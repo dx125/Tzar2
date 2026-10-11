@@ -1,0 +1,22 @@
+# Original game files: copyrighted, NEVER commit (see docs/original-build/README.md).
+/Origin/
+
+# Content imported/converted from the original game, local captures and dumps
+/imported/
+*.t2pkg
+**/local-goldens/
+**/re-dumps/
+
+# .NET / Godot build output
+bin/
+obj/
+.godot/
+*.user
+
+# IDE / OS
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+Thumbs.db
+.DS_Store
