@@ -7,6 +7,7 @@
 | **Intended reader** | The implementation agent(s) that will reverse engineer the original, build the new game, the campaign/scenario editor, and the modding platform |
 | **Codename** | `Tzar2` (repository name). Root .NET namespace: `Tzar2.*`. Public product name is **not** decided (see Q-01, trademark). |
 | **Repository** | `github.com/dx125/Tzar2` (public) |
+| **Release scope** | **1.0 = Windows only.** macOS, Linux, Android and iOS are planned for the post-1.0 platform-expansion phase, after the initial success of the Windows release (DEC-14). |
 | **Original install used for research** | `Origin/` in this repo (local only — **must never be committed**, see REQ-LEGAL-01) |
 | **Appendices** | [A – Original install inventory](tdd/A-original-install-inventory.md) · [B – Legacy data & formats reference](tdd/B-legacy-data-and-formats.md) · [C – Legacy trigger system](tdd/C-legacy-trigger-system.md) · [D – Legacy AI script DSL](tdd/D-legacy-ai-dsl.md) · [E – Gameplay content catalog](tdd/E-gameplay-content-catalog.md) · [F – References & sources](tdd/F-references.md) · [G – Review recommendations (proposed)](tdd/G-review-recommendations.md) |
 
@@ -46,7 +47,7 @@
 We will rebuild *TZAR: The Burden of the Crown* as a modern, cross-platform, moddable RTS that **looks and plays like the original** while fixing its well-known technical problems.
 
 * **Stack:** a pure, deterministic **C# simulation core** (no engine dependency) + **Godot 4.7 (.NET)** for rendering, audio, input, UI and the editor.
-* **Platforms:** Windows, macOS, Linux, Android, iOS (tablet-first; phones supported).
+* **Platforms:** **the first release (1.0) is Windows only.** macOS, Linux, Android and iOS (tablet-first; phones supported) are planned and will be added in a post-1.0 *platform expansion* phase, after the Windows release succeeds (DEC-14). The architecture is cross-platform-ready from day one, so those ports need no rewrites.
 * **Multiplayer:** deterministic **lockstep** over UDP with a relay server; **replays** are command logs; desync detection built in.
 * **Assets:** **imported at first run from the player's own legitimate copy** (GOG/Steam/CD). The repository and builds ship **no** original assets or code.
 * **Authentic look:** original 15‑bit (RGB555) sprites reproduced pixel-exactly, integer scaling by default, original HUD layouts reproduced; modern resolutions and optional enhancements are opt-in.
@@ -62,7 +63,7 @@ We will rebuild *TZAR: The Burden of the Crown* as a modern, cross-platform, mod
 |---|---|---|
 | **DEC-01** | Presentation engine: **Godot 4.7.x stable, .NET edition**. Pin the exact patch version in `global.json`/CI; upgrade minor versions only via ADR. | Product owner's choice. MIT license, strong 2D, built-in UI toolkit for the editor, C# support on desktop and mobile. |
 | **DEC-02** | The simulation, data, formats, scripting, AI, networking and replay layers are **plain .NET class libraries with zero references to Godot**. They are testable headless and reusable by the dedicated relay server and CLI tools. | Determinism, testability, engine independence, and a headless server. |
-| **DEC-03** | Platforms: Windows x64, macOS (arm64 + x64), Linux x64, Android arm64, iOS arm64. **Web is out of scope**: Godot cannot export C# projects to the web (as of 4.7). | Product owner's choice and engine constraints. |
+| **DEC-03** | Target platforms: Windows x64, macOS (arm64 + x64), Linux x64, Android arm64, iOS arm64, **delivered in phases per DEC-14** (Windows first). **Web is out of scope**: Godot cannot export C# projects to the web (as of 4.7). | Product owner's choice and engine constraints. |
 | **DEC-04** | **Deterministic fixed-point integer simulation**. No `float`/`double` in sim state or sim logic. | Lockstep MP and replays across x64/ARM64 and OSes. |
 | **DEC-05** | **No original assets or original code in the repo or in builds.** An importer converts the user's own installation. | Legal (the IP is owned by third parties; see §3.7). The OpenRA / fheroes2 / OpenRCT2 model. |
 | **DEC-06** | Gameplay is defined by **rulesets**. `classic` reproduces v1.10 behaviour (the GOG reference build; 1.11 differences documented when available, Q-02). Engine defects (§5) are fixed in **all** rulesets. Gameplay-affecting quirks are preserved in `classic`, but each must be individually toggleable in the rules. A `remastered` ruleset adds QoL and balance fixes. | Fidelity for purists plus freedom for redesign. |
@@ -73,6 +74,7 @@ We will rebuild *TZAR: The Burden of the Crown* as a modern, cross-platform, mod
 | **DEC-11** | The editor is a **separate app mode of the same Godot client** and shares the game renderer and the sim (WYSIWYG, instant playtest). Desktop-first. | Single renderer, single source of truth. |
 | **DEC-12** | **Original save games (`.wsv`) and demos (`.wdm`) are not supported** (stretch goal only). Original maps (`.wmp`) and campaigns (`.wcm`) **are** supported via conversion. | Bit-exact replay of the original simulation is not realistic; maps and campaigns are the valuable content. |
 | **DEC-13** | Scripting: (a) the **legacy trigger system** is re-implemented exactly; (b) **Lua 5.2 (pure C# interpreter, AOT-safe)** for new content; (c) compiled C# trait modules for deep extensions (built into the game, or loaded dynamically on desktop only). | Compatibility, safety, iOS AOT constraints. |
+| **DEC-14** | **Release phasing: version 1.0 ships for Windows x64 only.** macOS, Linux, Android and iOS support is planned, but it is delivered in the post-1.0 **Platform expansion (PX)** phase, which starts only after the initial success of the Windows release (product-owner decision). Until then: (a) the cross-platform **architecture constraints still apply** (engine-agnostic core DEC-02, integer determinism DEC-04, AOT/trimming-safe code REQ-ARCH-02, platform services behind interfaces REQ-PLAT-01, data-driven UI layouts that can host touch layouts); (b) the core libraries' determinism is still verified headless on Linux x64 and macOS arm64 in CI (cheap insurance for the later ports); (c) **no platform-specific deliverables** for non-Windows platforms are required for 1.0: no builds, store presence, touch UX, mobile import flow or mobile performance tuning. | Focus effort on one platform until the product is validated, while keeping later ports cheap. |
 
 ---
 
@@ -175,20 +177,23 @@ File containers identified (details in Appendix B):
 * **G3 — Campaign/scenario editor:** parity with `TzarEdit` and `TzarCampaign`, plus modern tooling.
 * **G4 — Deep customization & expansions:** new units, buildings, civilizations, technologies, spells, terrain sets, UI layouts, AI, maps and campaigns, all without engine code changes. Engine-level extensions through C# trait modules.
 * **G5 — Fix the original's problems** (§5) and scale beyond the original: maps up to 1024², larger population caps.
-* **G6 — Cross-platform & multiplayer:** Windows, macOS, Linux, Android, iOS. Cross-play lockstep MP, replays, reconnect.
+* **G6 — Multiplayer now, cross-platform next:** lockstep MP, replays and reconnect on Windows in 1.0. macOS, Linux, Android and iOS follow in the platform-expansion phase (DEC-14), with cross-play between all platforms.
 
 ### 4.2 Non-goals (for 1.0)
+* Builds for macOS, Linux, Android and iOS. They are planned for the post-1.0 platform-expansion phase (DEC-14), and the architecture must not prevent them.
 * Web build. 3D graphics. New official art (the community may add art through mods).
 * Network or save compatibility with the original executable. Playback of original `.wdm` demos.
 * Ranked matchmaking, accounts, anti-cheat beyond what lockstep validation provides.
 * Console platforms (keep the architecture console-friendly: no runtime code generation, AOT-safe).
 
-### 4.3 Success criteria (release 1.0)
+### 4.3 Success criteria
+Release 1.0 (Windows) must meet S1, S2 and S4–S8. S3 and the full S1 platform matrix apply to the platform-expansion phase (DEC-14).
+
 | # | Criterion | Measure |
 |---|---|---|
-| S1 | Determinism | 1,000 recorded replays (≥ 30 min each, mixed AI) produce identical per-tick state hashes on Win x64, macOS arm64, Linux x64, Android arm64, iOS arm64. |
+| S1 | Determinism | 1,000 recorded replays (≥ 30 min each, mixed AI) produce identical per-tick state hashes. **1.0:** on Windows x64 (game) plus a headless core run on Linux x64 and macOS arm64 (CI). **PX:** additionally on macOS, Linux, Android arm64 and iOS arm64 game builds. |
 | S2 | Performance (desktop) | Real World 512² map, 8 AI players, 4,000 units, day/night and weather on: ≥ 60 FPS render at 2560×1440; sim tick p99 ≤ 12 ms on a 2020-era 6-core CPU (Ryzen 5 3600 class). |
-| S3 | Performance (mobile) | Same scenario at 2,000 units: ≥ 30 FPS on a 2023 mid-range Android tablet (Snapdragon 7-series class) and an iPad (A14 or newer). Sim p99 ≤ 25 ms. Memory ≤ 1.5 GB. |
+| S3 | Performance (mobile; platform-expansion phase) | Same scenario at 2,000 units: ≥ 30 FPS on a 2023 mid-range Android tablet (Snapdragon 7-series class) and an iPad (A14 or newer). Sim p99 ≤ 25 ms. Memory ≤ 1.5 GB. |
 | S4 | Fidelity | The `classic` fidelity test suite (§22.3) passes: unit stats exact; timings within ±1 tick; combat outcomes for every unit pair within ±5% of the original over 100 trials. |
 | S5 | Visual fidelity | Golden-image tests: world-layer pixels identical (ΔE = 0) to captures from the original for 50 reference scenes at 1:1 scale, excluding dynamic effects. |
 | S6 | Content compatibility | 100% of the original campaigns and 95% of a corpus of ≥ 200 community maps and campaigns import without errors and are completable (scripted completion bots or manual QA). |
@@ -242,13 +247,15 @@ The new implementation MUST NOT reintroduce bugs fixed by Haemimont in 1.05–1.
 | Random map generator (6 types × 4 terrain sets × options) | M3 | ✔ | Template editor |
 | Legacy trigger engine, conversations, campaigns, persistent heroes | M4 | ✔ | |
 | Legacy map/campaign converter (`.wmp`, `.wcm`): conversion engine + CLI | M4 | ✔ | |
-| Legacy converter integrated into the campaign/scenario editor (import UI, report, type mapping, §18.5) | M5 | ✔ | Headless converter on mobile (SHOULD) |
+| Legacy converter integrated into the campaign/scenario editor (import UI, report, type mapping, §18.5) | M5 | ✔ | Headless converter on mobile (SHOULD, PX) |
 | Scenario editor (parity + modern) | M5 | ✔ | Prefab library, terrain-set editor |
 | Campaign editor (graph, packaging) | M5 | ✔ | |
 | Lockstep MP, relay, lobby (join codes), reconnect | M6 | ✔ | Matchmaking, ranked |
 | Replays + viewer | M6 | ✔ | Casting tools |
-| Desktop UX (original HUD layouts + widescreen layouts) | M3–M7 | ✔ | |
-| Touch UX (tablet-first, phone-compatible) | M7 | ✔ | |
+| Desktop UX (original HUD layouts + widescreen layouts) | M3–M8 | ✔ | |
+| Windows x64 build, installer/portable, store build(s) for Windows | M0–M8 | ✔ | |
+| macOS, Linux builds | PX | ✘ | ✔ after initial success (DEC-14) |
+| Android, iOS builds; touch UX (tablet-first, phone-compatible); mobile import flow | PX | ✘ | ✔ after initial success (DEC-14) |
 | Modding: traits, YAML rules, VFS packages, Lua, mod manager | M3–M8 | ✔ | Workshop integration |
 | Optional visual enhancements (filters, HD packs) | M8 | ✔ (framework + filters) | Community HD packs |
 | Localization (all original languages) | M8 | ✔ | Community translations |
@@ -546,6 +553,8 @@ For every system: **(1)** reproduce the original behaviour in `classic`; **(2)**
 * **REQ-IMP-04:** The importer never modifies the original install.
 
 ### 12.2 Locating the original
+Windows is required for 1.0. The other rows apply to the platform-expansion phase (DEC-14).
+
 | Platform | Sources |
 |---|---|
 | Windows | GOG Galaxy / registry, Steam libraries (`appmanifest_825730.acf`), common CD-install paths, manual folder pick, **GOG offline installer** (`setup_tzar*.exe`, Inno Setup; extract with a bundled `innoextract` (zlib license) or a built-in extractor), ISO/BIN of the retail CD (optional CD-audio tracks). |
@@ -651,7 +660,8 @@ For every system: **(1)** reproduce the original behaviour in `classic`; **(2)**
 ### 15.3 Modern additions (toggleable; defaults in `remastered`)
 Control-group bar, production queue display, idle-worker button (the original has a “next idle peon” order), extended tooltips with full stats, silhouettes, always-on health bars, minimap pings, colorblind-safe team palettes (opt-in, not default), replay/observer UI.
 
-### 15.4 Touch UX (tablet-first, phone-compatible)
+### 15.4 Touch UX (tablet-first, phone-compatible) — platform-expansion phase (DEC-14)
+*Not part of 1.0. For 1.0 it is enough that the layout system and input abstraction can host these layouts later.*
 * **REQ-UI-04:** Dedicated `touch-tablet` and `touch-phone` HUD layouts (the phone layout targets ≥ 6" screens, landscape only). Hit targets ≥ 44 pt / 48 dp.
 * Gestures: tap = select or default command (configurable “tap to command”); one-finger drag on empty ground = box select; two-finger drag = pan; pinch = zoom; double-tap = select all of a type on screen; long-press = context command; mini-map tap/drag = jump. **Modifier toggles** (Shift/Ctrl/Alt latch buttons) expose waypoints, move-advance, move-sneak, attack-set/type. Large command cards, a control-group bar, a rally-point mode button, haptics.
 * Text ≥ 12 pt; dialogs re-flowed for touch (data layouts).
@@ -705,7 +715,7 @@ A utility/behaviour-tree layer above the same executors, scriptable in Lua and e
 ## 18. Scenario & campaign editor
 
 ### 18.1 Principles
-* **REQ-EDT-01:** The editor is a mode of the Godot client (DEC-11): same renderer, same sim, instant playtest. Desktop platforms in 1.0; tablets get viewing and light editing post-1.0.
+* **REQ-EDT-01:** The editor is a mode of the Godot client (DEC-11): same renderer, same sim, instant playtest. Windows in 1.0; macOS/Linux with the platform-expansion phase; tablets get viewing and light editing after that (DEC-14).
 * **REQ-EDT-02:** Every operation is undoable (command pattern, unlimited history, survives save within a session). The map document model is engine-agnostic (`Tzar2.Content`), so the CLI can validate and convert maps headlessly.
 
 ### 18.2 Parity checklist (from the original Editor Manual; all MUST)
@@ -758,11 +768,11 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 * **REQ-EDT-10 Dependency resolution:** object types, images or AI scripts not present in the active rulesets/packages (e.g. maps made for WDT mods such as TzarOrcs) are either remapped through a user-editable **type mapping table** (saved as reusable YAML) or kept as flagged placeholders. A map never silently loses objects.
 * **REQ-EDT-11 Non-destructive & local:** the source file is never modified. Output goes to user data (`user://campaigns/`, `user://maps/`) or a folder the user chooses, never into the repository. `package.yaml` records provenance: source file name, size, MD5, detected codepage/language, converter version. Re-converting with a newer converter is possible and produces a diffable result.
 * **REQ-EDT-12 After conversion:** the result opens directly in the editor (review, edit, playtest, trigger debugger). “Play converted campaign” is available from the report. A headless smoke test loads every converted map and runs 600 ticks to verify that triggers, AI scripts and resources resolve without errors.
-* **Platforms:** the converter UI is part of the desktop editor. On mobile, users either transfer a `.t2camp` converted on desktop, or (SHOULD) pick a `.wmp`/`.wcm` file, which runs the same converter headless and shows a report summary.
+* **Platforms:** the converter UI is part of the desktop editor (Windows in 1.0). On mobile (platform-expansion phase), users either transfer a `.t2camp` converted on desktop, or (SHOULD) pick a `.wmp`/`.wcm` file, which runs the same converter headless and shows a report summary.
 * **Out of scope:** exporting back to `.wmp`/`.wcm` (conversion is one-way).
 
 ### 18.6 Acceptance
-* Author a 3-map campaign with conversations, a persistent hero, timers, quests, story screens, custom sounds and music using only the new editor, and play it end to end on desktop and a tablet.
+* Author a 3-map campaign with conversations, a persistent hero, timers, quests, story screens, custom sounds and music using only the new editor, and play it end to end on Windows (and on a tablet once the platform-expansion phase delivers mobile builds).
 * Convert the original campaign(s) and complete every mission (bots or manual QA).
 * Using only the editor's converter UI (§18.5), convert the four locally kept FX *Gold Edition* campaigns and a community campaign from an arbitrary folder. Expected: zero errors, a reviewable report, a correct campaign graph, correct Cyrillic/Spanish text, deduplicated resources, and every mission loads and passes the smoke test.
 
@@ -806,13 +816,15 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 
 ## 20. Platform specifics
 
-| Platform | Requirements & notes |
-|---|---|
-| Windows x64 | Godot default renderer per benchmark (§13.4). Windowed/borderless/exclusive fullscreen, high-DPI aware, Alt-Tab safe. Portable and installer builds; Steam/GOG builds MAY add store integrations behind interfaces. |
-| macOS (arm64 + x64) | Universal build, notarized. File access to the original install via security-scoped bookmarks (the user picks the folder once). |
-| Linux x64 | Tarball/AppImage (Flatpak MAY follow). Steam Proton path detection for the importer. Steam Deck plays as a desktop (trackpad/touch); a gamepad UX is post-1.0. |
-| Android arm64 | C# support in Godot is marked experimental, so spike M0-S5 validates our libraries on a device. The APK/AAB contains no game assets, which keeps it small. Import through SAF, on a background thread with progress (the user keeps the app open; resumable). Thermal-aware frame cap. |
-| iOS/iPadOS arm64 | NativeAOT, so code must be trimming-safe (REQ-ARCH-02). Exports require macOS. Import via the Files picker into the app sandbox. App Store policy risk for “bring your own data” apps (RISK-07). |
+**Phasing (DEC-14):** release 1.0 = **Windows x64 only**. The other rows describe the planned **platform-expansion phase (PX)**, which starts after the initial success of the Windows release. They are listed now so that 1.0 code does not block them.
+
+| Platform | Phase | Requirements & notes |
+|---|---|---|
+| Windows x64 (Windows 10/11) | **1.0** | Godot default renderer per benchmark (§13.4). Windowed/borderless/exclusive fullscreen, high-DPI aware, Alt-Tab safe. Portable and installer builds; Steam/GOG builds MAY add store integrations behind interfaces. |
+| macOS (arm64 + x64) | PX | Universal build, notarized. File access to the original install via security-scoped bookmarks (the user picks the folder once). |
+| Linux x64 | PX | Tarball/AppImage (Flatpak MAY follow). Steam Proton path detection for the importer. Steam Deck plays as a desktop (trackpad/touch); a gamepad UX is post-1.0. |
+| Android arm64 | PX | C# support in Godot is marked experimental, so spike PX-S5 (run at the start of PX) validates our libraries on a device. The APK/AAB contains no game assets, which keeps it small. Import through SAF, on a background thread with progress (the user keeps the app open; resumable). Thermal-aware frame cap. |
+| iOS/iPadOS arm64 | PX | NativeAOT, so code must be trimming-safe (REQ-ARCH-02). Exports require macOS. Import via the Files picker into the app sandbox. App Store policy risk for “bring your own data” apps (RISK-07). |
 
 * **REQ-PLAT-01:** One codebase with platform services behind interfaces (`IFilePicker`, `IStorage`, `IStore`, `IHaptics`, `ICrashReporter`).
 * **REQ-PLAT-02:** User data in Godot `user://` (saves, replays, settings, imported packages, logs); the imported base package lives there too, never next to the executable.
@@ -823,7 +835,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 
 ## 21. Performance targets and budgets
 
-| Target | Desktop reference (6-core 2020 CPU, GTX 1060-class GPU) | Mobile reference (2023 mid-range Android tablet; iPad A14+) |
+| Target | Desktop reference, Windows 1.0 (6-core 2020 CPU, GTX 1060-class GPU) | Mobile reference, platform-expansion phase (2023 mid-range Android tablet; iPad A14+) |
 |---|---|---|
 | Render | ≥ 60 FPS at 2560×1440 (S2 scenario) | ≥ 30 FPS at native resolution (S3 scenario) |
 | Sim tick (p99) | ≤ 12 ms at 4,000 units, 512² | ≤ 25 ms at 2,000 units, 512² |
@@ -843,7 +855,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 ## 22. Testing and verification
 
 1. **Unit & property tests** for each assembly. Property-based tests (FsCheck) for fixed-point math, pathfinding invariants (path validity, optimality bounds, connectivity consistency after random edits), snapshot round trips and rules merging.
-2. **Determinism suite:** a replay corpus on the CI matrix (Windows x64, Linux x64, macOS arm64, Android arm64 device or emulator, iOS arm64 simulator or device), compared tick-by-tick; random-command fuzz matches; save/load equivalence; worker-count independence (1 vs N threads); Lua scenarios.
+2. **Determinism suite:** a replay corpus compared tick by tick. In 1.0 it runs on Windows x64 (game build) plus headless core runs on Linux x64 and macOS arm64 (DEC-14). From PX on it also runs on Android arm64 (device or emulator) and iOS arm64 (simulator or device). It includes random-command fuzz matches; save/load equivalence; worker-count independence (1 vs N threads); Lua scenarios.
 3. **Fidelity suite (`Tzar2.Fidelity.Tests`, needs a local original install):** oracle measurements captured from the original by the capture harness (§23.2): unit speeds, attack cooldowns, per-pair combat outcomes (100 trials), gather/carry rates, build/research times, XP gain and level effects, capture times, trade profit, loan growth, spell effects. Stored as YAML expectation facts (numbers, not assets). Our sim replays the same scenarios headless and compares within tolerances (S4).
 4. **Golden-image tests:** placeholder-art goldens in public CI (renderer regressions); original-art goldens against captures from the original (local/private CI), 50 reference scenes (S5).
 5. **Content conversion tests:** every original map and campaign plus the community corpus convert without errors. Object, trigger and conversation counts match the decoded source. Campaign completion bots (recorded command scripts) verify victory paths for every original mission. Public CI uses **synthetic `.wmp`/`.wcm` fixtures** produced by a test-only writer built from our format spec (REQ-LEGAL-03). The real corpus runs locally from `TZAR2_ORIGINAL_PATH`, hash-checked against `docs/original-build/manifests/` (GOG v1.10 campaigns/maps and the locally kept FX campaigns), plus community maps. Includes the converter's codepage, campaign-graph and resource-dedup cases (§18.5).
@@ -851,7 +863,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 7. **MP soak:** headless bot clients through the relay with simulated 200 ms RTT, 5% loss and jitter; 500 two-hour matches with zero desyncs (S8); reconnect and drop-policy scenarios.
 8. **Performance benchmarks:** BenchmarkDotNet for sim systems and in-engine frame-time capture for rendering (§21).
 9. **ORIG regression tests:** one or more automated tests per `ORIG-*` item and per line of §5.1.
-10. **UX checks:** a hotkey/mouse parity checklist against Appendix E; touch usability sessions on a tablet and a phone.
+10. **UX checks:** a hotkey/mouse parity checklist against Appendix E (1.0); touch usability sessions on a tablet and a phone (PX).
 
 ---
 
@@ -953,7 +965,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 
 * **.NET:** use the .NET version required by the pinned Godot release (at least .NET 8 LTS) for everything Godot loads. Server and CLI MAY multi-target a newer LTS. `LangVersion latest`, nullable enabled, `TreatWarningsAsErrors`, central package management (`Directory.Packages.props`), shared `Directory.Build.props`.
 * **Style:** `.editorconfig`, analyzers (built-in + `Tzar2.Analyzers`), XML docs for public APIs of Content/Sim/Scripting (they become the modding API), ADRs for every deviation.
-* **CI (GitHub Actions):** build + tests on Windows/Linux/macOS per PR; determinism matrix incl. Android/iOS nightly; Godot headless exports for all platforms nightly; benchmarks nightly with thresholds; dependency license check; secret scanning. The root `.gitignore` covers `Origin/`, imported packages and local golden captures/RE dumps (REQ-LEGAL-01); keep it updated as new local-only artefacts appear.
+* **CI (GitHub Actions):** build + tests per PR on Windows (game, editor) and headless core tests on Linux/macOS; nightly determinism matrix (Windows game + Linux/macOS headless; Android/iOS added in PX); Godot export of the Windows build nightly (other platforms' exports added in PX); benchmarks nightly with thresholds; dependency license check; secret scanning. The root `.gitignore` covers `Origin/`, imported packages and local golden captures/RE dumps (REQ-LEGAL-01); keep it updated as new local-only artefacts appear.
 * **Dependencies (initial; all permissive):** Godot (MIT), LiteNetLib (MIT), Lua-CSharp (MIT), MeltySynth (MIT), YamlDotNet (MIT), System.IO.Hashing (MIT), FsCheck (BSD-3), SharpFuzz (MIT), BenchmarkDotNet (MIT), innoextract (zlib, external binary), GM SoundFont (license to verify), OFL fonts.
 
 ---
@@ -962,15 +974,16 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 
 | Milestone | Content | Exit criteria |
 |---|---|---|
-| **M0 Foundations** | Repo hygiene (done: `.gitignore` for `Origin/`, reference manifests), clean reference copy in place (passes `t2 verify-original`), solution skeleton, CI, analyzers, ADR template. **Spikes:** S1 instanced sprite renderer (10k y-sorted sprites from a texture array; desktop ≥ 60 FPS, tablet ≥ 30 FPS); S2 determinism x64 vs ARM64 (fixed-point + Lua-CSharp arithmetic); S3 LiteNetLib relay lockstep prototype (Windows ↔ Android); S4 Lua-CSharp sandbox + instruction budget; S5 Godot .NET export of our libraries to Android and iOS (NativeAOT); S6 sprite memory measurement + GPU format decision. | One ADR per spike; CI green; no original files tracked. |
+| **M0 Foundations** | Repo hygiene (done: `.gitignore` for `Origin/`, reference manifests), clean reference copy in place (passes `t2 verify-original`), solution skeleton, CI, analyzers, ADR template. **Spikes:** S1 instanced sprite renderer (10k y-sorted sprites from a texture array; Windows ≥ 60 FPS on the desktop reference); S2 determinism x64 vs ARM64 (fixed-point + Lua-CSharp arithmetic; headless on macOS arm64, cheap insurance for PX); S3 LiteNetLib relay lockstep prototype (Windows ↔ Windows, plus a headless Linux client); S4 Lua-CSharp sandbox + instruction budget; S6 sprite memory measurement + GPU format decision. (S5, the Godot .NET Android/iOS export check, moves to the start of PX.) | One ADR per spike; CI green; no original files tracked. |
 | **M1 Importer & viewer** | RE-01, RE-02, RE-13 (baseline); importer → base package; asset viewer (all sprites/animations/directions with player colours and shadows; terrain sets with transitions and water animation; sounds; MIDI playback). | All 961 RLE + all BMP/WAV/MID/INI/TSV/FNT of the reference build import without errors; 20 golden sprite comparisons pixel-identical; import is deterministic. |
 | **M2 Sim core & movement** | ECS, commands, snapshots, hashing, determinism CI; map model; pathfinding stack; movement; basic gathering/building/production/combat on test maps. | Determinism matrix green; ORIG-01/02/03 tests pass; B3/B4 benchmarks within budget. |
 | **M3 Classic gameplay & skirmish** | GAME-01…19, legacy AI, random maps, authentic desktop HUD and dialogs, audio, fog, day/night, weather. | Skirmish vs. Hard AI on all map types; fidelity suite ≥ 80% passing; hotkey parity checklist complete. |
 | **M4 Triggers & campaigns** | Legacy trigger engine, conversations, quests, story screens, campaign progression, persistence; `.wmp`/`.wcm` conversion engine + `t2 convert` CLI. | All original campaign missions completable; ≥ 90% of the community corpus converts. |
 | **M5 Editor** | Parity checklist (§18.2) 100%; modern additions (§18.3 MUSTs); legacy converter integrated into the editor (§18.5: import UI, report panel, codepage handling, type mapping, campaign-graph reconstruction). | Acceptance §18.6 passed. |
-| **M6 Multiplayer & replays** | Relay/lobby, LAN, reconnect, drop policy, desync tooling, replay recorder/viewer, MP saves. | 500-match soak with 0 desyncs; reconnect works; replays verify on all platforms. |
-| **M7 Mobile & touch** | Android/iOS builds, touch layouts and gestures, mobile import flow, performance tuning. | S3 met on reference devices; tablet usability sign-off. |
-| **M8 Modding, polish, release** | Lua API v1 frozen, mod manager, modding guide, localization, visual options, accessibility, DDV, remaining fidelity items, store builds. | S1–S8 met; release candidate. |
+| **M6 Multiplayer & replays** | Relay/lobby, LAN, reconnect, drop policy, desync tooling, replay recorder/viewer, MP saves. | 500-match soak with 0 desyncs; reconnect works; replays verify on Windows and in the headless Linux/macOS core runs. |
+| **M7 Windows beta** | Windows installer and portable build, code signing, crash reporting, performance tuning on Windows min-spec hardware, closed beta with veteran players. | Beta crash-free rate ≥ 99.5%; S2 met; no open P0/P1 bugs. |
+| **M8 Modding, polish, release (Windows 1.0)** | Lua API v1 frozen, mod manager, modding guide, localization, visual options, accessibility, DDV, remaining fidelity items, Windows store build(s). | S1 (1.0 scope), S2, S4–S8 met; Windows release candidate. |
+| **PX Platform expansion (post-1.0; starts after initial success of the Windows release, DEC-14)** | Spike S5 (Godot .NET export to Android/iOS with our libraries); macOS and Linux builds (signing/notarization, packaging); Android and iOS builds; touch layouts and gestures (§15.4); mobile import flow (§12.2); mobile performance tuning; full determinism matrix; store presence per platform. | S1 full platform matrix; S3 met on reference devices; tablet usability sign-off; cross-play MP with Windows verified. |
 
 ---
 
@@ -981,11 +994,11 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | RISK-01 | IP/trademark objection from rights holders | Project halt | No assets or code shipped; no “Tzar” branding without permission; seek Haemimont's blessing early (Q-01). |
 | RISK-02 | RE of map/trigger binary formats (HPFS) is harder than expected | Delays M4 | Start RE-03 in M1; the editor-diff methodology; the map model is independent of conversion, so new-editor maps work regardless. |
 | RISK-03 | Cross-platform determinism breaks (ARM64 vs x64, Lua doubles) | MP/replay failure | Integer-only sim, analyzers, CI matrix from M2, Lua integer API, spikes S2/S4. |
-| RISK-04 | Godot C# on mobile (experimental Android, NativeAOT on iOS) has blocking issues | M7 delays | Spike S5 in M0; keep the sim engine-independent; track Godot releases; trimming-safe code. |
+| RISK-04 | Godot C# on mobile (experimental Android, NativeAOT on iOS) has blocking issues | PX delays (no impact on Windows 1.0) | Spike S5 at the start of PX; keep the sim engine-independent; track Godot releases; trimming-safe code from day one. |
 | RISK-05 | Mobile memory/performance for full-quality sprites | Poor mobile experience | Per-match residency, lossless compact formats, a low-memory option, early S6 measurement. |
 | RISK-06 | Fidelity disputes (“doesn't feel like Tzar”) | Community rejection | The fidelity suite as oracle, captures, community beta with veterans, `classic` toggles for quirks. |
-| RISK-07 | App Store/Play policy for apps that require user-supplied game data | iOS/Android distribution | A fully functional demo/placeholder mode (CC0 art, tutorial map); clear import UX; possible license deal (Q-01). |
-| RISK-08 | Scope creep (editor, modding, mobile at once) | Schedule | Milestone gates; post-1.0 list; ADRs for additions. |
+| RISK-07 | App Store/Play policy for apps that require user-supplied game data | iOS/Android distribution (PX) | A fully functional demo/placeholder mode (CC0 art, tutorial map); clear import UX; possible license deal (Q-01). |
+| RISK-08 | Scope creep (editor, modding, several platforms at once) | Schedule | Windows-only 1.0 (DEC-14); milestone gates; post-1.0 list; ADRs for additions. |
 | RISK-09 | Overlap with Tzared (free remake) | Audience split | Differentiate: original campaigns, editor, open modding, faithful classic ruleset. |
 | RISK-10 | MIDI sound differs from what players remember | Perceived inauthenticity | SoundFont choice by listening tests; user SoundFonts; CD-audio import. |
 
@@ -998,10 +1011,10 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | Q-01 | Public product name and whether to approach Haemimont Games for a license/blessing (would allow bundling assets, store presence, the “Tzar” name) | Codename `Tzar2`; no bundled assets |
 | Q-02 | Baseline for `classic`: v1.10 (GOG, the reference build) or v1.11 (Gold Edition / possibly Steam)? | v1.10 (GOG reference build); 1.11 differences documented once a 1.11 build is available |
 | Q-03 | Should a `community-113b`-style ruleset be offered? | Not in 1.0 |
-| Q-04 | Distribution channels (itch.io, Steam, GOG, app stores) and the minimum OS versions | Desktop builds via GitHub releases first |
+| Q-04 | Distribution channels for the Windows 1.0 (GitHub releases, itch.io, Steam, GOG) and the minimum Windows version; what counts as “initial success” that triggers the platform-expansion phase (DEC-14) | Windows 10/11 x64 builds via GitHub releases first; PX trigger decided by the product owner |
 | Q-05 | Can the product owner provide (a) a clean GOG v1.10 English copy, or at least the 57 locally modified files (`docs/original-build/README.md` §3.1); (b) a Steam copy and an FX *Gold Edition* (v1.11) copy for fingerprinting and fidelity captures? | (a) is blocking for `classic` reference values (REQ-RE-03); (b) needed for RE-13 |
 | Q-06 | Telemetry/crash reporting service preference | Opt-in, self-hosted-capable (Sentry protocol) |
-| Q-07 | Phone support level (full play vs. tablet-only) | Full play on ≥ 6" phones, tablet-first design |
+| Q-07 | Phone support level in the platform-expansion phase (full play vs. tablet-only) | Full play on ≥ 6" phones, tablet-first design |
 | Q-08 | Which review recommendations G-01…G-17 (Appendix G) are accepted into the binding TDD? | G-01…G-05 and G-14 accepted; the rest remain proposals |
 | Q-09 | Who operates the public relay/lobby servers (hosting, cost, moderation)? | Community self-hosting only until decided |
 

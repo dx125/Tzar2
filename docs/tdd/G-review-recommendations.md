@@ -54,7 +54,7 @@ Priority: **H** = should be decided before M0 ends; **M** = before the milestone
 
 | ID | Topic | Gap | Proposal | Milestone |
 |---|---|---|---|---|
-| G-06 | Cross-device progress | Desktop + tablet are both targets; nothing syncs between them | Abstraction `ICloudStorage` (Steam Cloud, iCloud, Google Play Saved Games) plus manual export/import of profiles/saves/replays (they are platform-independent thanks to determinism) | M7 |
+| G-06 | Cross-device progress | Desktop + tablet are both targets (tablet in the platform-expansion phase); nothing syncs between them | Abstraction `ICloudStorage` (Steam Cloud, iCloud, Google Play Saved Games) plus manual export/import of profiles/saves/replays (they are platform-independent thanks to determinism) | PX |
 | G-07 | Live “classic ↔ enhanced” presentation toggle | Remasters such as AoE DE and D2R let players switch instantly between original and enhanced visuals | A hotkey/setting that switches presentation presets (Authentic ↔ Smooth/HD pack, original ↔ widescreen HUD) without restarting. Also useful for fidelity reviews | M8 |
 | G-08 | Observers/spectators | Replays exist, but there are no live spectator slots in MP | Spectator slots in the lobby (they receive the command stream and cannot send commands), optional broadcast delay | M6 |
 | G-09 | Achievements, statistics, leaderboards | Requested by the Steam community; typical for re-releases | Optional, behind a platform abstraction; derived from replay-verifiable sim events | Post-1.0 |
