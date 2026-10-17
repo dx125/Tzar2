@@ -734,12 +734,14 @@ public sealed class MovementSystem : ISimSystem
         // wanted step, right first (keep right), then left; only when neither is free does the unit stop.
         int dx = qx - px;
         int dy = qy - py;
-        foreach ((int sx, int sy) in (ReadOnlySpan<(int, int)>)[(px - dy, py + dx), (px + dy, py - dx)])
+        if ((dx != 0 || dy != 0) && !IntrudesEnemy(f, i, px, py, px - dy, py + dx) && Valid(world, layer, f.Radius[i], px - dy, py + dx))
         {
-            if ((sx != px || sy != py) && !IntrudesEnemy(f, i, px, py, sx, sy) && Valid(world, layer, f.Radius[i], sx, sy))
-            {
-                return (sx, sy);
-            }
+            return (px - dy, py + dx);
+        }
+
+        if ((dx != 0 || dy != 0) && !IntrudesEnemy(f, i, px, py, px + dy, py - dx) && Valid(world, layer, f.Radius[i], px + dy, py - dx))
+        {
+            return (px + dy, py - dx);
         }
 
         return (px, py);
