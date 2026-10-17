@@ -70,7 +70,8 @@ internal static class BenchCommand
         }
 
         using var scenario = new SyntheticScenario(options, workers);
-        using StreamWriter? stream = hashStream is null ? null : new StreamWriter(hashStream);
+        // "\n" line ends, so hash streams from Windows and Unix runners compare byte for byte.
+        using StreamWriter? stream = hashStream is null ? null : new StreamWriter(hashStream) { NewLine = "\n" };
         for (int t = 0; t < warmup; t++)
         {
             Write(stream, scenario.RunTick());

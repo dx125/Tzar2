@@ -16,8 +16,10 @@ env:
 
 jobs:
   determinism:
-    # Placeholder until M2: today it runs the Core golden-hash workload (identical hash required on every OS and
-    # runtime). From M2 on, this job replays the replay corpus and compares per-tick hash streams across the matrix.
+    # TDD §8.8 / §22.2 determinism matrix (ADR 0017): every OS runs the golden-hash suite in Debug (overflow policy
+    # Throw) and Release (Saturate) on net8 + net10, then a long synthetic match (4,000 units, 512², 6,000 ticks =
+    # 5 min of game time, churn) with the per-tick hash stream; determinism-compare diffs the streams tick by tick.
+    # The replay corpus joins this job once the gameplay systems produce one (M3+).
     name: Determinism - ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,9 +33,85 @@ jobs:
           global-json-file: global.json
           dotnet-version: 8.0.x
       - run: dotnet test tests/Tzar2.Determinism.Tests -c Release --logger "console;verbosity=normal"
+      - run: dotnet test tests/Tzar2.Determinism.Tests -c Debug --logger "console;verbosity=normal"
+      - name: Long synthetic match, per-tick hash stream
+        run: >
+          dotnet run -c Release --project src/Tzar2.Tools.Cli --
+          bench --ticks 6000 --warmup 0 --churn 2 --workers 4 --hash-stream long-${{ matrix.os }}.tsv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: long-hash-stream-${{ matrix.os }}
+          path: long-${{ matrix.os }}.tsv
+
+  determinism-compare:
+    name: Determinism - identical long hash streams
+    needs: determinism
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: long-hash-stream-*
+          merge-multiple: true
+      - name: Compare tick by tick
+        run: |
+          set -euo pipefail
+          ref=long-ubuntu-latest.tsv
+          for f in long-*.tsv; do
+            if ! cmp -s "$ref" "$f"; then
+              echo "::error::$f differs from $ref; first differing ticks:"
+              diff "$ref" "$f" | head -20
+              exit 1
+            fi
+          done
+          echo "All $(ls long-*.tsv | wc -l) hash streams are identical ($(wc -l < "$ref") ticks)."
+
+  spike-s2-determinism:
+    # Open item of ADR 0007: the S2 harness (fixed-point sim + sandboxed Lua) on Windows x64 and Linux x64 next to the
+    # local macOS arm64/Rosetta runs. Every configuration must produce the reference final hash AAE3D9913A101FAF (the
+    # harness's value at its own commit 8a3da0c and on main; see the note in ADR 0007).
+    name: Spike S2 determinism - ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      S2_REFERENCE_HASH: AAE3D9913A101FAF
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - run: dotnet build spikes/S2-determinism/Tzar2.Spikes.S2 -c Release
+      - run: dotnet build spikes/S2-determinism/Tzar2.Spikes.S2 -c Debug
+      - name: Run net8/net10 x Debug/Release and compare with the reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          for cfg in Release Debug; do
+            for tfm in net8.0 net10.0; do
+              label="${{ matrix.os }}-$tfm-$cfg"
+              dotnet "spikes/S2-determinism/Tzar2.Spikes.S2/bin/$cfg/$tfm/Tzar2.Spikes.S2.dll" --out s2-out --label "$label" > "s2-$label.txt"
+              final="$(grep '^final' "s2-$label.txt" | cut -f2 | tr -d '\r')"
+              echo "$label final=$final"
+              if [ "$final" != "$S2_REFERENCE_HASH" ]; then
+                echo "::error::S2 $label final hash $final differs from $S2_REFERENCE_HASH"
+                status=1
+              fi
+            done
+          done
+          exit $status
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spike-s2-${{ matrix.os }}
+          path: s2-out
 
   benchmarks:
-    # Thresholds (regressions > 10% fail, TDD §21) are added with the B1-B6 scenarios in M2.
+    # Includes SimTickBenchmarks (B3/B4-like). Relative thresholds (regressions > 10% fail, TDD §21) need a stable runner
+    # baseline first; until then the t2 bench step gates the absolute budget (p99 <= 12 ms at 4,000 units on 512²).
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
@@ -42,6 +120,12 @@ jobs:
         with:
           global-json-file: global.json
           dotnet-version: 8.0.x
+      - name: Sim tick budget (t2 bench, 4,000 units on 512²)
+        run: |
+          set -euo pipefail
+          dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --ticks 2000 --warmup 200 --churn 2 --workers 4 | tee bench.txt
+          p99="$(grep '^tick ms' bench.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
+          awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::sim tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
       - run: dotnet run -c Release --project tests/Tzar2.Benchmarks -- --filter "*" --exporters json markdown --artifacts BenchmarkDotNet.Artifacts
       - uses: actions/upload-artifact@v4
         with:
