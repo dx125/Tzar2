@@ -65,6 +65,9 @@ public sealed class MovementSystem : ISimSystem
     /// <summary>Ticks between follow checks.</summary>
     public const int FollowInterval = 10;
 
+    /// <summary>How far beyond its follow range an idle follower may have been shoved and still walk back.</summary>
+    public const int FollowDriftTiles = 6;
+
     /// <summary>Most neighbours a unit considers per tick (bounds the work in pathological stacks).</summary>
     public const int MaxNeighbours = 48;
 
@@ -173,8 +176,12 @@ public sealed class MovementSystem : ISimSystem
         long near = (long)m.Radius + MapState.UnitsPerTile + (3 * MapState.UnitsPerTile / 2);
         bool far = IntMath.DistanceSquared(p.X, p.Y, tp.X, tp.Y) > near * near;
         bool moved = IntMath.DistanceSquared(m.OrderX, m.OrderY, tp.X, tp.Y) > 4L * MapState.UnitsPerTile * MapState.UnitsPerTile;
-        // Re-plan only when the target has moved since the last request (an unreachable idle target is not chased again).
-        if (far && moved)
+        // Re-plan when the target has moved since the last request (an unreachable idle target is not chased again), or
+        // when an idle follower was shoved out of range of an idle target: it is at most FollowDriftTiles beyond the
+        // follow range (a follower stopped at the nearest reachable point of an unreachable target usually is not).
+        long drift = near + (FollowDriftTiles * MapState.UnitsPerTile);
+        bool drifted = far && m.State == MotionState.Idle && IntMath.DistanceSquared(p.X, p.Y, tp.X, tp.Y) <= drift * drift;
+        if ((far && moved) || drifted)
         {
             m.OrderX = tp.X;
             m.OrderY = tp.Y;
@@ -721,6 +728,18 @@ public sealed class MovementSystem : ISimSystem
         if (qy != py && !IntrudesEnemy(f, i, px, py, px, qy) && Valid(world, layer, f.Radius[i], px, qy))
         {
             return (px, qy);
+        }
+
+        // Owner decision (M2 part C): a mover held by an enemy first goes around it. Side-step perpendicular to the
+        // wanted step, right first (keep right), then left; only when neither is free does the unit stop.
+        int dx = qx - px;
+        int dy = qy - py;
+        foreach ((int sx, int sy) in (ReadOnlySpan<(int, int)>)[(px - dy, py + dx), (px + dy, py - dx)])
+        {
+            if ((sx != px || sy != py) && !IntrudesEnemy(f, i, px, py, sx, sy) && Valid(world, layer, f.Radius[i], sx, sy))
+            {
+                return (sx, sy);
+            }
         }
 
         return (px, py);

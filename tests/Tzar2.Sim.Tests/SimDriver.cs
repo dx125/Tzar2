@@ -17,13 +17,15 @@ internal sealed class SimDriver : IDisposable
     private readonly CommandList[] _pending;
     private readonly CommandList _tickSet = new();
 
-    public SimDriver(MapData map, int players = 2, int workers = 1, Ruleset? ruleset = null, int? pathBudget = null)
+    public SimDriver(MapData map, int players = 2, int workers = 1, Ruleset? ruleset = null, int? pathBudget = null, Func<SimulationConfig, SimulationConfig>? configure = null)
     {
         var config = new SimulationConfig { MatchSeed = 7, PlayerCount = players, CheatsAllowed = true };
         if (pathBudget is { } budget)
         {
             config = config with { PathBudgetPerTick = budget };
         }
+
+        config = configure?.Invoke(config) ?? config;
 
         Sim = new Simulation(ruleset ?? TestWorlds.Ruleset, map, config, workers);
         _pending = new CommandList[players];
@@ -44,8 +46,23 @@ internal sealed class SimDriver : IDisposable
     public EntityId Spawn(ushort type, int player, int tileX, int tileY, int dx = 0, int dy = 0)
         => World.Spawn(type, player, TileCenter(tileX) + dx, TileCenter(tileY) + dy);
 
-    public void Order(int player, CommandKind kind, ReadOnlySpan<EntityId> units, int x = 0, int y = 0, EntityId target = default, int arg0 = 0, int arg1 = 0)
-        => _pending[player].Add(kind, units, x, y, target, arg0, arg1);
+    public void Order(int player, CommandKind kind, ReadOnlySpan<EntityId> units, int x = 0, int y = 0, EntityId target = default, int arg0 = 0, int arg1 = 0, CommandFlags flags = CommandFlags.None)
+        => _pending[player].Add(kind, units, x, y, target, arg0, arg1, flags);
+
+    /// <summary>The rejection reasons of the commands rejected so far, in order.</summary>
+    public List<CommandRejection> Rejections()
+    {
+        var list = new List<CommandRejection>();
+        foreach ((int _, SimEvent e) in Events)
+        {
+            if (e.Kind == SimEventKind.CommandRejected)
+            {
+                list.Add((CommandRejection)e.Arg);
+            }
+        }
+
+        return list;
+    }
 
     public void MoveToTile(int player, ReadOnlySpan<EntityId> units, int tileX, int tileY)
         => Order(player, CommandKind.Move, units, TileCenter(tileX), TileCenter(tileY));

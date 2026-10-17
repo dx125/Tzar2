@@ -30,6 +30,33 @@ public enum SimEventKind : ushort
     /// instead (X, Y = that point; Arg = 1 if the unit cannot move at all from where it stands).
     /// </summary>
     GoalUnreachable = 6,
+
+    /// <summary>A worker delivered its load (Entity = worker, X = resource type id, Y = drop-off index, Arg = amount).</summary>
+    ResourceDelivered = 7,
+
+    /// <summary>A resource node ran out and was removed (Entity = node, Arg = type id).</summary>
+    ResourceDepleted = 8,
+
+    /// <summary>A construction site was placed (Entity = site, X, Y = position, Arg = type id).</summary>
+    ConstructionStarted = 9,
+
+    /// <summary>A construction site was completed (Entity = building, Arg = type id).</summary>
+    ConstructionCompleted = 10,
+
+    /// <summary>A construction site was cancelled and its cost refunded (Entity = site, Arg = type id).</summary>
+    ConstructionCancelled = 11,
+
+    /// <summary>A unit left its producer (Entity = new unit, X = producer index, Arg = type id).</summary>
+    UnitTrained = 12,
+
+    /// <summary>A finished unit cannot leave its producer yet (Entity = producer, Arg = <c>ProductionStall</c>).</summary>
+    ProductionStalled = 13,
+
+    /// <summary>A hit landed (Entity = target, X = attacker index, Y = health left, Arg = damage).</summary>
+    Damaged = 14,
+
+    /// <summary>An entity was killed in combat (Entity = victim, X = killer index, Arg = victim type id).</summary>
+    Killed = 15,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>
@@ -55,6 +82,18 @@ public enum CommandRejection
 
     /// <summary>The command would create more entities than slots are left (<c>EntityRegistry.RemainingCapacity</c>).</summary>
     EntityLimit = 7,
+
+    /// <summary>The player cannot pay the cost.</summary>
+    NotAffordable = 8,
+
+    /// <summary>The building does not fit there (off the map, on water or cliffs, or on another structure).</summary>
+    IllegalPlacement = 9,
+
+    /// <summary>A required building or technology is missing (TSV <c>DEPENDS ON</c>; research is not in M2).</summary>
+    RequirementNotMet = 10,
+
+    /// <summary>Every listed producer's queue is full.</summary>
+    QueueFull = 11,
 }
 
 /// <summary>One simulation event. Output only: events are not part of the state, hashes or snapshots.</summary>

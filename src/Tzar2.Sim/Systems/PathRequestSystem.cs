@@ -1,4 +1,5 @@
 using System;
+using Tzar2.Content.Compiled;
 using System.Collections.Generic;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Components;
@@ -469,7 +470,7 @@ public sealed class PathRequestSystem : ISimSystem
                 r.TargetY = _ty[k];
                 m.TargetX = _tx[k];
                 m.TargetY = _ty[k];
-                m.GroupSpeed = count >= 2 ? minSpeed : 0;
+                m.GroupSpeed = count >= 2 && world.Ruleset.Gameplay.GroupMoveSpeed == GroupMoveSpeed.Slowest ? minSpeed : 0;
                 m.SettleRadius = settle + (3 * MapState.UnitsPerTile / 2);
                 if (adjusted)
                 {

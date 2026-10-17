@@ -46,7 +46,7 @@ public sealed class Simulation : IDisposable
     /// <param name="config">Match settings.</param>
     /// <param name="workerCount">Threads for fork/join jobs (never affects results).</param>
     public Simulation(Ruleset ruleset, MapData map, SimulationConfig config, int workerCount = 1)
-        : this(new World(ruleset, map, config), workerCount)
+        : this(NewMatch(ruleset, map, config), workerCount)
     {
     }
 
@@ -59,9 +59,22 @@ public sealed class Simulation : IDisposable
         Workers = new DeterministicWorkerPool(workerCount);
         _context = new SimContext(world, Workers);
         _scheduler.Add(new CommandSystem());
+        _scheduler.Add(new ProductionSystem());
+        _scheduler.Add(new EconomySystem());
+        _scheduler.Add(new WorkerSystem());
         _scheduler.Add(new PathRequestSystem());
         _scheduler.Add(new MovementSystem());
+        _scheduler.Add(new CombatSystem());
         _scheduler.Add(new CleanupSystem());
+    }
+
+    // Match start: the map's objects, starting resources and the population limit (never on restore).
+    private static World NewMatch(Ruleset ruleset, MapData map, SimulationConfig config)
+    {
+        var world = new World(ruleset, map, config);
+        world.LoadMap();
+        ProductionSystem.UpdatePopulation(world);
+        return world;
     }
 
     /// <summary>The state.</summary>
