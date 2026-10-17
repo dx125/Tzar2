@@ -30,15 +30,20 @@ public class AllocationTests
 
         // Tier-0 and OSR code may allocate (e.g. unelided boxing) until tiered compilation has optimized the hot
         // methods in the background; with DOTNET_TieredCompilation=0 the first measured tick is already at 0 B.
-        for (int attempt = 0; attempt < 60 && MeasureTicks(scenario, 50) is not (0, 0); attempt++)
+        for (int attempt = 0; attempt < 60; attempt++)
         {
+            (long sim, long all) = MeasureTicks(scenario, 50);
+            if (sim == 0 && (all == 0 || workers == 1))
+            {
+                break;
+            }
+
             Thread.Sleep(50);
         }
 
         // The process-wide counter also sees the runtime's own background threads (tiering, timers), which are noisy
         // on CI runners. A per-tick allocation in the sim or its jobs shows up in every window (>= ~24 B x 200 ticks),
-        // background noise does not, so the quietest of six windows must be (almost) clean (the pathfinding stack has
-        // more rarely-hit methods that tiered compilation promotes late, on its own background thread).
+        // background noise does not, so the quietest of six windows must be (almost) clean.
         long simThread = long.MaxValue;
         long allThreads = long.MaxValue;
         for (int window = 0; window < 6; window++)
@@ -49,7 +54,13 @@ public class AllocationTests
         }
 
         Assert.Equal(0, simThread);
-        Assert.True(allThreads < 1024, $"{allThreads} B allocated on all threads over 200 ticks");
+
+        // With one worker every job runs inline on this thread, so other threads' allocations are the runtime's alone
+        // (ubuntu x64 runners showed a steady ~1.3 KB per window there); with workers, they may be the jobs'.
+        if (workers > 1)
+        {
+            Assert.True(allThreads < 1024, $"{allThreads} B allocated on all threads over 200 ticks");
+        }
     }
 
     private static (long SimThread, long AllThreads) MeasureTicks(SyntheticScenario scenario, int ticks)
