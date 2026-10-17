@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(Tzar2AppTargetFramework)</TargetFramework>
+    <AssemblyName>t2</AssemblyName>
+    <RootNamespace>Tzar2.Tools.Cli</RootNamespace>
+    <Description>The t2 command-line tool: import, convert, verify-original, validate, pack, replay, desync, bench, fidelity, dump.</Description>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The reference manifest is metadata only (paths, sizes, MD5), see docs/original-build/README.md §1. -->
+    <EmbeddedResource Include="../../docs/original-build/manifests/gog-1.10-en.reference.tsv"
+                      LogicalName="Tzar2.Tools.Cli.Manifests.gog-1.10-en.reference.tsv"
+                      Link="Manifests/gog-1.10-en.reference.tsv" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tzar2.Tools.Cli.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
+    <ProjectReference Include="../Tzar2.Formats/Tzar2.Formats.csproj" />
+    <ProjectReference Include="../Tzar2.Content/Tzar2.Content.csproj" />
+    <ProjectReference Include="../Tzar2.Import/Tzar2.Import.csproj" />
+    <ProjectReference Include="../Tzar2.Sim/Tzar2.Sim.csproj" />
+    <ProjectReference Include="../Tzar2.Scripting/Tzar2.Scripting.csproj" />
+    <ProjectReference Include="../Tzar2.AI/Tzar2.AI.csproj" />
+    <ProjectReference Include="../Tzar2.Net/Tzar2.Net.csproj" />
+    <ProjectReference Include="../Tzar2.Replay/Tzar2.Replay.csproj" />
+    <ProjectReference Include="../Tzar2.Game/Tzar2.Game.csproj" />
+  </ItemGroup>
+
+</Project>

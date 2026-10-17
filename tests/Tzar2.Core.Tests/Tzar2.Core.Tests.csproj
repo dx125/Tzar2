@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Core.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FsCheck" />
+    <PackageReference Include="FsCheck.Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tzar2.Core/Tzar2.Core.csproj" />
+  </ItemGroup>
+
+</Project>

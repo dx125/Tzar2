@@ -1,0 +1,17 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <!-- Godot 4.7 .NET presentation layer (TDD §7). The Godot.NET.Sdk version pins the engine version (DEC-01). -->
+  <PropertyGroup>
+    <!-- Literal on purpose: the Godot editor rewrites a property-based TargetFramework (ADR 0002). -->
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Tzar2.Client</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Tzar2.Game/Tzar2.Game.csproj" />
+    <ProjectReference Include="../Tzar2.Content/Tzar2.Content.csproj" />
+    <ProjectReference Include="../Tzar2.Import/Tzar2.Import.csproj" />
+  </ItemGroup>
+
+</Project>

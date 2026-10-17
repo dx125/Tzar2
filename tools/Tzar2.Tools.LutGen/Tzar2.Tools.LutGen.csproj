@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Build-time generator for the trigonometry lookup tables checked in as src/Tzar2.Core/Numerics/TrigTables.g.cs (TDD §8.2). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(Tzar2AppTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Tools.LutGen</RootNamespace>
+  </PropertyGroup>
+
+</Project>

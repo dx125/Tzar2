@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Content</RootNamespace>
+    <Description>VFS, packages, manifests, rules loader and ruleset compiler.</Description>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
+  </ItemGroup>
+
+</Project>

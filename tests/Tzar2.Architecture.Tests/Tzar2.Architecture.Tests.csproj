@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Architecture.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tzar2.Game/Tzar2.Game.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Import/Tzar2.Import.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Formats/Tzar2.Formats.csproj" />
+  </ItemGroup>
+
+</Project>

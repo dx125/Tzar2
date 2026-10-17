@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Import.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tzar2.Import/Tzar2.Import.csproj" />
+  </ItemGroup>
+
+</Project>

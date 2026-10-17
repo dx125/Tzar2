@@ -1,0 +1,82 @@
+name: CI
+
+# TDD §24: build + tests per PR on Windows (game incl. the Godot client) and headless core tests on Linux/macOS.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  legal:
+    name: No original game files (REQ-LEGAL-01)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: tools/ci/check-no-original-files.sh
+
+  licenses:
+    name: Dependency licenses (DEC-09)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - run: dotnet restore Tzar2.sln
+      - run: dotnet tool install --global nuget-license --version 4.0.18
+      - name: Check licenses of all (transitive) NuGet packages
+        run: >
+          nuget-license -i Tzar2.sln -t
+          -a tools/ci/allowed-licenses.json
+          -mapping tools/ci/license-url-mappings.json
+          -ignore tools/ci/license-ignored-packages.json
+
+  windows:
+    name: Windows x64 - full build and tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      # Tzar2.sln includes src/Tzar2.Client; Godot.NET.Sdk/GodotSharp come from NuGet, no Godot binary is needed to compile it.
+      - run: dotnet build Tzar2.sln -c Release
+      - run: dotnet test Tzar2.sln -c Release --no-build --logger trx --results-directory TestResults
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-windows
+          path: TestResults
+
+  headless:
+    name: Headless core - ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # DEC-14 (b): core determinism is checked on Linux x64 and macOS arm64 as insurance for the later ports.
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      # Tzar2.Headless.slnf is the solution without the Godot client.
+      - run: dotnet build Tzar2.Headless.slnf -c Release
+      - run: dotnet test Tzar2.Headless.slnf -c Release --no-build --logger trx --results-directory TestResults
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults

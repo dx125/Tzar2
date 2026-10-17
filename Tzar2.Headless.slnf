@@ -1,0 +1,37 @@
+{
+  "solution": {
+    "path": "Tzar2.sln",
+    "projects": [
+      "src/Tzar2.AI/Tzar2.AI.csproj",
+      "src/Tzar2.Analyzers/Tzar2.Analyzers.csproj",
+      "src/Tzar2.Content/Tzar2.Content.csproj",
+      "src/Tzar2.Core/Tzar2.Core.csproj",
+      "src/Tzar2.Formats/Tzar2.Formats.csproj",
+      "src/Tzar2.Game/Tzar2.Game.csproj",
+      "src/Tzar2.Import/Tzar2.Import.csproj",
+      "src/Tzar2.Net/Tzar2.Net.csproj",
+      "src/Tzar2.Replay/Tzar2.Replay.csproj",
+      "src/Tzar2.Scripting/Tzar2.Scripting.csproj",
+      "src/Tzar2.Server/Tzar2.Server.csproj",
+      "src/Tzar2.Sim/Tzar2.Sim.csproj",
+      "src/Tzar2.Tools.Cli/Tzar2.Tools.Cli.csproj",
+      "tests/Tzar2.AI.Tests/Tzar2.AI.Tests.csproj",
+      "tests/Tzar2.Analyzers.Tests/Tzar2.Analyzers.Tests.csproj",
+      "tests/Tzar2.Architecture.Tests/Tzar2.Architecture.Tests.csproj",
+      "tests/Tzar2.Benchmarks/Tzar2.Benchmarks.csproj",
+      "tests/Tzar2.Content.Tests/Tzar2.Content.Tests.csproj",
+      "tests/Tzar2.Core.Tests/Tzar2.Core.Tests.csproj",
+      "tests/Tzar2.Determinism.Tests/Tzar2.Determinism.Tests.csproj",
+      "tests/Tzar2.Formats.Tests/Tzar2.Formats.Tests.csproj",
+      "tests/Tzar2.Game.Tests/Tzar2.Game.Tests.csproj",
+      "tests/Tzar2.Import.Tests/Tzar2.Import.Tests.csproj",
+      "tests/Tzar2.Net.Tests/Tzar2.Net.Tests.csproj",
+      "tests/Tzar2.Replay.Tests/Tzar2.Replay.Tests.csproj",
+      "tests/Tzar2.Scripting.Tests/Tzar2.Scripting.Tests.csproj",
+      "tests/Tzar2.Server.Tests/Tzar2.Server.Tests.csproj",
+      "tests/Tzar2.Sim.Tests/Tzar2.Sim.Tests.csproj",
+      "tests/Tzar2.Tools.Cli.Tests/Tzar2.Tools.Cli.Tests.csproj",
+      "tools/Tzar2.Tools.LutGen/Tzar2.Tools.LutGen.csproj"
+    ]
+  }
+}

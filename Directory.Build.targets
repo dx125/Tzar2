@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    Determinism opt-in (TDD §8.8, ADR 0004).
+    A project sets <Tzar2Deterministic>true</Tzar2Deterministic> to get the Tzar2.Analyzers rules T2D001-T2D005
+    and the [assembly: Tzar2.Core.Tzar2Deterministic] marker. <Tzar2NoIO>true</Tzar2NoIO> additionally enables
+    T2D006 (no file/network I/O, REQ-ARCH-01) via [assembly: Tzar2.Core.Tzar2NoIO].
+  -->
+  <ItemGroup Condition="'$(Tzar2Deterministic)' == 'true' or '$(Tzar2NoIO)' == 'true'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/Tzar2.Analyzers/Tzar2.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Tzar2Deterministic)' == 'true'">
+    <AssemblyAttribute Include="Tzar2.Core.Tzar2DeterministicAttribute" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Tzar2NoIO)' == 'true'">
+    <AssemblyAttribute Include="Tzar2.Core.Tzar2NoIOAttribute" />
+  </ItemGroup>
+</Project>

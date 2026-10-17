@@ -1,0 +1,24 @@
+<Project>
+  <!--
+    Central package management. DEC-09: runtime dependencies MUST be MIT/BSD/zlib/Apache-2.0/MPL-2.0.
+    The CI license check (tools/ci/allowed-licenses.json) enforces this for every package below.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup Label="Runtime">
+    <PackageVersion Include="System.IO.Hashing" Version="10.0.13" />
+  </ItemGroup>
+  <ItemGroup Label="Analyzers">
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
+  </ItemGroup>
+  <ItemGroup Label="Tests">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="FsCheck" Version="3.4.0" />
+    <PackageVersion Include="FsCheck.Xunit" Version="3.4.0" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+</Project>

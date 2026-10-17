@@ -1,0 +1,74 @@
+name: Nightly
+
+# TDD §24: nightly determinism matrix, benchmarks and the Windows Godot build.
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  determinism:
+    # Placeholder until M2: today it runs the Core golden-hash workload (identical hash required on every OS and
+    # runtime). From M2 on, this job replays the replay corpus and compares per-tick hash streams across the matrix.
+    name: Determinism - ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - run: dotnet test tests/Tzar2.Determinism.Tests -c Release --logger "console;verbosity=normal"
+
+  benchmarks:
+    # Thresholds (regressions > 10% fail, TDD §21) are added with the B1-B6 scenarios in M2.
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - run: dotnet run -c Release --project tests/Tzar2.Benchmarks -- --filter "*" --exporters json markdown --artifacts BenchmarkDotNet.Artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks
+          path: BenchmarkDotNet.Artifacts
+
+  windows-godot:
+    # Placeholder for the nightly Windows export: export presets and templates arrive with the Windows build work (M7).
+    # Until then this imports the project headlessly with the pinned Godot editor and builds its C# solution.
+    name: Windows Godot build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - name: Download Godot ${{ env.GODOT_VERSION }} (.NET)
+        shell: pwsh
+        run: |
+          $name = "Godot_v${env:GODOT_VERSION}-stable_mono_win64"
+          Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/${env:GODOT_VERSION}-stable/$name.zip" -OutFile godot.zip
+          Expand-Archive godot.zip -DestinationPath "$env:RUNNER_TEMP/godot"
+          "GODOT=$env:RUNNER_TEMP/godot/$name/${name}_console.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Import project and build C# headlessly
+        shell: pwsh
+        run: |
+          & $env:GODOT --headless --path src/Tzar2.Client --build-solutions --quit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path src/Tzar2.Client/.godot/mono/temp/bin/Debug/Tzar2.Client.dll)) { throw "Godot did not build Tzar2.Client.dll" }

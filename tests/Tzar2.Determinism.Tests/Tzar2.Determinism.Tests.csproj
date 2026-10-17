@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Both runtimes: the hash stream must not depend on the .NET version either. -->
+    <TargetFrameworks>$(Tzar2LibraryTargetFramework);$(Tzar2AppTargetFramework)</TargetFrameworks>
+    <RootNamespace>Tzar2.Determinism.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tzar2.Core/Tzar2.Core.csproj" />
+  </ItemGroup>
+
+</Project>

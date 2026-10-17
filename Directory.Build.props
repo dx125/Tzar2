@@ -1,0 +1,29 @@
+<Project>
+  <!-- Shared build settings for every project in the repository (TDD §24). -->
+  <PropertyGroup>
+    <!-- Godot 4.7.2's Godot.NET.Sdk/GodotSharp target net8.0, so every assembly Godot loads uses it (ADR 0002). -->
+    <Tzar2LibraryTargetFramework>net8.0</Tzar2LibraryTargetFramework>
+    <!-- Standalone headless apps (CLI, relay server) run on the newer LTS. -->
+    <Tzar2AppTargetFramework>net10.0</Tzar2AppTargetFramework>
+
+    <VersionPrefix>0.0.1</VersionPrefix>
+
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Vulnerability audit findings stay visible as warnings but do not break unrelated builds. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <IsPackable>false</IsPackable>
+
+    <Authors>Tzar2 contributors</Authors>
+    <Copyright>Copyright (c) Tzar2 contributors. MIT License.</Copyright>
+    <RepositoryUrl>https://github.com/dx125/Tzar2</RepositoryUrl>
+  </PropertyGroup>
+</Project>

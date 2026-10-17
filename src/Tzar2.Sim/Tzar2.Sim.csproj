@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Sim</RootNamespace>
+    <Description>Deterministic simulation.</Description>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <Tzar2Deterministic>true</Tzar2Deterministic>
+    <Tzar2NoIO>true</Tzar2NoIO>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
+    <ProjectReference Include="../Tzar2.Content/Tzar2.Content.csproj" />
+  </ItemGroup>
+
+</Project>
