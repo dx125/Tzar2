@@ -20,7 +20,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: tools/ci/check-no-original-files.sh
+        with:
+          # Full history: every blob added or modified in the pushed/PR range is checked, not only the final tree.
+          fetch-depth: 0
+      - name: Self-test of the guard
+        run: tools/ci/test-check-no-original-files.sh
+      - name: Check the tree and every commit in the range
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          case "$EVENT_NAME" in
+            pull_request) range="$PR_BASE..$PR_HEAD" ;;
+            # A new branch has an all-zero "before"; the script then checks the whole history of PUSH_AFTER.
+            push) range="${PUSH_BEFORE:-0000000000000000000000000000000000000000}..$PUSH_AFTER" ;;
+            *) range="HEAD" ;;
+          esac
+          tools/ci/check-no-original-files.sh --range "$range"
 
   licenses:
     name: Dependency licenses (DEC-09)
