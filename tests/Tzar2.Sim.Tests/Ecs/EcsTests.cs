@@ -126,7 +126,7 @@ public class EcsTests
     {
         Assert.Equal(32, Unsafe.SizeOf<Command>());
         Assert.Equal(20, Unsafe.SizeOf<SimEvent>());
-        Assert.Equal(24, Unsafe.SizeOf<RenderEntity>());
+        Assert.Equal(28, Unsafe.SizeOf<RenderEntity>()); // 24 + the IsMoving flag (padded)
     }
 
     /// <summary>

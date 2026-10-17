@@ -32,6 +32,8 @@ public sealed class MapState
     private readonly byte[] _basePassability;
     private readonly ushort[] _blockers;
     private readonly int[] _occupancy;
+    private int[] _changedTiles = new int[64];
+    private int _changedCount;
 
     /// <summary>Builds the map state.</summary>
     /// <exception cref="ArgumentException">The map uses terrain types the ruleset lacks.</exception>
@@ -152,6 +154,10 @@ public sealed class MapState
         int i = TileIndex(tx, ty);
         _blockers[i] = checked((ushort)(_blockers[i] + 1));
         ObstacleVersion++;
+        if (_blockers[i] == 1)
+        {
+            RecordChange(i);
+        }
     }
 
     /// <summary>Removes a footprint obstacle from a tile.</summary>
@@ -166,6 +172,26 @@ public sealed class MapState
 
         _blockers[i]--;
         ObstacleVersion++;
+        if (_blockers[i] == 0)
+        {
+            RecordChange(i);
+        }
+    }
+
+    /// <summary>
+    /// Tiles whose effective passability changed since the last <see cref="ClearChangedTiles"/> (consumed by the
+    /// navigation layers for incremental updates; derived bookkeeping, not state).
+    /// </summary>
+    internal ReadOnlySpan<int> ChangedTiles => _changedTiles.AsSpan(0, _changedCount);
+
+    /// <summary>Whether the blockers were replaced wholesale (snapshot restore) since <see cref="ClearChangedTiles"/>.</summary>
+    internal bool BlockersReplaced { get; private set; }
+
+    /// <summary>Forgets <see cref="ChangedTiles"/> and <see cref="BlockersReplaced"/>.</summary>
+    internal void ClearChangedTiles()
+    {
+        _changedCount = 0;
+        BlockersReplaced = false;
     }
 
     /// <summary>Counts an entity into a cell.</summary>
@@ -242,6 +268,8 @@ public sealed class MapState
 
             _blockers[index] = (ushort)value;
         }
+
+        BlockersReplaced = true;
     }
 
     /// <summary>
@@ -260,6 +288,16 @@ public sealed class MapState
 
             _occupancy[cell.Cell]++;
         }
+    }
+
+    private void RecordChange(int tile)
+    {
+        if (_changedCount == _changedTiles.Length)
+        {
+            Array.Resize(ref _changedTiles, _changedTiles.Length * 2);
+        }
+
+        _changedTiles[_changedCount++] = tile;
     }
 
     private int TileIndex(int tx, int ty)

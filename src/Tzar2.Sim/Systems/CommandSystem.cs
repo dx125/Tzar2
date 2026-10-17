@@ -3,6 +3,7 @@ using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
+using Tzar2.Sim.Navigation;
 
 namespace Tzar2.Sim.Systems;
 
@@ -50,20 +51,105 @@ public sealed class CommandSystem : ISimSystem
         switch (command.Kind)
         {
             case CommandKind.Move:
+            case CommandKind.Patrol:
+            {
                 if (!world.Map.ContainsPoint(command.X, command.Y))
                 {
                     return CommandRejection.OutOfMap;
                 }
 
-                return ForOwnedMovers(world, command, entities, static (ref Motion m, in Command c) =>
+                bool patrol = command.Kind == CommandKind.Patrol;
+                int group = !patrol && CountOwnedMovers(world, command.Player, entities) >= 2 ? world.NextGroupId++ : 0;
+                int applied = 0;
+                foreach (EntityId entity in entities)
                 {
-                    m.TargetX = c.X;
-                    m.TargetY = c.Y;
-                    m.State = MotionState.Moving;
-                });
+                    int p = OwnedMover(world, entity, command.Player);
+                    if (p < 0)
+                    {
+                        continue;
+                    }
+
+                    ref Motion m = ref world.Motions.At(p);
+                    m.Order = patrol ? MotionOrder.Patrol : MotionOrder.Move;
+                    m.OrderX = command.X;
+                    m.OrderY = command.Y;
+                    Position position = world.Positions.Get(entity);
+                    m.PatrolX = position.X;
+                    m.PatrolY = position.Y;
+                    m.FollowTarget = 0;
+                    m.Replans = 0;
+                    MovementOrders.Request(world, entity, ref m, group, command.X, command.Y);
+                    applied++;
+                }
+
+                return applied > 0 ? null : CommandRejection.NoValidEntities;
+            }
+
+            case CommandKind.Follow:
+            {
+                int t = world.Positions.IndexOf(command.Target);
+                if (!world.Entities.IsAlive(command.Target) || t < 0)
+                {
+                    return CommandRejection.InvalidArgument;
+                }
+
+                Position target = world.Positions.At(t);
+                int applied = 0;
+                foreach (EntityId entity in entities)
+                {
+                    int p = OwnedMover(world, entity, command.Player);
+                    if (p < 0 || entity == command.Target)
+                    {
+                        continue;
+                    }
+
+                    ref Motion m = ref world.Motions.At(p);
+                    m.Order = MotionOrder.Follow;
+                    m.FollowTarget = command.Target.Value;
+                    m.OrderX = target.X;
+                    m.OrderY = target.Y;
+                    m.Replans = 0;
+                    MovementOrders.Request(world, entity, ref m, 0, target.X, target.Y);
+                    applied++;
+                }
+
+                return applied > 0 ? null : CommandRejection.NoValidEntities;
+            }
 
             case CommandKind.Stop:
-                return ForOwnedMovers(world, command, entities, static (ref Motion m, in Command c) => m.State = MotionState.Idle);
+            {
+                int applied = 0;
+                foreach (EntityId entity in entities)
+                {
+                    int p = OwnedMover(world, entity, command.Player);
+                    if (p >= 0)
+                    {
+                        MovementOrders.Stop(world, entity, ref world.Motions.At(p));
+                        applied++;
+                    }
+                }
+
+                return applied > 0 ? null : CommandRejection.NoValidEntities;
+            }
+
+            case CommandKind.DebugKill:
+            {
+                if (!world.Config.CheatsAllowed)
+                {
+                    return CommandRejection.CheatsDisabled;
+                }
+
+                int killed = 0;
+                foreach (EntityId entity in entities)
+                {
+                    if (world.Kill(entity))
+                    {
+                        killed++;
+                    }
+                }
+
+                return killed > 0 ? null : CommandRejection.NoValidEntities;
+            }
 
             case CommandKind.Delete:
             {
@@ -113,29 +199,27 @@ public sealed class CommandSystem : ISimSystem
         }
     }
 
-    private delegate void MotionUpdate(ref Motion motion, in Command command);
-
-    private static CommandRejection? ForOwnedMovers(World world, in Command command, ReadOnlySpan<EntityId> entities, MotionUpdate update)
+    // Dense position in the motion store of an owned, mobile, live unit, or -1.
+    private static int OwnedMover(World world, EntityId entity, byte player)
     {
-        int applied = 0;
-        foreach (EntityId entity in entities)
+        if (!IsOwned(world, entity, player))
         {
-            if (!IsOwned(world, entity, command.Player))
-            {
-                continue;
-            }
-
-            int position = world.Motions.IndexOf(entity);
-            if (position < 0 || world.Motions.At(position).SpeedPerTick <= 0)
-            {
-                continue;
-            }
-
-            update(ref world.Motions.At(position), command);
-            applied++;
+            return -1;
         }
 
-        return applied > 0 ? null : CommandRejection.NoValidEntities;
+        int position = world.Motions.IndexOf(entity);
+        return position >= 0 && world.Motions.At(position).SpeedPerTick > 0 ? position : -1;
+    }
+
+    private static int CountOwnedMovers(World world, byte player, ReadOnlySpan<EntityId> entities)
+    {
+        int n = 0;
+        foreach (EntityId entity in entities)
+        {
+            n += OwnedMover(world, entity, player) >= 0 ? 1 : 0;
+        }
+
+        return n;
     }
 
     private static bool IsOwned(World world, EntityId entity, byte player)

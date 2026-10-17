@@ -22,6 +22,15 @@ public sealed record SimulationConfig
     /// <summary>Game time per tick (REQ-SIM-01).</summary>
     public int TickLengthMilliseconds { get; init; } = Tick.DefaultLengthMilliseconds;
 
+    /// <summary>Default <see cref="PathBudgetPerTick"/>.</summary>
+    public const int DefaultPathBudgetPerTick = 750_000;
+
+    /// <summary>
+    /// Path-request budget: search-node expansions per tick (REQ-PATH-03: count-based, identical on all peers, never
+    /// time-based). At least one queued request is completed per tick whatever its cost.
+    /// </summary>
+    public int PathBudgetPerTick { get; init; } = DefaultPathBudgetPerTick;
+
     /// <summary>Checks the ranges.</summary>
     /// <exception cref="ArgumentOutOfRangeException">A value is out of range.</exception>
     public void Validate(int maxPlayers)
@@ -31,6 +40,7 @@ public sealed record SimulationConfig
         ArgumentOutOfRangeException.ThrowIfLessThan(FullHashIntervalTicks, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(TickLengthMilliseconds, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(TickLengthMilliseconds, 1000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(PathBudgetPerTick, 1);
     }
 }
 

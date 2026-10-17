@@ -34,7 +34,9 @@ for cache invalidation, and an occupancy grid; maps go up to 1,024² tiles (REQ-
   base passability is recomputed from map + ruleset and occupancy (`int` counts) is rebuilt from the entities
   (amended by [ADR 0019](0019-sim-hardening.md); occupancy cells per tile axis are limited to 1, 2 or 4).
 * Movement until §9.2 lands is a placeholder: straight line at the type's speed, facing quantized to 8 directions,
-  stop with a `Blocked` event at a tile the locomotor cannot enter.
+  stop with a `Blocked` event at a tile the locomotor cannot enter. (Replaced in M2 part B by the pathfinding and
+  movement stack of ADRs 0021-0026; the map layers above are its input, extended by the changed-tile log and
+  footprint structures.)
 
 ## Alternatives considered
 

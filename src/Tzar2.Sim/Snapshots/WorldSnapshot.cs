@@ -17,9 +17,10 @@ namespace Tzar2.Sim.Snapshots;
 /// <remarks>
 /// Layout: magic <c>T2SN</c>, format version, ruleset and map content hashes, the <see cref="SimulationConfig"/>,
 /// tick, entity registry, RNG streams, player states (raw), map dynamic layers (obstacle version and non-zero
-/// blockers only: static layers are referenced by the map content hash, occupancy is rebuilt), the stores (count,
-/// then per store: key, tier, contents), and finally the full-state hash of the captured world, which
-/// <see cref="Restore"/> recomputes and compares. Little-endian only (like <see cref="StateHasher"/>).
+/// blockers only: static layers are referenced by the map content hash, occupancy is rebuilt), decals, the group
+/// counter, the paths and the path-request queue, the stores (count, then per store: key, tier, contents), and finally
+/// the full-state hash of the captured world, which <see cref="Restore"/> recomputes and compares. Little-endian only
+/// (like <see cref="StateHasher"/>).
 /// </remarks>
 public static class WorldSnapshot
 {
@@ -27,7 +28,7 @@ public static class WorldSnapshot
     public const uint Magic = 0x4E533254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 2;
+    public const int FormatVersion = 3;
 
     /// <summary>Writes a snapshot of <paramref name="world"/>.</summary>
     public static void Capture(World world, BinaryBufferWriter writer, StateHasher hasher)
@@ -44,11 +45,16 @@ public static class WorldSnapshot
         writer.WriteBoolean(config.CheatsAllowed);
         writer.WriteVarUInt64((ulong)config.FullHashIntervalTicks);
         writer.WriteVarUInt64((ulong)config.TickLengthMilliseconds);
+        writer.WriteVarUInt64((ulong)config.PathBudgetPerTick);
         writer.WriteVarUInt64((ulong)world.Tick.Value);
         world.Entities.WriteTo(writer);
         world.Rng.WriteTo(writer);
         writer.WriteBytes(MemoryMarshal.AsBytes(world.Players));
         world.Map.WriteTo(writer);
+        world.Decals.WriteTo(writer);
+        writer.WriteVarUInt64((ulong)world.NextGroupId);
+        world.Paths.WriteTo(writer);
+        world.PathQueue.WriteTo(writer);
         writer.WriteVarUInt64((ulong)world.Components.All.Length);
         foreach (IComponentStore store in world.Components.All)
         {
@@ -110,6 +116,16 @@ public static class WorldSnapshot
         world.Rng = rng;
         reader.ReadBytes(world.Players.Length * System.Runtime.CompilerServices.Unsafe.SizeOf<PlayerState>()).CopyTo(MemoryMarshal.AsBytes(world.Players));
         world.Map.ReadFrom(ref reader);
+        world.Decals.ReadFrom(ref reader);
+        ulong nextGroup = reader.ReadVarUInt64();
+        if (nextGroup is 0 or > int.MaxValue)
+        {
+            throw new InvalidDataException("Invalid group counter.");
+        }
+
+        world.NextGroupId = (int)nextGroup;
+        world.Paths.ReadFrom(ref reader);
+        world.PathQueue.ReadFrom(ref reader);
         ulong storeCount = reader.ReadVarUInt64();
         if (storeCount != (ulong)world.Components.All.Length)
         {
@@ -180,7 +196,8 @@ public static class WorldSnapshot
         bool cheats = reader.ReadBoolean();
         ulong fullHashInterval = reader.ReadVarUInt64();
         ulong tickLength = reader.ReadVarUInt64();
-        if (players is 0 or > 16 || fullHashInterval is 0 or > int.MaxValue || tickLength is 0 or > 1000)
+        ulong pathBudget = reader.ReadVarUInt64();
+        if (players is 0 or > 16 || fullHashInterval is 0 or > int.MaxValue || tickLength is 0 or > 1000 || pathBudget is 0 or > int.MaxValue)
         {
             throw new InvalidDataException("Invalid configuration in snapshot.");
         }
@@ -192,6 +209,7 @@ public static class WorldSnapshot
             CheatsAllowed = cheats,
             FullHashIntervalTicks = (int)fullHashInterval,
             TickLengthMilliseconds = (int)tickLength,
+            PathBudgetPerTick = (int)pathBudget,
         };
     }
 }

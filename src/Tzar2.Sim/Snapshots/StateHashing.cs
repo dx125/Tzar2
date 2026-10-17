@@ -11,12 +11,12 @@ namespace Tzar2.Sim.Snapshots;
 /// <remarks>
 /// <b>Tick hash</b>: version tag, tick, entity registry, every hot store (in registration order: store index, then
 /// its entity and component spans), player states, RNG streams. <b>Full hash</b>: the tick hash's inputs plus every
-/// cold store and the map's dynamic layers (obstacle version, blockers, occupancy).
+/// cold store and the map's dynamic layers (obstacle version, blockers, occupancy), the decals, the group counter, the paths and the path-request queue.
 /// </remarks>
 public static class StateHashing
 {
     /// <summary>Changes whenever the hashed layout changes; part of every hash.</summary>
-    public const int LayoutVersion = 1;
+    public const int LayoutVersion = 2;
 
     /// <summary>Computes the per-tick hash of <paramref name="world"/>.</summary>
     public static ulong ComputeTickHash(World world, StateHasher hasher)
@@ -46,6 +46,10 @@ public static class StateHashing
         }
 
         world.Map.AppendTo(hasher);
+        world.Decals.AppendTo(hasher);
+        hasher.Add(world.NextGroupId);
+        world.Paths.AppendTo(hasher);
+        world.PathQueue.AppendTo(hasher);
         return hasher.GetHashAndReset();
     }
 
