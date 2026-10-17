@@ -1,0 +1,29 @@
+; Engine configuration file for spike S1 (instanced sprite renderer). Not part of Tzar2.sln.
+
+config_version=5
+
+[application]
+
+config/name="Tzar2 S1 renderer spike"
+config/description="M0 spike S1: instanced y-sorted sprites via RenderingServer/MultiMesh (DEC-10)"
+run/main_scene="res://scenes/Main.tscn"
+run/low_processor_mode=false
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/resizable=false
+window/vsync/vsync_mode=0
+
+[dotnet]
+
+project/assembly_name="S1Renderer"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
