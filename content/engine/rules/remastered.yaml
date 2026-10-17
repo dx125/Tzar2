@@ -1,0 +1,13 @@
+# The `remastered` ruleset (TDD §11.3): `classic` plus QoL defaults and optional balance changes. Engine defects
+# (§5) are fixed in every ruleset, so they are not toggles here.
+#
+# M2: no differences yet. The group move speed stays `slowest` in both rulesets until UNK-12 is captured (owner
+# decision; ADR 0024 question). Remastered changes go below as patches of classic entries (ADR 0031), e.g.
+#   euro.archer: { Armament: { range: 7 } }
+
+ruleset:
+  name: remastered
+  base: classic
+
+gameplay:
+  groupMoveSpeed: slowest

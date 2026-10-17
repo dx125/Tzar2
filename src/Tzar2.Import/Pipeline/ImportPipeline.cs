@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Tzar2.Content;
 using Tzar2.Content.Assets;
 using Tzar2.Content.Packages;
+using Tzar2.Content.Rules;
 using Tzar2.Content.Vfs;
 using Tzar2.Formats;
 using Tzar2.Formats.Audio;
@@ -186,7 +187,40 @@ public static class ImportPipeline
             SourceEdition = match?.Edition?.Id,
         };
         package.AddText(PackageWriter.ManifestPath, manifest.ToYaml());
+        CheckClassicRuleset(package, report);
         return (package, report);
+    }
+
+    /// <summary>
+    /// Compiles the <c>classic</c> ruleset from the new package and reports its warnings, e.g. a modified installation
+    /// whose tables differ from the reference build (ADR 0032). Never fails the import.
+    /// </summary>
+    private static void CheckClassicRuleset(PackageWriter package, ImportReport report)
+    {
+        var source = new MemorySource("imported package");
+        foreach ((string path, byte[] data) in package.Entries)
+        {
+            if (path.StartsWith("tables/", StringComparison.Ordinal) || path.StartsWith("manifests/", StringComparison.Ordinal))
+            {
+                source.Add(path, data);
+            }
+        }
+
+        var vfs = new VirtualFileSystem();
+        vfs.Mount(new EngineDefaultsSource());
+        vfs.Mount(source);
+        try
+        {
+            CompiledRuleset classic = RulesetCompiler.Compile(vfs, "classic");
+            foreach (string warning in classic.Warnings)
+            {
+                report.Warnings.Add(new ImportIssue("rules/classic.yaml", warning));
+            }
+        }
+        catch (RulesException ex)
+        {
+            report.Warnings.Add(new ImportIssue("rules/classic.yaml", "the classic ruleset does not compile from this installation: " + ex.Message));
+        }
     }
 
     private static void ApplyEdition(ImportReport report, EditionMatch? match)

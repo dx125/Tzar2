@@ -3,8 +3,8 @@ using System;
 namespace Tzar2.Content.Compiled;
 
 /// <summary>
-/// The minimal compiled entity type the M2 sim core consumes. The trait list of REQ-SIM-09 (§11.2) replaces the
-/// fixed fields here once the rules compiler exists; the id and key stay.
+/// A compiled entity type as the sim consumes it: movement and footprint fields (M2 parts A/B) plus the gameplay
+/// <see cref="Traits"/> the rules compiler produces (REQ-SIM-09, §11.2; ADR 0033). The id and key are stable.
 /// </summary>
 /// <remarks>
 /// A type is <b>mobile</b> when <see cref="SpeedUnitsPerSecond"/> &gt; 0 (trait <c>Mobile(locomotor, speed)</c>) and a
@@ -45,6 +45,7 @@ public sealed class EntityTypeDefinition
     /// Imported from the DAT footprint grid (value 0 = occupied, 2 = free; docs/formats/dat.md §3).
     /// </param>
     /// <param name="leavesCorpse">Whether a killed entity leaves a corpse decal (trait <c>CorpseOnDeath</c>).</param>
+    /// <param name="traits">Gameplay traits (null = <see cref="EntityTraits.None"/>); cross-references are checked by <see cref="Ruleset"/>.</param>
     /// <exception cref="ArgumentException">A value is out of range.</exception>
     public EntityTypeDefinition(
         ushort id,
@@ -57,7 +58,8 @@ public sealed class EntityTypeDefinition
         int footprintWidth = 0,
         int footprintHeight = 0,
         byte[]? footprint = null,
-        bool leavesCorpse = true)
+        bool leavesCorpse = true,
+        EntityTraits? traits = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         if ((int)locomotor >= LocomotorExtensions.Count)
@@ -107,6 +109,7 @@ public sealed class EntityTypeDefinition
         }
 
         LeavesCorpse = leavesCorpse;
+        Traits = traits ?? EntityTraits.None;
     }
 
     /// <summary>The type id used in sim components; equals the index in <see cref="Ruleset.EntityTypes"/>.</summary>
@@ -144,4 +147,10 @@ public sealed class EntityTypeDefinition
 
     /// <summary>Whether a killed entity leaves a corpse decal (which never blocks movement, ORIG-01).</summary>
     public bool LeavesCorpse { get; }
+
+    /// <summary>Gameplay traits (cost, armament, harvesting, production...).</summary>
+    public EntityTraits Traits { get; }
+
+    /// <summary>Whether the type moves.</summary>
+    public bool IsMobile => SpeedUnitsPerSecond > 0;
 }
