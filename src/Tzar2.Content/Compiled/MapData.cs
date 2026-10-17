@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text;
 using Tzar2.Core.Hashing;
 
@@ -6,8 +8,8 @@ namespace Tzar2.Content.Compiled;
 
 /// <summary>
 /// The static part of a compiled map as the simulation consumes it (TDD §9.1, REQ-ARCH-01). Immutable: the
-/// constructor copies the layers. Placed objects (trees, rocks, buildings, start units) are added with the map
-/// converter (§18.5); M2 needs only the terrain layers.
+/// constructor copies the layers. <see cref="Objects"/> are the placed objects (trees, rocks, buildings, start units)
+/// the match starts with; the legacy map converter (§18.5) fills them later, M2 test maps build them in code.
 /// </summary>
 /// <remarks>
 /// Layers are row-major. The terrain and height layers are <b>corner grids</b> of (W+1)×(H+1) vertices (TDD §9.1),
@@ -16,7 +18,10 @@ namespace Tzar2.Content.Compiled;
 public sealed class MapData
 {
     /// <summary>Format version of <see cref="ContentHash"/>'s encoding.</summary>
-    public const int HashVersion = 1;
+    public const int HashVersion = 2;
+
+    /// <summary>Most placed objects a map may hold.</summary>
+    public const int MaxObjects = 1 << 18;
 
     /// <summary>Smallest map side in tiles (test maps; classic maps start at 64).</summary>
     public const int MinSize = 1;
@@ -27,6 +32,7 @@ public sealed class MapData
     private readonly byte[] _terrainCorners;
     private readonly byte[] _heightCorners;
     private readonly byte[] _cliffTiles;
+    private readonly ImmutableArray<MapObject> _objects;
 
     /// <summary>Creates a map.</summary>
     /// <param name="name">Display name.</param>
@@ -35,8 +41,9 @@ public sealed class MapData
     /// <param name="terrainCorners">(W+1)×(H+1) terrain type ids.</param>
     /// <param name="heightCorners">(W+1)×(H+1) heights, or empty for a flat map.</param>
     /// <param name="cliffTiles">W×H flags (non-zero = cliff tile, impassable for land), or empty for none.</param>
-    /// <exception cref="ArgumentException">A size or layer length is invalid.</exception>
-    public MapData(string name, int width, int height, ReadOnlySpan<byte> terrainCorners, ReadOnlySpan<byte> heightCorners, ReadOnlySpan<byte> cliffTiles)
+    /// <param name="objects">Placed objects, in placement order (null = none).</param>
+    /// <exception cref="ArgumentException">A size or layer length is invalid, or an object is off the map.</exception>
+    public MapData(string name, int width, int height, ReadOnlySpan<byte> terrainCorners, ReadOnlySpan<byte> heightCorners, ReadOnlySpan<byte> cliffTiles, IReadOnlyList<MapObject>? objects = null)
     {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentOutOfRangeException.ThrowIfLessThan(width, MinSize);
@@ -70,8 +77,29 @@ public sealed class MapData
             _cliffTiles[i] = cliffTiles[i] != 0 ? (byte)1 : (byte)0;
         }
 
+        objects ??= [];
+        if (objects.Count > MaxObjects)
+        {
+            throw new ArgumentException($"At most {MaxObjects} objects.", nameof(objects));
+        }
+
+        var builder = ImmutableArray.CreateBuilder<MapObject>(objects.Count);
+        foreach (MapObject o in objects)
+        {
+            if (string.IsNullOrEmpty(o.TypeKey) || (uint)o.X >= (uint)(width * UnitsPerTile) || (uint)o.Y >= (uint)(height * UnitsPerTile))
+            {
+                throw new ArgumentException($"Object '{o.TypeKey}' at ({o.X}, {o.Y}) is invalid or off the map.", nameof(objects));
+            }
+
+            builder.Add(o);
+        }
+
+        _objects = builder.MoveToImmutable();
         ContentHash = ComputeHash();
     }
+
+    /// <summary>World units per tile (TDD §8.2).</summary>
+    public const int UnitsPerTile = 2048;
 
     /// <summary>Display name.</summary>
     public string Name { get; }
@@ -91,14 +119,17 @@ public sealed class MapData
     /// <summary>Cliff flag per tile (0 or 1), W×H, row-major.</summary>
     public ReadOnlySpan<byte> CliffTiles => _cliffTiles;
 
+    /// <summary>The objects placed when the match starts, in placement order.</summary>
+    public ImmutableArray<MapObject> Objects => _objects;
+
     /// <summary>xxHash64 of the map (lobby hash check, replay header; REQ-NET-05, §19.4).</summary>
     public ulong ContentHash { get; }
 
     /// <summary>Terrain type id at corner (<paramref name="x"/>, <paramref name="y"/>).</summary>
     public byte TerrainAt(int x, int y) => _terrainCorners[(y * (Width + 1)) + x];
 
-    /// <summary>Checks that every terrain id exists in <paramref name="ruleset"/>.</summary>
-    /// <exception cref="ArgumentException">A corner uses an unknown terrain type.</exception>
+    /// <summary>Checks that every terrain id and object type exists in <paramref name="ruleset"/>.</summary>
+    /// <exception cref="ArgumentException">A corner uses an unknown terrain type, or an object an unknown entity type.</exception>
     public void Validate(Ruleset ruleset)
     {
         ArgumentNullException.ThrowIfNull(ruleset);
@@ -110,6 +141,14 @@ public sealed class MapData
                 throw new ArgumentException($"Map '{Name}' uses terrain type {id}, but ruleset '{ruleset.Name}' defines {count}.", nameof(ruleset));
             }
         }
+
+        foreach (MapObject o in _objects)
+        {
+            if (ruleset.EntityTypeId(o.TypeKey) < 0)
+            {
+                throw new ArgumentException($"Map '{Name}' places '{o.TypeKey}', which ruleset '{ruleset.Name}' does not define.", nameof(ruleset));
+            }
+        }
     }
 
     private ulong ComputeHash()
@@ -117,6 +156,30 @@ public sealed class MapData
         var hasher = new StateHasher();
         hasher.Add(HashVersion).Add(Encoding.UTF8.GetBytes(Name)).Add(Width).Add(Height)
             .Add(_terrainCorners).Add(_heightCorners).Add(_cliffTiles);
+        hasher.Add(_objects.Length);
+        foreach (MapObject o in _objects)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(o.TypeKey)).Add(o.Owner).Add(o.X).Add(o.Y);
+        }
+
         return hasher.GetCurrentHash();
     }
+}
+
+/// <summary>
+/// An object placed on a map at match start. Units stand at (<see cref="X"/>, <see cref="Y"/>) in world units; a
+/// structure (a type with a footprint) is placed with its footprint's top-left tile at (X / 2,048, Y / 2,048).
+/// </summary>
+/// <param name="TypeKey">Entity type key in the ruleset, e.g. <c>euro.castle</c>, <c>comm.tree</c>.</param>
+/// <param name="Owner">Player slot, or <see cref="Nature"/> for unowned objects (resources, animals).</param>
+/// <param name="X">X in world units.</param>
+/// <param name="Y">Y in world units.</param>
+public readonly record struct MapObject(string TypeKey, byte Owner, int X, int Y)
+{
+    /// <summary>The owner of objects that belong to no kingdom (trees, rocks; §9.1 "Nature").</summary>
+    public const byte Nature = 0xFF;
+
+    /// <summary>A structure placed with its footprint's top-left at tile (<paramref name="tileX"/>, <paramref name="tileY"/>).</summary>
+    public static MapObject AtTile(string typeKey, byte owner, int tileX, int tileY)
+        => new(typeKey, owner, tileX * MapData.UnitsPerTile, tileY * MapData.UnitsPerTile);
 }

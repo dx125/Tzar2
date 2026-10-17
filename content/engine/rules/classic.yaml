@@ -1,0 +1,129 @@
+# The `classic` ruleset (TDD §11.3, DEC-06): v1.10 behaviour of the GOG reference build.
+#
+# This file holds NO original data. The numbers (costs, times, hit points, attack, defence, sight, range, speed, rate,
+# population, footprints, resource amounts, starting resources, damage bonuses) are read from the user's own imported
+# tables (`legacy:` below; ADR 0032). What this file adds is the mapping of those tables onto traits, and the constants
+# the tables do not contain.
+#
+# Values marked `UNVERIFIED (UNK-nn)` are placeholders: not in any original table and not yet measured in the running
+# game. They are listed with their unknowns in docs/mechanics/m2-placeholders.md and get replaced by capture facts
+# (`t2 fidelity`, ADR 0030). Do not tune them for balance: replace them with measurements.
+#
+# Format (ADR 0031): top-level keys are the sections below or entries. `^Name` entries are templates; `inherits` lists
+# templates; `-Trait:` removes an inherited trait; `field+=`/`field-=` append to/remove from inherited lists. A patch
+# must name an existing entry; a new one says `new: true`.
+
+ruleset:
+  name: classic
+  maxPlayers: 8
+  occupancyCellsPerTileAxis: 2        # UNVERIFIED (UNK-11): unit packing per tile
+  corpseTtlMs: 120000                 # REQ-PATH-08 default; UNVERIFIED corpse lifetime of the original
+  decalCap: 4000
+
+# GAME-01. Resource type ids are positions in this list. Iron exists in the data (RES.INI, te_ironplus) but not in the
+# HUD (UNK-14).
+resources: [food, wood, stone, gold, iron]
+
+gameplay:
+  # Owner decision for M2: a group move travels at its slowest member's speed in both rulesets until UNK-12 is captured
+  # (ADR 0024 question).
+  groupMoveSpeed: slowest             # UNVERIFIED (UNK-12)
+  populationLimit: 200                # UNVERIFIED: default of the lobby's POPULATION LIMIT setting (UNK-20)
+  startingResources: legacy           # RES.INI [Low]/[Medium]/[High] (lobby STARTING RESOURCES)
+  defaultStartingResources: medium    # UNVERIFIED: the lobby's default level
+  # Compile-time conversions of table columns.
+  speedPixelsPerSecondPerPoint: 12    # UNVERIFIED (UNK-12): px/s per SPEED point (SPEED 4 = 48 px/s)
+  attackCycleMs: 6000                 # UNVERIFIED (UNK-07): time between hits = attackCycleMs / RATE
+  hitDelayPercent: 50                 # UNVERIFIED (UNK-07): hit frame at this share of the cycle
+  # Combat and work constants.
+  minimumDamage: 1                    # UNVERIFIED (UNK-08)
+  resistanceScale: 100                # UNVERIFIED (UNK-08): building damage x 100 / (100 + RESISTANCE) (manual ch. 4)
+  meleeReachPx: 8                     # UNVERIFIED (UNK-07/11): edge-to-edge reach of hand-to-hand attacks
+  interactionReachPx: 32              # UNVERIFIED (UNK-17/18): worker reach to a node, drop-off or site
+  acquireIntervalMs: 200              # UNVERIFIED: target scan cadence of idle armed units
+  nodeSearchRadiusTiles: 12           # UNVERIFIED (UNK-17): where a worker looks for the next node of a resource
+  queueCapacity: 10                   # UNVERIFIED (UNK-20): production queue length
+  constructionRefundPercent: 100      # UNVERIFIED: refund of a cancelled construction site
+  productionRefundPercent: 100        # UNVERIFIED: refund of a cancelled queued unit
+
+# Terrain types of the M2 test maps (the terrain-set conversion of §9.1 replaces this list with the original sets).
+terrain:
+  - { key: grass, passable: [foot, mounted, large, air] }
+  - { key: water, passable: [ship, air], water: true }
+
+legacy:
+  # Table prefixes: DATA/<civ> UNITS.TXT, DATA/<civ> BUILDINGS.TXT; also the `[civ]` sections of OBJECTS/*.INI.
+  civilizations: [euro, asia, arab, comm]
+  # The subset of classes compiled for M2 basic play (§25: gathering, building, production, combat). M3 extends it.
+  units: [peon, footman, archer, maceman, pikeman, knight, heavy_cavalry, horse_samurai]
+  buildings: [castle, house, barrack, storage, lumber, farm, field]
+  # Cost suffixes (GAME-01; "m" = mana is per caster, not imported here).
+  costSuffixes: { f: food, w: wood, s: stone, g: gold, i: iron }
+  # Producer column of the unit tables -> building class.
+  producers: { Castle: castle, Barracks: barrack, Workshop: workshop, Harbor: harbor, "Mage Tower": magetower, Cathedral: cathedral, Mosque: mosque, Market: market }
+  # Resource rocks: amount from RES.INI [Others].
+  resourceNodes:
+    res_gold: { resource: gold, amount: golden rocks }
+    res_stone: { resource: stone, amount: rocks }
+  # Starting-resource levels -> RES.INI sections.
+  startingResources: { low: Low, medium: Medium, high: High }
+  # Civilization prefixes of class names in BONUS.INI.
+  bonusCivPrefixes: { e: euro, a: asia, r: arab }
+  # Hash of what the compiler reads from the tables of the clean reference build; another value means a modified
+  # installation (a warning in the import and ruleset reports, not an error). Changes with the lists above.
+  referenceEdition: GOG v1.10 EN
+  referenceDataHash: "12BCCFB408824815"
+
+# ---- templates ---------------------------------------------------------------------------------------------------
+
+^Unit:
+  Mobile: { locomotor: foot }
+  Collision: { radius: 7 }            # UNVERIFIED (UNK-11): collision radius in px
+  CorpseOnDeath: {}
+  PopulationCost: { amount: 1 }       # GAME-05: 1 population per unit in classic
+
+^Building:
+  Armor: { defence: 0 }               # RESISTANCE (from the table) reduces damage instead, see gameplay.resistanceScale
+
+^Resource: {}
+
+^Cavalry:
+  Mobile: { locomotor: mounted }
+  Collision: { radius: 10 }           # UNVERIFIED (UNK-11)
+
+# Peasants (manual §5.4: build, repair, capture, harvest...).
+^class.peon:
+  Armament: { autoAcquire: false }    # UNVERIFIED: idle peasants do not start fights
+  Builder: { civilizations: [own, comm] }
+  Harvester:
+    capacity: 10                      # UNVERIFIED (UNK-17)
+    gatherMs: { food: 1000, wood: 1000, stone: 1000, gold: 1000 }   # UNVERIFIED (UNK-17): per unit
+
+^class.knight: { inherits: [^Cavalry] }
+^class.heavy_cavalry: { inherits: [^Cavalry] }
+^class.horse_samurai: { inherits: [^Cavalry] }
+
+# Drop-offs (GAME-02; manual §5.4.1.2: castle stores all resources, farm food, lumbermill wood, storage gold and iron;
+# stone at the storage follows the Stone Mining technology there, E.3).
+^class.castle:
+  DropOff: { resources: [food, wood, stone, gold, iron] }
+^class.farm:
+  DropOff: { resources: [food] }
+^class.lumber:
+  DropOff: { resources: [wood] }
+^class.storage:
+  DropOff: { resources: [stone, gold, iron] }   # UNVERIFIED: stone
+
+# Fields produce unlimited food (manual §5.5) and need constant care (decay: UNK-17, not in M2).
+^class.field:
+  ResourceNode: { resource: food, amount: unlimited }
+
+# ---- entries not in the unit/building tables ----------------------------------------------------------------------
+
+# One tree per tile (§9.1). Trees come from the terrain sets (TREES.INI), which hold no amount.
+comm.tree:
+  new: true                           # not in the tables: a new entry (ADR 0031)
+  inherits: [^Resource]
+  Legacy: { class: tree, civ: comm }
+  Building: { width: 1, height: 1 }
+  ResourceNode: { resource: wood, amount: 100 }   # UNVERIFIED (UNK-17): wood per tree

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Tzar2.Content.Rules;
 using Tzar2.Tools.Cli.Fidelity.Yaml;
 using Xunit;
 

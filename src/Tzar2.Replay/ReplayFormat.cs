@@ -69,7 +69,7 @@ public sealed class ReplayRecorder
     public const uint Magic = 0x50523254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 1;
+    public const int FormatVersion = 2;
 
     internal const byte TagEnd = 0;
     internal const byte TagTick = 1;
@@ -97,6 +97,9 @@ public sealed class ReplayRecorder
         _writer.WriteBoolean(c.CheatsAllowed);
         _writer.WriteVarUInt64((ulong)c.FullHashIntervalTicks);
         _writer.WriteVarUInt64((ulong)c.TickLengthMilliseconds);
+        _writer.WriteVarUInt64((ulong)c.PathBudgetPerTick);
+        _writer.WriteVarUInt64((ulong)(c.StartingResources + 1));
+        _writer.WriteVarUInt64((ulong)(c.PopulationLimit + 1));
         _writer.WriteByte((byte)header.OverflowMode);
         _writer.WriteVarUInt64((ulong)header.HashIntervalTicks);
         _writer.WriteVarUInt64((ulong)header.KeyframeIntervalTicks);
@@ -265,10 +268,13 @@ public sealed class ReplayFile
         bool cheats = reader.ReadBoolean();
         int fullInterval = ReadInt(ref reader, int.MaxValue);
         int tickLength = ReadInt(ref reader, 1000);
+        int pathBudget = ReadInt(ref reader, int.MaxValue);
+        int startingResources = ReadInt(ref reader, 16) - 1;
+        int populationLimit = ReadInt(ref reader, 100_001) - 1;
         byte overflow = reader.ReadByte();
         int hashInterval = ReadInt(ref reader, int.MaxValue);
         int keyframeInterval = ReadInt(ref reader, int.MaxValue);
-        if (players < 1 || fullInterval < 1 || tickLength < 1 || hashInterval < 1 || keyframeInterval < 1 || overflow > 1)
+        if (players < 1 || fullInterval < 1 || tickLength < 1 || pathBudget < 1 || hashInterval < 1 || keyframeInterval < 1 || overflow > 1)
         {
             throw new InvalidDataException("Invalid replay header.");
         }
@@ -285,6 +291,9 @@ public sealed class ReplayFile
                 CheatsAllowed = cheats,
                 FullHashIntervalTicks = fullInterval,
                 TickLengthMilliseconds = tickLength,
+                PathBudgetPerTick = pathBudget,
+                StartingResources = startingResources,
+                PopulationLimit = populationLimit,
             },
             OverflowMode = (OverflowMode)overflow,
             HashIntervalTicks = hashInterval,

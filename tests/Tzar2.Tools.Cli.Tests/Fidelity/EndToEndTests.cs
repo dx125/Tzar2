@@ -12,6 +12,7 @@ using Tzar2.Tools.Cli.Fidelity.Analysis;
 using Tzar2.Tools.Cli.Fidelity.Capture;
 using Tzar2.Tools.Cli.Fidelity.Imaging;
 using Tzar2.Tools.Cli.Fidelity.Scenarios;
+using Tzar2.Content.Rules;
 using Tzar2.Tools.Cli.Fidelity.Yaml;
 using Xunit;
 

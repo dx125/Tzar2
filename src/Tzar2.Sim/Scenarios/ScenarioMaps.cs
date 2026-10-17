@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Rng;
 
@@ -80,6 +81,13 @@ public static class ScenarioMaps
         }
 
         return new MapData(name, width, height, corners, [], cliffs);
+    }
+
+    /// <summary>A copy of <paramref name="map"/> with placed objects (units, buildings, resources) for gameplay test maps.</summary>
+    public static MapData WithObjects(MapData map, IReadOnlyList<MapObject> objects, string? name = null)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        return new MapData(name ?? map.Name, map.Width, map.Height, map.TerrainCorners, map.HeightCorners, map.CliffTiles, objects);
     }
 
     /// <summary>

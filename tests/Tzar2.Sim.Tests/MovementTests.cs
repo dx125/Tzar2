@@ -131,6 +131,32 @@ public class MovementTests
     }
 
     [Fact]
+    public void A_follower_pushed_out_of_range_of_an_idle_target_returns()
+    {
+        using var d = new SimDriver(Open(64));
+        EntityId leader = d.Spawn(SyntheticScenario.Swordsman, 0, 20, 20);
+        EntityId follower = d.Spawn(SyntheticScenario.Swordsman, 0, 24, 20);
+        d.Order(0, CommandKind.Follow, [follower], target: leader);
+        d.RunUntil(() => false, 100);
+        Assert.False(d.IsMoving(follower));
+
+        // Shove it 5 tiles away (as a crowd would) while the leader stands still.
+        World w = d.World;
+        w.IsLocked = false;
+        ref Position p = ref w.Positions.Get(follower);
+        ref OccupancyCell cell = ref w.OccupancyCells.Get(follower);
+        w.Map.RemoveOccupant(cell.Cell);
+        p = new Position(p.X + (5 * Tile), p.Y);
+        cell.Cell = w.Map.CellIndexAt(p.X, p.Y);
+        w.Map.AddOccupant(cell.Cell);
+        w.IsLocked = true;
+
+        d.RunUntil(() => false, 200);
+        Position l = d.PositionOf(leader);
+        Assert.True(Distance(d.PositionOf(follower), l.X, l.Y) < 4 * Tile, "the follower did not come back");
+    }
+
+    [Fact]
     public void A_building_placed_across_a_path_makes_the_unit_route_around_it()
     {
         // A corridor 3 tiles high; a 3×3 house (plus-shaped mask) placed later in its middle, with a detour above.

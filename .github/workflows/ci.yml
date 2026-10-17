@@ -152,11 +152,17 @@ jobs:
           dotnet run -c Release --project src/Tzar2.Tools.Cli --
           bench --map 128 --entities 2000 --players 4 --seed 1592598566 --orders 12 --churn 2
           --ticks 300 --warmup 0 --workers 4
-          --expect-hash 56C6C54762811D13 --hash-stream hash-stream-${{ matrix.os }}.tsv
+          --expect-hash C8B62DE0DA848E64 --hash-stream hash-stream-${{ matrix.os }}.tsv
+      - name: Gameplay scenario hash stream (economy + combat, t2 bench, must match the golden final hash)
+        run: >
+          dotnet run -c Release --project src/Tzar2.Tools.Cli --
+          bench --scenario gameplay --map 128 --players 4 --entities 480 --seed 1592598566
+          --ticks 1600 --warmup 0 --workers 4
+          --expect-hash 377E87E86F7F2784 --hash-stream hash-stream-gameplay-${{ matrix.os }}.tsv
       - uses: actions/upload-artifact@v4
         with:
           name: hash-stream-${{ matrix.os }}
-          path: hash-stream-${{ matrix.os }}.tsv
+          path: hash-stream-*${{ matrix.os }}.tsv
 
   determinism-compare:
     name: Determinism - identical hash streams on all OSes
@@ -171,12 +177,15 @@ jobs:
         run: |
           set -euo pipefail
           ls -l hash-stream-*.tsv
-          ref=hash-stream-ubuntu-latest.tsv
-          for f in hash-stream-*.tsv; do
-            if ! cmp -s "$ref" "$f"; then
-              echo "::error::$f differs from $ref; first differing ticks:"
-              diff "$ref" "$f" | head -20
-              exit 1
-            fi
+          for kind in "" "gameplay-"; do
+            ref=hash-stream-${kind}ubuntu-latest.tsv
+            for os in windows-latest ubuntu-latest macos-latest; do
+              f=hash-stream-${kind}${os}.tsv
+              if ! cmp -s "$ref" "$f"; then
+                echo "::error::$f differs from $ref; first differing ticks:"
+                diff "$ref" "$f" | head -20
+                exit 1
+              fi
+            done
+            echo "The ${kind:-synthetic-}hash streams of the 3 OSes are identical ($(wc -l < "$ref") ticks)."
           done
-          echo "All $(ls hash-stream-*.tsv | wc -l) hash streams are identical ($(wc -l < "$ref") ticks)."

@@ -31,6 +31,30 @@ public enum CommandKind : ushort
     /// <summary>Follow <see cref="Command.Target"/>: keep re-pathing to it and stay close (guard/escort base order).</summary>
     Follow = 5,
 
+    /// <summary>Gather from resource node <see cref="Command.Target"/> and carry to the nearest drop-off (GAME-02).</summary>
+    Harvest = 6,
+
+    /// <summary>
+    /// Construct (GAME-03): a new building of type Arg0 with its footprint's top-left at the tile containing (X, Y), paid
+    /// at placement; or, with <see cref="Command.Target"/> set, help build that existing construction site.
+    /// </summary>
+    Build = 7,
+
+    /// <summary>Queue Arg1 (1-16) units of type Arg0 in each listed producer, paid when queued (GAME-05).</summary>
+    Train = 8,
+
+    /// <summary>
+    /// Cancel: a listed construction site is removed with a refund; a listed producer drops queue item Arg0 (-1 = the last)
+    /// with a refund.
+    /// </summary>
+    Cancel = 9,
+
+    /// <summary>Set the rally point of the listed producers to (X, Y); Arg0 = 1 clears it.</summary>
+    SetRally = 10,
+
+    /// <summary>Attack <see cref="Command.Target"/> until it dies (GAME-07).</summary>
+    Attack = 11,
+
     /// <summary>Debug: spawn Arg1 (1-64) units of type Arg0 at (X, Y); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugSpawn = 0xF000,
 
@@ -48,7 +72,7 @@ public enum CommandFlags : byte
     /// <summary>Shift: queue (waypoints) instead of replacing the current order.</summary>
     Queue = 1,
 
-    /// <summary>Ctrl: e.g. move-advance (attack-move).</summary>
+    /// <summary>Ctrl: e.g. move-advance (attack-move: a Move with Ctrl attacks enemies met on the way).</summary>
     Ctrl = 2,
 
     /// <summary>Alt: e.g. move-sneak.</summary>

@@ -1,5 +1,7 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 
 namespace Tzar2.Sim;
@@ -31,6 +33,15 @@ public sealed record SimulationConfig
     /// </summary>
     public int PathBudgetPerTick { get; init; } = DefaultPathBudgetPerTick;
 
+    /// <summary>
+    /// Starting-resource level (lobby STARTING RESOURCES): an index into the ruleset's
+    /// <c>GameplaySettings.StartingResources</c>, or -1 for the ruleset's default level.
+    /// </summary>
+    public int StartingResources { get; init; } = -1;
+
+    /// <summary>Population limit of the match (lobby POPULATION LIMIT), or -1 for the ruleset's default.</summary>
+    public int PopulationLimit { get; init; } = -1;
+
     /// <summary>Checks the ranges.</summary>
     /// <exception cref="ArgumentOutOfRangeException">A value is out of range.</exception>
     public void Validate(int maxPlayers)
@@ -41,6 +52,10 @@ public sealed record SimulationConfig
         ArgumentOutOfRangeException.ThrowIfLessThan(TickLengthMilliseconds, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(TickLengthMilliseconds, 1000);
         ArgumentOutOfRangeException.ThrowIfLessThan(PathBudgetPerTick, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(StartingResources, -1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(StartingResources, 15);
+        ArgumentOutOfRangeException.ThrowIfLessThan(PopulationLimit, -1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(PopulationLimit, 100_000);
     }
 }
 
@@ -58,7 +73,14 @@ public enum PlayerFlags
     Defeated = 2,
 }
 
-/// <summary>Per-player hot state (hashed every tick, REQ-SIM-12). Resources per GAME-01.</summary>
+/// <summary>A stockpile: one amount per resource type id of the ruleset (GAME-01; at most <see cref="Ruleset.MaxResourceTypes"/>).</summary>
+[InlineArray(Ruleset.MaxResourceTypes)]
+public struct ResourceAmounts
+{
+    private int _amount;
+}
+
+/// <summary>Per-player hot state (hashed every tick, REQ-SIM-12): stockpile (GAME-01) and population (GAME-05; ADR 0034).</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct PlayerState
 {
@@ -66,16 +88,16 @@ public struct PlayerState
     /// <summary>Flags.</summary>
     public PlayerFlags Flags;
 
-    /// <summary>Food.</summary>
-    public int Food;
+    /// <summary>Stockpile by resource type id.</summary>
+    public ResourceAmounts Resources;
 
-    /// <summary>Wood.</summary>
-    public int Wood;
+    /// <summary>Population used by the player's units (recomputed every tick, pipeline step 4).</summary>
+    public int Population;
 
-    /// <summary>Stone.</summary>
-    public int Stone;
+    /// <summary>Population room: completed buildings' <c>PopulationProvided</c>, at most <see cref="PopulationLimit"/>.</summary>
+    public int PopulationCap;
 
-    /// <summary>Gold.</summary>
-    public int Gold;
+    /// <summary>The match's population limit.</summary>
+    public int PopulationLimit;
 #pragma warning restore CA1051
 }

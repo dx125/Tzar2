@@ -27,7 +27,56 @@ public class AllocationTests
     public void Steady_state_ticks_do_not_allocate(int workers, int churn)
     {
         using var scenario = new SyntheticScenario(TestWorlds.SmallScenario with { ChurnPerPlayerPerTick = churn }, workers);
+        AssertSteadyStateDoesNotAllocate(scenario, workers);
+    }
 
+    /// <summary>The gameplay systems (production, economy, workers, combat) under the economy-and-combat scenario.</summary>
+#if DEBUG
+    [Theory(Skip = "The allocation gate runs on optimized (Release) builds; Debug code is JIT-compiled without boxing elision.")]
+#else
+    [Theory]
+#endif
+    [InlineData(1)]
+    [InlineData(4)]
+    public void Gameplay_ticks_do_not_allocate(int workers)
+    {
+        using var scenario = new GameplayScenario(GameplayFixtures.Classic, new GameplayScenarioOptions { MapSize = 96, Players = 2, SoldiersPerPlayer = 150, WorkersPerPlayer = 30, TreesPerPlayer = 120, BotIntervalTicks = 4 }, workers);
+
+        // Into the fight (soldiers meet in the middle after ~30 s), and until the flow-field cache holds its 64 field
+        // objects: group orders to new goals allocate a field object until then (bounded pool growth, not per tick).
+        World world = scenario.Simulation.World;
+        for (int t = 0; t < 700 || (world.FlowFields.FieldsAllocated < Tzar2.Sim.Navigation.FlowFieldCache.Capacity && t < 20_000); t++)
+        {
+            scenario.RunTick();
+        }
+
+        Assert.Equal(Tzar2.Sim.Navigation.FlowFieldCache.Capacity, world.FlowFields.FieldsAllocated);
+        AssertSteadyStateDoesNotAllocate(scenario, workers);
+    }
+
+    /// <summary>Structures appearing and disappearing (incremental navigation updates) while units move.</summary>
+#if DEBUG
+    [Theory(Skip = "The allocation gate runs on optimized (Release) builds; Debug code is JIT-compiled without boxing elision.")]
+#else
+    [Theory]
+#endif
+    [InlineData(1)]
+    [InlineData(4)]
+    public void Passability_churn_does_not_allocate(int workers)
+    {
+        using var scenario = new PassabilityChurnScenario(workers);
+        for (int t = 0; t < 400; t++)
+        {
+            scenario.RunTick();
+        }
+
+        int version = scenario.Simulation.World.Map.PassabilityVersion;
+        AssertSteadyStateDoesNotAllocate(scenario, workers);
+        Assert.True(scenario.Simulation.World.Map.PassabilityVersion > version + 100, "the scenario did not change passability");
+    }
+
+    private static void AssertSteadyStateDoesNotAllocate(IBenchScenario scenario, int workers)
+    {
         // Tier-0 and OSR code may allocate (e.g. unelided boxing) until tiered compilation has optimized the hot
         // methods in the background; with DOTNET_TieredCompilation=0 the first measured tick is already at 0 B.
         // Pools (plan buffers, flow-field cluster fields) also grow to their steady-state size during the first few
@@ -62,14 +111,16 @@ public class AllocationTests
         Assert.Equal(0, simThread);
 
         // With one worker every job runs inline on this thread, so other threads' allocations are the runtime's alone
-        // (ubuntu x64 runners showed a steady ~1.3 KB per window there); with workers, they may be the jobs'.
+        // (ubuntu x64 runners showed a steady ~1.3 KB per window there); with workers, they may be the jobs'. The runtime's
+        // own share also appears with workers (1,176 B per window on ubuntu x64 runners, M2 part C), so the bound is
+        // 2 KB: a per-tick allocation in a job costs at least ~24 B x 200 ticks = 4.8 KB and still fails it.
         if (workers > 1)
         {
-            Assert.True(allThreads < 1024, $"{allThreads} B allocated on all threads over 200 ticks");
+            Assert.True(allThreads < 2048, $"{allThreads} B allocated on all threads over 200 ticks");
         }
     }
 
-    private static (long SimThread, long AllThreads) MeasureTicks(SyntheticScenario scenario, int ticks)
+    private static (long SimThread, long AllThreads) MeasureTicks(IBenchScenario scenario, int ticks)
     {
         long simThread = 0;
         long allThreads = 0;

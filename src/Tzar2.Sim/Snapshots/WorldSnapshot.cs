@@ -28,7 +28,7 @@ public static class WorldSnapshot
     public const uint Magic = 0x4E533254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 3;
+    public const int FormatVersion = 4;
 
     /// <summary>Writes a snapshot of <paramref name="world"/>.</summary>
     public static void Capture(World world, BinaryBufferWriter writer, StateHasher hasher)
@@ -46,6 +46,8 @@ public static class WorldSnapshot
         writer.WriteVarUInt64((ulong)config.FullHashIntervalTicks);
         writer.WriteVarUInt64((ulong)config.TickLengthMilliseconds);
         writer.WriteVarUInt64((ulong)config.PathBudgetPerTick);
+        writer.WriteVarUInt64((ulong)(config.StartingResources + 1));
+        writer.WriteVarUInt64((ulong)(config.PopulationLimit + 1));
         writer.WriteVarUInt64((ulong)world.Tick.Value);
         world.Entities.WriteTo(writer);
         world.Rng.WriteTo(writer);
@@ -197,7 +199,10 @@ public static class WorldSnapshot
         ulong fullHashInterval = reader.ReadVarUInt64();
         ulong tickLength = reader.ReadVarUInt64();
         ulong pathBudget = reader.ReadVarUInt64();
-        if (players is 0 or > 16 || fullHashInterval is 0 or > int.MaxValue || tickLength is 0 or > 1000 || pathBudget is 0 or > int.MaxValue)
+        ulong startingResources = reader.ReadVarUInt64();
+        ulong populationLimit = reader.ReadVarUInt64();
+        if (players is 0 or > 16 || fullHashInterval is 0 or > int.MaxValue || tickLength is 0 or > 1000 || pathBudget is 0 or > int.MaxValue
+            || startingResources > 16 || populationLimit > 100_001)
         {
             throw new InvalidDataException("Invalid configuration in snapshot.");
         }
@@ -210,6 +215,8 @@ public static class WorldSnapshot
             FullHashIntervalTicks = (int)fullHashInterval,
             TickLengthMilliseconds = (int)tickLength,
             PathBudgetPerTick = (int)pathBudget,
+            StartingResources = (int)startingResources - 1,
+            PopulationLimit = (int)populationLimit - 1,
         };
     }
 }

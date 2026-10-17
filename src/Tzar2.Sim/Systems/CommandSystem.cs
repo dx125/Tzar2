@@ -59,6 +59,7 @@ public sealed class CommandSystem : ISimSystem
                 }
 
                 bool patrol = command.Kind == CommandKind.Patrol;
+                CombatMode mode = !patrol && (command.Flags & CommandFlags.Ctrl) != 0 ? CombatMode.AttackMove : CombatMode.None;
                 int group = !patrol && CountOwnedMovers(world, command.Player, entities) >= 2 ? world.NextGroupId++ : 0;
                 int applied = 0;
                 foreach (EntityId entity in entities)
@@ -69,6 +70,7 @@ public sealed class CommandSystem : ISimSystem
                         continue;
                     }
 
+                    GameplayCommands.ClearTasks(world, entity, mode);
                     ref Motion m = ref world.Motions.At(p);
                     m.Order = patrol ? MotionOrder.Patrol : MotionOrder.Move;
                     m.OrderX = command.X;
@@ -103,6 +105,7 @@ public sealed class CommandSystem : ISimSystem
                         continue;
                     }
 
+                    GameplayCommands.ClearTasks(world, entity);
                     ref Motion m = ref world.Motions.At(p);
                     m.Order = MotionOrder.Follow;
                     m.FollowTarget = command.Target.Value;
@@ -124,6 +127,7 @@ public sealed class CommandSystem : ISimSystem
                     int p = OwnedMover(world, entity, command.Player);
                     if (p >= 0)
                     {
+                        GameplayCommands.ClearTasks(world, entity);
                         MovementOrders.Stop(world, entity, ref world.Motions.At(p));
                         applied++;
                     }
@@ -193,6 +197,24 @@ public sealed class CommandSystem : ISimSystem
                 }
 
                 return null;
+
+            case CommandKind.Harvest:
+                return GameplayCommands.Harvest(world, command, entities);
+
+            case CommandKind.Build:
+                return GameplayCommands.Build(world, command, entities);
+
+            case CommandKind.Train:
+                return GameplayCommands.Train(world, command, entities);
+
+            case CommandKind.Cancel:
+                return GameplayCommands.Cancel(world, command, entities);
+
+            case CommandKind.SetRally:
+                return GameplayCommands.SetRally(world, command, entities);
+
+            case CommandKind.Attack:
+                return GameplayCommands.Attack(world, command, entities);
 
             default:
                 return CommandRejection.UnknownKind;

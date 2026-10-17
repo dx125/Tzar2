@@ -43,3 +43,5 @@ speeds from a blob 10 tiles deep.
 
 * Classic Tzar may move every unit at its own speed (UNK-12/RE-06 will tell). Keep "group moves at its slowest speed"
   for all rulesets (needed for acceptance 2), or make it a ruleset option with `classic` = own speeds?
+  **Answered (M2 part C):** a ruleset option `gameplay.groupMoveSpeed: slowest | own`, `slowest` in both rulesets until
+  UNK-12 is captured (ADR 0032).

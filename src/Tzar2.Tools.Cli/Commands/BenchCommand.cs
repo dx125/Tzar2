@@ -27,6 +27,8 @@ internal static class BenchCommand
         string? hashStream = null;
         bool trace = false;
         ulong? expectHash = null;
+        ulong? seedOption = null;
+        int? playersOption = null;
         for (int i = 0; i < args.Length; i++)
         {
             string arg = args[i];
@@ -52,12 +54,12 @@ internal static class BenchCommand
             bool ok = true;
             switch (arg)
             {
-                case "--scenario": scenarioName = value; ok = value is "synthetic" or "b3" or "b3-groups" or "b4"; break;
+                case "--scenario": scenarioName = value; ok = value is "synthetic" or "b3" or "b3-groups" or "b4" or "gameplay"; break;
                 case "--group": ok = TryInt(value, 1, 4096, v => group = v); break;
                 case "--path-budget": ok = TryInt(value, 1, int.MaxValue, v => budget = v); break;
                 case "--entities": ok = TryInt(value, 0, 1_000_000, v => entitiesOption = v); break;
                 case "--map": ok = TryInt(value, 8, 1024, v => mapOption = v); break;
-                case "--players": ok = TryInt(value, 1, 16, v => options = options with { Players = v }); break;
+                case "--players": ok = TryInt(value, 1, 16, v => options = options with { Players = v }); playersOption = options.Players; break;
                 case "--orders": ok = TryInt(value, 0, 4096, v => options = options with { OrdersPerPlayerPerTick = v }); break;
                 case "--churn": ok = TryInt(value, 0, 64, v => options = options with { ChurnPerPlayerPerTick = v }); break;
                 case "--ticks": ok = TryInt(value, 1, 10_000_000, v => ticksOption = v); break;
@@ -66,6 +68,7 @@ internal static class BenchCommand
                 case "--seed":
                     ok = ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out ulong seed);
                     options = options with { Seed = seed };
+                    seedOption = seed;
                     break;
                 case "--hash-stream": hashStream = value; break;
                 case "--expect-hash":
@@ -103,6 +106,16 @@ internal static class BenchCommand
                 },
                 workers),
             "b4" => new MassDeathScenario(new MassDeathScenarioOptions { MapSize = mapOption ?? 256, PathBudgetPerTick = pathBudget }, workers),
+            "gameplay" => new GameplayScenario(
+                GameplayRuleset.Value,
+                new GameplayScenarioOptions
+                {
+                    MapSize = mapOption ?? 192,
+                    Players = Math.Min(playersOption ?? 4, 8),
+                    SoldiersPerPlayer = entitiesOption is { } n ? n / Math.Min(playersOption ?? 4, 8) : 300,
+                    Seed = seedOption ?? new GameplayScenarioOptions().Seed,
+                },
+                workers),
             _ => new SyntheticScenario(options, workers),
         };
 
@@ -130,7 +143,7 @@ internal static class BenchCommand
         {
             pathSystem ??= system as Tzar2.Sim.Systems.PathRequestSystem;
         }
-        int ticks = ticksOption ?? scenarioName switch { "b3" or "b3-groups" => 600, "b4" => 3600, _ => 1000 };
+        int ticks = ticksOption ?? scenarioName switch { "b3" or "b3-groups" => 600, "b4" => 3600, "gameplay" => 2400, _ => 1000 };
         int warmup = warmupOption ?? (scenarioName == "synthetic" ? 100 : 0);
         // "\n" line ends, so hash streams from Windows and Unix runners compare byte for byte.
         using StreamWriter? stream = hashStream is null ? null : new StreamWriter(hashStream) { NewLine = "\n" };
@@ -195,6 +208,7 @@ internal static class BenchCommand
             MazeMoveScenario b3 when b3.PlannedAfterTick is < 0 or > 2 => "B3: the 500 move orders were not all planned within 3 ticks",
             MassDeathScenario b4 when b4.Blocked > 0 => "B4: units got stuck in the traffic through the mass-death area",
             MassDeathScenario when world.Map.ObstacleVersion != 0 => "B4: corpses changed passability",
+            GameplayScenario g when g.Delivered == 0 || g.Kills == 0 || g.Trained == 0 => "gameplay: no resources were delivered, nobody fought or nobody was trained",
             _ => null,
         };
         if (violation is not null)
@@ -242,7 +256,9 @@ internal static class BenchCommand
         output.WriteLine();
         output.WriteLine("  --scenario <name>   synthetic (bot orders on a generated map, default), b3 (500 individual move");
         output.WriteLine("                      orders on a 512² maze), b3-groups (the same in groups, see --group), b4 (mass");
-        output.WriteLine("                      death: 2,000 kills in 60 s, then traffic across the bridge)");
+        output.WriteLine("                      death: 2,000 kills in 60 s, then traffic across the bridge), gameplay (economy and");
+        output.WriteLine("                      combat: bases, harvesting, building, training and a battle of all kingdoms; the");
+        output.WriteLine("                      classic ruleset compiled from synthetic tables; --players, --entities = soldiers)");
         output.WriteLine("  --group <n>         units per order in b3-groups (default 50)");
         output.WriteLine("  --path-budget <n>   path-request budget in node expansions per tick (match setting)");
         output.WriteLine("  --trace             print per-tick time and path-request counters");
@@ -258,4 +274,7 @@ internal static class BenchCommand
         output.WriteLine("  --hash-stream <f>   write 'tick<TAB>hash[<TAB>full hash]' per tick to a file");
         output.WriteLine("  --expect-hash <hex> exit 1 if the final full-state hash differs");
     }
+
+    // The classic ruleset from the synthetic tables (no original data needed, REQ-LEGAL-03), compiled once.
+    private static readonly Lazy<Tzar2.Content.Compiled.Ruleset> GameplayRuleset = new(() => Tzar2.Content.Rules.SyntheticLegacyContent.CompileRuleset());
 }

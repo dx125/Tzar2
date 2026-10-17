@@ -240,6 +240,12 @@ public class EcsTests
             return Marshal.SizeOf(type);
         }
 
+        // [InlineArray(n)]: one declared element field repeated n times without gaps.
+        if (type.GetCustomAttribute<InlineArrayAttribute>() is { } inline)
+        {
+            return inline.Length * type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Sum(f => SizeOf(f.FieldType));
+        }
+
         return type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Sum(f => SizeOf(f.FieldType));
     }
 

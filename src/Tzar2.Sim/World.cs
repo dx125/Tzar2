@@ -50,6 +50,11 @@ public sealed class World
         OccupancyCells = Components.RegisterHot<OccupancyCell>("core.occupancy");
         Names = Components.RegisterCold<EntityName>("core.name");
         Footprints = Components.RegisterHot<Footprint>("core.footprint");
+        Combats = Components.RegisterHot<Combat>("game.combat");
+        Workers = Components.RegisterHot<Worker>("game.worker");
+        ResourceStocks = Components.RegisterHot<ResourceStock>("game.resource");
+        Constructions = Components.RegisterHot<Construction>("game.construction");
+        Productions = Components.RegisterHot<Production>("game.production");
         Decals = new DecalIndex(ruleset.DecalCap);
         Navigation = new NavigationGrid(Map, ruleset);
         CorpseTtlTicks = (ruleset.CorpseTtlMilliseconds + config.TickLengthMilliseconds - 1) / config.TickLengthMilliseconds;
@@ -103,6 +108,21 @@ public sealed class World
     /// <summary>Structure footprints (hot).</summary>
     public ComponentStore<Footprint> Footprints { get; }
 
+    /// <summary>Attack state of armed entities (hot).</summary>
+    public ComponentStore<Combat> Combats { get; }
+
+    /// <summary>Task state of workers (hot).</summary>
+    public ComponentStore<Worker> Workers { get; }
+
+    /// <summary>What is left in resource nodes (hot).</summary>
+    public ComponentStore<ResourceStock> ResourceStocks { get; }
+
+    /// <summary>Buildings under construction (hot).</summary>
+    public ComponentStore<Construction> Constructions { get; }
+
+    /// <summary>Training queues of completed producers (hot).</summary>
+    public ComponentStore<Production> Productions { get; }
+
     /// <summary>Corpses and other footprint-less leftovers (ORIG-01, REQ-PATH-08).</summary>
     public DecalIndex Decals { get; }
 
@@ -129,6 +149,12 @@ public sealed class World
 
     /// <summary>Whether <paramref name="player"/> is a slot in this match.</summary>
     public bool HasPlayer(int player) => (uint)player < (uint)_players.Length;
+
+    /// <summary>Whether <paramref name="owner"/> may own an entity: a player slot or <see cref="MapObject.Nature"/>.</summary>
+    public bool IsValidOwner(int owner) => HasPlayer(owner) || owner == MapObject.Nature;
+
+    /// <summary>The type of a live entity.</summary>
+    public EntityTypeDefinition TypeOf(EntityId entity) => Ruleset.EntityTypes[Identities.Get(entity).TypeId];
 
     /// <summary>
     /// Whether structural mutations are refused: <c>true</c> between ticks of a <see cref="Simulation"/> (after the first
@@ -181,7 +207,7 @@ public sealed class World
             throw new ArgumentOutOfRangeException(nameof(typeId));
         }
 
-        if (!HasPlayer(owner))
+        if (!IsValidOwner(owner))
         {
             throw new ArgumentOutOfRangeException(nameof(owner));
         }
@@ -222,6 +248,7 @@ public sealed class World
         int cell = Map.CellIndexAt(x, y);
         OccupancyCells.Set(entity, new OccupancyCell { Cell = cell });
         Map.AddOccupant(cell);
+        AddTraitComponents(entity, type, underConstruction: false);
         Events.Emit(new SimEvent(SimEventKind.Spawned, (byte)owner, entity, x, y, typeId));
         return entity;
     }
@@ -231,8 +258,16 @@ public sealed class World
     /// (<paramref name="tileX"/>, <paramref name="tileY"/>). Its blocked tiles become impassable for every locomotor
     /// except air; navigation updates incrementally (REQ-PATH-01).
     /// </summary>
+    /// <param name="typeId">A type with a footprint.</param>
+    /// <param name="owner">Player slot or <see cref="MapObject.Nature"/>.</param>
+    /// <param name="tileX">Footprint left column.</param>
+    /// <param name="tileY">Footprint top row.</param>
+    /// <param name="underConstruction">
+    /// Place a construction site (GAME-03): it blocks its tiles at once, starts with 1 hit point and grows to full health
+    /// as builders add progress; it neither produces nor accepts drop-offs until completed.
+    /// </param>
     /// <exception cref="ArgumentOutOfRangeException">The type has no footprint, or the footprint leaves the map.</exception>
-    public EntityId PlaceStructure(ushort typeId, int owner, int tileX, int tileY)
+    public EntityId PlaceStructure(ushort typeId, int owner, int tileX, int tileY, bool underConstruction = false)
     {
         RequireUnlocked();
         if (typeId >= Ruleset.EntityTypes.Count || !Ruleset.EntityTypes[typeId].HasFootprint)
@@ -240,7 +275,7 @@ public sealed class World
             throw new ArgumentOutOfRangeException(nameof(typeId), "Not a structure type.");
         }
 
-        if (!HasPlayer(owner))
+        if (!IsValidOwner(owner))
         {
             throw new ArgumentOutOfRangeException(nameof(owner));
         }
@@ -256,11 +291,95 @@ public sealed class World
         int y = (tileY * MapState.UnitsPerTile) + (type.FootprintHeight * MapState.UnitsPerTile / 2);
         Positions.Set(entity, new Position(x, y));
         Identities.Set(entity, new Identity { TypeId = typeId, Owner = (byte)owner });
-        Healths.Set(entity, new Health { Current = type.MaxHealth, Max = type.MaxHealth });
+        bool site = underConstruction && type.Traits.BuildTimeMs > 0;
+        Healths.Set(entity, new Health { Current = site ? 1 : type.MaxHealth, Max = type.MaxHealth });
         Footprints.Set(entity, new Footprint { TileX = tileX, TileY = tileY });
         ApplyFootprint(type, tileX, tileY, add: true);
+        AddTraitComponents(entity, type, site);
         Events.Emit(new SimEvent(SimEventKind.Spawned, (byte)owner, entity, x, y, typeId));
         return entity;
+    }
+
+    /// <summary>
+    /// Turns a completed construction site into a working building: drops the <see cref="Construction"/> component and
+    /// adds the components of its traits that only completed buildings have (production queue).
+    /// </summary>
+    public void CompleteConstruction(EntityId entity)
+    {
+        RequireUnlocked();
+        RequireAlive(entity);
+        Constructions.Remove(entity);
+        EntityTypeDefinition type = TypeOf(entity);
+        if (type.Traits.Producer is not null && !Productions.Has(entity) && HasPlayer(Identities.Get(entity).Owner))
+        {
+            Productions.Set(entity, default);
+        }
+
+        if (type.Traits.Armament is not null && !Combats.Has(entity))
+        {
+            Combats.Set(entity, new Combat { HitInMs = -1, ChaseTick = -1 });
+        }
+
+        if (type.Traits.ResourceNode is { } node && !ResourceStocks.Has(entity))
+        {
+            ResourceStocks.Set(entity, new ResourceStock { Amount = node.Amount });
+        }
+    }
+
+    /// <summary>
+    /// Places the map's objects and gives every player the starting resources and the population limit (match start;
+    /// called by the <see cref="Simulation"/> constructor, never on restore).
+    /// </summary>
+    /// <exception cref="ArgumentException">An object names an unknown type or owner, or does not fit on the map.</exception>
+    internal void LoadMap()
+    {
+        RequireUnlocked();
+        MapData data = Map.Data;
+        data.Validate(Ruleset);
+        foreach (MapObject o in data.Objects)
+        {
+            ushort typeId = (ushort)Ruleset.EntityTypeId(o.TypeKey);
+            if (!IsValidOwner(o.Owner))
+            {
+                throw new ArgumentException($"Map object '{o.TypeKey}' has owner {o.Owner}, but the match has {_players.Length} players.", nameof(data));
+            }
+
+            EntityTraits traits = Ruleset.EntityTypes[typeId].Traits;
+            if (o.Owner == MapObject.Nature && (traits.Harvester is not null || traits.IsBuilder || traits.Producer is not null || traits.DropOffMask != 0))
+            {
+                throw new ArgumentException($"Map object '{o.TypeKey}' works for a kingdom (worker, producer or drop-off) and cannot belong to Nature.", nameof(data));
+            }
+
+            if (Ruleset.EntityTypes[typeId].HasFootprint)
+            {
+                PlaceStructure(typeId, o.Owner, o.X / MapState.UnitsPerTile, o.Y / MapState.UnitsPerTile);
+            }
+            else
+            {
+                Spawn(typeId, o.Owner, o.X, o.Y);
+            }
+        }
+
+        GameplaySettings g = Ruleset.Gameplay;
+        int level = Config.StartingResources >= 0 ? Config.StartingResources : g.DefaultStartingResources;
+        int limit = Config.PopulationLimit >= 0 ? Config.PopulationLimit : g.PopulationLimit;
+        for (int p = 0; p < _players.Length; p++)
+        {
+            ref PlayerState player = ref _players[p];
+            player.PopulationLimit = limit;
+            if (g.StartingResources.Length > 0)
+            {
+                if (level >= g.StartingResources.Length)
+                {
+                    throw new ArgumentException($"Starting-resource level {level} does not exist in ruleset '{Ruleset.Name}'.", nameof(data));
+                }
+
+                for (int r = 0; r < g.StartingResources[level].Amounts.Length; r++)
+                {
+                    player.Resources[r] = g.StartingResources[level].Amounts[r];
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -358,6 +477,19 @@ public sealed class World
             {
                 throw Invalid($"invalid player flags {player.Flags}");
             }
+
+            if (player.Population < 0 || player.PopulationCap < 0 || player.PopulationLimit < 0)
+            {
+                throw Invalid("invalid population");
+            }
+
+            for (int r = 0; r < Ruleset.MaxResourceTypes; r++)
+            {
+                if (player.Resources[r] < 0 || (r >= Ruleset.ResourceTypes.Count && player.Resources[r] != 0))
+                {
+                    throw Invalid("invalid stockpile");
+                }
+            }
         }
 
         foreach (Position p in Positions.Components)
@@ -373,7 +505,7 @@ public sealed class World
         for (int i = 0; i < ids.Length; i++)
         {
             Identity identity = identities[i];
-            if (identity.TypeId >= Ruleset.EntityTypes.Count || !HasPlayer(identity.Owner) || identity.Facing >= Core.Numerics.Angle.DirectionCount)
+            if (identity.TypeId >= Ruleset.EntityTypes.Count || !IsValidOwner(identity.Owner) || identity.Facing >= Core.Numerics.Angle.DirectionCount)
             {
                 throw Invalid($"{ids[i]} has an invalid identity");
             }
@@ -445,8 +577,163 @@ public sealed class World
         }
 
         Map.RebuildOccupancy(cells);
+        ValidateGameplayComponents();
 
         static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
+    }
+
+    // Gameplay stores: enum ranges, timers, and that each entity's type has the matching trait (ADR 0019: snapshots are
+    // untrusted). Target handles may be stale (their entity died); systems re-validate them every tick.
+    private void ValidateGameplayComponents()
+    {
+        // The systems read these components of every entity in a gameplay store without checking.
+        RequireCore(Combats.Entities, mobile: false, structure: false);
+        RequireCore(Workers.Entities, mobile: true, structure: false);
+        RequireCore(ResourceStocks.Entities, mobile: false, structure: true);
+        RequireCore(Constructions.Entities, mobile: false, structure: true);
+        RequireCore(Productions.Entities, mobile: false, structure: true);
+        RequirePlayerOwner(Workers.Entities);
+        RequirePlayerOwner(Constructions.Entities);
+        RequirePlayerOwner(Productions.Entities);
+
+        ReadOnlySpan<EntityId> ids = Combats.Entities;
+        Span<Combat> combats = Combats.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Combat c = combats[i];
+            ArmamentDefinition? arm = TypeOf(ids[i]).Traits.Armament;
+            if (arm is null || c.Mode > CombatMode.AttackMove || c.HitInMs < -1 || c.HitInMs > arm.HitDelayMs
+                || c.CooldownMs < -Config.TickLengthMilliseconds || c.CooldownMs > arm.CooldownMs
+                || c.ChaseTick < -1 || c.ChaseTick > Tick.Value || c.Resume > 1 || c.Reserved0 != 0 || c.Reserved1 != 0)
+            {
+                throw Invalid("invalid combat state");
+            }
+        }
+
+        ids = Workers.Entities;
+        Span<Worker> workers = Workers.Components;
+        int resources = Ruleset.ResourceTypes.Count;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Worker w = workers[i];
+            EntityTraits t = TypeOf(ids[i]).Traits;
+            int capacity = t.Harvester?.Capacity ?? 0;
+            if ((t.Harvester is null && !t.IsBuilder) || w.Task > WorkerTask.Build
+                || (w.Task == WorkerTask.Harvest && t.Harvester is null) || (w.Task == WorkerTask.Build && !t.IsBuilder)
+                || w.Phase != w.Task switch
+                {
+                    WorkerTask.None => WorkerPhase.None,
+                    WorkerTask.Harvest when w.Phase is WorkerPhase.ToNode or WorkerPhase.Gathering or WorkerPhase.ToDropOff => w.Phase,
+                    WorkerTask.Build when w.Phase is WorkerPhase.ToSite or WorkerPhase.Building => w.Phase,
+                    _ => (WorkerPhase)0xFF,
+                } || w.Phase > WorkerPhase.Building || w.CarryAmount < 0
+                || w.CarryAmount > capacity || w.TimerMs < 0 || w.Retries < 0 || (w.CarryAmount > 0 && w.CarryResource == Worker.NoResource)
+                || (w.CarryResource != Worker.NoResource && w.CarryResource >= resources)
+                || (w.NodeResource != Worker.NoResource && w.NodeResource >= resources))
+            {
+                throw Invalid("invalid worker state");
+            }
+        }
+
+        ids = ResourceStocks.Entities;
+        Span<ResourceStock> stocks = ResourceStocks.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (TypeOf(ids[i]).Traits.ResourceNode is not { } node || stocks[i].Amount < -1 || (stocks[i].Amount == -1) != (node.Amount == -1))
+            {
+                throw Invalid("invalid resource stock");
+            }
+        }
+
+        ids = Constructions.Entities;
+        Span<Construction> sites = Constructions.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Construction c = sites[i];
+            if (!Footprints.Has(ids[i]) || c.TotalMs != TypeOf(ids[i]).Traits.BuildTimeMs || c.ProgressMs < 0 || c.ProgressMs > c.TotalMs)
+            {
+                throw Invalid("invalid construction site");
+            }
+        }
+
+        ids = Productions.Entities;
+        Span<Production> queues = Productions.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Production q = queues[i];
+            ProducerDefinition? producer = TypeOf(ids[i]).Traits.Producer;
+            if (producer is null || Constructions.Has(ids[i]) || q.Count > producer.QueueCapacity || q.ProgressMs < 0 || q.HasRally > 1
+                || q.Stall > (byte)ProductionStall.EntityLimit || q.Reserved != 0 || (q.HasRally == 1 && !Map.ContainsPoint(q.RallyX, q.RallyY)))
+            {
+                throw Invalid("invalid production queue");
+            }
+
+            for (int k = 0; k < ProducerDefinition.MaxQueueCapacity; k++)
+            {
+                if (k < q.Count ? !producer.CanProduce(q.Queue[k]) : q.Queue[k] != 0)
+                {
+                    throw Invalid("invalid production queue item");
+                }
+            }
+        }
+
+        static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
+    }
+
+    // Workers, sites and queues spend or earn a player's stockpile: their owner must be a player slot (never Nature).
+    private void RequirePlayerOwner(ReadOnlySpan<EntityId> ids)
+    {
+        foreach (EntityId e in ids)
+        {
+            if (!HasPlayer(Identities.Get(e).Owner))
+            {
+                throw new System.IO.InvalidDataException($"Snapshot violates a world invariant: {e} has worker, site or queue state but no player owner.");
+            }
+        }
+    }
+
+    private void RequireCore(ReadOnlySpan<EntityId> ids, bool mobile, bool structure)
+    {
+        foreach (EntityId e in ids)
+        {
+            if (!Identities.Has(e) || !Positions.Has(e) || !Healths.Has(e) || (mobile && !Motions.Has(e)) || (structure && !Footprints.Has(e)))
+            {
+                throw new System.IO.InvalidDataException($"Snapshot violates a world invariant: {e} lacks a core component of its gameplay state.");
+            }
+        }
+    }
+
+    // Adds the components a type's traits call for (combat, worker, resource stock, construction or production).
+    // Only player-owned entities work, produce or build: they spend and earn a player's stockpile (Nature has none).
+    private void AddTraitComponents(EntityId entity, EntityTypeDefinition type, bool underConstruction)
+    {
+        EntityTraits t = type.Traits;
+        bool player = HasPlayer(Identities.Get(entity).Owner);
+        if (player && (t.Harvester is not null || t.IsBuilder))
+        {
+            Workers.Set(entity, new Worker { CarryResource = Worker.NoResource, NodeResource = Worker.NoResource });
+        }
+
+        if (underConstruction)
+        {
+            Constructions.Set(entity, new Construction { TotalMs = t.BuildTimeMs });
+            return; // a site neither fights nor produces until completed
+        }
+
+        if (t.Armament is not null)
+        {
+            Combats.Set(entity, new Combat { HitInMs = -1, ChaseTick = -1 });
+        }
+
+        if (t.ResourceNode is { } node)
+        {
+            ResourceStocks.Set(entity, new ResourceStock { Amount = node.Amount });
+        }
+
+        if (player && t.Producer is not null)
+        {
+            Productions.Set(entity, default);
+        }
     }
 
     // Route nodes must name existing portals of the unit's layer (navigation is rebuilt from the restored map).

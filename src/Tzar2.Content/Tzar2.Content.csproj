@@ -15,4 +15,13 @@
     <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tzar2.Content.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Engine-default package (REQ-DATA-02): the built-in rulesets' YAML, served by EngineDefaultsSource. -->
+    <EmbeddedResource Include="../../content/engine/**/*.yaml" LogicalName="engine/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>
