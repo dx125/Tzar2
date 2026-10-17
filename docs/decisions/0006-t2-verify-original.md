@@ -15,7 +15,7 @@ only missing and modified files. The original is a Windows game, so file-name ca
 
 * The comparison logic lives in `Tzar2.Import.Editions` (`ReferenceManifest`, `InstallVerifier`), where edition
   fingerprinting (REQ-IMP-01) will build on it; the CLI only formats the report.
-* The reference manifest is **embedded** in `t2` (it is metadata only); `--manifest <file>` compares against another
+* The reference manifest is **embedded** (it is metadata only), once, in `Tzar2.Import` (`EditionCatalog.Reference`, shared with edition detection) and used by `t2`; `--manifest <file>` compares against another
   manifest, e.g. a GOG depot list.
 * Paths match **case-insensitively**; if several local files differ only in case, the exact-case one wins and the
   others are reported as extra.
