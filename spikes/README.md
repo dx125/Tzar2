@@ -9,7 +9,7 @@ the determinism analyzers stay on Core only).
 |---|---|---|---|
 | S1 | Instanced sprite renderer: 10k y-sorted sprites from a texture array (DEC-10) | Windows >= 60 FPS on the desktop reference | Measured on macOS arm64 ([`S1-renderer/`](S1-renderer/README.md), [ADR 0010](../docs/decisions/0010-spike-s1-instanced-renderer.md)); Windows run pending |
 | S2 | Determinism x64 vs ARM64 (fixed-point + Lua-CSharp arithmetic) | Identical hash streams; headless on macOS arm64 | Done: [ADR 0007](../docs/decisions/0007-spike-s2-determinism.md), `S2-determinism/` (`run-matrix.sh`) |
-| S3 | LiteNetLib relay lockstep prototype | Windows <-> Windows plus a headless Linux client | Not started |
+| S3 | LiteNetLib relay lockstep prototype | Windows <-> Windows plus a headless Linux client | Done on macOS + Linux containers; Windows via nightly CI ([`S3-net/`](S3-net/README.md), [ADR 0009](../docs/decisions/0009-spike-s3-lockstep-relay.md)) |
 | S4 | Lua-CSharp sandbox and instruction budget (DEC-13b) | Budget enforced deterministically; sandbox escapes blocked | Done: [ADR 0008](../docs/decisions/0008-spike-s4-lua-sandbox.md), `S4-lua/` (`Tzar2.Spikes.S4 all`) |
 | S6 | Sprite memory measurement and GPU format decision (REQ-GFX-03) | Measured volume; one of the layouts (a)/(b)/(c) chosen | Not started |
 
