@@ -6,6 +6,7 @@ using Tzar2.Sim.Components;
 using Tzar2.Sim.Ecs;
 using Tzar2.Sim.Events;
 using Tzar2.Sim.Map;
+using Tzar2.Sim.Navigation;
 
 namespace Tzar2.Sim;
 
@@ -50,6 +51,7 @@ public sealed class World
         Names = Components.RegisterCold<EntityName>("core.name");
         Footprints = Components.RegisterHot<Footprint>("core.footprint");
         Decals = new DecalIndex(ruleset.DecalCap);
+        Navigation = new NavigationGrid(Map, ruleset);
         CorpseTtlTicks = (ruleset.CorpseTtlMilliseconds + config.TickLengthMilliseconds - 1) / config.TickLengthMilliseconds;
     }
 
@@ -103,6 +105,9 @@ public sealed class World
 
     /// <summary>Corpses and other footprint-less leftovers (ORIG-01, REQ-PATH-08).</summary>
     public DecalIndex Decals { get; }
+
+    /// <summary>Navigation layers (derived from the map; not state, ADR 0021).</summary>
+    public NavigationGrid Navigation { get; }
 
     /// <summary>Corpse lifetime in ticks.</summary>
     public int CorpseTtlTicks { get; }
