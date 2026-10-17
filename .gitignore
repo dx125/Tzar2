@@ -27,3 +27,4 @@ BenchmarkDotNet.Artifacts/
 
 # Claude Code local state (agent worktrees)
 /.claude/
+spikes/S2-determinism/out/
