@@ -95,6 +95,12 @@ public sealed class CommandSystem : ISimSystem
                     return CommandRejection.OutOfMap;
                 }
 
+                // Global entity cap: reject up front, never fail half-way through the tick (ADR 0019).
+                if (world.Entities.RemainingCapacity < command.Arg1)
+                {
+                    return CommandRejection.EntityLimit;
+                }
+
                 for (int n = 0; n < command.Arg1; n++)
                 {
                     world.Spawn((ushort)command.Arg0, command.Player, command.X, command.Y);

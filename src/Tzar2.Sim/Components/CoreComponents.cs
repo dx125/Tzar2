@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using Tzar2.Core.Serialization;
 using Tzar2.Sim.Ecs;
 
@@ -99,11 +100,30 @@ public readonly struct EntityName : IColdComponent<EntityName>
     public const int MaxBytes = 256;
 
     /// <summary>Creates a name.</summary>
+    /// <exception cref="ArgumentException">The name is longer than <see cref="MaxBytes"/> UTF-8 bytes or is not valid UTF-16.</exception>
     public EntityName(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
+        int bytes;
+        try
+        {
+            bytes = StrictUtf8.GetByteCount(value);
+        }
+        catch (EncoderFallbackException ex)
+        {
+            throw new ArgumentException("The name is not valid UTF-16.", nameof(value), ex);
+        }
+
+        if (bytes > MaxBytes)
+        {
+            // Snapshots read names with this bound, so a longer one would make an unloadable save.
+            throw new ArgumentException($"The name is {bytes} UTF-8 bytes; at most {MaxBytes} are allowed.", nameof(value));
+        }
+
         Value = value;
     }
+
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     /// <summary>The name.</summary>
     public string Value { get; }

@@ -28,11 +28,12 @@ platforms. ADR 0007 left an open item: run the S2 harness on `windows-latest` an
 **Determinism CI.**
 * `Tzar2.Determinism.Tests.SimGoldenHashTests`: the synthetic scenario (128² generated map, 2,000 units, 4 players,
   bot move orders and delete/respawn churn through the command codec and slot stamping, 300 ticks) must produce the
-  committed golden hash stream `06D4D032CD216BBC` and final full-state hash `25418CEBC3F46249`, with 1 and 4
+  committed golden hash stream `297C6D90FC748B9E` and final full-state hash `38232E7ED6D36D86` (since ADR 0019; first
+  `06D4D032CD216BBC` / `25418CEBC3F46249`), with 1 and 4
   workers, on net8 and net10. Measured identical locally on macOS arm64 and x64 (Rosetta), Debug (overflow policy
   Throw) and Release (Saturate).
 * **PR CI (`ci.yml`, job `determinism`)** runs that suite on `windows-latest`, `ubuntu-latest` and `macos-latest`,
-  plus `t2 bench … --expect-hash 25418CEBC3F46249 --hash-stream …`; `determinism-compare` diffs the per-tick hash
+  plus `t2 bench … --expect-hash 38232E7ED6D36D86 --hash-stream …`; `determinism-compare` diffs the per-tick hash
   streams of the three OSes byte for byte (`\n` line ends on every OS).
 * **Nightly (`nightly.yml`)**: `determinism` runs the suite in Debug and Release and a long match (4,000 units on
   512², 6,000 ticks with churn) on all three OSes, `determinism-compare` diffs those streams; `spike-s2-determinism`

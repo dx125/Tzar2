@@ -243,8 +243,12 @@ public readonly struct Fixed : IEquatable<Fixed>, IComparable<Fixed>, IComparabl
     public static Fixed operator /(Fixed a, long b)
         => new(Checked((Int128)a._raw / b, OverflowSite.Divide));
 
-    /// <summary>Remainder with the sign of the dividend (same semantics as <see cref="long"/>).</summary>
-    public static Fixed operator %(Fixed a, Fixed b) => new(a._raw % b._raw);
+    /// <summary>
+    /// Remainder with the sign of the dividend (same semantics as <see cref="long"/>). <c>MinValue % -Epsilon</c> is 0
+    /// (the exact remainder; <c>long.MinValue % -1</c> would throw), so <c>%</c> never overflows.
+    /// </summary>
+    /// <exception cref="DivideByZeroException"><paramref name="b"/> is zero.</exception>
+    public static Fixed operator %(Fixed a, Fixed b) => b._raw == -1 ? Zero : new(a._raw % b._raw);
 
     /// <summary>Equality.</summary>
     public static bool operator ==(Fixed a, Fixed b) => a._raw == b._raw;

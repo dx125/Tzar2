@@ -101,36 +101,52 @@ public sealed class World
     /// <summary>Whether <paramref name="player"/> is a slot in this match.</summary>
     public bool HasPlayer(int player) => (uint)player < (uint)_players.Length;
 
+    /// <summary>
+    /// Whether structural mutations are refused: <c>true</c> between ticks of a <see cref="Simulation"/> (after the first
+    /// tick, and after a restore). REQ-ARCH-03: outside a tick only the match setup may change the world; the
+    /// presentation never does (ADR 0019).
+    /// </summary>
+    public bool IsLocked { get; internal set; }
+
     /// <summary>Adds or replaces a hot component on a live entity.</summary>
-    /// <exception cref="InvalidOperationException">The entity is not alive.</exception>
+    /// <exception cref="InvalidOperationException">The entity is not alive, or the world is locked.</exception>
     public void Set<T>(EntityId entity, T value)
         where T : unmanaged, IComponent
     {
+        RequireUnlocked();
         RequireAlive(entity);
         Components.Hot<T>().Set(entity, value);
     }
 
     /// <summary>Adds or replaces a cold component on a live entity.</summary>
-    /// <exception cref="InvalidOperationException">The entity is not alive.</exception>
+    /// <exception cref="InvalidOperationException">The entity is not alive, or the world is locked.</exception>
     public void SetCold<T>(EntityId entity, T value)
         where T : IColdComponent<T>
     {
+        RequireUnlocked();
         RequireAlive(entity);
         Components.Cold<T>().SetValue(entity, value);
     }
 
     /// <summary>Removes a hot component.</summary>
+    /// <exception cref="InvalidOperationException">The world is locked.</exception>
     public bool Remove<T>(EntityId entity)
         where T : unmanaged, IComponent
-        => Components.Hot<T>().Remove(entity);
+    {
+        RequireUnlocked();
+        return Components.Hot<T>().Remove(entity);
+    }
 
     /// <summary>
     /// Creates a unit of <paramref name="typeId"/> for <paramref name="owner"/> at a world point on the map
     /// (minimal M2 "prefab": identity, position, health, motion if mobile, occupancy).
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">The type, owner or point is invalid.</exception>
+    /// <exception cref="InvalidOperationException">The world is locked, or no entity slot is left (commands check
+    /// <see cref="EntityRegistry.RemainingCapacity"/> first, so this never happens inside a tick).</exception>
     public EntityId Spawn(ushort typeId, int owner, int x, int y)
     {
+        RequireUnlocked();
         if (typeId >= Ruleset.EntityTypes.Count)
         {
             throw new ArgumentOutOfRangeException(nameof(typeId));
@@ -165,8 +181,10 @@ public sealed class World
 
     /// <summary>Destroys an entity: removes all its components now; its slot is recycled in the cleanup step.</summary>
     /// <returns><c>false</c> if it was not alive.</returns>
+    /// <exception cref="InvalidOperationException">The world is locked.</exception>
     public bool Destroy(EntityId entity)
     {
+        RequireUnlocked();
         if (!Entities.IsAlive(entity))
         {
             return false;
@@ -195,6 +213,81 @@ public sealed class World
         Entities.Destroy(entity);
         Events.Emit(new SimEvent(SimEventKind.Destroyed, (byte)owner, entity, 0, 0, typeId));
         return true;
+    }
+
+    /// <summary>
+    /// Checks the semantic invariants of a restored world (snapshots from peers are untrusted, ADR 0019) and rebuilds the
+    /// occupancy grid from the entities' cells. Structural invariants (sorted stores, live entities, registry lists)
+    /// are checked while reading.
+    /// </summary>
+    /// <exception cref="System.IO.InvalidDataException">An invariant does not hold.</exception>
+    internal void ValidateRestoredState()
+    {
+        foreach (PlayerState player in _players)
+        {
+            if ((player.Flags & ~(PlayerFlags.Active | PlayerFlags.Defeated)) != 0)
+            {
+                throw Invalid($"invalid player flags {player.Flags}");
+            }
+        }
+
+        foreach (Position p in Positions.Components)
+        {
+            if (!Map.ContainsPoint(p.X, p.Y))
+            {
+                throw Invalid($"position ({p.X}, {p.Y}) is off the map");
+            }
+        }
+
+        ReadOnlySpan<EntityId> ids = Identities.Entities;
+        Span<Identity> identities = Identities.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Identity identity = identities[i];
+            if (identity.TypeId >= Ruleset.EntityTypes.Count || !HasPlayer(identity.Owner) || identity.Facing >= Core.Numerics.Angle.DirectionCount)
+            {
+                throw Invalid($"{ids[i]} has an invalid identity");
+            }
+        }
+
+        foreach (Health h in Healths.Components)
+        {
+            if (h.Max < 0 || h.Current > h.Max)
+            {
+                throw Invalid($"invalid health {h.Current}/{h.Max}");
+            }
+        }
+
+        foreach (Motion m in Motions.Components)
+        {
+            if (m.State is < MotionState.Idle or > MotionState.Blocked || m.SpeedPerTick < 0 || !Map.ContainsPoint(m.TargetX, m.TargetY))
+            {
+                throw Invalid("invalid motion");
+            }
+        }
+
+        ReadOnlySpan<EntityId> occupants = OccupancyCells.Entities;
+        Span<OccupancyCell> cells = OccupancyCells.Components;
+        for (int i = 0; i < occupants.Length; i++)
+        {
+            int p = Positions.IndexOf(occupants[i]);
+            if (p < 0 || cells[i].Cell != Map.CellIndexAt(Positions.At(p).X, Positions.At(p).Y))
+            {
+                throw Invalid($"{occupants[i]}'s occupancy cell does not match its position");
+            }
+        }
+
+        Map.RebuildOccupancy(cells);
+
+        static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
+    }
+
+    private void RequireUnlocked()
+    {
+        if (IsLocked)
+        {
+            throw new InvalidOperationException("The world is locked between ticks; change it through commands (REQ-ARCH-03).");
+        }
     }
 
     private void RequireAlive(EntityId entity)

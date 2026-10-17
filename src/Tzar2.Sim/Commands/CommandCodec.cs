@@ -82,8 +82,7 @@ public static class CommandCodec
         ArgumentNullException.ThrowIfNull(list);
         list.Clear();
         int count = ReadBounded(ref reader, CommandList.MaxCommands, "command count");
-        Span<EntityId> scratch = stackalloc EntityId[256];
-        EntityId[]? rented = null;
+        EntityId[] scratch = list.DecodeScratch;
         for (int i = 0; i < count; i++)
         {
             ulong kind = reader.ReadVarUInt64();
@@ -93,7 +92,7 @@ public static class CommandCodec
             }
 
             byte flags = reader.ReadByte();
-            if ((flags & ~(int)(CommandFlags.Queue | CommandFlags.Ctrl | CommandFlags.Alt)) != 0)
+            if ((flags & ~(int)CommandList.ValidFlags) != 0)
             {
                 throw new InvalidDataException($"Invalid command flags {flags}.");
             }
@@ -110,14 +109,12 @@ public static class CommandCodec
             int arg0 = ReadInt32(ref reader);
             int arg1 = ReadInt32(ref reader);
             int n = ReadBounded(ref reader, CommandList.MaxEntitiesPerCommand, "entity count");
-            Span<EntityId> entities = scratch;
-            if (n > scratch.Length)
+            if (list.EntityTotal + n > CommandList.MaxEntitiesPerList)
             {
-                rented ??= new EntityId[CommandList.MaxEntitiesPerCommand];
-                entities = rented;
+                throw new InvalidDataException($"The list holds more than {CommandList.MaxEntitiesPerList} entities.");
             }
 
-            entities = entities[..n];
+            Span<EntityId> entities = scratch.AsSpan(0, n);
             int index = 0;
             for (int k = 0; k < n; k++)
             {

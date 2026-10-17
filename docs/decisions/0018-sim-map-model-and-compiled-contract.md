@@ -30,7 +30,9 @@ for cache invalidation, and an occupancy grid; maps go up to 1,024² tiles (REQ-
     movement through the `OccupancyCell` component;
   * world units per §8.2: 2,048 per tile, so 1,024² spans 2,097,152 units (int32-safe). At 1,024² the layers take
     1 MiB (passability) + 2 MiB (blockers) + 8 MiB (occupancy).
-* Dynamic layers are in the full-state hash and in snapshots; base passability is recomputed from map + ruleset.
+* Dynamic layers are in the full-state hash. Snapshots store only the obstacle version and the non-zero blockers;
+  base passability is recomputed from map + ruleset and occupancy (`int` counts) is rebuilt from the entities
+  (amended by [ADR 0019](0019-sim-hardening.md); occupancy cells per tile axis are limited to 1, 2 or 4).
 * Movement until §9.2 lands is a placeholder: straight line at the type's speed, facing quantized to 8 directions,
   stop with a `Blocked` event at a tile the locomotor cannot enter.
 

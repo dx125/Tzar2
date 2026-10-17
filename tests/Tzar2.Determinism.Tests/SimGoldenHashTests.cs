@@ -17,9 +17,11 @@ public class SimGoldenHashTests(ITestOutputHelper output)
 {
     // Changing the scenario, a system, the command codec, the hashed layout or a Core primitive changes these values on
     // purpose: update them in the same commit and say why. An unexpected change, or a difference between platforms,
-    // is a determinism bug. History: (M2 part A) initial values.
-    private const ulong GoldenFinalFullHash = 0x25418CEBC3F46249UL;
-    private const ulong GoldenHashStream = 0x06D4D032CD216BBCUL;
+    // is a determinism bug. History: (M2 part A) 06D4D032CD216BBC / 25418CEBC3F46249 -> (M2 hardening, ADR 0019)
+    // 297C6D90FC748B9E / 38232E7ED6D36D86: occupancy counts became int instead of ushort, which changes the bytes of the
+    // full-state hash only (per-tick hashes are unchanged; the stream includes the full hashes every 20 ticks).
+    private const ulong GoldenFinalFullHash = 0x38232E7ED6D36D86UL;
+    private const ulong GoldenHashStream = 0x297C6D90FC748B9EUL;
 
     private const int Ticks = 300;
 

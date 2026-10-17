@@ -66,5 +66,7 @@ without wrapping every query in a sort, which would remove that advantage.
   layout and hash unchanged).
 * A store cannot hold two generations of one slot; `Set` throws if the sparse entry is stale, which only happens if
   a caller bypasses `World.Destroy`.
+* **Amended by [ADR 0019](0019-sim-hardening.md):** slots whose generation reaches 4,095 are retired instead of
+  wrapping; `World` refuses structural changes between ticks.
 * Revisit the 32-bit handle before snapshots/replays are frozen for 1.0 if mods need more than 1,048,575
   simultaneous entities.

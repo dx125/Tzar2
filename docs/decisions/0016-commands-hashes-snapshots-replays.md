@@ -53,6 +53,9 @@ and the tick's events; `RenderSnapshotExchange` is a lock-free triple buffer (th
 the reader gets the newest complete snapshot). `SimEvent`s (spawned, destroyed, arrived, blocked, command rejected)
 are output only: not state, not hashed, not snapshotted.
 
+**Amended by [ADR 0019](0019-sim-hardening.md):** snapshot format v2 (no static or derived map layers, full
+semantic validation on restore), streaming replay parse, stricter command lists and keyframe/seek checks.
+
 ## Alternatives considered
 
 * **MessagePack / System.Text.Json source-gen for snapshots:** AOT-safe, but per-field encoding defeats the

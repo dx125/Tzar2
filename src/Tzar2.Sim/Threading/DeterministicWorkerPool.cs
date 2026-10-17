@@ -42,6 +42,7 @@ public sealed class DeterministicWorkerPool : IDisposable
     private int _failedJob;
     private Exception? _failure;
     private volatile bool _disposed;
+    private int _running;
 
     /// <summary>Creates a pool that runs jobs on <paramref name="workerCount"/> threads, the caller's included.</summary>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="workerCount"/> is not in [1, <see cref="MaxWorkers"/>].</exception>
@@ -64,11 +65,29 @@ public sealed class DeterministicWorkerPool : IDisposable
 
     /// <summary>Runs <paramref name="job"/> for job indices 0..<paramref name="jobCount"/>-1 and waits for all of them.</summary>
     /// <exception cref="ObjectDisposedException">The pool is disposed.</exception>
+    /// <exception cref="InvalidOperationException">Called from inside a job or concurrently (nested fork/join would deadlock).</exception>
     public void Run(IParallelJob job, int jobCount)
     {
         ArgumentNullException.ThrowIfNull(job);
         ArgumentOutOfRangeException.ThrowIfNegative(jobCount);
         ObjectDisposedException.ThrowIf(_disposed, this);
+        if (Interlocked.CompareExchange(ref _running, 1, 0) != 0)
+        {
+            throw new InvalidOperationException("DeterministicWorkerPool.Run is not re-entrant: do not fork from inside a job.");
+        }
+
+        try
+        {
+            RunCore(job, jobCount);
+        }
+        finally
+        {
+            Volatile.Write(ref _running, 0);
+        }
+    }
+
+    private void RunCore(IParallelJob job, int jobCount)
+    {
         if (jobCount == 0)
         {
             return;
@@ -158,8 +177,10 @@ public sealed class DeterministicWorkerPool : IDisposable
             {
                 job.Execute(index);
             }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
+            catch (Exception ex)
             {
+                // Every exception, OutOfMemoryException included, is captured: an unhandled exception on a helper thread
+                // would kill the process, and the caller must not return while helpers are still running.
                 lock (_errorLock)
                 {
                     if (index < _failedJob)

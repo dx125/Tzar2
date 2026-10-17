@@ -123,6 +123,15 @@ public class FixedTests
     }
 
     [Fact]
+    public void Remainder_never_overflows()
+    {
+        Assert.Equal(Fixed.Zero, Fixed.MinValue % Fixed.FromRaw(-1));
+        Assert.Equal(Fixed.Zero, Fixed.FromRaw(12345) % Fixed.FromRaw(-1));
+        Assert.Equal(Fixed.FromRaw(-1), Fixed.FromRaw(-7) % Fixed.FromRaw(-2));
+        Assert.Throws<DivideByZeroException>(() => Fixed.One % Fixed.Zero);
+    }
+
+    [Fact]
     public void Overflow_policy_matches_the_build_configuration()
     {
 #if DEBUG

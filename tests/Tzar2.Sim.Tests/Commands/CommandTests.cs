@@ -20,7 +20,7 @@ public class CommandTests
         EntityId a = EntityId.Create(5, 1);
         EntityId b = EntityId.Create(2, 3);
         list.Add(CommandKind.Move, [a, b, EntityId.None, a, EntityId.Create(5, 2)], 10, 20);
-        Assert.Equal([b, a], list.EntitiesOf(list[0]).ToArray());
+        Assert.Equal([b, EntityId.Create(5, 2)], list.EntitiesOf(list[0]).ToArray()); // the newer handle of slot 5 wins
     }
 
     [Property(MaxTest = 500)]

@@ -36,8 +36,11 @@ public sealed class Ruleset
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentNullException.ThrowIfNull(terrainTypes);
         ArgumentNullException.ThrowIfNull(entityTypes);
-        ArgumentOutOfRangeException.ThrowIfLessThan(occupancyCellsPerTileAxis, 1);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(occupancyCellsPerTileAxis, 4);
+        if (occupancyCellsPerTileAxis is not (1 or 2 or 4))
+        {
+            // Cells must tile a 2,048-unit tile exactly (TDD §8.2), or points of one tile map into the next tile's cells.
+            throw new ArgumentOutOfRangeException(nameof(occupancyCellsPerTileAxis), "Occupancy cells per tile axis must be 1, 2 or 4.");
+        }
         ArgumentOutOfRangeException.ThrowIfLessThan(maxPlayers, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(maxPlayers, 16);
         if (terrainTypes.Count is 0 or > 256)
@@ -91,7 +94,7 @@ public sealed class Ruleset
     /// <summary>Entity types by id.</summary>
     public IReadOnlyList<EntityTypeDefinition> EntityTypes => _entityTypes;
 
-    /// <summary>Occupancy grid resolution: cells per tile along each axis (TDD §9.1).</summary>
+    /// <summary>Occupancy grid resolution: cells per tile along each axis (TDD §9.1): 1, 2 or 4, a divisor of the 2,048-unit tile.</summary>
     public int OccupancyCellsPerTileAxis { get; }
 
     /// <summary>Maximum number of kingdoms in a match.</summary>

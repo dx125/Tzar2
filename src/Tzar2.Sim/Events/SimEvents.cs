@@ -46,6 +46,9 @@ public enum CommandRejection
 
     /// <summary>Debug/cheat commands are not allowed in this session (GAME-19).</summary>
     CheatsDisabled = 6,
+
+    /// <summary>The command would create more entities than slots are left (<c>EntityRegistry.RemainingCapacity</c>).</summary>
+    EntityLimit = 7,
 }
 
 /// <summary>One simulation event. Output only: events are not part of the state, hashes or snapshots.</summary>
