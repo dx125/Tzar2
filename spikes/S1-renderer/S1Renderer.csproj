@@ -1,0 +1,10 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <!-- Spike S1 (TDD §25 M0, DEC-10). Standalone Godot project, deliberately not part of Tzar2.sln (spikes/README.md). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>Tzar2.Spikes.S1</RootNamespace>
+  </PropertyGroup>
+
+</Project>

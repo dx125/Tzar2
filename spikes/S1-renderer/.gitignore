@@ -1,0 +1,2 @@
+# Local benchmark runs (run-bench.sh / run-bench.ps1 default output). Curated results live in results/<machine>/.
+results/local-*/

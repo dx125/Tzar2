@@ -5,7 +5,7 @@ own folder here, is not part of `Tzar2.sln`, and ends with an ADR in `docs/decis
 
 | Spike | Question | Exit criterion | Status |
 |---|---|---|---|
-| S1 | Instanced sprite renderer: 10k y-sorted sprites from a texture array (DEC-10) | Windows >= 60 FPS on the desktop reference | Not started |
+| S1 | Instanced sprite renderer: 10k y-sorted sprites from a texture array (DEC-10) | Windows >= 60 FPS on the desktop reference | Measured on macOS arm64 ([`S1-renderer/`](S1-renderer/README.md), [ADR 0010](../docs/decisions/0010-spike-s1-instanced-renderer.md)); Windows run pending |
 | S2 | Determinism x64 vs ARM64 (fixed-point + Lua-CSharp arithmetic) | Identical hash streams; headless on macOS arm64 | Not started (Core golden hash in `tests/Tzar2.Determinism.Tests` is its seed) |
 | S3 | LiteNetLib relay lockstep prototype | Windows <-> Windows plus a headless Linux client | Not started |
 | S4 | Lua-CSharp sandbox and instruction budget (DEC-13b) | Budget enforced deterministically; sandbox escapes blocked | Not started |
