@@ -53,9 +53,13 @@ public sealed class Simulation : IDisposable
     private Simulation(World world, int workerCount)
     {
         World = world;
+
+        // Match load: build the navigation layers now rather than in the first tick (TDD §21: load <= 10 s).
+        world.Navigation.EnsureUpToDate();
         Workers = new DeterministicWorkerPool(workerCount);
         _context = new SimContext(world, Workers);
         _scheduler.Add(new CommandSystem());
+        _scheduler.Add(new PathRequestSystem());
         _scheduler.Add(new MovementSystem());
         _scheduler.Add(new CleanupSystem());
     }

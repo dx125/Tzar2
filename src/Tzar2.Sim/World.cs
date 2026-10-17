@@ -6,6 +6,7 @@ using Tzar2.Sim.Components;
 using Tzar2.Sim.Ecs;
 using Tzar2.Sim.Events;
 using Tzar2.Sim.Map;
+using Tzar2.Sim.Navigation;
 
 namespace Tzar2.Sim;
 
@@ -48,6 +49,10 @@ public sealed class World
         Motions = Components.RegisterHot<Motion>("core.motion");
         OccupancyCells = Components.RegisterHot<OccupancyCell>("core.occupancy");
         Names = Components.RegisterCold<EntityName>("core.name");
+        Footprints = Components.RegisterHot<Footprint>("core.footprint");
+        Decals = new DecalIndex(ruleset.DecalCap);
+        Navigation = new NavigationGrid(Map, ruleset);
+        CorpseTtlTicks = (ruleset.CorpseTtlMilliseconds + config.TickLengthMilliseconds - 1) / config.TickLengthMilliseconds;
     }
 
     /// <summary>The compiled ruleset.</summary>
@@ -94,6 +99,30 @@ public sealed class World
 
     /// <summary>Names (cold).</summary>
     public ColdComponentStore<EntityName> Names { get; }
+
+    /// <summary>Structure footprints (hot).</summary>
+    public ComponentStore<Footprint> Footprints { get; }
+
+    /// <summary>Corpses and other footprint-less leftovers (ORIG-01, REQ-PATH-08).</summary>
+    public DecalIndex Decals { get; }
+
+    /// <summary>Navigation layers (derived from the map; not state, ADR 0021).</summary>
+    public NavigationGrid Navigation { get; }
+
+    /// <summary>Flow-field cache (derived, not state).</summary>
+    public FlowFieldCache FlowFields { get; } = new();
+
+    /// <summary>Planned waypoints per unit (state).</summary>
+    public PathStore Paths { get; } = new();
+
+    /// <summary>Pending planning requests (state).</summary>
+    public PathRequestQueue PathQueue { get; } = new();
+
+    /// <summary>The id the next group move order gets (state).</summary>
+    public int NextGroupId { get; internal set; } = 1;
+
+    /// <summary>Corpse lifetime in ticks.</summary>
+    public int CorpseTtlTicks { get; }
 
     /// <summary>Speed of an entity type in world units per tick.</summary>
     public int SpeedPerTick(ushort typeId) => _entityTypeSpeedPerTick[typeId];
@@ -163,13 +192,31 @@ public sealed class World
         }
 
         EntityTypeDefinition type = Ruleset.EntityTypes[typeId];
+        if (type.HasFootprint)
+        {
+            return PlaceStructure(typeId, owner, x / MapState.UnitsPerTile, y / MapState.UnitsPerTile);
+        }
+
         EntityId entity = Entities.Create();
         Positions.Set(entity, new Position(x, y));
         Identities.Set(entity, new Identity { TypeId = typeId, Owner = (byte)owner });
         Healths.Set(entity, new Health { Current = type.MaxHealth, Max = type.MaxHealth });
         if (type.SpeedUnitsPerSecond > 0)
         {
-            Motions.Set(entity, new Motion { TargetX = x, TargetY = y, SpeedPerTick = SpeedPerTick(typeId), State = MotionState.Idle });
+            Motions.Set(entity, new Motion
+            {
+                TargetX = x,
+                TargetY = y,
+                SteerX = x,
+                SteerY = y,
+                OrderX = x,
+                OrderY = y,
+                SpeedPerTick = SpeedPerTick(typeId),
+                Radius = type.Radius,
+                GoalTile = -1,
+                Layer = Navigation.LayerOfType(typeId),
+                State = MotionState.Idle,
+            });
         }
 
         int cell = Map.CellIndexAt(x, y);
@@ -177,6 +224,80 @@ public sealed class World
         Map.AddOccupant(cell);
         Events.Emit(new SimEvent(SimEventKind.Spawned, (byte)owner, entity, x, y, typeId));
         return entity;
+    }
+
+    /// <summary>
+    /// Places a structure (a type with a footprint: building, tree, rock) with its footprint's top-left at tile
+    /// (<paramref name="tileX"/>, <paramref name="tileY"/>). Its blocked tiles become impassable for every locomotor
+    /// except air; navigation updates incrementally (REQ-PATH-01).
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The type has no footprint, or the footprint leaves the map.</exception>
+    public EntityId PlaceStructure(ushort typeId, int owner, int tileX, int tileY)
+    {
+        RequireUnlocked();
+        if (typeId >= Ruleset.EntityTypes.Count || !Ruleset.EntityTypes[typeId].HasFootprint)
+        {
+            throw new ArgumentOutOfRangeException(nameof(typeId), "Not a structure type.");
+        }
+
+        if (!HasPlayer(owner))
+        {
+            throw new ArgumentOutOfRangeException(nameof(owner));
+        }
+
+        EntityTypeDefinition type = Ruleset.EntityTypes[typeId];
+        if (!Map.ContainsTile(tileX, tileY) || !Map.ContainsTile(tileX + type.FootprintWidth - 1, tileY + type.FootprintHeight - 1))
+        {
+            throw new ArgumentOutOfRangeException(nameof(tileX), "The footprint leaves the map.");
+        }
+
+        EntityId entity = Entities.Create();
+        int x = (tileX * MapState.UnitsPerTile) + (type.FootprintWidth * MapState.UnitsPerTile / 2);
+        int y = (tileY * MapState.UnitsPerTile) + (type.FootprintHeight * MapState.UnitsPerTile / 2);
+        Positions.Set(entity, new Position(x, y));
+        Identities.Set(entity, new Identity { TypeId = typeId, Owner = (byte)owner });
+        Healths.Set(entity, new Health { Current = type.MaxHealth, Max = type.MaxHealth });
+        Footprints.Set(entity, new Footprint { TileX = tileX, TileY = tileY });
+        ApplyFootprint(type, tileX, tileY, add: true);
+        Events.Emit(new SimEvent(SimEventKind.Spawned, (byte)owner, entity, x, y, typeId));
+        return entity;
+    }
+
+    /// <summary>
+    /// Kills an entity: records a corpse decal if its type leaves one (it never blocks movement, ORIG-01), then
+    /// destroys it.
+    /// </summary>
+    /// <returns><c>false</c> if it was not alive.</returns>
+    public bool Kill(EntityId entity)
+    {
+        RequireUnlocked();
+        if (!Entities.IsAlive(entity))
+        {
+            return false;
+        }
+
+        int p = Identities.IndexOf(entity);
+        int q = Positions.IndexOf(entity);
+        if (p >= 0 && q >= 0 && CorpseTtlTicks > 0)
+        {
+            Identity identity = Identities.At(p);
+            EntityTypeDefinition type = Ruleset.EntityTypes[identity.TypeId];
+            if (type.LeavesCorpse && !type.HasFootprint)
+            {
+                Position position = Positions.At(q);
+                Decals.Add(new Decal
+                {
+                    X = position.X,
+                    Y = position.Y,
+                    ExpiresTick = Tick.Value + CorpseTtlTicks,
+                    TypeId = identity.TypeId,
+                    Owner = identity.Owner,
+                    Kind = DecalKind.Corpse,
+                });
+            }
+        }
+
+        return Destroy(entity);
     }
 
     /// <summary>Destroys an entity: removes all its components now; its slot is recycled in the cleanup step.</summary>
@@ -205,11 +326,19 @@ public sealed class World
             Map.RemoveOccupant(OccupancyCells.At(cellPosition).Cell);
         }
 
+        int footprintPosition = Footprints.IndexOf(entity);
+        if (footprintPosition >= 0)
+        {
+            Footprint footprint = Footprints.At(footprintPosition);
+            ApplyFootprint(Ruleset.EntityTypes[typeId], footprint.TileX, footprint.TileY, add: false);
+        }
+
         foreach (IComponentStore store in Components.All)
         {
             store.RemoveEntity(entity);
         }
 
+        Paths.Clear(entity.Index);
         Entities.Destroy(entity);
         Events.Emit(new SimEvent(SimEventKind.Destroyed, (byte)owner, entity, 0, 0, typeId));
         return true;
@@ -258,11 +387,49 @@ public sealed class World
             }
         }
 
-        foreach (Motion m in Motions.Components)
+        ReadOnlySpan<EntityId> movers = Motions.Entities;
+        Span<Motion> motions = Motions.Components;
+        for (int i = 0; i < movers.Length; i++)
         {
-            if (m.State is < MotionState.Idle or > MotionState.Blocked || m.SpeedPerTick < 0 || !Map.ContainsPoint(m.TargetX, m.TargetY))
+            Motion m = motions[i];
+            int identity = Identities.IndexOf(movers[i]);
+            if (m.State is < MotionState.Idle or > MotionState.Blocked || m.SpeedPerTick < 0 || !Map.ContainsPoint(m.TargetX, m.TargetY)
+                || m.Mode is < MotionMode.None or > MotionMode.Route || m.Order is < MotionOrder.None or > MotionOrder.Follow
+                || identity < 0 || m.Layer != Navigation.LayerOfType(Identities.At(identity).TypeId)
+                || m.Radius is < 1 or > EntityTypeDefinition.MaxRadius
+                || (m.Mode == MotionMode.Flow && (m.GoalTile < 0 || m.GoalTile >= Map.Width * Map.Height))
+                || ((m.Mode is MotionMode.Route or MotionMode.Path) && (m.PathCursor < 0 || m.PathCursor > Paths.Count(movers[i].Index)))
+                || (m.Mode == MotionMode.Path && (Paths.Count(movers[i].Index) < 2 || Paths.Count(movers[i].Index) % 2 != 0))
+                || Positions.IndexOf(movers[i]) < 0)
             {
                 throw Invalid("invalid motion");
+            }
+
+            if (m.Mode == MotionMode.Route && !RouteIsValid(Paths.Get(movers[i].Index), m.Layer, m.PathCursor, m.PlanVersion))
+            {
+                throw Invalid("invalid route");
+            }
+        }
+
+        // Queued path requests (copied raw from the snapshot).
+        const PathRequestFlags KnownFlags = PathRequestFlags.Prepared | PathRequestFlags.Flow | PathRequestFlags.FlowHead;
+        for (int i = 0; i < PathQueue.Count; i++)
+        {
+            PathRequest r = PathQueue[i];
+            bool prepared = (r.Flags & PathRequestFlags.Prepared) != 0;
+            bool flow = (r.Flags & (PathRequestFlags.Flow | PathRequestFlags.FlowHead)) != 0;
+            if ((r.Flags & ~KnownFlags) != 0 || (flow && !prepared) || r.PrepCost < 0 || r.Group < 0 || r.Group >= NextGroupId
+                || (prepared && r.TargetX != int.MinValue && (!Map.ContainsPoint(r.StartX, r.StartY) || !Map.ContainsPoint(r.TargetX, r.TargetY))))
+            {
+                throw Invalid("invalid path request");
+            }
+
+            // A live flow request needs the unit's flow goal.
+            int mp = Motions.IndexOf(EntityId.FromValue(r.Entity));
+            if (flow && mp >= 0 && Motions.At(mp).RequestSerial == r.Serial
+                && (Motions.At(mp).GoalTile < 0 || Motions.At(mp).GoalTile >= Map.Width * Map.Height || Motions.At(mp).Layer == NavigationGrid.NoLayer))
+            {
+                throw Invalid("flow request without a flow goal");
             }
         }
 
@@ -282,11 +449,63 @@ public sealed class World
         static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
     }
 
+    // Route nodes must name existing portals of the unit's layer (navigation is rebuilt from the restored map).
+    // A route's node ids must name existing portals of the unit's layer (navigation is rebuilt from the restored map);
+    // a plan made for the current passability version must match the layer exactly (it is used without re-checking).
+    private bool RouteIsValid(ReadOnlySpan<int> plan, byte layerIndex, int cursor, int planVersion)
+    {
+        Navigation.EnsureUpToDate();
+        if (layerIndex >= Navigation.LayerCount || plan.IsEmpty || (plan.Length & 1) != 0 || cursor > plan.Length / 2)
+        {
+            return false;
+        }
+
+        NavLayer layer = Navigation.Layers[layerIndex];
+        if (planVersion == Navigation.Version)
+        {
+            return PathSearch.RouteValid(layer, plan, 0);
+        }
+
+        foreach (int node in plan[..(plan.Length / 2)])
+        {
+            if ((uint)node >= (uint)layer.NodeCapacity)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private void RequireUnlocked()
     {
         if (IsLocked)
         {
             throw new InvalidOperationException("The world is locked between ticks; change it through commands (REQ-ARCH-03).");
+        }
+    }
+
+    private void ApplyFootprint(EntityTypeDefinition type, int tileX, int tileY, bool add)
+    {
+        ReadOnlySpan<byte> mask = type.Footprint;
+        for (int dy = 0; dy < type.FootprintHeight; dy++)
+        {
+            for (int dx = 0; dx < type.FootprintWidth; dx++)
+            {
+                if (mask[(dy * type.FootprintWidth) + dx] == 0)
+                {
+                    continue;
+                }
+
+                if (add)
+                {
+                    Map.AddBlocker(tileX + dx, tileY + dy);
+                }
+                else
+                {
+                    Map.RemoveBlocker(tileX + dx, tileY + dy);
+                }
+            }
         }
     }
 

@@ -129,10 +129,17 @@ public class HardeningTests
 
         var set = new CommandList();
         set.AppendStamped(0, batch);
-        TickResult result = sim.Tick(set); // 70,400 units in one occupancy cell: counts are int, nothing overflows
+        TickResult result = sim.Tick(set); // 70,400 units spawned on one point: counts are int, nothing overflows
         Assert.Equal(0, result.Tick.Value);
         Assert.Equal(70_400, sim.World.Entities.AliveCount);
-        Assert.Equal(70_400, sim.World.Map.Occupancy[sim.World.Map.CellIndexAt(1000, 1000)]);
+        long occupants = 0;
+        foreach (int count in sim.World.Map.Occupancy)
+        {
+            occupants += count;
+        }
+
+        // Movement starts pushing the stack apart in the same tick; every unit is still counted exactly once.
+        Assert.Equal(70_400, occupants);
     }
 
     [Fact]

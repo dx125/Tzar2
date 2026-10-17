@@ -16,8 +16,8 @@ namespace Tzar2.Sim.Map;
 /// cross a tile if all four corner terrain types allow it and the tile is not a cliff (cliffs leave only
 /// <see cref="Locomotor.Air"/>). <b>Blockers</b> count static footprint obstacles per tile (buildings, trees, rocks;
 /// corpses and debris never block, REQ-PATH-08); a blocked tile is passable for air only. Every blocker change bumps
-/// <see cref="ObstacleVersion"/>, the key that pathfinding caches (connectivity, HPA* clusters, flow fields) are
-/// validated against. <b>Occupancy</b> counts mobile entities per sub-tile cell
+/// <see cref="ObstacleVersion"/>; every effective passability change also bumps <see cref="PassabilityVersion"/>, the
+/// key that pathfinding caches (connectivity, HPA* clusters, flow fields) and plans are validated against. <b>Occupancy</b> counts mobile entities per sub-tile cell
 /// (<see cref="Ruleset.OccupancyCellsPerTileAxis"/>²  cells per tile).</para>
 /// <para>Memory at 1,024² with 2×2 cells: passability 1 MiB, blockers 2 MiB, occupancy 16 MiB (<c>int</c> counts, so
 /// no cell can overflow even with every entity in one cell, ADR 0019). Snapshots store only the obstacle version and
@@ -32,6 +32,8 @@ public sealed class MapState
     private readonly byte[] _basePassability;
     private readonly ushort[] _blockers;
     private readonly int[] _occupancy;
+    private int[] _changedTiles = new int[64];
+    private int _changedCount;
 
     /// <summary>Builds the map state.</summary>
     /// <exception cref="ArgumentException">The map uses terrain types the ruleset lacks.</exception>
@@ -108,6 +110,12 @@ public sealed class MapState
     /// <summary>Incremented on every blocker change; pathfinding caches key on it (REQ-PATH-01/02/04).</summary>
     public int ObstacleVersion { get; private set; }
 
+    /// <summary>
+    /// Incremented only when a tile's effective passability changes (its blocker count goes 0 → 1 or 1 → 0): the
+    /// version navigation and plans are validated against (a second blocker on a blocked tile changes nothing).
+    /// </summary>
+    public int PassabilityVersion { get; private set; }
+
     /// <summary>Base passability per tile (<see cref="LocomotorMask"/> bytes), ignoring blockers.</summary>
     public ReadOnlySpan<byte> BasePassability => _basePassability;
 
@@ -152,6 +160,11 @@ public sealed class MapState
         int i = TileIndex(tx, ty);
         _blockers[i] = checked((ushort)(_blockers[i] + 1));
         ObstacleVersion++;
+        if (_blockers[i] == 1)
+        {
+            RecordChange(i);
+            PassabilityVersion++;
+        }
     }
 
     /// <summary>Removes a footprint obstacle from a tile.</summary>
@@ -166,6 +179,27 @@ public sealed class MapState
 
         _blockers[i]--;
         ObstacleVersion++;
+        if (_blockers[i] == 0)
+        {
+            RecordChange(i);
+            PassabilityVersion++;
+        }
+    }
+
+    /// <summary>
+    /// Tiles whose effective passability changed since the last <see cref="ClearChangedTiles"/> (consumed by the
+    /// navigation layers for incremental updates; derived bookkeeping, not state).
+    /// </summary>
+    internal ReadOnlySpan<int> ChangedTiles => _changedTiles.AsSpan(0, _changedCount);
+
+    /// <summary>Whether the blockers were replaced wholesale (snapshot restore) since <see cref="ClearChangedTiles"/>.</summary>
+    internal bool BlockersReplaced { get; private set; }
+
+    /// <summary>Forgets <see cref="ChangedTiles"/> and <see cref="BlockersReplaced"/>.</summary>
+    internal void ClearChangedTiles()
+    {
+        _changedCount = 0;
+        BlockersReplaced = false;
     }
 
     /// <summary>Counts an entity into a cell.</summary>
@@ -186,7 +220,7 @@ public sealed class MapState
     public void AppendTo(StateHasher hasher)
     {
         ArgumentNullException.ThrowIfNull(hasher);
-        hasher.Add(ObstacleVersion).AddSpan<ushort>(_blockers).AddSpan<int>(_occupancy);
+        hasher.Add(ObstacleVersion).Add(PassabilityVersion).AddSpan<ushort>(_blockers).AddSpan<int>(_occupancy);
     }
 
     /// <summary>
@@ -197,6 +231,7 @@ public sealed class MapState
     {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteInt32(ObstacleVersion);
+        writer.WriteInt32(PassabilityVersion);
         int nonZero = 0;
         foreach (ushort b in _blockers)
         {
@@ -221,6 +256,7 @@ public sealed class MapState
     public void ReadFrom(ref BinaryBufferReader reader)
     {
         ObstacleVersion = reader.ReadInt32();
+        PassabilityVersion = reader.ReadInt32();
         Array.Clear(_blockers);
         Array.Clear(_occupancy);
         ulong count = reader.ReadVarUInt64();
@@ -242,6 +278,8 @@ public sealed class MapState
 
             _blockers[index] = (ushort)value;
         }
+
+        BlockersReplaced = true;
     }
 
     /// <summary>
@@ -260,6 +298,16 @@ public sealed class MapState
 
             _occupancy[cell.Cell]++;
         }
+    }
+
+    private void RecordChange(int tile)
+    {
+        if (_changedCount == _changedTiles.Length)
+        {
+            Array.Resize(ref _changedTiles, _changedTiles.Length * 2);
+        }
+
+        _changedTiles[_changedCount++] = tile;
     }
 
     private int TileIndex(int tx, int ty)

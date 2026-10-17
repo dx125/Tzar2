@@ -19,11 +19,17 @@ public enum SimEventKind : ushort
     /// <summary>A mover reached its target.</summary>
     Arrived = 3,
 
-    /// <summary>A mover stopped at impassable terrain (X, Y = position).</summary>
+    /// <summary>A mover gave up: it made no progress after repeated re-planning (X, Y = position).</summary>
     Blocked = 4,
 
     /// <summary>A command was ignored at execution time (Arg = <see cref="CommandRejection"/>, X = command index in the tick).</summary>
     CommandRejected = 5,
+
+    /// <summary>
+    /// The ordered goal is not reachable for the unit (REQ-PATH-01, ORIG-03): it goes to the nearest reachable point
+    /// instead (X, Y = that point; Arg = 1 if the unit cannot move at all from where it stands).
+    /// </summary>
+    GoalUnreachable = 6,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>
