@@ -142,7 +142,8 @@ public sealed class PackageReader : IDisposable
                 throw new InvalidDataException($"{name}: entry '{path}' out of range.");
             }
 
-            if (usize > MaxEntrySize || (method == 0 && csize != usize))
+            // Deflate expands at most ~1032:1; a larger claim is a decompression bomb (the buffer is allocated up front).
+            if (usize > MaxEntrySize || (method == 0 && csize != usize) || (method == 8 && usize > ((long)csize * 1032) + 1024))
             {
                 throw new InvalidDataException($"{name}: entry '{path}' has an invalid size.");
             }

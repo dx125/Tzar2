@@ -5,12 +5,17 @@ using Tzar2.Content.Packages;
 
 namespace Tzar2.Content.Vfs;
 
-/// <summary>A mounted <c>.t2pkg</c> package. Entry paths are normalised; non-normalisable entries are skipped.</summary>
+/// <summary>
+/// A mounted <c>.t2pkg</c> package. Only entries whose stored path is already a normalised content path are visible
+/// (packages written by <see cref="PackageWriter"/> always are); others, e.g. <c>Art/Unit/X.t2spr</c> from a hand-made
+/// zip, are listed in <see cref="SkippedEntries"/> so tools can report them instead of silently overriding nothing.
+/// </summary>
 public sealed class PackageSource : IContentSource, IDisposable
 {
     private readonly PackageReader _reader;
     private readonly Dictionary<string, PackageEntry> _entries = new(StringComparer.Ordinal);
     private readonly List<string> _paths;
+    private readonly List<string> _skipped = [];
 
     /// <summary>Wraps an open package. The source takes ownership of <paramref name="reader"/>.</summary>
     public PackageSource(PackageReader reader)
@@ -19,12 +24,15 @@ public sealed class PackageSource : IContentSource, IDisposable
         _reader = reader;
         foreach (PackageEntry entry in reader.Entries)
         {
-            if (entry.Path.EndsWith('/') || !ContentPath.IsNormalized(entry.Path))
+            if (entry.Path.EndsWith('/'))
             {
                 continue;
             }
 
-            _entries.TryAdd(entry.Path, entry);
+            if (!ContentPath.IsNormalized(entry.Path) || !_entries.TryAdd(entry.Path, entry))
+            {
+                _skipped.Add(entry.Path);
+            }
         }
 
         _paths = [.. _entries.Keys];
@@ -36,6 +44,9 @@ public sealed class PackageSource : IContentSource, IDisposable
 
     /// <inheritdoc/>
     public string Name => _reader.Name;
+
+    /// <summary>Entries that are not visible because their path is not normalised or is a duplicate.</summary>
+    public IReadOnlyList<string> SkippedEntries => _skipped;
 
     /// <inheritdoc/>
     public IReadOnlyList<string> Paths => _paths;

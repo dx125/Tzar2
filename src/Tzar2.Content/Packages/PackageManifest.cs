@@ -115,7 +115,10 @@ public sealed record PackageManifest
                 throw new InvalidDataException($"package.yaml:{lineNumber}: expected 'key: value'.");
             }
 
-            values[line[..colon].Trim()] = line[(colon + 1)..].Trim();
+            if (!values.TryAdd(line[..colon].Trim(), line[(colon + 1)..].Trim()))
+            {
+                throw new InvalidDataException($"package.yaml:{lineNumber}: duplicate key '{line[..colon].Trim()}'.");
+            }
         }
 
         string Required(string key) => values.TryGetValue(key, out string? v)
@@ -283,9 +286,31 @@ public sealed record PackageManifest
             return items;
         }
 
-        foreach (string part in body.Split(','))
+        // Split at commas outside double quotes (Plain() quotes items that contain commas).
+        int start = 0;
+        bool quoted = false;
+        for (int i = 0; i <= body.Length; i++)
         {
-            items.Add(Scalar(part.Trim(), key));
+            if (i < body.Length && body[i] == '\\' && quoted)
+            {
+                i++;
+                continue;
+            }
+
+            if (i < body.Length && body[i] == '"')
+            {
+                quoted = !quoted;
+            }
+            else if (i == body.Length || (body[i] == ',' && !quoted))
+            {
+                items.Add(Scalar(body[start..i].Trim(), key));
+                start = i + 1;
+            }
+        }
+
+        if (quoted)
+        {
+            throw new InvalidDataException($"package.yaml: unterminated quote in '{key}'.");
         }
 
         return items;

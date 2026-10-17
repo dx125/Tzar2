@@ -23,6 +23,14 @@ public class ContentPathTests
     [InlineData("a\u0001b")]
     public void Rejects_bad_paths(string input) => Assert.Throws<ArgumentException>(() => ContentPath.Normalize(input));
 
+    [Theory]
+    [InlineData("Cafe\u0301/E\u0300TE\u0301.ini", "café/èté.ini")]       // macOS NFD -> NFC
+    [InlineData("\u0418\u0306/\u0435\u0308.txt", "й/ё.txt")]          // Cyrillic (CP1251)
+    [InlineData("Z\u030C/a\u0328.txt", "ž/ą.txt")]                      // CP1250
+    [InlineData("caf\u00E9", "café")]                                   // already NFC
+    public void Composes_decomposed_letters(string input, string expected)
+        => Assert.Equal(expected, ContentPath.Normalize(input));
+
     [Fact]
     public void Changes_extensions() => Assert.Equal("a.b/c.t2spr", ContentPath.ChangeExtension("a.b/c.rle", ".t2spr"));
 }
@@ -143,6 +151,28 @@ public class PackageTests
         Assert.Equal(manifest.ToYaml(), parsed.ToYaml());
         Assert.Equal(["art", "sound"], parsed.Provides);
         Assert.Throws<InvalidDataException>(() => PackageManifest.Parse("name: x\nversion: 1\n"));
+        Assert.Throws<InvalidDataException>(() => PackageManifest.Parse("id: a\nid: b\nname: x\nversion: 1\n"));
+    }
+
+    [Fact]
+    public void List_items_with_commas_round_trip()
+    {
+        var manifest = new PackageManifest { Id = "m", Name = "M", Version = "1.0.0", Provides = ["a, b", "c\"d", "e"] };
+        Assert.Equal(["a, b", "c\"d", "e"], PackageManifest.Parse(manifest.ToYaml()).Provides);
+    }
+
+    [Fact]
+    public void Deflate_bombs_are_rejected_before_allocation()
+    {
+        var writer = new PackageWriter();
+        writer.Add("x", new byte[10]);
+        using var ms = new MemoryStream();
+        writer.WriteTo(ms);
+        byte[] bytes = ms.ToArray();
+        int central = bytes.AsSpan().IndexOf(new byte[] { 0x50, 0x4B, 0x01, 0x02 });
+        bytes[central + 10] = 8;                                        // method = deflate
+        BitConverter.TryWriteBytes(bytes.AsSpan(central + 24), 1u << 30); // uncompressed size = 1 GiB
+        Assert.Throws<InvalidDataException>(() => PackageReader.Open(new MemoryStream(bytes), "bomb"));
     }
 }
 
@@ -191,5 +221,21 @@ public class VirtualFileSystemTests
         Assert.Equal(new byte[] { 42 }, vfs.ReadAllBytes("DATA/RES.INI"));
         Assert.Equal(PackageKind.Mod, source.ReadManifest()!.Kind);
         Assert.Same(source, vfs.Resolve("data/res.ini"));
+        Assert.Empty(source.SkippedEntries);
+    }
+
+    [Fact]
+    public void Non_normalised_entries_are_reported_not_silently_dropped()
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            zip.CreateEntry("Art/Unit/X.t2spr");
+            zip.CreateEntry("art/ok.t2spr");
+        }
+
+        using var source = new PackageSource(PackageReader.Open(new MemoryStream(ms.ToArray()), "mod.t2pkg"));
+        Assert.Equal(["art/ok.t2spr"], source.Paths);
+        Assert.Equal(["Art/Unit/X.t2spr"], source.SkippedEntries);
     }
 }

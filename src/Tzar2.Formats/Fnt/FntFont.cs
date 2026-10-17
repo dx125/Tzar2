@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Tzar2.Formats.Bmp;
+using Tzar2.Formats.Text;
 
 namespace Tzar2.Formats.Fnt;
 
@@ -28,7 +29,7 @@ public sealed class FntFont
         Strip = strip;
     }
 
-    /// <summary>Face name (ASCII).</summary>
+    /// <summary>Face name, decoded as CP1252 (Windows font face names in the files are ASCII; the strip itself follows the edition's code page).</summary>
     public string Face { get; }
 
     /// <summary>Height of every glyph cell.</summary>
@@ -67,11 +68,6 @@ public sealed class FntFont
             name = name[..nul];
         }
 
-        char[] faceChars = new char[name.Length];
-        for (int i = 0; i < name.Length; i++)
-        {
-            faceChars[i] = (char)name[i];
-        }
 
         int cellHeight = ByteReader.U16(data, 0x20, Format, "cell height");
         ushort[] metrics = new ushort[7];
@@ -117,7 +113,7 @@ public sealed class FntFont
             }
         }
 
-        return new FntFont(new string(faceChars), cellHeight, metrics, declared, widths, charmap, strip);
+        return new FntFont(LegacyText.Decode(name, CodePage.Windows1252), cellHeight, metrics, declared, widths, charmap, strip);
     }
 
     /// <summary>Coverage value of pixel (x, y) of glyph <paramref name="glyph"/>.</summary>

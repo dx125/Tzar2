@@ -4,9 +4,12 @@ using System.Text;
 namespace Tzar2.Content;
 
 /// <summary>
-/// Logical content paths (TDD §11.1): relative, <c>/</c>-separated, lower-case (invariant), no empty, <c>.</c> or
-/// <c>..</c> segments. The VFS compares paths ordinally after normalisation, so lookups are case-insensitive like the
-/// original Windows game.
+/// Logical content paths (TDD §11.1): relative, <c>/</c>-separated, no empty, <c>.</c> or <c>..</c> segments,
+/// NFC-composed and lower-cased. The VFS compares paths ordinally after normalisation, so lookups are case-insensitive
+/// like the original Windows game. Two deliberate limits: composition covers the letters of the supported code pages
+/// (CP1250/1251/1252, built-in table, so macOS NFD names and Windows NFC names agree without ICU), and lower-casing is
+/// <see cref="string.ToLowerInvariant()"/> (simple invariant mapping), not the file system's case folding, so exotic
+/// pairs such as Turkish dotted/dotless I or ẞ/ß do not fold together.
 /// </summary>
 public static class ContentPath
 {
@@ -16,7 +19,7 @@ public static class ContentPath
     {
         ArgumentNullException.ThrowIfNull(path);
         var sb = new StringBuilder(path.Length);
-        foreach (string segment in path.Replace('\\', '/').Split('/'))
+        foreach (string segment in Compose(path).Replace('\\', '/').Split('/'))
         {
             if (segment.Length == 0)
             {
@@ -50,6 +53,58 @@ public static class ContentPath
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>Composes base letter + combining mark pairs of the supported code pages (NFC for that repertoire).</summary>
+    public static string Compose(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        if (!HasCombiningMark(text))
+        {
+            return text;
+        }
+
+        ReadOnlySpan<char> pairs = NfcTable.Pairs;
+        var sb = new StringBuilder(text.Length);
+        foreach (char c in text)
+        {
+            if (sb.Length > 0 && c is >= '\u0300' and <= '\u036F')
+            {
+                char previous = sb[^1];
+                bool composed = false;
+                for (int i = 0; i < pairs.Length; i += 3)
+                {
+                    if (pairs[i] == previous && pairs[i + 1] == c)
+                    {
+                        sb[^1] = pairs[i + 2];
+                        composed = true;
+                        break;
+                    }
+                }
+
+                if (composed)
+                {
+                    continue;
+                }
+            }
+
+            sb.Append(c);
+        }
+
+        return sb.ToString();
+    }
+
+    private static bool HasCombiningMark(string text)
+    {
+        foreach (char c in text)
+        {
+            if (c is >= '\u0300' and <= '\u036F')
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Whether <paramref name="path"/> is already in normal form.</summary>

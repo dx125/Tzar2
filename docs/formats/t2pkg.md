@@ -10,8 +10,11 @@ every OS and runtime (REQ-IMP-02): entries sorted by path (ordinal), **stored** 
 1980-01-01 00:00, "version made by" 2.0/MS-DOS, UTF-8 names, no extra fields, no ZIP64 (< 65,535 entries, < 4 GiB).
 `PackageReader` also reads deflated entries, for packages produced by other tools.
 
-Entry paths are normalised content paths (`ContentPath`): lower case, `/`, no `.`/`..`. The VFS mounts packages and
-folders in priority order; a later source wins for the same path.
+Entry paths are normalised content paths (`ContentPath`): NFC-composed for the letters of CP1250/1251/1252 (built-in
+table, identical with or without ICU), `ToLowerInvariant`, `/`, no `.`/`..`. The VFS mounts packages and folders in
+priority order; a later source wins for the same path. Package entries whose stored name is not normalised are not
+visible and are listed in `PackageSource.SkippedEntries` (and by `t2 dump`). The reader rejects deflate entries that
+claim more than 1,032× their compressed size before allocating.
 
 `package.yaml`: `id`, `name`, `version`, `kind`, `engineApi`, `dependsOn`, `conflictsWith`, `provides`,
 `gameplayHash` (SHA-256 over every `tables/` entry: path, NUL, int64 length, bytes, in path order), `sourceEdition`.
@@ -23,14 +26,18 @@ folders in priority order; a later source wins for the same path.
 | `art/<path under IMAGES>.t2spr` | every `.RLE` (key: the IMAGES.INI logical path, e.g. `art/unit/euro knight.t2spr`) |
 | `art/<path under IMAGES>.t2img` | every `.BMP` under `IMAGES/` |
 | `art-extra/<path>.t2img` | BMPs elsewhere (`HELP/`, `Hero Icons/`) |
-| `palettes/game.json` | `GAME.PAL`: 256 `rrggbb` entries, ramp base 112, 16 entries × 8 players |
-| `fonts/<name>.json`, `fonts/<name>.t2img` | metrics + `[code, unicode, glyph, width]` per character; glyph strip (R8 coverage, or Indexed8 for `FIXSHAD`) |
+| `palettes/game.json` | `IMAGES/GAME.PAL`: 256 `rrggbb` entries, ramp base 112, 16 entries × 8 players (other `.PAL` files: `palettes-extra/<source>.json`) |
+| `fonts/<name>.json`, `fonts/<name>.t2img` | `LOCAL/FONTS/*.FNT`: metrics + `[code, unicode, glyph, width]` per character; glyph strip (R8 coverage, or Indexed8 for `FIXSHAD`); fonts elsewhere: `fonts-extra/<source>` |
 | `sound/**.wav`, `music/*.mid` | unchanged copies |
 | `tables/<source path>.json` | every INI (`sections` → `entries` `[key or null, value]`, order and duplicates kept) and TSV (`header`, `rows`, blank separator rows as `[]`), decoded with the edition's code page |
 | `text/<source path>` | other text (`CHANGES.TXT`, help, AI scripts) as UTF-8 |
 | `manifests/sprites.json` | per sheet: asset, source, format, kind, directions, frames, cell size, player range, shadow hints, trimmed pixels, DAT cross-check |
 | `manifests/sprite-index.json` | every IMAGES.INI entry (data + terrain sets) resolved to its asset, with all keys as string lists |
 | `manifests/images.json`, `footprints.json`, `sounds.json`, `music.json`, `fonts.json`, `tables.json`, `terrain.json`, `edition.json` | indexes; `footprints.json` holds the DAT footprint rectangles and grids |
+
+Distinct sources always map to distinct entries; if two outputs still collided, the second file would be reported as
+an error, never abort the import. Sheets wider than 4,096 px or larger than 2^26 px are rejected by the RLE decoder,
+and trimmed cells larger than 2,048 px (one texture layer, ADR 0013) by the converter; both are per-file errors.
 
 Maps and campaigns (`.wmp`/`.wcm`) are validated but not converted (M4); movies and demos are skipped (M8, DEC-12).
 The import report (`import-report.json`/`.txt`) is written next to the package, never into it, because it contains
