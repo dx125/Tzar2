@@ -30,16 +30,24 @@ public class AllocationTests
 
         // Tier-0 and OSR code may allocate (e.g. unelided boxing) until tiered compilation has optimized the hot
         // methods in the background; with DOTNET_TieredCompilation=0 the first measured tick is already at 0 B.
-        for (int attempt = 0; attempt < 60 && MeasureTicks(scenario, 50).SimThread != 0; attempt++)
+        for (int attempt = 0; attempt < 60 && MeasureTicks(scenario, 50) is not (0, 0); attempt++)
         {
             Thread.Sleep(50);
         }
 
-        (long simThread, long allThreads) = MeasureTicks(scenario, 200);
-        Assert.Equal(0, simThread);
+        // The process-wide counter also sees the runtime's own background threads (tiering, timers), which are noisy
+        // on CI runners. A per-tick allocation in the sim or its jobs shows up in every window (>= ~24 B x 200 ticks),
+        // background noise does not, so the quietest of three windows must be (almost) clean.
+        long simThread = long.MaxValue;
+        long allThreads = long.MaxValue;
+        for (int window = 0; window < 3; window++)
+        {
+            (long sim, long all) = MeasureTicks(scenario, 200);
+            simThread = Math.Min(simThread, sim);
+            allThreads = Math.Min(allThreads, all);
+        }
 
-        // The process-wide counter also sees the runtime's own background threads (tiering, timers), so it gets a
-        // small allowance; a per-tick allocation on a worker would be at least ~24 B x 200 ticks.
+        Assert.Equal(0, simThread);
         Assert.True(allThreads < 1024, $"{allThreads} B allocated on all threads over 200 ticks");
     }
 
