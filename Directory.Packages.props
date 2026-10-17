@@ -8,6 +8,8 @@
   </PropertyGroup>
   <ItemGroup Label="Runtime">
     <PackageVersion Include="System.IO.Hashing" Version="10.0.13" />
+    <!-- Lua 5.2 interpreter in pure C# (MIT; deps LuaCSharp.Annotations/SourceGenerator are MIT too). Spike S4, ADR 0008. -->
+    <PackageVersion Include="LuaCSharp" Version="0.5.7" />
   </ItemGroup>
   <ItemGroup Label="Analyzers">
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />

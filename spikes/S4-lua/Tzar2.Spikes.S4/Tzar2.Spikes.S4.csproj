@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Spike S4 probe (ADR 0008): sandbox escape checks, budget checks and overhead benchmark.
+    NativeAOT check: dotnet publish -c Release -f net10.0 -r osx-arm64 -p:Tzar2Aot=true
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>$(Tzar2LibraryTargetFramework);$(Tzar2AppTargetFramework)</TargetFrameworks>
+    <RootNamespace>Tzar2.Spikes.S4</RootNamespace>
+    <IsAotCompatible>true</IsAotCompatible>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- -p:PublishAot=true would flow into the netstandard2.0 analyzer project and fail (NETSDK1207); use -p:Tzar2Aot=true. -->
+    <PublishAot Condition="'$(Tzar2Aot)' == 'true'">true</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Tzar2.Spikes.Lua/Tzar2.Spikes.Lua.csproj" />
+  </ItemGroup>
+
+</Project>
