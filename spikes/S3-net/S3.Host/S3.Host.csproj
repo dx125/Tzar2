@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>$(Tzar2AppTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Spikes.S3.Host</RootNamespace>
+    <Description>Spike S3: relay, headless bot client, UDP impairment proxy and measurement harness.</Description>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../S3.Lockstep/S3.Lockstep.csproj" />
+  </ItemGroup>
+
+</Project>

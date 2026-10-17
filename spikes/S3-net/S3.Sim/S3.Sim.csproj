@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Spikes.S3.Sim</RootNamespace>
+    <Description>Spike S3: toy deterministic simulation driven by lockstep commands.</Description>
+    <!-- The toy sim is held to the same rules as Tzar2.Sim (ADR 0004). -->
+    <Tzar2Deterministic>true</Tzar2Deterministic>
+    <Tzar2NoIO>true</Tzar2NoIO>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Tzar2.Core/Tzar2.Core.csproj" />
+  </ItemGroup>
+
+</Project>
