@@ -7,7 +7,7 @@
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- The ruleset compiler runs on every peer, so its output must not depend on floating point or hash order (ADR 0008). -->
+    <!-- The ruleset compiler runs on every peer, so its output must not depend on floating point or hash order (ADR 0012). -->
     <Tzar2Deterministic>true</Tzar2Deterministic>
   </PropertyGroup>
 
