@@ -5,6 +5,15 @@
     and the [assembly: Tzar2.Core.Tzar2Deterministic] marker. <Tzar2NoIO>true</Tzar2NoIO> additionally enables
     T2D006 (no file/network I/O, REQ-ARCH-01) via [assembly: Tzar2.Core.Tzar2NoIO].
   -->
+  <!-- Fixed overflow policy (ADR 0014); Tzar2.Core reads TZAR2_OVERFLOW_SATURATE in OverflowPolicy. -->
+  <PropertyGroup Condition="'$(Tzar2OverflowPolicy)' == 'Saturate'">
+    <DefineConstants>$(DefineConstants);TZAR2_OVERFLOW_SATURATE</DefineConstants>
+  </PropertyGroup>
+  <Target Name="Tzar2ValidateOverflowPolicy" BeforeTargets="CoreCompile"
+          Condition="'$(Tzar2OverflowPolicy)' != 'Throw' and '$(Tzar2OverflowPolicy)' != 'Saturate'">
+    <Error Text="Tzar2OverflowPolicy must be Throw or Saturate, not '$(Tzar2OverflowPolicy)'." />
+  </Target>
+
   <ItemGroup Condition="'$(Tzar2Deterministic)' == 'true' or '$(Tzar2NoIO)' == 'true'">
     <ProjectReference Include="$(MSBuildThisFileDirectory)src/Tzar2.Analyzers/Tzar2.Analyzers.csproj"
                       OutputItemType="Analyzer"

@@ -11,9 +11,10 @@ namespace Tzar2.Core.Numerics;
 /// <remarks>
 /// <para>Rounding: multiplication, division and conversions to integers truncate toward zero unless the
 /// method name says otherwise (TDD §8.2 default, revisited per formula once UNK-08 is resolved).</para>
-/// <para>Overflow: the operators are checked and throw <see cref="OverflowException"/>; overflow in the
-/// simulation is a bug, and an exception is deterministic. Use the <c>Saturating*</c> helpers where
-/// clamping is the intended behaviour.</para>
+/// <para>Overflow: the operators and conversions follow the build-time <see cref="OverflowPolicy"/> (ADR 0014):
+/// they throw <see cref="OverflowException"/> in development/debug builds and clamp to the representable range
+/// (and report the event) in release builds. Both are deterministic; overflow in the simulation is still a bug.
+/// Use the <c>Saturating*</c> helpers where clamping is the intended behaviour in every build.</para>
 /// </remarks>
 public readonly struct Fixed : IEquatable<Fixed>, IComparable<Fixed>, IComparable, ISpanFormattable
 {
@@ -64,12 +65,12 @@ public readonly struct Fixed : IEquatable<Fixed>, IComparable<Fixed>, IComparabl
     public static Fixed FromRaw(long raw) => new(raw);
 
     /// <summary>Converts an integer exactly.</summary>
-    /// <exception cref="OverflowException"><paramref name="value"/> is outside [<see cref="MinInteger"/>, <see cref="MaxInteger"/>].</exception>
+    /// <exception cref="OverflowException"><paramref name="value"/> is outside [<see cref="MinInteger"/>, <see cref="MaxInteger"/>] (policy <see cref="OverflowMode.Throw"/>).</exception>
     public static Fixed FromInt(long value)
     {
         if (value > MaxInteger || value < MinInteger)
         {
-            throw new OverflowException("Integer is outside the Fixed range.");
+            return new(OverflowPolicy.Overflow(OverflowSite.Convert, value < 0 ? long.MinValue : long.MaxValue));
         }
 
         return new(value << FractionBits);
@@ -77,11 +78,11 @@ public readonly struct Fixed : IEquatable<Fixed>, IComparable<Fixed>, IComparabl
 
     /// <summary>Creates <c>numerator / denominator</c>, truncated toward zero.</summary>
     /// <exception cref="DivideByZeroException"><paramref name="denominator"/> is zero.</exception>
-    /// <exception cref="OverflowException">The result is outside the Fixed range.</exception>
+    /// <exception cref="OverflowException">The result is outside the Fixed range (policy <see cref="OverflowMode.Throw"/>).</exception>
     public static Fixed FromRatio(long numerator, long denominator)
     {
         Int128 raw = ((Int128)numerator << FractionBits) / denominator;
-        return new(checked((long)raw));
+        return new(Checked(raw, OverflowSite.Convert));
     }
 
     /// <summary>Integer part, truncated toward zero.</summary>
@@ -124,8 +125,9 @@ public readonly struct Fixed : IEquatable<Fixed>, IComparable<Fixed>, IComparabl
     public int Sign => Math.Sign(_raw);
 
     /// <summary>Absolute value.</summary>
-    /// <exception cref="OverflowException">The value is <see cref="MinValue"/>.</exception>
-    public static Fixed Abs(Fixed value) => new(Math.Abs(value._raw));
+    /// <exception cref="OverflowException">The value is <see cref="MinValue"/> (policy <see cref="OverflowMode.Throw"/>).</exception>
+    public static Fixed Abs(Fixed value)
+        => value._raw == long.MinValue ? new(OverflowPolicy.Overflow(OverflowSite.Negate, long.MaxValue)) : new(Math.Abs(value._raw));
 
     /// <summary>The smaller of two values.</summary>
     public static Fixed Min(Fixed a, Fixed b) => a._raw <= b._raw ? a : b;
@@ -192,34 +194,54 @@ public readonly struct Fixed : IEquatable<Fixed>, IComparable<Fixed>, IComparabl
     /// <summary>Linear interpolation <c>a + (b - a) * t</c>.</summary>
     public static Fixed Lerp(Fixed a, Fixed b, Fixed t) => a + ((b - a) * t);
 
-    /// <summary>Checked addition.</summary>
-    public static Fixed operator +(Fixed a, Fixed b) => new(checked(a._raw + b._raw));
+    /// <summary>Addition; overflow follows <see cref="OverflowPolicy"/>.</summary>
+    public static Fixed operator +(Fixed a, Fixed b)
+    {
+        long result = unchecked(a._raw + b._raw);
+        if (((a._raw ^ result) & (b._raw ^ result)) < 0)
+        {
+            return new(OverflowPolicy.Overflow(OverflowSite.Add, a._raw < 0 ? long.MinValue : long.MaxValue));
+        }
 
-    /// <summary>Checked subtraction.</summary>
-    public static Fixed operator -(Fixed a, Fixed b) => new(checked(a._raw - b._raw));
+        return new(result);
+    }
 
-    /// <summary>Checked negation.</summary>
-    public static Fixed operator -(Fixed a) => new(checked(-a._raw));
+    /// <summary>Subtraction; overflow follows <see cref="OverflowPolicy"/>.</summary>
+    public static Fixed operator -(Fixed a, Fixed b)
+    {
+        long result = unchecked(a._raw - b._raw);
+        if (((a._raw ^ b._raw) & (a._raw ^ result)) < 0)
+        {
+            return new(OverflowPolicy.Overflow(OverflowSite.Subtract, a._raw < 0 ? long.MinValue : long.MaxValue));
+        }
+
+        return new(result);
+    }
+
+    /// <summary>Negation; <c>-MinValue</c> follows <see cref="OverflowPolicy"/> (saturates to <see cref="MaxValue"/>).</summary>
+    public static Fixed operator -(Fixed a)
+        => a._raw == long.MinValue ? new(OverflowPolicy.Overflow(OverflowSite.Negate, long.MaxValue)) : new(-a._raw);
 
     /// <summary>Identity.</summary>
     public static Fixed operator +(Fixed a) => a;
 
-    /// <summary>Checked multiplication, truncated toward zero.</summary>
-    public static Fixed operator *(Fixed a, Fixed b) => new(checked((long)MultiplyRaw(a._raw, b._raw)));
+    /// <summary>Multiplication, truncated toward zero; overflow follows <see cref="OverflowPolicy"/>.</summary>
+    public static Fixed operator *(Fixed a, Fixed b) => new(Checked(MultiplyRaw(a._raw, b._raw), OverflowSite.Multiply));
 
-    /// <summary>Checked multiplication by an integer.</summary>
-    public static Fixed operator *(Fixed a, long b) => new(checked(a._raw * b));
+    /// <summary>Multiplication by an integer; overflow follows <see cref="OverflowPolicy"/>.</summary>
+    public static Fixed operator *(Fixed a, long b) => new(Checked((Int128)a._raw * b, OverflowSite.Multiply));
 
-    /// <summary>Checked multiplication by an integer.</summary>
-    public static Fixed operator *(long a, Fixed b) => new(checked(a * b._raw));
+    /// <summary>Multiplication by an integer; overflow follows <see cref="OverflowPolicy"/>.</summary>
+    public static Fixed operator *(long a, Fixed b) => new(Checked((Int128)a * b._raw, OverflowSite.Multiply));
 
-    /// <summary>Checked division, truncated toward zero.</summary>
+    /// <summary>Division, truncated toward zero; overflow follows <see cref="OverflowPolicy"/>.</summary>
+    /// <exception cref="DivideByZeroException"><paramref name="b"/> is zero (in every build: a zero divisor is not an overflow).</exception>
+    public static Fixed operator /(Fixed a, Fixed b) => new(Checked(DivideRaw(a._raw, b._raw), OverflowSite.Divide));
+
+    /// <summary>Division by an integer, truncated toward zero; <c>MinValue / -1</c> follows <see cref="OverflowPolicy"/>.</summary>
     /// <exception cref="DivideByZeroException"><paramref name="b"/> is zero.</exception>
-    public static Fixed operator /(Fixed a, Fixed b) => new(checked((long)DivideRaw(a._raw, b._raw)));
-
-    /// <summary>Division by an integer, truncated toward zero.</summary>
-    /// <exception cref="DivideByZeroException"><paramref name="b"/> is zero.</exception>
-    public static Fixed operator /(Fixed a, long b) => new(checked(a._raw / b));
+    public static Fixed operator /(Fixed a, long b)
+        => new(Checked((Int128)a._raw / b, OverflowSite.Divide));
 
     /// <summary>Remainder with the sign of the dividend (same semantics as <see cref="long"/>).</summary>
     public static Fixed operator %(Fixed a, Fixed b) => new(a._raw % b._raw);
@@ -430,6 +452,16 @@ public readonly struct Fixed : IEquatable<Fixed>, IComparable<Fixed>, IComparabl
     private static Int128 MultiplyRaw(long a, long b) => (Int128)a * b / OneRaw;
 
     private static Int128 DivideRaw(long a, long b) => ((Int128)a << FractionBits) / b;
+
+    private static long Checked(Int128 value, OverflowSite site)
+    {
+        if (value > long.MaxValue)
+        {
+            return OverflowPolicy.Overflow(site, long.MaxValue);
+        }
+
+        return value < long.MinValue ? OverflowPolicy.Overflow(site, long.MinValue) : (long)value;
+    }
 
     private static long Saturate(Int128 value)
     {

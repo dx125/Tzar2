@@ -6,6 +6,13 @@
     <!-- Standalone headless apps (CLI, relay server) run on the newer LTS. -->
     <Tzar2AppTargetFramework>net10.0</Tzar2AppTargetFramework>
 
+    <!--
+      Fixed overflow policy (ADR 0014, owner decision): Throw in development/debug builds, Saturate (+ log) in release
+      builds, including Godot's ExportRelease. Override with -p:Tzar2OverflowPolicy=Throw|Saturate.
+    -->
+    <Tzar2OverflowPolicy Condition="'$(Tzar2OverflowPolicy)' == '' and ('$(Configuration)' == 'Release' or '$(Configuration)' == 'ExportRelease')">Saturate</Tzar2OverflowPolicy>
+    <Tzar2OverflowPolicy Condition="'$(Tzar2OverflowPolicy)' == ''">Throw</Tzar2OverflowPolicy>
+
     <VersionPrefix>0.0.1</VersionPrefix>
 
     <LangVersion>latest</LangVersion>

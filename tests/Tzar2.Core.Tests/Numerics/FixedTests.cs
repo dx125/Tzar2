@@ -35,7 +35,17 @@ public class FixedTests
     [Theory]
     [InlineData(Fixed.MaxInteger + 1)]
     [InlineData(Fixed.MinInteger - 1)]
-    public void FromInt_out_of_range_throws(long value) => Assert.Throws<OverflowException>(() => Fixed.FromInt(value));
+    public void FromInt_out_of_range_follows_the_overflow_policy(long value)
+    {
+        if (OverflowPolicy.Mode == OverflowMode.Throw)
+        {
+            Assert.Throws<OverflowException>(() => Fixed.FromInt(value));
+        }
+        else
+        {
+            Assert.Equal(value < 0 ? Fixed.MinValue : Fixed.MaxValue, Fixed.FromInt(value));
+        }
+    }
 
     [Theory]
     [InlineData(1, 2, 32768)]
@@ -71,14 +81,64 @@ public class FixedTests
     }
 
     [Fact]
-    public void Checked_operators_throw_on_overflow()
+    public void Operators_follow_the_overflow_policy()
     {
-        Assert.Throws<OverflowException>(() => Fixed.MaxValue + Fixed.Epsilon);
-        Assert.Throws<OverflowException>(() => Fixed.MinValue - Fixed.Epsilon);
-        Assert.Throws<OverflowException>(() => -Fixed.MinValue);
-        Assert.Throws<OverflowException>(() => Fixed.MaxValue * Fixed.FromInt(2));
-        Assert.Throws<OverflowException>(() => Fixed.MaxValue / Fixed.Half);
+        (Func<Fixed> Operation, Fixed Saturated)[] cases =
+        [
+            (() => Fixed.MaxValue + Fixed.Epsilon, Fixed.MaxValue),
+            (() => Fixed.MinValue - Fixed.Epsilon, Fixed.MinValue),
+            (() => Fixed.MinValue + -Fixed.One, Fixed.MinValue),
+            (() => -Fixed.MinValue, Fixed.MaxValue),
+            (() => Fixed.Abs(Fixed.MinValue), Fixed.MaxValue),
+            (() => Fixed.MaxValue * Fixed.FromInt(2), Fixed.MaxValue),
+            (() => Fixed.MaxValue * Fixed.FromInt(-2), Fixed.MinValue),
+            (() => Fixed.MaxValue * 2L, Fixed.MaxValue),
+            (() => -3L * Fixed.MaxValue, Fixed.MinValue),
+            (() => Fixed.MaxValue / Fixed.Half, Fixed.MaxValue),
+            (() => Fixed.MinValue / -1L, Fixed.MaxValue),
+            (() => Fixed.FromRatio(long.MaxValue, 1), Fixed.MaxValue),
+        ];
+
+        long before = OverflowPolicy.SaturationCount;
+        foreach ((Func<Fixed> operation, Fixed saturated) in cases)
+        {
+            if (OverflowPolicy.Mode == OverflowMode.Throw)
+            {
+                Assert.Throws<OverflowException>(() => operation());
+            }
+            else
+            {
+                Assert.Equal(saturated, operation());
+            }
+        }
+
+        if (OverflowPolicy.Mode == OverflowMode.Saturate)
+        {
+            Assert.True(OverflowPolicy.SaturationCount - before >= cases.Length);
+        }
+
+        // A zero divisor is a bug, not an overflow: it throws under both policies.
         Assert.Throws<DivideByZeroException>(() => Fixed.One / Fixed.Zero);
+        Assert.Throws<DivideByZeroException>(() => Fixed.One / 0L);
+    }
+
+    [Fact]
+    public void Overflow_policy_matches_the_build_configuration()
+    {
+#if DEBUG
+        Assert.Equal(OverflowMode.Throw, OverflowPolicy.Mode);
+#else
+        Assert.Equal(OverflowMode.Saturate, OverflowPolicy.Mode);
+#endif
+    }
+
+    [Fact]
+    public void Operators_in_range_are_exact_at_the_edges()
+    {
+        Assert.Equal(Fixed.MaxValue, Fixed.FromRaw(long.MaxValue - 1) + Fixed.Epsilon);
+        Assert.Equal(Fixed.MinValue, Fixed.FromRaw(long.MinValue + 1) - Fixed.Epsilon);
+        Assert.Equal(Fixed.FromRaw(-long.MaxValue), -Fixed.MaxValue);
+        Assert.Equal(Fixed.FromRaw(long.MinValue), Fixed.FromRaw(long.MinValue / 2) * 2L);
     }
 
     [Fact]
