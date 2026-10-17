@@ -20,7 +20,8 @@ data beyond a few illustrative values (REQ-LEGAL-01/02).
 | [fnt.md](fnt.md) | `LOCAL/FONTS/*.FNT` (7) | resolved | 7/7 decode; specimen sheets correct (CP1252) |
 | [ini-tsv.md](ini-tsv.md) | `DATA/**/*.INI`, `*.TXT` tables, `IMAGES.INI`, terrain INIs | resolved (syntax, code page, sprite linkage) | 177/177 INI parse, 0 warnings; 971/971 `IMAGES.INI` → RLE frame/direction counts match |
 | [hpfs.md](hpfs.md) | `.wmp`, `.wcm` containers | container resolved, payload open | 7 maps + 2 campaigns + 26 embedded maps read, block accounting consistent |
-| [sprite-volume.md](sprite-volume.md) | measurement for spike M0-S6 | done | — |
+| [sprite-volume.md](sprite-volume.md) | measurement for spike M0-S6 | done (decision: [ADR 0013](../decisions/0013-spike-s6-sprite-memory.md)) | — |
+| [t2pkg.md](t2pkg.md) | our output: `.t2pkg` base package, `.t2spr`, `.t2img` | implemented (M1) | `t2 import` of the reference build: 0 errors, deterministic |
 
 Not covered: `.wdt` packs (none in the EN loose-file build; Appendix B.3.1 has the
 community description, needs a PL/PT GOG sample), `.DDV` (RE-11, M8), `.wdm` (DEC-12).
@@ -52,6 +53,13 @@ community description, needs a PL/PT GOG sample), `.DDV` (RE-11, M8), `.wdm` (DE
   conflicting duplicate sections (`galleon`, `item_sword`). Readers must tolerate all of it.
 * The EN build's text files are pure ASCII (only `CREDITS.TXT` has one CP1252 byte).
 
+## C# implementation
+
+`Tzar2.Formats` ports the prototypes (namespaces `Rle`, `Dat`, `Bmp`, `Pal`, `Fnt`, `Hpfs`, `Ini`, `Tsv`, `Audio`,
+`Text` for the built-in CP1250/1251/1252 tables). Malformed input only ever throws `LegacyFormatException`;
+`Fuzzing.FuzzTargets` are the SharpFuzz/property-test entry points. Golden sprites for the M1 exit criterion come from
+`make_goldens.py` (below) and are compared in `Tzar2.Import.Tests` when `TZAR2_ORIGIN` is set.
+
 ## Reproducing
 
 ```sh
@@ -61,4 +69,5 @@ python3 -I tools/re/check_images_ini.py <install>                 # IMAGES.INI �
 python3 -I tools/re/tzfnt.py <install>/LOCAL/FONTS/SMALL.FNT <scratch>/small.png
 python3 -I tools/re/tzini.py <install>/DATA/IMAGES.INI
 python3 -I tools/re/hpfs.py <install>/Campaign/Tzar.wcm --recurse
+python3 -I tools/re/make_goldens.py <install> tests/local-goldens/sprites   # ignored by git; read by the golden test
 ```
