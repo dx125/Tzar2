@@ -1,4 +1,4 @@
-# 0007. Allow NuGet packages per assembly; System.IO.Hashing in Core
+# 0011. Allow NuGet packages per assembly; System.IO.Hashing in Core
 
 * **Status:** Accepted
 * **Date:** 2026-10-17

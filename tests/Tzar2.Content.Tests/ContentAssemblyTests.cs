@@ -9,7 +9,7 @@ public class ContentAssemblyTests
     [Fact]
     public void Assembly_markers_match_its_role()
     {
-        // The ruleset compiler runs on every peer (ADR 0008): deterministic, but it reads packages, so I/O is allowed.
+        // The ruleset compiler runs on every peer (ADR 0012): deterministic, but it reads packages, so I/O is allowed.
         Assembly assembly = typeof(ContentAssembly).Assembly;
         Assert.Equal(ContentAssembly.Name, assembly.GetName().Name);
         Assert.NotNull(assembly.GetCustomAttribute<Tzar2DeterministicAttribute>());

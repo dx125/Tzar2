@@ -1,4 +1,4 @@
-# 0008. Mark Tzar2.Content as deterministic
+# 0012. Mark Tzar2.Content as deterministic
 
 * **Status:** Accepted
 * **Date:** 2026-10-17

@@ -8,7 +8,7 @@ using Xunit;
 namespace Tzar2.Architecture.Tests;
 
 /// <summary>
-/// The determinism-critical assemblies of TDD §8.8 must opt into Tzar2.Analyzers (ADRs 0004, 0008). Checked on the compiled
+/// The determinism-critical assemblies of TDD §8.8 must opt into Tzar2.Analyzers (ADRs 0004, 0012). Checked on the compiled
 /// assemblies, so it does not matter where in the project (or in an imported file) the MSBuild property is set.
 /// </summary>
 public class DeterminismOptInTests

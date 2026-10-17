@@ -39,7 +39,7 @@ public class DependencyRulesTests
 
     /// <summary>
     /// TDD §7.2 / §24 (DEC-09): the NuGet packages each source project may reference directly. Test projects are free.
-    /// Core's "BCL only" admits the out-of-band BCL package System.IO.Hashing (ADR 0007).
+    /// Core's "BCL only" admits the out-of-band BCL package System.IO.Hashing (ADR 0011).
     /// </summary>
     public static readonly Dictionary<string, string[]> AllowedPackages = new(StringComparer.Ordinal)
     {

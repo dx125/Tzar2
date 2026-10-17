@@ -15,7 +15,7 @@ Replay (Replay records files).
 
 * Two MSBuild properties, handled in the root `Directory.Build.targets`:
   * `<Tzar2Deterministic>true</Tzar2Deterministic>` adds `[assembly: Tzar2.Core.Tzar2Deterministic]` and the analyzer.
-    Set in **Core, Content (ADR 0008), Sim, Scripting, AI, Replay**.
+    Set in **Core, Content (ADR 0012), Sim, Scripting, AI, Replay**.
   * `<Tzar2NoIO>true</Tzar2NoIO>` adds `[assembly: Tzar2.Core.Tzar2NoIO]`. Set in **Sim, Scripting, AI**.
   The analyzer keys on the attributes, so the attribute alone (e.g. in a mod assembly) is enough.
   `Tzar2.Architecture.Tests` checks the attributes on the compiled assemblies, so these projects keep their opt-in.
