@@ -11,7 +11,7 @@ namespace Tzar2.Sim.Snapshots;
 [StructLayout(LayoutKind.Sequential)]
 public readonly struct RenderEntity
 {
-    internal RenderEntity(EntityId id, int x, int y, ushort typeId, byte owner, byte facing, int health, int maxHealth)
+    internal RenderEntity(EntityId id, int x, int y, ushort typeId, byte owner, byte facing, int health, int maxHealth, bool moving = false)
     {
         Id = id;
         X = x;
@@ -21,6 +21,7 @@ public readonly struct RenderEntity
         Facing = facing;
         Health = health;
         MaxHealth = maxHealth;
+        IsMoving = moving;
     }
 
     /// <summary>The entity.</summary>
@@ -46,6 +47,9 @@ public readonly struct RenderEntity
 
     /// <summary>Maximum hit points (0 if the entity has none).</summary>
     public int MaxHealth { get; }
+
+    /// <summary>Whether the unit is walking this tick (selects the walk vs. idle animation).</summary>
+    public bool IsMoving { get; }
 }
 
 /// <summary>
@@ -96,7 +100,9 @@ public sealed class RenderSnapshot
             int h = world.Healths.IndexOf(ids[i]);
             Health health = h >= 0 ? world.Healths.At(h) : default;
             Identity identity = identities[i];
-            _entities[n++] = new RenderEntity(ids[i], position.X, position.Y, identity.TypeId, identity.Owner, identity.Facing, health.Current, health.Max);
+            int m = world.Motions.IndexOf(ids[i]);
+            bool moving = m >= 0 && (world.Motions.At(m).VelocityX != 0 || world.Motions.At(m).VelocityY != 0);
+            _entities[n++] = new RenderEntity(ids[i], position.X, position.Y, identity.TypeId, identity.Owner, identity.Facing, health.Current, health.Max, moving);
         }
 
         _entityCount = n;

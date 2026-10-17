@@ -110,8 +110,10 @@ jobs:
           path: s2-out
 
   benchmarks:
-    # Includes SimTickBenchmarks (B3/B4-like). Relative thresholds (regressions > 10% fail, TDD §21) need a stable runner
-    # baseline first; until then the t2 bench step gates the absolute budget (p99 <= 12 ms at 4,000 units on 512²).
+    # BenchmarkDotNet suites (sim tick, pathfinding, B3 maze planning, B4 mass death). Relative thresholds (regressions
+    # > 10% fail, TDD §21) need a stable runner baseline first; until then the t2 bench steps gate the absolute budgets:
+    # p99 <= 12 ms at 4,000 units on 512²; B3: 500 move orders planned within 3 ticks; B4: no stuck units, corpses
+    # never change passability, p99 <= 12 ms (ADR 0026).
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
@@ -126,6 +128,20 @@ jobs:
           dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --ticks 2000 --warmup 200 --churn 2 --workers 4 | tee bench.txt
           p99="$(grep '^tick ms' bench.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
           awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::sim tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
+      - name: B3 maze mass move (t2 bench, 500 orders on a 512² maze)
+        run: |
+          set -euo pipefail
+          for scenario in b3 b3-groups; do
+            dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --scenario "$scenario" --ticks 600 --workers 4 | tee "bench-$scenario.txt"
+            p99="$(grep '^tick ms' "bench-$scenario.txt" | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
+            awk -v p="$p99" -v s="$scenario" 'BEGIN { if (p > 12.0) { print "::error::" s " tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
+          done
+      - name: B4 mass death then traffic (t2 bench)
+        run: |
+          set -euo pipefail
+          dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --scenario b4 --workers 4 | tee bench-b4.txt
+          p99="$(grep '^tick ms' bench-b4.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
+          awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::B4 tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
       - run: dotnet run -c Release --project tests/Tzar2.Benchmarks -- --filter "*" --exporters json markdown --artifacts BenchmarkDotNet.Artifacts
       - uses: actions/upload-artifact@v4
         with:

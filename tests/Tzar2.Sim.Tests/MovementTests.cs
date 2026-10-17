@@ -51,6 +51,26 @@ public class MovementTests
     }
 
     [Fact]
+    public void The_render_snapshot_shows_who_is_walking()
+    {
+        using var d = new SimDriver(Open(20));
+        var exchange = new Snapshots.RenderSnapshotExchange();
+        d.Sim.RenderOutput = exchange;
+        EntityId walker = d.Spawn(SyntheticScenario.Swordsman, 0, 2, 2);
+        EntityId idler = d.Spawn(SyntheticScenario.Swordsman, 0, 10, 15);
+        d.MoveToTile(0, [walker], 15, 2);
+        for (int t = 0; t < 5; t++)
+        {
+            d.Step();
+        }
+
+        Snapshots.RenderSnapshot snapshot = exchange.AcquireLatest()!;
+        Assert.True(snapshot.Entities.ToArray().Single(e => e.Id == walker).IsMoving);
+        Assert.False(snapshot.Entities.ToArray().Single(e => e.Id == idler).IsMoving);
+        Assert.Equal(0, snapshot.Entities.ToArray().Single(e => e.Id == walker).Facing); // east
+    }
+
+    [Fact]
     public void Stop_halts_a_moving_unit_and_drops_its_plan()
     {
         using var d = new SimDriver(Open(40));

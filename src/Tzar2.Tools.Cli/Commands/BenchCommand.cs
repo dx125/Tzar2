@@ -189,6 +189,20 @@ internal static class BenchCommand
             return ExitCodes.Mismatch;
         }
 
+        // The functional part of the B3/B4 budgets (TDD §21); tick times are gated by the caller (CI) from the output.
+        string? violation = scenario switch
+        {
+            MazeMoveScenario b3 when b3.PlannedAfterTick is < 0 or > 2 => "B3: the 500 move orders were not all planned within 3 ticks",
+            MassDeathScenario b4 when b4.Blocked > 0 => "B4: units got stuck in the traffic through the mass-death area",
+            MassDeathScenario when world.Map.ObstacleVersion != 0 => "B4: corpses changed passability",
+            _ => null,
+        };
+        if (violation is not null)
+        {
+            stderr.WriteLine($"t2 bench: {violation}.");
+            return ExitCodes.Mismatch;
+        }
+
         return ExitCodes.Success;
     }
 
