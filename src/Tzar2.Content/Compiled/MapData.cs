@@ -14,6 +14,12 @@ namespace Tzar2.Content.Compiled;
 /// <remarks>
 /// Layers are row-major. The terrain and height layers are <b>corner grids</b> of (W+1)×(H+1) vertices (TDD §9.1),
 /// the cliff layer is a tile grid of W×H. Corner (x, y) is the top-left corner of tile (x, y).
+/// <para>
+/// A map may also name its <see cref="TerrainSet"/> and carry <see cref="SetTerrainCorners"/>: the terrain-set index
+/// (0 = water, 1… = ground types of <c>&lt;SET&gt;.TERRAIN.INI</c>) of every corner, the layer the renderer selects base
+/// and transition tiles from (docs/formats/bmp.md §3). The simulation ignores it and reads only the ruleset terrain
+/// ids of <see cref="TerrainCorners"/>. Random maps (ADR 0060) fill both; maps without a set leave it empty.
+/// </para>
 /// </remarks>
 public sealed class MapData
 {
@@ -33,6 +39,7 @@ public sealed class MapData
     private readonly byte[] _heightCorners;
     private readonly byte[] _cliffTiles;
     private readonly ImmutableArray<MapObject> _objects;
+    private readonly byte[] _setTerrainCorners;
 
     /// <summary>Creates a map.</summary>
     /// <param name="name">Display name.</param>
@@ -42,8 +49,10 @@ public sealed class MapData
     /// <param name="heightCorners">(W+1)×(H+1) heights, or empty for a flat map.</param>
     /// <param name="cliffTiles">W×H flags (non-zero = cliff tile, impassable for land), or empty for none.</param>
     /// <param name="objects">Placed objects, in placement order (null = none).</param>
+    /// <param name="terrainSet">Terrain set id (<c>grass</c>, <c>summer</c>, <c>desert</c>, <c>snow</c>…), or null.</param>
+    /// <param name="setTerrainCorners">(W+1)×(H+1) terrain-set indices; required with <paramref name="terrainSet"/>, empty without.</param>
     /// <exception cref="ArgumentException">A size or layer length is invalid, or an object is off the map.</exception>
-    public MapData(string name, int width, int height, ReadOnlySpan<byte> terrainCorners, ReadOnlySpan<byte> heightCorners, ReadOnlySpan<byte> cliffTiles, IReadOnlyList<MapObject>? objects = null)
+    public MapData(string name, int width, int height, ReadOnlySpan<byte> terrainCorners, ReadOnlySpan<byte> heightCorners, ReadOnlySpan<byte> cliffTiles, IReadOnlyList<MapObject>? objects = null, string? terrainSet = null, ReadOnlySpan<byte> setTerrainCorners = default)
     {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentOutOfRangeException.ThrowIfLessThan(width, MinSize);
@@ -64,6 +73,11 @@ public sealed class MapData
         if (cliffTiles.Length != 0 && cliffTiles.Length != width * height)
         {
             throw new ArgumentException($"Expected 0 or {width * height} cliff flags, got {cliffTiles.Length}.", nameof(cliffTiles));
+        }
+
+        if (terrainSet is null ? setTerrainCorners.Length != 0 : terrainSet.Length == 0 || setTerrainCorners.Length != corners)
+        {
+            throw new ArgumentException($"A terrain set needs a non-empty id and {corners} set corners; a map without one needs none.", nameof(setTerrainCorners));
         }
 
         Name = name;
@@ -95,6 +109,8 @@ public sealed class MapData
         }
 
         _objects = builder.MoveToImmutable();
+        TerrainSet = terrainSet;
+        _setTerrainCorners = setTerrainCorners.ToArray();
         ContentHash = ComputeHash();
     }
 
@@ -121,6 +137,12 @@ public sealed class MapData
 
     /// <summary>The objects placed when the match starts, in placement order.</summary>
     public ImmutableArray<MapObject> Objects => _objects;
+
+    /// <summary>Terrain set the renderer draws the map with, or null (ADR 0060).</summary>
+    public string? TerrainSet { get; }
+
+    /// <summary>Terrain-set index per corner, (W+1)×(H+1), row-major; empty when <see cref="TerrainSet"/> is null.</summary>
+    public ReadOnlySpan<byte> SetTerrainCorners => _setTerrainCorners;
 
     /// <summary>xxHash64 of the map (lobby hash check, replay header; REQ-NET-05, §19.4).</summary>
     public ulong ContentHash { get; }
@@ -160,6 +182,12 @@ public sealed class MapData
         foreach (MapObject o in _objects)
         {
             hasher.Add(Encoding.UTF8.GetBytes(o.TypeKey)).Add(o.Owner).Add(o.X).Add(o.Y);
+        }
+
+        // Added after HashVersion 2 without bumping it: maps without a terrain set hash exactly as before.
+        if (TerrainSet is not null)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(TerrainSet)).Add(_setTerrainCorners);
         }
 
         return hasher.GetCurrentHash();
