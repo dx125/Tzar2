@@ -110,6 +110,7 @@ public partial class MidiPlayer : Node
             throw new InvalidOperationException("No SoundFont loaded.");
         }
 
+        Stop();
         var sequencer = new MidiFileSequencer(_synth);
         sequencer.Play(new MidiFile(new MemoryStream(midi)), false);
         float[] left = new float[frames], right = new float[frames];
@@ -140,7 +141,7 @@ public partial class MidiPlayer : Node
             int n = Math.Min(available, _left.Length);
             Span<float> left = _left.AsSpan(0, n), right = _right.AsSpan(0, n);
             _sequencer.Render(left, right);
-            if (_frames.Length != n)
+            if (_frames.Length < n)
             {
                 _frames = new Vector2[n];
             }
@@ -150,7 +151,7 @@ public partial class MidiPlayer : Node
                 _frames[i] = new Vector2(left[i], right[i]);
             }
 
-            _playback.PushBuffer(_frames);
+            _playback.PushBuffer(n == _frames.Length ? _frames : _frames[..n]);
             available -= n;
         }
     }

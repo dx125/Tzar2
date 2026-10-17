@@ -79,5 +79,6 @@ public sealed class Rgb555Surface : IDisposable
         _frames?.Dispose();
         _frames = null;
         RS.FreeRid(_item);
+        _material.Dispose();
     }
 }

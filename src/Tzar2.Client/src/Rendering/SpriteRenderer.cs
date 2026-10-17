@@ -208,6 +208,10 @@ public sealed class SpriteRenderer : IDisposable
             }
         }
 
+        _colourMaterial.Dispose();
+        _shadowMaterial.Dispose();
+        _compositeMaterial.Dispose();
+        _quad.Dispose();
         if (GodotObject.IsInstanceValid(_maskViewport))
         {
             _host.RemoveChild(_maskViewport);

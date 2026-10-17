@@ -198,7 +198,7 @@ public sealed class SpritePage : IViewerPage
 
             for (int f = 0; f < sheet.FramesPerDirection; f++)
             {
-                world.Label(world.ToScreen(new Vector2I(0, f * (ch + Gap))) + new Vector2(-28, 14), f.ToString(CultureInfo.InvariantCulture), labelColour);
+                world.Label(world.ToScreen(new Vector2I(0, f * (ch + Gap))) + new Vector2(-24, 14), f.ToString(CultureInfo.InvariantCulture), labelColour);
             }
         }
         else
@@ -225,7 +225,7 @@ public sealed class SpritePage : IViewerPage
 
                 if (!across)
                 {
-                    world.Label(world.ToScreen(new Vector2I(0, r * dirRows * (ch + Gap))) + new Vector2(-22, 14), (player + 1).ToString(CultureInfo.InvariantCulture), labelColour);
+                    world.Label(world.ToScreen(new Vector2I(0, r * dirRows * (ch + Gap))) + new Vector2(-24, 14), (player + 1).ToString(CultureInfo.InvariantCulture), labelColour);
                 }
             }
         }
@@ -374,7 +374,7 @@ public sealed class SpritePage : IViewerPage
 
             text.Append(CultureInfo.InvariantCulture, $"Atlas: {atlas.Pages(Tzar2.Content.Assets.PixelFormat.Indexed8).Count} R8 + {atlas.Pages(Tzar2.Content.Assets.PixelFormat.Rgb5A1).Count} RG8 + {atlas.Pages(Tzar2.Content.Assets.PixelFormat.R8).Count} mask layers of {atlas.PageSize}²\n");
         }
-        catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException or InvalidOperationException)
+        catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException or InvalidOperationException or IndexOutOfRangeException)
         {
             _selection = null;
             text.Clear();

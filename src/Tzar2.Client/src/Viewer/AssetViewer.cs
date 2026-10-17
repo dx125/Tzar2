@@ -107,7 +107,7 @@ public partial class AssetViewer : Node
     {
         _world = new WorldView(GetViewport().FindWorld2D().Canvas)
         {
-            Origin = new Vector2I(PanelWidth + 24, 48),
+            Origin = new Vector2I(PanelWidth + 36, 48),
             BackgroundColour = Color.Color8(74, 92, 59),
         };
         _world.Resize(GetViewport().GetVisibleRect().Size is var s ? new Vector2I((int)s.X, (int)s.Y) : default);

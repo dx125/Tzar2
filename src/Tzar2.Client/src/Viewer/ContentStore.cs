@@ -125,7 +125,7 @@ public sealed class ContentStore : IDisposable
             }
             else
             {
-                ImageAsset image = LoadImage(asset)!;
+                ImageAsset image = LoadImage(asset) ?? throw new FileNotFoundException($"'{asset}' is missing.", asset);
                 sheet = ImageSheets.FromImage(image, cols, rows, asShadowMask: shadow, playerColours: overlay);
             }
 
