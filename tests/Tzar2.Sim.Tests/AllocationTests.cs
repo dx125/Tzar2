@@ -40,14 +40,17 @@ public class AllocationTests
     [InlineData(4)]
     public void Gameplay_ticks_do_not_allocate(int workers)
     {
-        using var scenario = new GameplayScenario(GameplayFixtures.Classic, new GameplayScenarioOptions { MapSize = 96, Players = 2, SoldiersPerPlayer = 150, WorkersPerPlayer = 30, TreesPerPlayer = 120 }, workers);
+        using var scenario = new GameplayScenario(GameplayFixtures.Classic, new GameplayScenarioOptions { MapSize = 96, Players = 2, SoldiersPerPlayer = 150, WorkersPerPlayer = 30, TreesPerPlayer = 120, BotIntervalTicks = 4 }, workers);
 
-        // Into the fight: soldiers meet in the middle after ~30 s.
-        for (int t = 0; t < 700; t++)
+        // Into the fight (soldiers meet in the middle after ~30 s), and until the flow-field cache holds its 64 field
+        // objects: group orders to new goals allocate a field object until then (bounded pool growth, not per tick).
+        World world = scenario.Simulation.World;
+        for (int t = 0; t < 700 || (world.FlowFields.FieldsAllocated < Tzar2.Sim.Navigation.FlowFieldCache.Capacity && t < 20_000); t++)
         {
             scenario.RunTick();
         }
 
+        Assert.Equal(Tzar2.Sim.Navigation.FlowFieldCache.Capacity, world.FlowFields.FieldsAllocated);
         AssertSteadyStateDoesNotAllocate(scenario, workers);
     }
 
