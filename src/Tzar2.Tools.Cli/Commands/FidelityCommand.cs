@@ -247,7 +247,7 @@ internal static class FidelityCommand
             throw new OptionException("--extract needs a zip file");
         }
 
-        string root = Path.GetFullPath(target);
+        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(target));
         Directory.CreateDirectory(root);
         int n = 0;
         using ZipArchive zip = ZipFile.OpenRead(input);

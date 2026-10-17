@@ -186,14 +186,26 @@ internal sealed class CaptureRunner
         {
             foreach ((Task<int> task, CancellationTokenSource cancel, string name) in samplers)
             {
-                if (!task.Wait(TimeSpan.FromSeconds(120)))
+                // A faulted sampler (e.g. disk full) must not skip closing the game or writing trial.json.
+                try
                 {
-                    cancel.Cancel();
-                    task.Wait(TimeSpan.FromSeconds(5));
-                }
+                    if (!task.Wait(TimeSpan.FromSeconds(120)))
+                    {
+                        cancel.Cancel();
+                        task.Wait(TimeSpan.FromSeconds(5));
+                    }
 
-                record.Notes.Add($"memsample {name}: {(task.IsCompletedSuccessfully ? task.Result.ToString(CultureInfo.InvariantCulture) : "no")} samples");
-                cancel.Dispose();
+                    record.Notes.Add($"memsample {name}: {(task.IsCompletedSuccessfully ? task.Result.ToString(CultureInfo.InvariantCulture) : "no")} samples");
+                }
+                catch (AggregateException ex)
+                {
+                    record.Notes.Add($"memsample {name}: failed ({ex.InnerException?.Message ?? ex.Message})");
+                    _log.Warn($"    memsample {name} failed: {ex.InnerException?.Message ?? ex.Message}");
+                }
+                finally
+                {
+                    cancel.Dispose();
+                }
             }
 
             record.ExitCode = driver.HasExited ? driver.ExitCode : null;
