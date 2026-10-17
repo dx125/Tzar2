@@ -25,8 +25,9 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // B4BF7619451DBAE2 / 56C6C54762811D13: passability version in the map hash, route plans carry portal tiles,
     // enemies block movers, crowd give-up rule -> (M2 part C, ADRs 0033/0034/0039) 2D1E33CB90510133 / C8B62DE0DA848E64:
     // the gameplay stores (combat, worker, resource, construction, production) join the hashed layout, PlayerState holds
-    // a resource array and population, the ruleset hash covers the gameplay traits. This scenario's units have no
-    // gameplay traits, so their behaviour is unchanged.
+    // a resource array and population (the hashed layout); and movers held by an enemy now side-step around it (owner
+    // decision, ADR 0025 amendment), which changes this four-player scenario's movement. Its units have no gameplay
+    // traits otherwise.
     private const ulong GoldenFinalFullHash = 0xC8B62DE0DA848E64UL;
     private const ulong GoldenHashStream = 0x2D1E33CB90510133UL;
 

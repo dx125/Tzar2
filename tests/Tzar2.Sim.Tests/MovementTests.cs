@@ -130,6 +130,35 @@ public class MovementTests
         Assert.True(Distance(d.PositionOf(follower), end.X, end.Y) < 4 * Tile);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_mover_goes_around_an_enemy_dead_ahead_on_its_right_side(bool westward)
+    {
+        // Owner decision (ADR 0025 amendment): side-step right first (keep right), then left.
+        using var d = new SimDriver(Open(32));
+        EntityId mover = d.Spawn(SyntheticScenario.Swordsman, 0, westward ? 20 : 4, 10);
+        d.Spawn(SyntheticScenario.Swordsman, 1, 12, 10);
+        int startY = d.PositionOf(mover).Y;
+        d.MoveToTile(0, [mover], westward ? 4 : 20, 10);
+        int passingY = startY;
+        d.RunUntil(() =>
+        {
+            Position p = d.PositionOf(mover);
+            if (Math.Abs(p.X - ((12 * Tile) + (Tile / 2))) < Tile / 4)
+            {
+                passingY = p.Y;
+            }
+
+            return !d.IsMoving(mover);
+        }, 800);
+        Assert.InRange(d.PositionOf(mover).X / Tile, westward ? 3 : 19, westward ? 5 : 21);
+
+        // East-bound, right is south (+Y, screen coordinates); west-bound, right is north.
+        Assert.True(westward ? passingY < startY : passingY > startY, $"passed at y {passingY}, started at {startY}");
+        Assert.Equal(0, d.Count(SimEventKind.Blocked));
+    }
+
     [Fact]
     public void A_follower_pushed_out_of_range_of_an_idle_target_returns()
     {
