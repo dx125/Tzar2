@@ -37,10 +37,11 @@ public class AllocationTests
 
         // The process-wide counter also sees the runtime's own background threads (tiering, timers), which are noisy
         // on CI runners. A per-tick allocation in the sim or its jobs shows up in every window (>= ~24 B x 200 ticks),
-        // background noise does not, so the quietest of three windows must be (almost) clean.
+        // background noise does not, so the quietest of six windows must be (almost) clean (the pathfinding stack has
+        // more rarely-hit methods that tiered compilation promotes late, on its own background thread).
         long simThread = long.MaxValue;
         long allThreads = long.MaxValue;
-        for (int window = 0; window < 3; window++)
+        for (int window = 0; window < 6; window++)
         {
             (long sim, long all) = MeasureTicks(scenario, 200);
             simThread = Math.Min(simThread, sim);
