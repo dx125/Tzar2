@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
+    <PackageReference Include="System.IO.Hashing" />
   </ItemGroup>
 
 </Project>

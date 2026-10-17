@@ -6,6 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FsCheck" />
+    <PackageReference Include="FsCheck.Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../Shared/*.cs" Link="Shared/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../src/Tzar2.Content/Tzar2.Content.csproj" />
   </ItemGroup>
 
