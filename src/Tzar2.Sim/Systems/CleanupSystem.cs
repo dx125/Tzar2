@@ -16,6 +16,6 @@ public sealed class CleanupSystem : ISimSystem
     {
         ArgumentNullException.ThrowIfNull(context);
         context.World.Entities.CommitDestroyed();
-        context.World.Decals.Expire(context.World.Tick.Value + 1);
+        context.World.Decals.Expire(context.World.Tick.Value);
     }
 }

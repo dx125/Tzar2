@@ -23,7 +23,7 @@ public sealed record SimulationConfig
     public int TickLengthMilliseconds { get; init; } = Tick.DefaultLengthMilliseconds;
 
     /// <summary>Default <see cref="PathBudgetPerTick"/>.</summary>
-    public const int DefaultPathBudgetPerTick = 400_000;
+    public const int DefaultPathBudgetPerTick = 750_000;
 
     /// <summary>
     /// Path-request budget: search-node expansions per tick (REQ-PATH-03: count-based, identical on all peers, never

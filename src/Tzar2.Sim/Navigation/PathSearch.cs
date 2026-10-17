@@ -49,7 +49,7 @@ public sealed class PathSearch
     private int TileCount { get; set; }
 
     /// <summary>Short queries (start and goal at most this many tiles apart on each axis) try a windowed A* first.</summary>
-    public const int ShortRange = 32;
+    public const int ShortRange = 48;
 
     /// <summary>Margin in tiles around a short query's bounding box.</summary>
     public const int WindowMargin = 16;
@@ -66,12 +66,34 @@ public sealed class PathSearch
     /// Finds a tile path between two walkable, connected tiles (check <see cref="NavLayer.AreConnected"/> first).
     /// </summary>
     /// <returns><c>false</c> if no path exists.</returns>
-    public bool FindTilePath(NavLayer layer, int start, int goal)
+    public bool FindTilePath(NavLayer layer, int start, int goal) => Find(layer, start, goal, refine: true);
+
+    /// <summary>
+    /// Plans a path: a tile path (<see cref="IsRoute"/> false: short queries and paths within one cluster region) or,
+    /// for long queries, the abstract <b>route</b> of portal nodes (<see cref="RouteNodes"/>) without refining it.
+    /// A unit follows a route by descending each portal's precomputed tree (ADR 0022), so long paths cost one abstract
+    /// search.
+    /// </summary>
+    /// <returns><c>false</c> if no path exists.</returns>
+    public bool FindRoute(NavLayer layer, int start, int goal) => Find(layer, start, goal, refine: false);
+
+    /// <summary>Whether the last <see cref="FindRoute"/> produced a route instead of a tile path.</summary>
+    public bool IsRoute { get; private set; }
+
+    /// <summary>The portal nodes of the last route, first to last.</summary>
+    public ReadOnlySpan<int> RouteNodes => _nodes.AsSpan(0, IsRoute ? _nodeCount : 0);
+
+    private int _nodeCount;
+    private int _goalX;
+    private int _goalY;
+
+    private bool Find(NavLayer layer, int start, int goal, bool refine)
     {
         ArgumentNullException.ThrowIfNull(layer);
         Expanded = 0;
         TileCount = 0;
         Cost = 0;
+        IsRoute = false;
         if (!layer.IsWalkable(start) || !layer.IsWalkable(goal))
         {
             return false;
@@ -113,6 +135,13 @@ public sealed class PathSearch
         }
 
         Cost = virtualCost;
+        CollectNodes(layer);
+        if (!refine)
+        {
+            IsRoute = true;
+            return true;
+        }
+
         Refine(layer, startCluster, goalCluster);
         return true;
     }
@@ -384,16 +413,19 @@ public sealed class PathSearch
         return false;
     }
 
+    // A* over the layer's compact portal graph (CSR); compact ids preserve the node-id order, so ties break the same.
     private bool AbstractSearch(NavLayer layer, int start, int goal, int cs, NavLayer.Cluster startCluster, int cg, NavLayer.Cluster goalCluster, out int cost)
     {
         cost = 0;
-        int capacity = layer.NodeCapacity + 1;
+        int n = layer.GraphNodeCount;
+        int capacity = n + 1;
         if (_g.Length < capacity)
         {
-            _g = new int[capacity];
-            _parent = new int[capacity];
-            _seen = new int[capacity];
-            _closed = new int[capacity];
+            int size = Math.Max(capacity, _g.Length * 2);
+            _g = new int[size];
+            _parent = new int[size];
+            _seen = new int[size];
+            _closed = new int[size];
             _stamp = 0;
         }
 
@@ -404,16 +436,27 @@ public sealed class PathSearch
             _stamp = 1;
         }
 
-        int virtualGoal = layer.NodeCapacity;
+        int virtualGoal = n;
         int width = layer.Width;
+        _goalX = goal % width;
+        _goalY = goal / width;
         _open.Clear();
+        int[] compactOf = layer.GraphCompactOf;
+        int[] adjStart = layer.GraphAdjStart;
+        int[] adjNode = layer.GraphAdjNode;
+        int[] adjCost = layer.GraphAdjCost;
+        int[] nodeX = layer.GraphX;
+        int[] nodeY = layer.GraphY;
+        int[] nodeCluster = layer.GraphCluster;
+        byte[] nodeRegion = layer.GraphRegion;
+        int[] nodeTile = layer.GraphTile;
         byte startRegion = layer.RegionOf(start);
         for (int i = 0; i < startCluster.PortalCount; i++)
         {
             int c = _startCost[startCluster.LocalIndex(startCluster.PortalTile[i], width)];
             if (startCluster.PortalRegion[i] == startRegion && c != int.MaxValue)
             {
-                Relax((cs * NavLayer.MaxPortals) + i, c, -1, Octile(width, startCluster.PortalTile[i], goal));
+                Relax(compactOf[(cs * NavLayer.MaxPortals) + i], c, -1, startCluster.PortalX[i], startCluster.PortalY[i]);
             }
         }
 
@@ -435,32 +478,21 @@ public sealed class PathSearch
             }
 
             int g = _g[node];
-            int cluster = node / NavLayer.MaxPortals;
-            int index = node % NavLayer.MaxPortals;
-            NavLayer.Cluster c = layer.ClusterAt(cluster);
-            if (cluster == cg && c.PortalRegion[index] == goalRegion)
+            if (nodeCluster[node] == cg && nodeRegion[node] == goalRegion)
             {
-                int toGoal = _goalCost[goalCluster.LocalIndex(c.PortalTile[index], width)];
+                int toGoal = _goalCost[goalCluster.LocalIndex(nodeTile[node], width)];
                 if (toGoal != int.MaxValue)
                 {
-                    Relax(virtualGoal, g + toGoal, node, 0);
+                    Relax(virtualGoal, g + toGoal, node, _goalX, _goalY);
                 }
             }
 
-            int partner = c.PortalPartner[index];
-            if (partner >= 0 && _closed[partner] != _stamp)
+            for (int e = adjStart[node]; e < adjStart[node + 1]; e++)
             {
-                Relax(partner, g + NavLayer.StraightCost, node, Octile(width, layer.PortalTile(partner), goal));
-            }
-
-            int row = index * NavLayer.MaxPortals;
-            for (int j = 0; j < c.PortalCount; j++)
-            {
-                int edge = c.IntraCost[row + j];
-                int target = (cluster * NavLayer.MaxPortals) + j;
-                if (edge >= 0 && _closed[target] != _stamp)
+                int target = adjNode[e];
+                if (_closed[target] != _stamp)
                 {
-                    Relax(target, g + edge, node, Octile(width, c.PortalTile[j], goal));
+                    Relax(target, g + adjCost[e], node, nodeX[target], nodeY[target]);
                 }
             }
         }
@@ -468,34 +500,47 @@ public sealed class PathSearch
         return false;
     }
 
-    private void Relax(int node, int g, int parent, int h)
+    // The heuristic (octile distance from the node's tile to the goal) is computed only for improving relaxations.
+    private void Relax(int node, int g, int parent, int x, int y)
     {
         if (_seen[node] == _stamp && g >= _g[node])
         {
             return;
         }
 
+        int dx = Math.Abs(x - _goalX);
+        int dy = Math.Abs(y - _goalY);
+        int h = dx > dy
+            ? (NavLayer.StraightCost * dx) + ((NavLayer.DiagonalCost - NavLayer.StraightCost) * dy)
+            : (NavLayer.StraightCost * dy) + ((NavLayer.DiagonalCost - NavLayer.StraightCost) * dx);
         _seen[node] = _stamp;
         _g[node] = g;
         _parent[node] = parent;
         _open.Push(((ulong)(uint)(g + h) << 32) | (uint)h, node);
     }
 
-    private void Refine(NavLayer layer, NavLayer.Cluster startCluster, NavLayer.Cluster goalCluster)
+    // Abstract nodes of the found path, first to last.
+    private void CollectNodes(NavLayer layer)
     {
-        // Abstract nodes, first to last.
         int count = 0;
-        for (int n = _parent[layer.NodeCapacity]; n >= 0; n = _parent[n])
+        int[] nodeId = layer.GraphNodeId;
+        for (int n = _parent[layer.GraphNodeCount]; n >= 0; n = _parent[n])
         {
             if (count == _nodes.Length)
             {
                 Array.Resize(ref _nodes, _nodes.Length * 2);
             }
 
-            _nodes[count++] = n;
+            _nodes[count++] = nodeId[n];
         }
 
         Array.Reverse(_nodes, 0, count);
+        _nodeCount = count;
+    }
+
+    private void Refine(NavLayer layer, NavLayer.Cluster startCluster, NavLayer.Cluster goalCluster)
+    {
+        int count = _nodeCount;
 
         // Start → first portal: the start tree leads from the portal back to the start, so reverse it.
         AppendTreeTrace(layer, startCluster, layer.PortalTile(_nodes[0]), _startTree, reverse: true);

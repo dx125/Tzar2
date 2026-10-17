@@ -17,8 +17,18 @@ namespace Tzar2.Sim.Tests.Navigation;
 /// </summary>
 public class NavLayerTests(ITestOutputHelper output)
 {
-    /// <summary>HPA* tile-path cost may exceed the optimum by this factor (measured worst case ≈ 1.10, see ADR 0022).</summary>
-    private const double OptimalityBound = 1.16;
+    /// <summary>
+    /// Per-query bound on HPA* tile-path cost vs. the optimum for random maps and queries (ADR 0022). Short queries
+    /// (≤ 48 tiles per axis) are solved optimally in a window; the abstract graph's single transition per entrance
+    /// costs up to ~30% on unlucky medium-range queries.
+    /// </summary>
+    private const double OptimalityBound = 1.35;
+
+    /// <summary>Worst ratio over the fixed 1,000-query sample (measured 1.11).</summary>
+    private const double SampleWorstBound = 1.16;
+
+    /// <summary>Mean ratio over the fixed sample (measured 1.015).</summary>
+    private const double SampleMeanBound = 1.03;
 
     private static MapData RandomMap(int size, int obstacleBasisPoints, ulong seed)
     {
@@ -164,7 +174,8 @@ public class NavLayerTests(ITestOutputHelper output)
         }
 
         output.WriteLine($"{n} queries: mean cost ratio {sum / n:F4}, worst {worst:F4}");
-        Assert.True(worst <= OptimalityBound, $"worst ratio {worst}");
+        Assert.True(worst <= SampleWorstBound, $"worst ratio {worst}");
+        Assert.True(sum / n <= SampleMeanBound, $"mean ratio {sum / n}");
     }
 
     [Property(MaxTest = 40)]
@@ -304,7 +315,7 @@ public class NavLayerTests(ITestOutputHelper output)
         long query = watch.ElapsedMilliseconds;
         int optimal = ReferenceAStar.Cost(layer, start, goal, out int referenceExpanded);
         output.WriteLine($"layer build {build} ms; HPA* {query} ms, {search.Expanded} expansions, {search.Tiles.Length} tiles, cost {search.Cost}; plain A* cost {optimal} with {referenceExpanded} expansions; portals {layer.PortalCount}");
-        Assert.InRange(search.Cost, optimal, (int)(optimal * OptimalityBound));
+        Assert.InRange(search.Cost, optimal, (int)(optimal * SampleWorstBound));
         Assert.True(search.Tiles.Length > 1000);
     }
 }

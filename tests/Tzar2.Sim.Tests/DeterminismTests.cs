@@ -89,6 +89,36 @@ public class DeterminismTests
         }
     }
 
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(1, 9)]
+    [InlineData(20, 5)]
+    [InlineData(20, 31)]
+    public void Maze_moves_are_worker_independent_and_survive_a_snapshot_mid_path(int groupSize, int splitTick)
+    {
+        // Paths, routes, flow fields and arrival slots in flight: 1 vs 4 workers, and restore mid-path.
+        var options = new MazeMoveScenarioOptions { MapSize = 96, Units = 120, GroupSize = groupSize, Bystanders = 40, Seed = 77, PathBudgetPerTick = 20_000 };
+        using var single = new MazeMoveScenario(options, workerCount: 1);
+        using var multi = new MazeMoveScenario(options, workerCount: 4);
+        for (int t = 0; t < splitTick; t++)
+        {
+            Assert.Equal(single.RunTick(), multi.RunTick());
+        }
+
+        byte[] snapshot = multi.Simulation.CaptureSnapshot();
+        using Simulation restored = Simulation.Restore(snapshot, multi.Ruleset, multi.Map, workerCount: 2);
+        Assert.Equal(snapshot, restored.CaptureSnapshot());
+        var none = new Tzar2.Sim.Commands.CommandList();
+        for (int t = splitTick; t < splitTick + 150; t++)
+        {
+            TickResult expected = single.RunTick();
+            Assert.Equal(expected, multi.RunTick());
+            Assert.Equal(expected, restored.Tick(t == 0 ? multi.LastCommands : none));
+        }
+
+        Assert.Equal(single.Simulation.ComputeFullHash(), restored.ComputeFullHash());
+    }
+
     private static List<ulong> Run(SyntheticScenarioOptions options, int workers, int ticks)
     {
         using var scenario = new SyntheticScenario(options, workers);

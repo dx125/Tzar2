@@ -96,20 +96,11 @@ public class OrigRegressionTests(ITestOutputHelper output)
             }
         }
 
-        if (victims.Count > 0)
-        {
-            // Half die through the debug command (the command path), half directly (the combat path calls Kill).
-            d.Order(1, CommandKind.DebugKill, victims.Take(250).ToArray());
-            d.Step();
-            foreach (EntityId v in victims.Skip(250))
-            {
-                Assert.True(d.World.Kill(v));
-            }
-        }
-        else
-        {
-            d.Step();
-        }
+        // They die through the debug kill command (combat calls the same World.Kill), in two batches.
+        d.Order(1, CommandKind.DebugKill, victims.Take(250).ToArray());
+        d.Step();
+        d.Order(1, CommandKind.DebugKill, victims.Skip(250).ToArray());
+        d.Step();
 
         d.MoveToTile(0, movers.ToArray(), 50, 20);
         var trace = new List<Position[]>();
@@ -302,11 +293,12 @@ public class OrigRegressionTests(ITestOutputHelper output)
         Assert.Equal(0, unreachable[0].Tick);
         d.RunUntil(() => !d.IsMoving(unit), 120 * TicksPerSecond);
 
-        // It ends just outside the ring on the near side (the ring's west edge is at x = 35), not stuck far away.
+        // It ends on the reachable tile nearest to the goal: just outside the ring (r² = 26 tiles², e.g. (39, 35)).
         Position p = d.PositionOf(unit);
         Assert.Equal(MotionState.Idle, d.MotionOf(unit).State);
-        Assert.InRange(p.X / Tile, 33, 34);
-        Assert.InRange(p.Y / Tile, 39, 41);
+        int dx = (p.X / Tile) - 40;
+        int dy = (p.Y / Tile) - 40;
+        Assert.Equal(26, (dx * dx) + (dy * dy));
         Assert.Equal(0, d.Count(SimEventKind.Blocked));
     }
 }

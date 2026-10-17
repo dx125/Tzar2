@@ -27,7 +27,7 @@ public struct Decal
     /// <summary>Y in world units.</summary>
     public int Y;
 
-    /// <summary>The first tick at which the decal no longer exists.</summary>
+    /// <summary>The tick whose cleanup removes the decal.</summary>
     public int ExpiresTick;
 
     /// <summary>Entity type of the dead unit.</summary>
@@ -106,7 +106,7 @@ public sealed class DecalIndex
         _count++;
     }
 
-    /// <summary>Removes the decals whose TTL ran out by <paramref name="tick"/> (pipeline step 17).</summary>
+    /// <summary>Removes the decals whose TTL ends at or before <paramref name="tick"/> (pipeline step 17 of that tick).</summary>
     public void Expire(int tick)
     {
         while (_count > 0 && _ring[_head].ExpiresTick <= tick)

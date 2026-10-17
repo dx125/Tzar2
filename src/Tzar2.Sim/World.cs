@@ -109,6 +109,18 @@ public sealed class World
     /// <summary>Navigation layers (derived from the map; not state, ADR 0021).</summary>
     public NavigationGrid Navigation { get; }
 
+    /// <summary>Flow-field cache (derived, not state).</summary>
+    public FlowFieldCache FlowFields { get; } = new();
+
+    /// <summary>Planned waypoints per unit (state).</summary>
+    public PathStore Paths { get; } = new();
+
+    /// <summary>Pending planning requests (state).</summary>
+    public PathRequestQueue PathQueue { get; } = new();
+
+    /// <summary>The id the next group move order gets (state).</summary>
+    public int NextGroupId { get; internal set; } = 1;
+
     /// <summary>Corpse lifetime in ticks.</summary>
     public int CorpseTtlTicks { get; }
 
@@ -191,7 +203,20 @@ public sealed class World
         Healths.Set(entity, new Health { Current = type.MaxHealth, Max = type.MaxHealth });
         if (type.SpeedUnitsPerSecond > 0)
         {
-            Motions.Set(entity, new Motion { TargetX = x, TargetY = y, SpeedPerTick = SpeedPerTick(typeId), State = MotionState.Idle });
+            Motions.Set(entity, new Motion
+            {
+                TargetX = x,
+                TargetY = y,
+                SteerX = x,
+                SteerY = y,
+                OrderX = x,
+                OrderY = y,
+                SpeedPerTick = SpeedPerTick(typeId),
+                Radius = type.Radius,
+                GoalTile = -1,
+                Layer = Navigation.LayerOfType(typeId),
+                State = MotionState.Idle,
+            });
         }
 
         int cell = Map.CellIndexAt(x, y);
@@ -313,6 +338,7 @@ public sealed class World
             store.RemoveEntity(entity);
         }
 
+        Paths.Clear(entity.Index);
         Entities.Destroy(entity);
         Events.Emit(new SimEvent(SimEventKind.Destroyed, (byte)owner, entity, 0, 0, typeId));
         return true;
@@ -361,11 +387,25 @@ public sealed class World
             }
         }
 
-        foreach (Motion m in Motions.Components)
+        ReadOnlySpan<EntityId> movers = Motions.Entities;
+        Span<Motion> motions = Motions.Components;
+        for (int i = 0; i < movers.Length; i++)
         {
-            if (m.State is < MotionState.Idle or > MotionState.Blocked || m.SpeedPerTick < 0 || !Map.ContainsPoint(m.TargetX, m.TargetY))
+            Motion m = motions[i];
+            int identity = Identities.IndexOf(movers[i]);
+            if (m.State is < MotionState.Idle or > MotionState.Blocked || m.SpeedPerTick < 0 || !Map.ContainsPoint(m.TargetX, m.TargetY)
+                || m.Mode is < MotionMode.None or > MotionMode.Route || m.Order is < MotionOrder.None or > MotionOrder.Follow
+                || identity < 0 || m.Layer != Navigation.LayerOfType(Identities.At(identity).TypeId)
+                || m.Radius is < 1 or > EntityTypeDefinition.MaxRadius
+                || (m.Mode == MotionMode.Flow && (m.GoalTile < 0 || m.GoalTile >= Map.Width * Map.Height))
+                || ((m.Mode is MotionMode.Route or MotionMode.Path) && (m.PathCursor < 0 || m.PathCursor > Paths.Count(movers[i].Index))))
             {
                 throw Invalid("invalid motion");
+            }
+
+            if (m.Mode == MotionMode.Route && !RouteIsValid(Paths.Get(movers[i].Index), m.Layer))
+            {
+                throw Invalid("invalid route");
             }
         }
 
@@ -383,6 +423,27 @@ public sealed class World
         Map.RebuildOccupancy(cells);
 
         static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
+    }
+
+    // Route nodes must name existing portals of the unit's layer (navigation is rebuilt from the restored map).
+    private bool RouteIsValid(ReadOnlySpan<int> nodes, byte layerIndex)
+    {
+        Navigation.EnsureUpToDate();
+        if (layerIndex >= Navigation.LayerCount || nodes.IsEmpty)
+        {
+            return false;
+        }
+
+        NavLayer layer = Navigation.Layers[layerIndex];
+        foreach (int node in nodes)
+        {
+            if ((uint)node >= (uint)layer.NodeCapacity || node % NavLayer.MaxPortals >= layer.ClusterAt(node / NavLayer.MaxPortals).PortalCount)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void RequireUnlocked()

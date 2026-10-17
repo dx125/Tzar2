@@ -273,6 +273,7 @@ public sealed class NavLayer
 
         _dirtyCount = 0;
         BuildComponents();
+        BuildGraph();
     }
 
     /// <summary>Recomputes everything from the map (construction; also the reference for incremental tests).</summary>
@@ -309,6 +310,125 @@ public sealed class NavLayer
 
         _dirtyCount = 0;
         BuildComponents();
+        BuildGraph();
+    }
+
+    // ----- compact abstract graph (CSR) for the searches ---------------------------------------------------------
+
+    /// <summary>Portal nodes in the compact graph (ids 0..N-1, in ascending node-id order).</summary>
+    internal int GraphNodeCount { get; private set; }
+
+    /// <summary>Compact id → node id (cluster × 32 + index).</summary>
+    internal int[] GraphNodeId { get; private set; } = [];
+
+    /// <summary>Node id → compact id, or -1.</summary>
+    internal int[] GraphCompactOf { get; private set; } = [];
+
+    /// <summary>CSR row starts (N + 1).</summary>
+    internal int[] GraphAdjStart { get; private set; } = [];
+
+    /// <summary>CSR neighbours (compact ids): the partner first, then the intra-cluster portals ascending.</summary>
+    internal int[] GraphAdjNode { get; private set; } = [];
+
+    /// <summary>CSR edge costs.</summary>
+    internal int[] GraphAdjCost { get; private set; } = [];
+
+    /// <summary>Tile column per compact node.</summary>
+    internal int[] GraphX { get; private set; } = [];
+
+    /// <summary>Tile row per compact node.</summary>
+    internal int[] GraphY { get; private set; } = [];
+
+    /// <summary>Cluster per compact node.</summary>
+    internal int[] GraphCluster { get; private set; } = [];
+
+    /// <summary>Region per compact node.</summary>
+    internal byte[] GraphRegion { get; private set; } = [];
+
+    /// <summary>Tile per compact node.</summary>
+    internal int[] GraphTile { get; private set; } = [];
+
+    // A pure function of the cluster data, rebuilt after every update (O(portals + edges)).
+    private void BuildGraph()
+    {
+        int n = PortalCount;
+        if (GraphCompactOf.Length != NodeCapacity)
+        {
+            GraphCompactOf = new int[NodeCapacity];
+        }
+
+        if (GraphAdjStart.Length < n + 1)
+        {
+            int size = Math.Max(n, GraphNodeId.Length * 2);
+            GraphNodeId = new int[size];
+            GraphAdjStart = new int[size + 1];
+            GraphX = new int[size];
+            GraphY = new int[size];
+            GraphCluster = new int[size];
+            GraphRegion = new byte[size];
+            GraphTile = new int[size];
+        }
+
+        GraphCompactOf.AsSpan().Fill(-1);
+        int k = 0;
+        int edges = 0;
+        for (int c = 0; c < _clusters.Length; c++)
+        {
+            Cluster cluster = _clusters[c];
+            for (int i = 0; i < cluster.PortalCount; i++)
+            {
+                GraphCompactOf[(c * MaxPortals) + i] = k;
+                GraphNodeId[k] = (c * MaxPortals) + i;
+                GraphX[k] = cluster.PortalX[i];
+                GraphY[k] = cluster.PortalY[i];
+                GraphCluster[k] = c;
+                GraphRegion[k] = cluster.PortalRegion[i];
+                GraphTile[k] = cluster.PortalTile[i];
+                edges += cluster.PortalPartner[i] >= 0 ? 1 : 0;
+                for (int j = 0; j < cluster.PortalCount; j++)
+                {
+                    edges += cluster.IntraCost[(i * MaxPortals) + j] >= 0 ? 1 : 0;
+                }
+
+                k++;
+            }
+        }
+
+        if (GraphAdjNode.Length < edges)
+        {
+            GraphAdjNode = new int[Math.Max(edges, GraphAdjNode.Length * 2)];
+            GraphAdjCost = new int[GraphAdjNode.Length];
+        }
+
+        int e = 0;
+        for (int compact = 0; compact < k; compact++)
+        {
+            GraphAdjStart[compact] = e;
+            int node = GraphNodeId[compact];
+            Cluster cluster = _clusters[node / MaxPortals];
+            int i = node % MaxPortals;
+            int partner = cluster.PortalPartner[i];
+            if (partner >= 0)
+            {
+                GraphAdjNode[e] = GraphCompactOf[partner];
+                GraphAdjCost[e++] = StraightCost;
+            }
+
+            int row = i * MaxPortals;
+            int baseNode = (node / MaxPortals) * MaxPortals;
+            for (int j = 0; j < cluster.PortalCount; j++)
+            {
+                int cost = cluster.IntraCost[row + j];
+                if (cost >= 0)
+                {
+                    GraphAdjNode[e] = GraphCompactOf[baseNode + j];
+                    GraphAdjCost[e++] = cost;
+                }
+            }
+        }
+
+        GraphAdjStart[k] = e;
+        GraphNodeCount = k;
     }
 
     /// <summary>A digest of the derived data (regions, portals, costs, components) for equivalence tests.</summary>
@@ -496,6 +616,8 @@ public sealed class NavLayer
         int y = y0 + (k * sy);
         int i = cluster.PortalCount++;
         cluster.PortalTile[i] = (y * Width) + x;
+        cluster.PortalX[i] = x;
+        cluster.PortalY[i] = y;
         cluster.PortalRegion[i] = _tileRegion[(y * Width) + x];
         cluster.PortalOutside[i] = ((y + oy) * Width) + x + ox;
         cluster.PortalPartner[i] = -1;
@@ -640,6 +762,10 @@ public sealed class NavLayer
         public int[] PortalTile { get; } = new int[MaxPortals];
 
         public int[] PortalOutside { get; } = new int[MaxPortals];
+
+        public int[] PortalX { get; } = new int[MaxPortals];
+
+        public int[] PortalY { get; } = new int[MaxPortals];
 
         public int[] PortalPartner { get; } = new int[MaxPortals];
 

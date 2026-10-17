@@ -30,6 +30,9 @@ public sealed record SyntheticScenarioOptions
     /// <summary>Units each player deletes and respawns per tick (mass-death churn, B4-like).</summary>
     public int ChurnPerPlayerPerTick { get; init; }
 
+    /// <summary>Path budget per tick (node expansions, REQ-PATH-03).</summary>
+    public int PathBudgetPerTick { get; init; } = SimulationConfig.DefaultPathBudgetPerTick;
+
     /// <summary>Probability per tile corner, in basis points, of a water lake seed.</summary>
     public int LakeSeedBasisPoints { get; init; } = 4;
 }
@@ -40,7 +43,7 @@ public sealed record SyntheticScenarioOptions
 /// optionally delete/respawn churn) every tick. The bot reads the world like an AI would; its commands go through
 /// <see cref="CommandCodec"/> and slot stamping exactly like lockstep commands.
 /// </summary>
-public sealed class SyntheticScenario : IDisposable
+public sealed class SyntheticScenario : IBenchScenario
 {
     /// <summary>Terrain ids of <see cref="CreateRuleset"/>.</summary>
     public const byte Grass = 0;
@@ -91,7 +94,7 @@ public sealed class SyntheticScenario : IDisposable
         Simulation = new Simulation(
             Ruleset,
             Map,
-            new SimulationConfig { MatchSeed = options.Seed, PlayerCount = options.Players, CheatsAllowed = true },
+            new SimulationConfig { MatchSeed = options.Seed, PlayerCount = options.Players, CheatsAllowed = true, PathBudgetPerTick = options.PathBudgetPerTick },
             workerCount);
         _bot = Xoshiro256StarStar.FromSeed(options.Seed ^ 0xB07B07UL);
         _owned = new EntityId[options.Players][];
@@ -171,14 +174,14 @@ public sealed class SyntheticScenario : IDisposable
         return new MapData($"synthetic-{size}", size, size, corners, [], cliffs);
     }
 
-    /// <summary>Generates the bot orders for the next tick, encodes and decodes them like lockstep, and runs the tick.</summary>
+    /// <inheritdoc />
     public TickResult RunTick()
     {
         GenerateCommands();
         return Simulation.Tick(_tickSet);
     }
 
-    /// <summary>Generates the next tick's command set into <see cref="LastCommands"/> without running it.</summary>
+    /// <inheritdoc />
     public void GenerateCommands()
     {
         World world = Simulation.World;
@@ -211,6 +214,14 @@ public sealed class SyntheticScenario : IDisposable
             _tickSet.AppendStamped((byte)p, _batch);
         }
     }
+
+    /// <inheritdoc />
+    public void AfterTick()
+    {
+    }
+
+    /// <inheritdoc />
+    public string Describe() => string.Empty;
 
     /// <inheritdoc />
     public void Dispose() => Simulation.Dispose();

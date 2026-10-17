@@ -19,9 +19,11 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // purpose: update them in the same commit and say why. An unexpected change, or a difference between platforms,
     // is a determinism bug. History: (M2 part A) 06D4D032CD216BBC / 25418CEBC3F46249 -> (M2 hardening, ADR 0019)
     // 297C6D90FC748B9E / 38232E7ED6D36D86: occupancy counts became int instead of ushort, which changes the bytes of the
-    // full-state hash only (per-tick hashes are unchanged; the stream includes the full hashes every 20 ticks).
-    private const ulong GoldenFinalFullHash = 0x38232E7ED6D36D86UL;
-    private const ulong GoldenHashStream = 0x297C6D90FC748B9EUL;
+    // full-state hash only (per-tick hashes are unchanged; the stream includes the full hashes every 20 ticks) ->
+    // (M2 part B, ADRs 0021-0025) 271B3EF84BB7433F / F8763BDE53F22E5B: pathfinding and movement replace the straight-line
+    // mover; the ruleset, Motion and the hashed layout gained fields (decals, paths, path queue).
+    private const ulong GoldenFinalFullHash = 0xF8763BDE53F22E5BUL;
+    private const ulong GoldenHashStream = 0x271B3EF84BB7433FUL;
 
     private const int Ticks = 300;
 
