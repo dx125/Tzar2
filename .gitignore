@@ -28,3 +28,6 @@ BenchmarkDotNet.Artifacts/
 # Claude Code local state (agent worktrees)
 /.claude/
 spikes/S2-determinism/out/
+
+# Python bytecode (tools/re)
+__pycache__/

@@ -11,13 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The reference manifest is metadata only (paths, sizes, MD5), see docs/original-build/README.md §1. -->
-    <EmbeddedResource Include="../../docs/original-build/manifests/gog-1.10-en.reference.tsv"
-                      LogicalName="Tzar2.Tools.Cli.Manifests.gog-1.10-en.reference.tsv"
-                      Link="Manifests/gog-1.10-en.reference.tsv" />
-  </ItemGroup>
-
-  <ItemGroup>
     <InternalsVisibleTo Include="Tzar2.Tools.Cli.Tests" />
   </ItemGroup>
 

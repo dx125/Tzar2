@@ -9,6 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Edition fingerprints (RE-13): file manifests are metadata only, see docs/original-build/README.md §1. -->
+    <EmbeddedResource Include="../../docs/original-build/manifests/gog-*.tsv"
+                      LogicalName="Tzar2.Import.Manifests.%(Filename)%(Extension)"
+                      Link="Manifests/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tzar2.Import.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
     <ProjectReference Include="../Tzar2.Formats/Tzar2.Formats.csproj" />
     <ProjectReference Include="../Tzar2.Content/Tzar2.Content.csproj" />

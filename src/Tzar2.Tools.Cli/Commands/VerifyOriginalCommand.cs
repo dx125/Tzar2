@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Reflection;
 using Tzar2.Import.Editions;
 
 namespace Tzar2.Tools.Cli.Commands;
@@ -12,7 +11,6 @@ namespace Tzar2.Tools.Cli.Commands;
 internal static class VerifyOriginalCommand
 {
     public const string EmbeddedManifestName = "gog-1.10-en.reference.tsv";
-    private const string EmbeddedManifestResource = "Tzar2.Tools.Cli.Manifests." + EmbeddedManifestName;
 
     public static int Run(string[] args, TextWriter stdout, TextWriter stderr)
     {
@@ -107,13 +105,8 @@ internal static class VerifyOriginalCommand
         return ok ? ExitCodes.Success : ExitCodes.Mismatch;
     }
 
-    internal static ReferenceManifest LoadEmbeddedManifest()
-    {
-        using Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(EmbeddedManifestResource)
-            ?? throw new InvalidOperationException($"Embedded manifest '{EmbeddedManifestResource}' is missing.");
-        using var reader = new StreamReader(stream);
-        return ReferenceManifest.Parse(reader, EmbeddedManifestName);
-    }
+    /// <summary>The reference manifest embedded in Tzar2.Import (single copy, shared with edition detection).</summary>
+    internal static ReferenceManifest LoadEmbeddedManifest() => EditionCatalog.Reference.Manifest;
 
     private static void PrintUsage(TextWriter output)
     {
