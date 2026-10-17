@@ -47,29 +47,12 @@ public sealed record ReplayHeader
     }
 }
 
-/// <summary>One recorded tick: its closed command set and, on checkpoint ticks, the hashes after it.</summary>
-public sealed class ReplayTick
-{
-    internal ReplayTick(Tick tick, CommandList commands, ulong? stateHash, ulong? fullHash)
-    {
-        Tick = tick;
-        Commands = commands;
-        StateHash = stateHash;
-        FullHash = fullHash;
-    }
-
-    /// <summary>The tick.</summary>
-    public Tick Tick { get; }
-
-    /// <summary>The stamped command set.</summary>
-    public CommandList Commands { get; }
-
-    /// <summary>Per-tick hash after the tick, if stored.</summary>
-    public ulong? StateHash { get; }
-
-    /// <summary>Full-state hash after the tick, if stored.</summary>
-    public ulong? FullHash { get; }
-}
+/// <summary>One recorded tick: its hashes on checkpoint ticks; the commands are decoded with <see cref="ReplayFile.ReadCommands"/>.</summary>
+/// <param name="Tick">The tick.</param>
+/// <param name="StateHash">Per-tick hash after the tick, if stored.</param>
+/// <param name="FullHash">Full-state hash after the tick, if stored.</param>
+/// <param name="CommandOffset">Offset of the encoded command set in the replay bytes.</param>
+public readonly record struct ReplayTick(Tick Tick, ulong? StateHash, ulong? FullHash, int CommandOffset);
 
 /// <summary>
 /// Records a match as a <c>.t2rep</c> byte stream (REQ-NET-09, ADR 0016): header, then per tick the command set and
@@ -196,36 +179,48 @@ public sealed class ReplayRecorder
     }
 }
 
-/// <summary>A parsed replay.</summary>
+/// <summary>A keyframe of a parsed replay: the snapshot of the state before <see cref="Tick"/>.</summary>
+/// <param name="Tick">The tick the snapshot precedes.</param>
+/// <param name="Snapshot">The snapshot bytes (a slice of the replay data, not a copy).</param>
+public readonly record struct ReplayKeyframe(Tick Tick, ReadOnlyMemory<byte> Snapshot);
+
+/// <summary>
+/// A parsed replay (ADR 0019). Parsing validates every record in one streaming pass but keeps only a compact index
+/// (about 32 bytes per tick and the keyframe slices); command sets are decoded on demand from the replay bytes with
+/// <see cref="ReadCommands"/>, so a two-hour replay costs a few MiB, not hundreds.
+/// </summary>
 public sealed class ReplayFile
 {
     /// <summary>Largest accepted keyframe (REQ-NET-11: bounded parsing).</summary>
     public const int MaxKeyframeBytes = 256 << 20;
 
-    private readonly List<ReplayTick> _ticks;
-    private readonly List<(Tick Tick, byte[] Snapshot)> _keyframes;
+    private readonly byte[] _data;
+    private readonly List<TickEntry> _ticks;
+    private readonly ReplayKeyframe[] _keyframes;
 
-    private ReplayFile(ReplayHeader header, List<ReplayTick> ticks, List<(Tick, byte[])> keyframes)
+    private ReplayFile(ReplayHeader header, byte[] data, List<TickEntry> ticks, ReplayKeyframe[] keyframes)
     {
         Header = header;
+        _data = data;
         _ticks = ticks;
         _keyframes = keyframes;
+        Ticks = new TickView(ticks);
     }
 
     /// <summary>The header.</summary>
     public ReplayHeader Header { get; }
 
     /// <summary>All ticks in order (tick i at index i).</summary>
-    public IReadOnlyList<ReplayTick> Ticks => _ticks;
+    public IReadOnlyList<ReplayTick> Ticks { get; }
 
     /// <summary>Keyframes in ascending tick order; each is the state before its tick.</summary>
-    public IReadOnlyList<(Tick Tick, byte[] Snapshot)> Keyframes => _keyframes;
+    public IReadOnlyList<ReplayKeyframe> Keyframes => _keyframes;
 
     /// <summary>The latest keyframe at or before <paramref name="tick"/>, or <c>null</c>.</summary>
-    public (Tick Tick, byte[] Snapshot)? KeyframeAtOrBefore(Tick tick)
+    public ReplayKeyframe? KeyframeAtOrBefore(Tick tick)
     {
-        (Tick, byte[])? best = null;
-        foreach ((Tick Tick, byte[] Snapshot) keyframe in _keyframes)
+        ReplayKeyframe? best = null;
+        foreach (ReplayKeyframe keyframe in _keyframes)
         {
             if (keyframe.Tick <= tick)
             {
@@ -236,10 +231,21 @@ public sealed class ReplayFile
         return best;
     }
 
-    /// <summary>Parses replay bytes.</summary>
-    /// <exception cref="InvalidDataException">The data is malformed or of an unsupported version.</exception>
-    public static ReplayFile Parse(ReadOnlySpan<byte> data)
+    /// <summary>Decodes the command set of tick <paramref name="tick"/> into <paramref name="commands"/> (cleared first).</summary>
+    /// <exception cref="ArgumentOutOfRangeException">The replay has no such tick.</exception>
+    public void ReadCommands(int tick, CommandList commands)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(tick);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(tick, _ticks.Count);
+        var reader = new BinaryBufferReader(_data.AsSpan(_ticks[tick].Offset));
+        CommandCodec.ReadTickSet(ref reader, commands);
+    }
+
+    /// <summary>Parses replay bytes (the array is kept, not copied: do not modify it afterwards).</summary>
+    /// <exception cref="InvalidDataException">The data is malformed or of an unsupported version.</exception>
+    public static ReplayFile Parse(byte[] data)
+    {
+        ArgumentNullException.ThrowIfNull(data);
         var reader = new BinaryBufferReader(data);
         if (reader.ReadUInt32() != ReplayRecorder.Magic)
         {
@@ -285,8 +291,10 @@ public sealed class ReplayFile
             KeyframeIntervalTicks = keyframeInterval,
         };
 
-        var ticks = new List<ReplayTick>();
-        var keyframes = new List<(Tick, byte[])>();
+        // A tick record is at least 4 bytes, so this bounds the index by the input size.
+        var ticks = new List<TickEntry>(Math.Min(reader.Remaining / 4, 1 << 16));
+        var keyframes = new List<ReplayKeyframe>();
+        var scratch = new CommandList();
         while (true)
         {
             byte tag = reader.ReadByte();
@@ -294,8 +302,8 @@ public sealed class ReplayFile
             {
                 case ReplayRecorder.TagTick:
                 {
-                    var commands = new CommandList();
-                    Tick tick = CommandCodec.ReadTickSet(ref reader, commands);
+                    int offset = reader.Position;
+                    Tick tick = CommandCodec.ReadTickSet(ref reader, scratch); // validates the commands
                     if (tick.Value != ticks.Count)
                     {
                         throw new InvalidDataException($"Tick {tick.Value} out of order.");
@@ -307,22 +315,24 @@ public sealed class ReplayFile
                         throw new InvalidDataException("Invalid tick flags.");
                     }
 
-                    ulong? state = (flags & 1) != 0 ? reader.ReadUInt64() : null;
-                    ulong? full = (flags & 2) != 0 ? reader.ReadUInt64() : null;
-                    ticks.Add(new ReplayTick(tick, commands, state, full));
+                    ulong state = (flags & 1) != 0 ? reader.ReadUInt64() : 0;
+                    ulong full = (flags & 2) != 0 ? reader.ReadUInt64() : 0;
+                    ticks.Add(new TickEntry(state, full, offset, flags));
                     break;
                 }
 
                 case ReplayRecorder.TagKeyframe:
                 {
                     int tick = ReadInt(ref reader, int.MaxValue);
-                    if (tick != ticks.Count)
+                    if (tick != ticks.Count || (keyframes.Count > 0 && keyframes[^1].Tick.Value == tick))
                     {
                         throw new InvalidDataException($"Keyframe for tick {tick} out of order.");
                     }
 
                     int length = ReadInt(ref reader, MaxKeyframeBytes);
-                    keyframes.Add((new Tick(tick), reader.ReadBytes(length).ToArray()));
+                    int start = reader.Position;
+                    reader.ReadBytes(length);
+                    keyframes.Add(new ReplayKeyframe(new Tick(tick), data.AsMemory(start, length)));
                     break;
                 }
 
@@ -333,7 +343,7 @@ public sealed class ReplayFile
                         throw new InvalidDataException("Replay end record does not match its contents.");
                     }
 
-                    return new ReplayFile(header, ticks, keyframes);
+                    return new ReplayFile(header, data, ticks, [.. keyframes]);
                 }
 
                 default:
@@ -351,5 +361,36 @@ public sealed class ReplayFile
         }
 
         return (int)value;
+    }
+
+    // 24 bytes per tick: 144,000 ticks (2 h) index in ~3.3 MiB.
+    private readonly record struct TickEntry(ulong StateHash, ulong FullHash, int Offset, byte Flags);
+
+    private sealed class TickView(List<TickEntry> ticks) : IReadOnlyList<ReplayTick>
+    {
+        public int Count => ticks.Count;
+
+        public ReplayTick this[int index]
+        {
+            get
+            {
+                TickEntry e = ticks[index];
+                return new ReplayTick(
+                    new Tick(index),
+                    (e.Flags & 1) != 0 ? e.StateHash : null,
+                    (e.Flags & 2) != 0 ? e.FullHash : null,
+                    e.Offset);
+            }
+        }
+
+        public IEnumerator<ReplayTick> GetEnumerator()
+        {
+            for (int i = 0; i < ticks.Count; i++)
+            {
+                yield return this[i];
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

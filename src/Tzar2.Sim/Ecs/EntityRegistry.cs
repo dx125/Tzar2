@@ -9,7 +9,9 @@ namespace Tzar2.Sim.Ecs;
 /// Allocates <see cref="EntityId"/> handles (REQ-SIM-07, ADR 0015). Fresh slots are handed out in ascending index
 /// order; destroyed slots are recycled first-in first-out, but only after <see cref="CommitDestroyed"/> (pipeline step
 /// 17, "ID recycling"), so a handle destroyed in tick T is never reused within tick T. Every reuse bumps the slot's
-/// 12-bit generation, so stale handles stop resolving.
+/// 12-bit generation, so stale handles stop resolving. A slot whose generation has reached
+/// <see cref="EntityId.MaxGeneration"/> is <b>retired</b> instead of recycled (ADR 0019), so a generation never wraps
+/// and a stale handle can never resolve to a later entity (no ABA).
 /// </summary>
 public sealed class EntityRegistry
 {
@@ -45,6 +47,12 @@ public sealed class EntityRegistry
     /// <summary>One past the highest slot index ever used.</summary>
     public int HighWater => _highWater;
 
+    /// <summary>
+    /// How many more entities <see cref="Create"/> can allocate right now (fresh slots plus recyclable slots; slots
+    /// destroyed in the current tick become available after <see cref="CommitDestroyed"/>). Commands check this before
+    /// creating entities, so the limit is a deterministic rejection, never an exception mid-tick (ADR 0019).
+    /// </summary>
+    public int RemainingCapacity => (EntityId.MaxIndex + 1 - _highWater) + _freeCount;
 
     /// <summary>Allocates a handle.</summary>
     /// <exception cref="InvalidOperationException">All 1,048,576 slots are alive.</exception>
@@ -108,12 +116,19 @@ public sealed class EntityRegistry
         return true;
     }
 
-    /// <summary>Moves the slots destroyed since the last call to the recycle queue, in destruction order.</summary>
+    /// <summary>
+    /// Moves the slots destroyed since the last call to the recycle queue, in destruction order. Slots at
+    /// <see cref="EntityId.MaxGeneration"/> are retired (never reused).
+    /// </summary>
     public void CommitDestroyed()
     {
         for (int i = 0; i < _pendingCount; i++)
         {
-            EnqueueFree(_pending[i]);
+            int slot = _pending[i];
+            if (_generations[slot] < EntityId.MaxGeneration)
+            {
+                EnqueueFree(slot);
+            }
         }
 
         _pendingCount = 0;
@@ -159,8 +174,13 @@ public sealed class EntityRegistry
         }
     }
 
-    /// <summary>Replaces this registry's state with one written by <see cref="WriteTo"/>.</summary>
-    /// <exception cref="System.IO.InvalidDataException">The data is malformed.</exception>
+    /// <summary>
+    /// Replaces this registry's state with one written by <see cref="WriteTo"/>, validating every invariant (snapshots
+    /// from peers are untrusted, ADR 0019): generations in range, alive slots have a generation, the free and pending
+    /// lists hold distinct dead slots and are disjoint, every dead slot below <see cref="EntityId.MaxGeneration"/> is in
+    /// exactly one of them, and retired slots (at the maximum generation) are never in the free list.
+    /// </summary>
+    /// <exception cref="System.IO.InvalidDataException">The data is malformed or violates an invariant.</exception>
     public void ReadFrom(ref BinaryBufferReader reader)
     {
         int highWater = ReadCount(ref reader, EntityId.MaxIndex + 1);
@@ -183,12 +203,20 @@ public sealed class EntityRegistry
             _aliveCount += alive;
         }
 
+        // 0 = not listed, 1 = free, 2 = pending.
+        byte[] listed = new byte[highWater];
         _freeHead = 0;
         _freeCount = 0;
         int freeCount = ReadCount(ref reader, highWater);
         for (int i = 0; i < freeCount; i++)
         {
-            EnqueueFree(ReadSlot(ref reader, highWater));
+            int slot = ReadSlot(ref reader, highWater, listed, 1);
+            if (_generations[slot] >= EntityId.MaxGeneration)
+            {
+                throw new System.IO.InvalidDataException($"Retired slot {slot} is in the free list.");
+            }
+
+            EnqueueFree(slot);
         }
 
         _pendingCount = 0;
@@ -200,7 +228,16 @@ public sealed class EntityRegistry
                 Array.Resize(ref _pending, _pending.Length * 2);
             }
 
-            _pending[_pendingCount++] = ReadSlot(ref reader, highWater);
+            _pending[_pendingCount++] = ReadSlot(ref reader, highWater, listed, 2);
+        }
+
+        for (int slot = 0; slot < highWater; slot++)
+        {
+            bool recyclable = _alive[slot] == 0 && _generations[slot] < EntityId.MaxGeneration;
+            if (recyclable && listed[slot] == 0)
+            {
+                throw new System.IO.InvalidDataException($"Dead slot {slot} is neither free nor pending (it would leak).");
+            }
         }
     }
 
@@ -215,14 +252,25 @@ public sealed class EntityRegistry
         return (int)value;
     }
 
-    private int ReadSlot(ref BinaryBufferReader reader, int highWater)
+    private int ReadSlot(ref BinaryBufferReader reader, int highWater, byte[] listed, byte list)
     {
-        int slot = ReadCount(ref reader, highWater - 1);
-        if (_alive[slot] != 0)
+        if (highWater == 0)
         {
-            throw new System.IO.InvalidDataException($"Slot {slot} is both alive and free.");
+            throw new System.IO.InvalidDataException("Free/pending slot listed in an empty registry.");
         }
 
+        int slot = ReadCount(ref reader, highWater - 1);
+        if (_alive[slot] != 0 || _generations[slot] == 0)
+        {
+            throw new System.IO.InvalidDataException($"Slot {slot} is listed as free/pending but is alive or unused.");
+        }
+
+        if (listed[slot] != 0)
+        {
+            throw new System.IO.InvalidDataException($"Slot {slot} is listed twice in the free/pending lists.");
+        }
+
+        listed[slot] = list;
         return slot;
     }
 

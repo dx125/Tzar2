@@ -16,9 +16,10 @@ namespace Tzar2.Sim.Snapshots;
 /// </summary>
 /// <remarks>
 /// Layout: magic <c>T2SN</c>, format version, ruleset and map content hashes, the <see cref="SimulationConfig"/>,
-/// tick, entity registry, RNG streams, player states (raw), map dynamic layers, the stores (count, then per store:
-/// key, tier, contents), and finally the full-state hash of the captured world, which <see cref="Restore"/>
-/// recomputes and compares. Little-endian only (like <see cref="StateHasher"/>).
+/// tick, entity registry, RNG streams, player states (raw), map dynamic layers (obstacle version and non-zero
+/// blockers only: static layers are referenced by the map content hash, occupancy is rebuilt), the stores (count,
+/// then per store: key, tier, contents), and finally the full-state hash of the captured world, which
+/// <see cref="Restore"/> recomputes and compares. Little-endian only (like <see cref="StateHasher"/>).
 /// </remarks>
 public static class WorldSnapshot
 {
@@ -26,7 +27,7 @@ public static class WorldSnapshot
     public const uint Magic = 0x4E533254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 1;
+    public const int FormatVersion = 2;
 
     /// <summary>Writes a snapshot of <paramref name="world"/>.</summary>
     public static void Capture(World world, BinaryBufferWriter writer, StateHasher hasher)
@@ -77,10 +78,12 @@ public static class WorldSnapshot
 
     /// <summary>
     /// Restores <paramref name="world"/> (freshly constructed with the snapshot's config, see
-    /// <see cref="ReadConfig"/>) from <paramref name="snapshot"/>, then verifies the stored full-state hash.
+    /// <see cref="ReadConfig"/>) from <paramref name="snapshot"/>, validates every invariant (ADR 0019), and verifies
+    /// the stored full-state hash. Internal: on failure the world is left partially overwritten, so only
+    /// <see cref="Simulation.Restore"/>, which discards it, may call this.
     /// </summary>
-    /// <exception cref="InvalidDataException">The snapshot is malformed, incompatible, or fails the hash check.</exception>
-    public static void Restore(World world, ReadOnlySpan<byte> snapshot)
+    /// <exception cref="InvalidDataException">The snapshot is malformed, inconsistent, or fails the hash check.</exception>
+    internal static void Restore(World world, ReadOnlySpan<byte> snapshot)
     {
         ArgumentNullException.ThrowIfNull(world);
         var reader = new BinaryBufferReader(snapshot);
@@ -137,6 +140,8 @@ public static class WorldSnapshot
         {
             throw new InvalidDataException("Trailing bytes after the snapshot.");
         }
+
+        world.ValidateRestoredState();
 
         ulong actual = StateHashing.ComputeFullHash(world, new StateHasher());
         if (actual != expected)

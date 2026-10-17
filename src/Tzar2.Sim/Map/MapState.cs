@@ -19,7 +19,10 @@ namespace Tzar2.Sim.Map;
 /// <see cref="ObstacleVersion"/>, the key that pathfinding caches (connectivity, HPA* clusters, flow fields) are
 /// validated against. <b>Occupancy</b> counts mobile entities per sub-tile cell
 /// (<see cref="Ruleset.OccupancyCellsPerTileAxis"/>²  cells per tile).</para>
-/// <para>Memory at 1,024² with 2×2 cells: passability 1 MiB, blockers 2 MiB, occupancy 8 MiB.</para>
+/// <para>Memory at 1,024² with 2×2 cells: passability 1 MiB, blockers 2 MiB, occupancy 16 MiB (<c>int</c> counts, so
+/// no cell can overflow even with every entity in one cell, ADR 0019). Snapshots store only the obstacle version and
+/// the non-zero blockers; base passability is recomputed from the map and occupancy is rebuilt from the entities'
+/// <c>OccupancyCell</c> components.</para>
 /// </remarks>
 public sealed class MapState
 {
@@ -28,7 +31,7 @@ public sealed class MapState
 
     private readonly byte[] _basePassability;
     private readonly ushort[] _blockers;
-    private readonly ushort[] _occupancy;
+    private readonly int[] _occupancy;
 
     /// <summary>Builds the map state.</summary>
     /// <exception cref="ArgumentException">The map uses terrain types the ruleset lacks.</exception>
@@ -47,7 +50,7 @@ public sealed class MapState
 
         _basePassability = new byte[Width * Height];
         _blockers = new ushort[Width * Height];
-        _occupancy = new ushort[CellWidth * CellHeight];
+        _occupancy = new int[CellWidth * CellHeight];
 
         var terrainMasks = new LocomotorMask[ruleset.TerrainTypes.Count];
         for (int i = 0; i < terrainMasks.Length; i++)
@@ -112,7 +115,7 @@ public sealed class MapState
     public ReadOnlySpan<ushort> Blockers => _blockers;
 
     /// <summary>Occupant count per cell.</summary>
-    public ReadOnlySpan<ushort> Occupancy => _occupancy;
+    public ReadOnlySpan<int> Occupancy => _occupancy;
 
     /// <summary>Whether tile (<paramref name="tx"/>, <paramref name="ty"/>) is on the map.</summary>
     public bool ContainsTile(int tx, int ty) => (uint)tx < (uint)Width && (uint)ty < (uint)Height;
@@ -166,7 +169,7 @@ public sealed class MapState
     }
 
     /// <summary>Counts an entity into a cell.</summary>
-    internal void AddOccupant(int cell) => _occupancy[cell] = checked((ushort)(_occupancy[cell] + 1));
+    internal void AddOccupant(int cell) => _occupancy[cell]++;
 
     /// <summary>Counts an entity out of a cell.</summary>
     internal void RemoveOccupant(int cell)
@@ -183,25 +186,80 @@ public sealed class MapState
     public void AppendTo(StateHasher hasher)
     {
         ArgumentNullException.ThrowIfNull(hasher);
-        hasher.Add(ObstacleVersion).AddSpan<ushort>(_blockers).AddSpan<ushort>(_occupancy);
+        hasher.Add(ObstacleVersion).AddSpan<ushort>(_blockers).AddSpan<int>(_occupancy);
     }
 
-    /// <summary>Writes the dynamic layers for a snapshot.</summary>
+    /// <summary>
+    /// Writes the dynamic layers for a snapshot: the obstacle version and the non-zero blockers as (tile index delta,
+    /// count) pairs. Occupancy is derived state and is rebuilt on restore (<see cref="RebuildOccupancy"/>).
+    /// </summary>
     public void WriteTo(BinaryBufferWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteInt32(ObstacleVersion);
-        writer.WriteBytes(MemoryMarshal.AsBytes(_blockers.AsSpan()));
-        writer.WriteBytes(MemoryMarshal.AsBytes(_occupancy.AsSpan()));
+        int nonZero = 0;
+        foreach (ushort b in _blockers)
+        {
+            nonZero += b != 0 ? 1 : 0;
+        }
+
+        writer.WriteVarUInt64((ulong)nonZero);
+        int previous = -1;
+        for (int i = 0; i < _blockers.Length; i++)
+        {
+            if (_blockers[i] != 0)
+            {
+                writer.WriteVarUInt64((ulong)(i - previous - 1));
+                writer.WriteVarUInt64(_blockers[i]);
+                previous = i;
+            }
+        }
     }
 
-    /// <summary>Restores the dynamic layers written by <see cref="WriteTo"/>.</summary>
-    /// <exception cref="InvalidDataException">The data is truncated.</exception>
+    /// <summary>Restores the layers written by <see cref="WriteTo"/>; occupancy is cleared for <see cref="RebuildOccupancy"/>.</summary>
+    /// <exception cref="InvalidDataException">The data is malformed.</exception>
     public void ReadFrom(ref BinaryBufferReader reader)
     {
         ObstacleVersion = reader.ReadInt32();
-        reader.ReadBytes(_blockers.Length * sizeof(ushort)).CopyTo(MemoryMarshal.AsBytes(_blockers.AsSpan()));
-        reader.ReadBytes(_occupancy.Length * sizeof(ushort)).CopyTo(MemoryMarshal.AsBytes(_occupancy.AsSpan()));
+        Array.Clear(_blockers);
+        Array.Clear(_occupancy);
+        ulong count = reader.ReadVarUInt64();
+        if (count > (ulong)_blockers.Length)
+        {
+            throw new InvalidDataException($"Snapshot lists {count} blocked tiles on a {Width}x{Height} map.");
+        }
+
+        long index = -1;
+        for (ulong k = 0; k < count; k++)
+        {
+            ulong delta = reader.ReadVarUInt64();
+            ulong value = reader.ReadVarUInt64();
+            index += (long)Math.Min(delta, (ulong)_blockers.Length) + 1;
+            if (index >= _blockers.Length || value is 0 or > ushort.MaxValue)
+            {
+                throw new InvalidDataException("Invalid blocker layer in snapshot.");
+            }
+
+            _blockers[index] = (ushort)value;
+        }
+    }
+
+    /// <summary>
+    /// Recomputes the occupancy counts from the entities' cells (snapshot restore). Every cell must be on the grid.
+    /// </summary>
+    /// <exception cref="InvalidDataException">A cell is off the grid.</exception>
+    internal void RebuildOccupancy(ReadOnlySpan<Components.OccupancyCell> cells)
+    {
+        Array.Clear(_occupancy);
+        foreach (Components.OccupancyCell cell in cells)
+        {
+            if ((uint)cell.Cell >= (uint)_occupancy.Length)
+            {
+                throw new InvalidDataException($"Occupancy cell {cell.Cell} is off the {CellWidth}x{CellHeight} grid.");
+            }
+
+            _occupancy[cell.Cell]++;
+        }
     }
 
     private int TileIndex(int tx, int ty)

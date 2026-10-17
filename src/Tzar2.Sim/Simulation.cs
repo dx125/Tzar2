@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Hashing;
 using Tzar2.Core.Ids;
@@ -20,12 +21,24 @@ public readonly record struct TickResult(Tick Tick, ulong StateHash, ulong? Full
 /// The deterministic simulation of one match (TDD §8): a <see cref="World"/>, the fixed system pipeline and a worker
 /// pool. <see cref="Tick"/> is the only way time advances: <c>Sim.Tick(T, commands)</c> of TDD §7.4.
 /// </summary>
+/// <remarks>
+/// <para><b>Thread affinity.</b> A simulation belongs to one thread (the sim thread, §7.3). <see cref="Tick"/>,
+/// <see cref="ComputeStateHash"/>, <see cref="ComputeFullHash"/> and <see cref="CaptureSnapshot"/> share scratch
+/// buffers; calling one while another runs throws <see cref="InvalidOperationException"/> instead of corrupting a hash
+/// or capturing a half-applied tick. Other threads read the sim only through <see cref="RenderOutput"/>.</para>
+/// <para><b>Faults.</b> If a tick throws (a bug: commands are validated so that ticks do not fail, ADR 0019), the
+/// world may be half-applied. The simulation is then <see cref="IsFaulted"/> and refuses further ticks and snapshots;
+/// the session ends the match with a repro bundle instead of continuing from a corrupt state.</para>
+/// <para><b>System state.</b> Systems keep no state across ticks outside <see cref="World"/> (ADR 0019), so a restored
+/// simulation only needs the same pipeline: pass the same <c>configureSystems</c> to <see cref="Restore"/>.</para>
+/// </remarks>
 public sealed class Simulation : IDisposable
 {
     private readonly SystemScheduler _scheduler = new();
     private readonly SimContext _context;
     private readonly StateHasher _hasher = new();
     private readonly BinaryBufferWriter _snapshotWriter = new(64 * 1024);
+    private int _busy;
 
     /// <summary>Creates a match at tick 0 with the default pipeline.</summary>
     /// <param name="ruleset">The compiled ruleset.</param>
@@ -65,52 +78,133 @@ public sealed class Simulation : IDisposable
     /// <summary>Optional render output; when set, a <see cref="RenderSnapshot"/> is published after every tick.</summary>
     public RenderSnapshotExchange? RenderOutput { get; set; }
 
-    /// <summary>Restores a match from a snapshot (save/load, reconnect, replay seek; REQ-SIM-13).</summary>
-    /// <exception cref="System.IO.InvalidDataException">The snapshot is malformed or does not match the ruleset/map.</exception>
-    public static Simulation Restore(ReadOnlySpan<byte> snapshot, Ruleset ruleset, MapData map, int workerCount = 1)
+    /// <summary>Whether a tick threw; the simulation then refuses to continue.</summary>
+    public bool IsFaulted { get; private set; }
+
+    /// <summary>
+    /// Restores a match from a snapshot (save/load, reconnect, replay seek; REQ-SIM-13). The snapshot is untrusted
+    /// input: its structure and all world invariants are validated (ADR 0019). Whether it is the <i>right</i> state is
+    /// established by the lockstep hash agreement: a rejoining peer compares its restored hash with the others'.
+    /// </summary>
+    /// <param name="snapshot">The snapshot bytes.</param>
+    /// <param name="ruleset">The ruleset (must match the snapshot's ruleset hash).</param>
+    /// <param name="map">The map (must match the snapshot's map hash).</param>
+    /// <param name="workerCount">Threads for fork/join jobs.</param>
+    /// <param name="configureSystems">Adds the same extra systems the original simulation had.</param>
+    /// <exception cref="System.IO.InvalidDataException">The snapshot is malformed, inconsistent, or does not match the ruleset/map.</exception>
+    public static Simulation Restore(ReadOnlySpan<byte> snapshot, Ruleset ruleset, MapData map, int workerCount = 1, Action<SystemScheduler>? configureSystems = null)
     {
         SimulationConfig config = WorldSnapshot.ReadConfig(snapshot, ruleset, map);
         var world = new World(ruleset, map, config);
         WorldSnapshot.Restore(world, snapshot);
-        return new Simulation(world, workerCount);
+        world.IsLocked = true;
+        var simulation = new Simulation(world, workerCount);
+        configureSystems?.Invoke(simulation.Systems);
+        return simulation;
     }
 
     /// <summary>
     /// Runs tick <see cref="World.Tick"/> with its closed command set (pipeline §8.5), then hashes the state, publishes
     /// the render snapshot and advances the tick counter.
     /// </summary>
+    /// <exception cref="InvalidOperationException">Called re-entrantly or concurrently, or the simulation is faulted.</exception>
     public TickResult Tick(CommandList commands)
     {
         ArgumentNullException.ThrowIfNull(commands);
-        World.Components.Seal();
-        Tick tick = World.Tick;
-        World.Events.Clear();
-        _context.Commands = commands;
-        _scheduler.RunTick(_context);
+        Enter();
+        try
+        {
+            World.Components.Seal();
+            Tick tick = World.Tick;
+            World.Events.Clear();
+            _context.Commands = commands;
+            World.IsLocked = false;
+            _scheduler.RunTick(_context);
+            World.IsLocked = true;
 
-        // Step 18: hashes describe the state after tick T, i.e. the state in which tick T+1 begins.
-        World.Tick = tick + 1;
-        ulong hash = StateHashing.ComputeTickHash(World, _hasher);
-        ulong? full = World.Tick.Value % World.Config.FullHashIntervalTicks == 0
-            ? StateHashing.ComputeFullHash(World, _hasher)
-            : null;
-        RenderOutput?.Publish(World, tick, hash);
-        return new TickResult(tick, hash, full);
+            // Step 18: hashes describe the state after tick T, i.e. the state in which tick T+1 begins.
+            World.Tick = tick + 1;
+            ulong hash = StateHashing.ComputeTickHash(World, _hasher);
+            ulong? full = World.Tick.Value % World.Config.FullHashIntervalTicks == 0
+                ? StateHashing.ComputeFullHash(World, _hasher)
+                : null;
+            RenderOutput?.Publish(World, tick, hash);
+            return new TickResult(tick, hash, full);
+        }
+        catch
+        {
+            IsFaulted = true;
+            World.IsLocked = true;
+            throw;
+        }
+        finally
+        {
+            Exit();
+        }
     }
 
     /// <summary>The per-tick hash of the current state.</summary>
-    public ulong ComputeStateHash() => StateHashing.ComputeTickHash(World, _hasher);
+    /// <exception cref="InvalidOperationException">A tick or another hash/snapshot call is running.</exception>
+    public ulong ComputeStateHash()
+    {
+        Enter(allowFaulted: true);
+        try
+        {
+            return StateHashing.ComputeTickHash(World, _hasher);
+        }
+        finally
+        {
+            Exit();
+        }
+    }
 
     /// <summary>The full-state hash of the current state.</summary>
-    public ulong ComputeFullHash() => StateHashing.ComputeFullHash(World, _hasher);
+    /// <exception cref="InvalidOperationException">A tick or another hash/snapshot call is running.</exception>
+    public ulong ComputeFullHash()
+    {
+        Enter(allowFaulted: true);
+        try
+        {
+            return StateHashing.ComputeFullHash(World, _hasher);
+        }
+        finally
+        {
+            Exit();
+        }
+    }
 
     /// <summary>Captures a snapshot of the current state (between ticks).</summary>
+    /// <exception cref="InvalidOperationException">A tick or another hash/snapshot call is running, or the simulation is faulted.</exception>
     public byte[] CaptureSnapshot()
     {
-        _snapshotWriter.Clear();
-        WorldSnapshot.Capture(World, _snapshotWriter, _hasher);
-        return _snapshotWriter.ToArray();
+        Enter();
+        try
+        {
+            _snapshotWriter.Clear();
+            WorldSnapshot.Capture(World, _snapshotWriter, _hasher);
+            return _snapshotWriter.ToArray();
+        }
+        finally
+        {
+            Exit();
+        }
     }
+
+    private void Enter(bool allowFaulted = false)
+    {
+        if (Interlocked.CompareExchange(ref _busy, 1, 0) != 0)
+        {
+            throw new InvalidOperationException("The simulation is busy: Tick, hashing and snapshots must not overlap (single sim thread).");
+        }
+
+        if (IsFaulted && !allowFaulted)
+        {
+            Volatile.Write(ref _busy, 0);
+            throw new InvalidOperationException("The simulation faulted in an earlier tick and cannot continue.");
+        }
+    }
+
+    private void Exit() => Volatile.Write(ref _busy, 0);
 
     /// <inheritdoc />
     public void Dispose() => Workers.Dispose();

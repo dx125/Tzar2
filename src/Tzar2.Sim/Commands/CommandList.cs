@@ -16,10 +16,17 @@ public sealed class CommandList
     /// <summary>Most entities in one command's set.</summary>
     public const int MaxEntitiesPerCommand = 4096;
 
+    /// <summary>Most entities over all commands of one list (bounds decoding memory to 128 KiB, REQ-NET-11).</summary>
+    public const int MaxEntitiesPerList = 32768;
+
+    /// <summary>The flags a command may carry.</summary>
+    internal const CommandFlags ValidFlags = CommandFlags.Queue | CommandFlags.Ctrl | CommandFlags.Alt;
+
     private Command[] _commands = new Command[16];
     private EntityId[] _entities = new EntityId[64];
     private int _count;
     private int _entityCount;
+    private EntityId[]? _decodeScratch;
 
     /// <summary>Number of commands.</summary>
     public int Count => _count;
@@ -53,9 +60,11 @@ public sealed class CommandList
 
     /// <summary>
     /// Appends a command. The entity set is canonicalized: sorted ascending and de-duplicated by slot index (of two
-    /// handles for one slot the lower generation is kept; at most one can be alive), so equal selections encode
-    /// identically. <see cref="EntityId.None"/> entries are dropped.
+    /// handles for one slot the <b>higher</b> generation, i.e. the newer handle, is kept; at most one can be alive), so
+    /// equal selections encode identically. <see cref="EntityId.None"/> entries are dropped. The same limits and
+    /// validity rules apply as when decoding, so every list built here round-trips through <see cref="CommandCodec"/>.
     /// </summary>
+    /// <exception cref="ArgumentException">The kind is <see cref="CommandKind.None"/> or the flags are unknown.</exception>
     /// <exception cref="InvalidOperationException">The list or the entity set is over its limit.</exception>
     public void Add(
         CommandKind kind,
@@ -78,6 +87,16 @@ public sealed class CommandList
             throw new InvalidOperationException($"A command holds at most {MaxEntitiesPerCommand} entities.");
         }
 
+        if (kind == CommandKind.None)
+        {
+            throw new ArgumentException("CommandKind.None is not a command.", nameof(kind));
+        }
+
+        if ((flags & ~ValidFlags) != 0)
+        {
+            throw new ArgumentException($"Unknown command flags {flags}.", nameof(flags));
+        }
+
         int offset = _entityCount;
         EnsureEntities(offset + entities.Length);
         Span<EntityId> set = _entities.AsSpan(offset, entities.Length);
@@ -86,10 +105,25 @@ public sealed class CommandList
         int unique = 0;
         for (int i = 0; i < set.Length; i++)
         {
-            if (!set[i].IsNone && (unique == 0 || set[unique - 1].Index != set[i].Index))
+            if (set[i].IsNone)
+            {
+                continue;
+            }
+
+            // Sorted by index, then generation: a later entry for the same slot is the newer handle and replaces it.
+            if (unique > 0 && set[unique - 1].Index == set[i].Index)
+            {
+                set[unique - 1] = set[i];
+            }
+            else
             {
                 set[unique++] = set[i];
             }
+        }
+
+        if (_entityCount + unique > MaxEntitiesPerList)
+        {
+            throw new InvalidOperationException($"A command list holds at most {MaxEntitiesPerList} entities.");
         }
 
         _entityCount += unique;
@@ -107,6 +141,11 @@ public sealed class CommandList
         if (_count + batch._count > MaxCommands)
         {
             throw new InvalidOperationException($"A command list holds at most {MaxCommands} commands.");
+        }
+
+        if (_entityCount + batch._entityCount > MaxEntitiesPerList)
+        {
+            throw new InvalidOperationException($"A command list holds at most {MaxEntitiesPerList} entities.");
         }
 
         EnsureCommands(_count + batch._count);
@@ -142,6 +181,12 @@ public sealed class CommandList
 
         return true;
     }
+
+    /// <summary>Total entities over all commands.</summary>
+    internal int EntityTotal => _entityCount;
+
+    /// <summary>Decoder scratch for entity sets (kept per list so decoding does not allocate per call).</summary>
+    internal EntityId[] DecodeScratch => _decodeScratch ??= new EntityId[MaxEntitiesPerCommand];
 
     internal void AddDecoded(in Command command, ReadOnlySpan<EntityId> entities)
     {
