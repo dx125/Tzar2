@@ -33,6 +33,13 @@ public sealed class InstallVerifierOptions
     /// metadata (<c>goggame-*</c>), which the reference manifest excludes (docs/original-build/README.md §2).
     /// </summary>
     public IReadOnlyList<string> IgnoredRootFilePrefixes { get; init; } = ["goggame"];
+
+    /// <summary>
+    /// File names (case-insensitive, at any depth) created by operating systems rather than the game; they are neither
+    /// compared nor reported as extra unless the manifest lists them. Default: <c>.DS_Store</c>, <c>Thumbs.db</c>,
+    /// <c>desktop.ini</c>.
+    /// </summary>
+    public IReadOnlyList<string> IgnoredFileNames { get; init; } = [".DS_Store", "Thumbs.db", "desktop.ini"];
 }
 
 /// <summary>
@@ -61,12 +68,13 @@ public static class InstallVerifier
             IgnoreInaccessible = false,
         };
 
+        var listed = new HashSet<string>(manifest.Entries.Select(e => e.Path), StringComparer.OrdinalIgnoreCase);
         var ignored = new List<string>();
         var localByPath = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (string file in Directory.EnumerateFiles(installRoot, "*", enumeration))
         {
             string relative = Path.GetRelativePath(installRoot, file).Replace('\\', '/');
-            if (IsIgnored(relative, options))
+            if (!listed.Contains(relative) && IsIgnored(relative, options))
             {
                 ignored.Add(relative);
                 continue;
@@ -137,6 +145,15 @@ public static class InstallVerifier
 
     private static bool IsIgnored(string relativePath, InstallVerifierOptions options)
     {
+        string fileName = relativePath[(relativePath.LastIndexOf('/') + 1)..];
+        foreach (string junk in options.IgnoredFileNames)
+        {
+            if (string.Equals(fileName, junk, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
         if (relativePath.Contains('/', StringComparison.Ordinal))
         {
             return false;

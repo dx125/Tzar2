@@ -35,6 +35,11 @@ public class ReferenceManifestTests
     [InlineData("path\tsize\tmd5\na\\b\t1\td41d8cd98f00b204e9800998ecf8427e\n", "relative path")]
     [InlineData("path\tsize\tmd5\n../a\t1\td41d8cd98f00b204e9800998ecf8427e\n", "relative path")]
     [InlineData("path\tsize\tmd5\n/a\t1\td41d8cd98f00b204e9800998ecf8427e\n", "relative path")]
+    [InlineData("path\tsize\tmd5\na//b\t1\td41d8cd98f00b204e9800998ecf8427e\n", "relative path")]
+    [InlineData("path\tsize\tmd5\n./a\t1\td41d8cd98f00b204e9800998ecf8427e\n", "relative path")]
+    [InlineData("path\tsize\tmd5\na/./b\t1\td41d8cd98f00b204e9800998ecf8427e\n", "relative path")]
+    [InlineData("path\tsize\tmd5\na/\t1\td41d8cd98f00b204e9800998ecf8427e\n", "relative path")]
+    [InlineData("path\tsize\tmd5\n.\t1\td41d8cd98f00b204e9800998ecf8427e\n", "relative path")]
     [InlineData("path\tsize\tmd5\nA\t1\td41d8cd98f00b204e9800998ecf8427e\na\t1\td41d8cd98f00b204e9800998ecf8427e\n", "duplicate")]
     public void Malformed_manifests_are_rejected_with_location(string text, string messagePart)
     {

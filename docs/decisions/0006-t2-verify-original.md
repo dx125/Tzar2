@@ -19,10 +19,14 @@ only missing and modified files. The original is a Windows game, so file-name ca
   manifest, e.g. a GOG depot list.
 * Paths match **case-insensitively**; if several local files differ only in case, the exact-case one wins and the
   others are reported as extra.
-* Root-level GOG Galaxy files (`goggame-*`) are ignored, because the reference manifest excludes them.
+* Root-level GOG Galaxy files (`goggame-*`) are ignored, because the reference manifest excludes them. OS junk
+  (`.DS_Store`, `Thumbs.db`, `desktop.ini`, any depth, any case) is ignored too unless the manifest lists it.
+* Manifest paths must be normalized relative paths: forward slashes, no leading `/`, no empty, `.` or `..` segments
+  (`a//b`, `./a`, `a/` are rejected).
 * The size is compared first; the MD5 is computed only when sizes match.
 * **Exit codes:** `0` all reference files present and identical; `1` modified or missing files (also extra files with
-  `--strict`); `2` usage or I/O error; `3` (other subcommands) not implemented yet. Extra files are listed but do not
+  `--strict`); `2` usage or I/O error (including paths the OS cannot represent, e.g. containing NUL, and an option
+  where `--manifest` expects its file); `t2` without arguments prints the usage to stderr and exits `2`; `3` (other subcommands) not implemented yet. Extra files are listed but do not
   fail by default, so an install with the HD patch or saved games still counts as clean as long as no original file is
   touched.
 

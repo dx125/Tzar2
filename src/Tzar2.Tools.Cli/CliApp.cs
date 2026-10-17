@@ -25,10 +25,16 @@ internal static class CliApp
 
     public static int Run(string[] args, TextWriter stdout, TextWriter stderr)
     {
-        if (args.Length == 0 || args[0] is "-h" or "--help" or "help")
+        if (args.Length == 0)
+        {
+            PrintUsage(stderr);
+            return ExitCodes.UsageError;
+        }
+
+        if (args[0] is "-h" or "--help" or "help")
         {
             PrintUsage(stdout);
-            return args.Length == 0 ? ExitCodes.UsageError : ExitCodes.Success;
+            return ExitCodes.Success;
         }
 
         if (args[0] == "verify-original")

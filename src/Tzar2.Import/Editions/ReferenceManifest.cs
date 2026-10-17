@@ -83,7 +83,7 @@ public sealed class ReferenceManifest
             }
 
             string path = fields[pathColumn];
-            if (path.Length == 0 || path.Contains('\\', StringComparison.Ordinal) || path.StartsWith('/') || path.Split('/').AsSpan().Contains(".."))
+            if (!IsNormalizedRelativePath(path))
             {
                 throw new FormatException($"{name}:{lineNumber}: '{path}' is not a relative path with forward slashes.");
             }
@@ -108,6 +108,25 @@ public sealed class ReferenceManifest
         }
 
         return new ReferenceManifest(name, entries);
+    }
+
+    // Forward slashes only; no leading slash; no empty, "." or ".." segments (rejects "a//b", "./a", "a/", "../a").
+    private static bool IsNormalizedRelativePath(string path)
+    {
+        if (path.Contains('\\', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        foreach (string segment in path.Split('/'))
+        {
+            if (segment is "" or "." or "..")
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool IsHex(string value)

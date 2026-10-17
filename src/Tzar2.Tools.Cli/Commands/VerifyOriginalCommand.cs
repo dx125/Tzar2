@@ -27,7 +27,14 @@ internal static class VerifyOriginalCommand
                 case "-h" or "--help":
                     PrintUsage(stdout);
                     return ExitCodes.Success;
-                case "--manifest" when i + 1 < args.Length:
+                case "--manifest":
+                    // A following option (e.g. "--manifest --strict") is a missing value, not a file name.
+                    if (i + 1 >= args.Length || args[i + 1].StartsWith('-'))
+                    {
+                        stderr.WriteLine("t2 verify-original: '--manifest' requires a file name.");
+                        return ExitCodes.UsageError;
+                    }
+
                     manifestPath = args[++i];
                     break;
                 case "--strict":
@@ -61,7 +68,8 @@ internal static class VerifyOriginalCommand
             manifest = manifestPath is null ? LoadEmbeddedManifest() : ReferenceManifest.Load(manifestPath);
             report = InstallVerifier.Verify(installPath, manifest);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException)
+        // ArgumentException: a path the OS cannot represent, e.g. one containing NUL.
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException or ArgumentException)
         {
             stderr.WriteLine($"t2 verify-original: {ex.Message}");
             return ExitCodes.UsageError;
