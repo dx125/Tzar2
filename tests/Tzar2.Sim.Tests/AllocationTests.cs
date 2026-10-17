@@ -111,10 +111,12 @@ public class AllocationTests
         Assert.Equal(0, simThread);
 
         // With one worker every job runs inline on this thread, so other threads' allocations are the runtime's alone
-        // (ubuntu x64 runners showed a steady ~1.3 KB per window there); with workers, they may be the jobs'.
+        // (ubuntu x64 runners showed a steady ~1.3 KB per window there); with workers, they may be the jobs'. The runtime's
+        // own share also appears with workers (1,176 B per window on ubuntu x64 runners, M2 part C), so the bound is
+        // 2 KB: a per-tick allocation in a job costs at least ~24 B x 200 ticks = 4.8 KB and still fails it.
         if (workers > 1)
         {
-            Assert.True(allThreads < 1024, $"{allThreads} B allocated on all threads over 200 ticks");
+            Assert.True(allThreads < 2048, $"{allThreads} B allocated on all threads over 200 ticks");
         }
     }
 
