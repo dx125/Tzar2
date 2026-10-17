@@ -3,7 +3,7 @@
 * **Status:** Accepted
 * **Date:** 2026-10-17
 * **Deciders:** implementation agent (M1 importer)
-* **Related:** spike M0-S6, REQ-GFX-03, REQ-GFX-04, REQ-GFX-05, DEC-07, DEC-10, TDD §13.2–13.3, §21, UNK-01a, UNK-03, UNK-39,
+* **Related:** spike M0-S6, ADR 0010 (S1 renderer), ADR 0011 (allowed packages: Content needs none for this), REQ-GFX-03, REQ-GFX-04, REQ-GFX-05, DEC-07, DEC-10, TDD §13.2–13.3, §21, UNK-01a, UNK-03, UNK-39,
   [docs/formats/sprite-volume.md](../formats/sprite-volume.md), [docs/formats/rle.md](../formats/rle.md)
 
 ## Context
@@ -75,6 +75,12 @@ Facts that shape the choice (rle.md §5, pal.md, bmp.md §2):
   mixing would complicate the pipeline for ~17 MB.
 * **Pre-packed atlases in the package:** fixes the atlas at import, defeats per-match residency and makes mods that add
   one unit re-pack the base content.
+* **One frame per array layer** (the alternative ADR 0010 asked S6 to re-measure): all layers of a texture array share
+  one size, and the build has 30,339 cells of very different sizes (up to 960 px wide). Sizing layers to the largest
+  trimmed cell would waste most of each layer, and even the resident set of one match holds far more frames than the
+  layer limit of target GPUs (2,048 on desktop GL/Vulkan/Metal; GLES 3.0 guarantees only 256). Packing many trimmed
+  cells per 2,048² layer (instance → layer + UV rect + pivot, as TDD §13.3 and ADR 0010 already assume) needs 26
+  layers for everything.
 * **4,096² layers:** fewer layers (8) but 16–64 MB per layer upload granularity and weaker occupancy for the small
   RGB555/shadow sets; not mobile-safe on older GPUs.
 
