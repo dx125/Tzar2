@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Spike S2 (ADR 0007): headless determinism harness. A toy fixed-point sim coupled to sandboxed Lua scripts
+    prints per-tick xxHash64 hashes; separate probes measure which Lua/.NET double operations differ by platform.
+    Run the whole matrix with ../run-matrix.sh.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>$(Tzar2LibraryTargetFramework);$(Tzar2AppTargetFramework)</TargetFrameworks>
+    <RootNamespace>Tzar2.Spikes.S2</RootNamespace>
+    <IsAotCompatible>true</IsAotCompatible>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- -p:PublishAot=true would flow into the netstandard2.0 analyzer project and fail (NETSDK1207); use -p:Tzar2Aot=true. -->
+    <PublishAot Condition="'$(Tzar2Aot)' == 'true'">true</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Tzar2.Core/Tzar2.Core.csproj" />
+    <ProjectReference Include="../../S4-lua/Tzar2.Spikes.Lua/Tzar2.Spikes.Lua.csproj" />
+  </ItemGroup>
+
+</Project>

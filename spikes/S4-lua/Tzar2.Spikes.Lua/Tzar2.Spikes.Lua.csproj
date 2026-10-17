@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Spike S4 (ADR 0008): a sandboxed, instruction-budgeted Lua-CSharp host. Throwaway code; the production host goes
+    into src/Tzar2.Scripting once the ADR is accepted. Not marked Tzar2Deterministic: the Lua library API is
+    double-based, so the analyzers would flag every LuaValue conversion. The determinism of this layer is what S2
+    measures instead.
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>$(Tzar2LibraryTargetFramework);$(Tzar2AppTargetFramework)</TargetFrameworks>
+    <RootNamespace>Tzar2.Spikes.Lua</RootNamespace>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LuaCSharp" />
+    <ProjectReference Include="../../../src/Tzar2.Core/Tzar2.Core.csproj" />
+  </ItemGroup>
+
+</Project>
