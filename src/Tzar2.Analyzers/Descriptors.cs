@@ -25,7 +25,7 @@ public static class Descriptors
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "System.Random, RandomNumberGenerator and Guid.NewGuid are not reproducible from the match seed (REQ-SIM-05, REQ-SIM-06).");
+        description: "System.Random, RandomNumberGenerator, Guid.NewGuid and Path.GetRandomFileName are not reproducible from the match seed; System.HashCode, string hash codes and RuntimeHelpers.GetHashCode are randomized per process (REQ-SIM-05, REQ-SIM-06).");
 
     /// <summary>T2D003: wall-clock time (REQ-SIM-05).</summary>
     public static readonly DiagnosticDescriptor WallClock = new(
@@ -45,7 +45,7 @@ public static class Descriptors
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Dictionary and HashSet enumeration order depends on hash codes and the history of the collection (REQ-SIM-05).");
+        description: "Dictionary and HashSet enumeration order (including their Keys and Values, and through casts) depends on hash codes and the history of the collection (REQ-SIM-05).");
 
     /// <summary>T2D005: runtime code generation (REQ-ARCH-02).</summary>
     public static readonly DiagnosticDescriptor CodeGeneration = new(
