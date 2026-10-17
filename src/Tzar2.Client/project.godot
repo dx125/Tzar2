@@ -11,14 +11,14 @@ config_version=5
 [application]
 
 config/name="Tzar2"
-config/description="Tzar2 client (M0 skeleton)"
+config/description="Tzar2 client (M1: asset viewer)"
 run/main_scene="res://scenes/Main.tscn"
-config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+config/features=PackedStringArray("4.7", "C#", "Mobile")
 
 [display]
 
-window/size/viewport_width=1024
-window/size/viewport_height=768
+window/size/viewport_width=1440
+window/size/viewport_height=900
 
 [dotnet]
 
@@ -26,4 +26,9 @@ project/assembly_name="Tzar2.Client"
 
 [rendering]
 
+; ADR 0010: Mobile renderer (RenderingDevice) by default, Compatibility as the fallback.
+renderer/rendering_method="mobile"
 textures/canvas_textures/default_texture_filter=0
+2d/snap/snap_2d_transforms_to_pixel=true
+2d/snap/snap_2d_vertices_to_pixel=true
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)

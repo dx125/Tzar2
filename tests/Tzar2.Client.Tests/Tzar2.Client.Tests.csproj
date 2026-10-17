@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests for the Godot client without referencing it (the client is a Godot.NET.Sdk project): the Godot-free sources in
+    src/Tzar2.Client/src/Logic are compiled in directly, and the headless smoke test runs the real client in the pinned
+    Godot editor binary when one is available (TZAR2_GODOT or GODOT, or the default macOS install path).
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Client.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../src/Tzar2.Client/src/Logic/*.cs" Link="Logic/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tzar2.Content/Tzar2.Content.csproj" />
+  </ItemGroup>
+
+</Project>
