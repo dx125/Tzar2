@@ -30,15 +30,21 @@ public class AllocationTests
 
         // Tier-0 and OSR code may allocate (e.g. unelided boxing) until tiered compilation has optimized the hot
         // methods in the background; with DOTNET_TieredCompilation=0 the first measured tick is already at 0 B.
-        for (int attempt = 0; attempt < 60; attempt++)
+        // Pools (plan buffers, flow-field cluster fields) also grow to their steady-state size during the first few
+        // hundred ticks, so require four clean windows in a row.
+        int clean = 0;
+        for (int attempt = 0; attempt < 120 && clean < 4; attempt++)
         {
             (long sim, long all) = MeasureTicks(scenario, 50);
             if (sim == 0 && (all == 0 || workers == 1))
             {
-                break;
+                clean++;
             }
-
-            Thread.Sleep(50);
+            else
+            {
+                clean = 0;
+                Thread.Sleep(50);
+            }
         }
 
         // The process-wide counter also sees the runtime's own background threads (tiering, timers), which are noisy
