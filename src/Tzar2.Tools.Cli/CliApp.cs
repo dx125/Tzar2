@@ -53,6 +53,11 @@ internal static class CliApp
             return FidelityCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
         }
 
+        if (args[0] == "mapgen")
+        {
+            return MapGenCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
+        }
+
         if (args[0] == "dump")
         {
             return DumpCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
@@ -82,6 +87,7 @@ internal static class CliApp
             ("verify-original <path>", "check a local original install against the reference manifest"),
             ("import <origin> <outDir>", "import an original install into a base package"),
             ("dump <file> [entries]", "dump a package or legacy file; --out <dir> writes PNGs"),
+            ("mapgen [options]", "generate a random map; --out <dir> writes a debug dump, a summary and a PNG preview"),
             ("bench [options]", "run the synthetic sim benchmark; reports tick p50/p99 and the final hash"),
             ("fidelity capture|analyze|check|scenarios|selftest", "capture harness: measure the original game (Windows), turn captures into facts"),
         };
