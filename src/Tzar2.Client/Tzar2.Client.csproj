@@ -14,4 +14,9 @@
     <ProjectReference Include="../Tzar2.Import/Tzar2.Import.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- MIDI music (REQ-AUD-02); allowed for the client only (ADR 0011 map, ADR 0020). -->
+    <PackageReference Include="MeltySynth" />
+  </ItemGroup>
+
 </Project>

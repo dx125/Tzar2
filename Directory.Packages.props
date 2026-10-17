@@ -12,6 +12,8 @@
     <PackageVersion Include="LuaCSharp" Version="0.5.7" />
     <!-- MIT; lockstep transport (DEC-08). Used by spikes/S3-net so far (ADR 0009). -->
     <PackageVersion Include="LiteNetLib" Version="2.1.4" />
+    <!-- MIT; SoundFont MIDI synthesizer in pure C# for music playback in the client (REQ-AUD-02, ADR 0020). -->
+    <PackageVersion Include="MeltySynth" Version="2.4.1" />
   </ItemGroup>
   <ItemGroup Label="Analyzers">
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />

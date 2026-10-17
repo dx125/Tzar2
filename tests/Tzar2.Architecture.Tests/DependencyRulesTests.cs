@@ -53,7 +53,8 @@ public class DependencyRulesTests
         ["Tzar2.Net"] = ["LiteNetLib"],
         ["Tzar2.Replay"] = [],
         ["Tzar2.Game"] = [],
-        ["Tzar2.Client"] = ["GodotSharp", "GodotSharpEditor", "Godot.SourceGenerators"],
+        // MeltySynth: MIDI music (REQ-AUD-02, ADR 0020).
+        ["Tzar2.Client"] = ["GodotSharp", "GodotSharpEditor", "Godot.SourceGenerators", "MeltySynth"],
         ["Tzar2.Server"] = [],
         ["Tzar2.Tools.Cli"] = [],
         ["Tzar2.Analyzers"] = ["Microsoft.CodeAnalysis.CSharp", "Microsoft.CodeAnalysis.Analyzers"],
@@ -66,6 +67,7 @@ public class DependencyRulesTests
         ["YamlDotNet"] = "YamlDotNet",
         ["LuaCSharp"] = "Lua",
         ["LiteNetLib"] = "LiteNetLib",
+        ["MeltySynth"] = "MeltySynth",
     };
 
     /// <summary>Compiled assembly name to project name, where they differ.</summary>

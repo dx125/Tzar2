@@ -31,3 +31,8 @@ spikes/S2-determinism/out/
 
 # Python bytecode (tools/re)
 __pycache__/
+
+# SoundFonts are downloaded for development only and never committed (tools/soundfont/README.md, ADR 0020)
+/soundfonts/
+*.sf2
+*.sf3
