@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Tzar2.Core/Tzar2.Core.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Sim/Tzar2.Sim.csproj" />
   </ItemGroup>
 
 </Project>

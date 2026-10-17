@@ -9,7 +9,7 @@ namespace Tzar2.Sim.Ecs;
 /// </summary>
 public sealed class ComponentRegistry
 {
-    private readonly List<IComponentStore> _stores = [];
+    private IComponentStore[] _stores = [];
 
     // Lookup only, never iterated (T2D004).
     private readonly Dictionary<Type, IComponentStore> _byType = [];
@@ -18,8 +18,8 @@ public sealed class ComponentRegistry
     /// <summary>Whether new stores can still be registered.</summary>
     public bool IsSealed { get; private set; }
 
-    /// <summary>All stores in registration order.</summary>
-    public IReadOnlyList<IComponentStore> All => _stores;
+    /// <summary>All stores in registration order (a span, so hot loops over it do not allocate an enumerator).</summary>
+    public ReadOnlySpan<IComponentStore> All => _stores;
 
     /// <summary>Registers a hot store.</summary>
     /// <exception cref="InvalidOperationException">The registry is sealed, or the type or key is already registered.</exception>
@@ -75,7 +75,7 @@ public sealed class ComponentRegistry
             throw new InvalidOperationException($"Component {type.Name} / key '{store.Key}' is already registered or invalid.");
         }
 
-        _stores.Add(store);
+        _stores = [.. _stores, store];
         return store;
     }
 

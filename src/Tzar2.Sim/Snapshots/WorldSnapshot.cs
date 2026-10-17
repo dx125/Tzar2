@@ -48,7 +48,7 @@ public static class WorldSnapshot
         world.Rng.WriteTo(writer);
         writer.WriteBytes(MemoryMarshal.AsBytes(world.Players));
         world.Map.WriteTo(writer);
-        writer.WriteVarUInt64((ulong)world.Components.All.Count);
+        writer.WriteVarUInt64((ulong)world.Components.All.Length);
         foreach (IComponentStore store in world.Components.All)
         {
             writer.WriteString(store.Key);
@@ -108,9 +108,9 @@ public static class WorldSnapshot
         reader.ReadBytes(world.Players.Length * System.Runtime.CompilerServices.Unsafe.SizeOf<PlayerState>()).CopyTo(MemoryMarshal.AsBytes(world.Players));
         world.Map.ReadFrom(ref reader);
         ulong storeCount = reader.ReadVarUInt64();
-        if (storeCount != (ulong)world.Components.All.Count)
+        if (storeCount != (ulong)world.Components.All.Length)
         {
-            throw new InvalidDataException($"Snapshot has {storeCount} stores, the world {world.Components.All.Count}.");
+            throw new InvalidDataException($"Snapshot has {storeCount} stores, the world {world.Components.All.Length}.");
         }
 
         foreach (IComponentStore store in world.Components.All)

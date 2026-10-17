@@ -50,6 +50,12 @@ public sealed class Simulation : IDisposable
     /// <summary>The state.</summary>
     public World World { get; }
 
+    /// <summary><see cref="Ruleset.ContentHash"/> of the ruleset (for replay headers and lobby checks).</summary>
+    public ulong RulesetHash => World.Ruleset.ContentHash;
+
+    /// <summary><see cref="MapData.ContentHash"/> of the map.</summary>
+    public ulong MapHash => World.Map.Data.ContentHash;
+
     /// <summary>The worker pool.</summary>
     public DeterministicWorkerPool Workers { get; }
 
