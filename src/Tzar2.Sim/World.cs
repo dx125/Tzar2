@@ -48,6 +48,9 @@ public sealed class World
         Motions = Components.RegisterHot<Motion>("core.motion");
         OccupancyCells = Components.RegisterHot<OccupancyCell>("core.occupancy");
         Names = Components.RegisterCold<EntityName>("core.name");
+        Footprints = Components.RegisterHot<Footprint>("core.footprint");
+        Decals = new DecalIndex(ruleset.DecalCap);
+        CorpseTtlTicks = (ruleset.CorpseTtlMilliseconds + config.TickLengthMilliseconds - 1) / config.TickLengthMilliseconds;
     }
 
     /// <summary>The compiled ruleset.</summary>
@@ -94,6 +97,15 @@ public sealed class World
 
     /// <summary>Names (cold).</summary>
     public ColdComponentStore<EntityName> Names { get; }
+
+    /// <summary>Structure footprints (hot).</summary>
+    public ComponentStore<Footprint> Footprints { get; }
+
+    /// <summary>Corpses and other footprint-less leftovers (ORIG-01, REQ-PATH-08).</summary>
+    public DecalIndex Decals { get; }
+
+    /// <summary>Corpse lifetime in ticks.</summary>
+    public int CorpseTtlTicks { get; }
 
     /// <summary>Speed of an entity type in world units per tick.</summary>
     public int SpeedPerTick(ushort typeId) => _entityTypeSpeedPerTick[typeId];
@@ -163,6 +175,11 @@ public sealed class World
         }
 
         EntityTypeDefinition type = Ruleset.EntityTypes[typeId];
+        if (type.HasFootprint)
+        {
+            return PlaceStructure(typeId, owner, x / MapState.UnitsPerTile, y / MapState.UnitsPerTile);
+        }
+
         EntityId entity = Entities.Create();
         Positions.Set(entity, new Position(x, y));
         Identities.Set(entity, new Identity { TypeId = typeId, Owner = (byte)owner });
@@ -177,6 +194,80 @@ public sealed class World
         Map.AddOccupant(cell);
         Events.Emit(new SimEvent(SimEventKind.Spawned, (byte)owner, entity, x, y, typeId));
         return entity;
+    }
+
+    /// <summary>
+    /// Places a structure (a type with a footprint: building, tree, rock) with its footprint's top-left at tile
+    /// (<paramref name="tileX"/>, <paramref name="tileY"/>). Its blocked tiles become impassable for every locomotor
+    /// except air; navigation updates incrementally (REQ-PATH-01).
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The type has no footprint, or the footprint leaves the map.</exception>
+    public EntityId PlaceStructure(ushort typeId, int owner, int tileX, int tileY)
+    {
+        RequireUnlocked();
+        if (typeId >= Ruleset.EntityTypes.Count || !Ruleset.EntityTypes[typeId].HasFootprint)
+        {
+            throw new ArgumentOutOfRangeException(nameof(typeId), "Not a structure type.");
+        }
+
+        if (!HasPlayer(owner))
+        {
+            throw new ArgumentOutOfRangeException(nameof(owner));
+        }
+
+        EntityTypeDefinition type = Ruleset.EntityTypes[typeId];
+        if (!Map.ContainsTile(tileX, tileY) || !Map.ContainsTile(tileX + type.FootprintWidth - 1, tileY + type.FootprintHeight - 1))
+        {
+            throw new ArgumentOutOfRangeException(nameof(tileX), "The footprint leaves the map.");
+        }
+
+        EntityId entity = Entities.Create();
+        int x = (tileX * MapState.UnitsPerTile) + (type.FootprintWidth * MapState.UnitsPerTile / 2);
+        int y = (tileY * MapState.UnitsPerTile) + (type.FootprintHeight * MapState.UnitsPerTile / 2);
+        Positions.Set(entity, new Position(x, y));
+        Identities.Set(entity, new Identity { TypeId = typeId, Owner = (byte)owner });
+        Healths.Set(entity, new Health { Current = type.MaxHealth, Max = type.MaxHealth });
+        Footprints.Set(entity, new Footprint { TileX = tileX, TileY = tileY });
+        ApplyFootprint(type, tileX, tileY, add: true);
+        Events.Emit(new SimEvent(SimEventKind.Spawned, (byte)owner, entity, x, y, typeId));
+        return entity;
+    }
+
+    /// <summary>
+    /// Kills an entity: records a corpse decal if its type leaves one (it never blocks movement, ORIG-01), then
+    /// destroys it.
+    /// </summary>
+    /// <returns><c>false</c> if it was not alive.</returns>
+    public bool Kill(EntityId entity)
+    {
+        RequireUnlocked();
+        if (!Entities.IsAlive(entity))
+        {
+            return false;
+        }
+
+        int p = Identities.IndexOf(entity);
+        int q = Positions.IndexOf(entity);
+        if (p >= 0 && q >= 0 && CorpseTtlTicks > 0)
+        {
+            Identity identity = Identities.At(p);
+            EntityTypeDefinition type = Ruleset.EntityTypes[identity.TypeId];
+            if (type.LeavesCorpse && !type.HasFootprint)
+            {
+                Position position = Positions.At(q);
+                Decals.Add(new Decal
+                {
+                    X = position.X,
+                    Y = position.Y,
+                    ExpiresTick = Tick.Value + CorpseTtlTicks,
+                    TypeId = identity.TypeId,
+                    Owner = identity.Owner,
+                    Kind = DecalKind.Corpse,
+                });
+            }
+        }
+
+        return Destroy(entity);
     }
 
     /// <summary>Destroys an entity: removes all its components now; its slot is recycled in the cleanup step.</summary>
@@ -203,6 +294,13 @@ public sealed class World
         if (cellPosition >= 0 && OccupancyCells.At(cellPosition).Cell >= 0)
         {
             Map.RemoveOccupant(OccupancyCells.At(cellPosition).Cell);
+        }
+
+        int footprintPosition = Footprints.IndexOf(entity);
+        if (footprintPosition >= 0)
+        {
+            Footprint footprint = Footprints.At(footprintPosition);
+            ApplyFootprint(Ruleset.EntityTypes[typeId], footprint.TileX, footprint.TileY, add: false);
         }
 
         foreach (IComponentStore store in Components.All)
@@ -287,6 +385,30 @@ public sealed class World
         if (IsLocked)
         {
             throw new InvalidOperationException("The world is locked between ticks; change it through commands (REQ-ARCH-03).");
+        }
+    }
+
+    private void ApplyFootprint(EntityTypeDefinition type, int tileX, int tileY, bool add)
+    {
+        ReadOnlySpan<byte> mask = type.Footprint;
+        for (int dy = 0; dy < type.FootprintHeight; dy++)
+        {
+            for (int dx = 0; dx < type.FootprintWidth; dx++)
+            {
+                if (mask[(dy * type.FootprintWidth) + dx] == 0)
+                {
+                    continue;
+                }
+
+                if (add)
+                {
+                    Map.AddBlocker(tileX + dx, tileY + dy);
+                }
+                else
+                {
+                    Map.RemoveBlocker(tileX + dx, tileY + dy);
+                }
+            }
         }
     }
 

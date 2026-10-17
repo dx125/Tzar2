@@ -13,13 +13,19 @@ namespace Tzar2.Content.Compiled;
 public sealed class Ruleset
 {
     /// <summary>Format version of <see cref="ContentHash"/>'s encoding; bump when fields are added.</summary>
-    public const int HashVersion = 1;
+    public const int HashVersion = 2;
 
     /// <summary>Default occupancy sub-cells per tile axis (TDD §9.1: 2×2 cells per tile; UNK-11).</summary>
     public const int DefaultOccupancyCellsPerTileAxis = 2;
 
     /// <summary>Default maximum kingdoms (REQ-PATH-00: 8 in classic; rules may raise it to 16).</summary>
     public const int DefaultMaxPlayers = 8;
+
+    /// <summary>Default corpse lifetime (REQ-PATH-08: e.g. corpse 120 s).</summary>
+    public const int DefaultCorpseTtlMilliseconds = 120_000;
+
+    /// <summary>Default global decal cap (REQ-PATH-08: e.g. 4,000, oldest first).</summary>
+    public const int DefaultDecalCap = 4000;
 
     private readonly TerrainTypeDefinition[] _terrainTypes;
     private readonly EntityTypeDefinition[] _entityTypes;
@@ -31,7 +37,9 @@ public sealed class Ruleset
         IReadOnlyList<TerrainTypeDefinition> terrainTypes,
         IReadOnlyList<EntityTypeDefinition> entityTypes,
         int occupancyCellsPerTileAxis = DefaultOccupancyCellsPerTileAxis,
-        int maxPlayers = DefaultMaxPlayers)
+        int maxPlayers = DefaultMaxPlayers,
+        int corpseTtlMilliseconds = DefaultCorpseTtlMilliseconds,
+        int decalCap = DefaultDecalCap)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentNullException.ThrowIfNull(terrainTypes);
@@ -43,6 +51,9 @@ public sealed class Ruleset
         }
         ArgumentOutOfRangeException.ThrowIfLessThan(maxPlayers, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(maxPlayers, 16);
+        ArgumentOutOfRangeException.ThrowIfLessThan(corpseTtlMilliseconds, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(decalCap, 0);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(decalCap, 1 << 20);
         if (terrainTypes.Count is 0 or > 256)
         {
             throw new ArgumentException("A ruleset needs 1-256 terrain types.", nameof(terrainTypes));
@@ -82,6 +93,8 @@ public sealed class Ruleset
         Name = name;
         OccupancyCellsPerTileAxis = occupancyCellsPerTileAxis;
         MaxPlayers = maxPlayers;
+        CorpseTtlMilliseconds = corpseTtlMilliseconds;
+        DecalCap = decalCap;
         ContentHash = ComputeHash();
     }
 
@@ -100,13 +113,20 @@ public sealed class Ruleset
     /// <summary>Maximum number of kingdoms in a match.</summary>
     public int MaxPlayers { get; }
 
+    /// <summary>How long a corpse decal lives (REQ-PATH-08); 0 = corpses are not recorded.</summary>
+    public int CorpseTtlMilliseconds { get; }
+
+    /// <summary>Most decals alive at once; the oldest is dropped first (REQ-PATH-08).</summary>
+    public int DecalCap { get; }
+
     /// <summary>xxHash64 of every field, in declaration order; replays and lobbies compare it (§19.4).</summary>
     public ulong ContentHash { get; }
 
     private ulong ComputeHash()
     {
         var hasher = new StateHasher();
-        hasher.Add(HashVersion).Add(Encoding.UTF8.GetBytes(Name)).Add(OccupancyCellsPerTileAxis).Add(MaxPlayers);
+        hasher.Add(HashVersion).Add(Encoding.UTF8.GetBytes(Name)).Add(OccupancyCellsPerTileAxis).Add(MaxPlayers)
+            .Add(CorpseTtlMilliseconds).Add(DecalCap);
         hasher.Add(_terrainTypes.Length);
         foreach (TerrainTypeDefinition t in _terrainTypes)
         {
@@ -116,7 +136,8 @@ public sealed class Ruleset
         hasher.Add(_entityTypes.Length);
         foreach (EntityTypeDefinition e in _entityTypes)
         {
-            hasher.Add((int)e.Id).Add(Encoding.UTF8.GetBytes(e.Key)).Add((byte)e.Locomotor).Add(e.SpeedUnitsPerSecond).Add(e.MaxHealth);
+            hasher.Add((int)e.Id).Add(Encoding.UTF8.GetBytes(e.Key)).Add((byte)e.Locomotor).Add(e.SpeedUnitsPerSecond).Add(e.MaxHealth)
+                .Add(e.Radius).Add(e.ClearanceTiles).Add(e.FootprintWidth).Add(e.FootprintHeight).Add(e.Footprint).Add(e.LeavesCorpse);
         }
 
         return hasher.GetCurrentHash();

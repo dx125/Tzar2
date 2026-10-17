@@ -16,14 +16,26 @@ public enum CommandKind : ushort
     /// <summary>Stop the listed units.</summary>
     Stop = 1,
 
-    /// <summary>Move the listed units to (X, Y) (placeholder straight-line mover until §9.2).</summary>
+    /// <summary>
+    /// Move the listed units to (X, Y) (TDD §9.3 right-click). Units of one command that share a locomotor form a
+    /// group: arrival slots around the goal (REQ-PATH-05) and, from 6 units, a shared flow field (REQ-PATH-04).
+    /// </summary>
     Move = 2,
 
     /// <summary>Delete the listed units (the original's Del key).</summary>
     Delete = 3,
 
+    /// <summary>Patrol between each unit's current position and (X, Y) until given another order.</summary>
+    Patrol = 4,
+
+    /// <summary>Follow <see cref="Command.Target"/>: keep re-pathing to it and stay close (guard/escort base order).</summary>
+    Follow = 5,
+
     /// <summary>Debug: spawn Arg1 (1-64) units of type Arg0 at (X, Y); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugSpawn = 0xF000,
+
+    /// <summary>Debug: kill the listed entities of any owner (leaving corpses); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
+    DebugKill = 0xF001,
 }
 
 /// <summary>Input modifiers carried by a command (TDD §9.3: Shift/Ctrl/Alt variants of orders).</summary>

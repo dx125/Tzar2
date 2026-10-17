@@ -62,6 +62,56 @@ public sealed class CommandSystem : ISimSystem
                     m.State = MotionState.Moving;
                 });
 
+            case CommandKind.Patrol:
+                if (!world.Map.ContainsPoint(command.X, command.Y))
+                {
+                    return CommandRejection.OutOfMap;
+                }
+
+                return ForOwnedMovers(world, command, entities, static (ref Motion m, in Command c) =>
+                {
+                    m.TargetX = c.X;
+                    m.TargetY = c.Y;
+                    m.State = MotionState.Moving;
+                });
+
+            case CommandKind.Follow:
+            {
+                int t = world.Positions.IndexOf(command.Target);
+                if (!world.Entities.IsAlive(command.Target) || t < 0)
+                {
+                    return CommandRejection.InvalidArgument;
+                }
+
+                Position target = world.Positions.At(t);
+                var moved = new Command(CommandKind.Move, command.Player, command.Flags, command.Target, target.X, target.Y, 0, 0, command.EntityOffset, command.EntityCount);
+                return ForOwnedMovers(world, moved, entities, static (ref Motion m, in Command c) =>
+                {
+                    m.TargetX = c.X;
+                    m.TargetY = c.Y;
+                    m.State = MotionState.Moving;
+                });
+            }
+
+            case CommandKind.DebugKill:
+            {
+                if (!world.Config.CheatsAllowed)
+                {
+                    return CommandRejection.CheatsDisabled;
+                }
+
+                int killed = 0;
+                foreach (EntityId entity in entities)
+                {
+                    if (world.Kill(entity))
+                    {
+                        killed++;
+                    }
+                }
+
+                return killed > 0 ? null : CommandRejection.NoValidEntities;
+            }
+
             case CommandKind.Stop:
                 return ForOwnedMovers(world, command, entities, static (ref Motion m, in Command c) => m.State = MotionState.Idle);
 

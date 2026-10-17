@@ -91,6 +91,20 @@ public struct OccupancyCell : IComponent
     public int Cell;
 }
 
+/// <summary>
+/// The tiles a structure blocks (buildings, trees, rocks; TDD §9.1): the footprint's top-left tile. The mask and size
+/// come from the entity type. Placing or destroying a structure adds/removes the blockers (REQ-PATH-01).
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct Footprint : IComponent
+{
+    /// <summary>Left tile column.</summary>
+    public int TileX;
+
+    /// <summary>Top tile row.</summary>
+    public int TileY;
+}
+
 #pragma warning restore CA1051
 
 /// <summary>Cold component: a display or script name (heroes, named campaign units).</summary>

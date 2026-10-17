@@ -48,6 +48,30 @@ public sealed class SyntheticScenario : IDisposable
     /// <summary>Water terrain id.</summary>
     public const byte Water = 1;
 
+    /// <summary>Entity type ids of <see cref="CreateRuleset"/>.</summary>
+    public const ushort Swordsman = 0;
+
+    /// <summary>Mounted unit type id.</summary>
+    public const ushort Knight = 1;
+
+    /// <summary>Large (siege) unit type id.</summary>
+    public const ushort Catapult = 2;
+
+    /// <summary>3×3 building with free corners.</summary>
+    public const ushort House = 3;
+
+    /// <summary>1×1 resource object.</summary>
+    public const ushort Tree = 4;
+
+    /// <summary>Ship type id.</summary>
+    public const ushort Boat = 5;
+
+    /// <summary>Flying unit type id.</summary>
+    public const ushort Dragon = 6;
+
+    /// <summary>The mobile land types the bot spawns and orders (ids 0 .. MobileTypeCount-1).</summary>
+    public const int MobileTypeCount = 3;
+
     private readonly SyntheticScenarioOptions _options;
     private readonly CommandList _batch = new();
     private readonly CommandList _tickSet = new();
@@ -93,7 +117,10 @@ public sealed class SyntheticScenario : IDisposable
     /// <summary>The command set of the last generated tick.</summary>
     public CommandList LastCommands => _tickSet;
 
-    /// <summary>The scenario's ruleset: grass (land) and water terrain; a foot, a mounted and a ship unit type.</summary>
+    /// <summary>
+    /// The scenario's ruleset: grass (land) and water terrain; foot, mounted and large land units, a 3×3 house, a
+    /// tree, a boat and a dragon.
+    /// </summary>
     public static Ruleset CreateRuleset() => new(
         "synthetic",
         [
@@ -101,9 +128,13 @@ public sealed class SyntheticScenario : IDisposable
             new TerrainTypeDefinition(Water, "water", LocomotorMask.Ship | LocomotorMask.Air, isWater: true),
         ],
         [
-            new EntityTypeDefinition(0, "swordsman", Locomotor.Foot, speedUnitsPerSecond: 64 * 48, maxHealth: 100),
-            new EntityTypeDefinition(1, "knight", Locomotor.Mounted, speedUnitsPerSecond: 64 * 80, maxHealth: 180),
-            new EntityTypeDefinition(2, "catapult", Locomotor.Large, speedUnitsPerSecond: 64 * 24, maxHealth: 250),
+            new EntityTypeDefinition(Swordsman, "swordsman", Locomotor.Foot, speedUnitsPerSecond: 64 * 48, maxHealth: 100, radius: 7 * 64),
+            new EntityTypeDefinition(Knight, "knight", Locomotor.Mounted, speedUnitsPerSecond: 64 * 80, maxHealth: 180, radius: 10 * 64),
+            new EntityTypeDefinition(Catapult, "catapult", Locomotor.Large, speedUnitsPerSecond: 64 * 24, maxHealth: 250, radius: 13 * 64),
+            new EntityTypeDefinition(House, "house", Locomotor.Foot, 0, 400, footprintWidth: 3, footprintHeight: 3, footprint: [0, 1, 0, 1, 1, 1, 0, 1, 0], leavesCorpse: false),
+            new EntityTypeDefinition(Tree, "tree", Locomotor.Foot, 0, 50, footprintWidth: 1, footprintHeight: 1, leavesCorpse: false),
+            new EntityTypeDefinition(Boat, "boat", Locomotor.Ship, speedUnitsPerSecond: 64 * 40, maxHealth: 150, radius: 14 * 64),
+            new EntityTypeDefinition(Dragon, "dragon", Locomotor.Air, speedUnitsPerSecond: 64 * 64, maxHealth: 300, radius: 12 * 64),
         ],
         maxPlayers: 16);
 
@@ -169,7 +200,7 @@ public sealed class SyntheticScenario : IDisposable
                 int n = Pick(p, _options.ChurnPerPlayerPerTick);
                 _batch.Add(CommandKind.Delete, _selection.AsSpan(0, n));
                 (int x, int y) = RandomLandPoint(world.Map);
-                _batch.Add(CommandKind.DebugSpawn, default, x, y, arg0: _bot.NextInt(Ruleset.EntityTypes.Count), arg1: n);
+                _batch.Add(CommandKind.DebugSpawn, default, x, y, arg0: _bot.NextInt(MobileTypeCount), arg1: n);
             }
 
             // Client -> relay -> peer: encode the batch, decode it, stamp the sender's slot.
@@ -190,7 +221,7 @@ public sealed class SyntheticScenario : IDisposable
         for (int i = 0; i < _options.EntityCount; i++)
         {
             (int x, int y) = RandomLandPoint(world.Map);
-            ushort type = (ushort)_bot.NextInt(Ruleset.EntityTypes.Count);
+            ushort type = (ushort)_bot.NextInt(MobileTypeCount);
             world.Spawn(type, i % _options.Players, x, y);
         }
     }
