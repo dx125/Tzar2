@@ -92,6 +92,9 @@ e.g. `13 = 12.bmp`); `[terrainsize] AB = 2,14,F`:
   visible.
 * Draw: base(B) → base(A) through the magenta key → overlay pixels. Equivalently, the
   importer can bake the 14 × 2 tiles per pair into a mask atlas.
+* Consequence used in code: a tile is drawable only when its corners hold one terrain, or two that have a transition
+  file (`TerrainComposer.IsDrawnByRule`). The viewer reports other tiles; the random map generator paints only
+  drawable tiles ([ADR 0060](../decisions/0060-random-map-generator.md)).
 
 ### 3.3 Water `00.BMP`
 512 × 2560 = **5 animation frames** of 512 × 512 (16 × 16 tiles), stacked vertically
