@@ -158,6 +158,7 @@ public sealed class MovementSystem : ISimSystem
         {
             m.OrderX = tp.X;
             m.OrderY = tp.Y;
+            m.Replans = 0;
             MovementOrders.Request(world, entity, ref m, 0, tp.X, tp.Y);
         }
         else if (!far && m.State == MotionState.Moving)
@@ -604,6 +605,7 @@ public sealed class MovementSystem : ISimSystem
                 {
                     (m.PatrolX, m.OrderX) = (m.OrderX, m.PatrolX);
                     (m.PatrolY, m.OrderY) = (m.OrderY, m.PatrolY);
+                    m.Replans = 0;
                     MovementOrders.Request(world, entity, ref m, 0, m.OrderX, m.OrderY);
                 }
                 else if (m.Order == MotionOrder.Move)

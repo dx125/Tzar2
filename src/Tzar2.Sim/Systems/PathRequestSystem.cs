@@ -363,7 +363,12 @@ public sealed class PathRequestSystem : ISimSystem
 
         // Partition by (layer, start component), in order of the first member.
         bool[] done = _done.Length >= n ? _done : (_done = new bool[Math.Max(n, _done.Length * 2)]);
-        Array.Clear(done, 0, n);
+
+        // Members prepared by an earlier call (another start component of the same order) keep their slots.
+        for (int k = 0; k < n; k++)
+        {
+            done[k] = (queue[_memberQueue[k]].Flags & PathRequestFlags.Prepared) != 0;
+        }
         int prepCost = 0;
         for (int a = 0; a < n; a++)
         {
@@ -434,7 +439,7 @@ public sealed class PathRequestSystem : ISimSystem
 
             // The group goal (adjusted once for the partition), then the slots.
             ref Motion first0 = ref world.Motions.Get(EntityId.FromValue(queue[_member[0]].Entity));
-            int scan = ResolveGoalForGroup(world, layer, component, first0.OrderX, first0.OrderY, out int goalX, out int goalY);
+            int scan = ResolveGoalForGroup(world, layer, component, first0.OrderX, first0.OrderY, out int goalX, out int goalY, out bool adjusted);
             prepCost += 1 + (scan / 16);
             int settle;
             if (count >= 2)
@@ -466,6 +471,12 @@ public sealed class PathRequestSystem : ISimSystem
                 m.TargetY = _ty[k];
                 m.GroupSpeed = count >= 2 ? minSpeed : 0;
                 m.SettleRadius = settle + (3 * MapState.UnitsPerTile / 2);
+                if (adjusted)
+                {
+                    EntityId member = EntityId.FromValue(r.Entity);
+                    world.Events.Emit(new SimEvent(SimEventKind.GoalUnreachable, world.Identities.Get(member).Owner, member, goalX, goalY, 0));
+                }
+
                 if (flow)
                 {
                     r.Flags |= PathRequestFlags.Flow;
@@ -481,8 +492,9 @@ public sealed class PathRequestSystem : ISimSystem
         queue[first].PrepCost += prepCost;
     }
 
-    private static int ResolveGoalForGroup(World world, NavLayer layer, int component, int x, int y, out int goalX, out int goalY)
+    private static int ResolveGoalForGroup(World world, NavLayer layer, int component, int x, int y, out int goalX, out int goalY, out bool adjusted)
     {
+        adjusted = false;
         int goal = layer.TileOf(x, y);
         goalX = Math.Clamp(x, 0, world.Map.WorldWidth - 1);
         goalY = Math.Clamp(y, 0, world.Map.WorldHeight - 1);
@@ -494,6 +506,7 @@ public sealed class PathRequestSystem : ISimSystem
         int nearest = NavQueries.NearestInComponent(layer, component, x, y, out int scanned);
         goalX = layer.CenterX(nearest);
         goalY = layer.CenterY(nearest);
+        adjusted = true;
         return scanned;
     }
 

@@ -265,6 +265,34 @@ public class MovementTests
     }
 
     [Fact]
+    public void A_group_split_by_a_wall_plans_each_side_once()
+    {
+        string[] rows = new string[20];
+        for (int y = 0; y < 20; y++)
+        {
+            rows[y] = new string('.', 10) + '#' + new string('.', 19);
+        }
+
+        using var d = new SimDriver(ScenarioMaps.FromAscii("split", rows));
+        var units = new List<EntityId>();
+        for (int i = 0; i < 12; i++)
+        {
+            // Interleaved in entity order: even on the west side, odd on the east side.
+            units.Add(i % 2 == 0 ? d.Spawn(SyntheticScenario.Swordsman, 0, 2 + (i % 3), 3 + i) : d.Spawn(SyntheticScenario.Swordsman, 0, 20 + (i % 3), 3 + i));
+        }
+
+        d.MoveToTile(0, units.ToArray(), 25, 10);
+        d.Step();
+        d.Step();
+        Assert.All(units, u => Assert.NotEqual(MotionMode.Waiting, d.MotionOf(u).Mode));
+        Assert.Equal(12, units.Select(u => (d.MotionOf(u).TargetX, d.MotionOf(u).TargetY)).Distinct().Count());
+        Assert.Equal(6, d.Count(SimEventKind.GoalUnreachable)); // the west side goes to the wall instead
+        d.RunUntil(() => !d.AnyMoving(units), 3000);
+        Assert.All(units.Where((_, i) => i % 2 == 1), u => Assert.True(d.PositionOf(u).X > 11 * Tile));
+        Assert.All(units.Where((_, i) => i % 2 == 0), u => Assert.InRange(d.PositionOf(u).X / Tile, 5, 9));
+    }
+
+    [Fact]
     public void Group_moves_assign_distinct_slots_and_share_one_flow_field()
     {
         using var d = new SimDriver(Open(64));

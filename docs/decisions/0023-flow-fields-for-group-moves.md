@@ -45,4 +45,7 @@ alive at once (180 MB).
 * Memory: ≤ ~112 fields × 8 bytes × portals (≈ 64 KB each on a 512² maze) plus local fields.
 * A group that cannot get a field (49th concurrent goal) still gets slots and individual paths: behaviour degrades in
   cost, not in correctness.
+* Local fields are built in the movement pre-pass (one 256-tile Dijkstra per newly entered cluster) and are not
+  charged to the path budget; after an obstacle change every live field is rebuilt there. Bounded by 48 fields ×
+  clusters entered, but a candidate for moving into the budgeted path phase.
 * Revisit `MaxFlowGroups` with real AI/human command rates (M3).

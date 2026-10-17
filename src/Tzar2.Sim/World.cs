@@ -398,7 +398,9 @@ public sealed class World
                 || identity < 0 || m.Layer != Navigation.LayerOfType(Identities.At(identity).TypeId)
                 || m.Radius is < 1 or > EntityTypeDefinition.MaxRadius
                 || (m.Mode == MotionMode.Flow && (m.GoalTile < 0 || m.GoalTile >= Map.Width * Map.Height))
-                || ((m.Mode is MotionMode.Route or MotionMode.Path) && (m.PathCursor < 0 || m.PathCursor > Paths.Count(movers[i].Index))))
+                || ((m.Mode is MotionMode.Route or MotionMode.Path) && (m.PathCursor < 0 || m.PathCursor > Paths.Count(movers[i].Index)))
+                || (m.Mode == MotionMode.Path && (Paths.Count(movers[i].Index) < 2 || Paths.Count(movers[i].Index) % 2 != 0))
+                || Positions.IndexOf(movers[i]) < 0)
             {
                 throw Invalid("invalid motion");
             }
