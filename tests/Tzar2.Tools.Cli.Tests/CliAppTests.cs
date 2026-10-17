@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace Tzar2.Tools.Cli.Tests;
@@ -20,13 +21,30 @@ public class CliAppTests
     [InlineData("M1", "pack")]
     [InlineData("M6", "replay", "verify", "a.t2rep")]
     [InlineData("M6", "desync", "diff", "a.snap", "b.snap")]
-    [InlineData("M2", "bench")]
     [InlineData("M3", "fidelity", "capture")]
     public void Planned_commands_report_not_implemented(string milestone, params string[] args)
     {
         (int code, _, string error) = Run(args);
         Assert.Equal(ExitCodes.NotImplemented, code);
         Assert.Contains($"not implemented ({milestone})", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Bench_runs_a_small_scenario_and_checks_the_expected_hash()
+    {
+        string[] small = ["bench", "--entities", "200", "--map", "32", "--players", "2", "--ticks", "20", "--warmup", "5", "--workers", "2"];
+        (int code, string output, string error) = Run(small);
+        Assert.True(code == ExitCodes.Success, error);
+        string hash = output.Split('\n').Single(l => l.StartsWith("final hash ", StringComparison.Ordinal))["final hash ".Length..].Trim();
+        Assert.Contains("p99", output, StringComparison.Ordinal);
+
+        (code, _, _) = Run([.. small, "--workers", "1", "--expect-hash", hash]);
+        Assert.Equal(ExitCodes.Success, code);
+        (code, _, error) = Run([.. small, "--expect-hash", "0123456789ABCDEF"]);
+        Assert.Equal(ExitCodes.Mismatch, code);
+        Assert.Contains("determinism failure", error, StringComparison.Ordinal);
+        (code, _, _) = Run("bench", "--map", "2000");
+        Assert.Equal(ExitCodes.UsageError, code);
     }
 
     [Fact]

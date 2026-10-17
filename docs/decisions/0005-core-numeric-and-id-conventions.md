@@ -51,8 +51,12 @@ leaves rounding, overflow behaviour, orientation and bit splits open.
 
 * An overflow inside a tick throws on every peer at the same tick. Whether the match then aborts with a repro bundle
   or the sim clamps is decided with the ECS in M2.
+  **Decided in [ADR 0014](0014-fixed-overflow-policy.md):** throw in debug builds, saturate and log in release builds.
 
 ## Questions for the product owner
 
 * Is 1,048,575 simultaneous entities (units, buildings, trees, projectiles, items, corpses) enough for 1,024² maps with
   mods? If not, `EntityId` would have to grow to 64 bits before M2 snapshots are frozen.
+
+**Answered (2026-10-17, product owner):** `EntityId` stays 32 bits (20-bit index, 12-bit generation); see
+[ADR 0015](0015-in-house-ecs.md).

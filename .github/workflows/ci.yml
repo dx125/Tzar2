@@ -99,3 +99,54 @@ jobs:
         with:
           name: test-results-${{ matrix.os }}
           path: TestResults
+
+  determinism:
+    # TDD §22.2 / ADR 0017: the sim golden hash on every OS. The test fails on any difference from the committed value;
+    # the t2 bench run writes the per-tick hash stream, and determinism-compare diffs the streams across OSes.
+    name: Determinism golden hash - ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - name: Golden hashes (Core + sim scenario, net8 and net10)
+        run: dotnet test tests/Tzar2.Determinism.Tests -c Release --logger "console;verbosity=normal"
+      - name: Sim scenario hash stream (t2 bench, must match the golden final hash)
+        run: >
+          dotnet run -c Release --project src/Tzar2.Tools.Cli --
+          bench --map 128 --entities 2000 --players 4 --seed 1592598566 --orders 12 --churn 2
+          --ticks 300 --warmup 0 --workers 4
+          --expect-hash 25418CEBC3F46249 --hash-stream hash-stream-${{ matrix.os }}.tsv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hash-stream-${{ matrix.os }}
+          path: hash-stream-${{ matrix.os }}.tsv
+
+  determinism-compare:
+    name: Determinism - identical hash streams on all OSes
+    needs: determinism
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hash-stream-*
+          merge-multiple: true
+      - name: Compare tick by tick
+        run: |
+          set -euo pipefail
+          ls -l hash-stream-*.tsv
+          ref=hash-stream-ubuntu-latest.tsv
+          for f in hash-stream-*.tsv; do
+            if ! cmp -s "$ref" "$f"; then
+              echo "::error::$f differs from $ref; first differing ticks:"
+              diff "$ref" "$f" | head -20
+              exit 1
+            fi
+          done
+          echo "All $(ls hash-stream-*.tsv | wc -l) hash streams are identical ($(wc -l < "$ref") ticks)."
