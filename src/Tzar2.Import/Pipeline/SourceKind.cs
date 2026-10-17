@@ -81,6 +81,8 @@ public static class SourceClassifier
     /// <summary>
     /// The package path an asset of <paramref name="kind"/> from <paramref name="source"/> is stored at, or null when the
     /// kind produces no single file. Art under <c>IMAGES/</c> lives in <c>art/</c> keyed by its IMAGES.INI logical path.
+    /// Every kind maps distinct sources to distinct paths (canonical locations, otherwise an <c>*-extra/</c> tree keyed
+    /// by the full source path), so a modded install with copies in other folders cannot collide.
     /// </summary>
     public static string? PackagePath(string source, SourceKind kind)
     {
@@ -89,8 +91,10 @@ public static class SourceClassifier
         {
             SourceKind.Sprite => ArtPath(source, ".t2spr"),
             SourceKind.Bitmap => ArtPath(source, ".t2img"),
-            SourceKind.Palette => "palettes/" + Content.ContentPath.ChangeExtension(LastSegment(source), ".json"),
-            SourceKind.Font => "fonts/" + Content.ContentPath.ChangeExtension(LastSegment(source), ".json"),
+            SourceKind.Palette => source == "images/game.pal" ? "palettes/game.json" : "palettes-extra/" + source + ".json",
+            SourceKind.Font => IsDirectChild(source, "local/fonts/")
+                ? "fonts/" + Content.ContentPath.ChangeExtension(LastSegment(source), ".json")
+                : "fonts-extra/" + Content.ContentPath.ChangeExtension(source, ".json"),
             SourceKind.Sound => source.StartsWith("sound/", StringComparison.Ordinal) ? source : "sound-extra/" + source,
             SourceKind.Music => source.StartsWith("music/", StringComparison.Ordinal) ? source : "music-extra/" + source,
             SourceKind.Ini or SourceKind.Tsv => "tables/" + source + ".json",
@@ -103,6 +107,9 @@ public static class SourceClassifier
         => source.StartsWith("images/", StringComparison.Ordinal)
             ? "art/" + Content.ContentPath.ChangeExtension(source["images/".Length..], extension)
             : "art-extra/" + Content.ContentPath.ChangeExtension(source, extension);
+
+    private static bool IsDirectChild(string path, string folder)
+        => path.StartsWith(folder, StringComparison.Ordinal) && path.IndexOf('/', folder.Length) < 0;
 
     private static string LastSegment(string path) => path[(path.LastIndexOf('/') + 1)..];
 }

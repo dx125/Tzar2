@@ -43,6 +43,15 @@ public sealed class RleSheet
     /// <summary>Size of the fixed header before the palette.</summary>
     public const int HeaderSize = 0x26;
 
+    /// <summary>Widest sheet accepted (the reference build's widest is 960 px).</summary>
+    public const int MaxWidth = 4096;
+
+    /// <summary>
+    /// Largest sheet area accepted, in pixels (2^26; the reference build's largest sheet has 6.7 M). Run lengths are bytes,
+    /// so a tiny file can describe a huge, almost empty sheet; this cap bounds what a decoder of it may allocate.
+    /// </summary>
+    public const long MaxPixels = 1L << 26;
+
     private const string Format = "RLE";
     private static ReadOnlySpan<byte> Magic => " elr"u8;
     private static ReadOnlySpan<byte> Magic2 => "RLE\0"u8;
@@ -163,6 +172,11 @@ public sealed class RleSheet
         if (width == 0 || height == 0)
         {
             throw new LegacyFormatException(Format, "empty sheet.");
+        }
+
+        if (width > MaxWidth || (long)width * height > MaxPixels)
+        {
+            throw new LegacyFormatException(Format, $"sheet {width}×{height} exceeds the supported size ({MaxWidth} px wide, {MaxPixels} px).");
         }
 
         long cells = (long)dirs * frames;

@@ -20,6 +20,13 @@ namespace Tzar2.Import.Tests.Pipeline;
 /// </summary>
 public sealed class OriginImportTests : IDisposable
 {
+    /// <summary>
+    /// SHA-256 of base.original.t2pkg imported from the clean GOG v1.10 EN build (REQ-IMP-02). A digest of our own output,
+    /// not of an original file. Pinned so every machine that has the original can prove it builds the same bytes;
+    /// update it only for an intentional change of the package format or layout.
+    /// </summary>
+    private const string ReferencePackageSha256 = "71d18d1279b16fd15134a2716834c11331ed2c686363eb4172b56b4192adcbfb";
+
     private readonly string _out = Path.Combine(Path.GetTempPath(), "tzar2-origin-import-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
@@ -41,6 +48,7 @@ public sealed class OriginImportTests : IDisposable
         Assert.True(report.Succeeded, string.Join("\n", report.Errors));
         Assert.Equal("gog-1.10-en", report.EditionId);
         Assert.Equal(report.PackageSha256, second.Report.PackageSha256);
+        Assert.True(report.PackageSha256 == ReferencePackageSha256, $"reference package sha256 is {report.PackageSha256}");
         Assert.Equal(File.ReadAllBytes(first.PackagePath), File.ReadAllBytes(second.PackagePath));
 
         // All 961 RLE + all BMP/WAV/MID/INI/TSV/FNT of the reference build (ADR 0013, TDD §25 M1).

@@ -107,6 +107,24 @@ public class RleSheetTests
         Assert.False(string.IsNullOrEmpty(name));
     }
 
+    [Theory]
+    [InlineData(5000, 4)]       // wider than MaxWidth
+    [InlineData(4096, 20000)]   // area above MaxPixels
+    [InlineData(20000, 20000)]  // the review's 3 MB "bounding-box bomb"
+    public void Oversized_geometry_is_rejected_before_anything_is_allocated(int width, int height)
+    {
+        byte[] header = new byte[RleSheet.HeaderSize];
+        " elr"u8.CopyTo(header);
+        "RLE\0"u8.CopyTo(header.AsSpan(0x10));
+        header[4] = 1;
+        header[8] = 1;
+        BitConverter.TryWriteBytes(header.AsSpan(0x14), (ushort)width);
+        BitConverter.TryWriteBytes(header.AsSpan(0x16), (ushort)height);
+        header[0x18] = 7;
+        var ex = Assert.Throws<LegacyFormatException>(() => RleSheet.Parse(header));
+        Assert.Contains("exceeds the supported size", ex.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Palette_in_a_direct_colour_sheet_is_rejected()
     {

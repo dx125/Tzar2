@@ -44,7 +44,11 @@ public sealed class ImportOptions
     /// <summary>Worker threads for decoding (results never depend on it).</summary>
     public int MaxParallelism { get; init; } = Environment.ProcessorCount;
 
-    /// <summary>Skips the MD5 verification of the detected edition (faster; the report then lacks modified files).</summary>
+    /// <summary>
+    /// Skips edition detection entirely (faster). This changes the package, not only the report: without an edition the
+    /// manifest has version 0.0.0 and no <c>sourceEdition</c>, <c>manifests/edition.json</c> is empty, and text is read as
+    /// CP1252 unless <see cref="CodePageOverride"/> is set.
+    /// </summary>
     public bool SkipEditionDetection { get; init; }
 }
 
@@ -149,6 +153,15 @@ public static class ImportPipeline
             {
                 count.Failed++;
                 report.Errors.Add(new ImportIssue(result.Source, result.Error));
+                continue;
+            }
+
+            string? clash = result.Outputs.Select(o => o.Path).FirstOrDefault(package.Contains);
+            if (clash is not null)
+            {
+                count.Failed++;
+                report.Errors.Add(new ImportIssue(result.Source, $"output '{clash}' is already produced by another file"));
+                result.Error = "duplicate output";
                 continue;
             }
 
@@ -408,6 +421,12 @@ public static class ImportPipeline
         catch (IOException ex)
         {
             result.Error = "read error: " + ex.Message;
+            result.Outputs.Clear();
+        }
+        catch (Exception ex) when (ex is ArgumentException or OverflowException or IndexOutOfRangeException or InvalidOperationException)
+        {
+            // Never let one file abort the import (REQ-IMP-03); this is a converter bug or an unforeseen input, so say so.
+            result.Error = $"internal error ({ex.GetType().Name}): {ex.Message}";
             result.Outputs.Clear();
         }
 
@@ -786,7 +805,13 @@ public static class ImportPipeline
                 }
 
                 IniSection? terrain = ini.Document.FindSection("terrain");
-                string dir = (terrain?.GetValue("dir") ?? r.Source["images/terrain/".Length..^".terrain.ini".Length]).ToLowerInvariant();
+                string set = r.Source["images/terrain/".Length..^".terrain.ini".Length];
+                string dir = SafeSegment(terrain?.GetValue("dir")) ?? set;
+                if (terrain?.GetValue("dir") is { } rawDir && SafeSegment(rawDir) is null)
+                {
+                    report.Warnings.Add(new ImportIssue(r.Source, $"terrain dir '{rawDir}' is not a plain folder name; using '{set}'"));
+                }
+
                 string folder = "art/terrain/" + dir + "/";
                 w.WriteStartObject();
                 w.WriteString("set", r.Source["images/terrain/".Length..^".terrain.ini".Length]);
@@ -815,8 +840,9 @@ public static class ImportPipeline
                         continue;
                     }
 
-                    string asset = folder + ContentPath.ChangeExtension(e.Value.ToLowerInvariant(), ImageAsset.Extension);
-                    bool exists = assets.Contains(asset);
+                    string? file = SafeSegment(e.Value);
+                    string? asset = file is null ? null : folder + ContentPath.ChangeExtension(file, ImageAsset.Extension);
+                    bool exists = asset is not null && assets.Contains(asset);
                     if (!exists)
                     {
                         report.Warnings.Add(new ImportIssue(r.Source, $"terrain file {e.Key} = {e.Value} does not exist"));
@@ -841,6 +867,25 @@ public static class ImportPipeline
 
             w.WriteEndArray();
         }));
+    }
+
+    /// <summary>A single normalised path segment (no separators, no <c>..</c>), or null.</summary>
+    private static string? SafeSegment(string? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            string normal = ContentPath.Normalize(value);
+            return normal.Contains('/', StringComparison.Ordinal) ? null : normal;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Spike S6 measurement (ADR 0013) over the converted sheets.</summary>
@@ -897,8 +942,9 @@ public static class ImportPipeline
         foreach ((string name, List<(int, int)> list) in sizes)
         {
             FormatStats stats = report.SpriteMemory[name];
-            AtlasPackResult p2 = AtlasPacker.Pack(list, 2048);
-            AtlasPackResult p4 = AtlasPacker.Pack(list, 4096);
+            // The converter rejects cells above one layer; filter anyway so the measurement can never fail an import.
+            AtlasPackResult p2 = AtlasPacker.Pack(list.Where(c => c.Item1 <= 2048 && c.Item2 <= 2048).ToList(), 2048);
+            AtlasPackResult p4 = AtlasPacker.Pack(list.Where(c => c.Item1 <= 4096 && c.Item2 <= 4096).ToList(), 4096);
             stats.Pages2048 = p2.Layers;
             stats.Occupancy2048 = p2.OccupancyPerMille(2048);
             stats.Pages4096 = p4.Layers;

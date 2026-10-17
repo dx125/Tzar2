@@ -19,6 +19,12 @@ public static class SpriteConverter
     /// <summary>The baked unit shadow colour of RGB555 sheets (docs/formats/rle.md §5.4).</summary>
     public const int BakedShadowRgb555 = 0x0020;
 
+    /// <summary>Largest trimmed cell side: one texture-array layer (ADR 0013).</summary>
+    public const int MaxCellSide = 2048;
+
+    /// <summary>Largest trimmed pixel payload of one sheet in bytes (the reference build's largest is about 6 MB).</summary>
+    public const long MaxSheetBytes = 1L << 27;
+
     /// <summary>Converts <paramref name="rle"/>.</summary>
     /// <param name="rle">The decoded sheet.</param>
     /// <param name="isUnitSheet">Whether the baked-shadow heuristic applies (sheets under <c>IMAGES/UNIT</c>).</param>
@@ -46,7 +52,9 @@ public static class SpriteConverter
             if (transparent < 0)
             {
                 format = PixelFormat.Rgba8;
-                warnings.Add("all 256 palette indices are used; stored as RGBA8");
+                warnings.Add(rle.Palette.Count == 256
+                    ? "all 256 palette indices are used; stored as RGBA8, so player colours (indices 240-255) can NOT be recoloured"
+                    : "all 256 palette indices are used; stored as RGBA8");
             }
         }
 
@@ -58,7 +66,16 @@ public static class SpriteConverter
             bounds[c] = rle.GetCellBounds(c);
             if (bounds[c] is { } b)
             {
-                total += (long)b.Width * b.Height * bpp;
+                if (b.Width > MaxCellSide || b.Height > MaxCellSide)
+                {
+                    throw new LegacyFormatException("RLE", $"cell {c} is {b.Width}×{b.Height} after trimming; cells must fit a {MaxCellSide}² texture layer (ADR 0013).");
+                }
+
+                total = checked(total + ((long)b.Width * b.Height * bpp));
+                if (total > MaxSheetBytes)
+                {
+                    throw new LegacyFormatException("RLE", $"trimmed cells exceed {MaxSheetBytes} bytes.");
+                }
             }
         }
 
@@ -76,7 +93,8 @@ public static class SpriteConverter
             }
 
             cells[c] = new SpriteCell(b.X0, b.Y0, b.Width, b.Height, offset);
-            Span<byte> cellPixels = pixels.AsSpan(offset, b.Width * b.Height * bpp);
+            int cellBytes = b.Width * b.Height * bpp;
+            Span<byte> cellPixels = pixels.AsSpan(offset, cellBytes);
             if (format == PixelFormat.Indexed8)
             {
                 cellPixels.Fill((byte)transparent);
@@ -117,7 +135,7 @@ public static class SpriteConverter
                 }
             }
 
-            offset += b.Width * b.Height * bpp;
+            offset += cellBytes;
         }
 
         if (highBit)
