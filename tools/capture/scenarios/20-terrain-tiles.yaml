@@ -1,0 +1,39 @@
+schema: tzar2-capture-scenario/1
+id: terrain-tiles
+title: Terrain tile and variant selection on the original maps (UNK-10)
+resolves: [UNK-10, UNK-03]
+priority: 2
+minutes: 4
+description: |
+  A 3x3 camera tour (minimap clicks) over three original maps covering the snow, grass and summer sets, with the
+  map revealed and no fog. The analysis identifies the tile of every screen cell, aligns the view with the map's
+  "tiles" words and reports which tile each word produced (variant stored in the map, or chosen by position).
+  The same snapshots feed the shadow analysis.
+launch: [-nomovies, -explore, -nofog, -map, "${map}"]
+trials:
+  - name: mp1-snow
+    vars: {map: MP1}
+  - name: mp2-grass
+    vars: {map: MP2}
+  - name: mp4-summer
+    vars: {map: MP4}
+steps:
+  - minimap: [0.2, 0.2]
+  - snapshot: {name: nw, window: false}
+  - minimap: [0.5, 0.2]
+  - snapshot: {name: n, window: false}
+  - minimap: [0.8, 0.2]
+  - snapshot: {name: ne, window: false}
+  - minimap: [0.2, 0.5]
+  - snapshot: {name: w, window: false}
+  - minimap: [0.5, 0.5]
+  - snapshot: {name: c, window: false}
+  - minimap: [0.8, 0.5]
+  - snapshot: {name: e, window: false}
+  - minimap: [0.2, 0.8]
+  - snapshot: {name: sw, window: false}
+  - minimap: [0.5, 0.8]
+  - snapshot: {name: s, window: false}
+  - minimap: [0.8, 0.8]
+  - snapshot: {name: se, window: false}
+analysis: [terrain-tiles, shadow-blend]

@@ -21,7 +21,6 @@ public class CliAppTests
     [InlineData("M1", "pack")]
     [InlineData("M6", "replay", "verify", "a.t2rep")]
     [InlineData("M6", "desync", "diff", "a.snap", "b.snap")]
-    [InlineData("M3", "fidelity", "capture")]
     public void Planned_commands_report_not_implemented(string milestone, params string[] args)
     {
         (int code, _, string error) = Run(args);

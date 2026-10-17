@@ -1,0 +1,35 @@
+schema: tzar2-capture-scenario/1
+id: combat-pairs
+title: Per-pair combat outcomes (draft for a later session, S4)
+resolves: [UNK-08]
+priority: 9
+minutes: 6
+default: false
+experimental: true
+description: |
+  Draft for TDD S4 (combat outcomes within 5 % over 100 trials): one unit of each side fights to the death and
+  the survivor's remaining hit points are sampled from memory. Not run by default; it needs the spawn and
+  kingdom commands confirmed by the smoke scenario and an outcome analysis that is not written yet (only the
+  quality check runs). Run with -Scenarios combat-pairs when asked.
+launch: [-nomovies, -explore, -nofog, -map, MP2]
+trials:
+  - name: footman-vs-footman
+    vars: {a: footman, b: footman, a_hp: "65"}
+  - name: knight-vs-pikeman
+    vars: {a: knight, b: pikeman, a_hp: "120"}
+steps:
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [587, 399]
+  - chat: "${cheat}spawn ${a}"
+  - wait: 1
+  - memscan: {name: a-hp, value: "${a_hp}", width: 4}
+  - chat: "${cheat}kingdom 2"
+  - move: [651, 399]
+  - chat: "${cheat}spawn ${b}"
+  - chat: "${cheat}kingdom 1"
+  - memsample: {name: a-hp-series, scan: a-hp, max_addresses: 4096, interval_ms: 50, duration_s: 40}
+  - move: [70, 400]
+  - burst: {name: fight, count: 20, interval_ms: 2000, region: [150, 30, 874, 738]}
+  - snapshot: after
+analysis: [capture-quality]

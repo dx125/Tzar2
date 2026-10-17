@@ -1,0 +1,56 @@
+schema: tzar2-capture-scenario/1
+id: player-colours
+title: Player slot -> colour ramp mapping (UNK-01a follow-up)
+resolves: [UNK-01a]
+priority: 1
+minutes: 2.5
+description: |
+  On the 8-kingdom map MP6, switch the controlled kingdom with the debug command "kingdom N" (spelling to be
+  confirmed by the smoke scenario), select that kingdom's castle (Ctrl+C), centre it (Space) and take a snapshot
+  tagged with the slot. The analysis counts GAME.PAL ramp colours around the screen centre for each slot.
+launch: [-nomovies, -explore, -nofog, -map, MP6]
+steps:
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: slot-1, tags: {slot: "1"}}
+  - chat: "${cheat}kingdom 2"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: slot-2, tags: {slot: "2"}}
+  - chat: "${cheat}kingdom 3"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: slot-3, tags: {slot: "3"}}
+  - chat: "${cheat}kingdom 4"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: slot-4, tags: {slot: "4"}}
+  - chat: "${cheat}kingdom 5"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: slot-5, tags: {slot: "5"}}
+  - chat: "${cheat}kingdom 6"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: slot-6, tags: {slot: "6"}}
+  - chat: "${cheat}kingdom 7"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: slot-7, tags: {slot: "7"}}
+  - chat: "${cheat}kingdom 8"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: slot-8, tags: {slot: "8"}}
+  - key: F5
+  - wait: 1
+  - snapshot: diplomacy
+  - key: Escape
+analysis: [player-colours]

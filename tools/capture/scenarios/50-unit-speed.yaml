@@ -1,0 +1,39 @@
+schema: tzar2-capture-scenario/1
+id: unit-speed
+title: Unit movement speed vs. SPEED stat (UNK-12, RE-06)
+resolves: [UNK-12]
+priority: 2
+minutes: 5
+experimental: true
+description: |
+  Spawns one unit at the centre of the view (debug command "spawn <class>"; assumed to spawn at the cursor),
+  selects everything in the view with a drag, orders a move 300 px west and later 300 px east, and records
+  window captures every 100 ms. The analysis tracks the moving unit and fits pixels per second. SPEED values are
+  the reference build's (DATA/EURO UNITS.TXT). Game speed: the default.
+launch: [-nomovies, -explore, -nofog, -map, MP2]
+trials:
+  - name: peon
+    vars: {unit: peon, speed_stat: "4"}
+  - name: knight
+    vars: {unit: knight, speed_stat: "6"}
+  - name: pikeman
+    vars: {unit: pikeman, speed_stat: "2"}
+  - name: maceman
+    vars: {unit: maceman, speed_stat: "3"}
+steps:
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [587, 399]
+  - chat: "${cheat}spawn ${unit}"
+  - wait: 1
+  - snapshot: spawned
+  - drag: {from: [160, 40], to: [1015, 760]}
+  - wait: 0.5
+  - click: {at: [287, 399], button: right}
+  - move: [70, 400]
+  # A 120-px band around the path keeps the zip small (the unit walks along y = 399).
+  - burst: {name: west, count: 100, interval_ms: 100, region: [150, 339, 874, 120]}
+  - click: {at: [887, 399], button: right}
+  - move: [70, 400]
+  - burst: {name: east, count: 140, interval_ms: 100, region: [150, 339, 874, 120]}
+analysis: [unit-speed]
