@@ -1,3 +1,4 @@
+using System.Linq;
 using System.IO;
 using Tzar2.Import.Editions;
 using Xunit;
@@ -89,6 +90,35 @@ public class InstallVerifierTests
         InstallVerificationReport report = InstallVerifier.Verify(install.Root, manifest);
         Assert.Equal(["goggame-1207659252.info"], report.Ignored);
         Assert.Equal(["sub/goggame-x.txt"], report.Extra);
+    }
+
+    [Fact]
+    public void Os_junk_files_are_ignored_not_extra()
+    {
+        using var install = new SyntheticInstall().Add("a.txt", "a").Add("DATA/b.ini", "b");
+        ReferenceManifest manifest = ManifestOf(install);
+        install.Write(".DS_Store", [1]);
+        install.Write("DATA/.DS_Store", [2]);
+        install.Write("Thumbs.db", [3]);
+        install.Write("DATA/THUMBS.DB", [4]);
+        install.Write("sub/Desktop.ini", [5]);
+
+        InstallVerificationReport report = InstallVerifier.Verify(install.Root, manifest);
+        Assert.True(report.MatchesReference);
+        Assert.Empty(report.Extra);
+        Assert.Equal([".DS_Store", "DATA/.DS_Store", "DATA/THUMBS.DB", "Thumbs.db", "sub/Desktop.ini"], report.Ignored);
+    }
+
+    [Fact]
+    public void Os_junk_names_listed_in_the_manifest_are_compared()
+    {
+        using var install = new SyntheticInstall().Add("a.txt", "a").Add("desktop.ini", "[.ShellClassInfo]");
+        ReferenceManifest manifest = ManifestOf(install);
+        install.Write("desktop.ini", "changed"u8.ToArray());
+
+        InstallVerificationReport report = InstallVerifier.Verify(install.Root, manifest);
+        Assert.Equal(["desktop.ini"], report.Modified.Select(m => m.Path));
+        Assert.Empty(report.Ignored);
     }
 
     [Fact]

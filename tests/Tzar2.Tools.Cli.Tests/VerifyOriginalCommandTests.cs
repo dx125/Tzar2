@@ -93,6 +93,27 @@ public sealed class VerifyOriginalCommandTests : IDisposable
     public void Bad_arguments_exit_two(params string[] args) => Assert.Equal(ExitCodes.UsageError, Run(args).Code);
 
     [Fact]
+    public void Manifest_option_does_not_consume_the_next_option()
+    {
+        (int code, _, string error) = Run("verify-original", _install, "--manifest", "--strict");
+        Assert.Equal(ExitCodes.UsageError, code);
+        Assert.Contains("'--manifest' requires a file", error, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("install")]
+    [InlineData("manifest")]
+    public void Nul_in_a_path_exits_two(string which)
+    {
+        string[] args = which == "install"
+            ? ["verify-original", _install + "\0x", "--manifest", _manifest]
+            : ["verify-original", _install, "--manifest", _manifest + "\0x"];
+        (int code, _, string error) = Run(args);
+        Assert.Equal(ExitCodes.UsageError, code);
+        Assert.StartsWith("t2 verify-original: ", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Nonexistent_install_or_manifest_exits_two()
     {
         (int code, _, string error) = Run("verify-original", Path.Combine(_root, "missing"), "--manifest", _manifest);

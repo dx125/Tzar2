@@ -1,0 +1,8 @@
+# Paths exempt from the extension / data-folder heuristics of tools/ci/check-no-original-files.sh (REQ-LEGAL-01).
+#
+# Only SYNTHETIC test fixtures that we created ourselves may be listed here (e.g. a hand-made 4-byte .rle used to test
+# the RLE decoder). One bash glob per line, relative to the repository root; '*' also matches '/'.
+# The allowlist never excuses a file under Origin/ or a file whose size and MD5 match an original game file.
+#
+# Example:
+#   tests/Tzar2.Formats.Tests/Fixtures/synthetic/*

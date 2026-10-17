@@ -28,6 +28,23 @@ public enum RngStreamKind : byte
 /// Drawing from one stream never changes another, so e.g. adding an AI player does not alter combat rolls.
 /// Presentation-only randomness must not use these streams.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>Copy trap.</b> <see cref="Xoshiro256StarStar"/> is a mutable struct and the stream accessors return it
+/// <em>by reference</em>. Draw directly through the accessor or through a <c>ref</c> local:
+/// </para>
+/// <code>
+/// int roll = streams.Combat.NextInt(100);        // advances the match stream
+/// ref Xoshiro256StarStar rng = ref streams.Combat; // advances the match stream
+/// rng.NextInt(100);
+/// </code>
+/// <para>
+/// Assigning the result to a plain local or field (<c>var rng = streams.Combat;</c> or <c>Xoshiro256StarStar rng =
+/// streams.Ai(p);</c>) or passing it by value <b>copies</b> the state: draws from the copy do not advance the match
+/// stream, so the same numbers are produced again later and peers that copy at different points desync. Pass streams
+/// to helpers as <c>ref Xoshiro256StarStar</c>.
+/// </para>
+/// </remarks>
 public sealed class RngStreams
 {
     private const int FixedStreamCount = 4; // Combat, MapGen, Scripts, Misc
@@ -59,19 +76,19 @@ public sealed class RngStreams
     /// <summary>Number of per-player AI streams.</summary>
     public int PlayerCount => _streams.Length - FixedStreamCount;
 
-    /// <summary>The <see cref="RngStreamKind.Combat"/> stream.</summary>
+    /// <summary>The <see cref="RngStreamKind.Combat"/> stream, by reference (do not copy it into a non-<c>ref</c> local; see remarks).</summary>
     public ref Xoshiro256StarStar Combat => ref _streams[0];
 
-    /// <summary>The <see cref="RngStreamKind.MapGen"/> stream.</summary>
+    /// <summary>The <see cref="RngStreamKind.MapGen"/> stream, by reference (do not copy it into a non-<c>ref</c> local; see remarks).</summary>
     public ref Xoshiro256StarStar MapGen => ref _streams[1];
 
-    /// <summary>The <see cref="RngStreamKind.Scripts"/> stream.</summary>
+    /// <summary>The <see cref="RngStreamKind.Scripts"/> stream, by reference (do not copy it into a non-<c>ref</c> local; see remarks).</summary>
     public ref Xoshiro256StarStar Scripts => ref _streams[2];
 
-    /// <summary>The <see cref="RngStreamKind.Misc"/> stream.</summary>
+    /// <summary>The <see cref="RngStreamKind.Misc"/> stream, by reference (do not copy it into a non-<c>ref</c> local; see remarks).</summary>
     public ref Xoshiro256StarStar Misc => ref _streams[3];
 
-    /// <summary>The <see cref="RngStreamKind.Ai"/> stream of <paramref name="player"/>.</summary>
+    /// <summary>The <see cref="RngStreamKind.Ai"/> stream of <paramref name="player"/>, by reference (do not copy it into a non-<c>ref</c> local; see remarks).</summary>
     public ref Xoshiro256StarStar Ai(int player)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(player);

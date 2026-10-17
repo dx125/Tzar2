@@ -28,13 +28,17 @@ leaves rounding, overflow behaviour, orientation and bit splits open.
   Stream (kind, index) of a match starts from `FromSeed(Mix(matchSeed ^ Mix(kind << 32 | index)))` with
   `Mix` = the SplitMix64 finalizer. Streams: `Combat`, `MapGen`, `Scripts`, `Misc`, and `Ai(player)`. Bounded integers
   use Lemire's unbiased method; chances use basis points.
-* **State hashing:** xxHash64 (System.IO.Hashing) over little-endian encodings; `StateHasher.AddSpan<T>` hashes raw
-  memory of unmanaged structs, which must therefore have no padding.
+* **State hashing:** xxHash64 (System.IO.Hashing) over little-endian encodings. Fixed-size values are appended
+  without framing; variable-length data (`Add(ReadOnlySpan<byte>)`, `AddSpan<T>`) is preceded by its byte length as
+  a 64-bit little-endian integer, so different splits of the same bytes hash differently (amended in the M0
+  hardening review; the golden hash in `Tzar2.Determinism.Tests` changed with it). `AddSpan<T>` hashes raw memory of
+  unmanaged structs, which must therefore have no padding.
 * **`EntityId`:** 20-bit index (1,048,575 slots) + 12-bit generation (1..4,095, wrapping to 1); the all-zero value is
   `None`. Ordered by index, then generation.
 * **`Tick`:** non-negative `int` (at 20 Hz, over three years of game time); `Tick.DefaultLengthMilliseconds = 50`.
 * **Binary I/O:** `BinaryBufferWriter`/`BinaryBufferReader`, little-endian, LEB128/zigzag varints, length-prefixed
-  strict UTF-8 strings with an explicit size bound; malformed input throws `InvalidDataException`.
+  strict UTF-8 strings with an explicit size bound; malformed input throws `InvalidDataException`. Varints must be
+  canonical (shortest form): redundant trailing zero groups are rejected, so every value has exactly one encoding.
 
 ## Alternatives considered
 

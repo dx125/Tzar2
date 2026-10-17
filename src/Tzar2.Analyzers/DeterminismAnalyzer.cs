@@ -58,7 +58,17 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
                 OperationKind.MethodReference,
                 OperationKind.BinaryOperator,
                 OperationKind.UnaryOperator,
-                OperationKind.TypeOf);
+                OperationKind.TypeOf,
+                OperationKind.LocalReference,
+                OperationKind.ParameterReference,
+                OperationKind.DefaultValue,
+                OperationKind.DeclarationExpression,
+                OperationKind.Discard,
+                OperationKind.DeclarationPattern,
+                OperationKind.TypePattern,
+                OperationKind.RecursivePattern,
+                OperationKind.IsType,
+                OperationKind.SizeOf);
             start.RegisterOperationAction(rules.AnalyzeDeclarator, OperationKind.VariableDeclarator);
             if (deterministic)
             {
@@ -81,6 +91,9 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
         private readonly ImmutableHashSet<INamedTypeSymbol> _unorderedCollections;
         private readonly ImmutableHashSet<INamedTypeSymbol> _fileSystemTypes;
         private readonly ImmutableHashSet<INamedTypeSymbol> _fileCapableReaders;
+        private readonly ImmutableHashSet<INamedTypeSymbol> _inMemoryStreams;
+        private readonly ImmutableHashSet<INamedTypeSymbol> _networkValueTypes;
+        private readonly IAssemblySymbol _assembly;
         private readonly INamedTypeSymbol? _guid;
         private readonly INamedTypeSymbol? _dateTime;
         private readonly INamedTypeSymbol? _dateTimeOffset;
@@ -88,11 +101,16 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
         private readonly INamedTypeSymbol? _lambdaExpression;
         private readonly INamedTypeSymbol? _genericExpression;
         private readonly INamedTypeSymbol? _stream;
+        private readonly INamedTypeSymbol? _string;
+        private readonly INamedTypeSymbol? _stringComparer;
+        private readonly INamedTypeSymbol? _runtimeHelpers;
+        private readonly INamedTypeSymbol? _path;
 
         public Rules(Compilation compilation, bool deterministic, bool noIO)
         {
             _deterministic = deterministic;
             _noIO = noIO;
+            _assembly = compilation.Assembly;
             _floatingTypes = Types(
                 compilation,
                 "System.Single",
@@ -109,7 +127,8 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
                 "System.Numerics.Quaternion",
                 "System.Numerics.Plane",
                 "System.Numerics.Complex");
-            _randomTypes = Types(compilation, "System.Random", "System.Security.Cryptography.RandomNumberGenerator");
+            // System.HashCode is seeded randomly per process.
+            _randomTypes = Types(compilation, "System.Random", "System.Security.Cryptography.RandomNumberGenerator", "System.HashCode");
             _clockTypes = Types(compilation, "System.Diagnostics.Stopwatch", "System.TimeProvider");
             _unorderedCollections = Types(
                 compilation,
@@ -137,8 +156,27 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
                 "System.IO.FileSystemInfo",
                 "System.IO.DriveInfo",
                 "System.IO.FileSystemWatcher",
-                "System.IO.RandomAccess");
+                "System.IO.RandomAccess",
+                "System.IO.Compression.ZipFile",
+                "System.IO.Compression.ZipFileExtensions",
+                "System.Console",
+                "System.Diagnostics.Process");
             _fileCapableReaders = Types(compilation, "System.IO.StreamReader", "System.IO.StreamWriter", "System.IO.BinaryReader", "System.IO.BinaryWriter");
+
+            // Streams that only wrap memory or another (caller-supplied) stream never touch a file or socket themselves.
+            _inMemoryStreams = Types(
+                compilation,
+                "System.IO.MemoryStream",
+                "System.IO.UnmanagedMemoryStream",
+                "System.IO.BufferedStream",
+                "System.IO.Compression.DeflateStream",
+                "System.IO.Compression.GZipStream",
+                "System.IO.Compression.ZLibStream",
+                "System.IO.Compression.BrotliStream",
+                "System.Security.Cryptography.CryptoStream");
+
+            // Plain values in System.Net that perform no I/O.
+            _networkValueTypes = Types(compilation, "System.Net.IPAddress", "System.Net.IPEndPoint", "System.Net.IPNetwork", "System.Net.HttpStatusCode");
             _guid = compilation.GetTypeByMetadataName("System.Guid");
             _dateTime = compilation.GetTypeByMetadataName("System.DateTime");
             _dateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
@@ -146,6 +184,10 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
             _lambdaExpression = compilation.GetTypeByMetadataName("System.Linq.Expressions.LambdaExpression");
             _genericExpression = compilation.GetTypeByMetadataName("System.Linq.Expressions.Expression`1");
             _stream = compilation.GetTypeByMetadataName("System.IO.Stream");
+            _string = compilation.GetSpecialType(SpecialType.System_String);
+            _stringComparer = compilation.GetTypeByMetadataName("System.StringComparer");
+            _runtimeHelpers = compilation.GetTypeByMetadataName("System.Runtime.CompilerServices.RuntimeHelpers");
+            _path = compilation.GetTypeByMetadataName("System.IO.Path");
         }
 
         public void AnalyzeSymbol(SymbolAnalysisContext context)
@@ -207,13 +249,29 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
                 {
                     Report(context.ReportDiagnostic, Descriptors.FloatingPoint, location, typeOf.TypeOperand);
                 }
+
+                if (operation is ISizeOfOperation sizeOf && IsFloating(sizeOf.TypeOperand))
+                {
+                    Report(context.ReportDiagnostic, Descriptors.FloatingPoint, location, sizeOf.TypeOperand);
+                }
+
+                if (operation is IIsTypeOperation isType && IsFloating(isType.TypeOperand))
+                {
+                    Report(context.ReportDiagnostic, Descriptors.FloatingPoint, location, isType.TypeOperand);
+                }
+
+                // Patterns have no Type of their own: `o is double d`, `o switch { float => ... }`, `o is double { }`.
+                if (operation is IPatternOperation pattern && IsFloating(pattern.NarrowedType))
+                {
+                    Report(context.ReportDiagnostic, Descriptors.FloatingPoint, location, pattern.NarrowedType);
+                }
             }
 
             switch (operation)
             {
                 case IObjectCreationOperation creation when creation.Type is not null:
                     CheckUsedType(context.ReportDiagnostic, creation.Type, location);
-                    if (_noIO && (DerivesFrom(creation.Type, _stream) || Contains(_fileCapableReaders, creation.Type)))
+                    if (_noIO && (IsIOStream(creation.Type) || OpensPath(creation)))
                     {
                         Report(context.ReportDiagnostic, Descriptors.InputOutput, location, creation.Type);
                     }
@@ -221,6 +279,11 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
                     break;
                 case IInvocationOperation invocation:
                     CheckMember(context.ReportDiagnostic, invocation.TargetMethod, location);
+                    if (_deterministic && IsStringHashCode(invocation))
+                    {
+                        Report(context.ReportDiagnostic, Descriptors.RandomSource, location, invocation.TargetMethod);
+                    }
+
                     break;
                 case IMemberReferenceOperation reference:
                     CheckMember(context.ReportDiagnostic, reference.Member, location);
@@ -235,17 +298,73 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
                 return;
             }
 
-            IOperation collection = loop.Collection;
-            while (collection is IConversionOperation { IsImplicit: true } conversion)
-            {
-                collection = conversion.Operand;
-            }
+            // Casting does not change the enumeration order: `(IEnumerable<KeyValuePair<K, V>>)dict` is still unordered.
+            IOperation collection = Unwrap(loop.Collection);
 
-            if (collection.Type is ITypeSymbol type && IsUnordered(type))
+            // `.Keys` / `.Values` of an unordered dictionary enumerate in its order, whatever their declared type
+            // (IReadOnlyDictionary.Keys is just an IEnumerable<TKey>).
+            if (collection is IPropertyReferenceOperation { Property.Name: "Keys" or "Values", Instance: { } instance }
+                && instance.Type is ITypeSymbol ownerType
+                && IsUnordered(ownerType))
+            {
+                Report(context.ReportDiagnostic, Descriptors.UnorderedIteration, loop.Collection.Syntax.GetLocation(), ownerType);
+            }
+            else if (collection.Type is ITypeSymbol type && IsUnordered(type))
             {
                 Report(context.ReportDiagnostic, Descriptors.UnorderedIteration, loop.Collection.Syntax.GetLocation(), type);
             }
         }
+
+        private static IOperation Unwrap(IOperation operation)
+        {
+            while (operation is IConversionOperation conversion)
+            {
+                operation = conversion.Operand;
+            }
+
+            return operation;
+        }
+
+        // string hash codes are randomized per process: s.GetHashCode(), string.GetHashCode(span), ((object)s).GetHashCode(),
+        // StringComparer.X.GetHashCode(s).
+        private bool IsStringHashCode(IInvocationOperation invocation)
+        {
+            IMethodSymbol method = invocation.TargetMethod;
+            if (method.Name != "GetHashCode")
+            {
+                return false;
+            }
+
+            return Same(method.ContainingType, _string)
+                || DerivesFrom(method.ContainingType, _stringComparer)
+                || (invocation.Instance is { } instance && Same(Unwrap(instance).Type, _string));
+        }
+
+        // A stream that is not known to be purely in-memory may be a file, pipe or socket. Streams declared in the analyzed
+        // assembly are themselves analyzed, so creating them is fine.
+        private bool IsIOStream(ITypeSymbol type)
+        {
+            if (!DerivesFrom(type, _stream) || SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, _assembly))
+            {
+                return false;
+            }
+
+            for (ITypeSymbol? current = type; current is not null; current = current.BaseType)
+            {
+                if (Contains(_inMemoryStreams, current))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // new StreamReader("path") / new StreamWriter("path") open a file; the Stream overloads do not.
+        private bool OpensPath(IObjectCreationOperation creation)
+            => Contains(_fileCapableReaders, creation.Type!)
+                && creation.Constructor is { Parameters.Length: > 0 } constructor
+                && constructor.Parameters[0].Type.SpecialType == SpecialType.System_String;
 
         private void CheckDeclaredType(System.Action<Diagnostic> report, ITypeSymbol type, Location location)
         {
@@ -278,7 +397,11 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
                     }
                 }
 
-                if (_noIO && (Contains(_fileSystemTypes, part) || IsInNamespace(part, "System.Net")))
+                if (_noIO && (Contains(_fileSystemTypes, part)
+                    || (IsInNamespace(part, "System.Net") && !Contains(_networkValueTypes, part))
+                    || IsInNamespace(part, "System.IO.Pipes")
+                    || IsInNamespace(part, "System.IO.MemoryMappedFiles")
+                    || IsInNamespace(part, "System.IO.IsolatedStorage")))
                 {
                     Report(report, Descriptors.InputOutput, location, part);
                 }
@@ -318,6 +441,14 @@ public sealed class DeterminismAnalyzer : DiagnosticAnalyzer
                 Report(report, Descriptors.WallClock, location, member);
             }
             else if (Same(containingType, _guid) && name == "NewGuid")
+            {
+                Report(report, Descriptors.RandomSource, location, member);
+            }
+            else if (Same(containingType, _runtimeHelpers) && name == "GetHashCode")
+            {
+                Report(report, Descriptors.RandomSource, location, member);
+            }
+            else if (Same(containingType, _path) && name == "GetRandomFileName")
             {
                 Report(report, Descriptors.RandomSource, location, member);
             }

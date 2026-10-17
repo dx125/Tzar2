@@ -12,6 +12,13 @@
 
 `.gitignore` at the repository root excludes `Origin/`.
 
+CI enforces this with `tools/ci/check-no-original-files.sh` (self-tested by `tools/ci/test-check-no-original-files.sh`)
+on every blob added or modified in a push or PR range: nothing under `Origin/`, nothing byte-identical to a manifest
+entry (or, when run locally, to any file in your `Origin/` folder), no original-only extensions (`.wdt .wmp .wcm .wsv
+.wdm .ddv .rle .exe .dll .fnt .pal`) and no `.bmp/.wav/.mid/.ini/.txt/.dat/.ai/.ais` under original-style folders
+(`DATA/ IMAGES/ SOUND(S)/ MUSIC/ LOCAL/ HELP/ MOVIES/`). Synthetic test fixtures that trip the name heuristics go in
+`tools/ci/original-files-allowlist.txt`. Run it locally before pushing.
+
 ## 2. Reference build (“the original”)
 
 **GOG “Tzar: The Burden of the Crown”, version 1.10, English. Build `49982740489443525`, published 2017-03-15** (GOG Galaxy generation-2 build; product ID `1207659252`).

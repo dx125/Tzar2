@@ -43,7 +43,21 @@ public class CliAppTests
     }
 
     [Fact]
-    public void No_arguments_prints_usage_and_fails() => Assert.Equal(ExitCodes.UsageError, Run().Code);
+    public void No_arguments_prints_usage_to_stderr_and_fails()
+    {
+        (int code, string output, string error) = Run();
+        Assert.Equal(ExitCodes.UsageError, code);
+        Assert.Empty(output);
+        Assert.Contains("Usage: t2 <command>", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Help_prints_usage_to_stdout()
+    {
+        (_, string output, string error) = Run("--help");
+        Assert.Contains("Usage: t2 <command>", output, StringComparison.Ordinal);
+        Assert.Empty(error);
+    }
 
     [Fact]
     public void Unknown_command_fails()

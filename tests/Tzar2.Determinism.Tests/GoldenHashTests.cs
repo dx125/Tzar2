@@ -1,3 +1,4 @@
+using System;
 using Tzar2.Core.Hashing;
 using Tzar2.Core.Numerics;
 using Tzar2.Core.Rng;
@@ -14,7 +15,9 @@ public class GoldenHashTests
 {
     // Changing Fixed, Trig, the RNG or the hashing scheme on purpose changes this value; update it in the same
     // commit and say why. An unexpected change, or a difference between platforms, is a determinism bug.
-    private const ulong GoldenHash = 908379687207490273UL;
+    // History: 908379687207490273 (M0) -> 1993851233297384235 when variable-length data became length-prefixed and the workload
+    // started hashing spans (M0 hardening review).
+    private const ulong GoldenHash = 1993851233297384235UL;
 
     [Fact]
     public void Core_workload_produces_the_golden_hash() => Assert.Equal(GoldenHash, RunWorkload());
@@ -78,6 +81,15 @@ public class GoldenHashTests
         }
 
         streams.AppendTo(hasher);
+
+        // Variable-length data (length-prefixed, see StateHasher).
+        long[] components = new long[37];
+        for (int i = 0; i < components.Length; i++)
+        {
+            components[i] = streams.Misc.NextInt(int.MinValue, int.MaxValue);
+        }
+
+        hasher.AddSpan<long>(components).AddSpan<long>(components.AsSpan(0, 5)).Add([1, 2, 3]).Add([]);
         return hasher.GetCurrentHash();
     }
 }

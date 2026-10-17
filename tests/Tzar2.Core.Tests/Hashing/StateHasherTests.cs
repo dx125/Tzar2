@@ -31,11 +31,11 @@ public class StateHasherTests
     }
 
     [Fact]
-    public void AddSpan_equals_element_wise_adds()
+    public void AddSpan_is_the_byte_length_then_the_element_bytes()
     {
         int[] values = [1, -2, 300000, int.MinValue];
         var bulk = new StateHasher().AddSpan<int>(values);
-        var single = new StateHasher();
+        var single = new StateHasher().Add((long)(values.Length * sizeof(int)));
         foreach (int v in values)
         {
             single.Add(v);
@@ -45,12 +45,31 @@ public class StateHasherTests
     }
 
     [Fact]
-    public void Incremental_equals_one_shot_and_reset_restarts()
+    public void Byte_spans_are_length_prefixed()
+    {
+        byte[] expected = [3, 0, 0, 0, 0, 0, 0, 0, 0xAA, 0xBB, 0xCC, 0, 0, 0, 0, 0, 0, 0, 0];
+        Assert.Equal(XxHash64.HashToUInt64(expected), new StateHasher().Add([0xAA, 0xBB, 0xCC]).Add([]).GetCurrentHash());
+    }
+
+    [Fact]
+    public void Different_splits_of_the_same_bytes_hash_differently()
+    {
+        ulong a = new StateHasher().Add([1, 2]).Add([3]).GetCurrentHash();
+        ulong b = new StateHasher().Add([1]).Add([2, 3]).GetCurrentHash();
+        ulong c = new StateHasher().AddSpan<int>([1, 2]).AddSpan<int>([]).GetCurrentHash();
+        ulong d = new StateHasher().AddSpan<int>([1]).AddSpan<int>([2]).GetCurrentHash();
+        Assert.NotEqual(a, b);
+        Assert.NotEqual(c, d);
+    }
+
+    [Fact]
+    public void Incremental_framing_and_reset_restarts()
     {
         byte[] data = Encoding.ASCII.GetBytes("Tzar2 deterministic state");
         var hasher = new StateHasher(seed: 123);
         hasher.Add(data.AsSpan(0, 5)).Add(data.AsSpan(5));
-        Assert.Equal(StateHasher.Hash(data, 123), hasher.GetHashAndReset());
+        byte[] framed = [5, 0, 0, 0, 0, 0, 0, 0, .. data.AsSpan(0, 5), (byte)(data.Length - 5), 0, 0, 0, 0, 0, 0, 0, .. data.AsSpan(5)];
+        Assert.Equal(StateHasher.Hash(framed, 123), hasher.GetHashAndReset());
         Assert.Equal(StateHasher.Hash([], 123), hasher.GetCurrentHash());
         hasher.Add(data);
         hasher.Reset();

@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <!-- The app target framework, so the net10.0 Server and Cli assemblies can be loaded and checked too. -->
+    <TargetFramework>$(Tzar2AppTargetFramework)</TargetFramework>
     <RootNamespace>Tzar2.Architecture.Tests</RootNamespace>
   </PropertyGroup>
 
@@ -9,6 +10,8 @@
     <ProjectReference Include="../../src/Tzar2.Game/Tzar2.Game.csproj" />
     <ProjectReference Include="../../src/Tzar2.Import/Tzar2.Import.csproj" />
     <ProjectReference Include="../../src/Tzar2.Formats/Tzar2.Formats.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Server/Tzar2.Server.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Tools.Cli/Tzar2.Tools.Cli.csproj" />
   </ItemGroup>
 
 </Project>

@@ -119,6 +119,33 @@ public class BinaryBufferTests
         Assert.Throws<InvalidDataException>(() => new BinaryBufferReader([10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]).ReadString(maxBytes: 4));
     }
 
+    [Theory]
+    [InlineData(new byte[] { 0x80, 0x00 })]                         // 0 with a redundant group
+    [InlineData(new byte[] { 0x81, 0x00 })]                         // 1
+    [InlineData(new byte[] { 0xFF, 0x80, 0x00 })]                   // 127
+    [InlineData(new byte[] { 0x80, 0x80, 0x80, 0x00 })]             // 0 padded to four bytes
+    [InlineData(new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0x8F, 0x00 })] // uint.MaxValue with a redundant group
+    public void Non_canonical_varints_are_rejected(byte[] encoded)
+    {
+        Assert.Throws<InvalidDataException>(() => new BinaryBufferReader(encoded).ReadVarUInt64());
+        Assert.Throws<InvalidDataException>(() => new BinaryBufferReader(encoded).ReadVarInt64());
+    }
+
+    [Theory]
+    [InlineData(0UL)]
+    [InlineData(127UL)]
+    [InlineData(128UL)]
+    [InlineData(1UL << 63)]
+    [InlineData(ulong.MaxValue)]
+    public void Canonical_varints_are_accepted(ulong value)
+    {
+        var writer = new BinaryBufferWriter();
+        writer.WriteVarUInt64(value);
+        var reader = new BinaryBufferReader(writer.WrittenSpan);
+        Assert.Equal(value, reader.ReadVarUInt64());
+        Assert.True(reader.IsAtEnd);
+    }
+
     [Fact]
     public void Clear_reuses_the_buffer()
     {
