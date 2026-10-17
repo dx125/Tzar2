@@ -56,6 +56,15 @@ public class PackageTests
     }
 
     [Fact]
+    public void Crc32_matches_the_standard_check_value()
+    {
+        Assert.Equal(0xCBF43926u, Crc32Checksum.Compute("123456789"u8));
+        Assert.Equal(0u, Crc32Checksum.Compute([]));
+        uint running = Crc32Checksum.Append(Crc32Checksum.Append(Crc32Checksum.Start, "1234"u8), "56789"u8);
+        Assert.Equal(0xCBF43926u, Crc32Checksum.Finish(running));
+    }
+
+    [Fact]
     public void Output_is_independent_of_insertion_order()
         => Assert.Equal(SHA256.HashData(Bytes(Sample())), SHA256.HashData(Bytes(Sample(reversed: true))));
 

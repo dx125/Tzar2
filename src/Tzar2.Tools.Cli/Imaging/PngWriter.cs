@@ -2,7 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
-using System.IO.Hashing;
+using Tzar2.Content.Packages;
 
 namespace Tzar2.Tools.Cli.Imaging;
 
@@ -52,10 +52,8 @@ internal static class PngWriter
         byte[] typeBytes = [(byte)type[0], (byte)type[1], (byte)type[2], (byte)type[3]];
         output.Write(typeBytes);
         output.Write(data);
-        var crc = new Crc32();
-        crc.Append(typeBytes);
-        crc.Append(data);
-        BinaryPrimitives.WriteUInt32BigEndian(buffer, crc.GetCurrentHashAsUInt32());
+        uint crc = Crc32Checksum.Finish(Crc32Checksum.Append(Crc32Checksum.Append(Crc32Checksum.Start, typeBytes), data));
+        BinaryPrimitives.WriteUInt32BigEndian(buffer, crc);
         output.Write(buffer);
     }
 

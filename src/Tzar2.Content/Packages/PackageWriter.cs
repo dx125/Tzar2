@@ -2,7 +2,6 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Hashing;
 using System.Text;
 
 namespace Tzar2.Content.Packages;
@@ -75,7 +74,7 @@ public sealed class PackageWriter
         foreach ((string path, byte[] data) in _entries)
         {
             byte[] name = Encoding.UTF8.GetBytes(path);
-            uint crc = Crc32.HashToUInt32(data);
+            uint crc = Crc32Checksum.Compute(data);
             if (offset + data.Length > uint.MaxValue)
             {
                 throw new InvalidOperationException("Package exceeds 4 GiB; ZIP64 is not supported.");

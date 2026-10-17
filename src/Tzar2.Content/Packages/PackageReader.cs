@@ -3,7 +3,6 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.IO.Hashing;
 using System.Text;
 
 namespace Tzar2.Content.Packages;
@@ -209,7 +208,7 @@ public sealed class PackageReader : IDisposable
             }
         }
 
-        if (data.Length != entry.Size || Crc32.HashToUInt32(data) != entry.Crc32)
+        if (data.Length != entry.Size || Crc32Checksum.Compute(data) != entry.Crc32)
         {
             throw new InvalidDataException($"{Name}: CRC mismatch in '{path}'.");
         }
