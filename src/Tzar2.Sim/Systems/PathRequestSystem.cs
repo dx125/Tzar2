@@ -319,7 +319,7 @@ public sealed class PathRequestSystem : ISimSystem
         }
 
         // Standing somewhere unwalkable (a building was placed on it): start from the nearest walkable tile.
-        tile = NavQueries.NearestWalkable(layer, layer.TileX(x), layer.TileY(y), 4);
+        tile = NavQueries.NearestWalkable(layer, layer.TileX(x), layer.TileY(y), MovementSystem.EscapeRadius);
         if (tile < 0)
         {
             return false;
@@ -683,14 +683,20 @@ public sealed class PathRequestSystem : ISimSystem
             IsRoute = Found && search.IsRoute;
             if (IsRoute)
             {
+                // Route plan: the portal node ids, then their tiles (so a plan can be checked against a changed layer).
                 ReadOnlySpan<int> nodes = search.RouteNodes;
-                if (_waypoints.Length < nodes.Length)
+                if (_waypoints.Length < 2 * nodes.Length)
                 {
-                    _waypoints = new int[Math.Max(nodes.Length, _waypoints.Length * 2)];
+                    _waypoints = new int[Math.Max(2 * nodes.Length, _waypoints.Length * 2)];
                 }
 
                 nodes.CopyTo(_waypoints);
-                _waypointInts = nodes.Length;
+                for (int k = 0; k < nodes.Length; k++)
+                {
+                    _waypoints[nodes.Length + k] = nav.Layers[Layer].PortalTile(nodes[k]);
+                }
+
+                _waypointInts = 2 * nodes.Length;
             }
             else if (Found)
             {

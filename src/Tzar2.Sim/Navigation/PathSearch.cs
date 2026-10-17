@@ -310,6 +310,52 @@ public sealed class PathSearch
         return true;
     }
 
+    /// <summary>
+    /// Whether a stored route plan (portal node ids, then their tiles; see <c>MotionMode.Route</c>) is still valid on
+    /// <paramref name="layer"/> from route index <paramref name="from"/> on: every node exists and still names the same
+    /// portal tile, and consecutive nodes are still joined (partners, or connected within their cluster). A pure function
+    /// of the plan and the layer, so a change elsewhere on the map never invalidates the plan.
+    /// </summary>
+    public static bool RouteValid(NavLayer layer, ReadOnlySpan<int> plan, int from)
+    {
+        ArgumentNullException.ThrowIfNull(layer);
+        if (plan.IsEmpty || (plan.Length & 1) != 0)
+        {
+            return false;
+        }
+
+        int len = plan.Length / 2;
+        for (int j = Math.Max(0, from); j < len; j++)
+        {
+            int node = plan[j];
+            if ((uint)node >= (uint)layer.NodeCapacity)
+            {
+                return false;
+            }
+
+            NavLayer.Cluster cluster = layer.ClusterAt(node / NavLayer.MaxPortals);
+            int index = node % NavLayer.MaxPortals;
+            if (index >= cluster.PortalCount || cluster.PortalTile[index] != plan[len + j])
+            {
+                return false;
+            }
+
+            if (j + 1 < len)
+            {
+                int next = plan[j + 1];
+                bool joined = cluster.PortalPartner[index] == next
+                    || (next / NavLayer.MaxPortals == node / NavLayer.MaxPortals && next % NavLayer.MaxPortals < cluster.PortalCount
+                        && cluster.IntraCost[(index * NavLayer.MaxPortals) + (next % NavLayer.MaxPortals)] >= 0);
+                if (!joined)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>Octile distance between two tiles in cost units.</summary>
     public static int Octile(int width, int a, int b)
     {

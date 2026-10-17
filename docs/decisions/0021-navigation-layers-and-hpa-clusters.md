@@ -34,6 +34,8 @@ layers of a 512² map takes ~20 ms (measured, `PathfindingBenchmarks.NavigationB
   recomputes walkability around them, rebuilds the regions of dirty clusters, the portals, partner links and trees of
   dirty clusters and their 4-neighbours, then the components and the compact graph. The result is byte-identical to a
   rebuild (property test `Incremental_updates_equal_a_rebuild`).
+* **Versions.** `MapState.PassabilityVersion` (state) counts effective passability changes only (a second blocker on a
+  blocked tile is not one); navigation, flow fields and plans are keyed to it, not to `ObstacleVersion`.
 * **Derived state.** Navigation is a pure function of the map's passability: it is built at match load (the
   `Simulation` constructor, also after a restore), never hashed or snapshotted. Snapshots that change blockers wholesale
   trigger a rebuild.

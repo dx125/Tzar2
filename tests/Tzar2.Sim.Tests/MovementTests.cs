@@ -295,18 +295,30 @@ public class MovementTests
     [Fact]
     public void Group_moves_assign_distinct_slots_and_share_one_flow_field()
     {
-        using var d = new SimDriver(Open(64));
+        // A wall between the group and its goal, so the shared field is actually descended.
+        string[] rows = new string[64];
+        for (int y = 0; y < 64; y++)
+        {
+            rows[y] = string.Concat(Enumerable.Range(0, 64).Select(x => x == 30 && y < 56 ? '#' : '.'));
+        }
+
+        using var d = new SimDriver(ScenarioMaps.FromAscii("wall", rows));
         var units = new List<EntityId>();
         for (int i = 0; i < 30; i++)
         {
             units.Add(d.Spawn(SyntheticScenario.Swordsman, 0, 5 + (i % 6), 5 + (i / 6)));
         }
 
-        d.MoveToTile(0, units.ToArray(), 50, 50);
+        d.MoveToTile(0, units.ToArray(), 50, 10);
         d.Step();
-        Assert.All(units, u => Assert.Contains(d.MotionOf(u).Mode, new[] { MotionMode.Flow, MotionMode.Direct }));
-        var targets = units.Select(u => (d.MotionOf(u).TargetX, d.MotionOf(u).TargetY)).ToHashSet();
-        Assert.Equal(30, targets.Count);
+        Assert.Equal(1, d.World.FlowFields.Builds);
+        Assert.All(units, u => Assert.Equal(MotionMode.Flow, d.MotionOf(u).Mode));
+        Assert.Single(units.Select(u => d.MotionOf(u).GoalTile).Distinct());
+        Assert.Equal(30, units.Select(u => (d.MotionOf(u).TargetX, d.MotionOf(u).TargetY)).Distinct().Count());
         Assert.Single(units.Select(u => d.MotionOf(u).GroupId).Distinct());
+        d.RunUntil(() => !d.AnyMoving(units), 3000);
+        Assert.Equal(1, d.World.FlowFields.Builds);
+        Assert.All(units, u => Assert.True(d.PositionOf(u).X > 31 * Tile));
+        Assert.Equal(0, d.Count(SimEventKind.Blocked));
     }
 }

@@ -44,8 +44,8 @@ internal sealed class SimDriver : IDisposable
     public EntityId Spawn(ushort type, int player, int tileX, int tileY, int dx = 0, int dy = 0)
         => World.Spawn(type, player, TileCenter(tileX) + dx, TileCenter(tileY) + dy);
 
-    public void Order(int player, CommandKind kind, ReadOnlySpan<EntityId> units, int x = 0, int y = 0, EntityId target = default)
-        => _pending[player].Add(kind, units, x, y, target);
+    public void Order(int player, CommandKind kind, ReadOnlySpan<EntityId> units, int x = 0, int y = 0, EntityId target = default, int arg0 = 0, int arg1 = 0)
+        => _pending[player].Add(kind, units, x, y, target, arg0, arg1);
 
     public void MoveToTile(int player, ReadOnlySpan<EntityId> units, int tileX, int tileY)
         => Order(player, CommandKind.Move, units, TileCenter(tileX), TileCenter(tileY));

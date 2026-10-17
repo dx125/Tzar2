@@ -79,7 +79,7 @@ public sealed class NavigationGrid
     /// <summary>Number of layers the ruleset needs on this map.</summary>
     public int LayerCount => _layerKeys.Count;
 
-    /// <summary>The map passability version the layers reflect.</summary>
+    /// <summary>The map's <see cref="MapState.PassabilityVersion"/> the layers reflect (state, so plans can be validated against it after a restore).</summary>
     public int Version { get; private set; } = -1;
 
     /// <summary>Layer index of an entity type, or <see cref="NoLayer"/>.</summary>
@@ -107,11 +107,11 @@ public sealed class NavigationGrid
 
             IsBuilt = true;
             _map.ClearChangedTiles();
-            Version = _map.ObstacleVersion;
+            Version = _map.PassabilityVersion;
             return;
         }
 
-        if (Version == _map.ObstacleVersion && !_map.BlockersReplaced)
+        if (Version == _map.PassabilityVersion && !_map.BlockersReplaced)
         {
             return;
         }
@@ -138,7 +138,7 @@ public sealed class NavigationGrid
         }
 
         _map.ClearChangedTiles();
-        Version = _map.ObstacleVersion;
+        Version = _map.PassabilityVersion;
     }
 
     private static bool SameColumn(ReadOnlySpan<byte> passability, Locomotor a, Locomotor b)

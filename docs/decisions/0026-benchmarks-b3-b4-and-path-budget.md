@@ -33,8 +33,15 @@ Measured (Apple M5, 10 cores, macOS arm64, Release, 4 sim workers, warm JIT; a s
 | B3 individual | planned after tick 2; ticks 0-2: 8.3 / 6.4 / 3.7 ms; 600 ticks p99 0.96 ms, max 7.6 ms. BDN 3-tick window 17.9 ms (4 workers), 57 ms (1 worker) | ≤ 3 ticks, p99 ≤ 12 ms |
 | B3 groups | planned after tick 0 (5.6 ms); p99 1.0 ms. BDN window 7.8 ms (4 workers) | same |
 | B4 | 2,000 killed, peak 2,000 corpses, obstacle version 0, 0 blocked, 424 crossings; p50 0.25 ms, p99 0.59 ms, max 11.0 ms. BDN traffic tick 0.63 ms | p99 ≤ 12 ms, no stuck units |
-| Synthetic 4,000 units / 512², 128 group orders + churn per tick (existing gate) | p50 4.1 ms, p99 6.4 ms, 0 B/tick in the sim | p99 ≤ 12 ms |
+| Synthetic 4,000 units / 512², 128 group orders + churn per tick (existing gate) | p50 3.7-4.1 ms, p99 6.4-9 ms (runs vary on the shared machine) | p99 ≤ 12 ms |
 | Micro | route query on the 512² maze 103 µs; flow-field build 146 µs; navigation build 20.9 ms | — |
+
+Allocations: the sim allocates 0 B per tick in steady state on the allocation gate (`AllocationTests`, synthetic
+64² scenario) and in B4's traffic phase. `t2 bench`'s `alloc` column includes the scenario's command generation and
+buffer growth during warm-up (B3 ≈ 19 KB/tick averaged over 600 ticks from tick 0, synthetic ≈ 1.3-1.8 KB/tick).
+
+After the review fixes (route re-validation, enemy blocking): B3 planned after tick 2, p99 0.87 ms, max 11.4 ms;
+B3 groups p99 0.82 ms; B4 p99 0.49 ms, 0 blocked; synthetic p99 6.5 ms.
 
 ## Alternatives considered
 

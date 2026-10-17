@@ -289,6 +289,8 @@ public sealed class FlowFieldCache
     public FlowField Reserve(NavLayer layer, int goalTile, long tick)
     {
         ArgumentNullException.ThrowIfNull(layer);
+        ArgumentOutOfRangeException.ThrowIfNegative(goalTile);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(goalTile, layer.Width * layer.Height);
         long key = FlowField.Key(layer.Index, goalTile);
         if (!_byKey.TryGetValue(key, out FlowField? field))
         {

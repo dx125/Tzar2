@@ -444,6 +444,7 @@ public sealed class NavLayer
             for (int i = 0; i < c.PortalCount; i++)
             {
                 hasher.AddSpan<int>(c.IntraCost.AsSpan(i * MaxPortals, c.PortalCount));
+                hasher.AddSpan<byte>(c.Trees[i]);
             }
 
             for (int r = 0; r < c.RegionCount; r++)
@@ -452,6 +453,9 @@ public sealed class NavLayer
             }
         }
 
+        int edges = GraphAdjStart[GraphNodeCount];
+        hasher.Add(GraphNodeCount).AddSpan<int>(GraphNodeId.AsSpan(0, GraphNodeCount)).AddSpan<int>(GraphAdjStart.AsSpan(0, GraphNodeCount + 1))
+            .AddSpan<int>(GraphAdjNode.AsSpan(0, edges)).AddSpan<int>(GraphAdjCost.AsSpan(0, edges));
         return hasher.GetCurrentHash();
     }
 

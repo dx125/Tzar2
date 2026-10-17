@@ -15,7 +15,9 @@ milliseconds per unit.
 ## Decision
 
 * **Queue.** `PathRequestQueue` (state: snapshotted, full hash) holds requests in issue order: commands of a tick in
-  command order, units of one order ascending. A newer order bumps the unit's `RequestSerial`, making older requests
+  command order, units of one order ascending, then re-plans in motion-store (entity index) order. This is
+  deterministic but not literally REQ-PATH-03's "(tick, entity ID)" order. Restored entries are validated (flags,
+  points on the map, group ids, and a flow goal for live flow requests). A newer order bumps the unit's `RequestSerial`, making older requests
   stale; stale entries cost nothing and the queue is compacted when it grows past 2 × units + 1,024.
 * **Prepare → compute → accept** each tick (`PathRequestSystem`):
   1. *Prepare* the first 512 live requests in queue order (sequential): fix the start (nearest walkable tile if the
@@ -36,8 +38,15 @@ milliseconds per unit.
   (`MotionMode.Route`). The unit descends the tree of the exit portal of its current cluster, crosses to the partner,
   continues with the next portal's tree, and finally the goal's cluster tree, looking up to 10 tiles ahead for the
   farthest visible tile (corridor line-of-sight with the unit's radius as margin). Short paths are smoothed tile paths
-  (`MotionMode.Path`). A route is re-planned when the navigation version changes (portal ids may change) or when the
-  unit is pushed off it.
+  (`MotionMode.Path`). A route plan stores the portal node ids **and their tiles**; when passability changes anywhere,
+  each route is re-checked (`PathSearch.RouteValid`: the remaining portals still exist at the same tiles and are still
+  joined) and only invalid ones are re-planned. The check is a pure function of the plan and the current layer, so a
+  restored match decides identically, and a tree felled across the map no longer stops every routed unit (review
+  finding B1). A unit pushed back across a portal resumes from the route two portals back; a unit off its route
+  re-plans.
+* **Preparation is not budgeted.** Goal resolution and the arrival-slot flood (≤ 65,536 cells per group) run for up to
+  512 requests per tick and are charged to the budget only on acceptance (`PrepCost`), so the per-tick CPU bound is
+  the batch limit plus the budget, not the budget alone.
 * **Budget.** Default 750,000 expansions per tick (a match setting, in the snapshot header). B3 needs ≈ 2 M expansions
   for its 500 orders: planned after tick 2, with 8.3 / 6.4 / 3.7 ms for ticks 0-2 on 4 workers (Apple M-series, warm
   JIT; ADR 0026). The synthetic 4,000-unit scenario (128 group orders per tick) stays at p99 6.4 ms with it.

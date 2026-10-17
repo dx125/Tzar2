@@ -53,8 +53,14 @@ public sealed class MovementSystem : ISimSystem
     /// <summary>Ticks without progress after which a unit re-plans (REQ-PATH-07: 2 s).</summary>
     public const int ReplanTicks = 40;
 
-    /// <summary>Re-plans before a unit gives up.</summary>
+    /// <summary>Re-plans before a unit stuck alone (or held by an enemy) gives up.</summary>
     public const int MaxReplans = 3;
+
+    /// <summary>Re-plans before a unit jammed in a friendly crowd gives up (about 60 s without progress).</summary>
+    public const int MaxCrowdReplans = 30;
+
+    /// <summary>Tiles searched for walkable ground around a unit standing inside a structure (largest footprint / 2 + margin).</summary>
+    public const int EscapeRadius = (EntityTypeDefinition.MaxFootprintTiles / 2) + EntityTypeDefinition.MaxClearanceTiles + 1;
 
     /// <summary>Ticks between follow checks.</summary>
     public const int FollowInterval = 10;
@@ -135,6 +141,19 @@ public sealed class MovementSystem : ISimSystem
             {
                 UpdateRoute(world, entity, ref m, layer, nav.Version, tick);
             }
+            else if (m.Mode == MotionMode.Direct && m.PlanVersion != nav.Version)
+            {
+                // A building may now stand between the unit and its target.
+                Position p = world.Positions.Get(entity);
+                if (PathSearch.LineWalkable(layer, p.X, p.Y, m.TargetX, m.TargetY, out _))
+                {
+                    m.PlanVersion = nav.Version;
+                }
+                else
+                {
+                    Replan(world, entity, ref m);
+                }
+            }
         }
     }
 
@@ -154,7 +173,8 @@ public sealed class MovementSystem : ISimSystem
         long near = (long)m.Radius + MapState.UnitsPerTile + (3 * MapState.UnitsPerTile / 2);
         bool far = IntMath.DistanceSquared(p.X, p.Y, tp.X, tp.Y) > near * near;
         bool moved = IntMath.DistanceSquared(m.OrderX, m.OrderY, tp.X, tp.Y) > 4L * MapState.UnitsPerTile * MapState.UnitsPerTile;
-        if (far && (m.State != MotionState.Moving || moved))
+        // Re-plan only when the target has moved since the last request (an unreachable idle target is not chased again).
+        if (far && moved)
         {
             m.OrderX = tp.X;
             m.OrderY = tp.Y;
@@ -224,6 +244,11 @@ public sealed class MovementSystem : ISimSystem
         int cost = field.CostAt(layer, tile);
         if (cost != int.MaxValue && (long)cost + 512 < m.BestDistance)
         {
+            if (m.BestDistance != int.MaxValue)
+            {
+                m.Replans = 0; // real progress down the field
+            }
+
             m.BestDistance = cost;
             m.StallTicks = 0;
         }
@@ -286,9 +311,14 @@ public sealed class MovementSystem : ISimSystem
     {
         if (m.PlanVersion != version)
         {
-            // Portal ids change when clusters are rebuilt: plan again (budgeted).
-            Replan(world, entity, ref m);
-            return;
+            // Passability changed somewhere: keep the route if its remaining portals are unchanged, else plan again.
+            if (!PathSearch.RouteValid(layer, world.Paths.Get(entity.Index), m.PathCursor - 2))
+            {
+                Replan(world, entity, ref m);
+                return;
+            }
+
+            m.PlanVersion = version;
         }
 
         Position p = world.Positions.Get(entity);
@@ -298,11 +328,12 @@ public sealed class MovementSystem : ISimSystem
             return;
         }
 
-        ReadOnlySpan<int> nodes = world.Paths.Get(entity.Index);
+        ReadOnlySpan<int> plan = world.Paths.Get(entity.Index);
+        ReadOnlySpan<int> nodes = plan[..(plan.Length / 2)];
         int len = nodes.Length;
         int cluster = layer.ClusterOf(tile);
         int goalTile = layer.TileOf(m.TargetX, m.TargetY);
-        int exit = ExitFrom(nodes, m.PathCursor, cluster);
+        int exit = ExitFrom(nodes, m.PathCursor - 2, cluster); // from two back: a unit pushed back across a portal resumes
         if (exit >= 0 && tile == layer.PortalTile(nodes[exit]))
         {
             exit = exit + 1 < len ? exit + 1 : len; // at the portal: next is the partner across, or the goal
@@ -323,6 +354,11 @@ public sealed class MovementSystem : ISimSystem
 
         if (exit != m.PathCursor)
         {
+            if (exit > m.PathCursor)
+            {
+                m.Replans = 0; // real progress along the route
+            }
+
             m.PathCursor = exit;
             m.BestDistance = int.MaxValue;
             m.StallTicks = 0;
@@ -510,7 +546,7 @@ public sealed class MovementSystem : ISimSystem
     private static int ExitFrom(ReadOnlySpan<int> nodes, int from, int cluster)
     {
         int len = nodes.Length;
-        for (int j = Math.Max(0, from); j < len && j <= from + 8; j++)
+        for (int j = Math.Max(0, from); j < len && j <= from + 10; j++)
         {
             if (nodes[j] / NavLayer.MaxPortals == cluster && (j + 1 == len || nodes[j + 1] / NavLayer.MaxPortals != cluster))
             {
@@ -603,10 +639,22 @@ public sealed class MovementSystem : ISimSystem
                 MovementOrders.Finish(world, entity, ref m, MotionState.Idle);
                 if (m.Order == MotionOrder.Patrol)
                 {
+                    // The reached end becomes the reachable point; a patrol whose ends coincide (e.g. ordered just
+                    // across a wall) ends instead of arriving every tick.
+                    m.OrderX = nx;
+                    m.OrderY = ny;
                     (m.PatrolX, m.OrderX) = (m.OrderX, m.PatrolX);
                     (m.PatrolY, m.OrderY) = (m.OrderY, m.PatrolY);
-                    m.Replans = 0;
-                    MovementOrders.Request(world, entity, ref m, 0, m.OrderX, m.OrderY);
+                    long apart = Math.Max(m.SettleRadius, 2L * MapState.UnitsPerTile);
+                    if (IntMath.DistanceSquared(nx, ny, m.OrderX, m.OrderY) <= apart * apart)
+                    {
+                        m.Order = MotionOrder.None;
+                    }
+                    else
+                    {
+                        m.Replans = 0;
+                        MovementOrders.Request(world, entity, ref m, 0, m.OrderX, m.OrderY);
+                    }
                 }
                 else if (m.Order == MotionOrder.Move)
                 {
@@ -656,6 +704,58 @@ public sealed class MovementSystem : ISimSystem
             && layer.IsWalkablePoint(x, y + r) && layer.IsWalkablePoint(x, y - r);
     }
 
+    // Enemies are hard obstacles (ADR 0025): a step that brings the unit closer to an enemy it overlaps is replaced by
+    // its axis components, or cancelled, so movers never walk through enemies (they stop; attacking them is gameplay).
+    private static (int X, int Y) HoldOffEnemies(World world, NavLayer? layer, Frame f, int i, int px, int py, int qx, int qy)
+    {
+        if (!IntrudesEnemy(f, i, px, py, qx, qy))
+        {
+            return (qx, qy);
+        }
+
+        if (qx != px && !IntrudesEnemy(f, i, px, py, qx, py) && Valid(world, layer, f.Radius[i], qx, py))
+        {
+            return (qx, py);
+        }
+
+        if (qy != py && !IntrudesEnemy(f, i, px, py, px, qy) && Valid(world, layer, f.Radius[i], px, qy))
+        {
+            return (px, qy);
+        }
+
+        return (px, py);
+    }
+
+    private static bool IntrudesEnemy(Frame f, int i, int fromX, int fromY, int x, int y)
+    {
+        int cx = Math.Clamp(f.Px[i] / GridCell, 0, f.GridW - 1);
+        int cy = Math.Clamp(f.Py[i] / GridCell, 0, f.GridH - 1);
+        for (int gy = Math.Max(0, cy - 1); gy <= Math.Min(f.GridH - 1, cy + 1); gy++)
+        {
+            for (int gx = Math.Max(0, cx - 1); gx <= Math.Min(f.GridW - 1, cx + 1); gx++)
+            {
+                int cell = (gy * f.GridW) + gx;
+                for (int k = f.CellStart[cell]; k < f.CellStart[cell + 1]; k++)
+                {
+                    int j = f.CellItems[k];
+                    if (j == i || f.Plane[j] != f.Plane[i] || f.Owner[j] == f.Owner[i])
+                    {
+                        continue;
+                    }
+
+                    long r = f.Radius[i] + f.Radius[j];
+                    long after = IntMath.DistanceSquared(x, y, f.Px[j], f.Py[j]);
+                    if (after < r * r && after < IntMath.DistanceSquared(fromX, fromY, f.Px[j], f.Py[j]))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     // Moves from (px, py) by (vx, vy) without entering invalid ground; slides along an axis when blocked.
     private static (int X, int Y) Slide(World world, NavLayer? layer, int radius, int px, int py, int vx, int vy)
     {
@@ -670,6 +770,13 @@ public sealed class MovementSystem : ISimSystem
         {
             // Standing on unwalkable ground (a building appeared): any step that stays on the map is allowed.
             return world.Map.ContainsPoint(qx, qy) ? (qx, qy) : (px, py);
+        }
+
+        if (layer is not null && !Valid(world, layer, radius, px, py) && layer.IsWalkablePoint(qx, qy))
+        {
+            // Overlapping a blocked tile with the body (e.g. just pushed out of a new building): moving the center
+            // over walkable ground is allowed, so the unit can step away.
+            return (qx, qy);
         }
 
         if (vx != 0 && Valid(world, layer, radius, qx, py))
@@ -851,6 +958,7 @@ public sealed class MovementSystem : ISimSystem
                     cursor++;
                     m.BestDistance = int.MaxValue;
                     m.StallTicks = 0;
+                    m.Replans = 0; // real progress: the crowd is moving
                 }
 
                 // Pushed past a corner: skip ahead when the next waypoint is already in sight.
@@ -883,7 +991,7 @@ public sealed class MovementSystem : ISimSystem
             long dist = IntMath.ISqrt((dx * dx) + (dy * dy));
             long toTarget = IntMath.ISqrt(IntMath.DistanceSquared(px, py, m.TargetX, m.TargetY));
 
-            if (final && dist <= speed)
+            if (final && dist <= speed && !IntrudesEnemy(f, i, px, py, m.SteerX, m.SteerY))
             {
                 (f.Qx[i], f.Qy[i]) = Slide(world, layer, m.Radius, px, py, (int)dx, (int)dy);
                 m.VelocityX = (int)dx;
@@ -912,7 +1020,9 @@ public sealed class MovementSystem : ISimSystem
                 }
             }
 
-            (int qx, int qy) = Slide(world, layer, m.Radius, px, py, (int)vx, (int)vy);
+            (int sx, int sy) = Slide(world, layer, m.Radius, px, py, (int)vx, (int)vy);
+            (int qx, int qy) = HoldOffEnemies(world, layer, f, i, px, py, sx, sy);
+            bool heldByEnemy = qx != sx || qy != sy;
             f.Qx[i] = qx;
             f.Qy[i] = qy;
             m.VelocityX = qx - px;
@@ -947,7 +1057,10 @@ public sealed class MovementSystem : ISimSystem
             {
                 // A unit held up by a crowd keeps trying (REQ-PATH-07 deadlock re-plan); only a unit that is stuck with
                 // nobody around, after several re-plans, gives up.
-                f.Out[i] = contacts == 0 && (m.Replans >= MaxReplans || layer is null) ? OutGiveUp : OutReplan;
+                // Give up: stuck alone or against an enemy after a few re-plans, or jammed in a crowd for good.
+                bool giveUp = layer is null || m.Replans >= MaxCrowdReplans
+                    || (m.Replans >= MaxReplans && ((contacts & 0xFFFF) == 0 || heldByEnemy));
+                f.Out[i] = giveUp ? OutGiveUp : OutReplan;
             }
         }
 
@@ -994,8 +1107,9 @@ public sealed class MovementSystem : ISimSystem
 
                         if (d2 < (r + 256) * (r + 256))
                         {
-                            // Low 16 bits: any contact; high bits: contacts with units that are not moving.
-                            contacts += f.Moving[j] == 0 ? 0x10001 : 1;
+                            // Low 16 bits: friendly contacts (a crowd to wait for); high bits: contacts with units that
+                            // are not moving (anyone already settled, or an enemy blocking the way).
+                            contacts += (f.Moving[j] == 0 ? 0x10000 : 0) + (f.Owner[j] == f.Owner[i] ? 1 : 0);
                         }
 
                         long forward = ((rx * dx) + (ry * dy)) / dist;
@@ -1066,10 +1180,11 @@ public sealed class MovementSystem : ISimSystem
                 int qx = f.Qx[i];
                 int qy = f.Qy[i];
                 (long sx, long sy) = Push(f, i);
-                if (layer is not null && !layer.IsWalkablePoint(qx, qy))
+                // Escape: the center is on blocked ground, or an idle unit's body still overlaps a blocked tile.
+                if (layer is not null && (!layer.IsWalkablePoint(qx, qy) || (m.State != MotionState.Moving && !Valid(world, layer, m.Radius, qx, qy))))
                 {
                     // Escape toward the nearest walkable tile.
-                    int tile = NavQueries.NearestWalkable(layer, layer.TileX(qx), layer.TileY(qy), 3);
+                    int tile = NavQueries.NearestWalkable(layer, layer.TileX(qx), layer.TileY(qy), EscapeRadius);
                     if (tile >= 0)
                     {
                         long ex = layer.CenterX(tile) - (long)qx;
@@ -1084,7 +1199,10 @@ public sealed class MovementSystem : ISimSystem
                     }
                 }
 
-                (f.Fx[i], f.Fy[i]) = sx == 0 && sy == 0 ? (qx, qy) : Slide(world, layer, m.Radius, qx, qy, (int)sx, (int)sy);
+                (int fx, int fy) = sx == 0 && sy == 0 ? (qx, qy) : Slide(world, layer, m.Radius, qx, qy, (int)sx, (int)sy);
+
+                // Pushes from friends behind must not drive the unit into an enemy either.
+                (f.Fx[i], f.Fy[i]) = HoldOffEnemies(world, layer, f, i, qx, qy, fx, fy);
             }
         }
 

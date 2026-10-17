@@ -21,9 +21,11 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // 297C6D90FC748B9E / 38232E7ED6D36D86: occupancy counts became int instead of ushort, which changes the bytes of the
     // full-state hash only (per-tick hashes are unchanged; the stream includes the full hashes every 20 ticks) ->
     // (M2 part B, ADRs 0021-0025) 271B3EF84BB7433F / F8763BDE53F22E5B: pathfinding and movement replace the straight-line
-    // mover; the ruleset, Motion and the hashed layout gained fields (decals, paths, path queue).
-    private const ulong GoldenFinalFullHash = 0xF8763BDE53F22E5BUL;
-    private const ulong GoldenHashStream = 0x271B3EF84BB7433FUL;
+    // mover; the ruleset, Motion and the hashed layout gained fields (decals, paths, path queue) -> (M2 part B review)
+    // B4BF7619451DBAE2 / 56C6C54762811D13: passability version in the map hash, route plans carry portal tiles,
+    // enemies block movers, crowd give-up rule.
+    private const ulong GoldenFinalFullHash = 0x56C6C54762811D13UL;
+    private const ulong GoldenHashStream = 0xB4BF7619451DBAE2UL;
 
     private const int Ticks = 300;
 

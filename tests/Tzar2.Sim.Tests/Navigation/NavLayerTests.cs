@@ -190,6 +190,8 @@ public class NavLayerTests(ITestOutputHelper output)
                 new EntityTypeDefinition(0, "small", Locomotor.Foot, 64 * 48, 10),
                 new EntityTypeDefinition(1, "big", Locomotor.Large, 64 * 24, 10, clearanceTiles: 2),
                 new EntityTypeDefinition(2, "rock", Locomotor.Foot, 0, 10, footprintWidth: 1, footprintHeight: 1),
+                new EntityTypeDefinition(3, "house", Locomotor.Foot, 0, 10, footprintWidth: 3, footprintHeight: 3, footprint: [0, 1, 0, 1, 1, 1, 0, 1, 0]),
+                new EntityTypeDefinition(4, "hall", Locomotor.Foot, 0, 10, footprintWidth: 5, footprintHeight: 4, footprint: [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0]),
             ]);
         MapData map = RandomMap(size, 1000, seed);
         var world = new World(ruleset, map, new SimulationConfig { PlayerCount = 1 });
@@ -205,7 +207,11 @@ public class NavLayerTests(ITestOutputHelper output)
             }
             else
             {
-                placed.Add(world.PlaceStructure(2, 0, rng.NextInt(size), rng.NextInt(size)));
+                // Rocks, and masked multi-tile footprints (which may overlap other structures).
+                ushort type = (ushort)(2 + rng.NextInt(3));
+                int w = type == 2 ? 1 : type == 3 ? 3 : 5;
+                int h = type == 2 ? 1 : type == 3 ? 3 : 4;
+                placed.Add(world.PlaceStructure(type, 0, rng.NextInt(size - w + 1), rng.NextInt(size - h + 1)));
             }
 
             if (rng.NextChance(4000))

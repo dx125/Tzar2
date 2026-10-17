@@ -405,9 +405,31 @@ public sealed class World
                 throw Invalid("invalid motion");
             }
 
-            if (m.Mode == MotionMode.Route && !RouteIsValid(Paths.Get(movers[i].Index), m.Layer))
+            if (m.Mode == MotionMode.Route && !RouteIsValid(Paths.Get(movers[i].Index), m.Layer, m.PathCursor, m.PlanVersion))
             {
                 throw Invalid("invalid route");
+            }
+        }
+
+        // Queued path requests (copied raw from the snapshot).
+        const PathRequestFlags KnownFlags = PathRequestFlags.Prepared | PathRequestFlags.Flow | PathRequestFlags.FlowHead;
+        for (int i = 0; i < PathQueue.Count; i++)
+        {
+            PathRequest r = PathQueue[i];
+            bool prepared = (r.Flags & PathRequestFlags.Prepared) != 0;
+            bool flow = (r.Flags & (PathRequestFlags.Flow | PathRequestFlags.FlowHead)) != 0;
+            if ((r.Flags & ~KnownFlags) != 0 || (flow && !prepared) || r.PrepCost < 0 || r.Group < 0 || r.Group >= NextGroupId
+                || (prepared && r.TargetX != int.MinValue && (!Map.ContainsPoint(r.StartX, r.StartY) || !Map.ContainsPoint(r.TargetX, r.TargetY))))
+            {
+                throw Invalid("invalid path request");
+            }
+
+            // A live flow request needs the unit's flow goal.
+            int mp = Motions.IndexOf(EntityId.FromValue(r.Entity));
+            if (flow && mp >= 0 && Motions.At(mp).RequestSerial == r.Serial
+                && (Motions.At(mp).GoalTile < 0 || Motions.At(mp).GoalTile >= Map.Width * Map.Height || Motions.At(mp).Layer == NavigationGrid.NoLayer))
+            {
+                throw Invalid("flow request without a flow goal");
             }
         }
 
@@ -428,18 +450,25 @@ public sealed class World
     }
 
     // Route nodes must name existing portals of the unit's layer (navigation is rebuilt from the restored map).
-    private bool RouteIsValid(ReadOnlySpan<int> nodes, byte layerIndex)
+    // A route's node ids must name existing portals of the unit's layer (navigation is rebuilt from the restored map);
+    // a plan made for the current passability version must match the layer exactly (it is used without re-checking).
+    private bool RouteIsValid(ReadOnlySpan<int> plan, byte layerIndex, int cursor, int planVersion)
     {
         Navigation.EnsureUpToDate();
-        if (layerIndex >= Navigation.LayerCount || nodes.IsEmpty)
+        if (layerIndex >= Navigation.LayerCount || plan.IsEmpty || (plan.Length & 1) != 0 || cursor > plan.Length / 2)
         {
             return false;
         }
 
         NavLayer layer = Navigation.Layers[layerIndex];
-        foreach (int node in nodes)
+        if (planVersion == Navigation.Version)
         {
-            if ((uint)node >= (uint)layer.NodeCapacity || node % NavLayer.MaxPortals >= layer.ClusterAt(node / NavLayer.MaxPortals).PortalCount)
+            return PathSearch.RouteValid(layer, plan, 0);
+        }
+
+        foreach (int node in plan[..(plan.Length / 2)])
+        {
+            if ((uint)node >= (uint)layer.NodeCapacity)
             {
                 return false;
             }

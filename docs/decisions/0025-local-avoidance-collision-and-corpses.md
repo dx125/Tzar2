@@ -25,13 +25,24 @@ alter passability. The movement step must give identical results for any worker 
 * **Terrain.** A ground unit's center and its four axis points at its radius (≤ 960) must be on walkable anchor tiles;
   blocked moves slide along an axis, then sideways at half speed. A unit standing on unwalkable ground (a building
   appeared) may move freely and is pushed toward the nearest walkable tile.
+* **Enemies are hard blockers** (product decision on review finding S4): a mover never takes a step — steering or
+  being pushed by friends behind it — that brings it closer to an enemy it overlaps; the step is reduced to an axis
+  component or cancelled. A mover held by an enemy stalls, re-plans (an alternative route is taken if one exists)
+  and after 3 re-plans stops with `Blocked`. Attacking the blocker is gameplay (M2-C). Two enemy columns meeting on a
+  one-tile bridge therefore stop face to face instead of passing.
 * **Resolve.** Overlaps are pushed apart from the steered positions (a Jacobi step, so order-independent): equal
   shares between two movers or two idle units; an idle friend takes ¾ against a mover (shoving), an idle enemy takes
   nothing and the mover all; pushes are capped at half the radius per tick; coincident units separate along a direction
   fixed by the pair's indices.
 * **Progress and stalls.** Progress is measured toward the steering point (paths, direct), along the portal tree
   (routes) or on the field cost (flow). No progress for 2 s → re-plan; after 3 re-plans a unit that has nobody around
-  gives up with `Blocked`; a unit held up by a crowd keeps re-planning (it is not stuck, it waits its turn).
+  gives up with `Blocked`; a unit held up by a friendly crowd keeps re-planning while the crowd moves (reaching a
+  waypoint, a route portal or a lower flow cost resets the count) and gives up after 30 re-plans (~60 s) without any.
+* **Orders.** A patrol whose two (resolved) ends coincide, e.g. ordered just across a wall, ends after the first leg
+  instead of arriving every tick; a follower re-plans only when its target has moved since the last request (an
+  unreachable idle target is not chased again). A unit inside a new structure searches up to
+  `MovementSystem.EscapeRadius` tiles (half the largest footprint plus clearance) for walkable ground, and may step
+  away while its body still overlaps the structure.
 * **Corpses (ORIG-01).** `World.Kill` records a corpse decal in `DecalIndex` and destroys the unit. Decals have a TTL
   and a global cap from the ruleset (default 120 s, 4,000, oldest dropped first), live in snapshots and the full hash,
   and never touch blockers, occupancy or navigation. Structures (`World.PlaceStructure`, types with a footprint mask)

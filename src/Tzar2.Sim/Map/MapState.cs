@@ -16,8 +16,8 @@ namespace Tzar2.Sim.Map;
 /// cross a tile if all four corner terrain types allow it and the tile is not a cliff (cliffs leave only
 /// <see cref="Locomotor.Air"/>). <b>Blockers</b> count static footprint obstacles per tile (buildings, trees, rocks;
 /// corpses and debris never block, REQ-PATH-08); a blocked tile is passable for air only. Every blocker change bumps
-/// <see cref="ObstacleVersion"/>, the key that pathfinding caches (connectivity, HPA* clusters, flow fields) are
-/// validated against. <b>Occupancy</b> counts mobile entities per sub-tile cell
+/// <see cref="ObstacleVersion"/>; every effective passability change also bumps <see cref="PassabilityVersion"/>, the
+/// key that pathfinding caches (connectivity, HPA* clusters, flow fields) and plans are validated against. <b>Occupancy</b> counts mobile entities per sub-tile cell
 /// (<see cref="Ruleset.OccupancyCellsPerTileAxis"/>²  cells per tile).</para>
 /// <para>Memory at 1,024² with 2×2 cells: passability 1 MiB, blockers 2 MiB, occupancy 16 MiB (<c>int</c> counts, so
 /// no cell can overflow even with every entity in one cell, ADR 0019). Snapshots store only the obstacle version and
@@ -110,6 +110,12 @@ public sealed class MapState
     /// <summary>Incremented on every blocker change; pathfinding caches key on it (REQ-PATH-01/02/04).</summary>
     public int ObstacleVersion { get; private set; }
 
+    /// <summary>
+    /// Incremented only when a tile's effective passability changes (its blocker count goes 0 → 1 or 1 → 0): the
+    /// version navigation and plans are validated against (a second blocker on a blocked tile changes nothing).
+    /// </summary>
+    public int PassabilityVersion { get; private set; }
+
     /// <summary>Base passability per tile (<see cref="LocomotorMask"/> bytes), ignoring blockers.</summary>
     public ReadOnlySpan<byte> BasePassability => _basePassability;
 
@@ -157,6 +163,7 @@ public sealed class MapState
         if (_blockers[i] == 1)
         {
             RecordChange(i);
+            PassabilityVersion++;
         }
     }
 
@@ -175,6 +182,7 @@ public sealed class MapState
         if (_blockers[i] == 0)
         {
             RecordChange(i);
+            PassabilityVersion++;
         }
     }
 
@@ -212,7 +220,7 @@ public sealed class MapState
     public void AppendTo(StateHasher hasher)
     {
         ArgumentNullException.ThrowIfNull(hasher);
-        hasher.Add(ObstacleVersion).AddSpan<ushort>(_blockers).AddSpan<int>(_occupancy);
+        hasher.Add(ObstacleVersion).Add(PassabilityVersion).AddSpan<ushort>(_blockers).AddSpan<int>(_occupancy);
     }
 
     /// <summary>
@@ -223,6 +231,7 @@ public sealed class MapState
     {
         ArgumentNullException.ThrowIfNull(writer);
         writer.WriteInt32(ObstacleVersion);
+        writer.WriteInt32(PassabilityVersion);
         int nonZero = 0;
         foreach (ushort b in _blockers)
         {
@@ -247,6 +256,7 @@ public sealed class MapState
     public void ReadFrom(ref BinaryBufferReader reader)
     {
         ObstacleVersion = reader.ReadInt32();
+        PassabilityVersion = reader.ReadInt32();
         Array.Clear(_blockers);
         Array.Clear(_occupancy);
         ulong count = reader.ReadVarUInt64();
