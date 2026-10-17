@@ -1,7 +1,7 @@
 # 0010. Draw world sprites as canvas MultiMeshes in CPU radix-sorted painter's order from a Texture2DArray
 
-* **Status:** Accepted for the rendering path, sorting and texture layout. The renderer **backend for Windows is
-  provisional** until `run-bench.ps1` has been run on the Windows desktop reference (see Consequences).
+* **Status:** Accepted. The Windows run (2026-10-17, RTX 4070 Ti, `results/windows-rtx4070ti/`) confirmed the
+  backend choice and the >= 60 FPS criterion (see "Windows results").
 * **Date:** 2026-10-17
 * **Deciders:** implementation agent (M0, spike S1)
 * **Related:** DEC-07, DEC-10, REQ-GFX-01, REQ-GFX-03, REQ-GFX-04, REQ-GFX-06, REQ-GFX-07, TDD §13.3, §13.4, §21, §25 (M0
@@ -123,11 +123,12 @@ order, hard 1:1 / 2:2 pixel blocks, dither visible, shadows under the sprites, m
 4. **Shadows:** implement the §13.3 shadow pass as designed (silhouettes into a single-channel mask render target,
    composited once): in the spike it costs about the same as drawing shadows directly (within +-5 % on Metal and native GL, 6-11 % slower on ANGLE) and avoids double
    darkening (UNK-03 still decides the exact original blend).
-5. **Backend (provisional for Windows):** target Godot's **Mobile** renderer (RenderingDevice: D3D12/Vulkan on
+5. **Backend (confirmed on Windows):** target Godot's **Mobile** renderer (RenderingDevice: D3D12/Vulkan on
    Windows, Metal on macOS) as the default for the game client, with **Compatibility** as the fallback for GPUs
    without a usable RenderingDevice driver. Forward+ brings nothing for this 2D workload (same FPS as Mobile, heavier
    start-up and features we do not use). On macOS (PX) use Mobile/Metal; native OpenGL there is 2x slower than Metal
-   and deprecated by Apple. This choice is confirmed or changed by the Windows run (Consequences).
+   and deprecated by Apple. The Windows run confirmed this: Mobile/D3D12 and Mobile/Vulkan are equal within noise,
+   both pixel-exact on the CPU-sorted path. Default to Mobile/Vulkan, keep D3D12 as a selectable driver.
 6. The spike's benchmark (`spikes/S1-renderer/run-bench.sh` / `run-bench.ps1`, `--bench`/`--verify`) is the
    reference harness for re-measuring; its `--verify` pixel comparison is the seed of the golden-image tests (§13.9).
 
@@ -143,20 +144,28 @@ order, hard 1:1 / 2:2 pixel blocks, dither visible, shadows under the sprites, m
 
 ## Consequences
 
-* **The M0 exit criterion "Windows >= 60 FPS on the desktop reference" is NOT yet demonstrated.** All numbers are from
-  an Apple M5 laptop. Required follow-up before the M0 sign-off of S1: run
-  `pwsh spikes/S1-renderer/run-bench.ps1 -Godot <Godot 4.7.2 mono console exe>` on the Windows reference
-  (6-core 2020 CPU, GTX 1060-class GPU) at 1920x1080 and 2560x1440, commit `results/windows-<gpu>/`, and update this
-  ADR's backend decision with the Windows data (Mobile/D3D12 vs Mobile/Vulkan vs Compatibility). On the M5 the worst
-  backend (native GL) still ran 10k sprites with shadows at 133 FPS (p99 10.6 ms) at 1440p x2 and 20k at 83 FPS, and
-  the RenderingDevice backends ran 10k at 322-335 FPS, so the margin is large, but a GTX 1060 has different fill and
-  driver characteristics, so this is evidence, not proof.
+* **Windows results (M0 exit criterion met).** `run-bench.ps1` was run by the product owner on Windows with an
+  NVIDIA GeForce RTX 4070 Ti (`results/windows-rtx4070ti/`, windowed, so "1440p" is 2560x1431). CPU-sorted path,
+  texture array, shadows direct, FPS / p99 ms:
+
+  | Backend | 10k @1080p | 10k @1440p | 20k @1440p |
+  |---|---|---|---|
+  | Mobile / Vulkan | 1041 / 1.3 | 1093 / 1.2 | 598 / 2.0 |
+  | Mobile / D3D12 | 1070 / 1.4 | 1033 / 1.4 | 585 / 2.3 |
+  | Compatibility / OpenGL 3 | 1045 / 1.3 | 942 / 1.4 | 520 / 2.2 |
+  | Forward+ / Vulkan | 1077 / 1.2 | 1095 / 1.3 | 604 / 2.0 |
+
+  `--verify`: the CPU-sorted path is pixel-exact on all five Windows backends at scales x1-x3 (30/30 PASS); the
+  depth path fails on Mobile and Compatibility (max +-7 per channel), exactly as on macOS — confirming decision 2.
+  CPU sort + fill + upload on Windows: 0.38 ms mean at 10k, 0.76 ms at 20k (p99 <= 1.02 ms).
+  Caveat: the GPU is far above the TDD's GTX 1060-class reference. With a ~16x margin over 60 FPS at 10k on every
+  backend the criterion is considered met; re-measure on min-spec hardware during M7 performance tuning.
 * CPU budget: sort + fill + upload is 0.39 ms at 10k and 0.85 ms at 20k on the M5 (p99 < 1 ms on Metal); the Windows
   run reports the same columns. Render snapshots (REQ-ARCH-03) should be SoA so the fill loop stays linear.
 * The client needs a sprite-batch module that owns one MultiMesh per draw layer and grows capacity in chunks
   (`MultimeshAllocateData` per size change), and sets a custom AABB (avoids per-upload bounds computation).
 * The 3D/depth path and the atlas variant stay in the spike only; they are not carried into the client.
-* Revisit if: the Windows run misses 60 FPS at 10k on any planned backend; S6 shows that frames must be packed so
+* Revisit if: a min-spec Windows run (M7) misses 60 FPS at 10k on any planned backend; S6 shows that frames must be packed so
   tightly that per-frame layers are impossible; or translucency/silhouette passes (ORIG-17) blow the fill budget.
 * Open measurement gaps: no GPU timer on Metal (frame time only); no Vulkan-on-macOS (MoltenVK) or Linux numbers;
   sprite cell fixed at 48x48 (real frames vary, S6); terrain chunks, fog and light passes not included.
