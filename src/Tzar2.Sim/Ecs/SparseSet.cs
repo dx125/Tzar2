@@ -165,7 +165,7 @@ public abstract class SparseSet<T>
     }
 
     /// <summary>
-    /// Restores contents from a snapshot: <paramref name="count"/> strictly ascending entities. The data must be written
+    /// Restores contents from a snapshot: <paramref name="entities"/> must be strictly ascending. The data must be written
     /// into <see cref="DenseArray"/> by the caller after this returns.
     /// </summary>
     /// <exception cref="System.IO.InvalidDataException">The entities are not strictly ascending by index.</exception>

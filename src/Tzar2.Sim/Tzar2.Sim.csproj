@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Tzar2.Sim.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
     <ProjectReference Include="../Tzar2.Content/Tzar2.Content.csproj" />
   </ItemGroup>
