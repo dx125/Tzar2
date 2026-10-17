@@ -36,3 +36,8 @@ __pycache__/
 /soundfonts/
 *.sf2
 *.sf3
+
+# Capture harness (ADR 0030): returned session zips and extracted raw captures show original art; never commit them.
+capture-*.zip
+/tests/fidelity/local-captures/
+/Tzar2Capture/

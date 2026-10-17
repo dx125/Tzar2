@@ -881,7 +881,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 ### 23.2 Tooling
 * Static: Ghidra (Apache-2.0), ImHex (GPL tool, used only as an application; its pattern files are written by us and kept in `tools/re/patterns`).
 * Dynamic: x32dbg/x64dbg, Cheat Engine (observation/measurement only), API Monitor; the original running on Windows 10/11 with **cnc-ddraw** in windowed mode (or in a VM) for captures.
-* **Capture harness** (`tools/capture`): drives the original with scripted input (AutoHotkey or a small C# input injector), records frames (screen capture), and optionally reads known memory addresses for measurement. Output: YAML fact files plus reference PNGs (PNGs stay local).
+* **Capture harness** (`tools/capture`): drives the original with scripted input (AutoHotkey or a small C# input injector), records frames (screen capture), and optionally reads known memory addresses for measurement. Output: YAML fact files plus reference PNGs (PNGs stay local). **Implemented** as `t2 fidelity capture|analyze` with YAML scenarios in `tools/capture/` and the operator script `tools/capture/run-capture.ps1` (C# input injector, the game's own F11 snapshots plus window captures, read-only memory probes; facts in `tests/fidelity/facts/`): [ADR 0030](decisions/0030-capture-harness.md).
 * Cross-check oracles only (not code sources): Arch.exe, RLEsBMPs, QuickBMS + `tzar.bms`.
 * Our own `t2 dump <file>` subcommands (hex views, structure dumps) as formats are understood.
 
