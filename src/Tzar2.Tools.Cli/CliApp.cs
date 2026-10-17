@@ -17,7 +17,6 @@ internal static class CliApp
         ("pack", "M1", "build a package from a directory"),
         ("replay verify", "M6", "verify the state hashes of a replay headlessly"),
         ("desync diff", "M6", "diff two desync snapshots"),
-        ("fidelity capture", "M3", "capture fidelity facts from the original"),
     ];
 
     public static int Run(string[] args, TextWriter stdout, TextWriter stderr)
@@ -47,6 +46,11 @@ internal static class CliApp
         if (args[0] == "bench")
         {
             return BenchCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
+        }
+
+        if (args[0] == "fidelity")
+        {
+            return FidelityCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
         }
 
         if (args[0] == "dump")
@@ -79,6 +83,7 @@ internal static class CliApp
             ("import <origin> <outDir>", "import an original install into a base package"),
             ("dump <file> [entries]", "dump a package or legacy file; --out <dir> writes PNGs"),
             ("bench [options]", "run the synthetic sim benchmark; reports tick p50/p99 and the final hash"),
+            ("fidelity capture|analyze|check|scenarios|selftest", "capture harness: measure the original game (Windows), turn captures into facts"),
         };
         lines.AddRange(Planned.Select(p => (p.Name, $"{p.Summary} [not implemented, {p.Milestone}]")));
         int width = lines.Max(l => l.Item1.Length) + 2;

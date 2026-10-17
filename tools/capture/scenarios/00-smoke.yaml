@@ -1,0 +1,44 @@
+schema: tzar2-capture-scenario/1
+id: smoke
+title: Start-up, direct map loading, F11 snapshots, chat cheats (discovery)
+resolves: []
+priority: 0
+minutes: 2.5
+description: |
+  Every other scenario relies on things we could only infer from the executable's strings: that "-map <name>"
+  starts a game on Maps\<name>.wmp, that "-explore" / "-nofog" reveal the map, that F11 writes a snapshot, and
+  that the hm* chat cheats work. This scenario records what really happens, with a snapshot after every step.
+# Empty variables are dropped from the command line: the first trial uses no reveal flags, the second both.
+launch: [-nomovies, "${explore}", "${nofog}", -map, MP2]
+trials:
+  - name: plain
+    vars: {explore: "", nofog: ""}
+  - name: explore-nofog
+    vars: {explore: -explore, nofog: -nofog}
+steps:
+  - snapshot: after-load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - snapshot: after-reveal-cheat
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - snapshot: after-nofog-cheat
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - snapshot: minimap-centre
+  - key: {key: C, ctrl: true}       # select own castle
+  - key: Space                      # centre it
+  - wait: 1
+  - snapshot: castle
+  - key: F5                         # diplomacy screen (kingdom names and colours)
+  - wait: 1
+  - snapshot: diplomacy
+  - key: Escape
+  - wait: 1
+  - key: F1                         # menu screen
+  - wait: 1
+  - snapshot: menu
+  - key: Escape
+  - wait: 1
+  - snapshot: back-in-game
+analysis: [capture-quality]

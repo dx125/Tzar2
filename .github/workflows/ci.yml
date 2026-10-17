@@ -77,6 +77,36 @@ jobs:
           name: test-results-windows
           path: TestResults
 
+  capture-harness:
+    # ADR 0030: the Win32 half of the capture harness (window capture, SendInput, ReadProcessMemory) on a real Windows
+    # desktop, the scenario files, and the operator script's own checks. The original game is never involved.
+    name: Capture harness - Windows self-test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - run: dotnet build src/Tzar2.Tools.Cli/Tzar2.Tools.Cli.csproj -c Release
+      - name: Parse run-capture.ps1
+        shell: pwsh
+        run: |
+          $tokens = $null; $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD/tools/capture/run-capture.ps1", [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors) { $errors | ForEach-Object { Write-Host $_ }; exit 1 }
+      - name: Scenario files are valid
+        run: src/Tzar2.Tools.Cli/bin/Release/net10.0/t2.exe fidelity scenarios
+      - name: Self-test (own window, PrintWindow/BitBlt, SendInput, ReadProcessMemory)
+        # Hosted runners may not deliver synthetic input to a foreground window; input checks warn instead of failing.
+        run: src/Tzar2.Tools.Cli/bin/Release/net10.0/t2.exe fidelity selftest --allow-no-input
+      - name: run-capture.ps1 stops cleanly on a folder without the game
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File tools/capture/run-capture.ps1 -TzarPath $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 1) { Write-Host "expected exit code 1, got $LASTEXITCODE"; exit 1 }
+          exit 0
+
   headless:
     name: Headless core - ${{ matrix.os }}
     strategy:

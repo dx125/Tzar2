@@ -1,0 +1,37 @@
+# Capture session defaults (ADR 0030). Every scenario in scenarios/ runs with these, and may override them.
+schema: tzar2-capture-session/1
+
+# tzar.ini settings written into the work copy before every launch (SECTION.KEY: value).
+ini:
+  DEFAULTS.LAYOUT: LAYOUT1024L    # 1024x768, HUD on the left; geometry below is from DATA/LAYOUT.INI [LAYOUT1024L]
+  DEFAULTS.DAYNIGHT: 0            # no day/night darkening: terrain colours must be the art's colours
+  DEFAULTS.WEATHER: 0             # no rain/snow/cloud overlays
+  DEFAULTS.LANGPROMPT: 0          # no language question at start-up
+  DEFAULTS.HWCURSOR: 0            # software cursor (the default); snapshots park it on the HUD panel
+  DEFAULTS.SCROLLSPEED: 2
+  SOUND.MUSIC: 0
+  SOUND.SOUND: 0
+
+# ddraw.ini [ddraw] overrides for the cnc-ddraw renderer (defaults in CncDdraw.cs: windowed, GDI, no scaling).
+wrapper: {}
+
+# Variables usable as ${name} in scenarios.
+vars:
+  # Chat cheat prefix (TDD GAME-19 lists hm* codes; the exact spelling is confirmed by the smoke scenario).
+  cheat: hm
+
+layout:
+  name: LAYOUT1024L
+  size: [1024, 768]
+  view: [150, 30, 874, 738]       # the world view
+  minimap: [4, 31, 128, 128]
+  park: [70, 400]                 # mouse rest position on the HUD panel (no edge scrolling, not over the world)
+
+timing:
+  key_hold_ms: 60
+  step_gap_ms: 250
+  chat_open_ms: 400
+  snapshot_timeout_ms: 6000
+  window_timeout_s: 90
+  load_s: 25
+  close_timeout_s: 3              # then the game is terminated (it may ask "quit?" on close)

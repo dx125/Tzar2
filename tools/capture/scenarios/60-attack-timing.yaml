@@ -1,0 +1,45 @@
+schema: tzar2-capture-scenario/1
+id: attack-timing
+title: Attack period and damage per hit from the defender's hit points (UNK-07, UNK-08)
+resolves: [UNK-07, UNK-08]
+priority: 3
+minutes: 3
+experimental: true
+description: |
+  Spawns a defender for kingdom 2 and an attacker for kingdom 1 next to it. Before the attacker exists, the
+  game's writable memory is scanned (read-only) for the defender's HEALTH value and narrowed to the values that
+  stay put for a second. Three seconds into the fight the values that went down are the defender's hit points;
+  they are sampled every 10 ms for 20 s (the first 4,096 stable addresses are sampled as well, as a fallback). The
+  analysis picks the address that steps down repeatedly: the times between steps are the attack period, the steps
+  the damage. HEALTH/RATE values are the reference build's (DATA/EURO UNITS.TXT).
+launch: [-nomovies, -explore, -nofog, -map, MP2]
+trials:
+  - name: knight-vs-footman
+    vars: {attacker: knight, defender: footman, defender_hp: "65", rate_stat: "4"}
+  - name: archer-vs-maceman
+    vars: {attacker: archer, defender: maceman, defender_hp: "120", rate_stat: "4"}
+steps:
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - move: [587, 399]
+  - chat: "${cheat}spawn ${defender}"
+  - wait: 1
+  - memscan: {name: hp-all, value: "${defender_hp}", width: 4}
+  - memscan: {name: hp-all16, value: "${defender_hp}", width: 2}
+  - wait: 1
+  - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
+  - memscan: {name: hp-stable16, from: hp-all16, mode: unchanged}
+  - chat: "${cheat}kingdom 1"
+  - move: [651, 399]
+  - chat: "${cheat}spawn ${attacker}"
+  - memsample: {name: hp-stable-series, scan: hp-stable, max_addresses: 4096, interval_ms: 20, duration_s: 25}
+  - wait: 3
+  - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
+  - memscan: {name: hp-hit16, from: hp-stable16, mode: decreased}
+  - memsample: {name: hp-series, scan: hp-hit, max_addresses: 256, interval_ms: 10, duration_s: 20}
+  - memsample: {name: hp-series16, scan: hp-hit16, max_addresses: 256, interval_ms: 10, duration_s: 20}
+  - move: [70, 400]
+  - burst: {name: fight, count: 20, interval_ms: 1000, region: [150, 30, 874, 738]}
+  - snapshot: after
+analysis: [attack-timing]
