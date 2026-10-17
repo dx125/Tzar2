@@ -27,7 +27,53 @@ public class AllocationTests
     public void Steady_state_ticks_do_not_allocate(int workers, int churn)
     {
         using var scenario = new SyntheticScenario(TestWorlds.SmallScenario with { ChurnPerPlayerPerTick = churn }, workers);
+        AssertSteadyStateDoesNotAllocate(scenario, workers);
+    }
 
+    /// <summary>The gameplay systems (production, economy, workers, combat) under the economy-and-combat scenario.</summary>
+#if DEBUG
+    [Theory(Skip = "The allocation gate runs on optimized (Release) builds; Debug code is JIT-compiled without boxing elision.")]
+#else
+    [Theory]
+#endif
+    [InlineData(1)]
+    [InlineData(4)]
+    public void Gameplay_ticks_do_not_allocate(int workers)
+    {
+        using var scenario = new GameplayScenario(GameplayFixtures.Classic, new GameplayScenarioOptions { MapSize = 96, Players = 2, SoldiersPerPlayer = 150, WorkersPerPlayer = 30, TreesPerPlayer = 120 }, workers);
+
+        // Into the fight: soldiers meet in the middle after ~30 s.
+        for (int t = 0; t < 700; t++)
+        {
+            scenario.RunTick();
+        }
+
+        AssertSteadyStateDoesNotAllocate(scenario, workers);
+    }
+
+    /// <summary>Structures appearing and disappearing (incremental navigation updates) while units move.</summary>
+#if DEBUG
+    [Theory(Skip = "The allocation gate runs on optimized (Release) builds; Debug code is JIT-compiled without boxing elision.")]
+#else
+    [Theory]
+#endif
+    [InlineData(1)]
+    [InlineData(4)]
+    public void Passability_churn_does_not_allocate(int workers)
+    {
+        using var scenario = new PassabilityChurnScenario(workers);
+        for (int t = 0; t < 400; t++)
+        {
+            scenario.RunTick();
+        }
+
+        int version = scenario.Simulation.World.Map.PassabilityVersion;
+        AssertSteadyStateDoesNotAllocate(scenario, workers);
+        Assert.True(scenario.Simulation.World.Map.PassabilityVersion > version + 100, "the scenario did not change passability");
+    }
+
+    private static void AssertSteadyStateDoesNotAllocate(IBenchScenario scenario, int workers)
+    {
         // Tier-0 and OSR code may allocate (e.g. unelided boxing) until tiered compilation has optimized the hot
         // methods in the background; with DOTNET_TieredCompilation=0 the first measured tick is already at 0 B.
         // Pools (plan buffers, flow-field cluster fields) also grow to their steady-state size during the first few
@@ -69,7 +115,7 @@ public class AllocationTests
         }
     }
 
-    private static (long SimThread, long AllThreads) MeasureTicks(SyntheticScenario scenario, int ticks)
+    private static (long SimThread, long AllThreads) MeasureTicks(IBenchScenario scenario, int ticks)
     {
         long simThread = 0;
         long allThreads = 0;
