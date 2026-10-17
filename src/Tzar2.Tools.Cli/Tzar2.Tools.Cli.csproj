@@ -8,6 +8,8 @@
     <Description>The t2 command-line tool: import, convert, verify-original, validate, pack, replay, desync, bench, fidelity, dump.</Description>
     <InvariantGlobalization>true</InvariantGlobalization>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- Source-generated Win32 interop of the capture harness (LibraryImport, function pointers; ADR 0030). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
