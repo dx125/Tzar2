@@ -69,7 +69,11 @@ public ref struct BinaryBufferReader
     /// <summary>Reads a fixed-point value.</summary>
     public Fixed ReadFixed() => Fixed.FromRaw(ReadInt64());
 
-    /// <summary>Reads a LEB128 unsigned integer, rejecting encodings longer than 10 bytes or above 64 bits.</summary>
+    /// <summary>
+    /// Reads a LEB128 unsigned integer. Only the canonical (shortest) encoding is accepted: encodings with redundant
+    /// trailing zero groups (e.g. <c>80 00</c> for 0), longer than 10 bytes or above 64 bits are rejected, so every value
+    /// has exactly one encoding.
+    /// </summary>
     public ulong ReadVarUInt64()
     {
         int start = _position;
@@ -85,6 +89,11 @@ public ref struct BinaryBufferReader
             result |= (ulong)(b & 0x7F) << shift;
             if ((b & 0x80) == 0)
             {
+                if (b == 0 && shift > 0)
+                {
+                    throw new InvalidDataException($"Variable-length integer at offset {start} is not canonically encoded.");
+                }
+
                 return result;
             }
         }

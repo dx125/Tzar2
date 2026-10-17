@@ -270,12 +270,31 @@ public readonly struct Fixed : IEquatable<Fixed>, IComparable<Fixed>, IComparabl
         return new string(buffer[..written]);
     }
 
-    /// <inheritdoc cref="ToString()" />
-    public string ToString(string? format, IFormatProvider? formatProvider) => ToString();
+    /// <summary>
+    /// Formats like <see cref="ToString()"/>. The only supported formats are empty/<see langword="null"/> and <c>G</c>
+    /// (both exact); the provider is ignored, the output is always invariant.
+    /// </summary>
+    /// <exception cref="FormatException"><paramref name="format"/> is not supported.</exception>
+    public string ToString(string? format, IFormatProvider? formatProvider)
+    {
+        ValidateFormat(format);
+        return ToString();
+    }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="ToString(string?, IFormatProvider?)" />
     public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider? provider)
-        => TryFormat(destination, out charsWritten);
+    {
+        ValidateFormat(format);
+        return TryFormat(destination, out charsWritten);
+    }
+
+    private static void ValidateFormat(ReadOnlySpan<char> format)
+    {
+        if (!format.IsEmpty && !format.SequenceEqual("G") && !format.SequenceEqual("g"))
+        {
+            throw new FormatException($"Format '{format.ToString()}' is not supported by Fixed; use \"\" or \"G\" (exact).");
+        }
+    }
 
     // "-" + 15 integer digits (2^47) + "." + 16 fraction digits.
     private const int MaxFormattedLength = 1 + 15 + 1 + FractionDecimalDigits;

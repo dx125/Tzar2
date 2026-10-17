@@ -154,6 +154,34 @@ public class FixedTests
         => Assert.Equal(expected, Fixed.FromRaw(raw).ToString());
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("G")]
+    [InlineData("g")]
+    public void Supported_formats_are_exact(string? format)
+    {
+        Fixed value = Fixed.FromRaw(-98304);
+        Assert.Equal("-1.5", value.ToString(format, System.Globalization.CultureInfo.GetCultureInfo("de-DE")));
+        Span<char> buffer = stackalloc char[8];
+        Assert.True(value.TryFormat(buffer, out int written, format, null));
+        Assert.Equal("-1.5", buffer[..written].ToString());
+        Assert.Equal("x=-1.5", FormattableString.Invariant($"x={value}"));
+    }
+
+    [Theory]
+    [InlineData("F2")]
+    [InlineData("N")]
+    [InlineData("X")]
+    [InlineData("G5")]
+    public void Unsupported_formats_throw(string format)
+    {
+        Fixed value = Fixed.One;
+        Assert.Throws<FormatException>(() => value.ToString(format, null));
+        Assert.Throws<FormatException>(() => string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:" + format + "}", value));
+        Assert.Throws<FormatException>(() => value.TryFormat(new char[64], out _, format, null));
+    }
+
+    [Theory]
     [InlineData("0", 0L)]
     [InlineData("+2", 131072L)]
     [InlineData("-0.5", -32768L)]
