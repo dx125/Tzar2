@@ -17,7 +17,7 @@ public class DeterminismOptInTests
     public static readonly Dictionary<string, (bool Deterministic, bool NoIO)> Expected = new(StringComparer.Ordinal)
     {
         ["Tzar2.Core"] = (true, false),
-        ["Tzar2.Content"] = (false, false),
+        ["Tzar2.Content"] = (true, false),
         ["Tzar2.Sim"] = (true, true),
         ["Tzar2.Scripting"] = (true, true),
         ["Tzar2.AI"] = (true, true),
