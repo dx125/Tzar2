@@ -29,7 +29,9 @@ alter passability. The movement step must give identical results for any worker 
   being pushed by friends behind it — that brings it closer to an enemy it overlaps; the step is reduced to an axis
   component or cancelled. A mover held by an enemy stalls, re-plans (an alternative route is taken if one exists)
   and after 3 re-plans stops with `Blocked`. Attacking the blocker is gameplay (M2-C). Two enemy columns meeting on a
-  one-tile bridge therefore stop face to face instead of passing.
+  one-tile bridge therefore stop face to face instead of passing. **Amended (M2 part C, owner decision):** before
+  giving way, a mover held by an enemy side-steps perpendicular to its step (right first, then left) when that is free,
+  so it walks around a single enemy in the open and stops only when no side is free (ADR 0038).
 * **Resolve.** Overlaps are pushed apart from the steered positions (a Jacobi step, so order-independent): equal
   shares between two movers or two idle units; an idle friend takes ¾ against a mover (shoving), an idle enemy takes
   nothing and the mover all; pushes are capped at half the radius per tick; coincident units separate along a direction
