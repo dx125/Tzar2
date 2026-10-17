@@ -105,14 +105,21 @@ internal static class DumpCommand
             stdout.WriteLine($"{package.Entries.Count} entries, {package.Entries.Sum(e => e.Size)} bytes");
             foreach (PackageEntry entry in package.Entries)
             {
-                stdout.WriteLine($"{entry.Size,10}  {entry.Path}");
+                string note = ContentPath.IsNormalized(entry.Path) ? string.Empty : "  (not a normalised content path: invisible to the VFS)";
+                stdout.WriteLine($"{entry.Size,10}  {entry.Path}{note}");
             }
 
             return ExitCodes.Success;
         }
 
         IReadOnlyList<Rgba32>? ramp = player is { } p ? LoadRamp(package, p) : null;
-        var selected = package.Entries.Where(e => patterns.Any(pattern => Matches(e.Path, pattern))).ToList();
+        // Only normalised paths are exported: a foreign package could name an entry "..\\x" or "C:x" (path traversal).
+        foreach (PackageEntry skipped in package.Entries.Where(e => !ContentPath.IsNormalized(e.Path)))
+        {
+            stderr.WriteLine($"t2 dump: skipping entry '{skipped.Path}' (not a normalised content path).");
+        }
+
+        var selected = package.Entries.Where(e => ContentPath.IsNormalized(e.Path) && patterns.Any(pattern => Matches(e.Path, pattern))).ToList();
         if (selected.Count == 0)
         {
             stderr.WriteLine("t2 dump: no entry matches.");
@@ -161,7 +168,18 @@ internal static class DumpCommand
         return p.EndsWith('*') ? path.StartsWith(p[..^1], StringComparison.Ordinal) : path == p;
     }
 
-    private static string FlatName(string path) => path.Replace('/', '_');
+    /// <summary>A single file name for a (normalised) entry path; separators and drive/stream colons are escaped.</summary>
+    internal static string FlatName(string path)
+    {
+        var sb = new System.Text.StringBuilder(path.Length);
+        foreach (char c in path)
+        {
+            sb.Append(c is '/' or '\\' or ':' || char.IsControl(c) || Array.IndexOf(Path.GetInvalidFileNameChars(), c) >= 0 ? '_' : c);
+        }
+
+        string name = sb.ToString().Trim('.', ' ');
+        return name.Length == 0 ? "_" : name;
+    }
 
     private static Rgba32[] LoadRamp(PackageReader package, int player)
     {

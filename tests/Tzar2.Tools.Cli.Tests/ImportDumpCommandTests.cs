@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Tzar2.Tests.Shared;
+using Tzar2.Tools.Cli.Commands;
 using Xunit;
 
 namespace Tzar2.Tools.Cli.Tests;
@@ -91,13 +92,39 @@ public sealed class ImportDumpCommandTests : IDisposable
     [InlineData("import", "only-one")]
     [InlineData("import", "a", "b", "--codepage", "866")]
     [InlineData("import", "a", "b", "--bogus")]
+    [InlineData("import", "a", "b", "--id", "../x")]
+    [InlineData("import", "a", "b", "--id", "a/b")]
     [InlineData("dump")]
     [InlineData("dump", "x.t2pkg", "--player", "9")]
     public void Bad_usage_fails(params string[] args) => Assert.Equal(ExitCodes.UsageError, Run(args).Code);
 
     [Fact]
     public void Import_refuses_to_write_into_the_install()
-        => Assert.Equal(ExitCodes.UsageError, Run("import", Origin, Path.Combine(Origin, "out")).Code);
+    {
+        Assert.Equal(ExitCodes.UsageError, Run("import", Origin, Path.Combine(Origin, "out")).Code);
+        // Case-insensitive file systems (Windows, macOS): a differently cased spelling is still inside the install.
+        Assert.Equal(ExitCodes.UsageError, Run("import", Origin, Path.Combine(_root, "ORIGIN", "out")).Code);
+    }
+
+    [Theory]
+    [InlineData("art/unit/a.t2spr", "art_unit_a.t2spr")]
+    [InlineData("..\\..\\x", "_.._x")]
+    [InlineData("c:x", "c_x")]
+    public void Dump_file_names_cannot_escape_the_output_folder(string entry, string expected)
+    {
+        string name = DumpCommand.FlatName(entry);
+        Assert.Equal(expected, name);
+        Assert.DoesNotContain(Path.DirectorySeparatorChar, name);
+        Assert.DoesNotContain(':', name);
+    }
+
+    [Theory]
+    [InlineData("base.original", true)]
+    [InlineData("mod-1_2", true)]
+    [InlineData(".hidden", false)]
+    [InlineData("a..b", false)]
+    [InlineData("a b", false)]
+    public void Package_ids_are_validated(string id, bool valid) => Assert.Equal(valid, ImportCommand.IsValidPackageId(id));
 
     [Fact]
     public void Help_mentions_import_and_dump()

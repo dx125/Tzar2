@@ -76,7 +76,16 @@ internal static class ImportCommand
             return ExitCodes.UsageError;
         }
 
-        if (Path.GetFullPath(output).StartsWith(Path.GetFullPath(origin).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        if (packageId is not null && !IsValidPackageId(packageId))
+        {
+            stderr.WriteLine($"t2 import: invalid package id '{packageId}' (letters, digits, '.', '-', '_'; must not start with '.').");
+            return ExitCodes.UsageError;
+        }
+
+        // REQ-IMP-04: never write into the install. Case-insensitive, because the install usually lives on a
+        // case-insensitive file system (Windows, macOS); symbolic links are resolved where they exist.
+        string originFull = Resolve(origin).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if ((Resolve(output) + Path.DirectorySeparatorChar).StartsWith(originFull, StringComparison.OrdinalIgnoreCase))
         {
             stderr.WriteLine("t2 import: the output folder must not be inside the original install (REQ-IMP-04).");
             return ExitCodes.UsageError;
@@ -106,6 +115,47 @@ internal static class ImportCommand
         stdout.Write(result.Report.ToText(quiet ? 10 : 40));
         stdout.WriteLine($"Report: {Path.Combine(Path.GetFullPath(output), ImportPipeline.ReportJson)}");
         return result.Report.Succeeded ? ExitCodes.Success : ExitCodes.Mismatch;
+    }
+
+    internal static bool IsValidPackageId(string id)
+    {
+        if (id.Length is 0 or > 64 || id[0] == '.' || id.Contains("..", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        foreach (char c in id)
+        {
+            if (!(char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or '_'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static string Resolve(string path)
+    {
+        string full = Path.GetFullPath(path);
+        try
+        {
+            // Resolve links on the longest existing prefix of the path.
+            string existing = full;
+            string rest = string.Empty;
+            while (!Directory.Exists(existing) && Path.GetDirectoryName(existing) is { } parent)
+            {
+                rest = Path.Combine(Path.GetFileName(existing), rest);
+                existing = parent;
+            }
+
+            string? target = new DirectoryInfo(existing).ResolveLinkTarget(returnFinalTarget: true)?.FullName;
+            return Path.TrimEndingDirectorySeparator(Path.Combine(target ?? existing, rest));
+        }
+        catch (IOException)
+        {
+            return full;
+        }
     }
 
     private static void PrintUsage(TextWriter output)

@@ -21,8 +21,8 @@ import tzrle  # noqa: E402
 NAMED = [
     'IMAGES/ANIMS/BRIBE.RLE',                    # surplus row
     'IMAGES/UNIT/ASIAN HORSARCHER IDLE2.RLE',    # 120-entry palette
-    'IMAGES/UNIT/EAGLE.RLE',                     # 24 directions
-    'IMAGES/UNIT/COW.RLE',                       # RGB555 unit with baked shadow 0x0020
+    'IMAGES/UNIT/EAGLE.RLE',                     # 24 directions, RGB555 unit with baked shadow 0x0020
+    'IMAGES/UNIT/COW.RLE',                       # indexed animal with baked-shadow palette entries
     'IMAGES/UNIT/EURO KNIGHT.RLE',               # indexed unit, player colour
     'IMAGES/UNIT/EAGLE_S.RLE',                   # shadow sheet
 ]
