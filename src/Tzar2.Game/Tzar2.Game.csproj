@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Game</RootNamespace>
+    <Description>Match setup, session orchestration, campaign state machine, save/load.</Description>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
+    <ProjectReference Include="../Tzar2.Content/Tzar2.Content.csproj" />
+    <ProjectReference Include="../Tzar2.Sim/Tzar2.Sim.csproj" />
+    <ProjectReference Include="../Tzar2.Scripting/Tzar2.Scripting.csproj" />
+    <ProjectReference Include="../Tzar2.AI/Tzar2.AI.csproj" />
+    <ProjectReference Include="../Tzar2.Net/Tzar2.Net.csproj" />
+    <ProjectReference Include="../Tzar2.Replay/Tzar2.Replay.csproj" />
+  </ItemGroup>
+
+</Project>

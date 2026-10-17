@@ -20,3 +20,7 @@ obj/
 !.vscode/extensions.json
 Thumbs.db
 .DS_Store
+
+# Test and benchmark output
+TestResults/
+BenchmarkDotNet.Artifacts/

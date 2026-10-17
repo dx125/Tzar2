@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Import</RootNamespace>
+    <Description>Legacy-to-new conversion pipeline and edition detection.</Description>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
+    <ProjectReference Include="../Tzar2.Formats/Tzar2.Formats.csproj" />
+    <ProjectReference Include="../Tzar2.Content/Tzar2.Content.csproj" />
+  </ItemGroup>
+
+</Project>
