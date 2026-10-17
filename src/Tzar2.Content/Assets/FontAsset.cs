@@ -110,14 +110,20 @@ public sealed class FontAsset
     }
 
     /// <summary>
-    /// The glyph strip as RGBA8 in <paramref name="colour"/>: R8 coverage strips map value <c>v</c> to alpha
-    /// <c>v / max</c> (1-bit fonts max 1, anti-aliased fonts max 7, fnt.md); indexed strips (<c>FIXSHAD</c>) use
-    /// their palette (white glyph, black drop shadow, keyed background).
+    /// The glyph strip as RGBA8 in <paramref name="colour"/>. Pixel values are coverage (fnt.md): value <c>v</c> becomes
+    /// alpha <c>v / max</c> (1-bit fonts max 1, anti-aliased fonts max 7), whether the strip was imported as R8 or, with
+    /// its irrelevant embedded palette, as Indexed8 (<c>SMALL</c>, <c>AV10</c>). Only a strip whose palette keys a used
+    /// index (<c>FIXSHAD</c>: white glyph, black drop shadow, green-keyed background) is drawn with its palette.
     /// </summary>
     public static byte[] StripToRgba(ImageAsset strip, Rgba32 colour)
     {
         ArgumentNullException.ThrowIfNull(strip);
-        if (strip.Format != PixelFormat.R8)
+        if (strip.Format == PixelFormat.Indexed8 && UsesKeyedIndex(strip))
+        {
+            return strip.ToRgba();
+        }
+
+        if (strip.Format is not (PixelFormat.R8 or PixelFormat.Indexed8))
         {
             return strip.ToRgba();
         }
@@ -138,6 +144,19 @@ public sealed class FontAsset
         }
 
         return rgba;
+    }
+
+    private static bool UsesKeyedIndex(ImageAsset strip)
+    {
+        foreach (byte v in strip.Pixels)
+        {
+            if (strip.Palette[v].A == 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Parses <c>fonts/&lt;name&gt;.json</c>.</summary>

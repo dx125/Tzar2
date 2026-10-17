@@ -260,6 +260,21 @@ public class ViewerAssetTests
         Assert.Equal(new byte[] { 10, 20, 30, 255, 10, 20, 30, 109 }, rgba);
         var oneBit = new ImageAsset { Format = PixelFormat.R8, Width = 2, Height = 1, Pixels = [1, 0] };
         Assert.Equal(new byte[] { 255, 255, 255, 255, 255, 255, 255, 0 }, FontAsset.StripToRgba(oneBit, new Rgba32(255, 255, 255, 255)));
+
+        // 1-bit fonts imported with their (irrelevant, all-black) embedded palette are still coverage.
+        Rgba32[] black = Enumerable.Repeat(new Rgba32(0, 0, 0, 255), 256).ToArray();
+        var indexed = new ImageAsset { Format = PixelFormat.Indexed8, Width = 2, Height = 1, Palette = black, Pixels = [1, 0] };
+        Assert.Equal(new byte[] { 9, 9, 9, 255, 9, 9, 9, 0 }, FontAsset.StripToRgba(indexed, new Rgba32(9, 9, 9, 255)));
+
+        // FIXSHAD keys its background: drawn with its palette (glyph, drop shadow, transparent).
+        Rgba32[] fix = Enumerable.Range(0, 256).Select(i => i switch
+        {
+            250 => new Rgba32(0, 255, 0, 0),
+            255 => new Rgba32(255, 255, 255, 255),
+            _ => new Rgba32(0, 0, 0, 255),
+        }).ToArray();
+        var keyed = new ImageAsset { Format = PixelFormat.Indexed8, Width = 3, Height = 1, Palette = fix, Pixels = [255, 0, 250] };
+        Assert.Equal(new byte[] { 255, 255, 255, 255, 0, 0, 0, 255, 0, 0, 0, 0 }, FontAsset.StripToRgba(keyed, new Rgba32(9, 9, 9, 255)));
     }
 
     private const string TerrainJson = """
