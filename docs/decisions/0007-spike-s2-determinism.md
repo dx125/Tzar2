@@ -133,6 +133,11 @@ table: [`spikes/S2-determinism/results-macos-arm64-2026-10-17.md`](../../spikes/
 * Rosetta is not Windows: Windows' CRT libm and the Windows x64 JIT are not covered. Before M2 closes, the S2
   harness (or its replacement) must run in CI on `windows-latest` x64 and `ubuntu-latest` x64 next to macOS arm64.
   `run-matrix.sh` already works without Rosetta (`DOTNET_X64` absent).
+  **Done in M2 part A:** the nightly job `spike-s2-determinism` runs the harness on `windows-latest` and
+  `ubuntu-latest` (net8/net10 × Debug/Release) against the reference hash `AAE3D9913A101FAF`
+  ([ADR 0017](0017-deterministic-worker-pool-and-determinism-ci.md)). That is what the harness produces at its own
+  commit `8a3da0c` and on main (macOS arm64 and x64/Rosetta, net8 and net10); the `A47B60C0B29054F5` in the table above
+  was most likely measured before the spike branch picked up the StateHasher length-prefix amendment (ADR 0005).
 * Lua-CSharp upgrades are determinism-relevant. Re-run `run-matrix.sh` (≈1 min) and the S4 probe on every package
   bump.
 * Revisit if Lua-CSharp gains native integers, or if a mod API needs floats in sim-affecting logic.
