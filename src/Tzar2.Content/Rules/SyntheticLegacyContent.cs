@@ -47,6 +47,14 @@ public static class SyntheticLegacyContent
         ("to_ship_level4", null), ("to_ship_level5", null), ("to_ship_level6", null), ("to_convertres", null),
     ];
 
+    /// <summary>The spell orders of the original (<c>ORDERS.INI ACTION = spell x</c>, stable keys; GAME-11).</summary>
+    public static IReadOnlyList<string> SpellOrders { get; } =
+    [
+        "spell_heal", "spell_spawndragon", "spell_raiseexp", "spell_flamebolt", "spell_bless", "spell_freeze", "spell_whirlpool",
+        "spell_turntostone", "spell_lightning", "spell_firerain", "spell_spawnbat", "spell_spawnstonegolem", "spell_spawncarpet",
+        "spell_spawnjin", "spell_magicvision", "spell_berserk", "spell_hypnotize", "spell_cloak", "spell_curse",
+    ];
+
     /// <summary>A VFS with the engine defaults and the synthetic tables mounted.</summary>
     public static VirtualFileSystem CreateFileSystem()
     {
@@ -77,6 +85,8 @@ public static class SyntheticLegacyContent
             ["Pikeman", "pikeman", "95f, 35g", "17", "6", "", "73", "9", "3", "3", "3", "Barracks", "te_halberd"],
             ["Mage", "mage", "140g", "29", "14", "9", "58", "4", "1", "5", "2", "Mage Tower", "*"],
             ["Trader", "trader", "390f, 210w", "49", "8", "", "340", "", "", "", "", "Market", "te_traderoutes"],
+            ["Priest", "priest", "160g", "31", "20", "16", "64", "18", "1", "5", "2", "Cathedral", "*"],
+            ["Crusader", "crusader", "", "", "6", "", "190", "15", "7", "6", "2", "Spawn", "te_crusade"],
         ]));
         source.Add("tables/data/euro buildings.txt.json", Tsv("DATA/EURO BUILDINGS.TXT", buildingHeader,
         [
@@ -91,6 +101,7 @@ public static class SyntheticLegacyContent
             ["Tavern", "tavern", "210w,190f", "41", "6", "140", "990", "-40,-60", "*"],
             ["Stable", "stable", "190w,190f", "39", "6", "70", "820", "*", "*"],
             ["Market", "market", "210w,210f", "61", "7", "210", "1450", "*", "tcguild"],
+            ["Outpost", "outpost", "410s,190w", "61", "9", "510", "2100", "+190,-210", "castle"],
             [],
             ["Castle", "castle", "900s,1100w", "90", "11", "700", "5500", "+300,-150", "*"],
             ["Cathedral", "cathedral", "1900s,2100g", "89", "9", "690", "4900", "+290,-60", "*"],
@@ -114,6 +125,7 @@ public static class SyntheticLegacyContent
             ["Cannon tower", "tower_stone2", "340w", "26", "16", "290", "", "*", "te_cannontower"],
             [],
             ["Magic Gateway", "magicgateway", "290w", "11", "9", "*", "1950", "*", "*"],
+            ["Dummy", "dummy", "290w", "11", "", "", "5100", "*", "te_tactics"],
         ]));
         source.Add("tables/data/comm units.txt.json", Tsv("DATA/COMM UNITS.TXT", unitHeader,
         [
@@ -134,6 +146,25 @@ public static class SyntheticLegacyContent
             ["Dwarf", "dwarf", "84g", "14", "4", "", "115", "8", "6", "5", "3", "Gate", "*"],
             ["Skeleton", "skeleton", "34f", "7", "6", "", "42", "5", "1", "5", "3", "Spawn", "*"],
             ["Ghost", "ghost", "44g", "16", "6", "", "58", "9", "1", "5", "3", "Spawn", "*"],
+            ["Bat", "bat", "30m", "", "11", "", "22", "4", "", "7", "3", "Spawn", "te_bat"],
+            ["Stone Golem", "troll", "110g,650m", "", "9", "", "420", "24", "4", "3", "3", "Spawn", "te_stonegolem"],
+            ["Dragon", "dragon", "75g,850m", "", "13", "3", "310", "24", "1", "5", "3", "Spawn", "te_dragon"],
+            ["Jinn", "jinn", "90g,320m", "", "9", "", "290", "21", "4", "5", "3", "Spawn", "te_jin"],
+            ["Carpet", "carpet", "85g,450m", "", "9", "", "95", "", "", "", "", "Spawn", "te_magiccarpet"],
+        ]));
+        source.Add("tables/data/arab units.txt.json", Tsv("DATA/ARAB UNITS.TXT", unitHeader,
+        [
+            ["Peon", "peon", "55f", "9", "6", "", "48", "4", "1", "5", "2", "Castle", "*"],
+            ["Jihad warrior", "jihad_warrior", "105f", "9", "6", "", "72", "11", "3", "5", "", "From Peasant", "te_jihad"],
+        ]));
+        source.Add("tables/data/arab buildings.txt.json", Tsv("DATA/ARAB BUILDINGS.TXT", buildingHeader,
+        [
+            ["Magic Workshop", "magicworkshop", "310s", "21", "6", "190", "1250", "*", "*"],
+        ]));
+        source.Add("tables/data/heroes.ini.json", Ini("DATA/HEROES.INI",
+        [
+            ("euro", [("Synthia", string.Empty), ("Testor", string.Empty), ("Fixturo", string.Empty)]),
+            ("arab", [("Mockad", string.Empty), ("Stubbir", string.Empty)]),
         ]));
         source.Add("tables/data/res.ini.json", Ini("DATA/RES.INI",
         [
@@ -172,6 +203,9 @@ public static class SyntheticLegacyContent
             ("e_magetower", @"building\euro mage.bmp", "object", "0,0,128,128"),
             ("e_tcguild", @"building\euro guild.bmp", "object", "0,0,128,128"),
             ("e_academy", @"building\euro academy.bmp", "object", "0,0,128,128"),
+            ("e_outpost", @"building\euro outpost.bmp", "object", "0,0,96,96"),
+            ("dummy", @"building\dummy.bmp", "object", "0,0,32,32"),
+            ("r_magicworkshop", @"building\arab magic workshop.bmp", "object", "0,0,96,96"),
             ("field", @"building\fields.bmp", "selection", "0,0,96,96"),
             ("wall_wood", @"building\walls\wood.bmp", "object", "0,0,32,32"),
             ("wall_stone", @"building\walls\stone.bmp", "object", "0,0,32,32"),
@@ -250,7 +284,7 @@ public static class SyntheticLegacyContent
                 ("te_irrigation", "te_livestock"),
             ]),
             ("required", [("knight", "stable"), ("workshop", "blacksmith"), ("market", "tcguild")]),
-            ("orders", [("spell_heal", "te_healing"), ("loan", "te_usury")]),
+            ("orders", [("spell_heal", "te_healing"), ("loan", "te_usury"), ("spell_freeze", "te_freeze"), ("raisedead", "te_necromancy"), ("spell_bless", "te_bless")]),
         ]));
         source.Add("tables/data/menu.ini.json", Ini("DATA/MENU.INI",
         [
@@ -271,6 +305,13 @@ public static class SyntheticLegacyContent
             ("wall_wood", [("to_wall_stone", "S")]),
             ("gate_wood_00", [("gateopen", "O"), ("to_gate_stone", "S")]),
             ("e_galleon", [("to_ship_level2", "L")]),
+            // A reduced, mixed caster card: one mage casts the spells of all three civilizations (GAME-11 tests).
+            ("e_mage", [("spell_lightning", "L"), ("spell_freeze", "Z"), ("spell_spawnbat", "T"), ("spell_cloak", "I"), ("spell_firerain", "R"),
+                ("spell_whirlpool", "W"), ("spell_turntostone", "U"), ("spell_berserk", "X"), ("spell_magicvision", "V"), ("raisedead", "D"),
+                ("spell_spawnstonegolem", "O"), ("spell_spawncarpet", "C"), ("spell_flamebolt", "F")]),
+            ("e_priest", [("spell_heal", "H"), ("spell_bless", "B"), ("spell_raiseexp", "Y")]),
+            ("r_peon", [("become_jihadw", "J"), ("bribe", "I")]),
+            ("r_magicworkshop", [("build_item", "I")]),
         ]));
         var orders = new List<(string, List<(string, string)>)>();
         foreach (string tech in TechnologyKeys)
@@ -285,19 +326,52 @@ public static class SyntheticLegacyContent
 
         orders.Add(("e_peon", [("ACTION", "CREATE peon"), ("CLASSNAME", "peon"), ("IMG", "3")]));
         orders.Add(("gateopen", [("ACTION", "gateopen"), ("IMG", "4")]));
+        foreach (string spell in SpellOrders)
+        {
+            orders.Add((spell, [("ACTION", "spell " + spell), ("PLACE", "command_spell"), ("IMG", "905")]));
+        }
+
+        orders.Add(("raisedead", [("ACTION", "raisedead"), ("PLACE", "command_spell"), ("IMG", "906")]));
+        orders.Add(("cloak", [("ACTION", "cloak"), ("IMG", "907")]));
+        orders.Add(("murder", [("ACTION", "murder"), ("PLACE", "command_murder"), ("IMG", "908")]));
+        orders.Add(("become_jihadw", [("ACTION", "become_jihad_warrior"), ("IMG", "909")]));
+        orders.Add(("bribe", [("ACTION", "bribe"), ("PLACE", "command_bribe"), ("IMG", "910")]));
+        orders.Add(("build_item", [("ACTION", "build_item"), ("IMG", "911")]));
         source.Add("tables/data/orders.ini.json", Ini("DATA/ORDERS.INI", [.. orders]));
     }
 
     private static void AddObjects(MemorySource source)
     {
-        AddObject(source, "peon", "unit", "euro", "e_peon");
-        AddObject(source, "footman", "unit", "euro", "e_footman");
-        AddObject(source, "archer", "unit", "euro", "e_archer1");
-        AddObject(source, "maceman", "unit", "euro", "e_maceman");
-        AddObject(source, "knight", "unit", "euro", "e_knight");
-        AddObject(source, "pikeman", "unit", "euro", "e_pikeman");
-        AddObject(source, "mage", "unit", "euro", "e_mage", extra: [("max_manna", "90")]);
-        AddObject(source, "castle", "building, capture", "euro", "e_castle", extra: [("pop_count", "24"), ("menu", "e_castle")]);
+        AddObjectSections(source, "PEON", [("general", [("class", "peon"), ("type", "unit")]), ("euro", [("image", "e_peon"), ("max_obj_in_holder", "6")]), ("arab", [("image", "r_peon"), ("max_obj_in_holder", "6"), ("menu", "r_peon")])]);
+        AddObject(source, "footman", "unit", "euro", "e_footman", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "archer", "unit", "euro", "e_archer1", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "maceman", "unit", "euro", "e_maceman", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "knight", "unit", "euro", "e_knight", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "pikeman", "unit", "euro", "e_pikeman", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "mage", "unit", "euro", "e_mage", extra: [("max_manna", "90"), ("menu", "e_mage"), ("max_obj_in_holder", "7")]);
+        AddObject(source, "priest", "unit", "euro", "e_priest", extra: [("max_manna", "95"), ("menu", "e_priest"), ("max_obj_in_holder", "7")]);
+        AddObject(source, "crusader", "unit, mounted", "euro", "e_crusader", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "bat", "unit", "comm", "bat", teren: "0");
+        AddObject(source, "troll", "unit", "comm", "troll", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "dragon", "unit", "comm", "dragon", teren: "0");
+        AddObject(source, "jinn", "unit", "comm", "jinn", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "skeleton", "unit", "comm", "skeleton", extra: [("max_obj_in_holder", "7")]);
+        AddObjectSections(source, "CARPET", [("general", [("class", "carpet"), ("teren", "0"), ("type", "unit")]), ("comm", [("image", "carpet"), ("max_obj_in_holder", "6")]), ("accept", [("infantryunits", string.Empty), ("mountedunits", string.Empty)])]);
+        AddObject(source, "jihad_warrior", "unit", "arab", "r_jihad", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "magicworkshop", "building, capture", "arab", "r_magicworkshop", extra: [("menu", "r_magicworkshop")]);
+        AddObject(source, "dummy", "building", "comm", "dummy");
+        AddObjectSections(source, "CRUSADE_ANCHOR", [("general", [("class", "CrusadeAnchor"), ("teren", "1")]), ("euro", [("menu", "crusade_anchor"), ("cost", "1100g,1900f"), ("fog_range", "4")])]);
+        AddObjectSections(source, "FOG_REVEALER", [("general", [("class", "fog_revealer")]), ("comm", [("fog_range", "9")])]);
+        AddObjectSections(source, "ITEM", [("general", [("class", "item"), ("type", "item")]), ("comm", []), ("enter", [("infantryunits", string.Empty), ("mountedunits", string.Empty)])]);
+        AddObjectSections(source, "ITEM_HEALTH", [("general", [("class", "item_health"), ("type", "item")]), ("comm", [("menu", "resitem")]), ("enter", [("infantryunits", string.Empty), ("mountedunits", string.Empty)])]);
+        AddObjectSections(source, "ITEM_MAGIC", [("general", [("class", "item_magic"), ("type", "item")]), ("comm", [("menu", "resitem")]), ("enter", [("infantryunits", string.Empty)])]);
+        AddObjectSections(source, "ITEM_PLUSPLUS", [("general", [("class", "item_plusplus"), ("type", "item")]), ("comm", [("menu", "resitem")]), ("enter", [("infantryunits", string.Empty), ("mountedunits", string.Empty)])]);
+        AddObjectSections(source, "ITEM_SCROLL", [("general", [("class", "item_scroll"), ("type", "item")]), ("comm", [("menu", "resitem")]), ("enter", [("infantryunits", string.Empty), ("mountedunits", string.Empty)])]);
+        AddObjectSections(source, "ITEM_SOUL", [("general", [("class", "item_soul"), ("type", "item")]), ("comm", [("menu", "item_soul")]), ("enter", [("infantryunits", string.Empty), ("mountedunits", string.Empty)])]);
+        AddObjectSections(source, "ITEM_FLAG", [("general", [("class", "item_flag"), ("type", "item")]), ("comm", [("menu", "resitem")]), ("enter", [("peon", string.Empty)])]);
+        AddObjectSections(source, "RESITEM", [("general", [("class", "resitem")]), ("comm", [("menu", "resitem")]), ("enter", [("peon", string.Empty), ("infantryunits", string.Empty), ("castle", string.Empty)])]);
+        AddObjectSections(source, "OUTPOST", [("general", [("class", "outpost"), ("type", "building, capture")]), ("damage", [("00", "85,15"), ("01", "75,25"), ("02", "65,35")]), ("euro", [("image", "e_outpost"), ("max_obj_in_holder", "40")]), ("accept", [("allunits", string.Empty)])]);
+        AddObjectSections(source, "CASTLE", [("general", [("class", "castle"), ("type", "building, capture")]), ("damage", [("00", "95,5"), ("01", "95,5"), ("02", "85,15")]), ("euro", [("image", "e_castle"), ("pop_count", "24"), ("menu", "e_castle"), ("max_obj_in_holder", "45")]), ("accept", [("allunits", string.Empty)])]);
         AddObject(source, "house", "building, capture", "euro", "e_house", extra: [("pop_count", "12")]);
         AddObject(source, "barrack", "building, capture", "euro", "e_barrack");
         AddObject(source, "storage", "building, capture", "euro", "e_storage", extra: [("menu", "e_storage")]);
@@ -322,9 +396,9 @@ public static class SyntheticLegacyContent
         AddObject(source, "tower_wood", "building, capture", "comm", "tower_wood", file: "tower wood", extra: [("menu", "tower_wood")]);
         AddObject(source, "tower_wood2", "building, capture", "comm", "tower_wood2", file: "tower wood2", extra: [("menu", "tower_wood2")]);
         AddObject(source, "tower_stone", "building, capture", "comm", "tower_stone", file: "tower stone", extra: [("menu", "tower_stone")]);
-        AddObject(source, "tower_stone2", "building, capture", "comm", "tower_stone2", file: "tower stone2");
-        AddObject(source, "catapult", "unit", "comm", "catapult", teren: "1");
-        AddObject(source, "galleon", "unit", "comm", "galleon", teren: "2", extra: [("menu", "e_galleon")]);
+        AddObject(source, "tower_stone2", "building, capture", "comm", "tower_stone2", file: "tower stone2", extra: [("max_damage", "45"), ("min_attack_range", "1")]);
+        AddObject(source, "catapult", "unit", "comm", "catapult", teren: "1", extra: [("min_attack_range", "3")]);
+        AddObjectSections(source, "GALLEON", [("general", [("class", "galleon"), ("teren", "2"), ("type", "unit")]), ("damage", [("00", "85,15"), ("01", "75,25"), ("02", "65,35")]), ("comm", [("image", "galleon"), ("menu", "e_galleon"), ("max_obj_in_holder", "20")]), ("accept", [("earthunits", string.Empty)])]);
         AddObject(source, "fishing_boat", "unit", "comm", "boat", teren: "2");
         AddObject(source, "cow", "unit, animal", "comm", "cow", teren: "1", extra: [("max_manna", "40")]);
         AddObject(source, "trader", "unit, mounted", "euro", "caravan");
@@ -356,6 +430,9 @@ public static class SyntheticLegacyContent
         section.AddRange(extra ?? []);
         source.Add($"tables/data/objects/{file ?? cls}.ini.json", Ini($"DATA/OBJECTS/{(file ?? cls).ToUpperInvariant()}.INI", [("general", general), (civ, section)]));
     }
+
+    private static void AddObjectSections(MemorySource source, string file, (string Section, List<(string Key, string Value)> Entries)[] sections)
+        => source.Add($"tables/data/objects/{file.ToLowerInvariant()}.ini.json", Ini($"DATA/OBJECTS/{file}.INI", sections));
 
     private static byte[] Tsv(string name, string[] header, string[][] rows) => Json(w =>
     {

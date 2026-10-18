@@ -149,6 +149,11 @@ legacy:
   startingResources: { low: Low, medium: Medium, high: High }
   # Civilization prefixes of class names in BONUS.INI.
   bonusCivPrefixes: { e: euro, a: asia, r: arab }
+  # GAME-10 (ADR 0094): item object classes -> item kind (OBJECTS/ITEM*.INI; armor shares the generic ITEM class, see
+  # comm.item_armor); who may carry each comes from its [enter] list.
+  items: { item: weapon, item_flag: flag, item_health: potion, item_magic: spellbook, item_plusplus: plusplus, item_scroll: scroll, item_soul: soul, resitem: resource }
+  # GAME-11: objects outside the tables imported with their cost and fog_range (crusade anchor, magic vision's revealer).
+  objects: [CrusadeAnchor, fog_revealer]
   # Hash of what the compiler reads from the tables of the clean reference build; another value means a modified
   # installation (a warning in the import and ruleset reports, not an error). Changes with the lists above.
   referenceEdition: GOG v1.10 EN
@@ -161,6 +166,7 @@ legacy:
   Collision: { radius: 7 }            # UNVERIFIED (UNK-11): collision radius in px
   CorpseOnDeath: {}
   PopulationCost: { amount: 1 }       # GAME-05: 1 population per unit in classic
+  Experience: {}                      # GAME-08: units gain experience in combat (manual ch. 5 §2.1)
 
 ^Building:
   Armor: { defence: 0 }               # RESISTANCE (from the table) reduces damage instead, see gameplay.resistanceScale
@@ -191,25 +197,27 @@ legacy:
   Armament: { autoAcquire: false }    # UNVERIFIED: idle peasants do not start fights
   Builder: { civilizations: [own, comm] }
   Capturer: {}                        # GAME-04
+  Briber: {}                          # GAME-11: order bribe (Bribery)
+  BribeImmune: {}                     # TDD GAME-11: peasants cannot be bribed
   Harvester:
     capacity: 10                      # UNVERIFIED (UNK-17)
     gatherMs: { food: 1000, wood: 1000, stone: 1000, gold: 1000, iron: 1000 }   # UNVERIFIED (UNK-17): per unit
 
 ^class.fishing_boat:
   inherits: [^Ship]
+  Armament: { projectile: arrow }     # UNVERIFIED (UNK-22)
   Harvester:
     capacity: 20                      # UNVERIFIED (UNK-17)
     gatherMs: { food: 1000 }          # UNVERIFIED (UNK-17)
-# Galleons, hulks and xebecs "begin trade" between harbors (manual ch. 5 §4.4.4, §7; GAME-14).
-^class.galleon: { inherits: [^Ship], Trader: { capacity: 200, access: water, technology: te_traderoutes } }   # UNVERIFIED (UNK-28): load
-^class.hulk: { inherits: [^Ship], Trader: { capacity: 150, access: water, technology: te_traderoutes } }      # UNVERIFIED (UNK-28)
-^class.xebec: { inherits: [^Ship], Trader: { capacity: 100, access: water, technology: te_traderoutes } }     # UNVERIFIED (UNK-28)
-^class.catapult: { inherits: [^Siege] }
-^class.hcatapult: { inherits: [^Siege] }
-^class.ballista: { inherits: [^Siege] }
+^class.galleon: { inherits: [^Ship], Trader: { capacity: 200, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon } }   # UNVERIFIED (UNK-28, UNK-22)
+^class.hulk: { inherits: [^Ship], Trader: { capacity: 150, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon } }      # UNVERIFIED (UNK-28, UNK-22)
+^class.xebec: { inherits: [^Ship], Trader: { capacity: 100, access: water, technology: te_traderoutes }, Armament: { projectile: arrow } }     # UNVERIFIED (UNK-28); BONUS.INI arrow_attack lists xebecs
+^class.catapult: { inherits: [^Siege], Armament: { damage: cannon, projectile: stone } }    # UNVERIFIED (UNK-22): stones land where the target stood
+^class.hcatapult: { inherits: [^Siege], Armament: { damage: cannon, projectile: stone } }   # UNVERIFIED (UNK-22)
+^class.ballista: { inherits: [^Siege], Armament: { projectile: bolt } }                     # UNVERIFIED (UNK-22)
 
 # The tables give armored chariots and caravans no SPEED.
-^class.chariot: { Mobile: { speed: 4 } }   # UNVERIFIED (UNK-12)
+^class.chariot: { Mobile: { speed: 4 }, Armament: { rate: 3 } }   # UNVERIFIED (UNK-12, UNK-07): the tables give armored chariots no SPEED and no RATE
 ^class.trader:                             # caravans: cycle between two markets (GAME-14, ADR 0103)
   Mobile: { speed: 4 }                     # UNVERIFIED (UNK-12)
   Trader: { capacity: 100, access: land, technology: te_traderoutes }   # UNVERIFIED (UNK-28): load per trip
@@ -251,6 +259,7 @@ legacy:
 ^class.castle:
   DropOff: { resources: [food, wood, stone, gold, iron] }
   ProtectedDelete: {}                 # GAME-04: Shift + Del
+  Holder: { healPerMinute: 120 }      # UNVERIFIED (UNK-24): garrisoned units "heal themselves quickly" (strategy guide)
 ^class.farm:
   DropOff: { resources: [food] }
 ^class.lumber:
@@ -269,7 +278,7 @@ legacy:
   TradeDock: { access: water }        # GAME-14: ships trade between harbors
 
 # Guilds are deletable only with Shift + Del (GAME-04).
-^class.cathedral: { ProtectedDelete: {} }
+^class.cathedral: { ProtectedDelete: {}, CrusadePreacher: {} }   # GAME-11: crusades are preached at the cathedral
 ^class.mosque: { ProtectedDelete: {} }
 ^class.shaolinn: { ProtectedDelete: {} }
 ^class.magetower: { ProtectedDelete: {} }
@@ -306,6 +315,41 @@ legacy:
   Bridge: {}
   -Burnable:
   -RuinOnDeath:
+
+# ---- GAME-07...11: combat, experience, holders, items, magic (ADRs 0090-0095) ----------------------------------------
+# Projectiles per shooter (TDD §10 GAME-07: arrow, bolt, cannon, rocket arrow, stone). Which unit fires which is not in
+# a table: the BONUS.INI group arrow_attack names the arrow shooters; the rest follows the manual's descriptions.
+^class.archer: { Armament: { projectile: arrow } }
+^class.longbowman: { Armament: { projectile: arrow } }
+^class.horse_archer: { Armament: { projectile: arrow } }
+^class.tower_wood: { Armament: { projectile: arrow } }
+^class.tower_wood2: { Armament: { projectile: arrow } }
+^class.tower_stone: { Armament: { projectile: arrow } }
+^class.tower_stone2: { Armament: { damage: cannon, projectile: cannon } }        # cannon tower
+^class.tower_rocket: { Armament: { damage: cannon, projectile: rocket_arrow } }  # UNVERIFIED (UNK-22)
+^class.mage: { Armament: { projectile: magic } }                                 # UNVERIFIED: the mage's bolt (OBJECTS MAGIC)
+^class.priest: { Armament: { projectile: magic } }                               # exorcism (order exorcism = attack)
+^class.dragon: { Armament: { projectile: flame_ball } }                          # UNVERIFIED (OBJECTS FLAME_BALL)
+^class.crusader: { BribeImmune: {} }                                             # TDD GAME-11: crusaders cannot be bribed
+^class.dummy:
+  TrainingDummy: {}                   # GAME-08: training against dummies (Tactics); they take no damage
+  -Burnable:
+  -RuinOnDeath:
+^class.outpost:
+  Holder: { healPerMinute: 120 }      # UNVERIFIED (UNK-24): "units garrisoned ... heal themselves quickly" (strategy guide)
+^class.jihad_warrior:
+  ConvertsFrom: { classes: [peon], order: become_jihadw }   # manual ch. 5: Jihad warriors are made from peasants
+  Armament: { rate: 3 }               # UNVERIFIED (UNK-07): the table gives an ATTACK but no RATE
+^euro.priest: { Armament: { rate: 2 } }   # UNVERIFIED (UNK-07): RATE 0 in the table, but priests attack (exorcism)
+^arab.priest: { Armament: { rate: 2 } }   # UNVERIFIED (UNK-07): no RATE in the table
+^class.carpet:
+  Mobile: { locomotor: air, speed: 5 }    # UNVERIFIED (UNK-12): the table gives magic carpets no SPEED
+  Collision: { radius: 12 }               # UNVERIFIED (UNK-11)
+^asia.priest:
+  ConvertsFrom: { classes: [monk], order: become_priest }   # TDD E.2: Asian priests from monks
+^class.magicworkshop:
+  ItemCrafter: { items: [comm.item, comm.item_armor, comm.item_health, comm.item_magic, comm.item_plusplus] }   # manual ch. 5 §6.1
+^Item: {}
 
 # ---- entries not in the unit/building tables ----------------------------------------------------------------------
 
@@ -379,16 +423,15 @@ te_concentration: { Technology: { effects: [{ stat: manaRegen, percent: 50, cate
 # Consumed by GAME-08 (experience), GAME-09 (holders), GAME-11 (spells), GAME-14 (trade/tavern).
 te_learning: { Technology: { effects: [{ stat: experienceCap, add: 4, category: unit }] } }          # UNVERIFIED (UNK-23)
 te_heroism: { Technology: { effects: [{ stat: experienceCap, add: 1000, category: unit }] } }        # UNVERIFIED (UNK-23): "unlimited"
-te_nobility: { Technology: { effects: [{ stat: abilityPower, add: 1, category: unit }] } }           # UNVERIFIED (UNK-23): leadership
-te_honor: { Technology: { effects: [{ stat: abilityPower, percent: 25, category: unit }] } }         # UNVERIFIED (UNK-23)
+# te_nobility (Leadership) and te_honor act through combat.leadership* / combat.honor* (GAME-08, ADR 0092).
 te_warfare: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }     # UNVERIFIED (UNK-23)
 te_tactics: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }     # UNVERIFIED (UNK-23)
 te_suntzubook: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }  # UNVERIFIED (UNK-23)
 te_bodybuilding: { Technology: { effects: [{ stat: healthPerLevel, add: 5, category: unit }] } }     # UNVERIFIED (UNK-23)
 te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes: [monk] }] } }       # UNVERIFIED (UNK-23)
 te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, add: 4, groups: [ships] }] } } # UNVERIFIED (UNK-24)
-te_inquisition: { Technology: { effects: [{ stat: abilityPower, percent: 50, classes: [priest] }] } }   # UNVERIFIED (UNK-26)
-te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 4, classes: [priest] }] } }        # UNVERIFIED (UNK-26)
+te_inquisition: { Technology: { effects: [{ stat: attack, percent: 50, classes: [priest] }] } }     # UNVERIFIED (UNK-26): exorcism is the priests' attack
+te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 4, classes: [priest] }] } }        # UNVERIFIED (UNK-26): +4 tiles of spell range
 te_tradetaxes: { Technology: { effects: [{ stat: income, percent: 10, classes: [market] }] } }       # UNVERIFIED (UNK-28)
 te_banking: { Technology: { effects: [{ stat: income, percent: 10, classes: [castle] }] } }          # UNVERIFIED (UNK-28)
 
@@ -400,3 +443,97 @@ to_ship_level3: { Upgrade: { after: [to_ship_level2], effects: [{ stat: attack, 
 to_ship_level4: { Upgrade: { after: [to_ship_level3], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
 to_ship_level5: { Upgrade: { after: [to_ship_level4], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
 to_ship_level6: { Upgrade: { after: [to_ship_level5], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
+
+# ---- GAME-07...11 constants (ADRs 0090-0095; docs/mechanics/m3-placeholders.md, stream E) ---------------------------
+combat:
+  # GAME-08 experience. Manual (ch. 6 Hints): "each experience point adds one point to the attack and half a point to the
+  # defense"; strategy guide: "as each experience level is earned, the next level requires more effort" and
+  # "Researching Learning allows your units to gain experience" (so no levels before Learning).
+  experiencePerDamagePercent: 100     # UNVERIFIED (UNK-23): experience per point of damage dealt to an enemy
+  experiencePerKill: 0                # UNVERIFIED (UNK-23)
+  levelBaseXp: 100                    # UNVERIFIED (UNK-23): level n needs 100 x n x (n + 1) / 2 experience
+  baseLevelCap: 0                     # strategy guide: Learning allows experience; te_learning / te_heroism raise the cap
+  attackPerLevel: 1                   # manual
+  defenceHalvesPerLevel: 1            # manual: half a point per level (truncated: UNVERIFIED rounding, UNK-08)
+  heroLevel: 12                       # TDD GAME-08: level 12 = named hero
+  leadershipTechnology: te_nobility   # manual: Leadership "makes the units around a hero gain experience along with him"
+  leadershipRadiusTiles: 4            # UNVERIFIED (UNK-23)
+  leadershipSharePercent: 50          # UNVERIFIED (UNK-23)
+  honorTechnology: te_honor           # manual: Honor "increases the attack damage of heroes, when fighting other heroes"
+  honorAttackPercent: 25              # UNVERIFIED (UNK-23)
+  dummyMaxLevel: 3                    # UNVERIFIED (UNK-23): training dummies teach the first levels only
+  heroNames: legacy                   # DATA/HEROES.INI
+  # GAME-09 holders.
+  exitRadiusTiles: 3                  # UNVERIFIED: units leaving a holder take free tiles this close
+  unitKeywords:                       # the [accept]/[enter] keywords of the object INIs
+    allunits: [foot, mounted, large]
+    earthunits: [foot, mounted, large]
+    infantryunits: [foot]
+    mountedunits: [mounted]
+  # GAME-10 crafting (Arabian Magic Workshop: "better items cost more and take more time", manual ch. 5 §6).
+  craftGoldPerPower: 50               # UNVERIFIED (UNK-25)
+  craftMsPerPower: 2000               # UNVERIFIED (UNK-25)
+  craftMaxPower: 20                   # UNVERIFIED (UNK-25)
+  # GAME-11.
+  bribeCostPercent: 200               # UNVERIFIED (UNK-26): gold = 200% of the unit's cost
+  crusadeAnchor: euro.crusadeanchor   # OBJECTS CRUSADE_ANCHOR.INI (cost from the data)
+  crusader: euro.crusader
+  crusadeSize: 5                      # ⚠ HYPOTHESIS (UNK-26): crusaders raised at the anchor
+  crusadeAnchorRadiusTiles: 4         # TDD GAME-11: anchor <= 4 tiles from the cathedral
+  crusadeCooldownMs: 60000            # UNVERIFIED (1.09: a cooldown after the crusaders die)
+  # GAME-07 projectiles (speeds, homing and splash are UNVERIFIED, UNK-22; strategy guide: peasants step away from
+  # catapult stones "just as the projectiles are about to land", so stones land where the target stood).
+  projectiles:
+    arrow: { pixelsPerSecond: 400, homing: true }
+    bolt: { pixelsPerSecond: 480, homing: true }
+    stone: { pixelsPerSecond: 200, homing: false, hitRadiusPx: 24, splashRadiusPx: 32, splashPercent: 50 }
+    cannon: { pixelsPerSecond: 320, homing: false, hitRadiusPx: 20, splashRadiusPx: 24, splashPercent: 50 }
+    rocket_arrow: { pixelsPerSecond: 360, homing: true, splashRadiusPx: 16, splashPercent: 50 }
+    magic: { pixelsPerSecond: 320, homing: true }
+    flame_ball: { pixelsPerSecond: 280, homing: true, splashRadiusPx: 16, splashPercent: 50 }
+    freeze_bolt: { pixelsPerSecond: 320, homing: true }
+    flame_bolt: { pixelsPerSecond: 320, homing: true }
+
+# ---- spells (GAME-11, ADR 0095) -----------------------------------------------------------------------------------
+# Which caster has which spell and which technology unlocks it come from the data (command cards, TECHTREE [orders]);
+# the spells themselves are rules entries keyed by their order (the data only names them).
+# Every magnitude below is UNVERIFIED (UNK-26). Ranges and radii in tiles; amounts by effect (damage / healing / bonus
+# percent / experience); summons pay the summoned type's mana and resource cost on top of the spell's mana.
+spell_heal: { new: true, Spell: { effect: heal, amount: 40, mana: 10, range: 6, cooldownMs: 1500, castMs: 500, targets: { category: unit } } }
+spell_bless: { new: true, Spell: { effect: bless, amount: 25, durationMs: 30000, mana: 30, range: 6, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }
+spell_lightning: { new: true, Spell: { effect: damage, amount: 40, mana: 30, range: 10, cooldownMs: 3000, castMs: 500 } }
+spell_freeze: { new: true, Spell: { effect: freeze, durationMs: 10000, mana: 40, range: 10, cooldownMs: 5000, castMs: 500, projectile: freeze_bolt, targets: { category: unit } } }
+spell_cloak: { new: true, Spell: { effect: cloak, durationMs: 30000, mana: 40, range: 6, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
+spell_spawnbat: { new: true, Spell: { effect: summon, summon: comm.bat, range: 2, cooldownMs: 2000, castMs: 500 } }
+spell_spawnstonegolem: { new: true, Spell: { effect: summon, summon: comm.troll, range: 2, cooldownMs: 5000, castMs: 1000 } }
+spell_spawndragon: { new: true, Spell: { effect: summon, summon: comm.dragon, range: 2, cooldownMs: 5000, castMs: 1000 } }
+spell_spawncarpet: { new: true, Spell: { effect: summon, summon: comm.carpet, range: 2, cooldownMs: 5000, castMs: 1000 } }
+spell_spawnjin: { new: true, Spell: { effect: summon, summon: comm.jinn, range: 2, cooldownMs: 5000, castMs: 1000 } }
+spell_firerain: { new: true, Spell: { effect: areaDamage, amount: 10, radius: 2, durationMs: 5000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too
+spell_whirlpool: { new: true, Spell: { effect: areaDamage, affects: enemy, amount: 30, radius: 2, durationMs: 6000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"
+spell_flamebolt: { new: true, Spell: { effect: damage, amount: 30, mana: 25, range: 10, cooldownMs: 2000, castMs: 500, projectile: flame_bolt } }
+spell_turntostone: { new: true, Spell: { effect: stone, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
+spell_berserk: { new: true, Spell: { effect: confuse, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
+spell_magicvision: { new: true, Spell: { effect: reveal, summon: comm.fog_revealer, mana: 40, range: 30, cooldownMs: 5000, castMs: 500 } }
+spell_raiseexp: { new: true, Spell: { effect: experience, amount: 100, mana: 50, range: 6, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }   # Mastery: mana into experience
+spell_curse: { new: true, Spell: { effect: curse, amount: 25, durationMs: 30000, mana: 30, range: 8, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }
+spell_hypnotize: { new: true, Spell: { effect: freeze, durationMs: 10000, mana: 40, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # on no command card
+raisedead: { new: true, Spell: { effect: raiseDead, summon: comm.skeleton, count: 5, radius: 3, mana: 40, range: 8, cooldownMs: 5000, castMs: 1000 } }
+cloak: { new: true, Spell: { effect: cloak, target: self, durationMs: 60000, cooldownMs: 1000 } }                       # ninjas (ADR 0095)
+murder: { new: true, Spell: { effect: kill, mana: 50, range: 0, cooldownMs: 10000, castMs: 500, targets: { category: unit } } }   # ninjas; heroes are immune
+
+# ---- items (GAME-10, ADR 0094): defaults of each kind; a map can give single items other values (M4 converter) ------
+comm.item: { Item: { power: 3 } }                                           # weapon: +3 attack, UNVERIFIED (UNK-25)
+comm.item_armor:
+  new: true
+  inherits: [^Item]
+  Legacy: { class: item_armor, civ: comm }
+  Item: { kind: armor, holders: [infantryunits, mountedunits], power: 2 }   # UNVERIFIED (UNK-25)
+comm.item_health: { Item: { health: 100 } }                                 # potion: UNVERIFIED (UNK-25)
+comm.item_magic: { Item: { spell: spell_firerain, charges: 3, cooldownMs: 10000 } }   # manual: the Fire Rain spell book; UNVERIFIED
+comm.item_plusplus: { Item: { level: 1 } }                                  # ⚠ HYPOTHESIS: one level
+comm.item_soul: { Item: { spell: murder, charges: 1 } }                     # item_kill, used once (UNVERIFIED); item_berserk is not implemented
+comm.resitem: { Item: { resource: gold, power: 100 } }                      # UNVERIFIED (UNK-25)
+
+# Magic vision's revealer (OBJECTS FOG_REVEALER, fog_range from the data) lasts a while (UNVERIFIED, UNK-26).
+comm.fog_revealer: { Lifetime: { ms: 30000 } }

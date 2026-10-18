@@ -45,7 +45,7 @@ public static class RulesetCompiler
     /// <summary>VFS folder of ruleset files.</summary>
     public const string RulesFolder = "rules/";
 
-    private static readonly string[] Sections = ["ruleset", "resources", "gameplay", "terrain", "legacy", "world"];
+    private static readonly string[] Sections = ["ruleset", "resources", "gameplay", "terrain", "legacy", "world", CombatCompiler.Section];
 
     /// <summary>Compiles the ruleset <paramref name="name"/> (e.g. <c>classic</c>).</summary>
     /// <exception cref="RulesException">A file is missing or malformed, or an entry is invalid.</exception>
@@ -140,6 +140,7 @@ public static class RulesetCompiler
         var compiled = new List<ResolvedEntry>();
         var technologyEntries = new List<ResolvedEntry>();
         var upgradeEntries = new List<ResolvedEntry>();
+        var spellEntries = new List<ResolvedEntry>();
         foreach (ResolvedEntry e in resolved)
         {
             if (e.Key.StartsWith('^'))
@@ -147,10 +148,11 @@ public static class RulesetCompiler
                 continue;
             }
 
-            // Technologies and upgrades (GAME-06) are entries with a Technology/Upgrade trait; ids of their own.
-            (e.Find("Technology") is not null ? technologyEntries : e.Find("Upgrade") is not null ? upgradeEntries : compiled).Add(e);
+            // Technologies, upgrades (GAME-06) and spells (GAME-11) are entries with a Technology/Upgrade/Spell trait; ids of their own.
+            (e.Find("Technology") is not null ? technologyEntries : e.Find("Upgrade") is not null ? upgradeEntries : e.Find("Spell") is not null ? spellEntries : compiled).Add(e);
         }
 
+        spellEntries.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
         compiled.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
         technologyEntries.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
         upgradeEntries.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
@@ -161,7 +163,8 @@ public static class RulesetCompiler
 
         // 5. Traits, then technologies and upgrades (their effects name entity types).
         var researchIds = new ResearchIds(technologyEntries, upgradeEntries);
-        var context = new EntityCompiler(compiled, resources, gameplay, researchIds, diagnostics);
+        var combat = new CombatCompiler(settings, spellEntries, diagnostics);
+        var context = new EntityCompiler(compiled, resources, gameplay, researchIds, diagnostics) { SpellIds = combat.SpellId, ProjectileIds = combat.ProjectileId };
         List<EntityTypeDefinition> types = context.CompileAll();
         List<TerrainTypeDefinition> terrain = ReadTerrain(settings);
         GameplaySettings gameplaySettings = gameplay.Build(legacy, settings);
@@ -173,6 +176,7 @@ public static class RulesetCompiler
         var orderGates = new List<OrderGate>();
         List<TechnologyDefinition> technologies = research.Technologies(technologyEntries, orderGates);
         List<UpgradeDefinition> upgrades = research.Upgrades(upgradeEntries);
+        CombatRules combatRules = combat.Compile(types, context.PendingSpecs, research, researchIds, legacy);
         var civilizations = new SortedSet<string>(StringComparer.Ordinal);
         foreach (EntityTypeDefinition t in types)
         {
@@ -216,7 +220,8 @@ public static class RulesetCompiler
                 civilizations: [.. civilizations],
                 orderGates: orderGates,
                 hudResourceMask: hudMask,
-                world: WorldReader.Build(settings, gameplaySettings));
+                world: WorldReader.Build(settings, gameplaySettings),
+                combat: combatRules);
             return new CompiledRuleset(ruleset, diagnostics, warnings, legacyHash);
         }
         catch (ArgumentException ex)
@@ -421,7 +426,7 @@ public static class RulesetCompiler
 
         public void Apply(string section, YamlNode value, string source)
         {
-            if (section is "ruleset" or "gameplay" or "legacy" or "world")
+            if (section is "ruleset" or "gameplay" or "legacy" or "world" or CombatCompiler.Section)
             {
                 YamlMapping map = Map(value, source, section);
                 foreach (KeyValuePair<string, YamlNode> f in map.Entries)
