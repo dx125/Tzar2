@@ -35,6 +35,12 @@ would need the original game to record them and would be original-derived data t
   enemies an "at most N" event waits for are removed ("cleared"); on a retry of a lost mission the kingdoms whose units
   must survive get `hmgod` ("god"). A mission counts as completable when the solver reaches the scenario's next map
   (or its win); the report says how much cheating that took.
+* **What counts as completable** (product-owner decision, 2026-10-18): cheat-assisted completion counts, provided the
+  assistance only stands in for player skill — kills, spawned units and objectives, resources, invulnerability. The
+  solver never sets a script variable, fires a trigger, skips a scripted step or ends a mission (`hmnext`): it only
+  reads the trigger state and issues commands. `CampaignAutoplay.IsAllowedAssist` lists the allowed commands (player
+  orders, conversation replies, debug spawn/kill, `hmgod`, the resource cheats); every batch is checked and anything
+  else throws. Maps completed by pure play are reported as a secondary number.
 * **Match setup for real maps** (in `ScenarioMatch`): owner-less objects that work for a kingdom (the sim gives Nature
   no workers, producers or drop-offs) and the Rescue pseudo-kingdom's objects go to one more, **passive** kingdom
   (`ControllerKind.Passive`: no AI, no human), neutral to everyone; a free slot is used, else an inactive kingdom that

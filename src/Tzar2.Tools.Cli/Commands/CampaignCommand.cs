@@ -137,6 +137,7 @@ internal static class CampaignCommand
             reports.Add(r);
             all &= r.Completed;
             stdout.WriteLine($"  => {(r.Completed ? "COMPLETED" : "NOT COMPLETED")}{(r.Error is { } e ? " (" + e + ")" : string.Empty)}");
+            stdout.WriteLine($"  maps completed: {r.MapsCompleted} of {source.Campaign.Maps.Length}; by pure play: {r.MapsByPurePlay}");
         }
 
         if (reportPath is not null)

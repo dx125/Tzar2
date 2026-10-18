@@ -80,7 +80,14 @@ public sealed record MissionReport(string MapId, bool Completed, MissionResult R
 /// <param name="Missions">Every mission played, in order.</param>
 /// <param name="Progress">The final progress (what a profile would store).</param>
 /// <param name="Error">Why the run stopped early, or null.</param>
-public sealed record CampaignReport(string CampaignId, bool Completed, ImmutableArray<MissionReport> Missions, CampaignProgress Progress, string? Error);
+public sealed record CampaignReport(string CampaignId, bool Completed, ImmutableArray<MissionReport> Missions, CampaignProgress Progress, string? Error)
+{
+    /// <summary>Distinct maps completed at least once.</summary>
+    public int MapsCompleted => Missions.Where(m => m.Completed).Select(m => m.MapId).Distinct(StringComparer.Ordinal).Count();
+
+    /// <summary>Distinct maps completed without any assistance (the secondary number of ADR 0134).</summary>
+    public int MapsByPurePlay => Missions.Where(m => m.Completed && m.Assist == "play").Select(m => m.MapId).Distinct(StringComparer.Ordinal).Count();
+}
 
 /// <summary>
 /// Plays a campaign headless to its end (TDD §22 item 5 "campaign completion bots"; ADR 0133): each mission runs in a
@@ -202,6 +209,31 @@ public static class CampaignAutoplay
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The commands the solver may issue (ADR 0134): orders any player could give, and assistance that only stands in
+    /// for player skill — debug spawns and kills, resources, invulnerability. Nothing that sets a script variable, fires
+    /// a trigger or skips a scripted step (no <c>hmnext</c>, no scenario state writes: the solver only reads the trigger
+    /// state).
+    /// </summary>
+    public static bool IsAllowedAssist(CommandKind kind, int arg0) => kind switch
+    {
+        CommandKind.Move or CommandKind.Attack or CommandKind.Stop or CommandKind.Board or CommandKind.Unload or CommandKind.ScenarioReply => true,
+        CommandKind.DebugSpawn or CommandKind.DebugKill => true,
+        CommandKind.Cheat => arg0 is (int)Sim.Systems.CheatCode.God or (int)Sim.Systems.CheatCode.LargeResources or (int)Sim.Systems.CheatCode.SmallResources,
+        _ => false,
+    };
+
+    private static void EnsureAllowed(CommandList batch)
+    {
+        for (int i = 0; i < batch.Count; i++)
+        {
+            if (!IsAllowedAssist(batch[i].Kind, batch[i].Arg0))
+            {
+                throw new InvalidOperationException($"The solver may not issue {batch[i].Kind} ({batch[i].Arg0}): only player orders and skill-replacing assistance are allowed (ADR 0134).");
+            }
+        }
     }
 
     /// <summary>Plays one mission and ends it in the campaign flow.</summary>
@@ -377,6 +409,7 @@ public static class CampaignAutoplay
             {
                 var cheat = new CommandList();
                 cheat.Add(CommandKind.Cheat, [], 0, 0, default, (int)Sim.Systems.CheatCode.God, 0);
+                EnsureAllowed(cheat);
                 session.SubmitAs((byte)k, cheat);
             }
 
@@ -426,6 +459,7 @@ public static class CampaignAutoplay
 
             if (_batch.Count > 0)
             {
+                EnsureAllowed(_batch);
                 session.Submit(_batch);
             }
         }
@@ -458,6 +492,7 @@ public static class CampaignAutoplay
             Content.Compiled.Scenario.Expressions.UnaryExpr u => UsesResources(u.Operand),
             Content.Compiled.Scenario.Expressions.BinaryExpr b => UsesResources(b.Left) || UsesResources(b.Right),
             Content.Compiled.Scenario.Expressions.SequenceExpr q => q.Statements.Any(UsesResources),
+            Content.Compiled.Scenario.Expressions.AssignExpr a => UsesResources(a.Target) || UsesResources(a.Value),
             _ => false,
         };
 
@@ -844,7 +879,7 @@ public static class CampaignAutoplay
                 EntityTypeDefinition type = world.Ruleset.EntityTypes[id.TypeId];
                 bool match = spec switch
                 {
-                    TypedObjects t => type.Key == t.TypeKey,
+                    TypedObjects t => id.TypeId == world.Ruleset.EntityTypeId(t.TypeKey),
                     CategoryObjects c => Scripting.Legacy.LegacyTriggerSystem.InCategory(c.Category, type),
                     _ => false,
                 };

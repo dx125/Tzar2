@@ -268,7 +268,7 @@ public static class ScenarioMatch
                 ScenarioOperations.SetDiplomacy(world, a, b, stance, sharing);
             }
 
-            // A kingdom that lets an ally command its units (the legacy "Command Units" flag of the pair) is enough for
+            // Runs after the loop above has set every pair's stance. A kingdom that lets an ally command its units (the legacy "Command Units" flag of the pair) is enough for
             // the sim's consented sharing, which needs both offers: the other side's offer is added (UNVERIFIED, UNK-69).
             foreach (DiplomacyDef d in scenario.Diplomacy)
             {

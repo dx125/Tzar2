@@ -23,7 +23,7 @@ public sealed class ScenarioMatchTests
         int keep = b.Structure("euro.castle", MapObject.Nature, 12, 12); // a drop-off without an owner
         int lost = b.Unit("euro.peon", MapObject.Nature, 20, 20, new ObjectInfo("lost", "", ObjectFlags.Rescue));
         MissionContent mission = new(b.Map(), b.Scenario());
-        MatchSetup setup = ScenarioMatch.Setup(mission, Rules, computerAi: false);
+        MatchSetup setup = ScenarioMatch.Setup(mission, Rules, computerAi: true);
         Assert.Equal(3, setup.Players.Count);
         Assert.Equal(ControllerKind.Passive, setup.Players[2].Controller);
         using var session = new GameSession(setup, Rules);
@@ -34,7 +34,20 @@ public sealed class ScenarioMatchTests
         Assert.Equal(2, world.Identities.Get(peon).Owner);
         Assert.Equal(Sim.Kingdoms.Stance.Neutral, world.Diplomacy.StanceOf(0, 2));
         Assert.Equal(Sim.Kingdoms.Stance.Neutral, world.Diplomacy.StanceOf(2, 1));
-        Assert.Null(session.Ai);
+        Assert.NotNull(session.Ai); // the computer kingdom runs the AI…
+        Assert.DoesNotContain(session.Ai!.Players, p => p.Settings.Slot == 2); // …the passive one does not
+    }
+
+    [Fact]
+    public void The_solver_issues_only_orders_and_skill_replacing_assistance()
+    {
+        Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Move, 0));
+        Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.DebugKill, 0));
+        Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Cheat, (int)Sim.Systems.CheatCode.God));
+        Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Cheat, (int)Sim.Systems.CheatCode.LargeResources));
+        Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Cheat, (int)Sim.Systems.CheatCode.Next)); // would skip the mission
+        Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Cheat, (int)Sim.Systems.CheatCode.Reveal));
+        Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Resign, 0));
     }
 
     [Fact]
