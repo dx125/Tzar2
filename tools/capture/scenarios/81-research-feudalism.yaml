@@ -1,0 +1,44 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: research-feudalism
+title: Research time and a technology effect: Feudalism (UNK-21)
+resolves: [UNK-21]
+priority: 5
+minutes: 2
+default: false                      # batch E (ADR 0113)
+experimental: true
+description: |
+  No spawn cheats. The castle (Ctrl+C) trains a peasant (P), researches Feudalism (D: 30 s, 300 gold in TECHNOLOGIES.INI)
+  and trains another peasant. The selection panel is captured every 500 ms during the research (its last change is the
+  completion); the food stockpile is followed in memory (MP2 starts at 1000): the first training's cost is
+  1000 minus the counter's first value, the second training's step is the cost after Feudalism.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: feudalism
+    vars: {measure: research, subject: te_feudalism, expected_s: "30", count: "1", quantity: food, primary: food-series, direction: down, initial: "1000"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - key: {key: C, ctrl: true}
+  - memscan: {name: food-all, value: "1000", width: 4}
+  - wait: 1
+  - memscan: {name: food-stable, from: food-all, mode: unchanged}
+  - key: P
+  - wait: 1.5
+  - memscan: {name: food-down, from: food-stable, mode: decreased}
+  - memsample: {name: food-series, scan: food-down, max_addresses: 256, interval_ms: 100, duration_s: 75}
+  - key: D
+  - move: [70, 400]
+  - burst: {name: panel, count: 90, interval_ms: 500, region: [4, 165, 142, 140]}
+  - key: {key: C, ctrl: true}
+  - key: P
+  - wait: 20
+analysis: [region-timing, counter-rate]

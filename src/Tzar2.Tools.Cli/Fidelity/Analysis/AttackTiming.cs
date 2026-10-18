@@ -44,6 +44,12 @@ internal static class AttackTiming
                 e.Add("rate_stat", trial.Var("rate_stat"));
                 e.Add("attack_stat", trial.Var("attack_stat"));
                 e.Add("defence_stat", trial.Var("defence_stat"));
+                if (trial.Var("bonus_percent") is { } bonus)
+                {
+                    e.Add("bonus_percent", bonus);
+                    e.Add("resistance", trial.Var("resistance"));
+                }
+
                 e.Add("addresses", series.Addresses.Count);
                 e.Add("samples", series.TimesMicroseconds.Count);
                 if (series.TimesMicroseconds.Count > 1)

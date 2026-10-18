@@ -32,6 +32,16 @@ pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch C   # ~1
 pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch D   # ~15 min: day/night clock (no input at all)
 ```
 
+After batch A has come back and the later scenarios have been adjusted, batches E–I (ADR 0113) follow the same way:
+
+```powershell
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch E   # ~18 min: group speed, research, bonuses, gathering, capture
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch F   # ~25 min: fire, repair, healing, field decay, experience
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch G   # ~13 min: magic, loans, score
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch H   # ~22 min: combat outcomes (fast game speed)
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch I   # ~11 min: trade and gambling (discovery)
+```
+
 Use your own game folder (the one containing `Tzar.exe`). If PowerShell refuses to run scripts:
 
 ```powershell
@@ -78,6 +88,25 @@ current layout.
   capture anyway: add `-AllowModified` (the results are then marked as coming from a modified install).
 * If the self-test fails, make sure the terminal is the active window and no other program (remote desktop, a game
   overlay, a macro tool) grabs input, then rerun.
+
+## Random maps from the editor (part of the editor session, ADR 0113)
+
+The random-map statistics (TDD RE-10) come from maps the original itself generates. In the editor (`TzarEdit.exe`):
+
+1. **File → New**, choose **Random** (not Empty).
+2. **Terrain Set:** Grass. **Size:** Medium (128×128) for the first round, Large (192×192) for the second.
+   **Players:** 2 for Medium, 4 for Large. Leave the check boxes as the dialog offers them (note which are on) and
+   the **Resources** radio button on its middle setting.
+3. **Type:** Archipelagos, then Island, Continental, Lakes, Dry (one after the other; skip "Random").
+4. Click **OK**, then **File → Save As**, and save the map with the type first in its name:
+   `continental-128-2-1.wmp`, `continental-128-2-2.wmp`, `island-192-4-1.wmp`, …
+5. Make **two maps per type and size**: 5 types × 2 sizes × 2 = 20 maps (about a minute each).
+6. Put the 20 `.wmp` files in one folder, zip it and send it with a note of the check boxes that were on.
+   The maps are made by the original and stay private like the capture zips.
+
+We keep them in the git-ignored `tests/fidelity/local-maps/` (`*.wmp` is ignored everywhere, and the REQ-LEGAL-01
+guard rejects the extension) and run `t2 fidelity maps tests/fidelity/local-maps`, which writes only numbers (castle spacing, gold, stone and trees per kingdom)
+into `tests/fidelity/facts/random-maps.yaml`.
 
 ## Windows 11 notes (first session, 2026-10-18, Windows 11 25H2, GOG v1.10)
 

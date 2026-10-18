@@ -31,6 +31,8 @@ internal static class FidelityAnalyzer
         "gather-rates" => GatherRates.Run(ctx, trials),
         "region-timing" => RegionTiming.Run(ctx, trials),
         "day-clock" => DayClock.Run(ctx, trials),
+        "counter-rate" => CounterRate.Run(ctx, trials),
+        "combat-outcomes" => CombatOutcomes.Run(ctx, trials),
         _ => AnalysisOutcome.Skipped($"unknown analysis '{kind}'"),
     };
 

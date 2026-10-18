@@ -47,7 +47,11 @@ The second session runs four batches (`run-capture.ps1 -Batch A|B|C|D`, ADR 0112
 | C | ~16 min | speed per point (15 more classes) | m2: SPEED → px/s; m3: armored chariot and caravan speed |
 | D | ~15 min | day length, night share | m3: day length, night hours |
 
-Still without a scenario: XP gain, trade profit, technology magnitudes, repair, fire, capture, random maps (RE-10),
+Batches E–I and the editor session (ADR 0113) cover the remaining §22.3 checks except AI script semantics, which
+stays pending by owner decision. Expected gate if every trial works: E 50 %, F 70 %, G 83 %, H 87 %, editor session
+90 %; trade and gambling need one follow-up after I's discovery run.
+
+Still without a scenario before ADR 0113: XP gain, trade profit, technology magnitudes, repair, fire, capture, random maps (RE-10),
 AI experiments (RE-07), and the "one level darker" terrain patches (UNK-32).
 
 The operator should also send the `SPGAMETICK` / `MPGAMETICK` values of GOG's own `tzar.ini`, if it has them (REQ-SIM-01 note).

@@ -6,7 +6,7 @@ provenance:
   edition: GOG v1.10 English (reference build)
   install_matches_reference: true
   session: capture-20261018-024524
-  method: read from the window capture named in each entry (ADR 0111, ADR 0112)
+  method: read by hand from capture frames; every value names its session, trial, frame, reader and date under sources (ADR 0113)
 analyses:
   setup-screen:
     status: ok
@@ -15,3 +15,6 @@ analyses:
       source: smoke/plain window capture "setup" (single-player setup screen of MP2)
       population_limit_default: 200
       starting_resources_default: map  # the control shows "Default": the map's own amounts on a preset map
+      sources:
+        population_limit_default: {session: capture-20261018-024524, trial: smoke/plain, frame: window/setup.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-18}
+        starting_resources_default: {session: capture-20261018-024524, trial: smoke/plain, frame: window/setup.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-18}

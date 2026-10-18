@@ -1,0 +1,184 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: combat-outcomes
+title: Per-pair combat outcomes, 8 duels per game (UNK-08, S4)
+resolves: [UNK-08]
+priority: 5
+minutes: 20
+default: false                      # batch H (ADR 0113)
+experimental: true
+description: |
+  Eight duels of the same pair at once (2 x 4 spots in the open middle of MP2), side b (kingdom 2) spawned first, then
+  side a; the game runs at its top speed (the outcome does not depend on it). 35 s later a game snapshot tagged with the
+  spots shows who is left. Twelve pairs, including mirror pairs: if the 8 duels of a mirror pair do not all end the same
+  way, the original is random and the batch must be repeated (7 games per pair for 100 trials). Neighbouring duels are
+  120 px apart (inside each other's sight): the analysis counts winners per spot, so cross-fights blur rather than fake
+  an outcome.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: footman-vs-footman
+    vars: {a: footman, b: footman, a_hp: "65", a_attack: "6", a_defence: "3", a_rate: "5", b_hp: "65", b_attack: "6", b_defence: "3", b_rate: "5", a_bonus: "0", b_bonus: "0"}
+  - name: peon-vs-peon
+    vars: {a: peon, b: peon, a_hp: "50", a_attack: "5", a_defence: "0", a_rate: "3", b_hp: "50", b_attack: "5", b_defence: "0", b_rate: "3", a_bonus: "0", b_bonus: "0"}
+  - name: archer-vs-archer
+    vars: {a: archer, b: archer, a_hp: "50", a_attack: "5", a_defence: "0", a_rate: "4", b_hp: "50", b_attack: "5", b_defence: "0", b_rate: "4", a_bonus: "0", b_bonus: "0"}
+  - name: knight-vs-footman
+    vars: {a: knight, b: footman, a_hp: "120", a_attack: "12", a_defence: "6", a_rate: "4", b_hp: "65", b_attack: "6", b_defence: "3", b_rate: "5", a_bonus: "0", b_bonus: "0"}
+  - name: maceman-vs-pikeman
+    vars: {a: maceman, b: pikeman, a_hp: "120", a_attack: "8", a_defence: "0", a_rate: "3", b_hp: "75", b_attack: "8", b_defence: "4", b_rate: "2", a_bonus: "0", b_bonus: "0"}
+  - name: pikeman-vs-knight
+    vars: {a: pikeman, b: knight, a_hp: "75", a_attack: "8", a_defence: "4", a_rate: "2", b_hp: "120", b_attack: "12", b_defence: "6", b_rate: "4", a_bonus: "600", b_bonus: "0"}
+  - name: footman-vs-pikeman
+    vars: {a: footman, b: pikeman, a_hp: "65", a_attack: "6", a_defence: "3", a_rate: "5", b_hp: "75", b_attack: "8", b_defence: "4", b_rate: "2", a_bonus: "150", b_bonus: "0"}
+  - name: maceman-vs-footman
+    vars: {a: maceman, b: footman, a_hp: "120", a_attack: "8", a_defence: "0", a_rate: "3", b_hp: "65", b_attack: "6", b_defence: "3", b_rate: "5", a_bonus: "0", b_bonus: "0"}
+  - name: knight-vs-knight
+    vars: {a: knight, b: knight, a_hp: "120", a_attack: "12", a_defence: "6", a_rate: "4", b_hp: "120", b_attack: "12", b_defence: "6", b_rate: "4", a_bonus: "0", b_bonus: "0"}
+  - name: archer-vs-peon
+    vars: {a: archer, b: peon, a_hp: "50", a_attack: "5", a_defence: "0", a_rate: "4", b_hp: "50", b_attack: "5", b_defence: "0", b_rate: "3", a_bonus: "0", b_bonus: "0"}
+  - name: footman-vs-archer
+    vars: {a: footman, b: archer, a_hp: "65", a_attack: "6", a_defence: "3", a_rate: "5", b_hp: "50", b_attack: "5", b_defence: "0", b_rate: "4", a_bonus: "150", b_bonus: "0"}
+  - name: knight-vs-maceman
+    vars: {a: knight, b: maceman, a_hp: "120", a_attack: "12", a_defence: "6", a_rate: "4", b_hp: "120", b_attack: "8", b_defence: "0", b_rate: "3", a_bonus: "0", b_bonus: "0"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [470, 290]
+  - chat: "${cheat}spawn ${b}"
+  - click: [470, 290]               # place
+  - click: [470, 290]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [560, 250]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [590, 290]
+  - chat: "${cheat}spawn ${b}"
+  - click: [590, 290]               # place
+  - click: [590, 290]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [560, 250]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [710, 290]
+  - chat: "${cheat}spawn ${b}"
+  - click: [710, 290]               # place
+  - click: [710, 290]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [560, 250]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [830, 290]
+  - chat: "${cheat}spawn ${b}"
+  - click: [830, 290]               # place
+  - click: [830, 290]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [560, 250]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [470, 370]
+  - chat: "${cheat}spawn ${b}"
+  - click: [470, 370]               # place
+  - click: [470, 370]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [560, 250]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [590, 370]
+  - chat: "${cheat}spawn ${b}"
+  - click: [590, 370]               # place
+  - click: [590, 370]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [560, 250]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [710, 370]
+  - chat: "${cheat}spawn ${b}"
+  - click: [710, 370]               # place
+  - click: [710, 370]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [560, 250]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [830, 370]
+  - chat: "${cheat}spawn ${b}"
+  - click: [830, 370]               # place
+  - click: [830, 370]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [560, 250]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [430, 290]
+  - chat: "${cheat}spawn ${a}"
+  - click: [430, 290]               # place
+  - move: [550, 290]
+  - chat: "${cheat}spawn ${a}"
+  - click: [550, 290]               # place
+  - move: [670, 290]
+  - chat: "${cheat}spawn ${a}"
+  - click: [670, 290]               # place
+  - move: [790, 290]
+  - chat: "${cheat}spawn ${a}"
+  - click: [790, 290]               # place
+  - move: [430, 370]
+  - chat: "${cheat}spawn ${a}"
+  - click: [430, 370]               # place
+  - move: [550, 370]
+  - chat: "${cheat}spawn ${a}"
+  - click: [550, 370]               # place
+  - move: [670, 370]
+  - chat: "${cheat}spawn ${a}"
+  - click: [670, 370]               # place
+  - move: [790, 370]
+  - chat: "${cheat}spawn ${a}"
+  - click: [790, 370]               # place
+  - key: NumPlus
+  - key: NumPlus
+  - key: NumPlus
+  - key: NumPlus
+  - key: NumPlus
+  - move: [70, 400]
+  - wait: 35
+  - snapshot: {name: after, tags: {spots: "450,290;570,290;690,290;810,290;450,370;570,370;690,370;810,370", half: "35"}}
+analysis: [combat-outcomes]

@@ -35,6 +35,12 @@ internal static class GatherRates
             var e = new YamlWriter();
             e.Add("trial", trial.Trial);
             e.Add("target", trial.Var("target"));
+            if (trial.Var("target_xy") is { } target)
+            {
+                e.Add("target_xy", target, "screen x,y of the resource");
+                e.Add("dropoff_xy", trial.Var("dropoff_xy"), "screen x,y of the drop-off's nearest edge");
+            }
+
             CaptureData? before = trial.Of("window").FirstOrDefault(c => c.Name == "before");
             CaptureData? after = trial.Of("window").FirstOrDefault(c => c.Name == "after");
             string? resource = before is not null && after is not null && ctx.TryImage(trial, before) is { } b && ctx.TryImage(trial, after) is { } a

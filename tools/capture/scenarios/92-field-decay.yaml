@@ -1,0 +1,48 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: field-decay
+title: Decay of an untended field (UNK-17)
+resolves: [UNK-17]
+priority: 5
+minutes: 5.5
+default: false                      # batch F (ADR 0113)
+experimental: true
+description: |
+  A field (B, I; HEALTH 100) is built at once next to the castle and its builder sent away. The field's hit points are
+  sampled for 5 minutes: when decay starts and how fast it goes.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: untended
+    vars: {quantity: hp, subject: field, max_value: "100", primary: field-stable-series, direction: down}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - chat: "${cheat}buildozer"
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - key: I
+  - click: [470, 450]
+  - wait: 2
+  - chat: "${cheat}buildozer"
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - click: {at: [760, 300], button: right}   # the builder leaves the field
+  - memscan: {name: field-all, value: "100", width: 4}
+  - wait: 1
+  - memscan: {name: field-stable, from: field-all, mode: unchanged}
+  - memsample: {name: field-stable-series, scan: field-stable, max_addresses: 4096, interval_ms: 1000, duration_s: 300}
+  - wait: 301
+analysis: [counter-rate]

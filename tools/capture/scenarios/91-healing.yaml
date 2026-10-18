@@ -1,0 +1,56 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: healing
+title: Healing inside the castle (UNK-24)
+resolves: [UNK-24]
+priority: 5
+minutes: 2.2
+default: false                      # batch F (ADR 0113)
+experimental: true
+description: |
+  A starting peasant (HEALTH 50) is hit by a spawned enemy footman for a few seconds, then sent into the castle
+  (right click on the castle: it is a holder). Its hit points are sampled while it is held.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: castle
+    vars: {quantity: hp, subject: peon, max_value: "50", primary: hp-held, direction: up}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - memscan: {name: hp-all, value: "50", width: 4}
+  - wait: 1
+  - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
+  - chat: "${cheat}kingdom 2"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - move: [700, 470]
+  - chat: "${cheat}spawn footman"
+  - click: [700, 470]               # place
+  - click: [700, 470]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [450, 450]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - wait: 5
+  - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - click: {at: [900, 620], button: right}   # into the castle
+  - memsample: {name: hp-held, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 60}
+  - wait: 61
+analysis: [counter-rate]

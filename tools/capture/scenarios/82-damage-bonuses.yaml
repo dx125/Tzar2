@@ -1,0 +1,59 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: damage-bonuses
+title: Damage with BONUS.INI matches (UNK-08)
+resolves: [UNK-07, UNK-08]
+priority: 5
+minutes: 4
+default: false                      # batch E (ADR 0113)
+experimental: true
+description: |
+  Like attack-timing (same set-up), with pairs that have a BONUS.INI match. The suite checks the engine's rule
+  attack x (1 + bonus) - defence, truncated, at least the minimum damage. European stats of the reference tables.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: pikeman-vs-knight
+    vars: {attacker: pikeman, defender: knight, defender_hp: "120", rate_stat: "2", attack_stat: "8", defence_stat: "6", bonus_percent: "600", resistance: "0"}
+  - name: footman-vs-pikeman
+    vars: {attacker: footman, defender: pikeman, defender_hp: "75", rate_stat: "5", attack_stat: "6", defence_stat: "4", bonus_percent: "150", resistance: "0"}
+  - name: archer-vs-maceman
+    vars: {attacker: archer, defender: maceman, defender_hp: "120", rate_stat: "4", attack_stat: "5", defence_stat: "0", bonus_percent: "100", resistance: "0"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [600, 340]
+  - chat: "${cheat}spawn ${defender}"
+  - click: [600, 340]               # place
+  - click: [600, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - wait: 1
+  - memscan: {name: hp-all, value: "${defender_hp}", width: 4}
+  - wait: 1
+  - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
+  - move: [660, 340]
+  - chat: "${cheat}spawn ${attacker}"
+  - click: [660, 340]               # place
+  - memsample: {name: hp-stable-series, scan: hp-stable, max_addresses: 4096, interval_ms: 20, duration_s: 20}
+  - click: [660, 340]               # select the attacker
+  - click: {at: [600, 340], button: right}   # attack the defender
+  - wait: 3
+  - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
+  - memsample: {name: hp-series, scan: hp-hit, max_addresses: 256, interval_ms: 10, duration_s: 15}
+  - wait: 16
+  - snapshot: after
+analysis: [attack-timing]

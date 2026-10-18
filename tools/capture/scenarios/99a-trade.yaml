@@ -1,0 +1,65 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: trade
+title: Trade profit (discovery, UNK-28)
+resolves: [UNK-28]
+priority: 5
+minutes: 6
+default: false                      # batch I (ADR 0113)
+experimental: true
+description: |
+  Discovery run (the market and gamble dialogs have not been seen yet): two markets are built at once (B, the
+  "guilds" category, Z) about 8 and 16 tiles from a third; an MP2 (Asian) peasant trades between them (T, then the
+  far market); the gold stockpile is followed in memory. Window captures after every step let the scenario be finished
+  once the trade order is known.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: trade
+    vars: {quantity: gold, subject: trade, primary: gold-series, direction: up, distance_tiles: "8"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - memscan: {name: gold-all, value: "1000", width: 4}
+  - wait: 1
+  - memscan: {name: gold-stable, from: gold-all, mode: unchanged}
+  - chat: "${cheat}notech"
+  - chat: "${cheat}buildozer"
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - click: [45, 355]                # the "guilds" category (checked by build-card in batch E)
+  - key: Z
+  - click: [420, 430]
+  - wait: 2
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - click: [45, 355]
+  - key: Z
+  - click: [420, 690]
+  - wait: 2
+  - chat: "${cheat}buildozer"
+  - snapshot: {name: markets, game: false}
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: T
+  - click: [420, 430]
+  - wait: 1
+  - click: [420, 690]
+  - snapshot: {name: trade-order, game: false}
+  - memsample: {name: gold-series, scan: gold-stable, max_addresses: 4096, interval_ms: 250, duration_s: 240}
+  - wait: 241
+  - snapshot: {name: after-trade, game: false}
+analysis: [counter-rate]

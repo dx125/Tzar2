@@ -1,0 +1,62 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: mana-spell
+title: Lightning damage and mana regeneration (UNK-26)
+resolves: [UNK-26]
+priority: 5
+minutes: 6
+default: false                      # batch G (ADR 0113)
+experimental: true
+description: |
+  A spawned mage (mana 100) casts lightning (L, then the target) on a spawned enemy peasant (HEALTH 50). Trial "target"
+  follows the peasant's hit points (the spell's damage is the largest step), trial "mana" the mage's mana after the cast
+  (how fast it refills).
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: target
+    vars: {quantity: hp, subject: spell_lightning, max_value: "50", primary: tgt-series, direction: down}
+  - name: mana
+    vars: {quantity: mana, subject: mage, max_value: "100", primary: mana-series, direction: up}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [720, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [720, 340]               # place
+  - click: [720, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [450, 300]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [560, 340]
+  - chat: "${cheat}spawn mage"
+  - click: [560, 340]               # place
+  - memscan: {name: mana-all, value: "100", width: 4}
+  - memscan: {name: tgt-all, value: "50", width: 4}
+  - wait: 1
+  - memscan: {name: mana-stable, from: mana-all, mode: unchanged}
+  - memscan: {name: tgt-stable, from: tgt-all, mode: unchanged}
+  - click: [560, 340]               # select the mage
+  - key: L
+  - click: [720, 340]               # lightning on the peasant
+  - memsample: {name: tgt-series, scan: tgt-stable, max_addresses: 4096, interval_ms: 20, duration_s: 6}
+  - wait: 3
+  - memscan: {name: mana-down, from: mana-stable, mode: decreased}
+  - key: S
+  - memsample: {name: mana-series, scan: mana-down, max_addresses: 256, interval_ms: 250, duration_s: 90}
+  - wait: 91
+analysis: [counter-rate]
