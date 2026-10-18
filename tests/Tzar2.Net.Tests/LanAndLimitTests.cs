@@ -71,3 +71,22 @@ public sealed class LanAndLimitTests
         Assert.False(window.TryRecord(10_000_002));
     }
 }
+
+public sealed class KeyedRateLimitTests
+{
+    [Fact]
+    public void The_least_recently_used_key_is_evicted_first_and_active_ones_keep_their_state()
+    {
+        var limit = new KeyedRateLimit<int>(capacity: 3, ratePerSecond: 1, burst: 2);
+        Assert.True(limit.TryTake(1, 0));
+        Assert.True(limit.TryTake(1, 0));
+        Assert.False(limit.TryTake(1, 0)); // key 1 is out of tokens
+        Assert.True(limit.TryTake(2, 0));
+        Assert.True(limit.TryTake(3, 0));
+        Assert.False(limit.TryTake(1, 0)); // touches 1: now 2 is the oldest
+        Assert.True(limit.TryTake(4, 0)); // evicts 2, not 1
+        Assert.Equal(3, limit.Count);
+        Assert.False(limit.TryTake(1, 0)); // 1 kept its empty bucket
+        Assert.True(limit.TryTake(2, 0)); // 2 starts fresh (evicts 3)
+    }
+}

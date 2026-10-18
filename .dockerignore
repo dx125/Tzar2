@@ -1,0 +1,13 @@
+# Docker build context of src/Tzar2.Server/Dockerfile: only what the relay needs. Everything else is excluded,
+# in particular Origin/ and imported content (REQ-LEGAL-01).
+*
+!global.json
+!Directory.Build.props
+!Directory.Build.targets
+!Directory.Packages.props
+!src/Tzar2.Analyzers/
+!src/Tzar2.Core/
+!src/Tzar2.Net/
+!src/Tzar2.Server/
+**/bin/
+**/obj/

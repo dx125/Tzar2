@@ -32,7 +32,7 @@ public sealed partial class RelayServer : IDisposable
     private readonly NetManager _net;
     private readonly Dictionary<string, Lobby> _lobbies = new(StringComparer.Ordinal);
     private readonly Dictionary<int, Member> _members = [];
-    private readonly Dictionary<IPAddress, TokenBucket> _connectLimits = [];
+    private readonly KeyedRateLimit<IPAddress> _connectLimits;
     private readonly BinaryBufferWriter _w = new(4096);
     private readonly BinaryBufferWriter _payload = new(4096);
     private readonly List<Lobby> _removed = [];
@@ -46,6 +46,7 @@ public sealed partial class RelayServer : IDisposable
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
         _options = options;
+        _connectLimits = new KeyedRateLimit<IPAddress>(MaxTrackedAddresses, options.ConnectsPerSecond, options.ConnectBurst);
         var listener = new EventBasedNetListener();
         listener.ConnectionRequestEvent += OnConnectionRequest;
         listener.PeerDisconnectedEvent += OnPeerDisconnected;
@@ -688,11 +689,6 @@ public sealed partial class RelayServer : IDisposable
 
     private void Housekeeping()
     {
-        if (_connectLimits.Count > MaxTrackedAddresses)
-        {
-            _connectLimits.Clear();
-        }
-
         LobbySummary[] listing = _lobbies.Values
             .Where(l => l.Public && l.Phase != LobbyPhase.Ended)
             .OrderBy(l => l.Phase).ThenBy(l => l.Code, StringComparer.Ordinal)
@@ -706,17 +702,8 @@ public sealed partial class RelayServer : IDisposable
         Metrics.BytesSent = _net.Statistics.BytesSent;
     }
 
-    private bool AllowRequest(IPAddress address)
-    {
-        long now = MonotonicClock.NowMicroseconds();
-        if (!_connectLimits.TryGetValue(address, out TokenBucket? bucket))
-        {
-            bucket = new TokenBucket(_options.ConnectsPerSecond, _options.ConnectBurst, now);
-            _connectLimits[address] = bucket;
-        }
-
-        return bucket.TryTake(1, now);
-    }
+    // Per address; at most 4,096 addresses are tracked, the least recently seen one is evicted first (review M1).
+    private bool AllowRequest(IPAddress address) => _connectLimits.TryTake(address, MonotonicClock.NowMicroseconds());
 
     private string NewCode()
     {

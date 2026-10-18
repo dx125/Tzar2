@@ -1,0 +1,16 @@
+# Self-hosting example (TDD §19.7, Q-09: community self-hosting). From the repository root:
+#   docker compose -f src/Tzar2.Server/compose.yaml up -d --build
+services:
+  relay:
+    build:
+      context: ../..
+      dockerfile: src/Tzar2.Server/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "47625:47625/udp"   # relay (players connect here)
+      - "8080:8080"         # HTTP: /lobbies, /healthz, /metrics (put it behind a proxy or bind it to localhost)
+    volumes:
+      - tzar2-data:/data    # desync reports
+    stop_grace_period: 10s
+volumes:
+  tzar2-data:
