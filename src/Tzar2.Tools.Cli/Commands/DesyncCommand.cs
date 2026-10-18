@@ -89,7 +89,7 @@ internal static class DesyncCommand
         IReadOnlyList<SnapshotDifference> diff;
         if (files.Count == 1)
         {
-            DesyncBundle bundle = DesyncReports.Read(File.ReadAllBytes(files[0]));
+            DesyncBundle bundle = DesyncReports.Read(MatchContent.ReadBounded(files[0]));
             Describe(bundle, stdout);
             (byte a, byte b) = slots ?? DefaultPair(bundle);
             stdout.WriteLine($"diff of slot {a} ({Name(bundle, a)}) against slot {b} ({Name(bundle, b)}), {(before ? "before" : "after")} snapshots:");
@@ -98,7 +98,7 @@ internal static class DesyncCommand
         else if (files.Count == 2 && setupFile is not null)
         {
             MatchSetup setup = SetupOf(setupFile, content);
-            diff = DesyncReports.Diff(setup, content.Ruleset, File.ReadAllBytes(files[0]), File.ReadAllBytes(files[1]), max);
+            diff = DesyncReports.Diff(setup, content.Ruleset, MatchContent.ReadBounded(files[0]), MatchContent.ReadBounded(files[1]), max);
         }
         else
         {
@@ -113,7 +113,7 @@ internal static class DesyncCommand
 
     private static MatchSetup SetupOf(string file, MatchContent content)
     {
-        byte[] bytes = File.ReadAllBytes(file);
+        byte[] bytes = MatchContent.ReadBounded(file);
         if (file.EndsWith(".t2desync", StringComparison.OrdinalIgnoreCase))
         {
             return DesyncReports.Setup(DesyncReports.Read(bytes), content.Ruleset, content.Ai);
@@ -165,7 +165,7 @@ internal static class DesyncCommand
             return ExitCodes.UsageError;
         }
 
-        DesyncBundle bundle = DesyncReports.Read(File.ReadAllBytes(input));
+        DesyncBundle bundle = DesyncReports.Read(MatchContent.ReadBounded(input));
         Directory.CreateDirectory(output);
         foreach (DesyncSlotReport s in bundle.Slots)
         {

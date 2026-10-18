@@ -29,6 +29,17 @@ internal sealed record MatchContent(Ruleset Ruleset, SkirmishAi Ai, string Descr
         return new MatchContent(ruleset, ai, $"package {Path.GetFileName(package)}, {(ai.IsOriginal ? "original AI" : "engine-default AI")}");
     }
 
+    /// <summary>Largest replay, report or snapshot file the commands read (review L1: checked before reading).</summary>
+    public const long MaxInputBytes = 1L << 30;
+
+    /// <summary>Reads a file after checking its size against <see cref="MaxInputBytes"/>.</summary>
+    /// <exception cref="InvalidDataException">The file is too large.</exception>
+    public static byte[] ReadBounded(string path)
+    {
+        long length = new FileInfo(path).Length;
+        return length <= MaxInputBytes ? File.ReadAllBytes(path) : throw new InvalidDataException($"{path} is {length} bytes, more than {MaxInputBytes}.");
+    }
+
     /// <summary>The package named by the environment (<c>TZAR2_PACKAGE</c>), if any.</summary>
     public static string? EnvironmentPackage() => Environment.GetEnvironmentVariable("TZAR2_PACKAGE") is { Length: > 0 } p ? p : null;
 }

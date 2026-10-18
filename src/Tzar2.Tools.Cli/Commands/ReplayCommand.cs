@@ -120,7 +120,7 @@ internal static class ReplayCommand
         ReplayFile replay;
         try
         {
-            replay = ReplayFile.Parse(File.ReadAllBytes(file));
+            replay = ReplayFile.Parse(MatchContent.ReadBounded(file));
         }
         catch (Exception e) when (e is IOException or InvalidDataException)
         {
@@ -254,7 +254,7 @@ internal static class ReplayCommand
             return ExitCodes.UsageError;
         }
 
-        ReplayFile replay = ReplayFile.Parse(File.ReadAllBytes(args[0]));
+        ReplayFile replay = ReplayFile.Parse(MatchContent.ReadBounded(args[0]));
         ReplayHeader h = replay.Header;
         stdout.WriteLine($"engine {h.EngineVersion}, ruleset {h.RulesetHash:X16}, map {h.MapHash:X16}, seed {h.Config.MatchSeed}, overflow {h.OverflowMode}");
         stdout.WriteLine($"{h.Config.PlayerCount} kingdoms ({string.Join(", ", h.PlayerNames.Select((n, i) => n.Length > 0 ? n : $"computer {i + 1}"))}), victory {h.Config.Victory}, cheats {h.Config.CheatsAllowed}, ranked {h.Config.Ranked}");
