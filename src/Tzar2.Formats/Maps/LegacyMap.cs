@@ -230,7 +230,11 @@ public sealed record LegacyObject(
     /// <summary>Pixel position of decorations (x, y), or null.</summary>
     public (int X, int Y)? PixelPosition { get; init; }
 
-    /// <summary>Wall shape / gate or bridge orientation and state (the extension word or bytes), or null.</summary>
+    /// <summary>
+    /// Wall shape / gate or bridge orientation and state (the class extension bytes at 0x38), or null. For gates, the
+    /// value is <c>byte0 | (byte1 &lt;&lt; 8)</c>: bit 1 = vertical, bit 0 = the other side, bit 8 = open. For bridges,
+    /// the value is the single orientation byte (0 = east-west, 1 = north-south). For walls, it is the shape word.
+    /// </summary>
     public int? Shape { get; init; }
 
     /// <summary>Item properties, or null.</summary>

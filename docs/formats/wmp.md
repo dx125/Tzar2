@@ -145,7 +145,7 @@ store `animation` there.
 | 0x0C | u8 | owner: 0 none (resources, decorations, items), 1–8 kingdoms, **9 Rescue**, **10 Nature** (animals, birds, monsters) |
 | 0x0D | u8 | race: 0 common, 1 European, 2 Arabian, 3 Asian |
 | 0x0E | u16 | object id. Triggers, conversations and `objext` refer to it. 0xFFFF = none. |
-| 0x10 | u16 | facing 0–7 |
+| 0x10 | u16 | facing 0–7 (⚠ assumed sprite order: 0 south, counter-clockwise, UNK-82) |
 | 0x12 | u16 | health |
 | 0x14 | u16 | max health |
 | 0x16 | u16 | attack |
@@ -176,8 +176,8 @@ Evidence: every named hero has 0x1000; the "No AI" groups of footmen and ships h
 | Classes | Size | Extension |
 |---|---|---|
 | `wall_stone`, `wall_wood` | 58 | u16 segment shape |
-| `gate_stone`, `gate_wood` | 58 | u8 orientation, u8 state |
-| `bridge` | 58 | u8 orientation |
+| `gate_stone`, `gate_wood` | 58 | u8 placement: bit 1 = vertical, bit 0 = the other side; u8 open (1) |
+| `bridge` | 58 | u8 axis: 0 = east-west (horizontal sprite), 1 = north-south (vertical sprite) |
 | `fishpatch` | 60 | u32 amount |
 | `res_gold`, `res_stone` | 72 | u16 resource (0 gold, 1 stone), u32 amount, u8 × 2 variant; then junk |
 | `ruin` | 88 | char[32] image name |
@@ -186,6 +186,13 @@ Evidence: every named hero has 0x1000; the "No AI" groups of footmen and ships h
 | `item_magic` | 112 | char[40] name; at 0x60: u8 magic type, u8, u8, u8 needs-mana, u16 time restriction, u16 max charges |
 | `item_scroll` | 1,318 | char[40] name; char[1,024] text; char[64] image, sound, music; u32 scroll time (ms) at 0x520; u8 auto-close |
 | `resitem` | 100 | char[40] name; u8 resource type at 0x60, u16 amount at 0x62 |
+
+Gate and bridge bytes were checked against their surroundings in every map. Of 42 gates, 17 of the 18 with bit 1 set
+sit in walls running north-south (one has no wall beside it), and 22 of the 24 without it sit in east-west walls (one
+is in a north-south wall, one stands alone); the second byte marks gates placed open. All 30 bridges with value 1
+span water along their north-south axis, and 20 of the 21 with 0 along the east-west one (one is undecided).
+A bridge's top-left tile is the record's x/y; the vertical sprite covers about 6 × 11 tiles, the horizontal one
+11 × 7.
 
 Custom ambient sounds are editor objects of class `sound_object`. None of the 33 maps has one, so their layout is
 ⚠ UNVERIFIED (UNK-77). The converter would keep them as raw placeholders.
@@ -375,6 +382,7 @@ Expressions are text in the language of Appendix C.6, plus what the game's own n
 | UNK-79 | The second part of Player Win/Lose's `next map|?` |
 | UNK-80 | Area rectangles: inclusive or exclusive right/bottom; rectangles past the edge |
 | UNK-81 | Cliff passability: whether all four tiles of a cliff piece block, and how units cross cliff rings |
+| UNK-82 | Object facing (0x10): assumed to use the sprite direction order (0 = south, counter-clockwise) |
 
 ## 11. Reproducing
 

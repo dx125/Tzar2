@@ -422,6 +422,11 @@ internal sealed class SyntheticObject
 
     public string? ScrollText { get; set; }
 
+    /// <summary>Raw class extension written at 0x38 (gates, bridges, walls).</summary>
+    public byte[]? Extension { get; set; }
+
+    public int Direction { get; set; }
+
     public byte[] Payload(SyntheticMap map)
     {
         int size = ClassName switch
@@ -444,12 +449,18 @@ internal sealed class SyntheticObject
         p[0x0C] = Owner;
         p[0x0D] = Race;
         SyntheticMap.W16(p, 0x0E, Id);
+        SyntheticMap.W16(p, 0x10, Direction);
         SyntheticMap.W16(p, 0x12, Health);
         SyntheticMap.W16(p, 0x14, Health);
         SyntheticMap.W16(p, 0x16, Attack);
         SyntheticMap.W16(p, 0x18, Defence);
         SyntheticMap.W16(p, 0x1A, 6);
         SyntheticMap.W16(p, 0x24, Mana);
+        if (Extension is not null)
+        {
+            Array.Copy(Extension, 0, p, 0x38, Extension.Length);
+        }
+
         switch (ClassName)
         {
             case "fishpatch":

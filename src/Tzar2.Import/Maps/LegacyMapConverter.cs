@@ -436,7 +436,7 @@ public static class LegacyMapConverter
                 int index = _objects.Count;
                 // A rock's or fish patch's own amount (REQ-EDT-03 lossless; ADR 0152); items keep theirs in ItemInfo.
                 int amount = o.Amount is int a && a > 0 && o.ClassName is "res_gold" or "res_stone" or "fishpatch" ? a : 0;
-                _objects.Add(new MapObject(key, owner, (o.X * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2), (o.Y * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2)) { Amount = amount });
+                _objects.Add(new MapObject(key, owner, (o.X * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2), (o.Y * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2)) { Amount = amount, Flags = PlacementFlags(o), Facing = FacingOf(o) });
                 _legacyIndices[o.Index] = index;
                 _infos.Add(Info(o, extras.TryGetValue(o.Id, out LegacyObjectExtra? extra) ? extra : null));
                 if (o.Id != 0xFFFF && !_indexById.TryAdd(o.Id, index))
@@ -488,6 +488,30 @@ public static class LegacyMapConverter
             ids.Remove(0xFFFF);
             return ids;
         }
+
+        // Gates: extension byte 0 bit 1 = vertical (Rotated), bit 0 = the other side (Mirrored); byte 1 = open.
+        // Bridges: extension byte 1 = running north-south (Rotated). Both checked against the walls and the water around
+        // every gate and bridge of the reference build (docs/formats/wmp.md §4.4); the types are defined horizontal.
+        private static MapObjectFlags PlacementFlags(LegacyObject o)
+        {
+            if (o.Shape is not int shape)
+            {
+                return MapObjectFlags.None;
+            }
+
+            return o.ClassName switch
+            {
+                "gate_stone" or "gate_wood" => ((shape & 2) != 0 ? MapObjectFlags.Rotated : 0)
+                    | ((shape & 1) != 0 ? MapObjectFlags.Mirrored : 0)
+                    | ((shape >> 8) != 0 ? MapObjectFlags.Open : 0),
+                "bridge" => (shape & 1) != 0 ? MapObjectFlags.Rotated : MapObjectFlags.None,
+                _ => MapObjectFlags.None,
+            };
+        }
+
+        // Legacy facing 0–7 runs counter-clockwise from south (the sprite direction order, docs/formats/rle.md); ours runs
+        // clockwise from east (ADR 0005). ⚠ UNVERIFIED that the map field uses the sprite order (UNK-82).
+        private static byte FacingOf(LegacyObject o) => o.Direction is >= 0 and <= 7 ? (byte)((2 - o.Direction) & 7) : (byte)0;
 
         private ObjectInfo Info(LegacyObject o, LegacyObjectExtra? extra)
         {
