@@ -12,7 +12,7 @@ namespace Tzar2.Sim.Systems;
 /// ownership, existence, arguments). Invalid commands, or invalid entities inside a command, are ignored
 /// deterministically and reported as <see cref="SimEventKind.CommandRejected"/> events.
 /// </summary>
-public sealed class CommandSystem : ISimSystem
+public sealed partial class CommandSystem : ISimSystem
 {
     /// <summary>Most units one <see cref="CommandKind.DebugSpawn"/> may create.</summary>
     public const int MaxDebugSpawn = 64;
