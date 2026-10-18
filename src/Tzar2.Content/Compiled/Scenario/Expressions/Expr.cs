@@ -43,7 +43,7 @@ public sealed record UnaryExpr(UnaryOp Op, Expr Operand) : Expr;
 public sealed record BinaryExpr(BinaryOp Op, Expr Left, Expr Right) : Expr;
 
 /// <summary>An assignment <c>target = value</c>; its value is the assigned value.</summary>
-/// <param name="Target">A <see cref="UserVar"/>, a <see cref="ReservedVar"/> (Set Object Properties, Object Expression), a <see cref="TimerRef"/> (sets the timer, e.g. <c>Clock = 0</c>) or an <see cref="UnknownRef"/> (no effect).</param>
+/// <param name="Target">A <see cref="UserVar"/>, a <see cref="ReservedVar"/> (Set Object Properties, Object Expression), a <see cref="TimerRef"/> (sets the timer, e.g. <c>Timer1 = 0</c>) or an <see cref="UnknownRef"/> (no effect).</param>
 /// <param name="Value">The assigned expression.</param>
 public sealed record AssignExpr(Expr Target, Expr Value) : Expr;
 
@@ -56,7 +56,7 @@ public sealed record CallExpr(CallKind Function, EquatableArray<Expr> Arguments)
 /// <param name="Statements">The statements, in order.</param>
 public sealed record SequenceExpr(EquatableArray<Expr> Statements) : Expr;
 
-/// <summary>A raw text argument, e.g. the movie path of <c>@PlayMovie(movies\outro.ddv)</c>.</summary>
+/// <summary>A raw text argument, e.g. the movie path of <c>@PlayMovie(movies\ending.ddv)</c>.</summary>
 /// <param name="Text">The text between the parentheses, trimmed.</param>
 public sealed record TextArg(string Text) : Expr;
 
