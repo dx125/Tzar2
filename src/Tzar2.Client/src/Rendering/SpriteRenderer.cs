@@ -138,6 +138,9 @@ public sealed class SpriteRenderer : IDisposable
         RS.CanvasItemSetVisible(_composite, _visible && _shadowsVisible);
     }
 
+    /// <summary>Multiplies the colour pass (translucent trees, §13.3).</summary>
+    public void SetModulate(Color colour) => RS.CanvasItemSetModulate(_objectsItem, colour);
+
     /// <summary>Starts a new frame.</summary>
     public void Clear() => _count = 0;
 

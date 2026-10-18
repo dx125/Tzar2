@@ -36,9 +36,11 @@ public partial class MidiPlayer : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
+        SoundMixer.EnsureBuses();
         _output = new AudioStreamPlayer
         {
             Stream = new AudioStreamGenerator { MixRate = SampleRate, BufferLength = 0.5f },
+            Bus = SoundMixer.MusicBus,
         };
         AddChild(_output);
     }
