@@ -350,6 +350,8 @@ public static class LegacyMapConverter
 
         private void ConvertObjects(int side)
         {
+            // Decorations stay decorations unless a trigger or conversation refers to them (signs, ruins that vanish).
+            HashSet<int> referenced = ReferencedIds();
             var extras = new Dictionary<int, LegacyObjectExtra>();
             foreach (LegacyObjectExtra e in _map.ObjectExtras)
             {
@@ -368,7 +370,7 @@ public static class LegacyMapConverter
                     continue;
                 }
 
-                if (DecorationClasses.Contains(o.ClassName))
+                if (DecorationClasses.Contains(o.ClassName) && !referenced.Contains(o.Id))
                 {
                     (int px, int py) = o.PixelPosition ?? (-1, -1);
                     _decorations.Add(new Decoration(o.ClassName, o.ImageName ?? string.Empty, o.X, o.Y, px, py));
@@ -405,6 +407,49 @@ public static class LegacyMapConverter
                     _report.Warn("object.id", $"object id {o.Id} is used twice; triggers refer to the first", at);
                 }
             }
+        }
+
+        private HashSet<int> ReferencedIds()
+        {
+            var ids = new HashSet<int>();
+            foreach (LegacyTrigger t in _map.Events.AddRange(_map.Actions))
+            {
+                if (t.Fields.IsDefault)
+                {
+                    continue;
+                }
+
+                foreach (object f in t.Fields)
+                {
+                    switch (f)
+                    {
+                        case LegacyObjectSpec spec:
+                            foreach (ushort id in spec.ObjectIds)
+                            {
+                                ids.Add(id);
+                            }
+
+                            break;
+                        case LegacyArea { IsObject: true } area:
+                            ids.Add(area.ObjectId);
+                            break;
+                        case LegacyHolder { Typed: false } holder:
+                            ids.Add(holder.ObjectId);
+                            break;
+                    }
+                }
+            }
+
+            foreach (LegacyConversation c in _map.Conversations)
+            {
+                foreach (LegacyPhrase p in c.Phrases)
+                {
+                    ids.Add(p.SourceObjectId);
+                }
+            }
+
+            ids.Remove(0xFFFF);
+            return ids;
         }
 
         private ObjectInfo Info(LegacyObject o, LegacyObjectExtra? extra)
@@ -989,13 +1034,20 @@ public static class LegacyMapConverter
         {
             if (!a.IsObject)
             {
+                // The editor lets rectangles reach one tile past the edge (right/bottom = side, ⚠ UNK-80); clamp.
                 int side = _map.Side;
-                if (a.Left < 0 || a.Top < 0 || a.Right >= side || a.Bottom >= side || a.Left > a.Right || a.Top > a.Bottom)
+                int l = Math.Clamp(a.Left, 0, side - 1), t = Math.Clamp(a.Top, 0, side - 1);
+                int r = Math.Clamp(a.Right, 0, side - 1), b = Math.Clamp(a.Bottom, 0, side - 1);
+                if (a.Left > a.Right || a.Top > a.Bottom || a.Right < 0 || a.Bottom < 0 || a.Left >= side || a.Top >= side)
                 {
-                    _report.Warn("trigger.area", $"rectangle ({a.Left}, {a.Top})–({a.Right}, {a.Bottom}) is not inside the map", at);
+                    _report.Warn("trigger.area", $"rectangle ({a.Left}, {a.Top})–({a.Right}, {a.Bottom}) is empty or outside the map", at);
+                }
+                else if ((l, t, r, b) != (a.Left, a.Top, a.Right, a.Bottom))
+                {
+                    _report.Info("trigger.area", $"rectangle ({a.Left}, {a.Top})–({a.Right}, {a.Bottom}) clamped to the map", at);
                 }
 
-                return new RectArea(a.Left, a.Top, a.Right, a.Bottom);
+                return new RectArea(l, t, r, b);
             }
 
             if (_indexById.TryGetValue(a.ObjectId, out int i))
@@ -1029,7 +1081,7 @@ public static class LegacyMapConverter
                 {
                     source = s;
                 }
-                else
+                else if (p.SourceObjectId != 0)
                 {
                     _report.Warn("conversation.source", $"speaker object id {p.SourceObjectId} does not exist", at);
                 }

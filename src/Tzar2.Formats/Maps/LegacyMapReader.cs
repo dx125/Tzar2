@@ -123,6 +123,11 @@ public static class LegacyMapReader
             throw new LegacyFormatException(CampaignFormat, "no MAPS/maps.ini.");
         }
 
+        if (mapFiles.Count == 0)
+        {
+            throw new LegacyFormatException(CampaignFormat, "no embedded maps (a map, not a campaign?).");
+        }
+
         return new LegacyCampaign(title, description, maps.ToImmutable(), mapFiles.ToImmutable(), files.ToImmutable(), [.. warnings]);
     }
 

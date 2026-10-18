@@ -26,7 +26,18 @@ public class FuzzPropertyTests
         ["tsv"] = "A\tB\r\n\"x, y\"\t2\r\n"u8.ToArray(),
         ["wav"] = SyntheticFormats.Wav(frames: 10),
         ["mid"] = SyntheticFormats.Mid(),
+        ["wmp"] = FuzzMap(),
+        ["wcm"] = SyntheticMap.Campaign("C", "D", [("Fuzz", true, FuzzMap())]),
     };
+
+    private static byte[] FuzzMap()
+    {
+        var m = new SyntheticMap { Name = "Fuzz", Side = 4 };
+        m.Objects.Add(new SyntheticObject { Id = 1 });
+        m.Actions.Add(("a", 5, new SyntheticPayload().Str("$x = 1").ToArray()));
+        m.Rules.Add(("r", "1", ["a"]));
+        return m.Build();
+    }
 
     public static TheoryData<string> Targets() => new(FuzzTargets.Names);
 
