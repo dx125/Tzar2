@@ -145,6 +145,25 @@ public class LegacyConverterTests
     }
 
     [Fact]
+    public void Gates_bridges_and_facings_keep_their_placement()
+    {
+        SyntheticMap m = FullMap();
+        m.Objects.Add(new SyntheticObject { ClassName = "bridge", X = 1, Y = 1, Owner = 10, Race = 0, Extension = [1] });
+        m.Objects.Add(new SyntheticObject { ClassName = "bridge", X = 1, Y = 4, Owner = 10, Race = 0, Extension = [0] });
+        m.Objects.Add(new SyntheticObject { ClassName = "gate_stone", X = 5, Y = 5, Owner = 1, Race = 1, Extension = [3, 1] });
+        m.Objects.Add(new SyntheticObject { ClassName = "gate_wood", X = 6, Y = 5, Owner = 1, Race = 1, Extension = [0, 0] });
+        m.Objects.Add(new SyntheticObject { ClassName = "archer", X = 3, Y = 3, Owner = 1, Race = 1, Direction = 4 });
+        MapData map = LegacyMapConverter.Convert(m.Build(), "full.wmp").Map!;
+        MapObject[] o = map.Objects.Where(x => x.TypeKey is "comm.bridge" or "euro.gate_stone" or "euro.gate_wood" or "euro.archer").ToArray();
+        Assert.Equal(MapObjectFlags.Rotated, o[0].Flags);
+        Assert.Equal(MapObjectFlags.None, o[1].Flags);
+        Assert.Equal(MapObjectFlags.Rotated | MapObjectFlags.Mirrored | MapObjectFlags.Open, o[2].Flags);
+        Assert.Equal(MapObjectFlags.None, o[3].Flags);
+        Assert.Equal((byte)6, o[4].Facing);   // legacy 4 = north → ours 6
+        Assert.Equal(map.ContentHash, MapBinary.Read(MapBinary.Write(map)).ContentHash);
+    }
+
+    [Fact]
     public void Every_trigger_type_maps_to_its_ir_record()
     {
         MapConversion c = LegacyMapConverter.Convert(FullMap().Build(), "full.wmp");
