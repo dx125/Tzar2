@@ -26,7 +26,8 @@ public interface IExpressionScope
 /// <c>$variables</c> and <c>#variables</c>, bare event and timer names, <c>@function(…)</c> (the <c>@</c> is optional
 /// for known functions, as the manual's <c>rnd(…)</c> example shows), the operators
 /// <c>= || &amp;&amp; == != &lt; &lt;= &gt; &gt;= + - * / % ! -</c>, parentheses, and several statements separated by
-/// line breaks or <c>;</c>. Precedence from loosest to tightest: assignment (right-associative), <c>||</c>,
+/// <c>;</c>, a top-level <c>,</c> or a line break (a line break inside parentheses or next to an operator is
+/// whitespace). Precedence from loosest to tightest: assignment (right-associative), <c>||</c>,
 /// <c>&amp;&amp;</c>, equality, relational, additive, multiplicative, unary. Names resolve case-insensitively through
 /// an <see cref="IExpressionScope"/>; an unresolved name (or an unknown <c>@name</c> without arguments) becomes
 /// <see cref="UnknownRef"/>, never an error. Function arity is not checked. Deterministic; no I/O.
@@ -99,6 +100,7 @@ public static class ExpressionParser
         Function,
         Text,
         Op,
+        Break,
     }
 
     private readonly record struct Token(Kind Kind, string Text, int Position);
@@ -120,7 +122,7 @@ public static class ExpressionParser
             var statements = ImmutableArray.CreateBuilder<Expr>();
             while (true)
             {
-                while (IsOp(";"))
+                while (IsOp(";") || IsOp(","))
                 {
                     Next();
                 }
@@ -131,7 +133,7 @@ public static class ExpressionParser
                 }
 
                 statements.Add(Assignment());
-                if (Peek.Kind != Kind.End && !IsOp(";"))
+                if (Peek.Kind != Kind.End && !IsOp(";") && !IsOp(","))
                 {
                     throw Error($"unexpected '{Peek.Text}'");
                 }
@@ -161,7 +163,7 @@ public static class ExpressionParser
                 return left;
             }
 
-            if (left is not (UserVar or ReservedVar or UnknownRef))
+            if (left is not (UserVar or ReservedVar or TimerRef or UnknownRef))
             {
                 throw Error("only a variable can be assigned");
             }
@@ -341,13 +343,16 @@ public static class ExpressionParser
             while (i < s.Length)
             {
                 char c = s[i];
-                if (c is '\r' or '\n' or ';')
+                if (c is ';')
                 {
-                    if (tokens.Count == 0 || tokens[^1] is not { Kind: Kind.Op, Text: ";" })
-                    {
-                        tokens.Add(new Token(Kind.Op, ";", i));
-                    }
+                    tokens.Add(new Token(Kind.Op, ";", i));
+                    i++;
+                    continue;
+                }
 
+                if (c is '\r' or '\n')
+                {
+                    tokens.Add(new Token(Kind.Break, string.Empty, i));
                     i++;
                     continue;
                 }
@@ -431,7 +436,52 @@ public static class ExpressionParser
             }
 
             tokens.Add(new Token(Kind.End, string.Empty, s.Length));
-            return tokens;
+            return Breaks(tokens);
+        }
+
+        // A line break separates statements only at parenthesis depth 0, after a complete operand and before a token
+        // that cannot continue an expression; otherwise it is whitespace (the original's maps break long conditions
+        // after "&&").
+        private static List<Token> Breaks(List<Token> tokens)
+        {
+            var result = new List<Token>(tokens.Count);
+            int depth = 0;
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                Token t = tokens[i];
+                if (t.Kind == Kind.Op && t.Text == "(")
+                {
+                    depth++;
+                }
+                else if (t.Kind == Kind.Op && t.Text == ")")
+                {
+                    depth--;
+                }
+
+                if (t.Kind != Kind.Break)
+                {
+                    result.Add(t);
+                    continue;
+                }
+
+                int next = i + 1;
+                while (tokens[next].Kind == Kind.Break)
+                {
+                    next++;
+                }
+
+                bool afterOperand = result.Count > 0 && (result[^1].Kind is Kind.Number or Kind.Variable or Kind.Identifier or Kind.Text
+                    || result[^1] is { Kind: Kind.Op, Text: ")" });
+                bool continues = tokens[next].Kind == Kind.Op && tokens[next].Text is "||" or "&&" or "==" or "!=" or "<" or "<=" or ">" or ">=" or "+" or "*" or "/" or "%" or "=" or ")" or ",";
+                if (depth <= 0 && afterOperand && !continues)
+                {
+                    result.Add(new Token(Kind.Op, ";", t.Position));
+                }
+
+                i = next - 1;
+            }
+
+            return result;
         }
 
         private static bool IsDigit(char c) => c is >= '0' and <= '9';
