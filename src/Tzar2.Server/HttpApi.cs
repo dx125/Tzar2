@@ -43,6 +43,7 @@ internal sealed class HttpApi : IDisposable
     public void Dispose()
     {
         _listener.Close();
+        _inFlight.Dispose();
         try
         {
             _loop?.Wait(TimeSpan.FromSeconds(2));
@@ -67,14 +68,47 @@ internal sealed class HttpApi : IDisposable
                 return;
             }
 
-            try
+            // At most MaxConcurrent requests are served at once; beyond that the answer is 503 at once, so slow
+            // clients cannot pile up work (review M2). Holding many idle sockets open is a job for a reverse proxy.
+            if (!_inFlight.Wait(0))
             {
-                Respond(context);
+                Reject(context);
+                continue;
             }
-            catch (Exception e) when (e is HttpListenerException or IOException or ObjectDisposedException)
+
+            _ = Task.Run(() =>
             {
-                // The client went away.
-            }
+                try
+                {
+                    Respond(context);
+                }
+                catch (Exception e) when (e is HttpListenerException or IOException or ObjectDisposedException or InvalidOperationException)
+                {
+                    // The client went away.
+                }
+                finally
+                {
+                    _inFlight.Release();
+                }
+            }, cancellation);
+        }
+    }
+
+    /// <summary>Most requests served at the same time.</summary>
+    public const int MaxConcurrent = 32;
+
+    private readonly SemaphoreSlim _inFlight = new(MaxConcurrent, MaxConcurrent);
+
+    private static void Reject(HttpListenerContext context)
+    {
+        try
+        {
+            context.Response.Headers["Retry-After"] = "1";
+            Send(context.Response, 503, "text/plain", "busy\n");
+        }
+        catch (Exception e) when (e is HttpListenerException or IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            // The client went away.
         }
     }
 

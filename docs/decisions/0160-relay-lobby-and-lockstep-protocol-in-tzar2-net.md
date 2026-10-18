@@ -87,3 +87,11 @@ Two constraints decide where it lives:
 * LiteNetLib assembles fragmented reliable messages before the relay sees them: a peer can make the relay buffer one
   large message before the byte budget disconnects it. Bounded by LiteNetLib's fragment limits; accepted for 1.0.
 * Spectator slots (G-08), casual resync and in-match speed votes are not implemented.
+* **Known limitation (review M3):** the protocol is not encrypted. The session token travels in plain text in the
+  rejoin hello, so someone on the network path between a player and the relay can capture it and take that player's
+  slot (the real player's connection is then dropped as stale). The token is 64 CSPRNG bits compared in constant time,
+  so it cannot be guessed, and LAN play stays on the local network. For internet play a DTLS (or Noise-style) layer
+  over LiteNetLib, or rotating the token on every rejoin, is backlog work; until then the relay must not be relied on
+  for anything beyond fair play among people who share the match code.
+* Connection attempts are limited per address for at most 4,096 addresses; when that is exceeded the least recently
+  seen address is evicted (review M1).

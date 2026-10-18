@@ -19,7 +19,10 @@ of its own (ADR 0011).
   (`RelayServer.Run`, 1 ms timer resolution on Windows), SIGTERM/Ctrl+C end every match with `Shutdown`.
 * **HTTP API with `HttpListener`** (part of the base runtime, no ASP.NET Core): `GET /lobbies` (JSON), `GET /healthz`,
   `GET /metrics` (Prometheus text format from `RelayMetrics`). Read-only: lobbies are created and joined over the
-  UDP protocol only, so the HTTP side has no state to protect and no request bodies are read.
+  UDP protocol only, so the HTTP side has no state to protect and no request bodies are read. At most 32 requests
+  are served at once; beyond that the API answers 503 at once (review M2). Idle connections are not limited by
+  `HttpListener`: a public deployment puts the API behind a reverse proxy or binds it to localhost. `/lobbies`
+  carries `Access-Control-Allow-Origin: *` (public read-only data for community pages).
 * **Logs**: every relay event as one JSON object per line on stdout (`ts`, `event`, `lobby`, `slot`, `detail`), written
   with `Utf8JsonWriter` (trim-safe, no reflection). The relay logs player names only on join and addresses only on
   refused hellos (G-05 data minimisation).
