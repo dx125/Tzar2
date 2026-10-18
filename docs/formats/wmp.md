@@ -294,7 +294,7 @@ decimal in every map.
 | Destroy / Erase / Appear Object | objects |
 | Explore Area | area, time (ms), u8 reveal fog |
 | Change Player Status | u8 kingdom, u8 cannot win, u8 cannot lose |
-| Lock/Unlock Units | objects, u8 lock |
+| Lock/Unlock Units | objects, u8: **0 lock, 1 unlock** |
 | Delay | time (ms) |
 | Object Exist / Destroyed | objects |
 | Enter / Leave Holder | objects, holder |

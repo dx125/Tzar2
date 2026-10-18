@@ -910,7 +910,8 @@ public static class LegacyMapConverter
                 case LegacyTriggerType.ChangePlayerStatus:
                     return new ChangePlayerStatusAction(a.Name, a.Field<int>(0), a.Field<int>(1) != 0, a.Field<int>(2) != 0);
                 case LegacyTriggerType.LockUnits:
-                    return new LockUnitsAction(a.Name, Objects(a.Field<LegacyObjectSpec>(0), at), a.Field<int>(1) != 0);
+                    // The byte is 0 for "lock" and 1 for "unlock" (every Lock/Unlock pair of the reference campaigns).
+                    return new LockUnitsAction(a.Name, Objects(a.Field<LegacyObjectSpec>(0), at), a.Field<int>(1) == 0);
                 case LegacyTriggerType.EraseObject:
                     return new EraseObjectAction(a.Name, Objects(a.Field<LegacyObjectSpec>(0), at));
                 case LegacyTriggerType.Delay:

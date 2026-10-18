@@ -182,6 +182,7 @@ public class LegacyConverterTests
         Assert.Equal(new NamedObjects(new[] { 4 }, Quantifier.Any), A<AppearObjectAction>("appear").Objects);   // the referenced sign
         Assert.Equal(new ChangePlayerStatusAction("status", 1, true, false), A<ChangePlayerStatusAction>("status"));
         Assert.Equal(500, A<DelayAction>("wait").TimeMs);
+        Assert.False(A<LockUnitsAction>("freeze").Locked);   // legacy byte 1 = unlock
 
         RuleDef main = s.Rules[0];
         Assert.Equal(new[] { 0, 10, 20 }, main.ActionIndices.ToArray());

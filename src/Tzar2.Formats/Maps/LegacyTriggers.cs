@@ -83,7 +83,7 @@ public enum LegacyTriggerType
     /// <summary>Change Player Status: kingdom, cannot win, cannot lose.</summary>
     ChangePlayerStatus = 24,
 
-    /// <summary>Lock/Unlock Units: objects, lock flag.</summary>
+    /// <summary>Lock/Unlock Units: objects, flag (0 lock, 1 unlock).</summary>
     LockUnits = 25,
 
     /// <summary>Erase Object: objects.</summary>
