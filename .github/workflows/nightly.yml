@@ -114,7 +114,7 @@ jobs:
     # > 10% fail, TDD §21) need a stable runner baseline first; until then the t2 bench steps gate the absolute budgets:
     # p99 <= 12 ms at 4,000 units on 512²; B3: 500 move orders planned within 3 ticks; B4: no stuck units, corpses
     # never change passability, p99 <= 12 ms (ADR 0026); gameplay: resources delivered, fights happen, p99 <= 12 ms
-    # (ADR 0039).
+    # (ADR 0039); ai: every AI gathers, builds, trains and fights, p99 <= 12 ms (ADR 0052).
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
@@ -143,6 +143,12 @@ jobs:
           dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --scenario gameplay --players 8 --workers 4 | tee bench-gameplay.txt
           p99="$(grep '^tick ms' bench-gameplay.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
           awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::gameplay tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
+      - name: AI against AI (t2 bench, 8 legacy AIs on 256², 20 minutes of game time; ADR 0051/0052)
+        run: |
+          set -euo pipefail
+          dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --scenario ai --players 8 --ticks 24000 --workers 4 | tee bench-ai.txt
+          p99="$(grep '^tick ms' bench-ai.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
+          awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::ai tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
       - name: B4 mass death then traffic (t2 bench)
         run: |
           set -euo pipefail

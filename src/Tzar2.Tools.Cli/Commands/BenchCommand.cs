@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using Tzar2.AI.Scenarios;
 using Tzar2.Sim;
 using Tzar2.Sim.Scenarios;
 
@@ -54,7 +55,7 @@ internal static class BenchCommand
             bool ok = true;
             switch (arg)
             {
-                case "--scenario": scenarioName = value; ok = value is "synthetic" or "b3" or "b3-groups" or "b4" or "gameplay"; break;
+                case "--scenario": scenarioName = value; ok = value is "synthetic" or "b3" or "b3-groups" or "b4" or "gameplay" or "ai"; break;
                 case "--group": ok = TryInt(value, 1, 4096, v => group = v); break;
                 case "--path-budget": ok = TryInt(value, 1, int.MaxValue, v => budget = v); break;
                 case "--entities": ok = TryInt(value, 0, 1_000_000, v => entitiesOption = v); break;
@@ -116,6 +117,16 @@ internal static class BenchCommand
                     Seed = seedOption ?? new GameplayScenarioOptions().Seed,
                 },
                 workers),
+            "ai" => new AiSkirmishScenario(
+                GameplayRuleset.Value,
+                DefaultAiScript.Value,
+                new AiSkirmishOptions
+                {
+                    MapSize = mapOption ?? 256,
+                    Players = Math.Min(playersOption ?? 8, 8),
+                    Seed = seedOption ?? new AiSkirmishOptions().Seed,
+                },
+                workers),
             _ => new SyntheticScenario(options, workers),
         };
 
@@ -143,7 +154,7 @@ internal static class BenchCommand
         {
             pathSystem ??= system as Tzar2.Sim.Systems.PathRequestSystem;
         }
-        int ticks = ticksOption ?? scenarioName switch { "b3" or "b3-groups" => 600, "b4" => 3600, "gameplay" => 2400, _ => 1000 };
+        int ticks = ticksOption ?? scenarioName switch { "b3" or "b3-groups" => 600, "b4" => 3600, "gameplay" => 2400, "ai" => 12_000, _ => 1000 };
         int warmup = warmupOption ?? (scenarioName == "synthetic" ? 100 : 0);
         // "\n" line ends, so hash streams from Windows and Unix runners compare byte for byte.
         using StreamWriter? stream = hashStream is null ? null : new StreamWriter(hashStream) { NewLine = "\n" };
@@ -209,6 +220,7 @@ internal static class BenchCommand
             MassDeathScenario b4 when b4.Blocked > 0 => "B4: units got stuck in the traffic through the mass-death area",
             MassDeathScenario when world.Map.ObstacleVersion != 0 => "B4: corpses changed passability",
             GameplayScenario g when g.Delivered == 0 || g.Kills == 0 || g.Trained == 0 => "gameplay: no resources were delivered, nobody fought or nobody was trained",
+            AiSkirmishScenario a when AiLagging(a) is { } p => $"ai: AI player {p} did not gather, build, train and fight",
             _ => null,
         };
         if (violation is not null)
@@ -218,6 +230,22 @@ internal static class BenchCommand
         }
 
         return ExitCodes.Success;
+    }
+
+    // The first AI player that has not delivered, built, trained and (in a run of 10 minutes or more of game time, the
+    // first wave leaves after 4) dealt damage, or null.
+    private static int? AiLagging(AiSkirmishScenario scenario)
+    {
+        bool fights = (long)scenario.Simulation.World.Tick.Value * scenario.Simulation.World.Config.TickLengthMilliseconds >= 600_000;
+        for (int p = 0; p < scenario.Options.Players; p++)
+        {
+            if (scenario.Delivered(p) == 0 || scenario.Built(p) == 0 || scenario.Trained(p) == 0 || (fights && scenario.DamageDealt(p) == 0))
+            {
+                return p;
+            }
+        }
+
+        return null;
     }
 
     private static void Write(StreamWriter? stream, TickResult result)
@@ -258,7 +286,9 @@ internal static class BenchCommand
         output.WriteLine("                      orders on a 512² maze), b3-groups (the same in groups, see --group), b4 (mass");
         output.WriteLine("                      death: 2,000 kills in 60 s, then traffic across the bridge), gameplay (economy and");
         output.WriteLine("                      combat: bases, harvesting, building, training and a battle of all kingdoms; the");
-        output.WriteLine("                      classic ruleset compiled from synthetic tables; --players, --entities = soldiers)");
+        output.WriteLine("                      classic ruleset compiled from synthetic tables; --players, --entities = soldiers),");
+        output.WriteLine("                      ai (AI against AI with the engine-default script: castles and peasants only, the");
+        output.WriteLine("                      legacy AI does everything else; --players default 8, --map default 256, 12,000 ticks)");
         output.WriteLine("  --group <n>         units per order in b3-groups (default 50)");
         output.WriteLine("  --path-budget <n>   path-request budget in node expansions per tick (match setting)");
         output.WriteLine("  --trace             print per-tick time and path-request counters");
@@ -274,6 +304,10 @@ internal static class BenchCommand
         output.WriteLine("  --hash-stream <f>   write 'tick<TAB>hash[<TAB>full hash]' per tick to a file");
         output.WriteLine("  --expect-hash <hex> exit 1 if the final full-state hash differs");
     }
+
+    // The engine-default AI script (Tzar2's own, content/engine/ai/skirmish.ais), compiled once.
+    private static readonly Lazy<Tzar2.AI.Legacy.Program.AiProgram> DefaultAiScript = new(() => Tzar2.AI.Legacy.Program.AiCompiler.CompileText(
+        "skirmish.ais", System.Text.Encoding.UTF8.GetString(new Tzar2.Content.Rules.EngineDefaultsSource().ReadAllBytes("ai/skirmish.ais"))));
 
     // The classic ruleset from the synthetic tables (no original data needed, REQ-LEGAL-03), compiled once.
     private static readonly Lazy<Tzar2.Content.Compiled.Ruleset> GameplayRuleset = new(() => Tzar2.Content.Rules.SyntheticLegacyContent.CompileRuleset());
