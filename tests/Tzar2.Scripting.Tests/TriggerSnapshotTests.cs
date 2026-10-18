@@ -103,7 +103,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
         using (d)
         {
             Run(d, hero, castle, MissionTicks);
-            Assert.Equal("49DC53D9F047562F", d.Hashes[^1].ToString("X16"));
+            // Naval (ADRs 0140-0145): synthetic hulk and xebec shift type ids, two naval stores join the hashed layout.
+            Assert.Equal("7A1F07A362A8E445", d.Hashes[^1].ToString("X16"));
         }
     }
 
