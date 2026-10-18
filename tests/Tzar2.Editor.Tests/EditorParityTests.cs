@@ -12,7 +12,8 @@ namespace Tzar2.Editor.Tests;
 /// <summary>Backs <c>docs/mechanics/editor-parity.md</c> (TDD §25 M5: "parity checklist 100 %").</summary>
 public class EditorParityTests
 {
-    private static readonly string[] Statuses = ["done", "blocked", "planned"];
+    // M5 is complete: every item is done or blocked with a reason ("planned" is no longer accepted).
+    private static readonly string[] Statuses = ["done", "blocked"];
 
     internal sealed record Row(string Id, string Feature, string Status, string Evidence, string Notes, int Line);
 
@@ -64,9 +65,9 @@ public class EditorParityTests
                 continue;
             }
 
-            if (r.Status == "done")
+            if (r.Status is "done" or "blocked")
             {
-                if (r.Evidence.Length == 0)
+                if (r.Status == "done" && r.Evidence.Length == 0)
                 {
                     problems.Add($"line {r.Line} ({r.Id}): done without evidence");
                 }
@@ -90,7 +91,7 @@ public class EditorParityTests
 
         // The summary block matches the rows.
         string text = File.ReadAllText(ChecklistPath);
-        int done = rows.Count(r => r.Status == "done"), blocked = rows.Count(r => r.Status == "blocked"), planned = rows.Count(r => r.Status == "planned");
+        int done = rows.Count(r => r.Status == "done"), blocked = rows.Count(r => r.Status == "blocked"), planned = 0;
         string expected = $"| All | {rows.Count} | {done} | {blocked} | {planned} |";
         Assert.True(text.Contains(expected, StringComparison.Ordinal), $"The summary should read: {expected}");
         string percent = $"Parity: **{done * 100 / rows.Count} %** done.";

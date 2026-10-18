@@ -12,11 +12,11 @@ Status:
 * **done**: works. *Evidence* names the test that proves it (`Class.Method` in `tests/Tzar2.Editor.Tests`, or
   `Client:` for the Godot smoke test).
 * **blocked**: cannot be done yet, for the reason given.
-* **planned**: not built yet. It must be gone by the end of M5.
+* **planned**: not built yet. None are left: the test accepts only done and blocked rows.
 
 `EditorParityTests.The_checklist_is_well_formed_and_backed_by_tests` parses this page. It checks the following:
 * every row has a known status;
-* every done row names at least one existing test;
+* every done row names at least one existing test, and so does every blocked row that names one (its local-only test);
 * every blocked row gives a reason;
 * the summary below matches the rows.
 
@@ -25,9 +25,9 @@ Status:
 <!-- summary:start -->
 | | Items | Done | Blocked | Planned |
 |---|---|---|---|---|
-| All | 104 | 97 | 1 | 6 |
+| All | 104 | 100 | 4 | 0 |
 
-Parity: **93 %** done.
+Parity: **96 %** done.
 <!-- summary:end -->
 
 ## §18.2 New map
@@ -170,9 +170,9 @@ Parity: **93 %** done.
 | m-lua | Lua script editor: highlighting, API completion, inline errors | blocked | TriggerEditorTests.Lua_scripts_are_stored_and_checked | scripts/*.lua are stored, highlighted and syntax-checked (strings, comments, brackets, blocks); API auto-complete and host diagnostics need the Lua host and API v1, which TDD §25 schedules for M8 |
 | m-localization | Localization tables for map strings (export/import `.po`) | done | TriggerEditorTests.Localization_exports_and_imports_po | gettext .po export and import of every player-visible text |
 | m-mod-palettes | Mod-aware palettes | done | ToolTests.Palette_sections_are_mod_aware_and_items_have_groups | the palette is built from the compiled ruleset |
-| s-authentic-import | (SHOULD) Asset import with an "authentic" conversion | planned |  |  |
-| s-random-templates | (SHOULD, post-1.0 acceptable) Random-map templates editable | planned |  |  |
-| s-mod-studio | (SHOULD) Rules/data browser ("Mod Studio"), at least read-only | planned |  |  |
+| s-authentic-import | (SHOULD) Asset import with an "authentic" conversion | done | StudioTests.Authentic_import_quantises_to_rgb555_flags_foreign_colours_and_casts_a_shadow | Map → Import image with authentic conversion: RGB555 + one-bit alpha, colours checked against the terrain's, shadow sprite from the silhouette (offset ⚠ UNVERIFIED) |
+| s-random-templates | (SHOULD, post-1.0 acceptable) Random-map templates editable | blocked |  | SHOULD, "post-1.0 acceptable" (§18.3): the random-map options (type, size, terrain, players, resources, features) are editable in New map → Random, but a saved template format is not designed yet |
+| s-mod-studio | (SHOULD) Rules/data browser ("Mod Studio"), at least read-only | done | StudioTests.The_rules_browser_lists_types_technologies_and_upgrades_and_filters | read-only browser of the compiled ruleset (types, technologies, upgrades), the §18.3 1.0 minimum |
 
 ## §18.4 Formats
 
@@ -200,6 +200,6 @@ Parity: **93 %** done.
 
 | Id | Feature | Status | Evidence | Notes |
 |---|---|---|---|---|
-| acc-authored | A 3-map campaign with conversations, persistent hero, timers, quests, story screens, custom sounds and music, authored with the editor only and played end to end | planned |  |  |
-| acc-original | The original campaigns convert and every mission completes | planned |  |  |
-| acc-fx | The FX Gold Edition campaigns and a community campaign convert through the converter UI | planned |  |  |
+| acc-authored | A 3-map campaign with conversations, persistent hero, timers, quests, story screens, custom sounds and music, authored with the editor only and played end to end | done | AcceptanceTests.A_three_map_campaign_authored_with_the_editor_only_plays_end_to_end, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | authored through the editor's interaction model and property pages, saved, reopened byte-identically and played to the end headless (story screen, quests, conversation, timers, persistent hero, carried variable, custom sound and music); the manual Windows play-through and tablets are QA/PX |
+| acc-original | The original campaigns convert and every mission completes | blocked | AcceptanceTests.The_original_campaigns_convert_through_the_editor_and_every_mission_completes | needs the user's original install (TZAR2_ORIGIN); not in CI (REQ-LEGAL-01). **Locally verified 2026-10-18** against the user's install (TZAR2_ORIGIN plus a TZAR2_PACKAGE imported outside the repo): both campaign files convert with 0 errors (the Tzar campaign has 6 warnings, code page 1252, en). 21 of 26 missions complete: the tutorial 7/7, the Tzar campaign 14/19 (only v_00 and saa8 complete in plain play; the rest need autoplay assistance: clearing or god mode). alex1, bigisland, v_02, vsaa and rajba are lost or time out at 90000 ticks with every assistance level, so the test fails and the item stays blocked until the autoplay or the simulation finishes those missions |
+| acc-fx | The FX Gold Edition campaigns and a community campaign convert through the converter UI | blocked | AcceptanceTests.The_FX_Gold_Edition_campaigns_convert_through_the_editor_with_zero_errors, AcceptanceTests.A_community_campaign_from_an_arbitrary_folder_converts_through_the_editor | needs the locally kept FX Gold Edition campaigns (TZAR2_FX_CAMPAIGNS) and a community campaign (TZAR2_CORPUS); not on this machine or in CI. The tests are written and run where the files are |
