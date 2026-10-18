@@ -27,6 +27,7 @@ public partial class GameApp : Node
     private readonly GameSettings _settings = new();
     private UiAssets? _ui;
     private Ruleset? _rules;
+    private Tzar2.AI.Legacy.Program.AiProgram? _ai;
     private PresentationCatalog? _catalog;
     private Node? _current;
     private MidiPlayer? _menuMusic;
@@ -77,6 +78,10 @@ public partial class GameApp : Node
         {
             CompiledRuleset compiled = RulesetLoader.Compile(_store.Source);
             _rules = compiled.Ruleset;
+
+            // Computer kingdoms run the original random.ais from the package, else the engine default (ADR 0073).
+            _ai = AiScripts.ForSkirmish(_store.Source, out bool original);
+            GD.Print(original ? "AI: the original random.ais from the package" : "AI: the engine-default skirmish.ais (no usable original scripts in the package)");
             foreach (string warning in compiled.Warnings)
             {
                 GD.Print("Ruleset: " + warning);
@@ -207,13 +212,13 @@ public partial class GameApp : Node
         GameSession session;
         try
         {
-            session = new GameSession(setup, _rules);
+            session = new GameSession(setup, _rules, _ai);
         }
         catch (Exception e) when (e is Content.MapGen.MapGenException or ArgumentException)
         {
             // A random map the rules cannot host: fall back to the skirmish test map.
             GD.PrintErr($"Random map failed ({e.Message}); using the skirmish test map.");
-            session = new GameSession(setup with { Map = new SkirmishTestMap(96) }, _rules);
+            session = new GameSession(setup with { Map = new SkirmishTestMap(96) }, _rules, _ai);
         }
 
         if (_args.GameSmoke)

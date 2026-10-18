@@ -11,7 +11,7 @@ public enum ControllerKind
     /// <summary>The local player (input → commands).</summary>
     Human = 0,
 
-    /// <summary>A computer player (an <see cref="IPlayerController"/>).</summary>
+    /// <summary>A computer kingdom run by the legacy AI (ADR 0051, 0073).</summary>
     Computer = 1,
 }
 

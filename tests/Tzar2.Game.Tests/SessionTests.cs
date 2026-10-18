@@ -71,7 +71,7 @@ public sealed class SessionTests
         Assert.Contains(frame.Visibility, v => v == 0);
         Assert.Equal(MatchOutcome.None, frame.Outcome);
 
-        // The placeholder AI (Hard: every 20 ticks) sends its idle peasants harvesting.
+        // The Hard legacy AI sends its peasants to work.
         var events = new List<SimEvent>();
         session.DrainEvents(events);
         Assert.NotEmpty(events);
@@ -137,7 +137,7 @@ public sealed class SessionTests
     public void A_right_click_on_an_enemy_unit_ends_in_a_kill()
     {
         // The client's order path end to end: frame entities -> EntityInfo -> OrderResolver -> session -> sim.
-        using var session = new GameSession(Setup(), Rules.Value, _ => new IdleController(), fog: false);
+        using var session = new GameSession(Setup(), Rules.Value, fog: false, computerPlayers: false);
         World world = session.Simulation.World;
         FrameEntity[] all = session.AcquireFrame(out _)!.Entities.ToArray();
         EntityInfo Info(FrameEntity e)
@@ -189,21 +189,21 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public void A_kingdom_without_units_and_buildings_is_defeated_and_its_controller_stops()
+    public void A_kingdom_without_units_and_buildings_is_defeated_and_its_ai_stops()
     {
-        // Three kingdoms: 1 deletes everything it owns; 0 (human) and 2 stay. 1 is defeated, the match goes on.
-        var suicide = new SuicideController();
-        MatchSetup setup = Setup(players: 3);
-        using var session = new GameSession(setup, Rules.Value, p => p.Slot == 1 ? suicide : new IdleController());
-        session.Step(40);
+        // Three kingdoms, 1 and 2 run by the AI: 1 deletes everything it owns (as its peer would send it); 0 (human)
+        // and 2 stay. 1 is defeated, its AI issues nothing more, the match goes on.
+        using var session = new GameSession(Setup(players: 3), Rules.Value);
+        Eliminate(session, 1);
         GameFrame frame = session.AcquireFrame(out _)!;
         Assert.True(frame.Players[1].Defeated);
         Assert.False(frame.Players[0].Defeated);
         Assert.False(frame.Players[2].Defeated);
         Assert.Equal(MatchOutcome.None, frame.Outcome);
-        int calls = suicide.Calls;
-        session.Step(40);
-        Assert.Equal(calls, suicide.Calls);
+        long issued = session.Ai!.Issued(0);
+        session.Step(400);
+        Assert.Equal(issued, session.Ai.Issued(0));
+        Assert.True(session.Ai.Issued(1) > 0);
 
         // The human deletes everything: defeat.
         var batch = new CommandList();
@@ -216,33 +216,11 @@ public sealed class SessionTests
     [Fact]
     public void The_last_kingdom_standing_wins()
     {
-        using var session = new GameSession(Setup(), Rules.Value, _ => new SuicideController());
-        session.Step(40);
+        using var session = new GameSession(Setup(), Rules.Value);
+        Eliminate(session, 1);
         GameFrame frame = session.AcquireFrame(out _)!;
         Assert.Equal(MatchOutcome.Victory, frame.Outcome);
         Assert.True(frame.Players[1].Defeated);
-    }
-
-    [Fact]
-    public void Controllers_only_read_the_world()
-    {
-        // The bundled computer player must change the world only through commands (replays and lockstep see those).
-        using var session = new GameSession(Setup(), Rules.Value, _ => new IdleController());
-        var ai = new PlaceholderAi(Difficulty.Hard);
-        var batch = new CommandList();
-        for (int tick = 0; tick < 2000; tick++)
-        {
-            ulong before = session.Simulation.ComputeFullHash();
-            batch.Clear();
-            ai.Think(session.Simulation.World, 0, batch);
-            Assert.Equal(before, session.Simulation.ComputeFullHash());
-            if (batch.Count > 0)
-            {
-                session.Submit(batch);
-            }
-
-            session.Step(1);
-        }
     }
 
     [Fact]
@@ -295,31 +273,31 @@ public sealed class SessionTests
         Assert.True(seen > 10);
     }
 
+    // From the world (the frame hides enemies in the fog).
     private static EntityId[] Own(GameSession session, byte owner)
-        => session.AcquireFrame(out _)!.Entities.ToArray().Where(e => e.Owner == owner).Select(e => e.Id).ToArray();
-
-    private sealed class SuicideController : IPlayerController
     {
-        public int Calls { get; private set; }
+        World w = session.Simulation.World;
+        return w.Identities.Entities.ToArray().Where(e => w.Identities.Get(e).Owner == owner).ToArray();
+    }
 
-        public void Think(World world, byte player, CommandList batch)
+    // Deletes a kingdom until nothing is left (its AI may have just started a site or a unit in the same tick).
+    private static void Eliminate(GameSession session, byte slot)
+    {
+        for (int i = 0; i < 10 && Own(session, slot).Length > 0; i++)
         {
-            Calls++;
-            var own = new List<EntityId>();
-            ReadOnlySpan<EntityId> ids = world.Identities.Entities;
-            for (int i = 0; i < ids.Length; i++)
-            {
-                if (world.Identities.Components[i].Owner == player)
-                {
-                    own.Add(ids[i]);
-                }
-            }
-
-            if (own.Count > 0)
-            {
-                batch.Add(CommandKind.Delete, own.ToArray(), flags: CommandFlags.Queue);
-            }
+            DeleteAll(session, slot);
+            session.Step(20);
         }
+
+        session.Step(40);
+    }
+
+    // Shift+Del of everything a slot owns (castles too), submitted as that slot's peer would send it.
+    private static void DeleteAll(GameSession session, byte slot)
+    {
+        var batch = new CommandList();
+        batch.Add(CommandKind.Delete, Own(session, slot), flags: CommandFlags.Queue);
+        session.SubmitAs(slot, batch);
     }
 
     [Fact]
@@ -350,13 +328,6 @@ public sealed class SessionTests
 
             frame.EntityCount = entities.Length;
             return frame;
-        }
-    }
-
-    internal sealed class IdleController : IPlayerController
-    {
-        public void Think(World world, byte player, CommandList batch)
-        {
         }
     }
 }
