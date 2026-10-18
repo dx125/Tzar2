@@ -37,6 +37,16 @@ public class CliAppTests
         string hash = output.Split('\n').Single(l => l.StartsWith("final hash ", StringComparison.Ordinal))["final hash ".Length..].Trim();
         Assert.Contains("p99", output, StringComparison.Ordinal);
 
+        // Per-section table (systems and their phases), calibration and normalized times (ADR 0080).
+        Assert.Contains("section ms   path-requests", output, StringComparison.Ordinal);
+        Assert.Contains("section ms     steer", output, StringComparison.Ordinal);
+        Assert.Contains("section ms   hash", output, StringComparison.Ordinal);
+        Assert.Contains("calibration ", output, StringComparison.Ordinal);
+        Assert.Contains("normalized p50 ", output, StringComparison.Ordinal);
+        (code, output, error) = Run([.. small, "--scenario", "s2"]);
+        Assert.True(code == ExitCodes.Success, error);
+        Assert.Contains("every 10 ticks", output, StringComparison.Ordinal);
+
         (code, _, _) = Run([.. small, "--workers", "1", "--expect-hash", hash]);
         Assert.Equal(ExitCodes.Success, code);
         (code, _, error) = Run([.. small, "--expect-hash", "0123456789ABCDEF"]);

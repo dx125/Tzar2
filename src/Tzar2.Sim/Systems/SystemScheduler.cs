@@ -77,6 +77,24 @@ public sealed class SimContext
 
     /// <summary>The commands of the current tick (stamped, in execution order).</summary>
     public CommandList Commands { get; internal set; } = new();
+
+    /// <summary>Optional profiler for tick sections (diagnostics only, see <see cref="ITickProfiler"/>).</summary>
+    public ITickProfiler? Profiler { get; internal set; }
+}
+
+/// <summary>
+/// Receives the boundaries of named tick sections (systems, their phases, hashing) for profiling, e.g. the per-system
+/// table of <c>t2 bench</c>. Diagnostics only: the sim never reads anything back, so a profiler cannot affect results.
+/// Sections nest; section names are constant strings. Calls come from the sim thread only.
+/// </summary>
+public interface ITickProfiler
+{
+    /// <summary>A section starts.</summary>
+    /// <param name="section">The section name.</param>
+    void Begin(string section);
+
+    /// <summary>The section that started last ends.</summary>
+    void End();
 }
 
 /// <summary>A simulation system: deterministic code that runs once per tick in its phase.</summary>
@@ -149,9 +167,12 @@ public sealed class SystemScheduler
     public void RunTick(SimContext context)
     {
         Seal();
+        ITickProfiler? profiler = context.Profiler;
         foreach (ISimSystem system in _ordered)
         {
+            profiler?.Begin(system.Name);
             system.Execute(context);
+            profiler?.End();
         }
     }
 }

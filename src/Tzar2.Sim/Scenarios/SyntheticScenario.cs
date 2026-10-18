@@ -30,6 +30,12 @@ public sealed record SyntheticScenarioOptions
     /// <summary>Units each player deletes and respawns per tick (mass-death churn, B4-like).</summary>
     public int ChurnPerPlayerPerTick { get; init; }
 
+    /// <summary>
+    /// Ticks between two order passes of one player (default 1: every tick). With N > 1 each player issues its orders and
+    /// churn only every N-th tick, the players staggered across the interval (an AI-like order rate; ADR 0080).
+    /// </summary>
+    public int OrderIntervalTicks { get; init; } = 1;
+
     /// <summary>Path budget per tick (node expansions, REQ-PATH-03).</summary>
     public int PathBudgetPerTick { get; init; } = SimulationConfig.DefaultPathBudgetPerTick;
 
@@ -188,10 +194,11 @@ public sealed class SyntheticScenario : IBenchScenario
         CollectOwnedUnits(world);
         _tickSet.Clear();
         int worldSize = world.Map.WorldWidth;
+        int interval = Math.Max(1, _options.OrderIntervalTicks);
         for (int p = 0; p < _options.Players; p++)
         {
             _batch.Clear();
-            int owned = _ownedCount[p];
+            int owned = (world.Tick.Value + (p * interval / _options.Players)) % interval == 0 ? _ownedCount[p] : 0;
             if (owned > 0 && _options.OrdersPerPlayerPerTick > 0)
             {
                 int n = Pick(p, _options.OrdersPerPlayerPerTick);

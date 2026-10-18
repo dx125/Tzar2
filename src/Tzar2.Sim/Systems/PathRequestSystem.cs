@@ -114,6 +114,8 @@ public sealed class PathRequestSystem : ISimSystem
         }
 
         // 1. Prepare.
+        ITickProfiler? profiler = context.Profiler;
+        profiler?.Begin("prepare");
         _batch.Clear();
         _liveFlowGroups = -1;
         for (int i = 0; i < queue.Count && _batch.Count < BatchLimit; i++)
@@ -139,7 +141,10 @@ public sealed class PathRequestSystem : ISimSystem
             _batch.Add(i);
         }
 
+        profiler?.End();
+
         // 2. Compute.
+        profiler?.Begin("compute");
         _compute.Clear();
         _flowBuilds.Clear();
         int version = nav.Version;
@@ -204,7 +209,10 @@ public sealed class PathRequestSystem : ISimSystem
             world.FlowFields.CountBuilds(_flowBuilds.Count);
         }
 
+        profiler?.End();
+
         // 3. Accept.
+        profiler?.Begin("accept");
         int budget = world.Config.PathBudgetPerTick;
         int spent = 0;
         int accepted = 0;
@@ -267,6 +275,7 @@ public sealed class PathRequestSystem : ISimSystem
         }
 
         queue.Dequeue(consumed);
+        profiler?.End();
         LastAccepted = accepted;
         LastSpent = spent;
     }

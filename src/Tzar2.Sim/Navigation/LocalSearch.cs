@@ -3,19 +3,16 @@ using System;
 namespace Tzar2.Sim.Navigation;
 
 /// <summary>
-/// A binary min-heap of (key, value) pairs ordered by key, then value: a total order, so pops are identical on every
-/// platform and run (deterministic tie-breaking, REQ-PATH-03). Duplicates are allowed (lazy decrease-key).
+/// A min-heap of (key, value) pairs ordered by key, then value: a total order, so the pop sequence is a function of the
+/// pushed pairs alone, identical on every platform and run and for any heap layout (deterministic tie-breaking,
+/// REQ-PATH-03). Duplicates are allowed (lazy decrease-key). A 4-ary heap over one array of entries: half the depth
+/// of a binary heap and each node's children share a cache line.
 /// </summary>
 internal sealed class MinHeap
 {
-    private ulong[] _keys;
-    private int[] _values;
+    private Entry[] _entries;
 
-    public MinHeap(int capacity = 256)
-    {
-        _keys = new ulong[capacity];
-        _values = new int[capacity];
-    }
+    public MinHeap(int capacity = 256) => _entries = new Entry[Math.Max(4, capacity)];
 
     public int Count { get; private set; }
 
@@ -23,71 +20,77 @@ internal sealed class MinHeap
 
     public void Push(ulong key, int value)
     {
-        if (Count == _keys.Length)
+        Entry[] entries = _entries;
+        if (Count == entries.Length)
         {
-            Array.Resize(ref _keys, _keys.Length * 2);
-            Array.Resize(ref _values, _values.Length * 2);
+            Array.Resize(ref _entries, entries.Length * 2);
+            entries = _entries;
         }
 
         int i = Count++;
         while (i > 0)
         {
-            int parent = (i - 1) >> 1;
-            if (!Less(key, value, _keys[parent], _values[parent]))
+            int parent = (i - 1) >> 2;
+            ref Entry p = ref entries[parent];
+            if (p.Key < key || (p.Key == key && p.Value <= value))
             {
                 break;
             }
 
-            _keys[i] = _keys[parent];
-            _values[i] = _values[parent];
+            entries[i] = p;
             i = parent;
         }
 
-        _keys[i] = key;
-        _values[i] = value;
+        entries[i] = new Entry(key, value);
     }
 
     public int Pop(out ulong key)
     {
-        key = _keys[0];
-        int result = _values[0];
+        Entry[] entries = _entries;
+        key = entries[0].Key;
+        int result = entries[0].Value;
         int n = --Count;
         if (n > 0)
         {
-            ulong k = _keys[n];
-            int v = _values[n];
+            Entry last = entries[n];
             int i = 0;
             while (true)
             {
-                int child = (2 * i) + 1;
-                if (child >= n)
+                int first = (i << 2) + 1;
+                if (first >= n)
                 {
                     break;
                 }
 
-                if (child + 1 < n && Less(_keys[child + 1], _values[child + 1], _keys[child], _values[child]))
+                // The least of the up to four children.
+                int best = first;
+                int end = Math.Min(first + 4, n);
+                for (int c = first + 1; c < end; c++)
                 {
-                    child++;
+                    if (Less(entries[c], entries[best]))
+                    {
+                        best = c;
+                    }
                 }
 
-                if (!Less(_keys[child], _values[child], k, v))
+                if (!Less(entries[best], last))
                 {
                     break;
                 }
 
-                _keys[i] = _keys[child];
-                _values[i] = _values[child];
-                i = child;
+                entries[i] = entries[best];
+                i = best;
             }
 
-            _keys[i] = k;
-            _values[i] = v;
+            entries[i] = last;
         }
 
         return result;
     }
 
-    private static bool Less(ulong ka, int va, ulong kb, int vb) => ka < kb || (ka == kb && va < vb);
+    private static bool Less(in Entry a, in Entry b) => a.Key < b.Key || (a.Key == b.Key && a.Value < b.Value);
+
+    private readonly record struct Entry(ulong Key, int Value);
 }
 
 /// <summary>

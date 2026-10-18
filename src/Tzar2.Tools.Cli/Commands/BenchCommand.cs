@@ -30,6 +30,9 @@ internal static class BenchCommand
         ulong? expectHash = null;
         ulong? seedOption = null;
         int? playersOption = null;
+        int? ordersOption = null;
+        int? churnOption = null;
+        int? intervalOption = null;
         for (int i = 0; i < args.Length; i++)
         {
             string arg = args[i];
@@ -55,14 +58,15 @@ internal static class BenchCommand
             bool ok = true;
             switch (arg)
             {
-                case "--scenario": scenarioName = value; ok = value is "synthetic" or "b3" or "b3-groups" or "b4" or "gameplay" or "ai"; break;
+                case "--scenario": scenarioName = value; ok = value is "synthetic" or "s2" or "b3" or "b3-groups" or "b4" or "gameplay" or "ai"; break;
                 case "--group": ok = TryInt(value, 1, 4096, v => group = v); break;
                 case "--path-budget": ok = TryInt(value, 1, int.MaxValue, v => budget = v); break;
                 case "--entities": ok = TryInt(value, 0, 1_000_000, v => entitiesOption = v); break;
                 case "--map": ok = TryInt(value, 8, 1024, v => mapOption = v); break;
                 case "--players": ok = TryInt(value, 1, 16, v => options = options with { Players = v }); playersOption = options.Players; break;
-                case "--orders": ok = TryInt(value, 0, 4096, v => options = options with { OrdersPerPlayerPerTick = v }); break;
-                case "--churn": ok = TryInt(value, 0, 64, v => options = options with { ChurnPerPlayerPerTick = v }); break;
+                case "--orders": ok = TryInt(value, 0, 4096, v => ordersOption = v); break;
+                case "--churn": ok = TryInt(value, 0, 64, v => churnOption = v); break;
+                case "--interval": ok = TryInt(value, 1, 10_000, v => intervalOption = v); break;
                 case "--ticks": ok = TryInt(value, 1, 10_000_000, v => ticksOption = v); break;
                 case "--warmup": ok = TryInt(value, 0, 1_000_000, v => warmupOption = v); break;
                 case "--workers": ok = TryInt(value, 1, 64, v => workers = v); break;
@@ -89,8 +93,14 @@ internal static class BenchCommand
         }
 
         int pathBudget = budget ?? SimulationConfig.DefaultPathBudgetPerTick;
+        bool s2 = scenarioName == "s2";
         options = options with
         {
+            // s2: the TDD §4.3 S2 proxy (4,000 units on 512², 8 players) at an AI-like order rate: every player orders 24
+            // units to a new point and replaces 1 unit every 10 ticks (ADR 0080). synthetic: the stress default.
+            OrdersPerPlayerPerTick = ordersOption ?? (s2 ? 24 : options.OrdersPerPlayerPerTick),
+            ChurnPerPlayerPerTick = churnOption ?? (s2 ? 1 : options.ChurnPerPlayerPerTick),
+            OrderIntervalTicks = intervalOption ?? (s2 ? 10 : 1),
             MapSize = mapOption ?? options.MapSize,
             EntityCount = entitiesOption ?? options.EntityCount,
             PathBudgetPerTick = pathBudget,
@@ -130,7 +140,8 @@ internal static class BenchCommand
             _ => new SyntheticScenario(options, workers),
         };
 
-        if (scenarioName != "synthetic")
+        bool synthetic = scenarioName is "synthetic" or "s2";
+        if (!synthetic)
         {
             // B3/B4 measure from tick 0, so warm the JIT up on a throwaway copy first (tier-0 code is several times
             // slower; the synthetic scenario uses --warmup ticks instead).
@@ -154,8 +165,8 @@ internal static class BenchCommand
         {
             pathSystem ??= system as Tzar2.Sim.Systems.PathRequestSystem;
         }
-        int ticks = ticksOption ?? scenarioName switch { "b3" or "b3-groups" => 600, "b4" => 3600, "gameplay" => 2400, "ai" => 12_000, _ => 1000 };
-        int warmup = warmupOption ?? (scenarioName == "synthetic" ? 100 : 0);
+        int ticks = ticksOption ?? scenarioName switch { "b3" or "b3-groups" => 600, "b4" => 3600, "gameplay" => 2400, "ai" => 12_000, "s2" => 2000, _ => 1000 };
+        int warmup = warmupOption ?? (scenarioName == "s2" ? 200 : synthetic ? 100 : 0);
         // "\n" line ends, so hash streams from Windows and Unix runners compare byte for byte.
         using StreamWriter? stream = hashStream is null ? null : new StreamWriter(hashStream) { NewLine = "\n" };
         for (int t = 0; t < warmup; t++)
@@ -164,6 +175,8 @@ internal static class BenchCommand
         }
 
         double[] samples = new double[ticks];
+        var profiler = new TickProfiler(ticks);
+        scenario.Simulation.Profiler = profiler;
         long allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
         int gcBefore = GC.CollectionCount(0);
         long simTicks = 0;
@@ -171,6 +184,7 @@ internal static class BenchCommand
         for (int t = 0; t < ticks; t++)
         {
             scenario.GenerateCommands();
+            profiler.NextTick();
             long start = Stopwatch.GetTimestamp();
             last = scenario.Simulation.Tick(scenario.LastCommands);
             long elapsed = Stopwatch.GetTimestamp() - start;
@@ -186,6 +200,8 @@ internal static class BenchCommand
 
         long allocated = GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore;
         int gcs = GC.CollectionCount(0) - gcBefore;
+        scenario.Simulation.Profiler = null;
+        double[] inTickOrder = (double[])samples.Clone();
         Array.Sort(samples);
         ulong finalHash = scenario.Simulation.ComputeFullHash();
         World world = scenario.Simulation.World;
@@ -196,15 +212,22 @@ internal static class BenchCommand
         }
 
         var inv = CultureInfo.InvariantCulture;
-        stdout.WriteLine(scenarioName == "synthetic"
-            ? string.Create(inv, $"scenario   synthetic: map {options.MapSize}x{options.MapSize}, {options.Players} players, seed {options.Seed}, orders {options.OrdersPerPlayerPerTick}/player/tick, churn {options.ChurnPerPlayerPerTick}/player/tick")
+        stdout.WriteLine(synthetic
+            ? string.Create(inv, $"scenario   {scenarioName}: map {options.MapSize}x{options.MapSize}, {options.Players} players, seed {options.Seed}, orders {options.OrdersPerPlayerPerTick}/player/tick, churn {options.ChurnPerPlayerPerTick}/player/tick, every {options.OrderIntervalTicks} ticks")
             : $"scenario   {scenario.Describe()}");
         stdout.WriteLine(string.Create(inv, $"paths      budget {pathBudget} expansions/tick; flow fields cached {world.FlowFields.Count}, built {world.FlowFields.Builds}, objects {world.FlowFields.FieldsAllocated}"));
         stdout.WriteLine(string.Create(inv, $"runtime    {Environment.Version}, {System.Runtime.InteropServices.RuntimeInformation.OSDescription.Trim()} {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}, workers {workers}, overflow policy {Core.Numerics.OverflowPolicy.Mode}"));
+        stdout.WriteLine(string.Create(inv, $"cpu        {CpuModel()}, {Environment.ProcessorCount} logical processors"));
         stdout.WriteLine(string.Create(inv, $"entities   {world.Entities.AliveCount} alive, {moving} moving at the end"));
         stdout.WriteLine(string.Create(inv, $"ticks      {ticks} measured after {warmup} warm-up"));
-        stdout.WriteLine(string.Create(inv, $"tick ms    p50 {Percentile(samples, 50):F3}  p99 {Percentile(samples, 99):F3}  max {samples[^1]:F3}  mean {simTicks * 1000.0 / Stopwatch.Frequency / ticks:F3}"));
+        double mean = simTicks * 1000.0 / Stopwatch.Frequency / ticks;
+        stdout.WriteLine(string.Create(inv, $"tick ms    p50 {Percentile(samples, 50):F3}  p99 {Percentile(samples, 99):F3}  max {samples[^1]:F3}  mean {mean:F3}"));
+        double calibration = Calibration.Measure();
+        double scale = Calibration.ReferenceMs / calibration;
+        stdout.WriteLine(string.Create(inv, $"calibration {calibration:F3} ms (reference {Calibration.ReferenceMs:F1} ms, scale {scale:F3})"));
+        stdout.WriteLine(string.Create(inv, $"normalized p50 {Percentile(samples, 50) * scale:F3}  p99 {Percentile(samples, 99) * scale:F3}  mean {mean * scale:F3}"));
         stdout.WriteLine(string.Create(inv, $"alloc      {allocated / (double)ticks:F1} B/tick (incl. bot command generation), gen0 GCs {gcs}"));
+        profiler.Print(stdout, inTickOrder);
         stdout.WriteLine(string.Create(inv, $"final tick {world.Tick.Value}"));
         stdout.WriteLine(string.Create(inv, $"final hash {finalHash:X16}"));
         if (expectHash is { } expect && expect != finalHash)
@@ -259,6 +282,32 @@ internal static class BenchCommand
         stream.WriteLine(result.FullHash is { } full ? string.Create(CultureInfo.InvariantCulture, $"\t{full:X16}") : string.Empty);
     }
 
+    // The CPU model on Linux (CI runners differ: normalized times, ADR 0080); "unknown" elsewhere.
+    private static string CpuModel()
+    {
+        try
+        {
+            if (File.Exists("/proc/cpuinfo"))
+            {
+                foreach (string line in File.ReadLines("/proc/cpuinfo"))
+                {
+                    if (line.StartsWith("model name", StringComparison.Ordinal))
+                    {
+                        return line[(line.IndexOf(':', StringComparison.Ordinal) + 1)..].Trim();
+                    }
+                }
+            }
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+
+        return "unknown";
+    }
+
     private static double Percentile(double[] sorted, int percentile)
     {
         int index = (int)Math.Ceiling(percentile / 100.0 * sorted.Length) - 1;
@@ -282,7 +331,9 @@ internal static class BenchCommand
         output.WriteLine();
         output.WriteLine("Runs a sim scenario headless and reports tick times (TDD §21).");
         output.WriteLine();
-        output.WriteLine("  --scenario <name>   synthetic (bot orders on a generated map, default), b3 (500 individual move");
+        output.WriteLine("  --scenario <name>   synthetic (stress: 16 move orders per player every tick on a generated map,");
+        output.WriteLine("                      default), s2 (the TDD S2 proxy: the same map and 4,000 units at an AI-like");
+        output.WriteLine("                      order rate, 24 units per player every 10 ticks), b3 (500 individual move");
         output.WriteLine("                      orders on a 512² maze), b3-groups (the same in groups, see --group), b4 (mass");
         output.WriteLine("                      death: 2,000 kills in 60 s, then traffic across the bridge), gameplay (economy and");
         output.WriteLine("                      combat: bases, harvesting, building, training and a battle of all kingdoms; the");
@@ -297,6 +348,7 @@ internal static class BenchCommand
         output.WriteLine("  --players <n>       players, 1-16 (default 8)");
         output.WriteLine("  --orders <n>        units ordered per player per tick (default 16)");
         output.WriteLine("  --churn <n>         units deleted and respawned per player per tick (default 0; B4-like)");
+        output.WriteLine("  --interval <n>      ticks between a player's order passes (default 1; s2: 10)");
         output.WriteLine("  --ticks <n>         measured ticks (default 1000)");
         output.WriteLine("  --warmup <n>        unmeasured ticks first (default 100)");
         output.WriteLine("  --workers <n>       sim worker threads (default: cores, max 8); never changes the result");
