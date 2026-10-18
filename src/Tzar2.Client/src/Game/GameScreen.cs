@@ -403,7 +403,7 @@ public partial class GameScreen : Node
     }
 
     /// <summary>Simulated input for the test driver: a minimap click at a map share (0-1).</summary>
-    public void MinimapClick(Vector2 share, bool right) => OnMinimap(share, right);
+    public void MinimapClick(Vector2 share, bool right, KeyMods mods = KeyMods.None) => OnMinimap(share, right, mods);
 
     /// <summary>Simulated input for the test driver: the mouse moves to a screen point.</summary>
     public void Hover(Vector2 screen) => _mouse = screen;
@@ -983,7 +983,9 @@ public partial class GameScreen : Node
             Math.Clamp(_pan.Y, 0, Math.Max(0, (_world.MapHeight * 32) - view.Y)));
     }
 
-    private void OnMinimap(Vector2 share, bool right)
+    private void OnMinimap(Vector2 share, bool right) => OnMinimap(share, right, KeyMods.None);
+
+    private void OnMinimap(Vector2 share, bool right, KeyMods mods)
     {
         if (_world is null)
         {
@@ -993,7 +995,7 @@ public partial class GameScreen : Node
         int x = (int)(share.X * _world.MapWidth * 32 * WorldRenderer.UnitsPerPixel), y = (int)(share.Y * _world.MapHeight * 32 * WorldRenderer.UnitsPerPixel);
         if (right)
         {
-            Send(OrderResolver.RightClick(SelectedInfos(), null, x, y, KeyMods.None, _session.LocalPlayer));
+            Send(OrderResolver.RightClick(SelectedInfos(), null, x, y, mods, _session.LocalPlayer));
         }
         else
         {

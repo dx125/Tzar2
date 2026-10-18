@@ -119,14 +119,20 @@ public sealed class AutoplayDriver
             game.Press(Key.Key1);
             await Frames(2);
             // The enemy base is off screen and in the fog: order through the minimap like a player would.
-            game.MinimapClick(new Vector2(enemy.X / (float)(game.Session.Map.Width * 2048), enemy.Y / (float)(game.Session.Map.Height * 2048)), right: true);
-            Log(game, $"attack-move ordered with {game.Selection.Selected.Count}");
-            for (int i = 0; i < 12 && game.Selection.Selected.Count > 0; i++)
+            // Ctrl+right click on the minimap: move-advance, fighting whatever comes into sight on the way.
+            game.MinimapClick(new Vector2(enemy.X / (float)(game.Session.Map.Width * 2048), enemy.Y / (float)(game.Session.Map.Height * 2048)), right: true, KeyMods.Ctrl);
+            Log(game, $"move-advance ordered with {game.Selection.Selected.Count}");
+
+            // Castles take one point per melee hit under the classic placeholder resistance formula (UNK-08), so the
+            // army is pointed at enemy units it can see (right click = attack), like a player would, until one dies.
+            for (int i = 0; i < 30 && game.Stats.Kills == 0 && game.Selection.Selected.Count > 0; i++)
             {
                 await Seconds(game, 10);
-                if (game.Frame!.Entities.ToArray().Any(e => e.Owner == game.Session.LocalPlayer && e.Activity == UnitActivity.Attack))
+                if (VisibleEnemyUnit(game) is { } victim)
                 {
-                    break;
+                    game.CenterOn(victim.X, victim.Y);
+                    await Frames(3);
+                    game.Click(Screen(game, victim), MouseButton.Right);
                 }
             }
 
@@ -139,6 +145,11 @@ public sealed class AutoplayDriver
             await Frames(3);
             await Shot("battle");
             Log(game, $"battle: kills {game.Stats.Kills}, losses {game.Stats.Losses}, sounds {game.Mixer?.Played}");
+            if (game.Stats.Kills == 0)
+            {
+                throw new InvalidOperationException("The battle ended without a single kill.");
+            }
+
             game.CenterOn(castle.X, castle.Y);
             await Seconds(game, 300);
             await Shot("night");
@@ -199,6 +210,34 @@ public sealed class AutoplayDriver
 
             game.PressCard(sub);
         }
+    }
+
+    private static FrameEntity? VisibleEnemyUnit(GameScreen game)
+    {
+        GameFrame frame = game.Frame!;
+        int width = game.Session.Map.Width;
+        FrameEntity? best = null;
+        long bestD = long.MaxValue;
+        FrameEntity[] all = frame.Entities.ToArray();
+        FrameEntity? lead = game.Selection.Selected.Count > 0 ? all.FirstOrDefault(e => e.Id == game.Selection.Selected[0]) : null;
+        foreach (FrameEntity e in all)
+        {
+            bool mobile = game.Session.Ruleset.EntityTypes[e.TypeId].IsMobile;
+            int tile = ((e.Y / 2048) * width) + (e.X / 2048);
+            if (e.Owner == game.Session.LocalPlayer || e.Owner >= 8 || !mobile || e.Health <= 0 || (frame.Visibility.Length > 0 && frame.Visibility[tile] != 2))
+            {
+                continue;
+            }
+
+            long dx = e.X - (lead?.X ?? e.X), dy = e.Y - (lead?.Y ?? e.Y), d = (dx * dx) + (dy * dy);
+            if (d < bestD)
+            {
+                bestD = d;
+                best = e;
+            }
+        }
+
+        return best;
     }
 
     private static int Index(GameScreen game, Func<CardButton, bool> match)

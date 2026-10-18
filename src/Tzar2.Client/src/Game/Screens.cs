@@ -187,7 +187,7 @@ public partial class SkirmishSetupScreen : ArtScreen
         _map = new TextureRect { Position = Origin + new Vector2I(554, 63), Size = new Vector2(180, 226), StretchMode = TextureRect.StretchModeEnum.KeepCentered, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_map);
         Text(new Vector2I(66, 40), catalog?.Text("singlescr", "random", "RANDOM MAP") ?? "SKIRMISH", UiAssets.TitleFont);
-        Text(new Vector2I(66, 70), "Skirmish test map (random maps come with the map generator)", UiAssets.SmallFont, new Color(0.8f, 0.8f, 0.7f));
+        Text(new Vector2I(66, 70), "Random map: choose its type, size and terrain below", UiAssets.SmallFont, new Color(0.8f, 0.8f, 0.7f));
         string[] titles =
         [
             "Kingdom",

@@ -132,6 +132,45 @@ public sealed class SessionTests
     }
 
     [Fact]
+    public void A_right_click_on_an_enemy_unit_ends_in_a_kill()
+    {
+        // The client's order path end to end: frame entities -> EntityInfo -> OrderResolver -> session -> sim.
+        using var session = new GameSession(Setup(), Rules.Value, _ => new IdleController());
+        World world = session.Simulation.World;
+        FrameEntity[] all = session.AcquireFrame(out _)!.Entities.ToArray();
+        EntityInfo Info(FrameEntity e)
+        {
+            EntityTypeDefinition t = Rules.Value.EntityTypes[e.TypeId];
+            return new EntityInfo(e.Id, e.TypeId, e.Owner, t.Traits.Category, t.Traits.Harvester is null && t.Traits.Armament is not null, 0, e.Health, e.MaxHealth,
+                t.Traits.Harvester is not null, t.Traits.IsBuilder, t.Traits.Armament is not null, t.Traits.Producer is not null, t.Traits.ResourceNode is not null, false, t.IsMobile);
+        }
+
+        EntityInfo[] army = all.Where(e => e.Owner == 0 && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "footman").Select(Info).ToArray();
+        FrameEntity victim = all.First(e => e.Owner == 1 && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "peon");
+        Assert.NotEmpty(army);
+        var events = new List<SimEvent>();
+        int kills = 0;
+        for (int round = 0; round < 40 && kills == 0; round++)
+        {
+            var batch = new CommandList();
+            foreach (PlannedCommand c in OrderResolver.RightClick(army, Info(victim), victim.X, victim.Y, KeyMods.None, 0))
+            {
+                Assert.Equal(CommandKind.Attack, c.Kind);
+                c.AddTo(batch);
+            }
+
+            session.Submit(batch);
+            session.Step(100);
+            session.DrainEvents(events);
+            kills += events.Count(e => e.Kind == SimEventKind.Killed && e.Entity == victim.Id);
+            events.Clear();
+        }
+
+        Assert.Equal(1, kills);
+        Assert.False(world.Entities.IsAlive(victim.Id));
+    }
+
+    [Fact]
     public void Running_on_the_sim_thread_advances_ticks_until_paused()
     {
         using var session = new GameSession(Setup(), Rules.Value);
