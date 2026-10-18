@@ -345,4 +345,18 @@ internal static unsafe partial class NativeMethods
     /// <summary>Keeps the display on and the PC awake (a screen saver or lock screen would swallow the input).</summary>
     [LibraryImport("kernel32.dll")]
     public static partial uint SetThreadExecutionState(uint flags);
+
+    // Device enumeration for the tzar.ini device counts (DeviceProbe). Read-only; nothing is opened.
+    [LibraryImport("winmm.dll", EntryPoint = "waveOutGetNumDevs")]
+    public static partial uint WaveOutGetNumDevs();
+
+    [LibraryImport("winmm.dll", EntryPoint = "midiOutGetNumDevs")]
+    public static partial uint MidiOutGetNumDevs();
+
+    [LibraryImport("dsound.dll", EntryPoint = "DirectSoundEnumerateW")]
+    public static partial int DirectSoundEnumerateW(delegate* unmanaged<Guid*, char*, char*, nint, int> callback, nint context);
+
+    // The ANSI entry point: the wide-character DirectDraw enumerations are not implemented on every Windows version.
+    [LibraryImport("ddraw.dll", EntryPoint = "DirectDrawEnumerateExA")]
+    public static partial int DirectDrawEnumerateExA(delegate* unmanaged<Guid*, byte*, byte*, nint, nint, int> callback, nint context, uint flags);
 }

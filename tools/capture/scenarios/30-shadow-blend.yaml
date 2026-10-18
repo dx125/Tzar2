@@ -8,13 +8,22 @@ description: |
   Snapshots of busy areas (towns with buildings, forests) on two more maps, day/night and weather off. Shadowed
   terrain pixels are compared with the known texel underneath (terrain tiles are identified exactly), which gives
   the darkening rule; applying the rule twice tests whether overlapping shadows darken twice.
-launch: [-nomovies, -explore, -nofog, -map, "${map}"]
+launch: [-nomovies, -map, "${map}"]
 trials:
   - name: mp3-grass
-    vars: {map: MP3}
+    vars: {map: MP3.wmp}
   - name: mp6-snow
-    vars: {map: MP6}
+    vars: {map: MP6.wmp}
 steps:
+  # Start (first session, 2026-10-18): "-map <name>.wmp" opens the setup screen; an empty-background click absorbs a
+  # wrapper cursor grab, if any; PLAY starts the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
   - key: {key: C, ctrl: true}   # own castle: buildings and their shadows
   - key: Space
   - wait: 1

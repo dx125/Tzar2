@@ -1,40 +1,62 @@
 schema: tzar2-capture-scenario/1
 id: smoke
-title: Start-up, direct map loading, F11 snapshots, chat cheats (discovery)
+title: Start-up, setup screen, F11 snapshots, chat cheats (discovery)
 resolves: []
 priority: 0
-minutes: 2.5
+minutes: 2
 description: |
-  Every other scenario relies on things we could only infer from the executable's strings: that "-map <name>"
-  starts a game on Maps\<name>.wmp, that "-explore" / "-nofog" reveal the map, that F11 writes a snapshot, and
-  that the hm* chat cheats work. This scenario records what really happens, with a snapshot after every step.
-# Empty variables are dropped from the command line: the first trial uses no reveal flags, the second both.
-launch: [-nomovies, "${explore}", "${nofog}", -map, MP2]
+  Checks what every other scenario relies on, with a snapshot after every step. Known from the first session
+  (2026-10-18, Windows 11): "-map <name>.wmp" (only this form) opens the single-player setup screen with the map
+  selected and PLAY starts it; -explore / -nofog reveal nothing, the hmreveal / hmnofog cheats do; F11 works in the
+  game but not on the diplomacy screen. Open questions recorded here: does "hmspawn <unit>" need a click to place
+  the unit (it showed as an all-green figure that never moved or fought), and does "hmkingdom <n>" switch the
+  controlled kingdom or convert the selection (the diplomacy screen still listed kingdoms 2-8 after "hmkingdom 8")?
+launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: plain
-    vars: {explore: "", nofog: ""}
-  - name: explore-nofog
-    vars: {explore: -explore, nofog: -nofog}
 steps:
+  - snapshot: {name: setup, game: false}
+  # Start: an empty-background click (absorbs a wrapper cursor grab, if any), then PLAY.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
   - snapshot: after-load
   - chat: "${cheat}reveal"
   - wait: 1
-  - snapshot: after-reveal-cheat
   - chat: "${cheat}nofog"
   - wait: 1
-  - snapshot: after-nofog-cheat
+  - snapshot: after-cheats
   - minimap: [0.5, 0.5]
   - wait: 1
   - snapshot: minimap-centre
+  # Spawn: is the unit placed at once, or does it follow the cursor until a click?
+  - move: [600, 340]
+  - chat: "${cheat}spawn peon"
+  - wait: 1
+  - snapshot: spawn-before-click
+  - move: [700, 340]
+  - wait: 1
+  - snapshot: spawn-cursor-moved
+  - click: [700, 340]
+  - wait: 1
+  - snapshot: spawn-after-click
+  # Kingdom: select the new unit, switch, look at the unit and at the diplomacy screen (whose rows omit the viewer).
+  - click: [700, 340]
+  - chat: "${cheat}kingdom 2"
+  - wait: 1
+  - snapshot: kingdom-2
+  - key: F5
+  - wait: 1
+  - snapshot: {name: diplomacy-kingdom-2, game: false}
+  - key: Escape
+  - wait: 1
+  - chat: "${cheat}kingdom 1"
+  - wait: 1
+  - snapshot: kingdom-1
   - key: {key: C, ctrl: true}       # select own castle
   - key: Space                      # centre it
   - wait: 1
   - snapshot: castle
-  - key: F5                         # diplomacy screen (kingdom names and colours)
-  - wait: 1
-  - snapshot: diplomacy
-  - key: Escape
-  - wait: 1
   - key: F1                         # menu screen
   - wait: 1
   - snapshot: menu

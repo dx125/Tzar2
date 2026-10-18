@@ -51,6 +51,9 @@ Send that one file (Google Drive, Telegram, any file share). It contains screens
 samples, the log and the settings used — nothing else from your PC. Please do not post it publicly: the screenshots
 show the game's copyrighted art.
 
+Before you start, switch the keyboard to the **English** layout: the chat commands are typed key by key with the
+current layout.
+
 ## Good to know
 
 * **Your game folder is not changed.** The session copies the game to `%LOCALAPPDATA%\Tzar2Capture\game` and works
@@ -65,6 +68,46 @@ show the game's copyrighted art.
   capture anyway: add `-AllowModified` (the results are then marked as coming from a modified install).
 * If the self-test fails, make sure the terminal is the active window and no other program (remote desktop, a game
   overlay, a macro tool) grabs input, then rerun.
+
+## Windows 11 notes (first session, 2026-10-18, Windows 11 25H2, GOG v1.10)
+
+The first session ran 16 of 16 trials after these fixes, which the harness now applies or checks by itself:
+
+* **GOG's compatibility database.** The GOG installer registers `goggame.sdb` (an `EmulateHeap` fix) for the file name
+  `Tzar.exe`, so it also applies to the work copy. With it loaded the game crashed while initialising sound (an access
+  violation in `winmmbase.dll`), even with sound off. The capture checks
+  `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Custom\Tzar.exe` and, if a database is
+  registered, prints the commands to remove it for the session (`sdbinst -u -g {guid}`, administrator terminal) and to
+  put it back afterwards (`sdbinst "<game folder>\goggame.sdb"`). It never removes it by itself. The self-test
+  shows the same check.
+* **Renderer.** GOG's `tzar.ini` has `DIRECTXDEVICE=-1` (the game's GDI path, which switches the desktop to 16-bit
+  colour itself and works only under the compatibility layer GOG sets for the install's own path: "Error switching to
+  1024x768 video mode" in the work copy). The session writes `VIDEO.DIRECTXDEVICE=0` (DirectDraw, through cnc-ddraw).
+* **Device counts.** At start-up `Tzar.exe` compares `VIDEO.DIRECTDRAW_DEVICESNUMBER` and the three
+  `SOUND.SOUNDDEVICE*NUMBER` values with the devices it finds. GOG ships its own PC's values; any difference ends in
+  "Invalid TZAR configuration detected. Running configuration program." The harness now reads this PC's DirectDraw,
+  waveOut, DirectSound and midiOut devices and the processor clock (`SOUND.CPUSPEED`) at the start of every session
+  and writes them into the work copy's `tzar.ini` only (waveOut and midiOut count their mapper as one more device;
+  DirectSound and DirectDraw count every entry, primary driver included: this reproduces what the game's own
+  `Setup.exe` wrote). The numbers change when, for example, Bluetooth headphones connect, so they are never stored in
+  `session.yaml`. If the game still reports an invalid configuration, run `Setup.exe` in the work copy and put the
+  values it writes into your local `session.yaml` (`ini:`); those win over the detected ones.
+* **First click.** Windowed cnc-ddraw grabbed the cursor on the first click into the window and did not pass that
+  click on, so PLAY never registered. The wrapper now runs with `devmode=true` (and `adjmouse=true`, as in
+  cnc-ddraw's own profile for the game), and every scenario starts with a click on empty background. Longer click
+  timings were tried before this fix and did not help on their own; they are not used.
+* **Starting a map.** Only `-map <name>.wmp` works (`-map MP2` and `-map Maps\MP2.wmp` give "Error loading map
+  file"). It opens the single-player setup screen with the map selected; the scenarios click PLAY (772, 596) and wait
+  10 s. `-explore` and `-nofog` do nothing, not even on the setup screen's switches; the chat cheats `hmreveal` and
+  `hmnofog` reveal the map, so every scenario types them after loading.
+* **Snapshots.** F11 works in the game but not on the diplomacy screen (F5): those steps take a window capture only.
+* **Not resolved by the first session.** `hmspawn <unit>` showed the unit as an all-green figure at the cursor that never
+  moved or fought; the scenarios now place it with a click at the same spot. `hmkingdom <n>` changed nothing visible
+  (the diplomacy screen still listed kingdoms 2-8 after `hmkingdom 8`); the player-colours, attack-timing and
+  combat-pairs scenarios now work whether it switches the controlled kingdom or gives the selected unit to kingdom
+  n, and the smoke scenario records which one it is.
+* The `MidiSrv` service and the keyboard layout were not the cause of the crash; the layout matters for the chat
+  commands (see above).
 
 ## For developers
 

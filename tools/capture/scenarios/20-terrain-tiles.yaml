@@ -9,15 +9,24 @@ description: |
   map revealed and no fog. The analysis identifies the tile of every screen cell, aligns the view with the map's
   "tiles" words and reports which tile each word produced (variant stored in the map, or chosen by position).
   The same snapshots feed the shadow analysis.
-launch: [-nomovies, -explore, -nofog, -map, "${map}"]
+launch: [-nomovies, -map, "${map}"]
 trials:
   - name: mp1-snow
-    vars: {map: MP1}
+    vars: {map: MP1.wmp}
   - name: mp2-grass
-    vars: {map: MP2}
+    vars: {map: MP2.wmp}
   - name: mp4-summer
-    vars: {map: MP4}
+    vars: {map: MP4.wmp}
 steps:
+  # Start (first session, 2026-10-18): "-map <name>.wmp" opens the setup screen; an empty-background click absorbs a
+  # wrapper cursor grab, if any; PLAY starts the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
   - minimap: [0.2, 0.2]
   - snapshot: {name: nw, window: false}
   - minimap: [0.5, 0.2]

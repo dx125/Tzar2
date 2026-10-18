@@ -11,13 +11,19 @@ ini:
   DEFAULTS.SCROLLSPEED: 2
   SOUND.MUSIC: 0
   SOUND.SOUND: 0
+  VIDEO.DIRECTXDEVICE: 0          # DirectDraw, which cnc-ddraw wraps. GOG ships -1 (GDI: the game switches the desktop to
+                                  # 16 bpp itself, which works only under GOG's DWM8And16BitMitigation layer for the
+                                  # install's own path, not in the work copy). cnc-ddraw's [Tzar] profile says the same.
+  # Never put machine values here in git: the DirectDraw/sound device counts and CPUSPEED are detected on the operator's
+  # PC for every session (MachineSettings.cs); a value set here locally overrides the detected one.
 
-# ddraw.ini [ddraw] overrides for the cnc-ddraw renderer (defaults in CncDdraw.cs: windowed, GDI, no scaling).
+# ddraw.ini [ddraw] overrides for the cnc-ddraw renderer (defaults in CncDdraw.cs: windowed, GDI, no scaling,
+# devmode and adjmouse on).
 wrapper: {}
 
 # Variables usable as ${name} in scenarios.
 vars:
-  # Chat cheat prefix (TDD GAME-19 lists hm* codes; the exact spelling is confirmed by the smoke scenario).
+  # Chat cheat prefix (confirmed by the first session: hmreveal / hmnofog work).
   cheat: hm
 
 layout:
@@ -33,5 +39,5 @@ timing:
   chat_open_ms: 400
   snapshot_timeout_ms: 6000
   window_timeout_s: 90
-  load_s: 25
+  load_s: 5                       # until the setup screen that "-map <name>.wmp" opens; scenarios click PLAY and wait for the map
   close_timeout_s: 3              # then the game is terminated (it may ask "quit?" on close)

@@ -6,11 +6,12 @@ priority: 2
 minutes: 5
 experimental: true
 description: |
-  Spawns one unit at the centre of the view (debug command "spawn <class>"; assumed to spawn at the cursor),
-  selects everything in the view with a drag, orders a move 300 px west and later 300 px east, and records
-  window captures every 100 ms. The analysis tracks the moving unit and fits pixels per second. SPEED values are
-  the reference build's (DATA/EURO UNITS.TXT). Game speed: the default.
-launch: [-nomovies, -explore, -nofog, -map, MP2]
+  Spawns one unit in an open grass band in the middle of MP2 (debug command "spawn <class>"; in the first session
+  the unit appeared at the cursor as an all-green figure and never moved, so it is now placed with a click at the
+  same spot), selects everything in the view with a drag, orders a move 300 px west and later 300 px east, and
+  records window captures every 100 ms. The analysis tracks the moving unit and fits pixels per second. SPEED
+  values are the reference build's (DATA/EURO UNITS.TXT). Game speed: the default.
+launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: peon
     vars: {unit: peon, speed_stat: "4"}
@@ -21,19 +22,29 @@ trials:
   - name: maceman
     vars: {unit: maceman, speed_stat: "3"}
 steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
   - minimap: [0.5, 0.5]
   - wait: 1
-  - move: [587, 399]
+  - move: [600, 340]
   - chat: "${cheat}spawn ${unit}"
+  - click: [600, 340]               # place the spawned unit (harmless if it is already placed: selects it)
   - wait: 1
   - snapshot: spawned
   - drag: {from: [160, 40], to: [1015, 760]}
   - wait: 0.5
-  - click: {at: [287, 399], button: right}
+  - click: {at: [300, 340], button: right}
   - move: [70, 400]
-  # A 120-px band around the path keeps the zip small (the unit walks along y = 399).
-  - burst: {name: west, count: 100, interval_ms: 100, region: [150, 339, 874, 120]}
-  - click: {at: [887, 399], button: right}
+  # A 120-px band around the path keeps the zip small (the unit walks along y = 340, clear of the rocks below it).
+  - burst: {name: west, count: 100, interval_ms: 100, region: [150, 280, 874, 120]}
+  - click: {at: [900, 340], button: right}
   - move: [70, 400]
-  - burst: {name: east, count: 140, interval_ms: 100, region: [150, 339, 874, 120]}
+  - burst: {name: east, count: 140, interval_ms: 100, region: [150, 280, 874, 120]}
 analysis: [unit-speed]

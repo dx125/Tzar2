@@ -3,54 +3,123 @@ id: player-colours
 title: Player slot -> colour ramp mapping (UNK-01a follow-up)
 resolves: [UNK-01a]
 priority: 1
-minutes: 2.5
+minutes: 4
 description: |
-  On the 8-kingdom map MP6, switch the controlled kingdom with the debug command "kingdom N" (spelling to be
-  confirmed by the smoke scenario), select that kingdom's castle (Ctrl+C), centre it (Space) and take a snapshot
-  tagged with the slot. The analysis counts GAME.PAL ramp colours around the screen centre for each slot.
-launch: [-nomovies, -explore, -nofog, -map, MP6]
+  On the 8-kingdom map MP6. (1) Swatches: the kingdom colour squares of the setup screen (kingdoms 1-2) and of the
+  diplomacy dialog (kingdoms 2-8 seen from kingdom 1) are matched to the GAME.PAL ramps. (2) Sprites: for every
+  kingdom N, one knight is spawned at its own spot of an open snow field and given to kingdom N, and the ramp colours
+  around that spot are counted. The first session's version (switch with "hmkingdom N", then Ctrl+C / Space to the
+  castle) never left kingdom 1, so each spot is made to work whichever of two readings of the cheat is right:
+  "hmkingdom N" before the spawn covers "switches the controlled kingdom", the same command with the new knight
+  selected covers "gives the selection to kingdom N". If neither holds, every knight shows ramp 1 and the analysis
+  reports no identity. The view is restored by a minimap click after every switch (a switch may move the camera).
+launch: [-nomovies, -map, MP6.wmp]
 steps:
-  - key: {key: C, ctrl: true}
-  - key: Space
+  - snapshot: {name: setup, game: false, tags: {swatches: "191,120,35,1,2"}}
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
   - wait: 1
-  - snapshot: {name: slot-1, tags: {slot: "1"}}
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - key: F5                         # diplomacy: kingdoms 2-8 with their colours
+  - wait: 1
+  - snapshot: {name: diplomacy, game: false, tags: {swatches: "309,254,32,2,7"}}
+  - key: Escape
+  - wait: 1
+  # kingdom 1
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.59, 0.54]           # the start view (an open snow field in the upper right)
+  - wait: 1
+  - move: [640, 100]
+  - chat: "${cheat}spawn knight"
+  - click: [640, 100]                # place
+  - click: [640, 100]                # select
+  - chat: "${cheat}kingdom 1"
+  - wait: 1
+  - snapshot: {name: slot-1, tags: {slot: "1", region: "615,50,50,70"}}
+  # kingdom 2
   - chat: "${cheat}kingdom 2"
-  - key: {key: C, ctrl: true}
-  - key: Space
+  - minimap: [0.59, 0.54]           # the start view (an open snow field in the upper right)
   - wait: 1
-  - snapshot: {name: slot-2, tags: {slot: "2"}}
+  - move: [690, 100]
+  - chat: "${cheat}spawn knight"
+  - click: [690, 100]                # place
+  - click: [690, 100]                # select
+  - chat: "${cheat}kingdom 2"
+  - wait: 1
+  - snapshot: {name: slot-2, tags: {slot: "2", region: "665,50,50,70"}}
+  # kingdom 3
   - chat: "${cheat}kingdom 3"
-  - key: {key: C, ctrl: true}
-  - key: Space
+  - minimap: [0.59, 0.54]           # the start view (an open snow field in the upper right)
   - wait: 1
-  - snapshot: {name: slot-3, tags: {slot: "3"}}
+  - move: [740, 100]
+  - chat: "${cheat}spawn knight"
+  - click: [740, 100]                # place
+  - click: [740, 100]                # select
+  - chat: "${cheat}kingdom 3"
+  - wait: 1
+  - snapshot: {name: slot-3, tags: {slot: "3", region: "715,50,50,70"}}
+  # kingdom 4
   - chat: "${cheat}kingdom 4"
-  - key: {key: C, ctrl: true}
-  - key: Space
+  - minimap: [0.59, 0.54]           # the start view (an open snow field in the upper right)
   - wait: 1
-  - snapshot: {name: slot-4, tags: {slot: "4"}}
+  - move: [790, 100]
+  - chat: "${cheat}spawn knight"
+  - click: [790, 100]                # place
+  - click: [790, 100]                # select
+  - chat: "${cheat}kingdom 4"
+  - wait: 1
+  - snapshot: {name: slot-4, tags: {slot: "4", region: "765,50,50,70"}}
+  # kingdom 5
   - chat: "${cheat}kingdom 5"
-  - key: {key: C, ctrl: true}
-  - key: Space
+  - minimap: [0.59, 0.54]           # the start view (an open snow field in the upper right)
   - wait: 1
-  - snapshot: {name: slot-5, tags: {slot: "5"}}
+  - move: [840, 100]
+  - chat: "${cheat}spawn knight"
+  - click: [840, 100]                # place
+  - click: [840, 100]                # select
+  - chat: "${cheat}kingdom 5"
+  - wait: 1
+  - snapshot: {name: slot-5, tags: {slot: "5", region: "815,50,50,70"}}
+  # kingdom 6
   - chat: "${cheat}kingdom 6"
-  - key: {key: C, ctrl: true}
-  - key: Space
+  - minimap: [0.59, 0.54]           # the start view (an open snow field in the upper right)
   - wait: 1
-  - snapshot: {name: slot-6, tags: {slot: "6"}}
+  - move: [890, 100]
+  - chat: "${cheat}spawn knight"
+  - click: [890, 100]                # place
+  - click: [890, 100]                # select
+  - chat: "${cheat}kingdom 6"
+  - wait: 1
+  - snapshot: {name: slot-6, tags: {slot: "6", region: "865,50,50,70"}}
+  # kingdom 7
   - chat: "${cheat}kingdom 7"
-  - key: {key: C, ctrl: true}
-  - key: Space
+  - minimap: [0.59, 0.54]           # the start view (an open snow field in the upper right)
   - wait: 1
-  - snapshot: {name: slot-7, tags: {slot: "7"}}
+  - move: [940, 100]
+  - chat: "${cheat}spawn knight"
+  - click: [940, 100]                # place
+  - click: [940, 100]                # select
+  - chat: "${cheat}kingdom 7"
+  - wait: 1
+  - snapshot: {name: slot-7, tags: {slot: "7", region: "915,50,50,70"}}
+  # kingdom 8
   - chat: "${cheat}kingdom 8"
-  - key: {key: C, ctrl: true}
-  - key: Space
+  - minimap: [0.59, 0.54]           # the start view (an open snow field in the upper right)
   - wait: 1
-  - snapshot: {name: slot-8, tags: {slot: "8"}}
-  - key: F5
+  - move: [990, 100]
+  - chat: "${cheat}spawn knight"
+  - click: [990, 100]                # place
+  - click: [990, 100]                # select
+  - chat: "${cheat}kingdom 8"
   - wait: 1
-  - snapshot: diplomacy
+  - snapshot: {name: slot-8, tags: {slot: "8", region: "965,50,50,70"}}
+  - key: F5                         # whose view is this now? (the rows omit the viewing kingdom)
+  - wait: 1
+  - snapshot: {name: diplomacy-after, game: false}
   - key: Escape
 analysis: [player-colours]
