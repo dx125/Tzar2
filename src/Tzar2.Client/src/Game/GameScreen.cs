@@ -1355,13 +1355,14 @@ public partial class GameScreen : Node
 
                     break;
                 case SimEventKind.Killed:
-                    // The event carries the victim's owner (Player) and type (Arg); index-based lookups can already
-                    // see a newer entity in the slot, because the frame is accepted before the events are drained.
+                    // The event carries the victim's owner (Player), the killer's owner (Y) and the victim's type (Arg);
+                    // index-based lookups can already see a newer entity in the slot, because the frame is accepted
+                    // before the events are drained.
                     if (e.Player == me)
                     {
                         Stats.Losses++;
                     }
-                    else if (_lastByIndex.TryGetValue(e.X, out var killer) && killer.Owner == me)
+                    else if (e.Y == me)
                     {
                         Stats.Kills++;
                     }

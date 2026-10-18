@@ -21,6 +21,9 @@ public enum CombatMode : byte
 
     /// <summary>Move-advance (Ctrl + move, TDD §9.3): attacks what it meets, then resumes the move order.</summary>
     AttackMove = 3,
+
+    /// <summary>Attack ground (order attack_ground; ADR 0091): fires at the point <see cref="Combat.ChaseX"/>, <see cref="Combat.ChaseY"/>.</summary>
+    Ground = 4,
 }
 
 /// <summary>

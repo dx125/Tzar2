@@ -69,10 +69,20 @@ public sealed class Simulation : IDisposable
         _scheduler.Add(new CombatSystem());
         _scheduler.Add(new StructureSystem());
         _scheduler.Add(new CaptureSystem());
+        AddCombatMagicSystems(_scheduler);
         _scheduler.Add(new VisibilitySystem());
         _scheduler.Add(new ClockSystem());
         _scheduler.Add(new VictorySystem());
         _scheduler.Add(new CleanupSystem());
+    }
+
+    // GAME-07…11 (ADRs 0091-0095): errands (step 6), spells (10, after mana regeneration), experience (11), holders (13).
+    private static void AddCombatMagicSystems(SystemScheduler scheduler)
+    {
+        scheduler.Add(new ErrandSystem());
+        scheduler.Add(new MagicSystem());
+        scheduler.Add(new ExperienceSystem());
+        scheduler.Add(new HolderSystem());
     }
 
     // Match start: the map's objects, starting resources and the population limit (never on restore).

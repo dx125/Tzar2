@@ -109,6 +109,49 @@ public enum CommandKind : ushort
 
     /// <summary>Loans (GAME-14, Usury): Arg1 = 0 take a loan of resource Arg0 in a listed tavern, 1 repay the outstanding loan.</summary>
     Loan = 46,
+    // GAME-07…11 (ADR 0096): values 20-39.
+
+    /// <summary>The listed units walk to own holder <see cref="Command.Target"/> (castle, outpost, ship, carpet) and enter it (GAME-09).</summary>
+    Board = 20,
+
+    /// <summary>The listed holders let their units out next to (X, Y) (orders emerge/unload); Arg0 &gt; 0 = only that many.</summary>
+    Unload = 21,
+
+    /// <summary>The listed units walk to item <see cref="Command.Target"/> and pick it up (the first to arrive gets it; GAME-10).</summary>
+    PickItem = 22,
+
+    /// <summary>The listed unit drops the item in inventory slot Arg0 where it stands.</summary>
+    DropItem = 23,
+
+    /// <summary>The listed unit uses the item in slot Arg0 (-1 = the default item) on <see cref="Command.Target"/> or (X, Y).</summary>
+    UseItem = 24,
+
+    /// <summary>The listed unit walks to own unit <see cref="Command.Target"/> and gives it the item in slot Arg0.</summary>
+    GiveItem = 25,
+
+    /// <summary>The listed unit makes slot Arg0 its default item (-1 = none).</summary>
+    SetDefaultItem = 26,
+
+    /// <summary>The listed casters cast spell Arg0 on <see cref="Command.Target"/>, at (X, Y), or on themselves (GAME-11).</summary>
+    CastSpell = 27,
+
+    /// <summary>The listed armed entities take stance Arg0 (0 aggressive, 1 stand ground, 2 hold fire; GAME-07).</summary>
+    SetStance = 28,
+
+    /// <summary>The listed ranged units attack the ground at (X, Y) (siege; GAME-07).</summary>
+    AttackGround = 29,
+
+    /// <summary>The listed units turn into type Arg0 (Jihad warriors from peasants, priests from monks), paying its cost.</summary>
+    ConvertUnit = 30,
+
+    /// <summary>The listed peasants walk to enemy unit <see cref="Command.Target"/> and bribe it with gold (Bribery).</summary>
+    Bribe = 31,
+
+    /// <summary>The listed cathedral preaches a crusade: an anchor at (X, Y), at most 4 tiles away (GAME-11).</summary>
+    PreachCrusade = 32,
+
+    /// <summary>The listed Magic Workshop crafts item type Arg0 for Arg1 gold (more gold, better item; GAME-10).</summary>
+    CraftItem = 33,
 
     /// <summary>Debug: spawn Arg1 (1-64) units of type Arg0 at (X, Y); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugSpawn = 0xF000,

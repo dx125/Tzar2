@@ -1,0 +1,201 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
+using Tzar2.Content.Compiled;
+using Tzar2.Core.Ids;
+using Tzar2.Core.Serialization;
+using Tzar2.Sim.Components;
+
+namespace Tzar2.Sim.Persistence;
+
+/// <summary>An item a persistent unit carries between campaign maps.</summary>
+/// <param name="TypeKey">The item type's stable key (<c>comm.item_magic</c>).</param>
+/// <param name="Power">Its power (weapon attack, armor defence, resource amount).</param>
+/// <param name="Charges">Spell book charges left.</param>
+public sealed record PersistentItem(string TypeKey, int Power, int Charges);
+
+/// <summary>
+/// What a persistent unit carries from one campaign map to the next (editor "Persistent" flag: "the unit properties
+/// are saved at the end of each campaign map ... a unit with the same name in one of the following campaign maps" gets
+/// them; GAME-08/20; ADR 0092). The campaign layer (M4) stores the records; this is the data model and its format.
+/// </summary>
+/// <param name="Name">The unit's name (the key that matches it on the next map).</param>
+/// <param name="TypeKey">Its type's stable key.</param>
+/// <param name="Level">Experience level.</param>
+/// <param name="Experience">Experience points.</param>
+/// <param name="Hero">Whether it is a named hero.</param>
+/// <param name="BonusAttack">Attack added by potions.</param>
+/// <param name="BonusDefence">Defence added by potions.</param>
+/// <param name="Items">The items it carries, in slot order.</param>
+public sealed record PersistentHero(string Name, string TypeKey, int Level, int Experience, bool Hero, int BonusAttack, int BonusDefence, ImmutableArray<PersistentItem> Items);
+
+/// <summary>Captures, applies and serializes <see cref="PersistentHero"/> records (versioned binary, little-endian).</summary>
+public static class PersistentHeroes
+{
+    /// <summary>Format version of <see cref="Write"/>.</summary>
+    public const int FormatVersion = 1;
+
+    /// <summary>Most records in one list (bounds untrusted input).</summary>
+    public const int MaxRecords = 4096;
+
+    private const int MaxNameBytes = 256;
+
+    /// <summary>The named units of <paramref name="player"/> (heroes and every other named unit), ascending by entity.</summary>
+    public static List<PersistentHero> Capture(World world, int player)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        var list = new List<PersistentHero>();
+        ReadOnlySpan<EntityId> named = world.Names.Entities;
+        for (int i = 0; i < named.Length; i++)
+        {
+            EntityId e = named[i];
+            if (world.Identities.IndexOf(e) is not (>= 0 and var p) || world.Identities.At(p).Owner != player || !world.TypeOf(e).IsMobile)
+            {
+                continue;
+            }
+
+            Experience x = world.Experiences.IndexOf(e) is >= 0 and var xi ? world.Experiences.At(xi) : default;
+            var items = ImmutableArray.CreateBuilder<PersistentItem>();
+            if (world.Inventories.IndexOf(e) is >= 0 and var ii)
+            {
+                Inventory inventory = world.Inventories.At(ii);
+                for (int k = 0; k < inventory.Count; k++)
+                {
+                    EntityId item = EntityId.FromValue(inventory.Items[k]);
+                    ItemState s = world.Items.Get(item);
+                    items.Add(new PersistentItem(world.TypeOf(item).Key, s.Power, s.Charges));
+                }
+            }
+
+            list.Add(new PersistentHero(world.Names.Get(e).Value, world.TypeOf(e).Key, x.Level, x.Xp, (x.Flags & ExperienceFlags.Hero) != 0, x.BonusAttack, x.BonusDefence, items.ToImmutable()));
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// Gives a unit placed at match setup the properties of a record (level, experience, hero, potions, name, items).
+    /// Items of unknown types are skipped.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The world is locked (only the match setup may do this).</exception>
+    public static void Apply(World world, EntityId unit, PersistentHero hero)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ArgumentNullException.ThrowIfNull(hero);
+        if (world.IsLocked)
+        {
+            throw new InvalidOperationException("Persistent units are applied at match setup.");
+        }
+
+        world.SetCold(unit, new EntityName(hero.Name));
+        if (world.Experiences.IndexOf(unit) is >= 0 and var x)
+        {
+            ref Experience e = ref world.Experiences.At(x);
+            e.Level = (ushort)Math.Clamp(hero.Level, 0, 10_000);
+            e.Xp = Math.Max(0, hero.Experience);
+            e.Flags = hero.Hero && e.Level >= world.Ruleset.Combat.HeroLevel ? ExperienceFlags.Hero : ExperienceFlags.None;
+            e.BonusAttack = Math.Clamp(hero.BonusAttack, 0, 100_000);
+            e.BonusDefence = Math.Clamp(hero.BonusDefence, 0, 100_000);
+            world.RefreshMaxHealth(unit);
+            ref Health h = ref world.Healths.Get(unit);
+            h.Current = h.Max;
+        }
+
+        Position at = world.Positions.Get(unit);
+        foreach (PersistentItem item in hero.Items)
+        {
+            int type = world.Ruleset.EntityTypeId(item.TypeKey);
+            if (type < 0 || world.Ruleset.EntityTypes[type].Traits.Item is null || world.Entities.RemainingCapacity < 1)
+            {
+                continue;
+            }
+
+            EntityId e = world.Spawn((ushort)type, MapObject.Nature, at.X, at.Y);
+            ref ItemState s = ref world.Items.Get(e);
+            s.Power = Math.Clamp(item.Power, 0, 1_000_000);
+            s.Charges = Math.Clamp(item.Charges, 0, 1_000_000);
+            if (Systems.CombatMagicCommands.CanCarry(world, unit, e))
+            {
+                world.PutInInventory(unit, e);
+            }
+        }
+    }
+
+    /// <summary>Writes records.</summary>
+    public static void Write(BinaryBufferWriter writer, IReadOnlyList<PersistentHero> heroes)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+        ArgumentNullException.ThrowIfNull(heroes);
+        writer.WriteVarUInt64(FormatVersion);
+        writer.WriteVarUInt64((ulong)heroes.Count);
+        foreach (PersistentHero h in heroes)
+        {
+            writer.WriteString(h.Name);
+            writer.WriteString(h.TypeKey);
+            writer.WriteVarInt64(h.Level);
+            writer.WriteVarInt64(h.Experience);
+            writer.WriteBoolean(h.Hero);
+            writer.WriteVarInt64(h.BonusAttack);
+            writer.WriteVarInt64(h.BonusDefence);
+            writer.WriteVarUInt64((ulong)h.Items.Length);
+            foreach (PersistentItem item in h.Items)
+            {
+                writer.WriteString(item.TypeKey);
+                writer.WriteVarInt64(item.Power);
+                writer.WriteVarInt64(item.Charges);
+            }
+        }
+    }
+
+    /// <summary>Reads records written by <see cref="Write"/> (untrusted: bounded and range-checked).</summary>
+    /// <exception cref="InvalidDataException">The data is malformed.</exception>
+    public static List<PersistentHero> Read(ReadOnlySpan<byte> data)
+    {
+        var reader = new BinaryBufferReader(data);
+        if (reader.ReadVarUInt64() != FormatVersion)
+        {
+            throw new InvalidDataException("Unsupported persistent hero format.");
+        }
+
+        ulong count = reader.ReadVarUInt64();
+        if (count > MaxRecords)
+        {
+            throw new InvalidDataException("Too many persistent heroes.");
+        }
+
+        var list = new List<PersistentHero>((int)count);
+        for (ulong i = 0; i < count; i++)
+        {
+            string name = reader.ReadString(MaxNameBytes);
+            string type = reader.ReadString(MaxNameBytes);
+            int level = Bounded(reader.ReadVarInt64(), 10_000);
+            int xp = Bounded(reader.ReadVarInt64(), int.MaxValue);
+            bool hero = reader.ReadBoolean();
+            int attack = Bounded(reader.ReadVarInt64(), 100_000);
+            int defence = Bounded(reader.ReadVarInt64(), 100_000);
+            ulong items = reader.ReadVarUInt64();
+            if (items > (ulong)Ruleset.InventoryLimit)
+            {
+                throw new InvalidDataException("Too many persistent items.");
+            }
+
+            var carried = ImmutableArray.CreateBuilder<PersistentItem>((int)items);
+            for (ulong k = 0; k < items; k++)
+            {
+                carried.Add(new PersistentItem(reader.ReadString(MaxNameBytes), Bounded(reader.ReadVarInt64(), 1_000_000), Bounded(reader.ReadVarInt64(), 1_000_000)));
+            }
+
+            list.Add(new PersistentHero(name, type, level, xp, hero, attack, defence, carried.MoveToImmutable()));
+        }
+
+        if (!reader.IsAtEnd)
+        {
+            throw new InvalidDataException("Trailing bytes after the persistent heroes.");
+        }
+
+        return list;
+
+        static int Bounded(long value, int max) => value >= 0 && value <= max ? (int)value : throw new InvalidDataException($"Persistent value {value} is out of range.");
+    }
+}

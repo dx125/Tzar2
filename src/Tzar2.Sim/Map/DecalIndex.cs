@@ -119,6 +119,39 @@ public sealed class DecalIndex
         }
     }
 
+    /// <summary>
+    /// Removes and returns the oldest corpse within <paramref name="radius"/> of a point (Raise Dead, GAME-11); the order
+    /// of the others is kept.
+    /// </summary>
+    /// <returns><c>false</c> when there is none.</returns>
+    public bool TakeCorpse(int x, int y, int radius, out Decal corpse)
+    {
+        long r2 = (long)radius * radius;
+        for (int i = 0; i < _count; i++)
+        {
+            ref Decal d = ref _ring[(_head + i) % _ring.Length];
+            long dx = d.X - (long)x;
+            long dy = d.Y - (long)y;
+            if (d.Kind != DecalKind.Corpse || (dx * dx) + (dy * dy) > r2)
+            {
+                continue;
+            }
+
+            corpse = d;
+            for (int k = i; k < _count - 1; k++)
+            {
+                _ring[(_head + k) % _ring.Length] = _ring[(_head + k + 1) % _ring.Length];
+            }
+
+            _count--;
+            _ring[(_head + _count) % _ring.Length] = default;
+            return true;
+        }
+
+        corpse = default;
+        return false;
+    }
+
     /// <summary>Counts the decals within <paramref name="radius"/> of a point.</summary>
     public int CountWithin(int x, int y, int radius)
     {

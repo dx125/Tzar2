@@ -10,20 +10,27 @@ using Tzar2.Sim.Map;
 namespace Tzar2.Sim.Systems;
 
 /// <summary>
-/// Pipeline step 9 (TDD §8.5, GAME-07; ADR 0038): target acquisition, chasing, the swing cycle and damage, then deaths.
+/// Pipeline step 9 (TDD §8.5, GAME-07; ADRs 0038, 0091): projectiles in flight, target acquisition, chasing, the swing
+/// cycle, then all of the tick's hits at once, then deaths.
 /// </summary>
 /// <remarks>
 /// <para><b>Acquisition</b> (staggered, §8.9): an idle armed unit with <c>AutoAcquire</c>, or one on a move-advance,
 /// scans every <c>acquireIntervalMs</c> (on ticks where <c>(index + tick)</c> hits its slot) for the nearest enemy in
 /// sight: smallest edge distance, ties to the lower entity index. Candidates come from a uniform grid of 4×4-tile
-/// cells rebuilt every tick (counting sort, ascending index per cell).</para>
-/// <para><b>Swing cycle</b> (UNK-07): in reach, a swing starts when the cooldown is over; the hit lands
-/// <c>HitDelayMs</c> later if the target is still in reach; the next swing waits <c>CooldownMs</c> from the start of the
-/// previous one (carry-over). Out of reach the unit chases (a path request at most every
-/// <see cref="ChaseIntervalTicks"/>).</para>
-/// <para><b>Damage</b> (UNK-08, placeholder): <c>max(minimumDamage, attack × (1 + bonus) − defence)</c>, the bonus from
-/// <c>BONUS.INI</c> in basis points, truncated toward zero. Hits apply in ascending attacker order; an entity whose
-/// health drops to 0 is killed after the pass (units leave a corpse that never blocks, ORIG-01).</para>
+/// cells rebuilt every tick (counting sort, ascending index per cell). Units inside holders, stone and cloaked units
+/// are never candidates; a confused unit takes everyone as an enemy and everyone takes it as one.</para>
+/// <para><b>Stances</b>: stand ground fights only what is in reach (no chasing); hold fire never starts a fight by
+/// itself. Frozen and stone units do nothing.</para>
+/// <para><b>Swing cycle</b> (UNK-07): in reach (and not inside <c>min_attack_range</c>), a swing starts when the cooldown is
+/// over; the hit lands <c>HitDelayMs</c> later if the target is still in reach; the next swing waits <c>CooldownMs</c>
+/// from the start of the previous one (carry-over). A ranged attacker with a projectile launches it at the hit frame;
+/// the projectile flies at its speed and hits on arrival (homing ones follow the target, others land where the target
+/// stood and hurt what is around: splash).</para>
+/// <para><b>Damage</b> (UNK-08, placeholder): <c>max(minimumDamage, attack × (1 + bonus) − defence)</c>, attack and defence
+/// after technologies, levels, items, blessings and curses (<see cref="CombatStats"/>); buildings then by resistance; a
+/// holder keeps its <c>[damage]</c> share and spreads the rest over the units inside. All hits of a tick apply together
+/// (simultaneous resolution, ADR 0038); deaths follow (<see cref="SimEventKind.Killed"/>: X = killer index, Y = killer
+/// owner).</para>
 /// </remarks>
 public sealed class CombatSystem : ISimSystem
 {
@@ -42,8 +49,10 @@ public sealed class CombatSystem : ISimSystem
     /// <summary>Owner bit of Nature in the per-cell owner masks (player slots use bits 0-15).</summary>
     private const int NatureBit = 31;
 
-    private readonly List<(EntityId Attacker, EntityId Target)> _hits = [];
-    private readonly List<(EntityId Victim, EntityId Killer)> _deaths = [];
+    private readonly List<HitRecord> _hits = [];
+    private readonly List<Death> _deaths = [];
+    private readonly List<EntityId> _spent = [];
+    private readonly List<EntityId> _splash = [];
     private int[] _cellStart = [];
     private int[] _cellItems = [];
     private uint[] _cellOwners = [];
@@ -61,7 +70,7 @@ public sealed class CombatSystem : ISimSystem
     {
         ArgumentNullException.ThrowIfNull(context);
         World world = context.World;
-        if (world.Combats.Count == 0)
+        if (world.Combats.Count == 0 && world.Projectiles.Count == 0)
         {
             return;
         }
@@ -72,32 +81,62 @@ public sealed class CombatSystem : ISimSystem
         int acquireEvery = Math.Max(1, world.Ruleset.Gameplay.AcquireIntervalMs / tickMs);
         _hits.Clear();
         _deaths.Clear();
+        _spent.Clear();
+
+        // Pass 0: projectiles fired in earlier ticks fly; arrivals become hits of this tick.
+        FlyProjectiles(world, tickMs);
 
         // Pass 1 decides on the state at the start of the step: targets, chases, swings and the hits that land now.
         for (int i = 0; i < world.Combats.Count; i++)
         {
-            Step(world, world.Combats.Entities[i], ref world.Combats.At(i), tick, tickMs, acquireEvery);
+            EntityId attacker = world.Combats.Entities[i];
+            if (world.IsHeld(attacker))
+            {
+                continue; // inside a holder: no fighting (GAME-09)
+            }
+
+            Step(world, attacker, ref world.Combats.At(i), tick, tickMs, acquireEvery);
+        }
+
+        foreach (EntityId p in _spent)
+        {
+            world.Destroy(p);
         }
 
         // Pass 2 applies the hits, all of them (simultaneous resolution: two units that strike each other in the same
         // tick can both die, whatever their entity indices), then pass 3 removes the dead.
-        foreach ((EntityId attacker, EntityId target) in _hits)
+        foreach (HitRecord hit in _hits)
         {
-            Hit(world, attacker, target);
+            Apply(world, hit, _deaths);
         }
 
-        foreach ((EntityId victim, EntityId killer) in _deaths)
+        ProcessDeaths(world, _deaths);
+    }
+
+    /// <summary>
+    /// Kills every victim at 0 hit points, in order (<see cref="SimEventKind.Killed"/> with the killer's index and owner),
+    /// crediting the killers' kill experience (GAME-08).
+    /// </summary>
+    internal static void ProcessDeaths(World world, List<Death> deaths)
+    {
+        foreach (Death d in deaths)
         {
-            if (!world.Entities.IsAlive(victim))
+            if (!world.Entities.IsAlive(d.Victim) || world.Healths.Get(d.Victim).Current > 0)
             {
                 continue;
             }
 
-            Identity identity = world.Identities.Get(victim);
-            int killerOwner = world.Identities.IndexOf(killer) is >= 0 and var ko ? world.Identities.At(ko).Owner : MapObject.Nature;
-            world.Events.Emit(new SimEvent(SimEventKind.Killed, identity.Owner, victim, killer.Index, killerOwner, identity.TypeId));
-            world.Kill(victim);
+            Identity identity = world.Identities.Get(d.Victim);
+            world.Events.Emit(new SimEvent(SimEventKind.Killed, identity.Owner, d.Victim, d.Killer.Index, d.KillerOwner, identity.TypeId));
+            if (world.Entities.IsAlive(d.Killer) && world.Experiences.IndexOf(d.Killer) is >= 0 and var x && d.KillerOwner != identity.Owner)
+            {
+                world.Experiences.At(x).PendingXp += world.Ruleset.Combat.ExperiencePerKill;
+            }
+
+            world.Kill(d.Victim);
         }
+
+        deaths.Clear();
     }
 
     private void Step(World world, EntityId attacker, ref Combat c, int tick, int tickMs, int acquireEvery)
@@ -106,9 +145,26 @@ public sealed class CombatSystem : ISimSystem
         ArmamentDefinition arm = type.Traits.Armament!;
         Identity self = world.Identities.Get(attacker);
         Position position = world.Positions.Get(attacker);
+        if (!world.CanAct(attacker))
+        {
+            // Frozen or stone (GAME-11): no swing, no chase; the cooldown keeps running.
+            c.HitInMs = -1;
+            c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
+            Interaction.Halt(world, attacker);
+            return;
+        }
+
+        CombatStance stance = StanceOf(world, attacker);
+        if (c.Mode == CombatMode.Ground)
+        {
+            GroundStep(world, attacker, ref c, type, arm, self, position, tick, tickMs);
+            return;
+        }
+
         int radius = Interaction.RadiusOf(world, attacker);
         EntityId target = EntityId.FromValue(c.Target);
-        if (c.Target != 0 && !IsEnemyTarget(world, self.Owner, target) && !(c.Mode == CombatMode.Explicit && IsButcherTarget(world, self.Owner, target)))
+        if (c.Target != 0 && !IsHostileTarget(world, attacker, self.Owner, target)
+            && !(c.Mode == CombatMode.Explicit && (IsButcherTarget(world, self.Owner, target) || IsTrainingTarget(world, self.Owner, target))))
         {
             c.Target = 0;
             c.HitInMs = -1;
@@ -123,10 +179,16 @@ public sealed class CombatSystem : ISimSystem
         {
             c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
             bool idle = !Interaction.IsMoving(world, attacker) && !HasTask(world, attacker);
-            bool scan = c.Mode == CombatMode.AttackMove || (c.Mode == CombatMode.None && arm.AutoAcquire && idle);
+            bool scan = c.Mode == CombatMode.AttackMove || (c.Mode == CombatMode.None && arm.AutoAcquire && idle && stance != CombatStance.HoldFire);
             if (scan && (attacker.Index + tick) % acquireEvery == 0)
             {
-                target = Acquire(world, self.Owner, position, radius, Math.Max(Sight(world, self, type), Range(world, attacker, self, type, arm)));
+                long sight = Math.Max(Sight(world, self, type), Range(world, attacker, self, type, arm));
+                if (stance == CombatStance.StandGround)
+                {
+                    sight = Math.Max(Range(world, attacker, self, type, arm), world.Ruleset.Gameplay.MeleeReachUnits);
+                }
+
+                target = Acquire(world, attacker, self.Owner, position, radius, sight, arm.MinRangeUnits);
                 if (!target.IsNone)
                 {
                     c.Target = target.Value;
@@ -155,7 +217,7 @@ public sealed class CombatSystem : ISimSystem
         int reach = range > 0 ? range
             : world.Footprints.Has(target) ? world.Ruleset.Gameplay.InteractionReachUnits
             : world.Ruleset.Gameplay.MeleeReachUnits;
-        if (distance <= reach)
+        if (distance <= reach && distance >= arm.MinRangeUnits)
         {
             Interaction.Halt(world, attacker);
             Position tp = world.Positions.Get(target);
@@ -172,7 +234,7 @@ public sealed class CombatSystem : ISimSystem
                 if (c.HitInMs <= 0)
                 {
                     c.HitInMs = -1;
-                    _hits.Add((attacker, target));
+                    Strike(world, attacker, type, arm, self, position, range, target, tp.X, tp.Y);
                 }
             }
 
@@ -180,10 +242,11 @@ public sealed class CombatSystem : ISimSystem
             {
                 c.CooldownMs += arm.CooldownMs;
                 c.HitInMs = arm.HitDelayMs;
+                Uncloak(world, attacker); // attacking reveals an invisible unit (1.10 fix)
                 if (c.HitInMs == 0)
                 {
                     c.HitInMs = -1;
-                    _hits.Add((attacker, target));
+                    Strike(world, attacker, type, arm, self, position, range, target, tp.X, tp.Y);
                 }
             }
 
@@ -192,20 +255,422 @@ public sealed class CombatSystem : ISimSystem
             return;
         }
 
-        // Out of reach: the swing is lost.
+        // Out of reach (or too close for a minimum range): the swing is lost.
         c.HitInMs = -1;
         c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
-        long sight = Math.Max(Sight(world, self, type), range);
+        long leash = Math.Max(Sight(world, self, type), range);
         bool mobile = world.Motions.IndexOf(attacker) is >= 0 and var m && world.Motions.At(m).SpeedPerTick > 0;
-        if (!mobile || (c.Mode == CombatMode.Auto && distance > sight * LeashFactor) || (c.Mode == CombatMode.AttackMove && distance > sight * LeashFactor))
+        bool tooClose = distance < arm.MinRangeUnits;
+        if (!mobile || (c.Mode == CombatMode.Auto && (distance > leash * LeashFactor || stance == CombatStance.StandGround || tooClose))
+            || (c.Mode == CombatMode.AttackMove && (distance > leash * LeashFactor || tooClose)))
         {
             c.Target = 0;
             c.Mode = c.Mode == CombatMode.AttackMove ? CombatMode.AttackMove : CombatMode.None;
             return;
         }
 
+        if (tooClose)
+        {
+            return; // an explicit target inside the minimum range: the unit waits (UNVERIFIED: no backing off)
+        }
+
         Chase(world, attacker, ref c, target, position, type, tick);
     }
+
+    // Attack ground (siege, order attack_ground): fire at the point while in range; move into range otherwise.
+    private void GroundStep(World world, EntityId attacker, ref Combat c, EntityTypeDefinition type, ArmamentDefinition arm, Identity self, Position position, int tick, int tickMs)
+    {
+        int range = Range(world, attacker, self, type, arm);
+        long d = IntMath.ISqrt(IntMath.DistanceSquared(position.X, position.Y, c.ChaseX, c.ChaseY));
+        if (d <= range && d >= arm.MinRangeUnits)
+        {
+            Interaction.Halt(world, attacker);
+            if (c.HitInMs >= 0)
+            {
+                c.HitInMs -= tickMs;
+                if (c.HitInMs <= 0)
+                {
+                    c.HitInMs = -1;
+                    Strike(world, attacker, type, arm, self, position, range, EntityId.None, c.ChaseX, c.ChaseY);
+                }
+            }
+
+            if (c.HitInMs < 0 && c.CooldownMs <= 0)
+            {
+                c.CooldownMs += arm.CooldownMs;
+                c.HitInMs = arm.HitDelayMs;
+                if (c.HitInMs == 0)
+                {
+                    c.HitInMs = -1;
+                    Strike(world, attacker, type, arm, self, position, range, EntityId.None, c.ChaseX, c.ChaseY);
+                }
+            }
+
+            c.CooldownMs = Math.Max(c.CooldownMs - tickMs, -tickMs);
+            return;
+        }
+
+        c.HitInMs = -1;
+        c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
+        if (d > range && !Interaction.IsMoving(world, attacker) && (c.ChaseTick < 0 || tick - c.ChaseTick >= ChaseIntervalTicks))
+        {
+            c.ChaseTick = tick;
+            int x = c.ChaseX;
+            int y = c.ChaseY;
+            Interaction.MoveTo(world, attacker, x, y);
+        }
+    }
+
+    // The hit frame: a ranged attacker with a projectile fires it; everyone else hits at once.
+    private void Strike(World world, EntityId attacker, EntityTypeDefinition type, ArmamentDefinition arm, Identity self, Position from, int range, EntityId target, int x, int y)
+    {
+        int attack = CombatStats.Attack(world, attacker, type, arm);
+        bool hero = world.IsHero(attacker);
+        if (arm.Projectile >= 0 && range > 0 && world.Entities.RemainingCapacity >= 1)
+        {
+            ProjectileDefinition def = world.Ruleset.Projectiles[arm.Projectile];
+            EntityId p = world.Entities.Create();
+            world.Projectiles.Set(p, new Projectile
+            {
+                X = from.X,
+                Y = from.Y,
+                TargetX = x,
+                TargetY = y,
+                Target = target.Value,
+                Attacker = attacker.Value,
+                Attack = attack,
+                MaxAttack = MaxRoll(arm),
+                AttackerType = type.Id,
+                Spell = Projectile.NoSpell,
+                Kind = (byte)arm.Projectile,
+                Owner = self.Owner,
+                DamageClass = arm.DamageClass,
+                FromHero = hero ? (byte)1 : (byte)0,
+            });
+            long flightMs = IntMath.ISqrt(IntMath.DistanceSquared(from.X, from.Y, x, y)) * 1000 / def.SpeedUnitsPerSecond;
+            world.Events.Emit(new SimEvent(SimEventKind.ProjectileLaunched, self.Owner, attacker, x, y, arm.Projectile | (int)(Math.Min(flightMs, 0xFFFFFF) << 8)));
+            return;
+        }
+
+        if (!target.IsNone)
+        {
+            _hits.Add(new HitRecord(attacker, target, self.Owner, type.Id, attack, MaxRoll(arm), 100, arm.DamageClass, hero));
+        }
+    }
+
+    // The extra damage a max_damage shooter may roll above its attack (towers; ⚠ HYPOTHESIS).
+    private static int MaxRoll(ArmamentDefinition arm)
+        => arm.MaxAttack > arm.Attack ? arm.MaxAttack - arm.Attack : 0;
+
+    private void FlyProjectiles(World world, int tickMs)
+    {
+        ReadOnlySpan<EntityId> ids = world.Projectiles.Entities;
+        Span<Projectile> projectiles = world.Projectiles.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            ref Projectile p = ref projectiles[i];
+            ProjectileDefinition def = world.Ruleset.Projectiles[p.Kind];
+            EntityId target = EntityId.FromValue(p.Target);
+            bool targetAlive = p.Target != 0 && world.Entities.IsAlive(target) && world.Positions.Has(target) && !world.IsHeld(target)
+                && world.Healths.IndexOf(target) is >= 0 and var h && world.Healths.At(h).Current > 0;
+            if (def.Homing && p.Target != 0)
+            {
+                if (!targetAlive)
+                {
+                    _spent.Add(ids[i]); // its target is gone: the arrow is lost
+                    continue;
+                }
+
+                Position tp = world.Positions.Get(target);
+                p.TargetX = tp.X;
+                p.TargetY = tp.Y;
+            }
+
+            long step = Math.Max(1, (long)def.SpeedUnitsPerSecond * tickMs / 1000);
+            long dx = p.TargetX - p.X;
+            long dy = p.TargetY - p.Y;
+            long dist = IntMath.ISqrt((dx * dx) + (dy * dy));
+            if (dist > step)
+            {
+                p.X += (int)(dx * step / dist);
+                p.Y += (int)(dy * step / dist);
+                continue;
+            }
+
+            p.X = p.TargetX;
+            p.Y = p.TargetY;
+            _spent.Add(ids[i]);
+            Impact(world, p, def, target, targetAlive);
+        }
+    }
+
+    // Arrival: the target is hit if it is there (homing: always), and splash hurts what stands around the point.
+    private void Impact(World world, in Projectile p, ProjectileDefinition def, EntityId target, bool targetAlive)
+    {
+        EntityId attacker = EntityId.FromValue(p.Attacker);
+        bool hitsTarget = targetAlive && (def.Homing || Interaction.EdgeDistance(world, new Position(p.X, p.Y), 0, target) <= def.HitRadiusUnits);
+        if (p.Spell != Projectile.NoSpell)
+        {
+            if (hitsTarget)
+            {
+                _hits.Add(new HitRecord(attacker, target, p.Owner, p.AttackerType, 0, 0, 100, p.DamageClass, false) { Spell = p.Spell });
+            }
+
+            return;
+        }
+
+        if (hitsTarget)
+        {
+            _hits.Add(new HitRecord(attacker, target, p.Owner, p.AttackerType, p.Attack, p.MaxAttack, 100, p.DamageClass, p.FromHero != 0));
+        }
+
+        int radius = Math.Max(def.SplashPercent > 0 ? def.SplashRadiusUnits : 0, p.Target == 0 ? def.HitRadiusUnits : 0);
+        if (radius <= 0)
+        {
+            return;
+        }
+
+        _splash.Clear();
+        Within(world, p.X, p.Y, radius, _splash);
+        foreach (EntityId victim in _splash)
+        {
+            if (hitsTarget && victim == target)
+            {
+                continue;
+            }
+
+            byte owner = world.Identities.Get(victim).Owner;
+            if (owner == p.Owner && !def.FriendlyFire)
+            {
+                continue;
+            }
+
+            // Attack ground (no target): what stands at the point takes the full hit, the rest the splash share.
+            bool atPoint = p.Target == 0 && Interaction.EdgeDistance(world, new Position(p.X, p.Y), 0, victim) <= def.HitRadiusUnits;
+            _hits.Add(new HitRecord(attacker, victim, p.Owner, p.AttackerType, p.Attack, p.MaxAttack, atPoint ? 100 : def.SplashPercent, p.DamageClass, p.FromHero != 0));
+        }
+    }
+
+    /// <summary>
+    /// The combatants (units and buildings on the map, alive, not stone) whose body is within <paramref name="radius"/>
+    /// of the point, in grid order (deterministic: cells row by row, ascending index in a cell). Uses this tick's grid.
+    /// </summary>
+    internal void Within(World world, int x, int y, int radius, List<EntityId> output)
+    {
+        long slack = (EntityTypeDefinition.MaxFootprintTiles / 2 * MapState.UnitsPerTile) + EntityTypeDefinition.MaxRadius;
+        long reach = radius + slack;
+        int cx0 = (int)Math.Max(0, (x - reach) / CellSize);
+        int cy0 = (int)Math.Max(0, (y - reach) / CellSize);
+        int cx1 = (int)Math.Min(_gridW - 1, (x + reach) / CellSize);
+        int cy1 = (int)Math.Min(_gridH - 1, (y + reach) / CellSize);
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        for (int cy = cy0; cy <= cy1; cy++)
+        {
+            for (int cx = cx0; cx <= cx1; cx++)
+            {
+                int cell = (cy * _gridW) + cx;
+                for (int k = _cellStart[cell]; k < _cellStart[cell + 1]; k++)
+                {
+                    EntityId candidate = ids[_cellItems[k]];
+                    if (!world.Entities.IsAlive(candidate) || world.Healths.Get(candidate).Current <= 0 || world.IsStone(candidate))
+                    {
+                        continue;
+                    }
+
+                    if (Interaction.EdgeDistance(world, new Position(x, y), 0, candidate) <= radius)
+                    {
+                        output.Add(candidate);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Applies one hit (pass 2; also used by spells): damage after bonus, defence, resistance, the holder's share and
+    /// immunity, experience for the attacker, retaliation, and the death queue.
+    /// </summary>
+    internal static void Apply(World world, in HitRecord hit, List<Death> deaths)
+    {
+        if (!world.Entities.IsAlive(hit.Target) || world.Healths.IndexOf(hit.Target) is not (>= 0 and var hp))
+        {
+            return;
+        }
+
+        ref Health health = ref world.Healths.At(hp);
+        if (health.Current <= 0 || world.IsInvulnerable(world.Identities.Get(hit.Target).Owner))
+        {
+            return; // already killed by an earlier hit of this tick, or hmgod (GAME-19)
+        }
+
+        if (hit.Spell != Projectile.NoSpell)
+        {
+            MagicSystem.ApplyEffect(world, hit.Spell, hit.Attacker, hit.Owner, hit.Target, 0, 0, deaths);
+            return;
+        }
+
+        if (world.IsStone(hit.Target) || world.IsHeld(hit.Target))
+        {
+            return; // stone takes no damage; a unit inside a holder is reached only through its holder's share
+        }
+
+        EntityTypeDefinition targetType = world.TypeOf(hit.Target);
+        Identity victim = world.Identities.Get(hit.Target);
+        bool attackerAlive = world.Entities.IsAlive(hit.Attacker) && world.Identities.Has(hit.Attacker);
+        if ((targetType.Traits.Abilities & AbilityFlags.TrainingDummy) != 0 && victim.Owner == hit.Owner)
+        {
+            // Training (Tactics): no damage; the attacker learns up to the dummies' level.
+            if (attackerAlive && world.Experiences.IndexOf(hit.Attacker) is >= 0 and var dx && world.Experiences.At(dx).Level < world.Ruleset.Combat.DummyMaxLevel)
+            {
+                world.Experiences.At(dx).PendingXp += Math.Max(1, (int)((long)hit.Attack * world.Ruleset.Combat.ExperiencePerDamagePercent / 100));
+            }
+
+            return;
+        }
+
+        int dealt = Damage(world, hit, targetType);
+        if (world.Holders.Count != 0 && world.Holders.IndexOf(hit.Target) is >= 0 and var hs && world.Holders.At(hs).Count > 0 && targetType.Traits.Holder is { } holder)
+        {
+            DamageShare share = holder.ShareFor(hit.DamageClass);
+            int spread = (int)((long)dealt * share.DistributePercent / 100);
+            dealt = (int)((long)dealt * share.TakePercent / 100);
+            Share(world, hit, spread, deaths);
+        }
+
+        if (dealt <= 0)
+        {
+            return;
+        }
+
+        health.Current = (int)Math.Max(health.Current - (long)dealt, 0);
+        world.Events.Emit(new SimEvent(SimEventKind.Damaged, victim.Owner, hit.Target, hit.Attacker.Index, health.Current, dealt));
+        Credit(world, hit, victim.Owner, dealt);
+        if (health.Current == 0)
+        {
+            deaths.Add(new Death(hit.Target, hit.Attacker, hit.Owner));
+            return;
+        }
+
+        // Retaliation: an idle armed unit that is hit fights back (not on hold fire).
+        int k = world.Combats.IndexOf(hit.Target);
+        if (k >= 0 && attackerAlive && world.Identities.Get(hit.Attacker).Owner != victim.Owner)
+        {
+            ref Combat other = ref world.Combats.At(k);
+            if (other.Target == 0 && other.Mode == CombatMode.None && targetType.Traits.Armament!.AutoAcquire
+                && !Interaction.IsMoving(world, hit.Target) && !HasTask(world, hit.Target) && StanceOf(world, hit.Target) != CombatStance.HoldFire
+                && !world.IsHeld(hit.Attacker))
+            {
+                other.Target = hit.Attacker.Value;
+                other.Mode = CombatMode.Auto;
+                other.ChaseTick = -1;
+            }
+        }
+    }
+
+    // The damage formula (UNK-08 placeholder, ADR 0038): attack (rolled up to max_damage), BONUS.INI, Honor, defence,
+    // the minimum, building resistance, then the splash share.
+    private static int Damage(World world, in HitRecord hit, EntityTypeDefinition targetType)
+    {
+        byte targetOwner = world.Identities.Get(hit.Target).Owner;
+        long attack = hit.Attack;
+        if (hit.MaxRoll > 0)
+        {
+            attack += world.Rng.Combat.NextInt(hit.MaxRoll + 1);
+        }
+
+        CombatSettings combat = world.Ruleset.Combat;
+        if (hit.FromHero && combat.HonorTechnology >= 0 && world.HasPlayer(hit.Owner) && world.Players[hit.Owner].HasTechnology(combat.HonorTechnology)
+            && world.IsHero(hit.Target))
+        {
+            attack = attack * (100 + combat.HonorAttackPercent) / 100; // Honor: heroes hit heroes harder
+        }
+
+        int bonus = world.Ruleset.BonusBasisPoints(hit.AttackerType, targetType.Id);
+        int defence = CombatStats.Defence(world, hit.Target, targetType);
+        int resistance = world.Stats.Apply(targetOwner, ModifierStat.Resistance, targetType.Id, targetType.Traits.Resistance);
+        long damage = (attack * (10_000 + bonus) / 10_000) - defence;
+        if (resistance > 0)
+        {
+            // Buildings: RESISTANCE reduces the damage (manual ch. 4; the scale is UNVERIFIED, UNK-08).
+            int scale = world.Ruleset.Gameplay.ResistanceScale;
+            damage = damage * scale / (scale + resistance);
+        }
+
+        long dealt = Math.Clamp(damage, world.Ruleset.Gameplay.MinimumDamage, int.MaxValue);
+        if (hit.Percent != 100)
+        {
+            dealt = dealt * hit.Percent / 100; // splash share
+        }
+
+        return (int)Math.Clamp(dealt, 0, int.MaxValue);
+    }
+
+    // A holder's distributed share: split evenly over the units inside (the first ones by entity index take the rest).
+    private static void Share(World world, in HitRecord hit, int total, List<Death> deaths)
+    {
+        if (total <= 0)
+        {
+            return;
+        }
+
+        int n = world.Holders.Get(hit.Target).Count;
+        int each = total / n;
+        int rest = total - (each * n);
+        int done = 0;
+        ReadOnlySpan<EntityId> held = world.Helds.Entities;
+        for (int i = 0; i < held.Length && done < n; i++)
+        {
+            if (world.Helds.Components[i].Holder != hit.Target.Value || world.Items.Has(held[i]))
+            {
+                continue;
+            }
+
+            int amount = each + (done < rest ? 1 : 0);
+            done++;
+            if (amount <= 0)
+            {
+                continue;
+            }
+
+            ref Health health = ref world.Healths.Get(held[i]);
+            if (health.Current <= 0)
+            {
+                continue;
+            }
+
+            health.Current = Math.Max(0, health.Current - amount);
+            world.Events.Emit(new SimEvent(SimEventKind.Damaged, world.Identities.Get(held[i]).Owner, held[i], hit.Attacker.Index, health.Current, amount));
+            if (health.Current == 0)
+            {
+                deaths.Add(new Death(held[i], hit.Attacker, hit.Owner));
+            }
+        }
+
+        world.Events.Emit(new SimEvent(SimEventKind.DamageShared, world.Identities.Get(hit.Target).Owner, hit.Target, n, 0, total));
+    }
+
+    // Experience for damage dealt to another kingdom's (or Nature's) unit or building (not from allies' or own; GAME-08).
+    internal static void Credit(World world, in HitRecord hit, byte victimOwner, int dealt)
+    {
+        if (victimOwner == hit.Owner || !world.Entities.IsAlive(hit.Attacker) || world.Experiences.Count == 0
+            || world.Experiences.IndexOf(hit.Attacker) is not (>= 0 and var x))
+        {
+            return;
+        }
+
+        world.Experiences.At(x).PendingXp += (int)Math.Min((long)dealt * world.Ruleset.Combat.ExperiencePerDamagePercent / 100, 1_000_000);
+    }
+
+    private static void Uncloak(World world, EntityId unit)
+    {
+        if (world.Statuses.Count != 0 && world.Statuses.IndexOf(unit) is >= 0 and var s)
+        {
+            world.Statuses.At(s).CloakUntil = 0;
+        }
+    }
+
+    private static CombatStance StanceOf(World world, EntityId entity)
+        => world.Stances.Count != 0 && world.Stances.IndexOf(entity) is >= 0 and var s ? world.Stances.At(s).Value : CombatStance.Aggressive;
 
     private static void Chase(World world, EntityId attacker, ref Combat c, EntityId target, Position position, EntityTypeDefinition type, int tick)
     {
@@ -265,58 +730,6 @@ public sealed class CombatSystem : ISimSystem
         Interaction.MoveTo(world, attacker, x, y);
     }
 
-    private void Hit(World world, EntityId attacker, EntityId target)
-    {
-        ref Health health = ref world.Healths.Get(target);
-        if (health.Current <= 0 || world.IsInvulnerable(world.Identities.Get(target).Owner))
-        {
-            return; // already killed by an earlier hit of this tick, or hmgod (GAME-19)
-        }
-
-        EntityTypeDefinition type = world.TypeOf(attacker);
-        byte attackerOwner = world.Identities.Get(attacker).Owner;
-        EntityTypeDefinition targetType = world.TypeOf(target);
-        byte targetOwner = world.Identities.Get(target).Owner;
-        int bonus = world.Ruleset.BonusBasisPoints(type.Id, targetType.Id);
-
-        // Technology effects (ADR 0040): the attacker's owner's attack, the target's owner's defence and resistance; ship
-        // cannon levels on the attacker itself.
-        int attack = ResearchRules.LevelBonus(world, attacker, ModifierStat.Attack, world.Stats.Apply(attackerOwner, ModifierStat.Attack, type.Id, type.Traits.Armament!.Attack));
-        int defence = world.Stats.Apply(targetOwner, ModifierStat.Defence, targetType.Id, targetType.Traits.Defence);
-        int resistance = world.Stats.Apply(targetOwner, ModifierStat.Resistance, targetType.Id, targetType.Traits.Resistance);
-        long damage = ((long)attack * (10_000 + bonus) / 10_000) - defence;
-        if (resistance > 0)
-        {
-            // Buildings: RESISTANCE reduces the damage (manual ch. 4; the scale is UNVERIFIED, UNK-08).
-            int scale = world.Ruleset.Gameplay.ResistanceScale;
-            damage = damage * scale / (scale + resistance);
-        }
-
-        int dealt = (int)Math.Clamp(damage, world.Ruleset.Gameplay.MinimumDamage, int.MaxValue);
-        health.Current = (int)Math.Max(health.Current - (long)dealt, 0);
-        Identity victim = world.Identities.Get(target);
-        world.Events.Emit(new SimEvent(SimEventKind.Damaged, victim.Owner, target, attacker.Index, health.Current, dealt));
-        if (health.Current == 0)
-        {
-            _deaths.Add((target, attacker));
-            return;
-        }
-
-        // Retaliation: an idle armed unit that is hit fights back.
-        int k = world.Combats.IndexOf(target);
-        if (k >= 0)
-        {
-            ref Combat other = ref world.Combats.At(k);
-            if (other.Target == 0 && other.Mode == CombatMode.None && targetType.Traits.Armament!.AutoAcquire
-                && !Interaction.IsMoving(world, target) && !HasTask(world, target))
-            {
-                other.Target = attacker.Value;
-                other.Mode = CombatMode.Auto;
-                other.ChaseTick = -1;
-            }
-        }
-    }
-
     private static int Range(World world, EntityId attacker, Identity self, EntityTypeDefinition type, ArmamentDefinition arm)
         => arm.RangeUnits <= 0 ? 0 : ResearchRules.LevelBonus(world, attacker, ModifierStat.Range, world.Stats.Apply(self.Owner, ModifierStat.Range, type.Id, arm.RangeUnits));
 
@@ -328,15 +741,31 @@ public sealed class CombatSystem : ISimSystem
         => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var i && world.Identities.At(i).Owner == owner
             && world.Ruleset.EntityTypes[world.Identities.At(i).TypeId].Traits.SpawnOnDeath >= 0 && world.Healths.Get(target).Current > 0;
 
+    // An own training dummy may be attacked on an explicit order (Tactics; GAME-08).
+    internal static bool IsTrainingTarget(World world, byte owner, EntityId target)
+        => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var i && world.Identities.At(i).Owner == owner
+            && (world.Ruleset.EntityTypes[world.Identities.At(i).TypeId].Traits.Abilities & AbilityFlags.TrainingDummy) != 0 && !world.Constructions.Has(target);
+
     private static bool HasTask(World world, EntityId entity)
     {
         int w = world.Workers.IndexOf(entity);
         return w >= 0 && world.Workers.At(w).Task != WorkerTask.None;
     }
 
+    // An enemy for this attacker: a live enemy (IsEnemyTarget), or anyone at all when either side is confused (GAME-11).
+    private static bool IsHostileTarget(World world, EntityId attacker, byte owner, EntityId target)
+    {
+        if (IsEnemyTarget(world, owner, target))
+        {
+            return true;
+        }
+
+        return target != attacker && (world.IsConfused(attacker) || world.IsConfused(target)) && IsTargetable(world, target);
+    }
+
     // A live unit or building of another owner. Nature's units (animals, wild creatures) are hostile to every kingdom
-    // and can be fought; resources never are.
-    private static bool IsEnemyTarget(World world, byte owner, EntityId target)
+    // and can be fought; resources never are. Units inside holders, stone and invisible units cannot be targeted.
+    internal static bool IsEnemyTarget(World world, byte owner, EntityId target)
     {
         if (!world.Entities.IsAlive(target))
         {
@@ -350,19 +779,26 @@ public sealed class CombatSystem : ISimSystem
         }
 
         Identity identity = world.Identities.At(i);
-        return identity.Owner != owner && IsCombatant(world, identity) && world.Healths.Get(target).Current > 0
-            && world.MayAttack(owner, target); // GAME-13 stances, GAME-15 unclaimed gateways and ambient life
+        // GAME-12: an invisible unit is a target only where a detector of the kingdom sees it; GAME-13/15: stances,
+        // unclaimed gateways and ambient life.
+        return identity.Owner != owner && IsTargetable(world, target) && world.MayAttack(owner, target)
+            && !(owner < world.Players.Length && world.IsConcealed(target) && world.Visibility.IsConcealedFrom(world, owner, target, world.Positions.Get(target)));
     }
+
+    private static bool IsTargetable(World world, EntityId target)
+        => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var i && IsCombatant(world, world.Identities.At(i))
+            && world.Healths.Get(target).Current > 0 && !world.IsHeld(target) && !world.IsStone(target);
 
     private static bool IsCombatant(World world, Identity identity)
         => world.Ruleset.EntityTypes[identity.TypeId].Traits.Category is EntityCategory.Unit or EntityCategory.Building;
 
     private static uint OwnerBit(byte owner) => owner == MapObject.Nature ? 1u << NatureBit : 1u << (owner & 15);
 
-    private EntityId Acquire(World world, byte owner, Position position, int radius, long sight)
+    private EntityId Acquire(World world, EntityId scanner, byte owner, Position position, int radius, long sight, int minRange)
     {
         EntityId best = EntityId.None;
         long bestDistance = long.MaxValue;
+        bool confused = world.IsConfused(scanner);
 
         // Structures are bucketed by their center; their footprint reaches at most half the largest side further.
         long slack = (EntityTypeDefinition.MaxFootprintTiles / 2 * MapState.UnitsPerTile) + EntityTypeDefinition.MaxRadius;
@@ -371,7 +807,7 @@ public sealed class CombatSystem : ISimSystem
         int cy0 = Math.Max(0, (position.Y - reach) / CellSize);
         int cx1 = Math.Min(_gridW - 1, (position.X + reach) / CellSize);
         int cy1 = Math.Min(_gridH - 1, (position.Y + reach) / CellSize);
-        uint enemies = ~OwnerBit(owner);
+        uint enemies = confused ? uint.MaxValue : ~OwnerBit(owner);
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         Span<Identity> identities = world.Identities.Components;
         for (int cy = cy0; cy <= cy1; cy++)
@@ -396,13 +832,13 @@ public sealed class CombatSystem : ISimSystem
                 for (int k = _cellStart[cell]; k < _cellStart[cell + 1]; k++)
                 {
                     int dense = _cellItems[k];
-                    if (identities[dense].Owner == owner)
+                    EntityId candidate = ids[dense];
+                    if ((identities[dense].Owner == owner && !confused && !world.IsConfused(candidate)) || candidate == scanner)
                     {
                         continue;
                     }
 
-                    EntityId candidate = ids[dense];
-                    if (world.Healths.Get(candidate).Current <= 0 || !world.MayAttack(owner, candidate))
+                    if (world.Healths.Get(candidate).Current <= 0 || world.IsStone(candidate) || (!confused && !world.MayAttack(owner, candidate)))
                     {
                         continue;
                     }
@@ -415,7 +851,7 @@ public sealed class CombatSystem : ISimSystem
                     }
 
                     long d = Interaction.EdgeDistance(world, position, radius, candidate);
-                    if (d <= sight && (d < bestDistance || (d == bestDistance && candidate.Index < best.Index)))
+                    if (d <= sight && d >= minRange && (d < bestDistance || (d == bestDistance && candidate.Index < best.Index)))
                     {
                         bestDistance = d;
                         best = candidate;
@@ -427,8 +863,8 @@ public sealed class CombatSystem : ISimSystem
         return best;
     }
 
-    // Buckets the combatants (units and buildings; not resources) by position (structures by their center) with a
-    // stable counting sort, and records which owners each cell holds.
+    // Buckets the combatants (units and buildings on the map; not resources, items, or units inside holders) by
+    // position (structures by their center) with a stable counting sort, and records which owners each cell holds.
     private void BuildGrid(World world)
     {
         _gridW = (world.Map.WorldWidth + CellSize - 1) / CellSize;
@@ -451,9 +887,10 @@ public sealed class CombatSystem : ISimSystem
             _cellItems = new int[_cellOf.Length];
         }
 
+        bool anyHeld = world.Helds.Count != 0;
         for (int i = 0; i < ids.Length; i++)
         {
-            if (!IsCombatant(world, identities[i]))
+            if (!IsCombatant(world, identities[i]) || (anyHeld && world.Helds.Has(ids[i])))
             {
                 _cellOf[i] = -1;
                 continue;
@@ -484,3 +921,25 @@ public sealed class CombatSystem : ISimSystem
     private int[] _cellOf = [];
     private int[] _cursor = [];
 }
+
+/// <summary>One hit to apply in pass 2 (or a spell effect carried by a projectile).</summary>
+/// <param name="Attacker">Who struck (may be dead by now: projectiles, simultaneous hits).</param>
+/// <param name="Target">Who is hit.</param>
+/// <param name="Owner">The attacker's owner.</param>
+/// <param name="AttackerType">The attacker's type (bonuses).</param>
+/// <param name="Attack">Attack before defence.</param>
+/// <param name="MaxRoll">Extra damage the hit may roll (0..MaxRoll).</param>
+/// <param name="Percent">Share of the damage (splash).</param>
+/// <param name="DamageClass">Damage class (holder shares).</param>
+/// <param name="FromHero">Whether the attacker is a hero (Honor).</param>
+internal readonly record struct HitRecord(EntityId Attacker, EntityId Target, byte Owner, ushort AttackerType, int Attack, int MaxRoll, int Percent, DamageClass DamageClass, bool FromHero)
+{
+    /// <summary>A spell to apply instead of damage (spell projectiles), or <see cref="Projectile.NoSpell"/>.</summary>
+    public ushort Spell { get; init; } = Projectile.NoSpell;
+}
+
+/// <summary>A unit or building brought to 0 hit points, killed after the hits of the tick.</summary>
+/// <param name="Victim">Who dies.</param>
+/// <param name="Killer">Who dealt the last hit.</param>
+/// <param name="KillerOwner">The killer's owner (also when the killer died in the same tick).</param>
+internal readonly record struct Death(EntityId Victim, EntityId Killer, int KillerOwner);

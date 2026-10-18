@@ -201,11 +201,9 @@ public sealed partial class World
         stock = (int)Math.Clamp(stock + amount, 0, Ruleset.World.StockpileCap);
     }
 
-    // Hook: units inside holders (GAME-09, stream E) reveal nothing. Until the holder system lands nothing is held.
-    internal bool IsHeld(EntityId entity) => false;
-
-    // Hook: cloaked units (GAME-11 invisibility, stream E). Until the status effects land nothing is cloaked.
-    internal bool IsConcealed(EntityId entity) => false;
+    // Units inside holders (GAME-09: World.IsHeld, stream E) reveal nothing; cloaked units (GAME-11 invisibility and ninja
+    // cloak: World.IsCloaked) are concealed from kingdoms without a detector near.
+    internal bool IsConcealed(EntityId entity) => IsCloaked(entity);
 
     // Called once at the end of the constructor: the world-system state and its stores (appended after the others).
     private void InitializeKingdoms()

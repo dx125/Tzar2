@@ -55,7 +55,7 @@ public enum SimEventKind : ushort
     /// <summary>A hit landed (Entity = target, X = attacker index, Y = health left, Arg = damage).</summary>
     Damaged = 14,
 
-    /// <summary>An entity was killed in combat (Entity = victim, X = killer index, Arg = victim type id).</summary>
+    /// <summary>An entity was killed in combat (Entity = victim, X = killer index, Y = killer owner or -1, Arg = victim type id).</summary>
     Killed = 15,
 
     /// <summary>A technology was researched (Entity = the building, Player = researcher, Arg = technology id).</summary>
@@ -120,6 +120,55 @@ public enum SimEventKind : ushort
 
     /// <summary>A cheat code was applied (GAME-19): Arg = <c>CheatCode</c>.</summary>
     CheatUsed = 52,
+    // GAME-07…11 (ADRs 0090-0096): values 24-39.
+
+    /// <summary>A projectile was fired (Entity = shooter, X, Y = where it is aimed, Arg = projectile id | flight ms &lt;&lt; 8).</summary>
+    ProjectileLaunched = 24,
+
+    /// <summary>A unit reached an experience level (Entity, X = level, Arg = type id).</summary>
+    LevelUp = 25,
+
+    /// <summary>A unit became a named hero (Entity, X = index of its name in the civilization's list, Arg = type id).</summary>
+    HeroPromoted = 26,
+
+    /// <summary>A unit entered a holder (Entity = unit, X = holder index, Arg = unit type id).</summary>
+    Boarded = 27,
+
+    /// <summary>A unit left a holder (Entity = unit, X = holder index, Arg = unit type id).</summary>
+    Unloaded = 28,
+
+    /// <summary>A unit picked an item up (Entity = item, X = unit index, Arg = item type id).</summary>
+    ItemPicked = 29,
+
+    /// <summary>An item was dropped on the ground (Entity = item, X, Y = where, Arg = item type id).</summary>
+    ItemDropped = 30,
+
+    /// <summary>An item was used (Entity = item, X = user index, Arg = item type id); a scroll's text is shown on this.</summary>
+    ItemUsed = 31,
+
+    /// <summary>A spell took effect (Entity = caster, X = target index or -1, Y = (target X / 64) | (target Y / 64) &lt;&lt; 16, Arg = spell id).</summary>
+    SpellCast = 32,
+
+    /// <summary>A spell effect hit a unit (Entity = target, X = caster index, Arg = spell id).</summary>
+    SpellEffect = 33,
+
+    /// <summary>A unit was summoned or raised (Entity = new unit, X = caster index, Arg = type id).</summary>
+    Summoned = 34,
+
+    /// <summary>A crusade was preached (Entity = anchor, X = cathedral index, Arg = crusaders to raise).</summary>
+    CrusadePreached = 35,
+
+    /// <summary>A unit was bribed (Entity, Player = new owner, X = old owner, Arg = type id).</summary>
+    Bribed = 36,
+
+    /// <summary>A unit converted into another type (Entity = new unit, X = old type id, Arg = new type id).</summary>
+    UnitConverted = 37,
+
+    /// <summary>A Magic Workshop finished an item (Entity = item, X = workshop index, Arg = item type id).</summary>
+    ItemCrafted = 38,
+
+    /// <summary>A holder's damage was spread over the units inside (Entity = holder, X = units hit, Arg = total damage).</summary>
+    DamageShared = 39,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>
@@ -181,6 +230,31 @@ public enum CommandRejection
 
     /// <summary>No loan to repay (GAME-14).</summary>
     NoLoan = 34,
+    // GAME-07…11 (ADR 0096): values 15-29.
+
+    /// <summary>The holder has no room left (GAME-09).</summary>
+    HolderFull = 15,
+
+    /// <summary>The holder does not take these units, or the item cannot be carried by them.</summary>
+    NotAccepted = 16,
+
+    /// <summary>Every listed unit's inventory is full (GAME-10).</summary>
+    InventoryFull = 17,
+
+    /// <summary>The caster has too little mana (GAME-11).</summary>
+    NotEnoughMana = 18,
+
+    /// <summary>The caster or spell book is still cooling down, or a book has no charges left.</summary>
+    SpellNotReady = 19,
+
+    /// <summary>The unit cannot cast that spell (not on its card, or its technology is missing).</summary>
+    SpellUnknown = 20,
+
+    /// <summary>The target is not a valid target of the order (immune, wrong kind, not visible).</summary>
+    InvalidTarget = 21,
+
+    /// <summary>A crusade of the player is still going on or cooling down (GAME-11).</summary>
+    CrusadeActive = 22,
 }
 
 /// <summary>One simulation event. Output only: events are not part of the state, hashes or snapshots.</summary>

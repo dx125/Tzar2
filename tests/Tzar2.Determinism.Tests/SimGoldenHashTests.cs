@@ -31,7 +31,8 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // PlayerState technologies and civilization join the hashed layout; behaviour unchanged -> (PR #21 review)
     // CCD85F529731EEC1 / 618722F6DFB2231D: GateState, Production and Construction grew (paid costs), a repair store ->
     // (M3 F, ADRs 0100-0107) BC950AE8AB330411 / A9EC6EED34BA1812: kingdom state and diplomacy join the tick hash,
-    // visibility (stamps, explored, last-seen) the full hash, two stores (trade, Nature homes) the layout.
+    // visibility (stamps, explored, last-seen) the full hash, two stores (trade, Nature homes) the layout ->
+    // (M3 stream E, ADRs 0090-0096) the GAME-07…11 stores join the hashed layout; behaviour unchanged.
     private const ulong GoldenFinalFullHash = 0xA9EC6EED34BA1812UL;
     private const ulong GoldenHashStream = 0xBC950AE8AB330411UL;
 

@@ -63,6 +63,7 @@ public sealed partial class World
         Manas = Components.RegisterHot<ManaState>("game.mana");
         Lifetimes = Components.RegisterHot<Lifetime>("game.lifetime");
         RepairProgresses = Components.RegisterHot<RepairProgress>("game.repair");
+        RegisterCombatMagicStores();
         Stats = new PlayerStats(ruleset, config.PlayerCount);
         Decals = new DecalIndex(ruleset.DecalCap);
         Navigation = new NavigationGrid(Map, ruleset);
@@ -433,6 +434,7 @@ public sealed partial class World
 
         CaptureStates.Remove(entity);
         RefreshMaxHealth(entity);
+        AfterChangeOwnerCombatMagic(entity);
     }
 
     /// <summary>
@@ -498,13 +500,15 @@ public sealed partial class World
         }
 
         RefreshMaxHealth(entity);
+        AfterConvertTypeCombatMagic(entity, next);
     }
 
     /// <summary>Recomputes a live entity's maximum hit points (owner's technologies); the damage it took stays taken.</summary>
     public void RefreshMaxHealth(EntityId entity)
     {
         ref Health health = ref Healths.Get(entity);
-        int max = MaxHealthFor(Identities.Get(entity).Owner, TypeOf(entity));
+        int owner = Identities.Get(entity).Owner;
+        int max = MaxHealthFor(owner, TypeOf(entity)) + LevelHealth(entity, owner, TypeOf(entity));
         if (Constructions.Has(entity))
         {
             // A site grows toward its maximum as it is built.
@@ -584,6 +588,7 @@ public sealed partial class World
             ApplyStructure(entity, add: true);
         }
 
+        AfterCompleteCombatMagic(entity, type);
         if (type.Traits.Decay is not null && !Neglects.Has(entity))
         {
             Neglects.Set(entity, default);
@@ -760,6 +765,7 @@ public sealed partial class World
             return false;
         }
 
+        BeforeDestroyCombatMagic(entity);
         int owner = 0;
         int typeId = 0;
         int position = Identities.IndexOf(entity);
@@ -927,6 +933,7 @@ public sealed partial class World
         ValidateGameplayComponents();
         ValidateM3Components();
         ValidateKingdomComponents();
+        ValidateCombatMagicComponents();
 
         static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
     }
@@ -951,7 +958,7 @@ public sealed partial class World
         {
             Combat c = combats[i];
             ArmamentDefinition? arm = TypeOf(ids[i]).Traits.Armament;
-            if (arm is null || c.Mode > CombatMode.AttackMove || c.HitInMs < -1 || c.HitInMs > arm.HitDelayMs
+            if (arm is null || c.Mode > CombatMode.Ground || c.HitInMs < -1 || c.HitInMs > arm.HitDelayMs
                 || c.CooldownMs < -Config.TickLengthMilliseconds || c.CooldownMs > arm.CooldownMs
                 || c.ChaseTick < -1 || c.ChaseTick > Tick.Value || c.Resume > 1 || c.Reserved0 != 0 || c.Reserved1 != 0)
             {
@@ -1232,7 +1239,7 @@ public sealed partial class World
     {
         foreach (EntityId e in ids)
         {
-            if (!Identities.Has(e) || !Positions.Has(e) || !Healths.Has(e) || (mobile && !Motions.Has(e)) || (structure && !Footprints.Has(e) && !Motions.Has(e)))
+            if (!Identities.Has(e) || !Positions.Has(e) || !Healths.Has(e) || (mobile && !Motions.Has(e) && !IsHeld(e)) || (structure && !Footprints.Has(e) && !Motions.Has(e)))
             {
                 throw new System.IO.InvalidDataException($"Snapshot violates a world invariant: {e} lacks a core component of its gameplay state.");
             }
@@ -1246,6 +1253,7 @@ public sealed partial class World
         EntityTraits t = type.Traits;
         byte owner = Identities.Get(entity).Owner;
         bool player = HasPlayer(owner);
+        AddCombatMagicComponents(entity, type, underConstruction);
         if (player && (t.Harvester is not null || t.IsBuilder || t.IsCapturer))
         {
             Workers.Set(entity, new Worker { CarryResource = Worker.NoResource, NodeResource = Worker.NoResource });

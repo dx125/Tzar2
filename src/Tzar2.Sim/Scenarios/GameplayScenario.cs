@@ -44,7 +44,7 @@ public sealed record GameplayScenarioOptions
 /// A deterministic bot issues the orders through <see cref="CommandCodec"/> and slot stamping, like lockstep clients.
 /// The ruleset is passed in (the compiled <c>classic</c> ruleset; Sim never compiles rules, REQ-ARCH-01).
 /// </summary>
-public sealed class GameplayScenario : IBenchScenario
+public sealed partial class GameplayScenario : IBenchScenario
 {
     private readonly GameplayScenarioOptions _options;
     private readonly CommandList _batch = new();
@@ -238,6 +238,8 @@ public sealed class GameplayScenario : IBenchScenario
                 objects.Add(new MapObject("euro.peon", (byte)p, Center(bx - 1, size), Center(by + (w % 12), size) + ((w / 12) * 300)));
             }
 
+            AddCombatMagicObjects(objects, used, size, ruleset, p, bx, by); // GAME-07…11 (ADR 0096)
+
             // Soldiers: a block between the base and the center.
             int sx = bx + (ox > 0 ? -14 : 16);
             int sy = by + (oy > 0 ? -14 : 16);
@@ -327,13 +329,14 @@ public sealed class GameplayScenario : IBenchScenario
                 case SimEventKind.TradeDelivered: _sales++; break;
                 case SimEventKind.TributeSent: _tributes++; break;
                 case SimEventKind.DiplomacyChanged: _diplomacy++; break;
+                default: CountCombatMagic(e.Kind); break;
             }
         }
     }
 
     /// <inheritdoc />
     public string Describe()
-        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, researched {_researched}, captured {_captured}, fires {_fires}, repaired {_repaired}, claimed {_claimed}, sales {_sales}, tributes {_tributes}, diplomacy {_diplomacy}, gates {Simulation.World.Gates.Count}, bridge tiles {BridgeTiles()}, corpses {Simulation.World.Decals.Count}");
+        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, researched {_researched}, captured {_captured}, fires {_fires}, repaired {_repaired}, claimed {_claimed}, sales {_sales}, tributes {_tributes}, diplomacy {_diplomacy}, gates {Simulation.World.Gates.Count}, bridge tiles {BridgeTiles()}, corpses {Simulation.World.Decals.Count}, spells {_spells}, projectiles {_projectiles}, boarded {_boarded}, items {_picked}, level-ups {_levels}");
 
     /// <inheritdoc />
     public void Dispose() => Simulation.Dispose();
@@ -392,6 +395,7 @@ public sealed class GameplayScenario : IBenchScenario
         if (!castle.IsNone)
         {
             first = M3Orders(world, player, tick, castle);
+            CombatMagicOrders(world, player, tick, castle); // GAME-07…11: holders, items, spells, stances (ADR 0096)
         }
 
         // Peasants: two build a house every 400 ticks; the rest harvest the node nearest to them.
