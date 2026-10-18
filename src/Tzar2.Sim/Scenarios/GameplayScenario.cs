@@ -458,7 +458,7 @@ public sealed class GameplayScenario : IBenchScenario
     {
         int window = _options.BotIntervalTicks;
         int players = _options.Players;
-        if (player < 2 && players >= 2)
+        if (player < 2 && players >= 3) // two-kingdom runs (allocation gate) keep their battle
         {
             byte other = (byte)(1 - player);
             if (tick < window)
