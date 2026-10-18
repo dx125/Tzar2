@@ -1479,6 +1479,14 @@ public static class CampaignAutoplay
                 {
                     if (stranded.Any(o => !world.IsHeld(o)) && _ferried.TryGetValue(ship.Value, out int boarded) && _tick - boarded < 1200)
                     {
+                        // The ones whose boarding gave up (no errand) are sent again, to the same ship.
+                        EntityId[] again = Unboarding(world, stranded);
+                        if (again.Length > 0 && _tick - _reboarded >= 200)
+                        {
+                            _reboarded = _tick;
+                            _batch.Add(CommandKind.Board, again, 0, 0, ship);
+                        }
+
                         Goal = $"{name}: waiting for {stranded.Count(o => !world.IsHeld(o))} more to board";
                         return true;
                     }
@@ -1525,8 +1533,11 @@ public static class CampaignAutoplay
                 return false;
             }
 
-            if (Due(boat))
+            EntityId[] idle = Unboarding(world, stranded);
+            if (Due(boat) || (idle.Length > 0 && _tick - _reboarded >= 200))
             {
+                // Everyone on the first order; afterwards only those whose boarding gave up (no errand any more).
+                _reboarded = _tick;
                 _batch.Add(CommandKind.Board, stranded.Where(u => !world.IsHeld(u)).ToArray(), 0, 0, boat);
                 Note($"ferry boards {stranded.Count} for {name}");
             }
@@ -1534,6 +1545,12 @@ public static class CampaignAutoplay
             Goal = $"{name}: {stranded.Count} units board a ship at ({Pos(world, boat).X / Tile},{Pos(world, boat).Y / Tile})";
             return true;
         }
+
+        private int _reboarded = int.MinValue / 2;
+
+        // Units of a ferry that are neither aboard nor walking to board.
+        private static EntityId[] Unboarding(World world, List<EntityId> units)
+            => units.Where(u => !world.IsHeld(u) && !world.Errands.Has(u)).ToArray();
 
         // Whether an order to this ship may be given again (at most every 30 seconds).
         private bool Due(EntityId ship)
@@ -1577,8 +1594,9 @@ public static class CampaignAutoplay
 
                 taken.UnionWith(free);
                 any = true;
-                if (Due(holder))
+                if (Due(holder) || (Unboarding(world, free).Length > 0 && _tick - _reboarded >= 200))
                 {
+                    _reboarded = _tick;
                     _batch.Add(CommandKind.Board, free.ToArray(), 0, 0, holder);
                 }
             }
