@@ -101,6 +101,13 @@ public sealed record MatchSetup
     /// </summary>
     public Content.Compiled.Scenario.ScenarioData? Scenario { get; init; }
 
+    /// <summary>
+    /// Match-start changes beyond the lobby settings (scenario kingdoms' stockpiles and diplomacy, campaign carry-over;
+    /// ADR 0133), run once for a new match after the AI and the triggers attached and before the first tick; never on
+    /// restore (the snapshot has their result). Null for none.
+    /// </summary>
+    public IMatchPreparation? Preparation { get; init; }
+
     /// <summary>Trigger engine settings (null: the defaults with the human kingdoms as responders).</summary>
     public Scripting.Legacy.TriggerOptions? TriggerOptions { get; init; }
 
@@ -192,6 +199,15 @@ public sealed record MatchSetup
             throw new ArgumentException("A local skirmish has at most one human player.", nameof(ruleset));
         }
     }
+}
+
+/// <summary>Changes a new match before its first tick (ADR 0133).</summary>
+public interface IMatchPreparation
+{
+    /// <summary>Applies the changes; the world is still unlocked (match setup).</summary>
+    /// <param name="simulation">The new match.</param>
+    /// <param name="triggers">The scenario's trigger engine, or null.</param>
+    void Prepare(Simulation simulation, Scripting.Legacy.LegacyTriggerSystem? triggers);
 }
 
 /// <summary>A map built elsewhere (a converted or authored scenario map, a campaign mission; ADR 0132).</summary>

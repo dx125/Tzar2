@@ -136,6 +136,9 @@ public sealed class ScenarioPresenter
         batch.Add(Sim.Commands.CommandKind.ScenarioReply, [], 0, 0, default, serial, position);
     }
 
+    /// <summary>Rebuilds <see cref="View"/> from the trigger state (after match preparation).</summary>
+    public void Refresh() => View = Build();
+
     /// <summary>Translates the tick's events into notices and refreshes <see cref="View"/> (sim thread, after a tick).</summary>
     public void Update(ReadOnlySpan<SimEvent> events, List<ScenarioNotice> into)
     {

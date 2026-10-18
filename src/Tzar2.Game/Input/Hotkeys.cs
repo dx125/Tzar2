@@ -98,8 +98,8 @@ public sealed class HotkeyTable
         {
             new("menu", GameKey.F1, KeyMods.None, GameAction.MenuScreen, 0, Done, string.Empty),
             new("menu-f10", GameKey.F10, KeyMods.None, GameAction.MenuScreen, 0, Done, string.Empty),
-            new("save", GameKey.F2, KeyMods.None, GameAction.SaveDialog, 0, Blocked, "saves are M6 (§19.5)"),
-            new("load", GameKey.F3, KeyMods.None, GameAction.LoadDialog, 0, Blocked, "saves are M6 (§19.5)"),
+            new("save", GameKey.F2, KeyMods.None, GameAction.SaveDialog, 0, Partial, "quick save of campaign missions (ADR 0133); the save dialog and skirmish/MP saves are M6"),
+            new("load", GameKey.F3, KeyMods.None, GameAction.LoadDialog, 0, Partial, "quick load of campaign missions (ADR 0133); the load dialog is M6"),
             new("scores", GameKey.F4, KeyMods.None, GameAction.Scores, 0, Partial, "every kingdom's sim score and statistics as messages (ADR 0106)"),
             new("diplomacy", GameKey.F5, KeyMods.None, GameAction.Diplomacy, 0, Blocked, "the sim has diplomacy (SetDiplomacy, ADR 0102); the dialog is not built yet"),
             new("tribute", GameKey.F6, KeyMods.None, GameAction.Tribute, 0, Blocked, "the sim has tribute (ADR 0102); the dialog is not built yet"),

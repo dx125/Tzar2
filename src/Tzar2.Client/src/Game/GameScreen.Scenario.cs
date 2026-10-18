@@ -19,6 +19,35 @@ public partial class GameScreen
     private double _viewLockedUntil;
     private bool _storyPause;
 
+    /// <summary>F2 (quick save) in a campaign mission (ADR 0133).</summary>
+    public event System.Action? SaveRequested;
+
+    /// <summary>F3 (quick load).</summary>
+    public event System.Action? LoadRequested;
+
+    private bool QuickSave()
+    {
+        if (SaveRequested is null)
+        {
+            return false;
+        }
+
+        SaveRequested.Invoke();
+        Message("Game saved.");
+        return true;
+    }
+
+    private bool QuickLoad()
+    {
+        if (LoadRequested is null)
+        {
+            return false;
+        }
+
+        LoadRequested.Invoke();
+        return true;
+    }
+
     /// <summary>Raised when the scenario asks for the next campaign map (Load Map, Player Win, Player Lose).</summary>
     public event System.Action<ScenarioNotice>? MapRequested;
 

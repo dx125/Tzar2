@@ -67,6 +67,11 @@ internal static class CliApp
             return ConvertCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
         }
 
+        if (args[0] == "campaign")
+        {
+            return CampaignCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
+        }
+
         if (args[0] == "ai")
         {
             return AiCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
@@ -100,6 +105,7 @@ internal static class CliApp
             ("bench [options]", "run the synthetic sim benchmark; reports tick p50/p99 and the final hash"),
             ("convert <file|folder>", "convert legacy .wmp maps and .wcm campaigns into .t2map/.t2camp (§18.5)"),
             ("ai check <folder|package>", "parse and compile legacy AI scripts; prints located messages"),
+            ("campaign run (--demo | <wcm>)", "play campaigns headless with the scripted solver; reports which missions complete"),
             ("fidelity capture|analyze|check|scenarios|selftest", "capture harness: measure the original game (Windows), turn captures into facts"),
         };
         lines.AddRange(Planned.Select(p => (p.Name, $"{p.Summary} [not implemented, {p.Milestone}]")));

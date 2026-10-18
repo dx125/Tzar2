@@ -53,6 +53,9 @@ public sealed record ViewerArgs
     /// <summary>Start a skirmish directly.</summary>
     public bool Skirmish { get; init; }
 
+    /// <summary>Open the campaign screen directly (<c>--campaign</c>), or start its current mission (<c>--campaign play</c>).</summary>
+    public string? Campaign { get; init; }
+
     /// <summary>Autoplay screenshot folder, or null.</summary>
     public string? AutoplayDir { get; init; }
 
@@ -134,6 +137,9 @@ public sealed record ViewerArgs
                     break;
                 case "--skirmish":
                     result = result with { Skirmish = true };
+                    break;
+                case "--campaign":
+                    result = result with { Campaign = i + 1 < args.Count && !args[i + 1].StartsWith("--", StringComparison.Ordinal) ? args[++i] : "screen" };
                     break;
                 case "--autoplay":
                     result = result with { AutoplayDir = Value(), Skirmish = true };

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Tzar2.AI;
 using Tzar2.AI.Runtime;
 using Tzar2.Content.Compiled;
@@ -124,6 +125,12 @@ public sealed class GameSession : IDisposable
             Scenario = new ScenarioPresenter(LegacyTriggerSystem.Attach(Simulation, scenario, setup.EffectiveTriggerOptions), Simulation.World, LocalPlayer);
         }
 
+        if (snapshot is null)
+        {
+            setup.Preparation?.Prepare(Simulation, Scenario?.Triggers);
+            Scenario?.Refresh();
+        }
+
         _fog = fog;
         Publish();
     }
@@ -137,6 +144,65 @@ public sealed class GameSession : IDisposable
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         return new GameSession(setup, ruleset, fog, peers: null, snapshot);
+    }
+
+    private TaskCompletionSource<(byte[] Snapshot, int Tick)>? _snapshotRequest;
+
+    /// <summary>
+    /// A snapshot of the running match (quick save; ADR 0133) with the tick it belongs to. It is always taken by the
+    /// thread that runs the ticks, between two ticks: with a sim thread, this call posts a request that the thread
+    /// serves at the top of its loop (never inside <c>RunTick</c>) and blocks until then; without one it captures
+    /// directly. The tick is read together with the snapshot, so they always match.
+    /// </summary>
+    /// <exception cref="TimeoutException">The sim thread did not answer within 10 s (stopped or faulted).</exception>
+    public (byte[] Snapshot, int Tick) CaptureSnapshotNow()
+    {
+        if (_thread is null)
+        {
+            return (Simulation.CaptureSnapshot(), Simulation.World.Tick.Value);
+        }
+
+        var request = new TaskCompletionSource<(byte[] Snapshot, int Tick)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (Interlocked.CompareExchange(ref _snapshotRequest, request, null) is not null)
+        {
+            throw new InvalidOperationException("Another snapshot request is pending.");
+        }
+
+        return request.Task.Wait(TimeSpan.FromSeconds(10)) ? request.Task.Result : throw new TimeoutException("The sim thread did not take the snapshot.");
+    }
+
+    /// <summary>Stops the sim thread (the match stays readable for the campaign layer; ticks only through <see cref="Step"/>).</summary>
+    public void Stop()
+    {
+        if (_thread is null)
+        {
+            return;
+        }
+
+        _stop = true;
+        if (_thread.Join(TimeSpan.FromSeconds(5)))
+        {
+            _thread = null;
+            _stop = false;
+        }
+    }
+
+    // Answers a pending snapshot request from the sim thread (between ticks).
+    private void ServeSnapshot()
+    {
+        if (Interlocked.Exchange(ref _snapshotRequest, null) is { } request)
+        {
+            try
+            {
+                request.SetResult((Simulation.CaptureSnapshot(), Simulation.World.Tick.Value));
+            }
+#pragma warning disable CA1031 // The requester gets the failure.
+            catch (Exception e)
+#pragma warning restore CA1031
+            {
+                request.SetException(e);
+            }
+        }
     }
 
     /// <summary>A snapshot of the match between ticks (not while the sim thread runs).</summary>
@@ -355,6 +421,7 @@ public sealed class GameSession : IDisposable
         {
             while (!_stop)
             {
+                ServeSnapshot();
                 double now = clock.Elapsed.TotalMilliseconds;
                 if (_paused || HoldsForScenario)
                 {

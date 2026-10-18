@@ -775,7 +775,12 @@ public partial class GameScreen : Node
 
     private void Act(HotkeyBinding binding, KeyMods mods)
     {
-        if (binding.Status == ParityStatus.Blocked)
+        if ((binding.Action == GameAction.SaveDialog && QuickSave()) || (binding.Action == GameAction.LoadDialog && QuickLoad()))
+        {
+            return;
+        }
+
+        if (binding.Status == ParityStatus.Blocked || binding.Action is GameAction.SaveDialog or GameAction.LoadDialog)
         {
             Message($"{binding.Action}: {binding.Note}");
             return;
