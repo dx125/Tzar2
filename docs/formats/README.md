@@ -20,6 +20,7 @@ data beyond a few illustrative values (REQ-LEGAL-01/02).
 | [fnt.md](fnt.md) | `LOCAL/FONTS/*.FNT` (7) | resolved | 7/7 decode; specimen sheets correct (CP1252) |
 | [ini-tsv.md](ini-tsv.md) | `DATA/**/*.INI`, `*.TXT` tables, `IMAGES.INI`, terrain INIs | resolved (syntax, code page, sprite linkage) | 177/177 INI parse, 0 warnings; 971/971 `IMAGES.INI` → RLE frame/direction counts match |
 | [hpfs.md](hpfs.md) | `.wmp`, `.wcm` containers | container resolved, payload open | 7 maps + 2 campaigns + 26 embedded maps read, block accounting consistent |
+| [wmp.md](wmp.md) | `.wmp`/`.wcm` payload: header, kingdoms, tiles, objects, triggers, conversations, campaigns | resolved for conversion (UNK-70…80 open) | 33/33 maps decode with 0 warnings; every trigger payload consumed exactly; 99.45 % corner agreement; `t2 convert` 9/9 files, 0 errors |
 | [sprite-volume.md](sprite-volume.md) | measurement for spike M0-S6 | done (decision: [ADR 0013](../decisions/0013-spike-s6-sprite-memory.md)) | — |
 | [t2pkg.md](t2pkg.md) | our output: `.t2pkg` base package, `.t2spr`, `.t2img` | implemented (M1) | `t2 import` of the reference build: 0 errors, deterministic |
 
@@ -35,9 +36,9 @@ community description, needs a PL/PT GOG sample), `.DDV` (RE-11, M8), `.wdm` (DE
 | UNK-01b | meaning of `_c` mask images | **resolved**: player-colour overlay patches, same ramp, offset/animation from `IMAGES.INI` | [bmp.md §2](bmp.md#building-masks) |
 | UNK-02 | `.DAT` fields | **resolved** (frame boxes, footprint rect); footprint grid values 0/2 hypothesis, 1 unknown | [dat.md](dat.md) |
 | UNK-03 | shadow blend | **factor VERIFIED** (capture capture-20261018-024524, ADR 0111): each 5-bit channel of the shadowed terrain is halved, `c >> 1` (93 of 93 observed levels in the shadow-blend trials, 80 of 87 in the terrain-tiles trials, the 7 misses in sparse dark and middle levels; ADR 0111); overlap: no double darkening seen (542 doubly darkened pairs against 10,458), a dedicated overlap capture is still to come. Encoding: kind-7 sheets; baked near-black-green pixels in unit sheets (heuristic) | [rle.md §5.3–5.4](rle.md) |
-| UNK-04 | HPFS / map schema | **partial**: container resolved; member list known; `tiles` = side² uint16; rest open | [hpfs.md](hpfs.md) |
+| UNK-04 | HPFS / map schema | **resolved for conversion**: container, header, kingdoms, diplomacy, tiles (terrain pair + shape, cliff, tree), objects and extensions, triggers (28 actions, 8 events), conversations, campaigns; leftovers UNK-70…80 | [hpfs.md](hpfs.md), [wmp.md](wmp.md) |
 | UNK-06 | `.FNT` glyph format | **resolved** | [fnt.md](fnt.md) |
-| UNK-10 | terrain storage / transitions | **partial**: transition tile shape order and keys known. Capture capture-20261018-024524 (ADR 0111): 34 of 39 snapshots of five maps aligned with the map words; most words show several tiles (the variant is not in the word alone); the transition variant column is not a coordinate parity (variant 0 ≈ 3/4 of the cells); no single base-tile offset per atlas. Rule still open | [bmp.md §3](bmp.md#3-terrain-sets) |
+| UNK-10 | terrain storage / transitions | **partial**: maps store per tile a terrain pair and a 4-corner shape ([wmp.md §5](wmp.md)), so corners are recoverable (99.45 % agreement); the variant column is not stored. Transition tile shape order and keys known. Capture capture-20261018-024524 (ADR 0111): 34 of 39 snapshots of five maps aligned with the map words; most words show several tiles (the variant is not in the word alone); the transition variant column is not a coordinate parity (variant 0 ≈ 3/4 of the cells); no single base-tile offset per atlas. Rule still open | [bmp.md §3](bmp.md#3-terrain-sets) |
 | UNK-31 | BMP transparency key | **resolved**: `0x03E0` green; terrain transitions also `0x7C1F` magenta | [bmp.md §1.2](bmp.md) |
 | UNK-39 | RGB555 → RGB888 | **resolved for the rebuild** (capture capture-20261018-024524, ADR 0111): the game draws to an RGB555 surface (masks 7C00/03E0/001F) whatever the wrapper offers; the screen expansion is the display path's, and the modern path shows bit replication for red and blue, which we keep. Period hardware cannot be measured | [rle.md §5.1](rle.md) |
 | UNK-40 | cursor hotspots | **mostly resolved**: `IMAGES.INI` `hotspot` for cursor entries | [ini-tsv.md §4](ini-tsv.md#imagesini) |
@@ -69,5 +70,6 @@ python3 -I tools/re/check_images_ini.py <install>                 # IMAGES.INI �
 python3 -I tools/re/tzfnt.py <install>/LOCAL/FONTS/SMALL.FNT <scratch>/small.png
 python3 -I tools/re/tzini.py <install>/DATA/IMAGES.INI
 python3 -I tools/re/hpfs.py <install>/Campaign/Tzar.wcm --recurse
+python3 -I tools/re/tzmap.py <install>/Campaign/Tzar.wcm --triggers   # map payload summary (wmp.md)
 python3 -I tools/re/make_goldens.py <install> tests/local-goldens/sprites   # ignored by git; read by the golden test
 ```

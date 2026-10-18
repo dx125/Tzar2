@@ -21,7 +21,7 @@ namespace Tzar2.Formats.Fuzzing;
 public static class FuzzTargets
 {
     /// <summary>Names accepted by <see cref="Run"/>.</summary>
-    public static readonly string[] Names = ["rle", "dat", "bmp", "pal", "fnt", "hpfs", "ini", "tsv", "wav", "mid"];
+    public static readonly string[] Names = ["rle", "dat", "bmp", "pal", "fnt", "hpfs", "ini", "tsv", "wav", "mid", "wmp", "wcm"];
 
     /// <summary>Runs the target <paramref name="name"/> on <paramref name="data"/>.</summary>
     /// <returns>True when the input parsed, false when it was rejected with <see cref="LegacyFormatException"/>.</returns>
@@ -43,6 +43,8 @@ public static class FuzzTargets
                 case "tsv": TsvTable.Parse(data, CodePage.Windows1251); break;
                 case "wav": WavInfo.Parse(data); break;
                 case "mid": MidiInfo.Parse(data); break;
+                case "wmp": Maps.LegacyMapReader.ReadMap(data); break;
+                case "wcm": Maps.LegacyMapReader.ReadCampaign(data); break;
                 default: throw new ArgumentException($"Unknown fuzz target '{name}'.", nameof(name));
             }
 
