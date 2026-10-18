@@ -129,10 +129,6 @@ public sealed class WorldRenderer : IDisposable
     /// <summary>Instances drawn in the last frame.</summary>
     public int DrawnSprites => _ground.Count + _objects.Count;
 
-    /// <summary>The sprite direction column of a sim facing (sim: 0 = east, clockwise; sheets: S, SE, E, NE, N, NW, W, SW).</summary>
-    public static int Direction(int facing, int directions)
-        => directions < 8 ? 0 : ((2 - facing) % 8 + 8) % 8;
-
     /// <summary>Draws <paramref name="frame"/>.</summary>
     public void Render(
         GameFrame frame,
@@ -252,14 +248,6 @@ public sealed class WorldRenderer : IDisposable
         _lightTexture.Dispose();
     }
 
-    /// <summary>The construction-site sheet name for a footprint (<c>build1x1</c> … <c>build6x6</c>).</summary>
-    public static string BuildSiteName(EntityTypeDefinition def)
-    {
-        ArgumentNullException.ThrowIfNull(def);
-        int n = Math.Clamp(Math.Max(def.FootprintWidth, def.FootprintHeight), 1, 8);
-        return $"build{n}x{n}";
-    }
-
     private int Fog(byte[] fog, int x, int y)
     {
         int tx = Math.Clamp(x / (TilePixels * UnitsPerPixel), 0, MapWidth - 1), ty = Math.Clamp(y / (TilePixels * UnitsPerPixel), 0, MapHeight - 1);
@@ -291,10 +279,10 @@ public sealed class WorldRenderer : IDisposable
             bool ground = visual.Class == "field";
             if (e.ConstructionPermille >= 0 && !ground)
             {
-                sheet = _bank.Get(BuildSiteName(def));
+                sheet = _bank.Get(SpriteRules.BuildSiteName(def));
                 if (sheet is not null)
                 {
-                    frameIndex = Math.Min(sheet.Sheet.FramesPerDirection - 1, e.ConstructionPermille * sheet.Sheet.FramesPerDirection / 1000);
+                    frameIndex = SpriteRules.SiteFrame(e.ConstructionPermille, sheet.Sheet.FramesPerDirection);
                 }
             }
             else
@@ -305,9 +293,8 @@ public sealed class WorldRenderer : IDisposable
                     variant = (int)(phase % (uint)Math.Max(1, sheet.Sheet.Directions));
                     if (def.Traits.ResourceNode is { Amount: > 0 } node && e.ResourceLeft >= 0 && sheet.Sheet.FramesPerDirection > 1)
                     {
-                        // Rocks shrink as they are mined (frames = stages; ⚠ the original's thresholds are not measured).
-                        int left4 = (int)Math.Clamp(e.ResourceLeft * (long)sheet.Sheet.FramesPerDirection / node.Amount, 0, sheet.Sheet.FramesPerDirection - 1);
-                        frameIndex = sheet.Sheet.FramesPerDirection - 1 - left4;
+                        // Rocks shrink as they are mined (frames = stages).
+                        frameIndex = SpriteRules.DepletionFrame(e.ResourceLeft, node.Amount, sheet.Sheet.FramesPerDirection);
                     }
                     else
                     {
@@ -360,7 +347,7 @@ public sealed class WorldRenderer : IDisposable
             frame = s.Animation.FrameAt(timeMs + phase);
         }
 
-        int dir = Direction(e.Facing, s.Sheet.Directions);
+        int dir = SpriteRules.Direction(e.Facing, s.Sheet.Directions);
         var cellOrigin = new Vector2I(px - s.Object.Position.X - (s.Object.Size.X / 2), py - s.Object.Position.Y - (s.Object.Size.Y / 2));
         AddSheet(_objects, s, cellOrigin, dir, frame, player, ((uint)(py + 4096) << 6) | 2, shadows: true);
         _pickables.Add(new Pickable(index, new Rect2(cellOrigin + s.Selection.Position, s.Selection.Size), py));
@@ -419,7 +406,7 @@ public sealed class WorldRenderer : IDisposable
                 {
                     // Structures: the footprint outline (⚠ the original's selection look is not measured yet).
                     var r = new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, def.FootprintWidth) * TilePixels, Math.Max(1, def.FootprintHeight) * TilePixels);
-                    Corners(_marksUnder, r, mark);
+                    Corners(_marksOver, r, mark);
                 }
                 else
                 {

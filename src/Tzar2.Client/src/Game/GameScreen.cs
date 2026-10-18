@@ -98,8 +98,9 @@ public partial class GameScreen : Node
     private Rid _boxItem;
 
     /// <summary>Creates the screen for a session that has not started yet.</summary>
-    public GameScreen(ContentStore store, UiAssets ui, GameSession session, string terrainSet, string? soundFont)
+    public GameScreen(ContentStore store, UiAssets ui, GameSession session, string terrainSet, string? soundFont, GameSettings? settings = null)
     {
+        Settings = settings ?? new GameSettings();
         _store = store;
         _ui = ui;
         _session = session;
@@ -162,8 +163,17 @@ public partial class GameScreen : Node
     /// <summary>Only the test driver gives input (the real mouse and keyboard are ignored).</summary>
     public bool Scripted { get; set; }
 
-    /// <summary>Weather (rain) on or off.</summary>
-    public bool Rain { get; set; }
+    /// <summary>Forces rain on (test driver); otherwise rain comes and goes when weather effects are on.</summary>
+    public bool ForceRain { get; set; }
+
+    /// <summary>Whether it rains now.</summary>
+    public bool Rain { get; private set; }
+
+    /// <summary>Keeps the session's game speed instead of the settings' (smoke test, test driver).</summary>
+    public bool KeepSpeed { get; set; }
+
+    /// <summary>The player's preferences.</summary>
+    public GameSettings Settings { get; }
 
     /// <inheritdoc/>
     public override void _Ready()
@@ -190,7 +200,7 @@ public partial class GameScreen : Node
 
             if (type.HasFootprint && type.Traits.Category == EntityCategory.Building)
             {
-                _bank.Add(WorldRenderer.BuildSiteName(type));
+                _bank.Add(SpriteRules.BuildSiteName(type));
             }
         }
 
@@ -230,6 +240,7 @@ public partial class GameScreen : Node
         _music = new MidiPlayer();
         AddChild(_music);
         StartMusic();
+        ApplySettings();
 
         _minimapImage = Image.CreateEmpty(_world.MapWidth, _world.MapHeight, false, Image.Format.Rgba8);
         _minimapTexture = ImageTexture.CreateFromImage(_minimapImage);
@@ -306,7 +317,10 @@ public partial class GameScreen : Node
         DrawBox();
         UpdateHud(frame, phase);
         UpdateCursor();
-        _workSoundBudget = 2;
+        _workSoundBudget = Settings.NatureSounds ? 2 : 0;
+
+        // ⚠ Placeholder weather: with weather effects on, a rain shower every 12 minutes of game time for 3 minutes.
+        Rain = ForceRain || (Settings.Weather && (frame.Tick.Value * frame.TickMs / 180_000) % 4 == 2);
 
         if (frame.Outcome != MatchOutcome.None && !_outcomeShown)
         {
@@ -387,6 +401,9 @@ public partial class GameScreen : Node
         MouseButtonEvent(release);
     }
 
+    /// <summary>Simulated input for the test driver: a minimap click at a map share (0-1).</summary>
+    public void MinimapClick(Vector2 share, bool right) => OnMinimap(share, right);
+
     /// <summary>Simulated input for the test driver: the mouse moves to a screen point.</summary>
     public void Hover(Vector2 screen) => _mouse = screen;
 
@@ -439,11 +456,11 @@ public partial class GameScreen : Node
         };
     }
 
-    /// <summary>Time of day of a frame (0 = midnight); the match starts at 07:12.</summary>
+    /// <summary>Time of day of a frame (0 = midnight); the match starts at 10:00.</summary>
     public static float DayPhase(GameFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
-        long ms = ((long)frame.Tick.Value * frame.TickMs) + (DayLengthMs * 3 / 10);
+        long ms = ((long)frame.Tick.Value * frame.TickMs) + (DayLengthMs * 10 / 24);
         return (ms % DayLengthMs) / (float)DayLengthMs;
     }
 
@@ -739,13 +756,7 @@ public partial class GameScreen : Node
                 Message(_catalog.Text("sp_setupmap", "vcond_0", "Standard") + ": destroy every enemy unit and building.");
                 break;
             case GameAction.Options:
-                _options.DayNight = !_options.DayNight;
-                Message("Day/night " + (_options.DayNight ? "on" : "off") + " (Shift+F9: weather, Ctrl+F9: fog)");
-                if ((mods & KeyMods.Shift) != 0)
-                {
-                    Rain = !Rain;
-                }
-
+                ShowOptions();
                 break;
             case GameAction.Screenshot:
                 Screenshot();
@@ -953,7 +964,7 @@ public partial class GameScreen : Node
         if (Input.IsKeyPressed(Key.Down)) { dir.Y += 1; }
         if (dir != Vector2.Zero)
         {
-            _pan += (Vector2I)(dir * (float)(ScrollSpeed * delta)).Round();
+            _pan += (Vector2I)(dir * (float)(ScrollSpeed * Settings.ScrollSpeed / 5.0 * delta)).Round();
             ClampPan();
         }
     }
@@ -1455,6 +1466,7 @@ public partial class GameScreen : Node
                 Icon = v.IconIndex,
                 Health = e.MaxHealth > 0 ? e.Health / (float)e.MaxHealth : -1,
                 Strip = strip,
+                StripIsHealth = true,
             };
         }
 
@@ -1500,7 +1512,7 @@ public partial class GameScreen : Node
 
             if (e.QueueCount > 1)
             {
-                stats.Add(("art/icons/multiselect.t2img", HudText.Number(e.QueueCount)));
+                stats[^1] = (stats[^1].Item1, $"{e.QueuePermille / 10} % (+{e.QueueCount - 1})");
             }
         }
 
@@ -1652,6 +1664,42 @@ public partial class GameScreen : Node
         }
     }
 
+    /// <summary>Applies <see cref="Settings"/> (volumes, categories, speed, day/night).</summary>
+    public void ApplySettings()
+    {
+        SoundMixer.SetVolume(SoundMixer.SfxBus, Settings.SoundVolume);
+        SoundMixer.SetVolume(SoundMixer.MusicBus, Settings.MusicVolume);
+        _mixer?.SetEnabled(SoundCategory.Speech, Settings.UnitSpeech);
+        _mixer?.SetEnabled(SoundCategory.Buildings, Settings.BuildingSounds);
+        if (!KeepSpeed)
+        {
+            _session.SpeedIndex = Settings.GameSpeed;
+        }
+
+        _options.DayNight = Settings.DayNight;
+    }
+
+    private void ShowOptions()
+    {
+        if (GetNodeOrNull("Options") is not null || _hud is null)
+        {
+            return;
+        }
+
+        bool paused = _session.Paused;
+        _session.Paused = true;
+        var options = new OptionsScreen(_ui, _catalog, _hud.Layout.Size, Settings);
+        var layer = new CanvasLayer { Layer = 3, Name = "Options" };
+        layer.AddChild(options);
+        AddChild(layer);
+        options.Changed += ApplySettings;
+        options.Closed += () =>
+        {
+            layer.QueueFree();
+            _session.Paused = paused;
+        };
+    }
+
     private void ShowMenu()
     {
         if (GetNodeOrNull("GameMenu") is not null || _hud is null)
@@ -1674,8 +1722,7 @@ public partial class GameScreen : Node
                     RestartRequested?.Invoke();
                     break;
                 case GameMenuChoice.Options:
-                    _options.DayNight = !_options.DayNight;
-                    Message("Day/night " + (_options.DayNight ? "on" : "off"));
+                    ShowOptions();
                     break;
             }
         };

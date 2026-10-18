@@ -10,7 +10,7 @@ namespace Tzar2.Client.Game;
 /// </summary>
 public partial class WeatherLayer : Node2D
 {
-    private const int Drops = 160;
+    private const int Drops = 700;
     private readonly GameScreen _screen;
     private readonly Rect2I _view;
     private readonly Texture2D?[] _streaks = new Texture2D?[6];

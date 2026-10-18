@@ -221,7 +221,7 @@ public sealed class PresentationCatalog
         return "sound/" + file.Replace('\\', '/').TrimStart('/').ToLowerInvariant();
     }
 
-    /// <summary>The command card of MENU.INI section <paramref name="menu"/> for an entity of <paramref name="civilization"/>.</summary>
+    /// <summary>The command card of MENU.INI section <paramref name="menu"/>.</summary>
     public IReadOnlyList<CardButton> Card(string? menu)
     {
         var buttons = new List<CardButton>();
@@ -322,7 +322,7 @@ public sealed class PresentationCatalog
 
         string suffix = civ switch { "euro" => " e", "asia" => " a", "arab" => " r", _ => string.Empty };
         string name = _strings.Get("objects", cls + suffix) ?? _strings.Get("objects", cls) ?? cls;
-        return new TypeVisual(type.Id, type.Key, cls, civ, name, images, Empty(menu), IconIndex(Empty(icon) ?? cls), Empty(select), Empty(command), Empty(attack), Empty(die));
+        return new TypeVisual(type.Id, type.Key, cls, civ, name, images, Empty(menu), IconIndex(Empty(icon) ?? (images.TryGetValue(UnitAnim.Base, out string? b) ? b : cls)), Empty(select), Empty(command), Empty(attack), Empty(die));
     }
 
     private static string? Empty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;

@@ -24,6 +24,7 @@ public partial class GameApp : Node
     private readonly ContentStore _store;
     private readonly ViewerArgs _args;
     private readonly SkirmishOptions _skirmish = new();
+    private readonly GameSettings _settings = new();
     private UiAssets? _ui;
     private Ruleset? _rules;
     private PresentationCatalog? _catalog;
@@ -190,7 +191,7 @@ public partial class GameApp : Node
             session.SpeedIndex = GameSession.SpeedSteps.Length - 1;
         }
 
-        var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont);
+        var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null };
         screen.Finished += (outcome, stats) => ShowResults(outcome, stats);
         screen.QuitRequested += ShowMainMenu;
         screen.RestartRequested += () => StartSkirmish(options);

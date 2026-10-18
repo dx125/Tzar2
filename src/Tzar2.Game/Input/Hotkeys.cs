@@ -146,7 +146,7 @@ public sealed class HotkeyTable
         for (int d = 1; d <= 9; d++)
         {
             list.Add(new($"group-assign-{d}", GameKey.D0 + d, KeyMods.Ctrl, GameAction.AssignGroup, d, Done, string.Empty));
-            list.Add(new($"group-select-{d}", GameKey.D0 + d, KeyMods.None, GameAction.SelectGroup, d, Done, "pressing twice centres on the group (assumed)"));
+            list.Add(new($"group-select-{d}", GameKey.D0 + d, KeyMods.None, GameAction.SelectGroup, d, Partial, "pressing twice centres on the group (assumed)"));
         }
 
         for (GameKey letter = GameKey.A; letter <= GameKey.Z; letter++)

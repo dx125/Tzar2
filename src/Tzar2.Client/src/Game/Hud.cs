@@ -24,6 +24,9 @@ public sealed class SelectionInfo
     /// <summary>Icons in the info area (multi-selection or production queue) with an optional progress 0-1000.</summary>
     public IReadOnlyList<(int Icon, int Progress)> Strip { get; init; } = [];
 
+    /// <summary>Whether the strip values are health (green/yellow/red) rather than progress.</summary>
+    public bool StripIsHealth { get; init; }
+
     /// <summary>Health share 0-1 for the portrait bar, or −1.</summary>
     public float Health { get; init; } = -1;
 }
@@ -193,7 +196,7 @@ public partial class Hud : Control
         if (info is { Health: >= 0 } h)
         {
             _portraitBar.Size = new Vector2(Math.Max(1, MathF.Round(48 * h.Health)), 3);
-            _portraitBar.Color = h.Health > 0.5f ? new Color(0.1f, 0.85f, 0.1f) : h.Health > 0.25f ? new Color(0.95f, 0.85f, 0.1f) : new Color(0.9f, 0.1f, 0.1f);
+            _portraitBar.Color = HealthColour(h.Health);
         }
 
         _name.Texture = info is null ? null : _ui.Text(info.Name, UiAssets.BoldFont, new Color(1f, 0.92f, 0.65f));
@@ -224,10 +227,14 @@ public partial class Hud : Control
             if (has && strip[i].Progress >= 0)
             {
                 _stripBars[i].Size = new Vector2(Math.Max(1, 48 * strip[i].Progress / 1000), 3);
-                _stripBars[i].Color = new Color(0.9f, 0.75f, 0.3f);
+                _stripBars[i].Color = info!.StripIsHealth ? HealthColour(strip[i].Progress / 1000f) : new Color(0.9f, 0.75f, 0.3f);
             }
         }
     }
+
+    /// <summary>The health bar colour of a share 0-1 (⚠ thresholds not measured).</summary>
+    public static Color HealthColour(float share)
+        => share > 0.5f ? new Color(0.1f, 0.85f, 0.1f) : share > 0.25f ? new Color(0.95f, 0.85f, 0.1f) : new Color(0.9f, 0.1f, 0.1f);
 
     /// <summary>Fills the command card.</summary>
     public void SetCard(IReadOnlyList<CardSlot?> card)
@@ -240,6 +247,7 @@ public partial class Hud : Control
             _card[i] = slot;
             _cardIcons[i].Texture = slot is { } s ? _ui.Cell(Buttons, s.Button.ImageIndex) ?? _ui.Text(s.Button.Hotkey.ToString(), UiAssets.BoldFont) : null;
             _cardShade[i].Visible = slot is { Enabled: false };
+            _cardIcons[i].Modulate = slot is { Enabled: false } ? new Color(0.5f, 0.5f, 0.5f) : Colors.White;
             _cardFrames[i].Visible = slot is { Active: true };
         }
     }

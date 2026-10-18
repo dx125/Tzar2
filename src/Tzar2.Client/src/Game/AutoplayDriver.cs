@@ -113,14 +113,43 @@ public sealed class AutoplayDriver
             game.CenterOn(enemy.X, enemy.Y);
             await Frames(3);
             await Shot("fog-enemy-base");
+
+            // 7. Group 1 attacks the enemy castle (right click on it); watch the fight.
+            game.Press(Key.Key1);
+            await Frames(2);
+            // The enemy base is off screen and in the fog: order through the minimap like a player would.
+            game.MinimapClick(new Vector2(enemy.X / (float)(game.Session.Map.Width * 2048), enemy.Y / (float)(game.Session.Map.Height * 2048)), right: true);
+            Log(game, $"attack-move ordered with {game.Selection.Selected.Count}");
+            for (int i = 0; i < 12 && game.Selection.Selected.Count > 0; i++)
+            {
+                await Seconds(game, 10);
+                if (game.Frame!.Entities.ToArray().Any(e => e.Owner == game.Session.LocalPlayer && e.Activity == UnitActivity.Attack))
+                {
+                    break;
+                }
+            }
+
+            if (game.Selection.Selected.Count > 0 && game.Info(game.Selection.Selected[0]) is { } lead
+                && game.Frame!.Entities.ToArray().FirstOrDefault(e => e.Id == lead.Id) is { MaxHealth: > 0 } f0)
+            {
+                game.CenterOn(f0.X, f0.Y);
+            }
+
+            await Frames(3);
+            await Shot("battle");
+            Log(game, $"battle: kills {game.Stats.Kills}, losses {game.Stats.Losses}, sounds {game.Mixer?.Played}");
             game.CenterOn(castle.X, castle.Y);
-            await Seconds(game, 360);
+            await Seconds(game, 300);
             await Shot("night");
             game.Session.SpeedIndex = 3;
-            game.Rain = true;
+            game.ForceRain = true;
             await Frames(20);
             await Shot("rain");
-            game.Rain = false;
+            game.ForceRain = false;
+            game.Press(Key.F9);
+            await Frames(3);
+            await Shot("options");
+            game.GetNodeOrNull("Options")?.QueueFree();
             game.Press(Key.F1);
             await Frames(3);
             await Shot("game-menu");
