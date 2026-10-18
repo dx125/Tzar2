@@ -1,6 +1,6 @@
 # 0070. Run single-player matches in a Game-layer session with a sim thread and session-built game frames
 
-* **Status:** Accepted
+* **Status:** Accepted; the derived fog and the placeholder victory rule are replaced by the sim ([0101](0101-incremental-per-kingdom-visibility.md), [0106](0106-victory-conditions-and-statistics.md))
 * **Date:** 2026-10-17
 * **Deciders:** implementation agent (M3 stream D)
 * **Related:** TDD §7.2–§7.4, §8.5, §13.6, §15, §16, §25 M3; REQ-ARCH-03; DEC-02; ADR 0009, 0016–0019, 0039

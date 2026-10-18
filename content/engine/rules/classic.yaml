@@ -70,7 +70,7 @@ gameplay:
   captureResetMs: 5000                # UNVERIFIED (UNK-19): progress is lost after this long without a capturer
   influenceRadiusTiles: 16            # UNVERIFIED (UNK-19): EMIT fades linearly to 0 at this distance
 
-# World systems (M3 stream F, ADRs 0100-0106; docs/mechanics/m3-world-placeholders.md). Nothing here is in an original
+# World systems (M3 stream F, ADRs 0100-0106; docs/mechanics/m3-placeholders.md, stream F). Nothing here is in an original
 # table except where noted; every value is UNVERIFIED until captured.
 world:
   # GAME-12 fog and visibility (ADR 0101).

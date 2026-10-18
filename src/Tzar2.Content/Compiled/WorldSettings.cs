@@ -25,7 +25,7 @@ public readonly record struct TerrainWeather(string TerrainSet, WeatherKind Kind
 /// The ruleset-wide constants of the world systems (M3 stream F, ADRs 0100-0106): fog and visibility (GAME-12),
 /// diplomacy (GAME-13), trade and tavern (GAME-14), gateways and nature (GAME-15), day/night and weather (GAME-16),
 /// victory and scoring (GAME-17) and cheats (GAME-19). The YAML section is <c>world:</c>. Every value without a source in
-/// the original data is UNVERIFIED (docs/mechanics/m3-world-placeholders.md).
+/// the original data is UNVERIFIED (docs/mechanics/m3-placeholders.md, stream F).
 /// </summary>
 public sealed record WorldSettings
 {
