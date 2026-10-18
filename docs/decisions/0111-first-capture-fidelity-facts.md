@@ -28,9 +28,21 @@ three analysis problems, not capture problems:
    (setup screen, diplomacy dialog: tag `swatches`, default geometry for the 1024 × 768 diplomacy dialog); the
    terrain analysis reports the base-tile offset per atlas and the transition variant against the cell's parity.
 2. **Facts committed** to `tests/fidelity/facts/*.yaml` (numbers only, REQ-LEGAL-01).
-3. **Shadow (UNK-03): ½ per 5-bit channel.** In the shadow-blend trials the rule `c >> 1` reproduces all 32 levels of
-   all three channels (runner-up 75 %); 542 pairs fit a double application against 10,458 single ones, so
-   overlapping shadows are not darkened twice as far as this capture shows. The client's 50 % mask pass stays (it
+3. **Shadow (UNK-03): ½ per 5-bit channel.** Two independent fits, both won by `c >> 1` (`floor(c*16/32)`):
+   * `shadow-blend.yaml` (scenario shadow-blend, MP3/MP6, 12 snapshots): 93 of 96 channel levels seen, all 93
+     reproduced (`table_agreement` 1; runner-up `floor(c*17/32)` 0.7527); 10,458 pairs fit, 542 fit only a double
+     application.
+   * `terrain-tiles.yaml` (scenario terrain-tiles, MP1/MP2/MP4, 27 snapshots): 87 of 96 levels seen, 80 reproduced
+     (`table_agreement` 0.9195; runner-up 0.6782); 18,990 pairs fit, 491 doubly. The 7 disagreements are all in the
+     dark and middle levels: red 5 → 1, 17 → 7; green 13 → 7; blue 2 → 0, 12 → 5, 13 → 7, 18 → 8, each
+     exactly one level off `c >> 1`. These levels are rare on the snow, grass and summer maps of that scenario (few votes
+     each), so sprite pixels over terrain can outvote the shadow there.
+
+   The status stays VERIFIED: the bright half of every channel and the whole shadow-blend table agree. What would
+   close the residue: a capture with shadows over dark and middle terrain (desert, dirt, water edges; the deliberate
+   overlap scenario of the next run can provide it), and a fit restricted to pixels inside the shadow sprites'
+   footprints, so sprite pixels no longer vote. As far as this capture shows, overlapping shadows are not darkened
+   twice (542 / 491 double-application pairs against 10,458 / 18,990). The client's 50 % mask pass stays (it
    differs from `c >> 1` by at most one 5-bit level); the comments now say "measured".
 4. **Player colours (UNK-01a): identity.** The setup and diplomacy swatches of kingdoms 1–8 are each nearest to
    `GAME.PAL` ramp N for kingdom N, and kingdom 1's castle carries ramp 1. The engine already maps owner N to ramp N;

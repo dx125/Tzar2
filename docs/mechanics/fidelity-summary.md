@@ -19,7 +19,7 @@ measurement replaced it.
 |---|---|---|
 | UNK-01a slot → ramp, UI colours of kingdoms 1–8 | VERIFIED: identity | 50 % of UNK-01a |
 | UNK-01a slot → ramp, sprite ramps | kingdom 1 VERIFIED; kingdoms 2–8 need the next session | |
-| UNK-03 shadow factor | VERIFIED: ½ per 5-bit channel (`c >> 1`) | 50 % of UNK-03 |
+| UNK-03 shadow factor | VERIFIED: ½ per 5-bit channel (`c >> 1`); shadow-blend fit 93/93 levels, terrain-tiles fit 80/87 (7 dark/middle levels each one level off, few votes; ADR 0111) | 50 % of UNK-03 |
 | UNK-03 overlap | consistent with "no double darkening" (542 vs 10,458 pairs); needs a deliberate overlap capture | |
 | UNK-39 RGB555 → screen | resolved for the rebuild: RGB555 surface, replication kept | 100 % |
 | UNK-10 terrain variant choice | facts collected (34 of 39 snapshots aligned); rule still open | 0 % |

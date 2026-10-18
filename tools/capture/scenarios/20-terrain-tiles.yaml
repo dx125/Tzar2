@@ -1,4 +1,6 @@
 schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
 id: terrain-tiles
 title: Terrain tile and variant selection on the original maps (UNK-10)
 resolves: [UNK-10, UNK-03]
