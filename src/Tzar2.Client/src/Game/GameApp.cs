@@ -37,15 +37,24 @@ public partial class GameApp : Node
         _store = store;
         _args = args;
         _skirmish.Players = args.Players;
-        _skirmish.MapSize = args.MapSize;
+        _skirmish.TestMapSize = args.MapSize;
+        if (Content.MapGen.RandomMapNames.TryParse(args.MapType, out Content.MapGen.RandomMapType type))
+        {
+            _skirmish.MapType = Array.IndexOf(SkirmishOptions.MapTypes, type);
+        }
+
+        if (Content.MapGen.RandomMapNames.TryParse(args.MapSizeName, out Content.MapGen.RandomMapSize size))
+        {
+            _skirmish.MapSize = Array.IndexOf(SkirmishOptions.MapSizes, size);
+        }
         if (args.Seed is { } seed)
         {
             _skirmish.Seed = seed;
         }
 
-        if (args.Terrain is { } terrain && Array.IndexOf(SkirmishOptions.TerrainSets, terrain) is var t and >= 0)
+        if (Content.MapGen.RandomMapNames.TryParse(args.Terrain, out Content.MapGen.MapTerrainSet set))
         {
-            _skirmish.Terrain = t;
+            _skirmish.Terrain = Array.IndexOf(SkirmishOptions.TerrainSets, set);
         }
     }
 
@@ -137,7 +146,17 @@ public partial class GameApp : Node
             return null;
         }
 
-        MapData map = setup.Map.Create(_rules, setup);
+        MapData map;
+        try
+        {
+            map = setup.Map.Create(_rules, setup);
+        }
+        catch (Exception e) when (e is Content.MapGen.MapGenException or ArgumentException)
+        {
+            GD.PrintErr("Map preview: " + e.Message);
+            return null;
+        }
+
         int scale = Math.Max(1, 176 / Math.Max(map.Width, map.Height));
         var image = Image.CreateEmpty(map.Width * scale, map.Height * scale, false, Image.Format.Rgba8);
         var water = new Color(0.15f, 0.25f, 0.55f);
@@ -184,8 +203,19 @@ public partial class GameApp : Node
             return;
         }
 
-        string terrain = SkirmishOptions.TerrainSets[options.Terrain];
-        var session = new GameSession(setup, _rules);
+        string terrain = Content.MapGen.RandomMapNames.SetId(SkirmishOptions.TerrainSets[options.Terrain]);
+        GameSession session;
+        try
+        {
+            session = new GameSession(setup, _rules);
+        }
+        catch (Exception e) when (e is Content.MapGen.MapGenException or ArgumentException)
+        {
+            // A random map the rules cannot host: fall back to the skirmish test map.
+            GD.PrintErr($"Random map failed ({e.Message}); using the skirmish test map.");
+            session = new GameSession(setup with { Map = new SkirmishTestMap(96) }, _rules);
+        }
+
         if (_args.GameSmoke)
         {
             session.SpeedIndex = GameSession.SpeedSteps.Length - 1;
@@ -220,7 +250,8 @@ public partial class GameApp : Node
             own = civs[0];
         }
 
-        var players = new PlayerSetup[options.Players];
+        int count = options.TestMapSize > 0 ? options.Players : Math.Min(options.Players, Content.MapGen.MapGenerator.MaxPlayersFor(SkirmishOptions.MapSizes[options.MapSize]));
+        var players = new PlayerSetup[count];
         for (int i = 0; i < players.Length; i++)
         {
             players[i] = i == 0
@@ -230,12 +261,29 @@ public partial class GameApp : Node
 
         return new MatchSetup
         {
-            Map = new SkirmishTestMap(options.MapSize),
+            Map = MapSource(options),
             Players = players,
             Seed = options.Seed,
             StartingResources = options.StartingResources >= 3 ? -1 : options.StartingResources,
             PopulationLimit = SkirmishOptions.PopulationLimits[options.PopulationLimit],
         };
+    }
+
+    private static IMapSource MapSource(SkirmishOptions options)
+    {
+        if (options.TestMapSize > 0)
+        {
+            return new SkirmishTestMap(options.TestMapSize);
+        }
+
+        Content.MapGen.RandomMapSize size = SkirmishOptions.MapSizes[options.MapSize];
+        Content.MapGen.MapResourceLevel resources = options.StartingResources switch
+        {
+            0 => Content.MapGen.MapResourceLevel.Low,
+            2 => Content.MapGen.MapResourceLevel.High,
+            _ => Content.MapGen.MapResourceLevel.Normal,
+        };
+        return new RandomMapSource(SkirmishOptions.MapTypes[options.MapType], SkirmishOptions.TerrainSets[options.Terrain], size, resources);
     }
 
     private Color PlayerColour(int player)

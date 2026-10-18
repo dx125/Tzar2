@@ -42,8 +42,10 @@ corpses, fog and placement legality. There is no visibility system and no victor
    radii every 4 ticks (explored stays explored; no ghosts) until the sim has visibility; a kingdom without units and
    buildings is defeated and the local player wins when all others are, until the sim has victory conditions.
 7. **`IMapSource`** abstracts where maps come from. `SkirmishTestMap` generates a deterministic grassland with lakes,
-   forests, gold and stone and a start base per kingdom from ruleset keys only; the map generator (stream C) and the
-   legacy map converter (M4) plug in as further sources.
+   forests, gold and stone and a start base per kingdom from ruleset keys only (tests, `--map-size <tiles>`).
+   `RandomMapSource` wraps the random map generator of stream C (ADR 0060; type, terrain set, size, resources from the
+   skirmish setup) and is the default; maps that carry terrain-set corners are drawn from them directly. The legacy map
+   converter (M4) plugs in as a further source.
 8. **Interpolation** (`FrameInterpolator`) blends the previous and the newest frame by the time since the newest
    arrived; jumps over two tiles snap.
 
@@ -57,8 +59,8 @@ corpses, fog and placement legality. There is no visibility system and no victor
 
 ## Consequences
 
-* The legacy AI, the map generator and sim visibility/victory replace `PlaceholderAi`, `SkirmishTestMap`, `FogOfWar` and
-  the victory rule without touching the client.
+* The legacy AI and sim visibility/victory replace `PlaceholderAi`, `FogOfWar` and the victory rule without touching
+  the client.
 * Frames copy the fog and buildable layers per tick (O(map tiles), skipped when unchanged for the buildable layer); on
   512² maps that is ~0.5 MB per tick, acceptable on desktop; revisit with dirty rectangles if profiling says so.
 * `GameSession` is the place for save/load and replays later (it already owns the command stream).

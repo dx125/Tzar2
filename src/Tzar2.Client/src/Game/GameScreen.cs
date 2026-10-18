@@ -179,7 +179,8 @@ public partial class GameScreen : Node
     public override void _Ready()
     {
         HudLayout layout = HudLayout.Load(_store.Vfs.Exists("tables/data/layout.ini.json") ? IniTable.Parse(_store.Read("tables/data/layout.ini.json")) : IniTable.Empty);
-        TerrainSet set = _store.TerrainSets.FirstOrDefault(s => s.Id == _terrainSetId) ?? _store.TerrainSets.FirstOrDefault()
+        string setId = _session.Map.TerrainSet ?? _terrainSetId;
+        TerrainSet set = _store.TerrainSets.FirstOrDefault(s => s.Id == setId) ?? _store.TerrainSets.FirstOrDefault()
             ?? throw new InvalidOperationException("The package has no terrain sets.");
 
         // Sprites of the civilizations in the match (REQ-GFX-05).

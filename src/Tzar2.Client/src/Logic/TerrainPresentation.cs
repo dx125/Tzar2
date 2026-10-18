@@ -68,11 +68,30 @@ public static class TerrainPresentation
         return (0, shore, land, variety);
     }
 
-    /// <summary>Builds the composer grid for <paramref name="map"/>.</summary>
+    /// <summary>
+    /// Builds the composer grid for <paramref name="map"/>: the map's own terrain-set corners when it carries them for
+    /// <paramref name="set"/> (random maps, ADR 0060), else the derived placeholder layout below.
+    /// </summary>
     public static TerrainGrid Build(MapData map, Ruleset ruleset, TerrainSet set)
     {
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(ruleset);
+        ArgumentNullException.ThrowIfNull(set);
+        if (map.TerrainSet is { } own && string.Equals(own, set.Id, StringComparison.OrdinalIgnoreCase) && map.SetTerrainCorners.Length == (map.Width + 1) * (map.Height + 1))
+        {
+            var exact = new TerrainGrid(map.Width, map.Height, 0);
+            ReadOnlySpan<byte> setCorners = map.SetTerrainCorners;
+            for (int y = 0; y <= map.Height; y++)
+            {
+                for (int x = 0; x <= map.Width; x++)
+                {
+                    exact[x, y] = setCorners[(y * (map.Width + 1)) + x];
+                }
+            }
+
+            return exact;
+        }
+
         (int water, int shore, int land, int variety) = Palette(set);
         int w = map.Width, h = map.Height, stride = w + 1;
         bool[] wet = new bool[stride * (h + 1)];

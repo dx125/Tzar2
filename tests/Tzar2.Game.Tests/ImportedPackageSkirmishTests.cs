@@ -30,6 +30,24 @@ public sealed class ImportedPackageSkirmishTests(ITestOutputHelper output)
         Environment.GetEnvironmentVariable("TZAR2_PACKAGE") is { Length: > 0 } p && File.Exists(p) ? p : null;
 
     [PackageFact]
+    public void Random_maps_of_every_type_load_on_the_classic_ruleset()
+    {
+        using PackageSource package = PackageSource.Open(PackagePath!);
+        Ruleset ruleset = RulesetLoader.Compile(package).Ruleset;
+        foreach (Tzar2.Content.MapGen.RandomMapType type in Enum.GetValues<Tzar2.Content.MapGen.RandomMapType>())
+        {
+            var setup = new MatchSetup
+            {
+                Map = new RandomMapSource(type, size: Tzar2.Content.MapGen.RandomMapSize.Small),
+                Players = [new PlayerSetup(0, "euro", ControllerKind.Human), new PlayerSetup(1, "arab", ControllerKind.Computer)],
+            };
+            using var session = new GameSession(setup, ruleset);
+            session.Step(200);
+            output.WriteLine($"{type}: {session.Map.Width}x{session.Map.Height} {session.Map.TerrainSet}, {session.AcquireFrame(out _)!.EntityCount} entities");
+        }
+    }
+
+    [PackageFact]
     public void Computer_kingdoms_of_every_civilization_play_a_skirmish_on_the_classic_ruleset()
     {
         using PackageSource package = PackageSource.Open(PackagePath!);

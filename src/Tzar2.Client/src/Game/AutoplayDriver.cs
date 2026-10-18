@@ -89,7 +89,8 @@ public sealed class AutoplayDriver
             Log(game, "castle card: " + string.Join(" ", game.Card.Select(c => c is { } s ? $"{s.Button.Hotkey}:{s.Button.Order}{(s.Enabled ? string.Empty : "(off)")}" : "-")));
 
             // 5. Drag-box the footmen, Ctrl+1, move-advance toward the map centre.
-            FrameEntity foot = Own(game, "footman");
+            // Random maps start with peasants only: then the peasants that are not chopping play the army.
+            FrameEntity foot = game.Frame!.Entities.ToArray().Any(e => e.Owner == game.Session.LocalPlayer && game.Catalog.Type(e.TypeId).Class == "footman") ? Own(game, "footman") : Own(game, "peon");
             game.CenterOn(foot.X, foot.Y);
             await Frames(3);
             Vector2 f = Screen(game, foot);

@@ -19,7 +19,8 @@ public sealed record ViewerArgs
         + "  --game-smoke         run a skirmish headless for --ticks ticks and quit (exit code 0 = OK)\n"
         + "  --ticks <n>          ticks for --game-smoke (default 300)\n"
         + "  --seed <n>           match seed\n"
-        + "  --map-size <n>       skirmish test map side in tiles (default 96)\n"
+        + "  --map-type <type>    random map type (random, archipelagos, island, continental, lakes, dry)\n"
+        + "  --map-size <size>    random map size (tiny ... enormous), or a number: the test map's side in tiles\n"
         + "  --players <n>        kingdoms in the skirmish (2-8, default 2)\n"
         + "  --terrain <set>      terrain set (grass, summer, desert, snow)\n"
         + "  --soundfont <path>   General MIDI SoundFont (.sf2) for music playback\n"
@@ -64,8 +65,14 @@ public sealed record ViewerArgs
     /// <summary>Match seed, or null for the default.</summary>
     public ulong? Seed { get; init; }
 
-    /// <summary>Test-map side in tiles.</summary>
-    public int MapSize { get; init; } = 96;
+    /// <summary>Test-map side in tiles, or 0 for a random map (the default).</summary>
+    public int MapSize { get; init; }
+
+    /// <summary>Random map type name, or null for the default.</summary>
+    public string? MapType { get; init; }
+
+    /// <summary>Random map size name, or null for the default.</summary>
+    public string? MapSizeName { get; init; }
 
     /// <summary>Kingdoms in the skirmish.</summary>
     public int Players { get; init; } = 2;
@@ -141,7 +148,13 @@ public sealed record ViewerArgs
                     result = result with { Seed = ulong.TryParse(Value(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out ulong seed) ? seed : null };
                     break;
                 case "--map-size":
-                    result = result with { MapSize = Number(Value(), 48, 512, 96) };
+                    string? size = Value();
+                    result = size is not null && size.Length > 0 && char.IsAsciiDigit(size[0])
+                        ? result with { MapSize = Number(size, 48, 512, 96) }
+                        : result with { MapSizeName = size };
+                    break;
+                case "--map-type":
+                    result = result with { MapType = Value() };
                     break;
                 case "--players":
                     result = result with { Players = Number(Value(), 2, 8, 2) };

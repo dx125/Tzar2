@@ -117,6 +117,20 @@ public sealed class SessionTests
         Assert.True(checkedLegal > 50);
     }
 
+    [Theory]
+    [InlineData(Tzar2.Content.MapGen.RandomMapType.Continental)]
+    [InlineData(Tzar2.Content.MapGen.RandomMapType.Lakes)]
+    public void A_skirmish_runs_on_a_random_map(Tzar2.Content.MapGen.RandomMapType type)
+    {
+        MatchSetup setup = Setup() with { Map = new RandomMapSource(type, size: Tzar2.Content.MapGen.RandomMapSize.Tiny) };
+        using var session = new GameSession(setup, Rules.Value);
+        Assert.NotNull(session.Map.TerrainSet);
+        session.Step(100);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        Assert.Contains(frame.Entities.ToArray(), e => e.Owner == 0 && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "castle");
+        Assert.Contains(frame.Entities.ToArray(), e => e.Owner == 1 && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "castle");
+    }
+
     [Fact]
     public void Running_on_the_sim_thread_advances_ticks_until_paused()
     {

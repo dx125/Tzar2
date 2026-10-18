@@ -182,6 +182,8 @@ public sealed class GameArgsTests
         Assert.True(ViewerArgs.Parse(["--smoke"]).IsViewerMode);
         Assert.True(ViewerArgs.Parse(["--viewer"]).IsViewerMode);
         Assert.Equal("d", ViewerArgs.Parse(["--autoplay", "d"]).AutoplayDir);
+        ViewerArgs r = ViewerArgs.Parse(["--map-type", "lakes", "--map-size", "large"]);
+        Assert.Equal(("lakes", "large", 0), (r.MapType, r.MapSizeName, r.MapSize));
         Assert.NotEmpty(ViewerArgs.Parse(["--players", "12"]).Errors);
         Assert.NotEmpty(ViewerArgs.Parse(["--ticks", "x"]).Errors);
     }

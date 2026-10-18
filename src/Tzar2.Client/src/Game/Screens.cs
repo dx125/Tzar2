@@ -124,8 +124,15 @@ public sealed class SkirmishOptions
     /// <summary>Civilization keys offered (ruleset order: European, Arabian, Asian).</summary>
     public static readonly string[] Civilizations = ["euro", "arab", "asia"];
 
-    /// <summary>Terrain sets offered.</summary>
-    public static readonly string[] TerrainSets = ["summer", "grass", "desert", "snow"];
+    /// <summary>Terrain sets offered (random-map terrain sets).</summary>
+    public static readonly Content.MapGen.MapTerrainSet[] TerrainSets =
+        [Content.MapGen.MapTerrainSet.Grass, Content.MapGen.MapTerrainSet.Summer, Content.MapGen.MapTerrainSet.Desert, Content.MapGen.MapTerrainSet.Winter];
+
+    /// <summary>Random map types offered (Random first).</summary>
+    public static readonly Content.MapGen.RandomMapType[] MapTypes = Enum.GetValues<Content.MapGen.RandomMapType>();
+
+    /// <summary>Random map sizes offered.</summary>
+    public static readonly Content.MapGen.RandomMapSize[] MapSizes = Enum.GetValues<Content.MapGen.RandomMapSize>();
 
     /// <summary>Population limits offered.</summary>
     public static readonly int[] PopulationLimits = [50, 100, 150, 200, 300, 500, 1000];
@@ -148,8 +155,14 @@ public sealed class SkirmishOptions
     /// <summary>Index into <see cref="TerrainSets"/>.</summary>
     public int Terrain { get; set; }
 
-    /// <summary>Map side in tiles.</summary>
-    public int MapSize { get; set; } = 96;
+    /// <summary>Test-map side in tiles, or 0 for a random map.</summary>
+    public int TestMapSize { get; set; }
+
+    /// <summary>Index into <see cref="MapTypes"/>.</summary>
+    public int MapType { get; set; } = 3;
+
+    /// <summary>Index into <see cref="MapSizes"/>.</summary>
+    public int MapSize { get; set; } = 1;
 
     /// <summary>Match seed.</summary>
     public ulong Seed { get; set; } = 0x7A42_0003UL;
@@ -160,7 +173,7 @@ public partial class SkirmishSetupScreen : ArtScreen
 {
     private readonly SkirmishOptions _options;
     private readonly PresentationCatalog? _catalog;
-    private readonly TextureRect[] _values = new TextureRect[6];
+    private readonly TextureRect[] _values = new TextureRect[8];
     private readonly Func<SkirmishOptions, Image?>? _preview;
     private readonly TextureRect _map;
 
@@ -183,12 +196,22 @@ public partial class SkirmishSetupScreen : ArtScreen
             catalog?.Text("sp_setupmap", "t_poplimit", "Population Limit") ?? "Population Limit",
             "Kingdoms",
             "Terrain",
+            "Map Type",
+            "Map Size",
         ];
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 8; i++)
         {
             int slot = i;
-            var at = new Vector2I(i % 2 == 0 ? 66 : 271, 370 + ((i / 2) * 58));
+
+            // Rows 0-2 are the dialog's slider slots; the map type and size row above them uses the common arrows.
+            var at = i < 6 ? new Vector2I(i % 2 == 0 ? 66 : 271, 370 + ((i / 2) * 58)) : new Vector2I(i == 6 ? 66 : 271, 300);
             Text(at - new Vector2I(0, 18), titles[i], UiAssets.SmallFont, new Color(0.85f, 0.85f, 0.75f));
+            if (i >= 6)
+            {
+                Arrow(at, "art/screens/common/btn left.t2img");
+                Arrow(at + new Vector2I(154, 0), "art/screens/common/btn right.t2img");
+            }
+
             Area(new Rect2I(at, new Vector2I(27, 27)), () => Change(slot, -1));
             Area(new Rect2I(at + new Vector2I(154, 0), new Vector2I(27, 27)), () => Change(slot, +1));
             _values[i] = Text(at + new Vector2I(30, 6), string.Empty, UiAssets.SmallFont, Colors.White);
@@ -218,9 +241,19 @@ public partial class SkirmishSetupScreen : ArtScreen
             case 3: _options.PopulationLimit = Wrap(_options.PopulationLimit + step, SkirmishOptions.PopulationLimits.Length); break;
             case 4: _options.Players = 2 + Wrap(_options.Players - 2 + step, 7); break;
             case 5: _options.Terrain = Wrap(_options.Terrain + step, SkirmishOptions.TerrainSets.Length); break;
+            case 6: _options.MapType = Wrap(_options.MapType + step, SkirmishOptions.MapTypes.Length); break;
+            case 7: _options.MapSize = Wrap(_options.MapSize + step, SkirmishOptions.MapSizes.Length); break;
         }
 
         Refresh();
+    }
+
+    private void Arrow(Vector2I at, string image)
+    {
+        if (Ui.Region(image, new Rect2I(0, 0, 27, 27)) is { } t)
+        {
+            AddChild(new TextureRect { Texture = t, Position = Origin + at, MouseFilter = MouseFilterEnum.Ignore });
+        }
     }
 
     private void Refresh()
@@ -233,9 +266,11 @@ public partial class SkirmishSetupScreen : ArtScreen
             T("sp_setupmap", $"resurcs_{_options.StartingResources}", _options.StartingResources.ToString(CultureInfo.InvariantCulture)),
             SkirmishOptions.PopulationLimits[_options.PopulationLimit].ToString(CultureInfo.InvariantCulture),
             _options.Players.ToString(CultureInfo.InvariantCulture),
-            SkirmishOptions.TerrainSets[_options.Terrain],
+            Content.MapGen.RandomMapNames.Name(SkirmishOptions.TerrainSets[_options.Terrain]),
+            Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapTypes[_options.MapType]),
+            Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapSizes[_options.MapSize]),
         ];
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 8; i++)
         {
             _values[i].Texture = Ui.Text(values[i], UiAssets.SmallFont, Colors.White);
         }
