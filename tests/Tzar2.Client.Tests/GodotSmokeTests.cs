@@ -227,6 +227,7 @@ public sealed class GodotSmokeTests : IDisposable
         Assert.Contains("blocking=0", line, StringComparison.Ordinal);
         Assert.Contains("playtest=", line, StringComparison.Ordinal);
         Assert.Contains("import=smoke.t2map", line, StringComparison.Ordinal);
+        Assert.Contains("campaign=", line, StringComparison.Ordinal);
         Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);
     }
 
