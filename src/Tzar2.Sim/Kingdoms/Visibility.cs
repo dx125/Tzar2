@@ -252,9 +252,9 @@ public sealed class Visibility
         Span<Identity> identities = world.Identities.Components;
         for (int i = 0; i < ids.Length; i++)
         {
-            if (identities[i].Owner != player)
+            if (identities[i].Owner != player || world.IsHeld(ids[i]))
             {
-                continue;
+                continue; // a detector inside a holder sees nothing (GAME-09)
             }
 
             int detect = world.Ruleset.EntityTypes[identities[i].TypeId].Traits.World.DetectUnits;
