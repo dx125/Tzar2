@@ -22,13 +22,14 @@ public sealed class TerrainLayer : IDisposable
     public const int WaterFps = 7;
 
     private readonly List<(Rgb555Surface Surface, Rect2I Pixels)> _chunks = [];
+    private readonly TerrainComposer _composer;
 
     /// <summary>Composes and uploads the terrain of <paramref name="grid"/>.</summary>
     public TerrainLayer(Rid parent, int drawIndex, TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load)
     {
         ArgumentNullException.ThrowIfNull(set);
         ArgumentNullException.ThrowIfNull(grid);
-        var composer = new TerrainComposer(set, load);
+        _composer = new TerrainComposer(set, load);
         Width = grid.Width;
         Height = grid.Height;
         TileColours = new Color[Width * Height];
@@ -36,33 +37,57 @@ public sealed class TerrainLayer : IDisposable
         {
             for (int cx = 0; cx < Width; cx += ChunkTiles)
             {
-                int w = Math.Min(ChunkTiles, Width - cx), h = Math.Min(ChunkTiles, Height - cy);
-                var sub = new TerrainGrid(w, h, 0);
-                for (int y = 0; y <= h; y++)
-                {
-                    for (int x = 0; x <= w; x++)
-                    {
-                        sub[x, y] = grid[cx + x, cy + y];
-                    }
-                }
-
-                int frames = composer.FrameCount(sub);
-                var images = new List<byte[]>(frames);
-                TerrainImage first = composer.Compose(sub, 0, cx, cy);
-                images.Add(first.Pixels);
-                for (int f = 1; f < frames; f++)
-                {
-                    images.Add(composer.Compose(sub, f, cx, cy).Pixels);
-                }
-
-                Issues += first.Issues.Count;
                 var surface = new Rgb555Surface(parent, drawIndex);
-                var origin = new Vector2I(cx * TerrainComposer.TileSize, cy * TerrainComposer.TileSize);
-                surface.Set(first.Width, first.Height, images, origin, showKeys: false);
-                _chunks.Add((surface, new Rect2I(origin, first.Width, first.Height)));
-                Average(first, cx, cy, w, h);
+                _chunks.Add((surface, new Rect2I(cx * TerrainComposer.TileSize, cy * TerrainComposer.TileSize, 0, 0)));
+                Issues += Compose(_chunks.Count - 1, grid, cx, cy);
             }
         }
+    }
+
+    /// <summary>
+    /// Recomposes the chunks that overlap tiles (<paramref name="left"/>, <paramref name="top"/>)–(<paramref name="right"/>,
+    /// <paramref name="bottom"/>) from <paramref name="grid"/> (the editor's terrain painting; same size as the original grid).
+    /// </summary>
+    public void Recompose(TerrainGrid grid, int left, int top, int right, int bottom)
+    {
+        ArgumentNullException.ThrowIfNull(grid);
+        int perRow = (Width + ChunkTiles - 1) / ChunkTiles;
+        for (int cy = Math.Max(0, (top - 1) / ChunkTiles); cy <= Math.Min((Height - 1) / ChunkTiles, (bottom + 1) / ChunkTiles); cy++)
+        {
+            for (int cx = Math.Max(0, (left - 1) / ChunkTiles); cx <= Math.Min((Width - 1) / ChunkTiles, (right + 1) / ChunkTiles); cx++)
+            {
+                Compose((cy * perRow) + cx, grid, cx * ChunkTiles, cy * ChunkTiles);
+            }
+        }
+    }
+
+    private int Compose(int chunk, TerrainGrid grid, int cx, int cy)
+    {
+        int w = Math.Min(ChunkTiles, Width - cx), h = Math.Min(ChunkTiles, Height - cy);
+        var sub = new TerrainGrid(w, h, 0);
+        for (int y = 0; y <= h; y++)
+        {
+            for (int x = 0; x <= w; x++)
+            {
+                sub[x, y] = grid[cx + x, cy + y];
+            }
+        }
+
+        int frames = _composer.FrameCount(sub);
+        var images = new List<byte[]>(frames);
+        TerrainImage first = _composer.Compose(sub, 0, cx, cy);
+        images.Add(first.Pixels);
+        for (int f = 1; f < frames; f++)
+        {
+            images.Add(_composer.Compose(sub, f, cx, cy).Pixels);
+        }
+
+        Rgb555Surface surface = _chunks[chunk].Surface;
+        var origin = new Vector2I(cx * TerrainComposer.TileSize, cy * TerrainComposer.TileSize);
+        surface.Set(first.Width, first.Height, images, origin, showKeys: false);
+        _chunks[chunk] = (surface, new Rect2I(origin, first.Width, first.Height));
+        Average(first, cx, cy, w, h);
+        return first.Issues.Count;
     }
 
     /// <summary>Tiles across.</summary>

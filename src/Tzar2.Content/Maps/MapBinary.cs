@@ -15,12 +15,16 @@ namespace Tzar2.Content.Maps;
 /// Layout: <c>T2MP</c>, u16 version, string name, u16 width, u16 height, string terrain set (empty = none),
 /// (W+1)(H+1) terrain bytes, (W+1)(H+1) height bytes, W·H cliff bytes, set-corner bytes (same count as terrain, absent
 /// without a terrain set), u32 object count, then per object: string type key, u8 owner, i32 x, i32 y. Strings are a
-/// u16 byte length plus UTF-8.
+/// u16 byte length plus UTF-8. Version 2 (written only when an object carries editor extras, so maps without them keep
+/// their version-1 bytes; ADR 0152) adds per object: u8 flags, u8 facing, i32 amount.
 /// </remarks>
 public static class MapBinary
 {
-    /// <summary>Current version.</summary>
+    /// <summary>Version without per-object extras.</summary>
     public const ushort Version = 1;
+
+    /// <summary>Version with per-object flags, facing and amount (ADR 0152).</summary>
+    public const ushort ExtrasVersion = 2;
 
     private static ReadOnlySpan<byte> Magic => "T2MP"u8;
 
@@ -29,8 +33,14 @@ public static class MapBinary
     {
         ArgumentNullException.ThrowIfNull(map);
         using var ms = new MemoryStream();
+        bool extras = false;
+        foreach (MapObject o in map.Objects)
+        {
+            extras |= o.HasExtras;
+        }
+
         ms.Write(Magic);
-        U16(ms, Version);
+        U16(ms, extras ? ExtrasVersion : Version);
         Str(ms, map.Name);
         U16(ms, (ushort)map.Width);
         U16(ms, (ushort)map.Height);
@@ -54,6 +64,13 @@ public static class MapBinary
             ms.Write(b4);
             BinaryPrimitives.WriteInt32LittleEndian(b4, o.Y);
             ms.Write(b4);
+            if (extras)
+            {
+                ms.WriteByte((byte)o.Flags);
+                ms.WriteByte(o.Facing);
+                BinaryPrimitives.WriteInt32LittleEndian(b4, o.Amount);
+                ms.Write(b4);
+            }
         }
 
         return ms.ToArray();
@@ -70,7 +87,7 @@ public static class MapBinary
         }
 
         ushort version = r.U16();
-        if (version != Version)
+        if (version is not (Version or ExtrasVersion))
         {
             throw new FormatException($"map.bin: unsupported version {version}.");
         }
@@ -97,7 +114,21 @@ public static class MapBinary
             byte owner = r.Take(1)[0];
             int x = r.I32();
             int y = r.I32();
-            objects.Add(new MapObject(key, owner, x, y));
+            var o = new MapObject(key, owner, x, y);
+            if (version == ExtrasVersion)
+            {
+                byte flags = r.Take(1)[0];
+                byte facing = r.Take(1)[0];
+                int amount = r.I32();
+                if ((flags & ~7) != 0 || facing > 7 || amount < 0)
+                {
+                    throw new FormatException($"map.bin: object {i} has invalid extras.");
+                }
+
+                o = o with { Flags = (MapObjectFlags)flags, Facing = facing, Amount = amount };
+            }
+
+            objects.Add(o);
         }
 
         if (!r.AtEnd)

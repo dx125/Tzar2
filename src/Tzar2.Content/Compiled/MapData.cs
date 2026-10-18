@@ -100,7 +100,7 @@ public sealed class MapData
         var builder = ImmutableArray.CreateBuilder<MapObject>(objects.Count);
         foreach (MapObject o in objects)
         {
-            if (string.IsNullOrEmpty(o.TypeKey) || (uint)o.X >= (uint)(width * UnitsPerTile) || (uint)o.Y >= (uint)(height * UnitsPerTile))
+            if (string.IsNullOrEmpty(o.TypeKey) || (uint)o.X >= (uint)(width * UnitsPerTile) || (uint)o.Y >= (uint)(height * UnitsPerTile) || o.Facing > 7 || o.Amount < 0)
             {
                 throw new ArgumentException($"Object '{o.TypeKey}' at ({o.X}, {o.Y}) is invalid or off the map.", nameof(objects));
             }
@@ -184,6 +184,21 @@ public sealed class MapData
             hasher.Add(Encoding.UTF8.GetBytes(o.TypeKey)).Add(o.Owner).Add(o.X).Add(o.Y);
         }
 
+        // Added after HashVersion 2 without bumping it (ADR 0152): maps whose objects carry no extras hash as before.
+        bool extras = false;
+        foreach (MapObject o in _objects)
+        {
+            extras |= o.HasExtras;
+        }
+
+        if (extras)
+        {
+            foreach (MapObject o in _objects)
+            {
+                hasher.Add((byte)o.Flags).Add(o.Facing).Add(o.Amount);
+            }
+        }
+
         // Added after HashVersion 2 without bumping it: maps without a terrain set hash exactly as before.
         if (TerrainSet is not null)
         {
@@ -207,7 +222,36 @@ public readonly record struct MapObject(string TypeKey, byte Owner, int X, int Y
     /// <summary>The owner of objects that belong to no kingdom (trees, rocks; §9.1 "Nature").</summary>
     public const byte Nature = 0xFF;
 
+    /// <summary>Placement variants set in the editor (gate and bridge orientation, gate open; ADR 0152). None by default.</summary>
+    public MapObjectFlags Flags { get; init; }
+
+    /// <summary>Initial 8-direction facing of a unit (0 = east, clockwise; ADR 0005), 0 by default.</summary>
+    public byte Facing { get; init; }
+
+    /// <summary>Resource amount of a resource object (gold or stone rock, fish patch), or 0 for the type's default.</summary>
+    public int Amount { get; init; }
+
+    /// <summary>Whether any of <see cref="Flags"/>, <see cref="Facing"/> and <see cref="Amount"/> is set (map.bin v2, hash).</summary>
+    public bool HasExtras => Flags != MapObjectFlags.None || Facing != 0 || Amount != 0;
+
     /// <summary>A structure placed with its footprint's top-left at tile (<paramref name="tileX"/>, <paramref name="tileY"/>).</summary>
     public static MapObject AtTile(string typeKey, byte owner, int tileX, int tileY)
         => new(typeKey, owner, tileX * MapData.UnitsPerTile, tileY * MapData.UnitsPerTile);
+}
+
+/// <summary>Placement variants of a map object (TDD §18.2 "Buildings": gates and bridges; ADR 0152).</summary>
+[Flags]
+public enum MapObjectFlags : byte
+{
+    /// <summary>As the type is defined.</summary>
+    None = 0,
+
+    /// <summary>Footprint turned by 90° (a gate placed the other way, a bridge along the other axis).</summary>
+    Rotated = 1,
+
+    /// <summary>A gate placed open.</summary>
+    Open = 2,
+
+    /// <summary>Drawn from the other side (presentation only; ⚠ UNVERIFIED what the manual's gate "side" changes).</summary>
+    Mirrored = 4,
 }

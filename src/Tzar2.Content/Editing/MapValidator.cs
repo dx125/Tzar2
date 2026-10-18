@@ -89,6 +89,7 @@ public static class MapValidator
     {
         private readonly DocumentState _s = doc.State;
         private readonly Ruleset? _rules = options.Ruleset;
+        private Occupancy? _occupancy;
 
         public ImmutableArray<ValidationIssue>.Builder Issues { get; } = ImmutableArray.CreateBuilder<ValidationIssue>();
 
@@ -206,49 +207,22 @@ public static class MapValidator
 
         private void Placement(EditorObject o, EntityTypeDefinition type, EditorLocation at)
         {
+            _occupancy ??= new Occupancy(doc, _rules!);
             if (type.HasFootprint)
             {
-                int w = type.FootprintWidth;
-                int h = type.FootprintHeight;
-                if (!doc.ContainsTile(o.TileX, o.TileY) || !doc.ContainsTile(o.TileX + w - 1, o.TileY + h - 1))
+                (int x0, int y0, int w, int h) = Occupancy.Footprint(type, o.Placement);
+                if (!doc.ContainsTile(x0, y0) || !doc.ContainsTile(x0 + w - 1, y0 + h - 1))
                 {
                     Add(ValidationSeverity.Blocking, "object.footprint", $"'{o.Label}' does not fit on the map.", at);
                     return;
                 }
-
-                if (type.Traits.Category == EntityCategory.Building && type.Traits.Placement != PlacementKind.Bridge && !AllLand(o.TileX, o.TileY, w, h))
-                {
-                    Add(ValidationSeverity.Warning, "object.terrain", $"Building '{o.Label}' stands on water.", at);
-                }
-
-                return;
             }
 
-            bool water = doc.ContainsTile(o.TileX, o.TileY) && doc.IsWaterTile(o.TileX, o.TileY);
-            if (type.Locomotor == Locomotor.Ship && type.IsMobile && !water)
+            PlacementCheck check = _occupancy.Check(o.Placement, o.Id);
+            if (!check.Ok)
             {
-                Add(ValidationSeverity.Warning, "object.terrain", $"Ship '{o.Label}' stands on land.", at);
+                Add(ValidationSeverity.Warning, "object.terrain", $"'{o.Label}': {check.Reason}.", at);
             }
-            else if (type.Locomotor is Locomotor.Foot or Locomotor.Mounted or Locomotor.Large && type.IsMobile && water)
-            {
-                Add(ValidationSeverity.Warning, "object.terrain", $"Land unit '{o.Label}' stands in water.", at);
-            }
-        }
-
-        private bool AllLand(int x0, int y0, int w, int h)
-        {
-            for (int y = y0; y < y0 + h; y++)
-            {
-                for (int x = x0; x < x0 + w; x++)
-                {
-                    if (!doc.IsLandTile(x, y))
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
         }
 
         private void Kingdoms()
