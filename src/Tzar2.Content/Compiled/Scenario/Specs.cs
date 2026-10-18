@@ -82,7 +82,7 @@ public sealed record RectArea(int Left, int Top, int Right, int Bottom) : AreaSp
 public sealed record ObjectArea(int ObjectIndex, int? RadiusTiles = null) : AreaSpec;
 
 /// <summary>A user resource of the map package (image, sound or music), by its path under <c>assets/</c>.</summary>
-/// <param name="Path">Logical path, e.g. <c>user/woolin.png</c>.</param>
+/// <param name="Path">Logical path, e.g. <c>user/hero.png</c>.</param>
 public sealed record ResourceRef(string Path);
 
 /// <summary>Helpers for legacy player masks (bit 0 = player 1).</summary>
