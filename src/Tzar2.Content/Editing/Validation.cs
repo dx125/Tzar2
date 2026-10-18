@@ -101,7 +101,8 @@ public readonly record struct EditorLocation(LocationKind Kind, int Index = -1, 
 /// <param name="Code">Stable code, e.g. <c>object.type</c>.</param>
 /// <param name="Message">Human-readable text.</param>
 /// <param name="Location">Where.</param>
-public sealed record ValidationIssue(ValidationSeverity Severity, string Code, string Message, EditorLocation Location);
+/// <param name="MapId">The campaign map the finding is in (campaign validation), or null.</param>
+public sealed record ValidationIssue(ValidationSeverity Severity, string Code, string Message, EditorLocation Location, string? MapId = null);
 
 /// <summary>The findings of one validation pass, in a fixed order.</summary>
 /// <param name="Issues">Findings.</param>

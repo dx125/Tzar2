@@ -129,7 +129,20 @@ public static class EditorSmoke
             Require(screen.Document.State.Scenario.Rules.Length == 1, "the document survives the playtest");
         }
 
-        string notes = play;
+        // Campaign editor: two maps, saved, reopened, byte-identical.
+        CampaignWindow campaignWindow = screen.OpenCampaignEditor(CampaignDocument.New("Smoke saga"));
+        campaignWindow.Campaign.AddMap(screen.Document, entry: true);
+        campaignWindow.Campaign.AddMap(NewMap.Empty(new NewMapOptions("Second", 32, screen.Document.TerrainSet), screen.RulesFor(screen.Document.TerrainSet), rules));
+        await Frame(host);
+        await Frame(host);
+        await Shot(host, "5-campaign");
+        string campaignPath = Path.Combine(dir, "smoke.t2camp");
+        Require(campaignWindow.SaveTo(campaignPath), "campaign saved");
+        byte[] campaignBytes = File.ReadAllBytes(campaignPath);
+        Require(campaignWindow.OpenFile(campaignPath), "campaign reopened");
+        Require(CampaignPackage.Write(campaignWindow.Campaign).AsSpan().SequenceEqual(campaignBytes), "campaign round trip");
+        campaignWindow.QueueFree();
+        string notes = play + $" campaign={campaignBytes.Length}";
         if (ImportPath is { } legacy)
         {
             ImportWindow import = screen.OpenImport();

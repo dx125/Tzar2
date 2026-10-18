@@ -357,6 +357,11 @@ public partial class EditorScreen : Control
 
     private void Save(bool saveAs)
     {
+        if (!saveAs && SaveCampaignInstead())
+        {
+            return;
+        }
+
         if (_path is not null && !saveAs)
         {
             SaveTo(_path);
@@ -408,6 +413,7 @@ public partial class EditorScreen : Control
         Item(map, "Custom sounds and music…", () => Dialogs.Sounds(this, Document, () => _controller.Selection.IsEmpty ? 0 : _controller.Selection[0]));
         MapMenuExtras?.Invoke(map);
         TriggerMenus(bar);
+        CampaignMenu(bar);
         ExtraMenus?.Invoke(bar);
         return bar;
     }
