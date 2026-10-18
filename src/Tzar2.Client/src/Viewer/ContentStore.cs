@@ -43,6 +43,9 @@ public sealed class ContentStore : IDisposable
     /// <summary>Package file or folder.</summary>
     public string Path { get; }
 
+    /// <summary>The mounted source (the game compiles the ruleset from it).</summary>
+    public IContentSource Source => _source;
+
     /// <summary>The virtual file system over the package.</summary>
     public VirtualFileSystem Vfs { get; }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -172,6 +173,37 @@ public sealed class GodotSmokeTests : IDisposable
         Assert.Contains("terrain=3", line, StringComparison.Ordinal);
         Assert.Contains("fonts=1", line, StringComparison.Ordinal);
         Assert.Contains("sounds=1", line, StringComparison.Ordinal);
+        Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);
+    }
+
+    [GodotFact]
+    public void A_skirmish_runs_300_ticks_headless_on_a_synthetic_package()
+    {
+        // The synthetic art plus the synthetic legacy tables (CI never sees original data): the classic ruleset
+        // compiles, the test map is generated, the whole game screen (world renderer, HUD, audio) runs on the dummy
+        // renderer while the sim thread plays 300 ticks with a computer opponent.
+        string package = Path.Combine(_dir, "game.t2pkg");
+        var writer = new PackageWriter();
+        var tables = Tzar2.Content.Rules.SyntheticLegacyContent.CreateTables();
+        foreach (string path in tables.Paths)
+        {
+            writer.Add(path, tables.ReadAllBytes(path));
+        }
+
+        foreach (KeyValuePair<string, byte[]> entry in SyntheticPackage.Build().Entries)
+        {
+            if (!writer.Contains(entry.Key))
+            {
+                writer.Add(entry.Key, entry.Value);
+            }
+        }
+
+        writer.WriteTo(package);
+        (int exit, string output) = GodotRunner.RunClient("--config", Path.Combine(_dir, "game.cfg"), "--package", package, "--game-smoke", "--ticks", "300", "--map-size", "48");
+        _output.WriteLine(output);
+        Assert.Equal(0, exit);
+        string line = output.Split('\n').Single(l => l.StartsWith("GAME SMOKE OK", StringComparison.Ordinal));
+        Assert.Contains("ticks=3", line, StringComparison.Ordinal);
         Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);
     }
 
