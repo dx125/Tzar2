@@ -76,6 +76,8 @@ public sealed partial class GameplayScenario : IBenchScenario
     private long _sales;
     private long _tributes;
     private long _diplomacy;
+    private long _hired;
+    private readonly int _tavern;
     private readonly int _market;
 
     /// <summary>Creates the scenario and its simulation at tick 0.</summary>
@@ -99,6 +101,7 @@ public sealed partial class GameplayScenario : IBenchScenario
         _wall = ruleset.EntityTypeId("comm.wall_wood");
         _bridge = ruleset.EntityTypeId("comm.bridge");
         _market = ruleset.EntityTypeId("euro.market");
+        _tavern = ruleset.EntityTypeId("euro.tavern");
         _bridged = new bool[options.Players];
         Map = CreateMap(ruleset, options);
         Simulation = new Simulation(
@@ -146,6 +149,9 @@ public sealed partial class GameplayScenario : IBenchScenario
 
     /// <summary>World-system events (M3 stream F, ADR 0107): gateways claimed, trade sales, tributes, diplomacy changes.</summary>
     public (long Claimed, long Sales, long Tributes, long Diplomacy) WorldEvents => (_claimed, _sales, _tributes, _diplomacy);
+
+    /// <summary>Tavern hires (mercenary groups and heroes; ADR 0108).</summary>
+    public long Hired => _hired;
 
     private int BridgeTiles()
     {
@@ -195,6 +201,13 @@ public sealed partial class GameplayScenario : IBenchScenario
                 && Place(objects, used, size, ruleset, "euro.market", p, bx + 4, by - 4) && Place(objects, used, size, ruleset, "euro.market", p, bx - 10, by - 4))
             {
                 objects.Add(new MapObject("euro.trader", (byte)p, Center(bx + 5, size), Center(by - 5, size)));
+            }
+
+            // A tavern (ADR 0108) for kingdoms 0 and 1 of three or more (as their alliance and trade): they hire a mercenary
+            // group and a hero; two-kingdom runs (the allocation gate) keep their map.
+            if (ruleset.EntityTypeId("euro.tavern") >= 0 && p < 2 && options.Players >= 3)
+            {
+                Place(objects, used, size, ruleset, "euro.tavern", p, bx - 6, by - 8);
             }
 
             // Keep the bot's gate, wall and bridge spots free of trees.
@@ -327,6 +340,7 @@ public sealed partial class GameplayScenario : IBenchScenario
                 case SimEventKind.Repaired: _repaired++; break;
                 case SimEventKind.Claimed: _claimed++; break;
                 case SimEventKind.TradeDelivered: _sales++; break;
+                case SimEventKind.Hired: _hired++; break;
                 case SimEventKind.TributeSent: _tributes++; break;
                 case SimEventKind.DiplomacyChanged: _diplomacy++; break;
                 default: CountCombatMagic(e.Kind); break;
@@ -336,7 +350,7 @@ public sealed partial class GameplayScenario : IBenchScenario
 
     /// <inheritdoc />
     public string Describe()
-        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, researched {_researched}, captured {_captured}, fires {_fires}, repaired {_repaired}, claimed {_claimed}, sales {_sales}, tributes {_tributes}, diplomacy {_diplomacy}, gates {Simulation.World.Gates.Count}, bridge tiles {BridgeTiles()}, corpses {Simulation.World.Decals.Count}, spells {_spells}, projectiles {_projectiles}, boarded {_boarded}, items {_picked}, level-ups {_levels}");
+        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, researched {_researched}, captured {_captured}, fires {_fires}, repaired {_repaired}, claimed {_claimed}, sales {_sales}, tributes {_tributes}, diplomacy {_diplomacy}, hired {_hired}, gates {Simulation.World.Gates.Count}, bridge tiles {BridgeTiles()}, corpses {Simulation.World.Decals.Count}, spells {_spells}, projectiles {_projectiles}, boarded {_boarded}, items {_picked}, level-ups {_levels}");
 
     /// <inheritdoc />
     public void Dispose() => Simulation.Dispose();
@@ -491,6 +505,14 @@ public sealed partial class GameplayScenario : IBenchScenario
                 Position b = world.Positions.Get(theirs);
                 _batch.Add(CommandKind.Trade, Span(_selection), b.X, b.Y, target: own, arg0: 1 | (3 << 8), arg1: 50);
             }
+
+            if (tick >= 600 && tick < 600 + window && _tavern >= 0 && Tavern(world, player) is { IsNone: false } tavern)
+            {
+                _selection.Clear();
+                _selection.Add(tavern);
+                _batch.Add(CommandKind.Hire, Span(_selection), arg0: 0);
+                _batch.Add(CommandKind.Hire, Span(_selection), arg0: world.Ruleset.World.MercenaryOffers); // the hero
+            }
         }
 
         if (tick % 400 < window && players >= 2)
@@ -502,6 +524,21 @@ public sealed partial class GameplayScenario : IBenchScenario
         {
             _batch.Add(CommandKind.SetDiplomacy, x: 3, arg0: (int)Kingdoms.Stance.Neutral);
         }
+    }
+
+    private EntityId Tavern(World world, byte owner)
+    {
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            Identity identity = world.Identities.Get(structures[i]);
+            if (identity.TypeId == _tavern && identity.Owner == owner && !world.Constructions.Has(structures[i]))
+            {
+                return structures[i];
+            }
+        }
+
+        return EntityId.None;
     }
 
     private EntityId Market(World world, byte owner, int nth)

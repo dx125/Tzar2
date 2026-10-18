@@ -268,6 +268,9 @@ public sealed partial class CommandSystem : ISimSystem
             case CommandKind.Loan:
                 return KingdomCommands.Loan(world, command, entities);
 
+            case CommandKind.Hire:
+                return TavernOffers.Hire(world, command, entities);
+
             case CommandKind.Cheat:
                 return KingdomCommands.Cheat(world, command);
             case CommandKind.Board:
