@@ -92,6 +92,21 @@ public sealed record MatchSetup
     /// <summary>Cheats (the <c>hm*</c> codes) allowed: a sandbox or a lobby where every player agreed (GAME-19).</summary>
     public bool CheatsAllowed { get; init; }
 
+    /// <summary>A ranked match: cheats are never allowed (GAME-19).</summary>
+    public bool Ranked { get; init; }
+
+    /// <summary>
+    /// A multiplayer match (ADR 0162): several human kingdoms, each with a standby AI that takes over when its human
+    /// drops (REQ-NET-07; ADR 0163). Part of the match fingerprint.
+    /// </summary>
+    public bool Multiplayer { get; init; }
+
+    /// <summary>The slot this machine plays in a multiplayer match (null: the first human).</summary>
+    public byte? LocalSlot { get; init; }
+
+    /// <summary>The description this setup was built from (multiplayer lobbies, replays), or null.</summary>
+    public MatchDescriptor? Descriptor { get; init; }
+
     /// <summary>The script of the computer kingdoms (<see cref="SkirmishAi.Resolve"/>; part of the match fingerprint).</summary>
     public SkirmishAi Ai { get; init; } = SkirmishAi.EngineDefault;
 
@@ -142,7 +157,7 @@ public sealed record MatchSetup
             {
                 foreach (PlayerSetup p in Players)
                 {
-                    if (p.Controller == ControllerKind.Computer)
+                    if (p.Controller == ControllerKind.Computer || (Multiplayer && p.Controller == ControllerKind.Human))
                     {
                         list.Add(new Replay.ReplayAiProgram(p.Slot, Ai.ContentHash));
                     }
@@ -159,6 +174,11 @@ public sealed record MatchSetup
     {
         get
         {
+            if (LocalSlot is { } local)
+            {
+                return local;
+            }
+
             foreach (PlayerSetup p in Players)
             {
                 if (p.Controller == ControllerKind.Human)
@@ -197,9 +217,19 @@ public sealed record MatchSetup
             humans += Players[i].Controller == ControllerKind.Human ? 1 : 0;
         }
 
-        if (humans > 1)
+        if (humans > 1 && !Multiplayer)
         {
             throw new ArgumentException("A local skirmish has at most one human player.", nameof(ruleset));
+        }
+
+        if (LocalSlot is { } local && (local >= Players.Count || Players[local].Controller != ControllerKind.Human))
+        {
+            throw new ArgumentException($"The local slot {local} is not a human kingdom.", nameof(ruleset));
+        }
+
+        if (Ranked && CheatsAllowed)
+        {
+            throw new ArgumentException("A ranked match never allows cheats (GAME-19).", nameof(ruleset));
         }
     }
 }

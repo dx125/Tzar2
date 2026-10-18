@@ -16,14 +16,20 @@ namespace Tzar2.Net.Relay;
 /// <param name="After">The current snapshot.</param>
 public sealed record DesyncSlotReport(byte Slot, string Name, ulong ReportedHash, int BeforeTick, byte[] Before, int AfterTick, ulong AfterHash, byte[] After);
 
+/// <summary>A lobby slot as it was when the match started (with the settings, this rebuilds the match).</summary>
+public sealed record DesyncLobbySlot(SlotState State, string Name, byte[] Choice);
+
 /// <summary>
 /// A desync report bundle (<c>.t2desync</c>; REQ-NET-04, ADR 0165): the desync tick, the majority hash and the odd slots,
-/// the lobby settings (to rebuild the match), every peer's snapshots before and after, and the relay's log of closed
-/// ticks covering them. <c>t2 desync diff</c> reads it. Parsing is bounded (REQ-NET-11).
+/// the lobby settings and slots (to rebuild the match), every peer's snapshots before and after, and the relay's log of
+/// closed ticks covering them. <c>t2 desync diff</c> reads it. Parsing is bounded (REQ-NET-11).
 /// </summary>
 public sealed record DesyncBundle(
     string Lobby, ulong MatchId, int Tick, ulong MajorityHash, byte[] OddSlots, byte[] Settings, DesyncSlotReport[] Slots, TickClosure[] Log)
 {
+    /// <summary>The lobby's slots (empty when unknown).</summary>
+    public DesyncLobbySlot[] LobbySlots { get; init; } = [];
+
     /// <summary>"T2DS" little-endian.</summary>
     public const uint Magic = 0x53443254;
 
@@ -62,6 +68,14 @@ public sealed record DesyncBundle(
         foreach (TickClosure c in Log)
         {
             Wire.WriteClosure(w, c);
+        }
+
+        w.WriteVarUInt64((ulong)LobbySlots.Length);
+        foreach (DesyncLobbySlot s in LobbySlots)
+        {
+            w.WriteByte((byte)s.State);
+            w.WriteString(s.Name);
+            Blob(w, s.Choice);
         }
 
         return w.ToArray();
@@ -114,12 +128,24 @@ public sealed record DesyncBundle(
                 }
             }
 
+            var lobbySlots = new DesyncLobbySlot[Count(ref r, Limits.MaxSlots)];
+            for (int i = 0; i < lobbySlots.Length; i++)
+            {
+                byte state = r.ReadByte();
+                if (state > (byte)SlotState.Computer)
+                {
+                    throw new InvalidDataException("Unknown slot state.");
+                }
+
+                lobbySlots[i] = new DesyncLobbySlot((SlotState)state, r.ReadString(Limits.MaxNameBytes), ReadBlob(ref r, Limits.MaxChoiceBytes));
+            }
+
             if (!r.IsAtEnd)
             {
                 throw new InvalidDataException("Trailing bytes.");
             }
 
-            return new DesyncBundle(lobby, match, tick, majority, odd, settings, slots, log);
+            return new DesyncBundle(lobby, match, tick, majority, odd, settings, slots, log) { LobbySlots = lobbySlots };
         }
         catch (OverflowException e)
         {

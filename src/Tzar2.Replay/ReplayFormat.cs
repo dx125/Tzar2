@@ -42,6 +42,19 @@ public sealed record ReplayHeader
     /// <summary>The AI program of every computer kingdom, ascending by slot (empty: no AI).</summary>
     public ImmutableArray<ReplayAiProgram> AiPrograms { get; init; } = [];
 
+    /// <summary>
+    /// The match description the game layer needs to rebuild the map, the kingdoms and the AI for re-simulation
+    /// (<c>t2 replay verify</c>; opaque to the replay layer, at most <see cref="MaxSetupBytes"/>; empty when the match
+    /// cannot be rebuilt from a description, e.g. a campaign mission). Format version 4.
+    /// </summary>
+    public ImmutableArray<byte> Setup { get; init; } = [];
+
+    /// <summary>Player names by slot (format version 4; replays carry no other personal data, G-05).</summary>
+    public ImmutableArray<string> PlayerNames { get; init; } = [];
+
+    /// <summary>Largest <see cref="Setup"/>.</summary>
+    public const int MaxSetupBytes = 64 * 1024;
+
     /// <summary>Creates the header for a simulation at tick 0.</summary>
     public static ReplayHeader For(Simulation simulation, string engineVersion)
     {
@@ -56,6 +69,13 @@ public sealed record ReplayHeader
     }
 }
 
+/// <summary>A chat line recorded with the match (REQ-NET-09: optional chat).</summary>
+/// <param name="Tick">The tick during which it arrived.</param>
+/// <param name="From">The sender's slot.</param>
+/// <param name="Recipients">Recipient mask (bit = slot).</param>
+/// <param name="Text">The line.</param>
+public readonly record struct ReplayChat(int Tick, byte From, byte Recipients, string Text);
+
 /// <summary>One recorded tick: its hashes on checkpoint ticks; the commands are decoded with <see cref="ReplayFile.ReadCommands"/>.</summary>
 /// <param name="Tick">The tick.</param>
 /// <param name="StateHash">Per-tick hash after the tick, if stored.</param>
@@ -68,9 +88,11 @@ public readonly record struct ReplayTick(Tick Tick, ulong? StateHash, ulong? Ful
 /// the hashes on checkpoint ticks, plus a keyframe snapshot every <see cref="ReplayHeader.KeyframeIntervalTicks"/>.
 /// </summary>
 /// <remarks>
-/// Layout: magic <c>T2RP</c>, format version, header, then records <c>tag</c> byte + body: 1 = tick (command set via
+/// Layout: magic <c>T2RP</c>, format version, header (version 4: the whole <see cref="SimulationConfig"/>, the setup
+/// description and the player names), then records <c>tag</c> byte + body: 1 = tick (command set via
 /// <see cref="CommandCodec"/>, flags byte, optional state hash, optional full hash), 2 = keyframe (tick, length,
-/// snapshot bytes), 0 = end (tick count). Recording allocates only when the internal buffer grows.
+/// snapshot bytes), 3 = chat line (tick, sender, recipients, text), 0 = end (tick count). Recording allocates only when
+/// the internal buffer grows.
 /// </remarks>
 public sealed class ReplayRecorder
 {
@@ -78,11 +100,18 @@ public sealed class ReplayRecorder
     public const uint Magic = 0x50523254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 3;
+    public const int FormatVersion = 4;
+
+    /// <summary>The oldest format version <see cref="ReplayFile.Parse"/> reads (3: before the full config and setup).</summary>
+    public const int OldestReadableVersion = 3;
+
+    /// <summary>Longest recorded chat line in UTF-8 bytes (REQ-NET-03).</summary>
+    public const int MaxChatBytes = 256;
 
     internal const byte TagEnd = 0;
     internal const byte TagTick = 1;
     internal const byte TagKeyframe = 2;
+    internal const byte TagChat = 3;
 
     private readonly BinaryBufferWriter _writer = new(64 * 1024);
     private int _ticks;
@@ -119,6 +148,33 @@ public sealed class ReplayRecorder
             _writer.WriteByte(program.Slot);
             _writer.WriteUInt64(program.ProgramHash);
         }
+
+        // Version 4: the rest of the config, the setup description and the player names.
+        _writer.WriteBoolean(c.NoFog);
+        _writer.WriteBoolean(c.Explored);
+        _writer.WriteByte((byte)c.Victory);
+        _writer.WriteByte((byte)c.GameType);
+        _writer.WriteVarUInt64((ulong)c.ScoreLimit);
+        _writer.WriteVarUInt64((ulong)c.TimeLimitMinutes);
+        _writer.WriteBoolean(c.DayNight);
+        _writer.WriteBoolean(c.Weather);
+        _writer.WriteUInt64(c.Teams);
+        _writer.WriteBoolean(c.Ranked);
+        ImmutableArray<byte> setup = header.Setup.IsDefault ? [] : header.Setup;
+        if (setup.Length > ReplayHeader.MaxSetupBytes)
+        {
+            throw new ArgumentException("The setup description is too large.", nameof(header));
+        }
+
+        _writer.WriteVarUInt64((ulong)setup.Length);
+        _writer.WriteBytes(setup.AsSpan());
+        ImmutableArray<string> names = header.PlayerNames.IsDefault ? [] : header.PlayerNames;
+        int nameCount = Math.Min(names.Length, 16);
+        _writer.WriteVarUInt64((ulong)nameCount);
+        for (int i = 0; i < nameCount; i++)
+        {
+            _writer.WriteString(names[i].Length <= 32 ? names[i] : names[i][..32]);
+        }
     }
 
     /// <summary>The header.</summary>
@@ -146,6 +202,18 @@ public sealed class ReplayRecorder
         _writer.WriteVarUInt64((ulong)tick.Value);
         _writer.WriteVarUInt64((ulong)snapshot.Length);
         _writer.WriteBytes(snapshot);
+    }
+
+    /// <summary>Records a chat line that arrived during tick <paramref name="tick"/> (cut to <see cref="MaxChatBytes"/>).</summary>
+    public void RecordChat(int tick, byte from, byte recipients, string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ThrowIfFinished();
+        _writer.WriteByte(TagChat);
+        _writer.WriteVarUInt64((ulong)Math.Max(0, tick));
+        _writer.WriteByte(from);
+        _writer.WriteByte(recipients);
+        _writer.WriteString(System.Text.Encoding.UTF8.GetByteCount(text) <= MaxChatBytes ? text : text[..Math.Min(text.Length, MaxChatBytes / 4)]);
     }
 
     /// <summary>Records the command set that ran in <paramref name="result"/>'s tick and its hashes.</summary>
@@ -217,14 +285,18 @@ public sealed class ReplayFile
     private readonly List<TickEntry> _ticks;
     private readonly ReplayKeyframe[] _keyframes;
 
-    private ReplayFile(ReplayHeader header, byte[] data, List<TickEntry> ticks, ReplayKeyframe[] keyframes)
+    private ReplayFile(ReplayHeader header, byte[] data, List<TickEntry> ticks, ReplayKeyframe[] keyframes, ReplayChat[] chat)
     {
         Header = header;
         _data = data;
         _ticks = ticks;
         _keyframes = keyframes;
+        Chat = chat;
         Ticks = new TickView(ticks);
     }
+
+    /// <summary>The recorded chat lines, in order.</summary>
+    public IReadOnlyList<ReplayChat> Chat { get; }
 
     /// <summary>The header.</summary>
     public ReplayHeader Header { get; }
@@ -271,7 +343,8 @@ public sealed class ReplayFile
             throw new InvalidDataException("Not a Tzar2 replay.");
         }
 
-        if (reader.ReadVarUInt64() != ReplayRecorder.FormatVersion)
+        ulong version = reader.ReadVarUInt64();
+        if (version is < ReplayRecorder.OldestReadableVersion or > ReplayRecorder.FormatVersion)
         {
             throw new InvalidDataException("Unsupported replay format version.");
         }
@@ -303,10 +376,70 @@ public sealed class ReplayFile
 
             ai.Add(new ReplayAiProgram(slot, hash));
         }
+
+        var config = new SimulationConfig
+        {
+            MatchSeed = seed,
+            PlayerCount = players,
+            CheatsAllowed = cheats,
+            FullHashIntervalTicks = fullInterval,
+            TickLengthMilliseconds = tickLength,
+            PathBudgetPerTick = pathBudget,
+            StartingResources = startingResources,
+            PopulationLimit = populationLimit,
+        };
+        ImmutableArray<byte> setup = [];
+        ImmutableArray<string> names = [];
+        if (version >= 4)
+        {
+            bool noFog = reader.ReadBoolean();
+            bool explored = reader.ReadBoolean();
+            byte victory = reader.ReadByte();
+            byte gameType = reader.ReadByte();
+            int scoreLimit = ReadInt(ref reader, 100_000_000);
+            int timeLimit = ReadInt(ref reader, 10_000);
+            bool dayNight = reader.ReadBoolean();
+            bool weather = reader.ReadBoolean();
+            ulong teams = reader.ReadUInt64();
+            bool ranked = reader.ReadBoolean();
+            if (victory > (byte)VictoryCondition.NotSpecified || gameType > (byte)GameType.Deathmatch)
+            {
+                throw new InvalidDataException("Invalid replay header.");
+            }
+
+            config = config with
+            {
+                NoFog = noFog,
+                Explored = explored,
+                Victory = (VictoryCondition)victory,
+                GameType = (GameType)gameType,
+                ScoreLimit = scoreLimit,
+                TimeLimitMinutes = timeLimit,
+                DayNight = dayNight,
+                Weather = weather,
+                Teams = teams,
+                Ranked = ranked,
+            };
+            setup = [.. reader.ReadBytes(ReadInt(ref reader, ReplayHeader.MaxSetupBytes))];
+            int nameCount = ReadInt(ref reader, 16);
+            var nameBuilder = ImmutableArray.CreateBuilder<string>(nameCount);
+            for (int i = 0; i < nameCount; i++)
+            {
+                nameBuilder.Add(reader.ReadString(32 * 4));
+            }
+
+            names = nameBuilder.MoveToImmutable();
+        }
+
         if (players < 1 || fullInterval < 1 || tickLength < 1 || pathBudget < 1 || hashInterval < 1 || keyframeInterval < 1 || overflow > 1
             || (ai.Count > 0 && ai[ai.Count - 1].Slot >= players))
         {
             throw new InvalidDataException("Invalid replay header.");
+        }
+
+        if (config.Ranked && config.CheatsAllowed)
+        {
+            throw new InvalidDataException("Invalid replay header: a ranked match never allows cheats.");
         }
 
         var header = new ReplayHeader
@@ -314,26 +447,19 @@ public sealed class ReplayFile
             EngineVersion = engine,
             RulesetHash = rulesetHash,
             MapHash = mapHash,
-            Config = new SimulationConfig
-            {
-                MatchSeed = seed,
-                PlayerCount = players,
-                CheatsAllowed = cheats,
-                FullHashIntervalTicks = fullInterval,
-                TickLengthMilliseconds = tickLength,
-                PathBudgetPerTick = pathBudget,
-                StartingResources = startingResources,
-                PopulationLimit = populationLimit,
-            },
+            Config = config,
             OverflowMode = (OverflowMode)overflow,
             HashIntervalTicks = hashInterval,
             KeyframeIntervalTicks = keyframeInterval,
             AiPrograms = ai.MoveToImmutable(),
+            Setup = setup,
+            PlayerNames = names,
         };
 
         // A tick record is at least 4 bytes, so this bounds the index by the input size.
         var ticks = new List<TickEntry>(Math.Min(reader.Remaining / 4, 1 << 16));
         var keyframes = new List<ReplayKeyframe>();
+        var chat = new List<ReplayChat>();
         var scratch = new CommandList();
         while (true)
         {
@@ -376,6 +502,21 @@ public sealed class ReplayFile
                     break;
                 }
 
+                case ReplayRecorder.TagChat:
+                {
+                    int tick = ReadInt(ref reader, int.MaxValue);
+                    byte from = reader.ReadByte();
+                    byte recipients = reader.ReadByte();
+                    string text = reader.ReadString(ReplayRecorder.MaxChatBytes);
+                    if (from >= players || chat.Count >= 1 << 20)
+                    {
+                        throw new InvalidDataException("Invalid chat record.");
+                    }
+
+                    chat.Add(new ReplayChat(tick, from, recipients, text));
+                    break;
+                }
+
                 case ReplayRecorder.TagEnd:
                 {
                     if (ReadInt(ref reader, int.MaxValue) != ticks.Count || !reader.IsAtEnd)
@@ -383,7 +524,7 @@ public sealed class ReplayFile
                         throw new InvalidDataException("Replay end record does not match its contents.");
                     }
 
-                    return new ReplayFile(header, data, ticks, [.. keyframes]);
+                    return new ReplayFile(header, data, ticks, [.. keyframes], [.. chat]);
                 }
 
                 default:

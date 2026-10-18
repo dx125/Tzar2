@@ -109,6 +109,19 @@ internal static class KingdomCommands
         return null;
     }
 
+    /// <summary>Hands the kingdom to the computer (Arg0 = 1) or back to its human (Arg0 = 0); REQ-NET-07, ADR 0163.</summary>
+    public static CommandRejection? SetController(World world, in Command command)
+    {
+        if (command.Arg0 is not (0 or 1) || command.Arg1 != 0)
+        {
+            return CommandRejection.InvalidArgument;
+        }
+
+        ref PlayerState player = ref world.Players[command.Player];
+        player.Flags = command.Arg0 == 1 ? player.Flags | PlayerFlags.AiControlled : player.Flags & ~PlayerFlags.AiControlled;
+        return null;
+    }
+
     /// <summary>Trade (GAME-14, ADR 0103): sets the route of each listed trader the player commands.</summary>
     public static CommandRejection? Trade(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {

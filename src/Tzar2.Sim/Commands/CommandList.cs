@@ -159,6 +159,13 @@ public sealed class CommandList
         }
     }
 
+    /// <summary>Whether <see cref="AppendStamped"/> of <paramref name="batch"/> stays within this list's limits.</summary>
+    public bool CanAppend(CommandList batch)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+        return _count + batch._count <= MaxCommands && _entityCount + batch._entityCount <= MaxEntitiesPerList;
+    }
+
     /// <summary>Whether two lists hold the same commands with the same entity sets.</summary>
     public bool ContentEquals(CommandList other)
     {

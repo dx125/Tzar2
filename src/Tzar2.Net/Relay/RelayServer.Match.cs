@@ -491,7 +491,10 @@ public sealed partial class RelayServer
 
         DesyncSlotReport[] slots = collect.Snapshots.OrderBy(p => p.Key).Select(p => new DesyncSlotReport(
             p.Key, lobby.Slots[p.Key].Name, collect.Reported[p.Key], p.Value.BeforeTick, p.Value.BeforeData, p.Value.Tick, p.Value.Hash, p.Value.Data)).ToArray();
-        var bundle = new DesyncBundle(lobby.Code, lobby.Parameters!.MatchId, collect.Tick, collect.Majority, collect.Odd, lobby.Settings, slots, [.. log]);
+        var bundle = new DesyncBundle(lobby.Code, lobby.Parameters!.MatchId, collect.Tick, collect.Majority, collect.Odd, lobby.Settings, slots, [.. log])
+        {
+            LobbySlots = lobby.Slots.Select(s => new DesyncLobbySlot(s.State, s.Name, s.Choice)).ToArray(),
+        };
         try
         {
             _options.DesyncSink?.Store(bundle);

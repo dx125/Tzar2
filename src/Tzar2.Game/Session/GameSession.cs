@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -56,12 +57,25 @@ public sealed class GameSession : IDisposable
     /// </param>
     /// <exception cref="MatchMismatchException">A peer's match differs.</exception>
     public GameSession(MatchSetup setup, Ruleset ruleset, bool fog = true, IReadOnlyList<MatchFingerprint>? peers = null)
-        : this(setup, ruleset, fog, peers, snapshot: null)
+        : this(setup, ruleset, fog, peers, snapshot: null, driver: null, record: true)
     {
     }
 
-    private GameSession(MatchSetup setup, Ruleset ruleset, bool fog, IReadOnlyList<MatchFingerprint>? peers, byte[]? snapshot)
+    /// <summary>
+    /// A match for re-simulating a replay of <paramref name="setup"/> (<c>t2 replay verify</c>): tick 0, the same AI and
+    /// triggers, no recording, no sim thread.
+    /// </summary>
+    public static GameSession ForReplay(MatchSetup setup, Ruleset ruleset) => new(setup, ruleset, fog: false, peers: null, snapshot: null, driver: null, record: false);
+
+    /// <summary>A match whose ticks come from a lockstep driver (multiplayer, ADR 0162); restored from <paramref name="snapshot"/> if given.</summary>
+    internal GameSession(MatchSetup setup, Ruleset ruleset, ILockstepDriver driver, byte[]? snapshot, bool fog = true)
+        : this(setup, ruleset, fog, peers: null, snapshot, driver, record: snapshot is null)
     {
+    }
+
+    private GameSession(MatchSetup setup, Ruleset ruleset, bool fog, IReadOnlyList<MatchFingerprint>? peers, byte[]? snapshot, ILockstepDriver? driver, bool record)
+    {
+        _driver = driver;
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(ruleset);
         setup.Validate(ruleset);
@@ -71,7 +85,7 @@ public sealed class GameSession : IDisposable
         Map = setup.Map.Create(ruleset, setup);
         Map.Validate(ruleset);
         Fingerprint = MatchFingerprint.Of(setup, ruleset, Map);
-        SinglePlayer = peers is null || peers.Count == 0;
+        SinglePlayer = (peers is null || peers.Count == 0) && driver is null;
         foreach (MatchFingerprint peer in peers ?? [])
         {
             Fingerprint.EnsureCompatible(peer);
@@ -110,9 +124,17 @@ public sealed class GameSession : IDisposable
         {
             foreach (PlayerSetup p in setup.Players)
             {
-                if (p.Controller == ControllerKind.Computer)
+                if (p.Controller == ControllerKind.Computer || (setup.Multiplayer && p.Controller == ControllerKind.Human))
                 {
-                    computers.Add(new AiPlayerSettings { Slot = p.Slot, Program = setup.Ai.Program, Civilization = p.Civilization, Difficulty = SkirmishAi.ToAi(p.Difficulty) });
+                    // Multiplayer humans get a standby AI for the drop policy (REQ-NET-07; ADR 0163).
+                    computers.Add(new AiPlayerSettings
+                    {
+                        Slot = p.Slot,
+                        Program = setup.Ai.Program,
+                        Civilization = p.Civilization,
+                        Difficulty = SkirmishAi.ToAi(p.Difficulty),
+                        Standby = p.Controller == ControllerKind.Human,
+                    });
                 }
             }
         }
@@ -132,7 +154,139 @@ public sealed class GameSession : IDisposable
         }
 
         _fog = fog;
+
+        // Every match that starts at tick 0 is recorded (REQ-NET-09); a restored one (save, rejoin) is not.
+        if (record && snapshot is null)
+        {
+            MatchDescriptor? descriptor = MatchDescriptor.Of(setup);
+            _recorder = new ReplayRecorder(ReplayHeader() with
+            {
+                Setup = descriptor is null ? [] : [.. descriptor.ToBytes()],
+                PlayerNames = descriptor is null ? [] : [.. descriptor.Players.Select(p => p.Name)],
+            });
+        }
+
         Publish();
+    }
+
+    private readonly ILockstepDriver? _driver;
+    private readonly ReplayRecorder? _recorder;
+    private readonly List<ChatLine> _chat = [];
+    private (int Tick, byte[] Snapshot)[] _keyframes = [];
+
+    /// <summary>Whether the ticks come from the network (multiplayer).</summary>
+    public bool IsMultiplayer => _driver is not null;
+
+    /// <summary>Whether this match is being recorded.</summary>
+    public bool IsRecording => _recorder is not null;
+
+    /// <summary>
+    /// Ends the recording and returns the <c>.t2rep</c> bytes, or null when the match was not recorded. Call after
+    /// <see cref="Stop"/> (or without a sim thread).
+    /// </summary>
+    public byte[]? FinishReplay()
+    {
+        if (_thread is not null)
+        {
+            throw new InvalidOperationException("Stop the sim thread before finishing the replay.");
+        }
+
+        return _recorder?.Finish();
+    }
+
+    /// <summary>The latest keyframe snapshot taken before tick <paramref name="tick"/> (the state before its tick), or null.</summary>
+    internal (int Tick, byte[] Snapshot)? KeyframeBefore(int tick)
+    {
+        (int Tick, byte[] Snapshot)? best = null;
+        foreach ((int Tick, byte[] Snapshot) k in _keyframes)
+        {
+            if (k.Tick <= tick && (best is null || k.Tick > best.Value.Tick))
+            {
+                best = k;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>Moves the chat and system lines of every tick since the last call into <paramref name="into"/> (main thread).</summary>
+    public void DrainChat(List<ChatLine> into)
+    {
+        ArgumentNullException.ThrowIfNull(into);
+        lock (_gate)
+        {
+            into.AddRange(_chat);
+            _chat.Clear();
+        }
+    }
+
+    // A chat or system line for the UI and the replay (any thread; bounded like the events).
+    internal void PostChat(ChatLine line, int tick)
+    {
+        lock (_gate)
+        {
+            if (_chat.Count < 1024)
+            {
+                _chat.Add(line);
+            }
+
+            if (line.Kind == ChatLineKind.Player && _recorder is not null && _pendingChatRecords.Count < 1024)
+            {
+                _pendingChatRecords.Add((tick, line));
+            }
+        }
+    }
+
+    private readonly List<(int Tick, ChatLine Line)> _pendingChatRecords = [];
+
+    // The local player's commands queued since the last call (the lockstep driver sends them as one payload).
+    internal bool TakeLocalCommands(CommandList into)
+    {
+        lock (_gate)
+        {
+            CommandList local = _pending[LocalPlayer];
+            if (local.Count == 0)
+            {
+                return false;
+            }
+
+            into.Clear();
+            into.AppendStamped(LocalPlayer, local);
+            local.Clear();
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Runs the ticks the lockstep driver has (at most <paramref name="maxTicks"/>) on the calling thread, pumping the
+    /// network first (headless multiplayer peers, tests). Returns the number of ticks run.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Not a multiplayer match, or the sim thread runs.</exception>
+    public int PumpLockstep(int maxTicks)
+    {
+        if (_driver is null || _thread is not null)
+        {
+            throw new InvalidOperationException("Only a multiplayer match without a sim thread is pumped from outside.");
+        }
+
+        return Lockstep(maxTicks);
+    }
+
+    private int Lockstep(int maxTicks)
+    {
+        _driver!.Pump(this);
+        int ran = 0;
+        while (ran < maxTicks && !_stop && _driver.TryTakeTick(Simulation.World.Tick.Value, _tickSet))
+        {
+            ExecuteTick();
+            ran++;
+            if (ran % 16 == 0)
+            {
+                _driver.Pump(this); // keep the network alive while catching up
+            }
+        }
+
+        return ran;
     }
 
     /// <summary>
@@ -143,7 +297,7 @@ public sealed class GameSession : IDisposable
     public static GameSession Restore(MatchSetup setup, Ruleset ruleset, byte[] snapshot, bool fog = true)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        return new GameSession(setup, ruleset, fog, peers: null, snapshot);
+        return new GameSession(setup, ruleset, fog, peers: null, snapshot, driver: null, record: false);
     }
 
     private TaskCompletionSource<(byte[] Snapshot, int Tick)>? _snapshotRequest;
@@ -239,6 +393,7 @@ public sealed class GameSession : IDisposable
         Weather = setup.Weather,
         Teams = setup.Teams,
         CheatsAllowed = setup.CheatsAllowed,
+        Ranked = setup.Ranked,
     };
 
     /// <summary>The setup.</summary>
@@ -309,21 +464,37 @@ public sealed class GameSession : IDisposable
     /// <summary>The exception that stopped the sim thread, or null.</summary>
     public Exception? Fault => Volatile.Read(ref _fault);
 
-    /// <summary>Index into <see cref="SpeedSteps"/>.</summary>
+    /// <summary>Index into <see cref="SpeedSteps"/> (fixed by the lobby in multiplayer: changes are ignored).</summary>
     public int SpeedIndex
     {
         get => _speedIndex;
-        set => _speedIndex = Math.Clamp(value, 0, SpeedSteps.Length - 1);
+        set
+        {
+            if (_driver is null)
+            {
+                _speedIndex = Math.Clamp(value, 0, SpeedSteps.Length - 1);
+            }
+        }
     }
 
     /// <summary>Game speed in percent.</summary>
-    public int SpeedPercent => SpeedSteps[_speedIndex];
+    public int SpeedPercent => _driver?.SpeedPercent ?? SpeedSteps[_speedIndex];
 
-    /// <summary>Whether the match is paused.</summary>
+    /// <summary>Whether the match is paused (multiplayer: asks the relay, which pauses every peer; REQ-NET-07 pauses).</summary>
     public bool Paused
     {
-        get => _paused;
-        set => _paused = value;
+        get => _driver?.Paused ?? _paused;
+        set
+        {
+            if (_driver is not null)
+            {
+                _driver.RequestPause(value);
+            }
+            else
+            {
+                _paused = value;
+            }
+        }
     }
 
     /// <summary>
@@ -419,6 +590,16 @@ public sealed class GameSession : IDisposable
         double due = 0;
         try
         {
+            while (!_stop && _driver is not null)
+            {
+                // Multiplayer: the relay's closed ticks are the clock (ADR 0162).
+                ServeSnapshot();
+                if (Lockstep(256) == 0)
+                {
+                    Thread.Sleep(1);
+                }
+            }
+
             while (!_stop)
             {
                 ServeSnapshot();
@@ -453,7 +634,18 @@ public sealed class GameSession : IDisposable
 
     private void RunTick()
     {
-        World world = Simulation.World;
+        if (_driver is not null)
+        {
+            // Headless multiplayer (Step): wait briefly for the relay's closure instead of making one up.
+            var wait = Stopwatch.StartNew();
+            while (Lockstep(1) == 0 && wait.ElapsedMilliseconds < 5_000 && !_stop)
+            {
+                Thread.Sleep(1);
+            }
+
+            return;
+        }
+
         _tickSet.Clear();
         lock (_gate)
         {
@@ -465,9 +657,40 @@ public sealed class GameSession : IDisposable
             }
         }
 
+        ExecuteTick();
+    }
+
+    // Runs one tick with the command set in _tickSet (local scheduler or lockstep closure), records it and publishes.
+    private void ExecuteTick()
+    {
+        World world = Simulation.World;
+        if (_recorder is not null && _recorder.IsKeyframeDue(world.Tick))
+        {
+            byte[] keyframe = Simulation.CaptureSnapshot();
+            _recorder.RecordKeyframe(world.Tick, keyframe);
+            KeepKeyframe(world.Tick.Value, keyframe);
+        }
+        else if (_recorder is null && _driver is not null && world.Tick.Value % ReplayKeyframeInterval == 0)
+        {
+            KeepKeyframe(world.Tick.Value, Simulation.CaptureSnapshot()); // desync reports need one even unrecorded
+        }
+
         bool replied = _replyQueued;
-        Simulation.Tick(_tickSet);
+        TickResult result = Simulation.Tick(_tickSet);
+        _recorder?.RecordTick(_tickSet, result);
         Interlocked.Increment(ref _ticksRun);
+        if (_recorder is not null)
+        {
+            lock (_gate)
+            {
+                foreach ((int tick, ChatLine line) in _pendingChatRecords)
+                {
+                    _recorder.RecordChat(tick, line.From, line.Recipients, line.Text);
+                }
+
+                _pendingChatRecords.Clear();
+            }
+        }
 
         lock (_gate)
         {
@@ -491,6 +714,16 @@ public sealed class GameSession : IDisposable
         _holdForScenario = Scenario is { AwaitingReply: true } && SinglePlayer;
 
         Publish();
+        _driver?.AfterTick(this, result);
+    }
+
+    /// <summary>Ticks between keyframes (REQ-NET-09: 60 s of game time).</summary>
+    internal int ReplayKeyframeInterval => _recorder?.Header.KeyframeIntervalTicks ?? 1200;
+
+    // The two latest keyframes (desync reports send the last one every peer agreed on).
+    private void KeepKeyframe(int tick, byte[] snapshot)
+    {
+        _keyframes = _keyframes.Length < 2 ? [.. _keyframes, (tick, snapshot)] : [_keyframes[1], (tick, snapshot)];
     }
 
     /// <summary>
@@ -500,15 +733,34 @@ public sealed class GameSession : IDisposable
     /// <param name="text">The line.</param>
     /// <param name="x">Where <c>hmspawn</c> spawns (world units; e.g. the view centre).</param>
     /// <param name="y">Where <c>hmspawn</c> spawns.</param>
-    public bool SubmitChat(string text, int x = 0, int y = 0)
+    public bool SubmitChat(string text, int x = 0, int y = 0) => SubmitChat(text, ChatTarget.All, 0, x, y);
+
+    /// <summary>
+    /// Submits a chat line: an <c>hm*</c> code becomes its cheat command (GAME-19; the sim refuses it unless the lobby
+    /// allowed cheats, never in a ranked match); in multiplayer any other text goes to <paramref name="target"/> through
+    /// the relay's chat channel (REQ-NET-03). Returns false for plain text in single player.
+    /// </summary>
+    /// <param name="text">The line.</param>
+    /// <param name="target">Everyone, the allies, the enemies, or the slots in <paramref name="customMask"/>.</param>
+    /// <param name="customMask">Recipient slots for <see cref="ChatTarget.Custom"/>.</param>
+    /// <param name="x">Where <c>hmspawn</c> spawns (world units; e.g. the view centre).</param>
+    /// <param name="y">Where <c>hmspawn</c> spawns.</param>
+    public bool SubmitChat(string text, ChatTarget target, byte customMask = 0, int x = 0, int y = 0)
     {
+        ArgumentNullException.ThrowIfNull(text);
         var batch = new CommandList();
-        if (!Input.CheatCodes.TryParse(text, Ruleset, batch, x, y))
+        if (Input.CheatCodes.TryParse(text, Ruleset, batch, x, y))
+        {
+            Submit(batch);
+            return true;
+        }
+
+        if (_driver is null || text.Trim().Length == 0)
         {
             return false;
         }
 
-        Submit(batch);
+        _driver.SendChat(target, customMask, text);
         return true;
     }
 
@@ -526,7 +778,7 @@ public sealed class GameSession : IDisposable
         GameFrame frame = _frames.Back;
         FrameBuilder.Fill(frame, Simulation.World, _fog ? LocalPlayer : null, Outcome());
         frame.SpeedPercent = SpeedPercent;
-        frame.Paused = _paused;
+        frame.Paused = Paused;
         frame.Scenario = Scenario?.View;
         _frames.Publish();
     }
