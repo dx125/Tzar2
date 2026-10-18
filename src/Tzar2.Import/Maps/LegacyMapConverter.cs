@@ -304,6 +304,8 @@ public static class LegacyMapConverter
 
         // Derives the (side+1)² corner grid from the per-tile words (docs/formats/wmp.md §5): bits 4–9 hold the terrain
         // pair a·8+b, bits 0–3 the transition shape s (corner mask s+1, bits TL 1, TR 2, BR 4, BL 8; a set bit = a).
+        // A cliff tile (bit 10) stores a cliff piece in bits 0–9 instead, so it casts no vote; corners only cliffs touch
+        // take the terrain of the nearest voted corner (breadth-first, row-major order).
         private int CornerGrid(byte[] corners, byte[] cliffs)
         {
             int side = _map.Side;
@@ -314,7 +316,12 @@ public static class LegacyMapConverter
                 for (int x = 0; x < side; x++)
                 {
                     ushort w = _map.Tiles[(y * side) + x];
-                    cliffs[(y * side) + x] = (byte)((w & 0x0400) != 0 ? 1 : 0);
+                    if ((w & 0x0400) != 0)
+                    {
+                        cliffs[(y * side) + x] = 1;
+                        continue;
+                    }
+
                     int code = (w >> 4) & 63;
                     int hi = code >> 3, lo = code & 7;
                     int mask = hi == lo ? 15 : (w & 15) + 1;
@@ -326,6 +333,8 @@ public static class LegacyMapConverter
             }
 
             int conflicts = 0;
+            var known = new bool[corners.Length];
+            var queue = new Queue<int>();
             for (int c = 0; c < corners.Length; c++)
             {
                 int best = 0, kinds = 0;
@@ -341,10 +350,33 @@ public static class LegacyMapConverter
 
                 corners[c] = (byte)best;
                 conflicts += kinds > 1 ? 1 : 0;
+                if (kinds > 0)
+                {
+                    known[c] = true;
+                    queue.Enqueue(c);
+                }
+            }
+
+            while (queue.Count > 0)
+            {
+                int c = queue.Dequeue();
+                int cx = c % cs, cy = c / cs;
+                foreach ((int dx, int dy) in Neighbours)
+                {
+                    int nx = cx + dx, ny = cy + dy;
+                    if ((uint)nx < (uint)cs && (uint)ny < (uint)cs && !known[(ny * cs) + nx])
+                    {
+                        known[(ny * cs) + nx] = true;
+                        corners[(ny * cs) + nx] = corners[c];
+                        queue.Enqueue((ny * cs) + nx);
+                    }
+                }
             }
 
             return conflicts;
         }
+
+        private static readonly (int Dx, int Dy)[] Neighbours = [(0, -1), (-1, 0), (1, 0), (0, 1)];
 
         private static void Vote(byte[] votes, int corner, int terrain) => votes[(corner * 8) + terrain]++;
 
