@@ -140,6 +140,13 @@ public sealed class NetworkMatchOptions
     /// <summary>Whether the frames show the local player's fog.</summary>
     public bool Fog { get; init; } = true;
 
+    /// <summary>
+    /// The UI reports "loaded" itself with <see cref="NetworkMatch.ReportLoaded"/> once its screen is ready (sprites,
+    /// sounds), so the match starts when every machine can show it (REQ-NET-05, ORIG-06); otherwise right after the
+    /// session is built (headless peers).
+    /// </summary>
+    public bool DeferLoadReport { get; init; }
+
     /// <summary>Checks the values.</summary>
     /// <exception cref="ArgumentException">A value is invalid.</exception>
     public void Validate()

@@ -39,7 +39,7 @@ public static class Wire
         w.WriteUInt32(Magic);
         w.WriteUInt16(ProtocolVersion);
         w.WriteByte((byte)m.Kind);
-        w.WriteString(m.GameVersion);
+        w.WriteString(Truncate(m.GameVersion, Limits.MaxVersionBytes));
         w.WriteString(m.Name);
         w.WriteString(m.Code);
         w.WriteByte(m.Slot);

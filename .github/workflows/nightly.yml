@@ -214,31 +214,42 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (-not (Test-Path src/Tzar2.Client/.godot/mono/temp/bin/Debug/Tzar2.Client.dll)) { throw "Godot did not build Tzar2.Client.dll" }
 
-  spike-s3-net:
-    # Spike S3 (ADR 0009): relay + lockstep clients as local processes on Windows and Linux, with impaired UDP.
-    # Covers the "Windows <-> Windows plus a headless Linux client" criterion until the M6 soak test replaces it.
-    name: Spike S3 lockstep - ${{ matrix.os }}
+  mp-soak:
+    # M6 (ADR 0167, TDD §22.7): a nightly slice of the multiplayer soak on Windows and Linux. Each match: two bot players
+    # behind UDP proxies (200 ms RTT, jitter, 5 % loss) and two Hard AIs through the real relay, 5 minutes of game time
+    # at 4x speed, half of the matches with a disconnect and rejoin (some after an AI takeover). Every match must end
+    # with identical full-state hashes, no desync and verified replays. Replaces the spike S3 job (ADR 0009).
+    name: Multiplayer soak - ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
           dotnet-version: 8.0.x
-      - run: dotnet build spikes/S3-net/S3.Host -c Release
-      - name: Forced desync is detected at its tick
-        run: dotnet spikes/S3-net/S3.Host/bin/Release/net10.0/S3.Host.dll faults --only fault-desync
-      - name: Disconnect + rejoin restores an identical state
-        run: dotnet spikes/S3-net/S3.Host/bin/Release/net10.0/S3.Host.dll faults --only fault-rejoin
-      - name: Measurement (informational)
-        continue-on-error: true
-        run: dotnet spikes/S3-net/S3.Host/bin/Release/net10.0/S3.Host.dll bench --clients 4 --rtt 100 --loss 5 --delivery redundant
+      - run: dotnet build src/Tzar2.Tools.Cli -c Release
+      - name: Soak slice (20 matches)
+        run: >
+          dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli --
+          soak --synthetic --matches 20 --parallel 2 --ticks 6000 --rtt 200 --loss 5 --disconnects 0.5
+          --seed ${{ github.run_number }} --report soak-${{ matrix.os }}.json
+      - name: Soak summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### t2 soak (ADR 0167)'
+            echo '```'
+            head -c 2000 soak-${{ matrix.os }}.json || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: spike-s3-${{ matrix.os }}
-          path: spikes/S3-net/results
+          name: soak-${{ matrix.os }}
+          path: soak-${{ matrix.os }}.json

@@ -418,7 +418,11 @@ public sealed partial class NetworkMatch : IDisposable
                 ai = new StateHasher().Add(ai).Add(p.Slot).Add(p.ProgramHash).GetCurrentHash();
             }
 
-            _client.Loaded([f.RulesetHash, f.MapHash, f.SettingsHash, ai, save?.SnapshotHash ?? 0], session.Simulation.ComputeStateHash());
+            _loadReport = ([f.RulesetHash, f.MapHash, f.SettingsHash, ai, save?.SnapshotHash ?? 0], session.Simulation.ComputeStateHash());
+            if (!_options.DeferLoadReport)
+            {
+                ReportLoaded();
+            }
         }
         catch (Exception ex) when (ex is InvalidDataException or ArgumentException or IOException or Content.MapGen.MapGenException or InvalidOperationException)
         {
@@ -426,6 +430,19 @@ public sealed partial class NetworkMatch : IDisposable
             _client.Loaded([(ulong)Random.Shared.NextInt64()], 0); // never equal to another peer: the barrier stops the match
         }
     }
+
+    private (ulong[] Parts, ulong Initial)? _loadReport;
+
+    /// <summary>Tells the relay this machine finished loading (with <see cref="NetworkMatchOptions.DeferLoadReport"/>).</summary>
+    public void ReportLoaded()
+    {
+        if (Interlocked.Exchange(ref _loadReportSent, 1) == 0 && _loadReport is { } report)
+        {
+            _client.Loaded(report.Parts, report.Initial);
+        }
+    }
+
+    private int _loadReportSent;
 
     // The kingdoms are the lobby's occupied slots in slot order; a resumed match keeps the save's civilizations and teams.
     private MatchDescriptor Describe(LobbyState lobby, MatchSettings settings, MultiplayerSave? save)

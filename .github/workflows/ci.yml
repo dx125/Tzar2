@@ -156,6 +156,58 @@ jobs:
           docker logs relay | tee relay.log
           grep -q '"event":"service.stop"' relay.log
 
+  replay-corpus:
+    # M6 exit criterion "replays verify on Windows and in the headless Linux/macOS core runs" (ADR 0164, 0167): a
+    # single-player replay of three Hard AIs and two short multiplayer soak matches (impaired UDP, a disconnect and
+    # rejoin each) are recorded on Linux; replay-verify re-simulates them on every OS.
+    name: Replays - record a corpus
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - run: dotnet build src/Tzar2.Tools.Cli -c Release
+      - name: Single player, three computer kingdoms
+        run: dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- replay record --synthetic --players 3 --ticks 2400 --out corpus/sp-3ai.t2rep
+      - name: Multiplayer soak slice (2 matches, 200 ms RTT, 5 % loss, disconnect + rejoin)
+        run: >
+          dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli --
+          soak --synthetic --matches 2 --parallel 2 --ticks 1600 --disconnects 1 --replays corpus --report soak-ci.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: replay-corpus
+          path: |
+            corpus
+            soak-ci.json
+
+  replay-verify:
+    name: Replays - verify on ${{ matrix.os }}
+    needs: replay-corpus
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: replay-corpus
+      - run: dotnet build src/Tzar2.Tools.Cli -c Release
+      - name: Re-simulate every replay and compare every stored hash
+        run: dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- replay verify --synthetic corpus --report verify-${{ matrix.os }}.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: replay-verify-${{ matrix.os }}
+          path: verify-${{ matrix.os }}.json
+
   determinism:
     # TDD §22.2 / ADR 0017: the sim golden hash on every OS. The test fails on any difference from the committed value;
     # the t2 bench run writes the per-tick hash stream, and determinism-compare diffs the streams across OSes.
