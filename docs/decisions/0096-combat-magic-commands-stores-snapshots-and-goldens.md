@@ -14,11 +14,11 @@ appends to the same enums and stores.
 ## Decision
 
 * **Commands** (wire values 20-39, agreed with the other stream): `Board` 20, `Unload` 21, `PickItem` 22, `DropItem` 23,
-  `UseItem` 24, `GiveItem` 25, `SetDefaultItem` 26, `CastSpell` 27, `SetStance` 28, `AttackGround` 29, `Convert` 30,
+  `UseItem` 24, `GiveItem` 25, `SetDefaultItem` 26, `CastSpell` 27, `SetStance` 28, `AttackGround` 29, `ConvertUnit` 30,
   `Bribe` 31, `PreachCrusade` 32, `CraftItem` 33. Rejections 15-29: `HolderFull` 15, `NotAccepted` 16, `InventoryFull`
   17, `NotEnoughMana` 18, `SpellNotReady` 19, `SpellUnknown` 20, `InvalidTarget` 21, `CrusadeActive` 22. Events 24-39:
   `ProjectileLaunched`, `LevelUp`, `HeroPromoted`, `Boarded`, `Unloaded`, `ItemPicked`, `ItemDropped`, `ItemUsed`,
-  `SpellCast`, `SpellEffect`, `Summoned`, `CrusadePreached`, `Bribed`, `Converted`, `ItemCrafted`, `DamageShared`.
+  `SpellCast`, `SpellEffect`, `Summoned`, `CrusadePreached`, `Bribed`, `UnitConverted`, `ItemCrafted`, `DamageShared`.
   `Killed.Y` = the killer's owner. A new order to a unit ends its errand and spell in progress (a conversion is
   refunded). Units inside holders, and frozen or stone units, take no orders but Delete.
 * **Stores** (appended after stream A's): `game.experience`, `game.held`, `game.holder`, `game.errand`,
@@ -34,9 +34,10 @@ appends to the same enums and stores.
 * **Goldens and benchmark**: the gameplay scenario gives every base a mage, a priest and a catapult and puts weapons
   and gold at the center; the bot researches Learning first, garrisons four soldiers every 600 ticks and lets them out
   300 ticks later, casts lightning at enemies and heals friends, bombards the center (attack ground) and picks items
-  up; archers, towers and siege fire projectiles. Re-pinned (reasons in the tests): gameplay ruleset
-  `50886B22810B0E2D`, stream `DC25F0F062A7C2B3`, final `A0830629428F5D2A`; CI gameplay bench `89E4C3B0FF1C1994`;
-  synthetic movement `2DE785A669E84C94` / `07504983A332DD9F` (layout only).
+  up; archers, towers and siege fire projectiles. Re-pinned on top of stream F (reasons in the tests): gameplay
+  ruleset `CDF88159DCB8216C`, stream `14CA89CFE290A0DE`, final `259C6906C08AB4A3`; CI gameplay bench `4F22CD50EF776506`;
+  synthetic movement `B12B61103AA6CEB6` / `806340E79AAFCB5C` (layout only). Snapshot format 7, hashed layout 6, ruleset
+  hash version 6 (after stream F's 6 / 5 / 5).
 
 Measured (Apple M5, macOS arm64, Release, .NET 10, shared machine with other agents, ±30%):
 

@@ -157,7 +157,7 @@ legacy:
   # Hash of what the compiler reads from the tables of the clean reference build; another value means a modified
   # installation (a warning in the import and ruleset reports, not an error). Changes with the lists above.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "581E8478C927F4CD"
+  referenceDataHash: "6E4A7EB7A913D5E6"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 

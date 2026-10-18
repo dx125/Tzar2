@@ -1,4 +1,4 @@
-# M3 gameplay placeholders, streams A and E: GAME-01 … GAME-11 (UNVERIFIED)
+# M3 gameplay placeholders, streams A, E and F: GAME-01 … GAME-19 (UNVERIFIED)
 
 Status: **open**. Register of every gameplay value and rule of M3 stream A (ADRs 0040-0045) that is neither in an
 original data table nor measured in the running game. Owner decision: no captures from the running original yet; take
@@ -156,7 +156,7 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 * **Per-kingdom gate routing** (REQ-PATH-01 per-player portals): backlog; the movement bar of ADR 0102 is enough for M3.
 * **Confirmed defaults:** lobby teams start with shared victory; the 10 s stance-change interval stays (engine bound,
   UNVERIFIED).
-## Stream E: GAME-07 … GAME-11 (combat, experience, holders, items, magic; ADRs 0090-0096)
+# Stream E: GAME-07 … GAME-11 (combat, experience, holders, items, magic; ADRs 0090-0096)
 
 From the data (not placeholders): holder capacities, `[accept]` and `[damage]` shares (`max_obj_in_holder`: castle,
 outpost 50; galleon 24, hulk 16, xebec 8; carpet, caravan 8 — the data wins over the manual's "eight units" per ship);
@@ -169,7 +169,7 @@ Inquisition do what their texts say (not how much); fire rain hits own units; wh
 strategy guide: no experience before Learning; each level costs more; garrisons heal "quickly" and take a little damage
 when the building is hit; catapult stones can be stepped away from.
 
-### Values
+## Values
 
 | Value | Placeholder | Where | Unknown | How to resolve |
 |---|---|---|---|---|
@@ -205,7 +205,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Bribe price | 200% of the unit's cost, in gold | YAML `combat.bribeCostPercent` | UNK-26 | bribe captures |
 | Magic vision | the revealer lasts 30 s | YAML `comm.fog_revealer.Lifetime` | UNK-26 | captures |
 
-### Rules in code
+## Rules in code
 
 | Rule | Placeholder | System | Unknown |
 |---|---|---|---|
