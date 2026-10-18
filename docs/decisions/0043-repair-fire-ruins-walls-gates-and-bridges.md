@@ -41,7 +41,7 @@ UNK-42 new).
   do not. Owner decisions after the review (one legal order per tick toggling 200 gates cost 15.6 ms per tick):
   a gate changes at most once per `gateChangeIntervalMs` (1 s); `SetGate` (17) open/close orders on a gate that changed
   sooner are rejected for it (`GateBusy` when no listed gate takes the order); step 10 applies at most
-  `maxGateChangesPerTick` (16) changes per tick in ascending entity order and only touches the passage tiles. Automatic
+  `maxGateChangesPerTick` (4; 16 cost 15 ms p99 under 200-gate spam, review) changes per tick in ascending entity order and only touches the passage tiles. Automatic
   mode (the default, `gate_subai_on`) wants the gate open while an own unit is within `gateOpenReachPx` (32) and closed
   once none is within `gateCloseReachPx` (64): hysteresis. The units come from a coarse grid (8-tile cells) rebuilt per
   tick, so the work is bounded by the units near gates. A gate never closes on a unit standing in its passage. Every

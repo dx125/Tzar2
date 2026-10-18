@@ -37,7 +37,7 @@ carry and validate (ADR 0019).
   (after the review) attacks enemy houses with soldiers (fire, ruins), captures houses, repairs damaged buildings, builds
   a turned gate, drags a wall and bridges a river beside its base, so the cross-OS golden and hash-stream CI cover
   those systems.
-  Golden values re-pinned (reasons in the tests): gameplay ruleset `BF28E77D177AB6AB`, stream `C872CDC357B5AEEA`,
+  Golden values re-pinned (reasons in the tests): gameplay ruleset `A6ED431A6A6A8BC6`, stream `C872CDC357B5AEEA`,
   final `2D2D3341E01243F0`; CI gameplay bench `760986D3F5B6E96C`; synthetic movement `CCD85F529731EEC1` /
   `618722F6DFB2231D` (layout only, behaviour unchanged).
 

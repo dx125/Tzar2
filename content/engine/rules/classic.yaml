@@ -63,7 +63,7 @@ gameplay:
   gateOpenReachPx: 32                 # UNVERIFIED: an automatic gate opens for its owner's units this close
   gateCloseReachPx: 64                # UNVERIFIED: ... and closes when none is this close (hysteresis)
   gateChangeIntervalMs: 1000          # UNVERIFIED: least time between two changes of one gate (owner decision)
-  maxGateChangesPerTick: 16           # engine bound: gate changes applied per tick (the rest wait)
+  maxGateChangesPerTick: 4            # engine bound: gate changes applied per tick (the rest wait); 16 cost 15 ms p99 (review)
   # GAME-04: capture (ADR 0044; ⚠ HYPOTHESIS UNK-19 for the EMIT influence).
   capturePointsPerSecond: 10          # UNVERIFIED (UNK-19): capture points per capturing peasant per second
   minimumCaptureResistance: 1         # UNVERIFIED (UNK-19)

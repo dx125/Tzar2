@@ -111,17 +111,26 @@ public class M3ReviewRegressionTests
         }
 
         d.RunUntil(() => false, 20);
+        // Deterministic cost proxies (owner decision; review R12: 16 changes per tick cost 15 ms p99, 4 cost 1.1 ms):
+        // passability changes and navigation clusters rebuilt per tick stay bounded whatever the orders.
         int maxChanges = 0;
-        // The deterministic gate: passability changes (navigation work) per tick stay bounded whatever the orders.
-        for (int i = 0; i < 100; i++)
+        long maxClusters = 0;
+        int cap = Classic.Gameplay.MaxGateChangesPerTick;
+        Assert.Equal(4, cap);
+        for (int i = 0; i < 400; i++)
         {
             d.Order(0, CommandKind.SetGate, [.. gates], arg0: i % 2 == 0 ? 1 : 0); // spam: open/close all 200 every tick
             int before = d.World.Map.PassabilityVersion;
+            d.World.Navigation.EnsureUpToDate();
+            long clusters = d.World.Navigation.ClustersRebuilt;
             d.Step();
+            d.World.Navigation.EnsureUpToDate(); // the update the next tick's path requests would do
             maxChanges = Math.Max(maxChanges, d.World.Map.PassabilityVersion - before);
+            maxClusters = Math.Max(maxClusters, d.World.Navigation.ClustersRebuilt - clusters);
         }
 
-        Assert.True(maxChanges <= 16 * 3, $"{maxChanges} passability changes in one tick"); // 16 gates x their passage
+        Assert.True(maxChanges <= cap, $"{maxChanges} passability changes in one tick"); // one passage tile per gate
+        Assert.True(maxClusters <= cap * d.World.Navigation.LayerCount, $"{maxClusters} clusters rebuilt in one tick ({d.World.Navigation.LayerCount} layers)");
 
         // Orders to gates that changed less than 1 s ago are rejected.
         d.RunUntil(() => false, 40);

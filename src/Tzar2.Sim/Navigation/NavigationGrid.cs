@@ -79,6 +79,21 @@ public sealed class NavigationGrid
     /// <summary>Number of layers the ruleset needs on this map.</summary>
     public int LayerCount => _layerKeys.Count;
 
+    /// <summary>Clusters rebuilt by incremental updates so far, over every layer (a cost counter; derived, not state).</summary>
+    public long ClustersRebuilt
+    {
+        get
+        {
+            long n = 0;
+            foreach (NavLayer layer in _layers)
+            {
+                n += layer.ClustersRebuilt;
+            }
+
+            return n;
+        }
+    }
+
     /// <summary>The map's <see cref="MapState.PassabilityVersion"/> the layers reflect (state, so plans can be validated against it after a restore).</summary>
     public int Version { get; private set; } = -1;
 

@@ -110,7 +110,7 @@ public sealed record GameplaySettings
     public int GateChangeIntervalMs { get; init; } = 1000;
 
     /// <summary>Most gate state changes applied per tick (the rest wait: bounded navigation work).</summary>
-    public int MaxGateChangesPerTick { get; init; } = 16;
+    public int MaxGateChangesPerTick { get; init; } = 4;
 
     /// <summary>A full repair (0 → max) costs this share of the effective construction cost, charged pro rata (bp; UNK-18).</summary>
     public int RepairCostBasisPoints { get; init; } = 5_000;

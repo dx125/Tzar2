@@ -51,7 +51,7 @@ Shift + Delete; what each technology does (not how much).
 | Wall drag | at most 64 segments; builders move on within 6 tiles | YAML `gameplay.maxWallSegments`, `wallContinueRadiusTiles` | — | editor/game captures |
 | Gate footprint | 3 × 1 with the middle tile as the passage | YAML `^class.gate_*` | UNK-02 | editor placement |
 | Gate opening | automatic by default; opens for the owner's units within 32 px, closes when none is within 64 px | YAML `gameplay.gateOpenReachPx`, `gateCloseReachPx` | — | observation |
-| Gate change rate | at most one change per gate per second; at most 16 changes per tick (owner decision: bounded work) | YAML `gameplay.gateChangeIntervalMs`, `maxGateChangesPerTick` | — | observation |
+| Gate change rate | at most one change per gate per second; at most 4 changes per tick (owner decision: bounded work; 16 cost 15 ms p99 under 200-gate spam) | YAML `gameplay.gateChangeIntervalMs`, `maxGateChangesPerTick` | — | observation |
 | Bridge footprint | the sprite box (`bridge_horz`), ends on land | import + code | UNK-02 | editor placement |
 | Harbor water | within 2 tiles of the footprint | code (`GameplayCommands.CoastReachTiles`) | UNK-02 | editor placement |
 | Shore reach | +1 tile for boats at buildings and peasants at ships | code (`Interaction.WorkerReaches`) | UNK-11 | captures (and the terrain-set conversion) |
