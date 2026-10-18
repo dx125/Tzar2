@@ -98,11 +98,14 @@ public struct KingdomState
     /// <summary>Cheat switches.</summary>
     public CheatFlags Cheats;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved0;
+    /// <summary>Tavern offers of <see cref="TavernPeriod"/> already hired (bit = offer slot; GAME-14).</summary>
+    public byte TavernTaken;
 
     /// <summary>Padding, always 0.</summary>
     public short Reserved1;
+
+    /// <summary>The tavern period <see cref="TavernTaken"/> belongs to (offers change every <c>world.tavernRefreshMs</c>).</summary>
+    public int TavernPeriod;
 #pragma warning restore CA1051
 
     /// <summary><see cref="LoanResource"/> when no loan is outstanding.</summary>

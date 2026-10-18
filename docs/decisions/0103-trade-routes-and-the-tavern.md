@@ -43,5 +43,4 @@ repaying, then 1,200 "after some time". The profit formula, odds and loan growth
 
 * No trade loop gains anything without distance: a load is paid before it is carried, sold only at the other dock, and
   close docks give no profit; cancelling refunds exactly the load.
-* Hiring mercenaries and heroes in the tavern depends on stream E's heroes (HEROES.INI, Heroes' Quest, Fame); the tavern
-  trait is where that menu attaches.
+* Hiring mercenaries and heroes is ADR 0108 (it needed stream E's heroes; it attaches to the tavern trait).

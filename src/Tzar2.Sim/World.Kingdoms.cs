@@ -20,6 +20,7 @@ namespace Tzar2.Sim;
 public sealed partial class World
 {
     private KingdomState[] _kingdoms = [];
+    private ushort[][]? _mercenaryPools;
     private byte[] _gateBars = [];
 
     /// <summary>Stances and sharing between the kingdoms (GAME-13).</summary>
@@ -194,6 +195,49 @@ public sealed partial class World
         }
     }
 
+    /// <summary>
+    /// The unit types a kingdom's tavern hires from (GAME-14, ADR 0108): military land units of its civilization that some
+    /// building trains, ascending by type id (derived from the ruleset, not state).
+    /// </summary>
+    internal ReadOnlySpan<ushort> MercenaryPool(int player)
+    {
+        if (_mercenaryPools is null)
+        {
+            var pools = new ushort[Ruleset.Civilizations.Count][];
+            var trained = new bool[Ruleset.EntityTypes.Count];
+            foreach (EntityTypeDefinition t in Ruleset.EntityTypes)
+            {
+                if (t.Traits.Producer is { } producer)
+                {
+                    foreach (ushort id in producer.Produces)
+                    {
+                        trained[id] = true;
+                    }
+                }
+            }
+
+            for (int c = 0; c < pools.Length; c++)
+            {
+                var list = new System.Collections.Generic.List<ushort>();
+                foreach (EntityTypeDefinition t in Ruleset.EntityTypes)
+                {
+                    if (trained[t.Id] && t.Traits.World.IsMilitary && t.Traits.Civilization == Ruleset.Civilizations[c]
+                        && t.Locomotor is Locomotor.Foot or Locomotor.Mounted)
+                    {
+                        list.Add(t.Id);
+                    }
+                }
+
+                pools[c] = [.. list];
+            }
+
+            _mercenaryPools = pools;
+        }
+
+        int civ = HasPlayer(player) ? _players[player].Civilization : -1;
+        return (uint)civ < (uint)_mercenaryPools.Length ? _mercenaryPools[civ] : [];
+    }
+
     /// <summary>Adds to a stockpile up to <see cref="WorldSettings.StockpileCap"/> (incomes of the world systems: overflow guard).</summary>
     internal void Credit(int player, int resource, long amount)
     {
@@ -293,7 +337,9 @@ public sealed partial class World
                 || (loan && (k.LoanResource < 0 || k.LoanResource >= resources || k.LoanDue <= 0)) || (!loan && k.LoanDue != 0)
                 || k.LoanLimit < 0 || k.LoanRaiseTick < -1 || k.OutcomeTick < -1 || k.OutcomeTick > Tick.Value
                 || (k.Cheats & ~(CheatFlags.NoFog | CheatFlags.NoTech | CheatFlags.God | CheatFlags.Buildozer)) != 0
-                || (k.Cheats != CheatFlags.None && !Config.CheatsAllowed) || k.Reserved0 != 0 || k.Reserved1 != 0)
+                || (k.Cheats != CheatFlags.None && !Config.CheatsAllowed) || k.Reserved1 != 0
+                || k.TavernPeriod < 0 || k.TavernPeriod > Systems.TavernOffers.PeriodAt(this, Tick.Value)
+                || (k.TavernTaken >> (Ruleset.World.MercenaryOffers + Ruleset.World.HeroOffers)) != 0)
             {
                 throw new InvalidDataException("Snapshot violates a world invariant: invalid kingdom state.");
             }

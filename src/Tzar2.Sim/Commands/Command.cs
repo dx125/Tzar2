@@ -109,6 +109,12 @@ public enum CommandKind : ushort
 
     /// <summary>Loans (GAME-14, Usury): Arg1 = 0 take a loan of resource Arg0 in a listed tavern, 1 repay the outstanding loan.</summary>
     Loan = 46,
+
+    /// <summary>
+    /// Tavern hiring (GAME-14, ADR 0108): in a listed own tavern hire offer Arg0 of this period (mercenary groups first, then
+    /// heroes; see <c>TavernOffers</c>), paid at once; Mercenaries / Heroes' Quest needed.
+    /// </summary>
+    Hire = 47,
     // GAME-07…11 (ADR 0096): values 20-39.
 
     /// <summary>The listed units walk to own holder <see cref="Command.Target"/> (castle, outpost, ship, carpet) and enter it (GAME-09).</summary>

@@ -137,6 +137,15 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Deathmatch | every kingdom starts on the High resources | YAML `world.deathmatchStartingResources` | — | lobby captures |
 | Cheat resources | hmdvaleva 2,000, hmpetleva 5,000 of each | YAML `world.cheat*` | UNK-30 | testing the codes (names confirmed in the executable, [list](original-switches-and-cheats.md); amounts not measured) |
 | Cheat semantics | hmgod: no damage to own units and buildings; hmbuildozer: instant; hmnotech: no requirements; hmnext: win | code (`KingdomCommands.Cheat`) | UNK-30 | testing the codes |
+| Tavern offers refresh | every 2 minutes, one set per kingdom (seeded) | YAML `world.tavernRefreshMs` | UNK-28 | tavern menu captures over time |
+| Tavern offers | 3 mercenary groups and 1 hero at a time | YAML `world.mercenaryOffers`, `heroOffers` | UNK-28 | tavern menu captures |
+| Mercenary group size | 3-5 soldiers ("small groups", manual ch. 6) | YAML `world.mercenaryGroupMin/Max` | UNK-28 | tavern menu captures |
+| Mercenary and hero types | military land units of the kingdom's civilization that a building trains | code (`World.MercenaryPool`) | UNK-28 | tavern menu captures (all civilizations) |
+| Mercenary price | 150% of the soldiers' training cost; heroes 600% of their type's | YAML `world.mercenaryCostPercent`, `heroCostPercent` | UNK-28 | price captures |
+| Mercenary level | 1; heroes at the hero level (12) | YAML `world.mercenaryLevel`, `combat.heroLevel` | UNK-23 | level of hired units |
+| Fame | +1 soldier, +2 levels, 75% of the price | YAML `world.fame*` | UNK-23/28 | captures with and without Fame |
+| Hired units' level cap | the tavern level stands even above the kingdom's cap | code (`TavernOffers.Train`) | UNK-23 | observation |
+| Hire refused | a hire needs population room for the whole group | code (`TavernOffers.Hire`) | UNK-20 | observation |
 
 ## Rules in code
 
@@ -151,8 +160,8 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 
 * **King of the Hill, Capture the Flag** (lobby strings `g_type_1`, `g_type_2`): out of M3 scope; TDD GAME-17 names
   Standard and Deathmatch only. No code.
-* **Tavern mercenaries and heroes:** a follow-up once streams E and F have both landed; whichever rebases second wires
-  the hire orders to the `Tavern` trait (ADR 0103).
+* ~~**Tavern mercenaries and heroes:** a follow-up once streams E and F have both landed~~ — done: ADR 0108 (values in
+  the table above). The legacy AI scripts never hire (they only build taverns), so the AI does not use `Hire`.
 * **Per-kingdom gate routing** (REQ-PATH-01 per-player portals): backlog; the movement bar of ADR 0102 is enough for M3.
 * **Confirmed defaults:** lobby teams start with shared victory; the 10 s stance-change interval stays (engine bound,
   UNVERIFIED).

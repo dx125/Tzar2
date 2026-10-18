@@ -134,7 +134,7 @@ public sealed class ExperienceSystem : ISimSystem
 
     // A new hero takes the first name of its civilization's list (HEROES.INI) that no live hero of its kingdom carries;
     // when all are taken, "<first name> <n>" (UNVERIFIED). Returns the list index, or -1.
-    private static int NameHero(World world, EntityId unit, byte owner)
+    internal static int NameHero(World world, EntityId unit, byte owner)
     {
         ImmutableArray<string> names = world.Ruleset.Combat.NamesOf(world.CivilizationOf(unit));
         Ecs.ColdComponentStore<EntityName> store = world.Names;
