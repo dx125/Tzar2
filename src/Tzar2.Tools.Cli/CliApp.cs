@@ -63,6 +63,11 @@ internal static class CliApp
             return DumpCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
         }
 
+        if (args[0] == "ai")
+        {
+            return AiCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
+        }
+
         foreach ((string name, string milestone, _) in Planned)
         {
             string[] words = name.Split(' ');
@@ -89,6 +94,7 @@ internal static class CliApp
             ("dump <file> [entries]", "dump a package or legacy file; --out <dir> writes PNGs"),
             ("mapgen [options]", "generate a random map; --out <dir> writes a debug dump, a summary and a PNG preview"),
             ("bench [options]", "run the synthetic sim benchmark; reports tick p50/p99 and the final hash"),
+            ("ai check <folder|package>", "parse and compile legacy AI scripts; prints located messages"),
             ("fidelity capture|analyze|check|scenarios|selftest", "capture harness: measure the original game (Windows), turn captures into facts"),
         };
         lines.AddRange(Planned.Select(p => (p.Name, $"{p.Summary} [not implemented, {p.Milestone}]")));

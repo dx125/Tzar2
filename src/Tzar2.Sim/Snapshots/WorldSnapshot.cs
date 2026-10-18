@@ -18,7 +18,8 @@ namespace Tzar2.Sim.Snapshots;
 /// Layout: magic <c>T2SN</c>, format version, ruleset and map content hashes, the <see cref="SimulationConfig"/>,
 /// tick, entity registry, RNG streams, player states (raw), map dynamic layers (obstacle version and non-zero
 /// blockers only: static layers are referenced by the map content hash, occupancy is rebuilt), decals, the group
-/// counter, the paths and the path-request queue, the stores (count, then per store: key, tier, contents), and finally
+/// counter, the paths and the path-request queue, the stores (count, then per store: key, tier, contents), the
+/// extension blocks of in-sim controllers (count, then per block in key order: key, length, bytes; ADR 0051), and finally
 /// the full-state hash of the captured world, which <see cref="Restore"/> recomputes and compares. Little-endian only
 /// (like <see cref="StateHasher"/>).
 /// </remarks>
@@ -28,7 +29,7 @@ public static class WorldSnapshot
     public const uint Magic = 0x4E533254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 6;
+    public const int FormatVersion = 7;
 
     /// <summary>Writes a snapshot of <paramref name="world"/>.</summary>
     public static void Capture(World world, BinaryBufferWriter writer, StateHasher hasher)
@@ -76,6 +77,7 @@ public static class WorldSnapshot
             store.WriteTo(writer);
         }
 
+        world.Extensions.WriteTo(writer);
         writer.WriteUInt64(StateHashing.ComputeFullHash(world, hasher));
     }
 
@@ -165,6 +167,7 @@ public static class WorldSnapshot
             }
         }
 
+        world.Extensions.ReadFrom(ref reader);
         ulong expected = reader.ReadUInt64();
         if (!reader.IsAtEnd)
         {

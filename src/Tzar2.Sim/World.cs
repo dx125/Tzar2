@@ -178,6 +178,9 @@ public sealed partial class World
     /// <summary>The id the next group move order gets (state).</summary>
     public int NextGroupId { get; internal set; } = 1;
 
+    /// <summary>State of in-sim controllers outside Tzar2.Sim (AI, scripts), in snapshots and the full hash (ADR 0051).</summary>
+    public Snapshots.WorldStateExtensions Extensions { get; } = new();
+
     /// <summary>Corpse lifetime in ticks.</summary>
     public int CorpseTtlTicks { get; }
 

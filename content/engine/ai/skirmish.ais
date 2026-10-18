@@ -1,0 +1,77 @@
+; Tzar2 engine default skirmish AI.
+; Written for Tzar2 (MIT licence); it is not part of the original game. The game uses the original scripts of the
+; player's own install (DATA/AI, imported into the base package); this script runs when they are missing, in tests and
+; in benchmarks. It is written in the legacy AI language (docs/tdd/D-legacy-ai-dsl.md) and names only the object
+; classes of the M2/M3 classic subset, so it also documents what the interpreter understands.
+
+rule say "Tzar2 default AI ready" forget THIS end
+
+; ---- housing: keep room for the next units
+; (thresholds derived for this script: the castle's room plus about one house per eight to twelve units, rounded so
+;  that a house is started before the room runs out; not taken from any original table)
+{ critical rule when castle 1 end
+  rule when units 18 have 1 house end
+  rule when units 26 have 2 houses end
+  rule when units 34 have 4 houses end
+  rule when units 44 have 6 houses end
+  rule when units 58 have 9 houses end
+  rule when units 76 have 12 houses end
+  rule when units 100 have 16 houses end
+  rule when units 130 have 20 houses end
+}
+
+; ---- the town
+rule have castle end
+{ critical rule when castle 1 end
+  rule have 10 peons end
+  rule when units 16 have 16 peons end
+  rule when units 30 have 22 peons end
+  rule when units 50 have 28 peons end
+  rule when difficulty hard have 40% peons end
+  rule when not difficulty hard have 30% peons end
+  rule when peons 6 have farm end
+  rule when peons 9 have lumber end
+  rule when peons 12 have storage end
+}
+
+; ---- hard: save stone for the second barracks (what follows may not spend it until 400 are stocked)
+{ critical rule when difficulty hard, barracks, not barracks 2 end
+  rule have 400 stone end
+  rule have needs_locked end
+}
+
+; ---- a first guard, then barracks
+{ critical rule when castle, peons 8 end
+  critical rule have 1 barracks end
+  rule have 6 footmen end
+  rule have 4 archers end
+  rule when footmen 6 trigger Guarded end
+}
+rule when trigger Guarded say "My town is guarded" forget THIS end
+
+; ---- the army grows with the economy
+{ critical rule when trigger Guarded end
+  rule when peons 16 have 2 barracks end
+  rule have 12 footmen end
+  rule have 8 archers end
+  rule have 6 macemen end
+  rule when units 50 have 20% footmen end
+  rule when units 50 have 15% archers end
+  rule when units 70 have 10% macemen end
+  rule when knight have 10 knights end
+}
+
+; ---- what each civilization trains best
+{ critical rule when trigger Guarded end
+  rule when civ european, barracks 2 have 10 pikemen end
+  rule when civ arabian, barracks 2 have 10 pikemen end
+  rule when civ arabian have 8 heavy_cavalry end
+  rule when civ asian have 8 horse_samurai end
+}
+
+; ---- answer what the enemy brings
+rule trigger !FacingCavalry end
+rule when enemy knights 8 trigger FacingCavalry end
+rule when enemy heavy_cavalry 8 trigger FacingCavalry end
+rule when trigger FacingCavalry, civ european have 16 pikemen end
+rule when trigger FacingCavalry, civ asian have 16 macemen end

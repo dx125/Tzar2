@@ -1,0 +1,58 @@
+using System;
+using System.Text;
+using Tzar2.AI.Legacy.Program;
+using Tzar2.AI.Scenarios;
+using Tzar2.Content.Compiled;
+using Tzar2.Content.Rules;
+using Tzar2.Core.Hashing;
+using Tzar2.Core.Serialization;
+using Tzar2.Sim;
+using Tzar2.Sim.Commands;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace Tzar2.Determinism.Tests;
+
+/// <summary>
+/// Cross-platform determinism of the legacy AI (REQ-AI-03, ADR 0051; TDD §22.2): four AI kingdoms with the engine-default
+/// script on the synthetic classic ruleset must issue the same commands and produce the same hash stream on every OS,
+/// runtime, configuration and worker count. The AI is part of the lockstep, so any divergence here is a desync.
+/// </summary>
+public class AiGoldenHashTests(ITestOutputHelper output)
+{
+    // Changing the AI (interpreter, executors, default script), a gameplay system, the scenario or the hashed layout changes
+    // these values on purpose: update them in the same commit and say why. History: (M3 part B) first; PR #20 review (duplicate goals once per run, bounded site searches); rebase onto M3-A (#21: economy, construction and research rules change the match); research state and executor (the AI state now records the research view, players get their civilization set); M3-F (#23: fog, diplomacy, victory change the match; the AI respects stances).
+    private const ulong GoldenCommandStream = 0xDE296AD03D027410UL;
+    private const ulong GoldenHashStream = 0x6511E3FFD562CB52UL;
+    private const ulong GoldenFinalFullHash = 0x482E181918701157UL;
+
+    private const int Ticks = 9600;
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    public void Ai_skirmish_produces_the_golden_hashes(int workers)
+    {
+        Ruleset ruleset = SyntheticLegacyContent.CompileRuleset();
+        AiProgram program = AiCompiler.CompileText("skirmish.ais", Encoding.UTF8.GetString(new EngineDefaultsSource().ReadAllBytes("ai/skirmish.ais")));
+        using var scenario = new AiSkirmishScenario(ruleset, program, new AiSkirmishOptions { Players = 4, MapSize = 128, Seed = 0x5EED_A1UL }, workers);
+        var states = new StateHasher();
+        var commands = new StateHasher();
+        var wire = new BinaryBufferWriter(1024);
+        for (int t = 0; t < Ticks; t++)
+        {
+            TickResult result = scenario.RunTick();
+            states.Add(result.StateHash).Add(result.FullHash ?? 0UL);
+            wire.Clear();
+            CommandCodec.WriteBatch(wire, scenario.Ai.LastCommands);
+            commands.Add(wire.WrittenSpan);
+        }
+
+        ulong final = scenario.Simulation.ComputeFullHash();
+        output.WriteLine($"workers={workers} runtime={Environment.Version} commands={commands.GetCurrentHash():X16} stream={states.GetCurrentHash():X16} final={final:X16} {scenario.Describe()}");
+        Assert.True(scenario.Ai.Issued(0) > 0 && scenario.Trained(0) > 0 && scenario.Ai.Players[0].Waves > 0, scenario.Describe());
+        Assert.Equal(GoldenCommandStream, commands.GetCurrentHash());
+        Assert.Equal(GoldenHashStream, states.GetCurrentHash());
+        Assert.Equal(GoldenFinalFullHash, final);
+    }
+}

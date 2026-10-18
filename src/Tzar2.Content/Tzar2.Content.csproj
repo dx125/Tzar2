@@ -20,8 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Engine-default package (REQ-DATA-02): the built-in rulesets' YAML, served by EngineDefaultsSource. -->
+    <!-- Engine-default package (REQ-DATA-02): the built-in rulesets' YAML and AI scripts, served by EngineDefaultsSource. -->
     <EmbeddedResource Include="../../content/engine/**/*.yaml" LogicalName="engine/%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- The engine-default AI scripts (Tzar2's own, ADR 0052): used when the base package has no original scripts. -->
+    <EmbeddedResource Include="../../content/engine/**/*.ais;../../content/engine/**/*.ai" LogicalName="engine/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

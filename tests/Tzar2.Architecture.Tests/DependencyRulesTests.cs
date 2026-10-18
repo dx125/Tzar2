@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using System.Xml.Linq;
 using Xunit;
@@ -35,6 +37,17 @@ public class DependencyRulesTests
         ["Tzar2.Server"] = ["Tzar2.Core", "Tzar2.Net"],
         ["Tzar2.Tools.Cli"] = NonGodotLibraries,
         ["Tzar2.Analyzers"] = [],
+    };
+
+    /// <summary>
+    /// REQ-ARCH-01: the AI consumes the compiled ruleset ("They consume only compiled Ruleset and MapData objects"), which
+    /// it reaches through Sim (<c>World.Ruleset</c>). Its compiled IL may therefore reference Tzar2.Content, but only the
+    /// types of the compiled contract namespace, never the VFS, packages or the rules compiler (ADR 0050). Project
+    /// references still follow <see cref="Allowed"/>.
+    /// </summary>
+    public static readonly Dictionary<string, (string Assembly, string Namespace)[]> CompiledContract = new(StringComparer.Ordinal)
+    {
+        ["Tzar2.AI"] = [("Tzar2.Content", "Tzar2.Content.Compiled")],
     };
 
     /// <summary>
@@ -248,7 +261,9 @@ public class DependencyRulesTests
                 Assert.False(referenced.StartsWith("Godot", StringComparison.Ordinal), $"{name} references {referenced}.");
                 if (referenced.StartsWith("Tzar2.", StringComparison.Ordinal) || referenced == "t2")
                 {
-                    Assert.True(Allowed[name].Contains(ProjectName(referenced)), $"{name} references {referenced}, which TDD §7.2 does not allow.");
+                    bool contract = CompiledContract.TryGetValue(name, out (string Assembly, string Namespace)[]? allowed)
+                        && allowed.Any(c => c.Assembly == referenced);
+                    Assert.True(Allowed[name].Contains(ProjectName(referenced)) || contract, $"{name} references {referenced}, which TDD §7.2 does not allow.");
                 }
                 else
                 {
@@ -261,6 +276,83 @@ public class DependencyRulesTests
                 }
             }
         }
+    }
+
+    [Fact]
+    public void Compiled_contract_references_stay_in_the_contract_namespace()
+    {
+        foreach ((string project, (string Assembly, string Namespace)[] contracts) in CompiledContract.OrderBy(p => p.Key, StringComparer.Ordinal))
+        {
+            Assembly assembly = Assembly.Load(new AssemblyName(project));
+            using var stream = File.OpenRead(assembly.Location);
+            using var pe = new PEReader(stream);
+            MetadataReader metadata = pe.GetMetadataReader();
+            int checkedTypes = 0;
+            foreach (TypeReferenceHandle handle in metadata.TypeReferences)
+            {
+                (string scope, string ns, string type) = Resolve(metadata, metadata.GetTypeReference(handle));
+                foreach ((string target, string allowedNamespace) in contracts)
+                {
+                    if (scope == target)
+                    {
+                        checkedTypes++;
+                        Assert.True(ns == allowedNamespace, $"{project} uses {ns}.{type} of {target}; only {allowedNamespace} is allowed (ADR 0050).");
+                    }
+                }
+            }
+
+            Assert.True(checkedTypes > 0, $"{project} no longer uses the compiled contract; remove it from CompiledContract.");
+        }
+
+        static (string Scope, string Namespace, string Type) Resolve(MetadataReader metadata, TypeReference reference)
+        {
+            // Nested types resolve through their declaring type.
+            while (reference.ResolutionScope.Kind == HandleKind.TypeReference)
+            {
+                reference = metadata.GetTypeReference((TypeReferenceHandle)reference.ResolutionScope);
+            }
+
+            string scope = reference.ResolutionScope.Kind == HandleKind.AssemblyReference
+                ? metadata.GetString(metadata.GetAssemblyReference((AssemblyReferenceHandle)reference.ResolutionScope).Name)
+                : string.Empty;
+            return (scope, metadata.GetString(reference.Namespace), metadata.GetString(reference.Name));
+        }
+    }
+
+    /// <summary>
+    /// REQ-AI-03 / ADR 0051: the AI is just another player. It changes the world only through commands
+    /// (<c>CommandSystem.ExecuteInTick</c>), so its IL must not call the world's structural mutators.
+    /// </summary>
+    [Fact]
+    public void The_ai_does_not_call_world_mutators()
+    {
+        var denied = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Tzar2.Sim.World::Set", "Tzar2.Sim.World::SetCold", "Tzar2.Sim.World::Remove", "Tzar2.Sim.World::Spawn",
+            "Tzar2.Sim.World::PlaceStructure", "Tzar2.Sim.World::CompleteConstruction", "Tzar2.Sim.World::Kill",
+            "Tzar2.Sim.World::Destroy", "Tzar2.Sim.Map.MapState::AddBlocker", "Tzar2.Sim.Map.MapState::RemoveBlocker",
+            "Tzar2.Sim.Map.MapState::AddOccupant", "Tzar2.Sim.Map.MapState::RemoveOccupant",
+        };
+        Assembly assembly = typeof(AI.AIAssembly).Assembly;
+        using var stream = File.OpenRead(assembly.Location);
+        using var pe = new PEReader(stream);
+        MetadataReader metadata = pe.GetMetadataReader();
+        int calls = 0;
+        foreach (MemberReferenceHandle handle in metadata.MemberReferences)
+        {
+            MemberReference member = metadata.GetMemberReference(handle);
+            if (member.Parent.Kind != HandleKind.TypeReference)
+            {
+                continue;
+            }
+
+            TypeReference type = metadata.GetTypeReference((TypeReferenceHandle)member.Parent);
+            string name = $"{metadata.GetString(type.Namespace)}.{metadata.GetString(type.Name)}::{metadata.GetString(member.Name)}";
+            calls += name.StartsWith("Tzar2.Sim.", StringComparison.Ordinal) ? 1 : 0;
+            Assert.False(denied.Contains(name), $"Tzar2.AI calls {name}; the AI may change the world only through commands (ADR 0051).");
+        }
+
+        Assert.True(calls > 0, "the check found no Sim member references at all");
     }
 
     private static string ProjectName(string assemblyName)

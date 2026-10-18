@@ -11,7 +11,8 @@ namespace Tzar2.Sim.Snapshots;
 /// <remarks>
 /// <b>Tick hash</b>: version tag, tick, entity registry, every hot store (in registration order: store index, then
 /// its entity and component spans), player states, RNG streams. <b>Full hash</b>: the tick hash's inputs plus every
-/// cold store and the map's dynamic layers (obstacle version, blockers, occupancy), the decals, the group counter, the paths and the path-request queue.
+/// cold store and the map's dynamic layers (obstacle version, blockers, occupancy), the decals, the group counter, the paths, the path-request queue
+/// and the extension state of in-sim controllers such as the AI (only when there is any, ADR 0051).
 /// </remarks>
 public static class StateHashing
 {
@@ -51,6 +52,7 @@ public static class StateHashing
         world.Paths.AppendTo(hasher);
         world.PathQueue.AppendTo(hasher);
         world.Visibility.AppendTo(hasher);
+        world.Extensions.AppendTo(hasher); // nothing without extensions (ADR 0051)
         return hasher.GetHashAndReset();
     }
 
