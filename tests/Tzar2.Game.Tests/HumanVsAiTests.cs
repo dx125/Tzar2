@@ -160,7 +160,13 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
         }
 
         int from = Near(a), to = Near(b);
-        return from >= 0 && to >= 0 && layer.AreConnected(from, to);
+        if (from < 0 || to < 0)
+        {
+            // A castle walled in without a walkable tile within 8 tiles is a broken map, not a water crossing.
+            throw new InvalidOperationException($"No walkable tile within 8 tiles of the castle of kingdom {(from < 0 ? a : b) + 1}: the map is broken.");
+        }
+
+        return layer.AreConnected(from, to);
     }
 
     [Fact]
