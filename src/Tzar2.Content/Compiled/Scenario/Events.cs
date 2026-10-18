@@ -24,13 +24,15 @@ public sealed record ObjectDestroyedEvent(string Name, ObjectSpec Objects) : Eve
 /// <param name="Name">Event name.</param>
 /// <param name="Objects">Which objects.</param>
 /// <param name="HolderIndex">Index of the holder object in <see cref="MapData.Objects"/>, or −1 when unset.</param>
-public sealed record ObjectsEnterHolderEvent(string Name, ObjectSpec Objects, int HolderIndex) : EventDef(Name);
+/// <param name="Holders">Instead of one holder: any holder matching this specification (legacy "typed" holder), or null.</param>
+public sealed record ObjectsEnterHolderEvent(string Name, ObjectSpec Objects, int HolderIndex, ObjectSpec? Holders = null) : EventDef(Name);
 
 /// <summary>The objects left the holder.</summary>
 /// <param name="Name">Event name.</param>
 /// <param name="Objects">Which objects.</param>
 /// <param name="HolderIndex">Index of the holder object in <see cref="MapData.Objects"/>, or −1 when unset.</param>
-public sealed record ObjectLeaveHolderEvent(string Name, ObjectSpec Objects, int HolderIndex) : EventDef(Name);
+/// <param name="Holders">Instead of one holder: any holder matching this specification (legacy "typed" holder), or null.</param>
+public sealed record ObjectLeaveHolderEvent(string Name, ObjectSpec Objects, int HolderIndex, ObjectSpec? Holders = null) : EventDef(Name);
 
 /// <summary>The objects exist (are alive).</summary>
 /// <param name="Name">Event name.</param>

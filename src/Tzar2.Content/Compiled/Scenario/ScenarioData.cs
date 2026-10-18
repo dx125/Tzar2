@@ -191,10 +191,12 @@ public sealed class ScenarioData
                 case ObjectsEnterHolderEvent x:
                     Objects(x.Objects, e.Name);
                     Holder(x.HolderIndex, e.Name);
+                    OptionalObjects(x.Holders, e.Name);
                     break;
                 case ObjectLeaveHolderEvent x:
                     Objects(x.Objects, e.Name);
                     Holder(x.HolderIndex, e.Name);
+                    OptionalObjects(x.Holders, e.Name);
                     break;
                 case ObjectExistEvent x:
                     Objects(x.Objects, e.Name);
@@ -281,6 +283,14 @@ public sealed class ScenarioData
                 {
                     Index(i, s.ObjectCount, "object", owner);
                 }
+            }
+        }
+
+        private void OptionalObjects(ObjectSpec? spec, string owner)
+        {
+            if (spec is not null)
+            {
+                Objects(spec, owner);
             }
         }
 
