@@ -1113,6 +1113,23 @@ public static class CampaignAutoplay
                     && want.Op is Content.Compiled.Scenario.Expressions.BinaryOp.Greater or Content.Compiled.Scenario.Expressions.BinaryOp.GreaterOrEqual:
                     return Load(world, me, triggers, cargo.Name, holders, want.Op == Content.Compiled.Scenario.Expressions.BinaryOp.Greater ? want.Value + 1 : want.Value);
 
+                // An item "entering" a unit: that unit picks it up (a hero takes the letter).
+                case ObjectsEnterHolderEvent { Objects: NamedObjects letters } take when take.HolderIndex >= 0 && Entity(world, triggers, take.HolderIndex) is { } taker
+                    && world.Diplomacy.MayCommand(me, world.Identities.Get(taker).Owner) && world.Inventories.Has(taker) && Carried(world, triggers, letters, me) is { } letter && !world.IsHeld(letter):
+                {
+                    Position where = Pos(world, letter);
+                    var around = new RectArea((where.X / Tile) - 1, (where.Y / Tile) - 1, (where.X / Tile) + 1, (where.Y / Tile) + 1);
+                    if (Reach(world, triggers, taker, around, where) is null)
+                    {
+                        return Go(world, me, triggers, take.Name, [taker], around, where, individually: true);
+                    }
+
+                    _batch.Add(CommandKind.PickItem, [taker], 0, 0, letter);
+                    Goal = $"{take.Name}: pick the item up at ({where.X / Tile},{where.Y / Tile})";
+                    Note($"take an item for {take.Name}");
+                    return true;
+                }
+
                 case ObjectsEnterHolderEvent board when board.HolderIndex >= 0 && Entity(world, triggers, board.HolderIndex) is { } holder:
                 {
                     List<EntityId> units = OwnUnits(world, me, triggers, board.Objects, Pos(world, holder));
