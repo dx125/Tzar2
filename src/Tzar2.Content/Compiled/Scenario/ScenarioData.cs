@@ -347,6 +347,13 @@ public sealed class ScenarioData
                     }
 
                     break;
+                case SequenceExpr q:
+                    foreach (Expr statement in q.Statements)
+                    {
+                        Walk(statement, owner);
+                    }
+
+                    break;
             }
         }
 

@@ -22,9 +22,15 @@ public class ScenarioTests
     [InlineData("@gold(2) == $stone + 100", "(gold(2) == ($stone + 100))")]
     [InlineData("$v = rnd ($v, 4*$v)", "(var0 = rnd(var0, (4 * var0)))")]
     [InlineData("T1 > 5000", "(timer3 > 5000)")]
-    [InlineData("$MaxHealth != $DEFENCE", "($maxhealth != $defense)")]
+    [InlineData("$MaxHealth != $DEFENCE", "($maxhealth != $defence)")]
     [InlineData("(5*3 – 8)/12*7 >= ($v/10 + 5)", "(((((5 * 3) - 8) / 12) * 7) >= ((var0 / 10) + 5))")]
     [InlineData("nosuchthing + $health", "(?nosuchthing + $health)")]
+    [InlineData("$a = 1\r\n$b = @MAX(51, $health);\r\n", "[(var0 = 1); (var1 = max(51, $health))]")]
+    [InlineData("#Druid == 1", "(var0 == 1)")]
+    [InlineData("@VardalWon = 1", "(?@VardalWon = 1)")]
+    [InlineData("@PlayMovie(movies\\outro.ddv)", "playmovie('movies\\outro.ddv')")]
+    [InlineData("@build()", "build()")]
+    [InlineData("$isselected==1 && $Defence > $cargo", "(($isselected == 1) && ($defence > $cargo))")]
     public void Parser_builds_resolved_trees(string source, string expected)
     {
         var scope = new RecordingScope(["a", "b", "c"], ["", "", "", "t1"]);
@@ -37,7 +43,6 @@ public class ScenarioTests
     [InlineData("1 +")]
     [InlineData("(1")]
     [InlineData("3 = 4")]
-    [InlineData("@gold(1, 2)")]
     [InlineData("@frobnicate(1)")]
     [InlineData("1 # 2")]
     [InlineData("99999999999")]
@@ -135,6 +140,8 @@ public class ScenarioTests
             new PlayerWinAction("win", PlayerMasks.Of(1), "Next"),
             new ConversationAction("talk", 0),
             new KeepRuleAction("keep"),
+            new DelayAction("wait", 5000),
+            new DestroyObjectAction("raze", new CategoryObjects(ObjectCategory.Buildings, PlayerMasks.Of(2), CountComparison.AtMost, 0, Quantifier.Any)),
         ];
         PhraseDef[] phrases =
         [
@@ -183,6 +190,8 @@ public class ScenarioTests
         BinaryExpr b => "(" + Show(b.Left) + " " + Op(b.Op) + " " + Show(b.Right) + ")",
         AssignExpr a => "(" + Show(a.Target) + " = " + Show(a.Value) + ")",
         CallExpr c => c.Function.ToString().ToLowerInvariant() + "(" + string.Join(", ", System.Linq.Enumerable.Select(c.Arguments, Show)) + ")",
+        SequenceExpr q => "[" + string.Join("; ", System.Linq.Enumerable.Select(q.Statements, Show)) + "]",
+        TextArg t => "'" + t.Text + "'",
         _ => throw new ArgumentException(e.GetType().Name),
     };
 

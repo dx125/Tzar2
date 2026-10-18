@@ -8,7 +8,10 @@ namespace Tzar2.Content.Compiled.Scenario.Expressions;
 /// <summary>Resolves the names an expression uses to indices of the scenario tables (ADR 0120).</summary>
 public interface IExpressionScope
 {
-    /// <summary>Index of user variable <paramref name="name"/> (without <c>$</c>), registering it if new; −1 if not allowed.</summary>
+    /// <summary>
+    /// Index of user variable <paramref name="name"/> (without <c>$</c>; <c>#</c> names keep their <c>#</c>),
+    /// registering it if new; −1 if not allowed.
+    /// </summary>
     int UserVariable(string name);
 
     /// <summary>Index of the event named <paramref name="name"/>, or −1.</summary>
@@ -19,64 +22,39 @@ public interface IExpressionScope
 }
 
 /// <summary>
-/// Parser of the legacy expression language (Appendix C.6): integer literals, <c>$variables</c>, bare event and timer
-/// names, <c>@function(…)</c> (the <c>@</c> is optional, as the manual's <c>rnd(…)</c> example shows), the operators
-/// <c>= || &amp;&amp; == != &lt; &lt;= &gt; &gt;= + - * / % ! -</c> and parentheses. Precedence from loosest to tightest:
-/// assignment (right-associative), <c>||</c>, <c>&amp;&amp;</c>, equality, relational, additive, multiplicative, unary.
-/// Names resolve case-insensitively through an <see cref="IExpressionScope"/>; an unresolved name becomes
-/// <see cref="UnknownRef"/>, never an error. Deterministic and allocation-light; no I/O.
+/// Parser of the legacy expression language (Appendix C.6 plus the further names of ADR 0120): integer literals,
+/// <c>$variables</c> and <c>#variables</c>, bare event and timer names, <c>@function(…)</c> (the <c>@</c> is optional
+/// for known functions, as the manual's <c>rnd(…)</c> example shows), the operators
+/// <c>= || &amp;&amp; == != &lt; &lt;= &gt; &gt;= + - * / % ! -</c>, parentheses, and several statements separated by
+/// line breaks or <c>;</c>. Precedence from loosest to tightest: assignment (right-associative), <c>||</c>,
+/// <c>&amp;&amp;</c>, equality, relational, additive, multiplicative, unary. Names resolve case-insensitively through
+/// an <see cref="IExpressionScope"/>; an unresolved name (or an unknown <c>@name</c> without arguments) becomes
+/// <see cref="UnknownRef"/>, never an error. Function arity is not checked. Deterministic; no I/O.
 /// </summary>
 public static class ExpressionParser
 {
-    private static readonly Dictionary<string, ReservedVariable> Reserved = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["health"] = ReservedVariable.Health,
-        ["maxhealth"] = ReservedVariable.MaxHealth,
-        ["attack"] = ReservedVariable.Attack,
-        ["defense"] = ReservedVariable.Defense,
-        ["defence"] = ReservedVariable.Defense,
-        ["level"] = ReservedVariable.Level,
-        ["manna"] = ReservedVariable.Manna,
-        ["mana"] = ReservedVariable.Manna,
-        ["maxmanna"] = ReservedVariable.MaxManna,
-        ["maxmana"] = ReservedVariable.MaxManna,
-        ["kingdom"] = ReservedVariable.Kingdom,
-        ["x"] = ReservedVariable.X,
-        ["y"] = ReservedVariable.Y,
-        ["gold"] = ReservedVariable.Gold,
-        ["stone"] = ReservedVariable.Stone,
-        ["food"] = ReservedVariable.Food,
-        ["wood"] = ReservedVariable.Wood,
-    };
+    private static readonly Dictionary<string, ReservedVariable> Reserved = BuildReserved();
 
-    private static readonly Dictionary<string, CallKind> Functions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["gold"] = CallKind.Gold,
-        ["stone"] = CallKind.Stone,
-        ["food"] = CallKind.Food,
-        ["wood"] = CallKind.Wood,
-        ["rnd"] = CallKind.Rnd,
-    };
+    private static readonly Dictionary<string, CallKind> Functions = BuildFunctions();
 
     /// <summary>Whether <paramref name="name"/> (without <c>$</c>) is a reserved variable.</summary>
     public static bool IsReserved(string name) => Reserved.ContainsKey(name);
 
-    /// <summary>The canonical spelling of a reserved variable, e.g. <c>$maxhealth</c>.</summary>
-    public static string Spelling(ReservedVariable variable) => "$" + variable.ToString().ToLowerInvariant();
+    /// <summary>The canonical spelling of a reserved variable, e.g. <c>$maxhealth</c> (the game's <c>$defence</c>).</summary>
+    public static string Spelling(ReservedVariable variable)
+        => variable == ReservedVariable.Defense ? "$defence" : "$" + variable.ToString().ToLowerInvariant();
+
+    /// <summary>The canonical spelling of a function, e.g. <c>@kingdomcanrescue</c>.</summary>
+    public static string Spelling(CallKind function) => "@" + function.ToString().ToLowerInvariant();
 
     /// <summary>Parses <paramref name="source"/>. Never throws for bad input: errors go to <see cref="ExpressionDef.Error"/>.</summary>
     public static ExpressionDef Parse(string source, IExpressionScope scope)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(scope);
-        if (source.AsSpan().Trim().Length == 0)
-        {
-            return new ExpressionDef(source, null);
-        }
-
         try
         {
-            Expr root = new Parser(source, scope).ParseAll();
+            Expr? root = new Parser(source, scope).ParseAll();
             return new ExpressionDef(source, root);
         }
         catch (FormatException e)
@@ -85,6 +63,33 @@ public static class ExpressionParser
         }
     }
 
+    private static Dictionary<string, ReservedVariable> BuildReserved()
+    {
+        var map = new Dictionary<string, ReservedVariable>(StringComparer.OrdinalIgnoreCase);
+        foreach (ReservedVariable v in Enum.GetValues<ReservedVariable>())
+        {
+            map[v.ToString()] = v;
+        }
+
+        map["defence"] = ReservedVariable.Defense;
+        map["mana"] = ReservedVariable.Manna;
+        map["maxmana"] = ReservedVariable.MaxManna;
+        return map;
+    }
+
+    private static Dictionary<string, CallKind> BuildFunctions()
+    {
+        var map = new Dictionary<string, CallKind>(StringComparer.OrdinalIgnoreCase);
+        foreach (CallKind k in Enum.GetValues<CallKind>())
+        {
+            map[k.ToString()] = k;
+        }
+
+        return map;
+    }
+
+    private static bool TakesText(CallKind kind) => kind is CallKind.Str or CallKind.PlayMovie;
+
     private enum Kind
     {
         End,
@@ -92,6 +97,7 @@ public static class ExpressionParser
         Variable,
         Identifier,
         Function,
+        Text,
         Op,
     }
 
@@ -109,15 +115,34 @@ public static class ExpressionParser
             _scope = scope;
         }
 
-        public Expr ParseAll()
+        public Expr? ParseAll()
         {
-            Expr e = Assignment();
-            if (Peek.Kind != Kind.End)
+            var statements = ImmutableArray.CreateBuilder<Expr>();
+            while (true)
             {
-                throw Error($"unexpected '{Peek.Text}'");
+                while (IsOp(";"))
+                {
+                    Next();
+                }
+
+                if (Peek.Kind == Kind.End)
+                {
+                    break;
+                }
+
+                statements.Add(Assignment());
+                if (Peek.Kind != Kind.End && !IsOp(";"))
+                {
+                    throw Error($"unexpected '{Peek.Text}'");
+                }
             }
 
-            return e;
+            return statements.Count switch
+            {
+                0 => null,
+                1 => statements[0],
+                _ => new SequenceExpr(statements.ToImmutable()),
+            };
         }
 
         private Token Peek => _tokens[_index];
@@ -242,17 +267,23 @@ public static class ExpressionParser
 
         private Expr Variable(string name)
         {
-            if (Reserved.TryGetValue(name, out ReservedVariable reserved))
+            // '$' names may be reserved; '#' names are always user variables and keep their '#' (ADR 0120).
+            if (name[0] == '$' && Reserved.TryGetValue(name[1..], out ReservedVariable reserved))
             {
                 return new ReservedVar(reserved);
             }
 
-            int index = _scope.UserVariable(name);
-            return index >= 0 ? new UserVar(index) : new UnknownRef("$" + name);
+            int index = _scope.UserVariable(name[0] == '$' ? name[1..] : name);
+            return index >= 0 ? new UserVar(index) : new UnknownRef(name);
         }
 
         private Expr Name(string name)
         {
+            if (name[0] == '@')
+            {
+                return new UnknownRef(name);
+            }
+
             int index = _scope.Event(name);
             if (index >= 0)
             {
@@ -272,6 +303,11 @@ public static class ExpressionParser
                 throw Error($"unknown function '{t.Text}'");
             }
 
+            if (Peek.Kind == Kind.Text)
+            {
+                return new CallExpr(kind, ImmutableArray.Create<Expr>(new TextArg(Next().Text)));
+            }
+
             Expect("(");
             var args = ImmutableArray.CreateBuilder<Expr>();
             if (!IsOp(")"))
@@ -285,12 +321,6 @@ public static class ExpressionParser
             }
 
             Expect(")");
-            int expected = kind == CallKind.Rnd ? 2 : 1;
-            if (args.Count != expected)
-            {
-                throw Error($"'{name}' takes {expected} argument(s), got {args.Count}");
-            }
-
             return new CallExpr(kind, args.ToImmutable());
         }
 
@@ -311,6 +341,17 @@ public static class ExpressionParser
             while (i < s.Length)
             {
                 char c = s[i];
+                if (c is '\r' or '\n' or ';')
+                {
+                    if (tokens.Count == 0 || tokens[^1] is not { Kind: Kind.Op, Text: ";" })
+                    {
+                        tokens.Add(new Token(Kind.Op, ";", i));
+                    }
+
+                    i++;
+                    continue;
+                }
+
                 if (char.IsWhiteSpace(c))
                 {
                     i++;
@@ -327,7 +368,7 @@ public static class ExpressionParser
 
                     tokens.Add(new Token(Kind.Number, s[start..i], start));
                 }
-                else if (c == '$' || c == '@' || IsIdentifierStart(c))
+                else if (c is '$' or '@' or '#' || IsIdentifierStart(c))
                 {
                     i++;
                     while (i < s.Length && IsIdentifierPart(s[i]))
@@ -336,20 +377,32 @@ public static class ExpressionParser
                     }
 
                     string text = s[start..i];
-                    if (text.Length == 1 && c is '$' or '@')
+                    if (text.Length == 1 && c is '$' or '@' or '#')
                     {
                         throw new FormatException($"'{c}' without a name at position {start + 1}");
                     }
 
                     int j = i;
-                    while (j < s.Length && char.IsWhiteSpace(s[j]))
+                    while (j < s.Length && s[j] is ' ' or '\t')
                     {
                         j++;
                     }
 
-                    bool call = c == '@' || (j < s.Length && s[j] == '(' && Functions.ContainsKey(text));
-                    Kind kind = c == '$' ? Kind.Variable : call ? Kind.Function : Kind.Identifier;
-                    tokens.Add(new Token(kind, c == '$' ? text[1..] : text, start));
+                    bool paren = j < s.Length && s[j] == '(';
+                    bool known = Functions.TryGetValue(text.TrimStart('@'), out CallKind kind);
+                    Kind tokenKind = c is '$' or '#' ? Kind.Variable : (paren && (c == '@' || known)) ? Kind.Function : Kind.Identifier;
+                    tokens.Add(new Token(tokenKind, text, start));
+                    if (tokenKind == Kind.Function && known && TakesText(kind))
+                    {
+                        int close = s.IndexOf(')', j);
+                        if (close < 0)
+                        {
+                            throw new FormatException($"missing ')' at position {s.Length + 1}");
+                        }
+
+                        tokens.Add(new Token(Kind.Text, s[(j + 1)..close].Trim(), j + 1));
+                        i = close + 1;
+                    }
                 }
                 else
                 {

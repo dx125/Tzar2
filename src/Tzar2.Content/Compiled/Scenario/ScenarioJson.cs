@@ -220,6 +220,14 @@ public static class ScenarioJson
                     w.WriteNumber("count", t.Count);
                     w.WriteString("quantifier", t.Quantifier.ToString());
                     break;
+                case CategoryObjects c:
+                    w.WriteString("kind", "category");
+                    w.WriteString("category", c.Category.ToString());
+                    w.WriteNumber("players", c.Players);
+                    w.WriteString("comparison", c.Comparison.ToString());
+                    w.WriteNumber("count", c.Count);
+                    w.WriteString("quantifier", c.Quantifier.ToString());
+                    break;
                 default:
                     throw new ArgumentException($"Unknown object spec {spec.GetType().Name}.");
             }
@@ -448,6 +456,10 @@ public static class ScenarioJson
                 case UnlockViewAction:
                     w.WriteString("kind", "unlockView");
                     break;
+                case DelayAction x:
+                    w.WriteString("kind", "delay");
+                    w.WriteNumber("time", x.TimeMs);
+                    break;
                 case UnknownAction x:
                     w.WriteString("kind", "unknown");
                     w.WriteNumber("code", x.LegacyCode);
@@ -650,6 +662,7 @@ public static class ScenarioJson
             return Str(e, "kind") switch
             {
                 "named" => new NamedObjects(Ints(e, "objects"), Enum<Quantifier>(e, "quantifier")),
+                "category" => new CategoryObjects(Enum<ObjectCategory>(e, "category"), Mask(e, "players"), Enum<CountComparison>(e, "comparison"), Int(e, "count"), Enum<Quantifier>(e, "quantifier")),
                 "typed" => new TypedObjects(Str(e, "type"), Mask(e, "players"), Enum<CountComparison>(e, "comparison"), Int(e, "count"), Enum<Quantifier>(e, "quantifier")),
                 string k => throw new JsonException($"unknown object spec '{k}'"),
             };
@@ -716,6 +729,7 @@ public static class ScenarioJson
                 "spawnObject" => new SpawnObjectAction(n, Str(e, "type"), Int(e, "owner"), Int(e, "count"), Area(e, "area")),
                 "stopTimer" => new StopTimerAction(n, Int(e, "timer")),
                 "unlockView" => new UnlockViewAction(n),
+                "delay" => new DelayAction(n, Int(e, "time")),
                 "unknown" => new UnknownAction(n, Int(e, "code"), ImmutableArray.Create(e.GetProperty("raw").GetBytesFromBase64())),
                 string k => throw new JsonException($"unknown action kind '{k}'"),
             };

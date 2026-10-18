@@ -39,6 +39,33 @@ public sealed record NamedObjects(EquatableArray<int> ObjectIndices, Quantifier 
 /// <param name="Quantifier">All or Any.</param>
 public sealed record TypedObjects(string TypeKey, ushort Players, CountComparison Comparison, int Count, Quantifier Quantifier) : ObjectSpec;
 
+/// <summary>Object categories of the original editor's type filter (ADR 0120).</summary>
+public enum ObjectCategory : byte
+{
+    /// <summary>Any object.</summary>
+    AnyObject,
+
+    /// <summary>"Major objects" (⚠ UNVERIFIED which classes count, UNK-75).</summary>
+    MajorObjects,
+
+    /// <summary>Units.</summary>
+    Units,
+
+    /// <summary>Military units.</summary>
+    MilitaryUnits,
+
+    /// <summary>Buildings.</summary>
+    Buildings,
+}
+
+/// <summary>Objects of a category owned by some players, counted (like <see cref="TypedObjects"/> without a type).</summary>
+/// <param name="Category">The category.</param>
+/// <param name="Players">Legacy players, bit 0 = player 1.</param>
+/// <param name="Comparison">At least / at most.</param>
+/// <param name="Count">The count.</param>
+/// <param name="Quantifier">All or Any.</param>
+public sealed record CategoryObjects(ObjectCategory Category, ushort Players, CountComparison Comparison, int Count, Quantifier Quantifier) : ObjectSpec;
+
 /// <summary>An area (Appendix C.4): a tile rectangle, or the current position of an object.</summary>
 public abstract record AreaSpec;
 
