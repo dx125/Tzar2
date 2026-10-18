@@ -31,7 +31,7 @@ public sealed class MultiplayerCommandTests : IDisposable
     [Fact]
     public void A_recorded_replay_verifies_and_a_tampered_one_does_not()
     {
-        string file = Path.Combine(_dir, "a.t2rep");
+        string file = Path.Combine(_dir, "new folder", "a.t2rep"); // record creates the folder
         (int code, string output, string error) = Run("replay", "record", "--synthetic", "--players", "2", "--ticks", "300", "--size", "64", "--out", file);
         Assert.True(code == ExitCodes.Success, error);
         Assert.Contains("recorded 300 ticks", output, StringComparison.Ordinal);

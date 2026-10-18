@@ -241,6 +241,11 @@ internal static class ReplayCommand
         using var session = new GameSession(setup, content.Ruleset, fog: false);
         session.Step(ticks);
         byte[] replay = session.FinishReplay()!;
+        if (Path.GetDirectoryName(Path.GetFullPath(output)) is { } folder)
+        {
+            Directory.CreateDirectory(folder);
+        }
+
         File.WriteAllBytes(output, replay);
         stdout.WriteLine(string.Create(CultureInfo.InvariantCulture, $"recorded {ticks} ticks of {players} computer kingdoms on {source.Name} to {output} ({replay.Length} bytes), final {session.Simulation.ComputeStateHash():X16}"));
         return ExitCodes.Success;
