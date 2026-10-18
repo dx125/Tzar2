@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Tzar2.Content.Compiled;
+using Tzar2.Sim;
 
 namespace Tzar2.Game.Session;
 
@@ -57,6 +58,36 @@ public sealed record MatchSetup
 
     /// <summary>Population limit (lobby POPULATION LIMIT), or -1 for the ruleset default.</summary>
     public int PopulationLimit { get; init; } = -1;
+
+    /// <summary>Victory condition (GAME-17; the skirmish default is Standard).</summary>
+    public VictoryCondition Victory { get; init; } = VictoryCondition.Standard;
+
+    /// <summary>Game type (GAME-17).</summary>
+    public GameType GameType { get; init; } = GameType.Standard;
+
+    /// <summary>Score limit of <see cref="VictoryCondition.ScoreLimit"/>.</summary>
+    public int ScoreLimit { get; init; } = 10_000;
+
+    /// <summary>Time limit (minutes) of <see cref="VictoryCondition.TimeLimit"/>.</summary>
+    public int TimeLimitMinutes { get; init; } = 60;
+
+    /// <summary>No Fog (GAME-12).</summary>
+    public bool NoFog { get; init; }
+
+    /// <summary>Explore: the map starts explored (GAME-12).</summary>
+    public bool Explored { get; init; }
+
+    /// <summary>Day/night cycle (GAME-16).</summary>
+    public bool DayNight { get; init; } = true;
+
+    /// <summary>Weather (GAME-16).</summary>
+    public bool Weather { get; init; } = true;
+
+    /// <summary>Teams, 4 bits per slot (GAME-13; see <see cref="SimulationConfig.Teams"/>).</summary>
+    public ulong Teams { get; init; }
+
+    /// <summary>Cheats (the <c>hm*</c> codes) allowed: a sandbox or a lobby where every player agreed (GAME-19).</summary>
+    public bool CheatsAllowed { get; init; }
 
     /// <summary>The slot the local player controls.</summary>
     public byte LocalPlayer

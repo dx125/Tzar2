@@ -33,13 +33,11 @@ public sealed class GameSession : IDisposable
     private readonly List<SimEvent> _events = [];
     private readonly IPlayerController?[] _controllers;
     private readonly FrameExchange _frames = new();
-    private readonly FogOfWar? _fog;
+    private readonly bool _fog;
     private Thread? _thread;
     private volatile bool _stop;
     private volatile int _speedIndex = 3;
     private volatile bool _paused;
-    private int _defeated;
-    private MatchOutcome _outcome;
     private Exception? _fault;
 
     /// <summary>Creates the match at tick 0.</summary>
@@ -66,6 +64,16 @@ public sealed class GameSession : IDisposable
                 PlayerCount = setup.Players.Count,
                 StartingResources = setup.StartingResources,
                 PopulationLimit = setup.PopulationLimit,
+                Victory = setup.Victory,
+                GameType = setup.GameType,
+                ScoreLimit = setup.ScoreLimit,
+                TimeLimitMinutes = setup.TimeLimitMinutes,
+                NoFog = setup.NoFog,
+                Explored = setup.Explored,
+                DayNight = setup.DayNight,
+                Weather = setup.Weather,
+                Teams = setup.Teams,
+                CheatsAllowed = setup.CheatsAllowed,
             });
         _controllers = new IPlayerController?[setup.Players.Count];
         foreach (PlayerSetup p in setup.Players)
@@ -76,8 +84,7 @@ public sealed class GameSession : IDisposable
             }
         }
 
-        _fog = fog ? new FogOfWar(Map.Width, Map.Height) : null;
-        _fog?.Update(Simulation.World, LocalPlayer);
+        _fog = fog;
         Publish();
     }
 
@@ -244,7 +251,7 @@ public sealed class GameSession : IDisposable
                 }
             }
 
-            if (_controllers[slot] is { } controller && (_defeated & (1 << slot)) == 0)
+            if (_controllers[slot] is { } controller && (world.Players[slot].Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious)) == 0)
             {
                 _batch.Clear();
                 controller.Think(world, (byte)slot, _batch);
@@ -254,15 +261,6 @@ public sealed class GameSession : IDisposable
 
         Simulation.Tick(_tickSet);
         Interlocked.Increment(ref _ticksRun);
-        if (_fog is not null && world.Tick.Value % FogOfWar.IntervalTicks == 0)
-        {
-            _fog.Update(world, LocalPlayer);
-        }
-
-        if (world.Tick.Value % 20 == 0)
-        {
-            UpdateOutcome(world);
-        }
 
         lock (_gate)
         {
@@ -276,41 +274,38 @@ public sealed class GameSession : IDisposable
         Publish();
     }
 
-    // ⚠ PLACEHOLDER victory rule (ADR 0070) until the sim has GAME victory conditions: a kingdom with no units and no
-    // buildings left is defeated; the local player wins when every other kingdom is.
-    private void UpdateOutcome(World world)
+    /// <summary>
+    /// Submits a chat line typed by the local player: an <c>hm*</c> code becomes its cheat command (GAME-19; the sim refuses
+    /// it unless the match allows cheats). Other text is chat, which needs multiplayer (M6).
+    /// </summary>
+    /// <param name="text">The line.</param>
+    /// <param name="x">Where <c>hmspawn</c> spawns (world units; e.g. the view centre).</param>
+    /// <param name="y">Where <c>hmspawn</c> spawns.</param>
+    public bool SubmitChat(string text, int x = 0, int y = 0)
     {
-        int alive = 0;
-        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
-        Span<Sim.Components.Identity> identities = world.Identities.Components;
-        for (int i = 0; i < ids.Length; i++)
+        var batch = new CommandList();
+        if (!Input.CheatCodes.TryParse(text, Ruleset, batch, x, y))
         {
-            byte owner = identities[i].Owner;
-            if (owner < 32 && world.Ruleset.EntityTypes[identities[i].TypeId].Traits.Category is EntityCategory.Unit or EntityCategory.Building)
-            {
-                alive |= 1 << owner;
-            }
+            return false;
         }
 
-        int all = (1 << _controllers.Length) - 1;
-        _defeated = all & ~alive;
-        if (_outcome == MatchOutcome.None)
-        {
-            if ((_defeated & (1 << LocalPlayer)) != 0)
-            {
-                _outcome = MatchOutcome.Defeat;
-            }
-            else if (_controllers.Length > 1 && (_defeated | (1 << LocalPlayer)) == all)
-            {
-                _outcome = MatchOutcome.Victory;
-            }
-        }
+        Submit(batch);
+        return true;
+    }
+
+    // GAME-17: the outcome follows the sim's victory evaluation (VictorySystem).
+    private MatchOutcome Outcome()
+    {
+        PlayerFlags flags = Simulation.World.Players[LocalPlayer].Flags;
+        return (flags & PlayerFlags.Victorious) != 0 ? MatchOutcome.Victory
+            : (flags & PlayerFlags.Defeated) != 0 ? MatchOutcome.Defeat
+            : MatchOutcome.None;
     }
 
     private void Publish()
     {
         GameFrame frame = _frames.Back;
-        FrameBuilder.Fill(frame, Simulation.World, _fog, _defeated, _outcome);
+        FrameBuilder.Fill(frame, Simulation.World, _fog ? LocalPlayer : null, Outcome());
         frame.SpeedPercent = SpeedPercent;
         frame.Paused = _paused;
         _frames.Publish();

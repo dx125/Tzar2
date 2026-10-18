@@ -62,7 +62,9 @@ public sealed class SessionTests
         Assert.True(fresh);
         Assert.Equal(300, frame.Tick.Value);
         Assert.Equal(300, session.TicksRun);
-        Assert.Equal(session.Simulation.World.Identities.Count, frame.EntityCount);
+        // GAME-12: the frame shows what the local kingdom sees (units in sight, structures as last seen).
+        Assert.True(frame.EntityCount <= session.Simulation.World.Identities.Count + 64);
+        Assert.All(frame.Entities.ToArray(), e => Assert.True(e.Owner == 0 || e.Remembered || session.Simulation.World.Visibility.CanSee(session.Simulation.World, 0, e.Id)));
         Assert.Equal(2, frame.Players.Length);
         Assert.Equal(64 * 64, frame.Visibility.Length);
         Assert.Contains(frame.Visibility, v => v == 2);
@@ -73,7 +75,7 @@ public sealed class SessionTests
         var events = new List<SimEvent>();
         session.DrainEvents(events);
         Assert.NotEmpty(events);
-        Assert.Contains(frame.Entities.ToArray(), e => e.Owner == 1 && e.Activity is UnitActivity.Walk or UnitActivity.Chop or UnitActivity.Mine);
+        Assert.Contains(session.Simulation.World.Motions.Components.ToArray(), m => m.State == Tzar2.Sim.Components.MotionState.Moving);
         events.Clear();
         session.DrainEvents(events);
         Assert.Empty(events);
@@ -123,7 +125,7 @@ public sealed class SessionTests
     public void A_skirmish_runs_on_a_random_map(Tzar2.Content.MapGen.RandomMapType type)
     {
         MatchSetup setup = Setup() with { Map = new RandomMapSource(type, size: Tzar2.Content.MapGen.RandomMapSize.Tiny) };
-        using var session = new GameSession(setup, Rules.Value);
+        using var session = new GameSession(setup, Rules.Value, fog: false);
         Assert.NotNull(session.Map.TerrainSet);
         session.Step(100);
         GameFrame frame = session.AcquireFrame(out _)!;
@@ -135,7 +137,7 @@ public sealed class SessionTests
     public void A_right_click_on_an_enemy_unit_ends_in_a_kill()
     {
         // The client's order path end to end: frame entities -> EntityInfo -> OrderResolver -> session -> sim.
-        using var session = new GameSession(Setup(), Rules.Value, _ => new IdleController());
+        using var session = new GameSession(Setup(), Rules.Value, _ => new IdleController(), fog: false);
         World world = session.Simulation.World;
         FrameEntity[] all = session.AcquireFrame(out _)!.Entities.ToArray();
         EntityInfo Info(FrameEntity e)
@@ -351,7 +353,7 @@ public sealed class SessionTests
         }
     }
 
-    private sealed class IdleController : IPlayerController
+    internal sealed class IdleController : IPlayerController
     {
         public void Think(World world, byte player, CommandList batch)
         {
