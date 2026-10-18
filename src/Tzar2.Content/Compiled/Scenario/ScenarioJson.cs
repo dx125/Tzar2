@@ -57,7 +57,8 @@ public static class ScenarioJson
         }
     }
 
-    private static byte[] NormaliseNewlines(ReadOnlySpan<byte> bytes)
+    /// <summary>Drops CR bytes (Utf8JsonWriter writes Environment.NewLine) and ends with one LF: platform-independent bytes.</summary>
+    internal static byte[] NormaliseNewlines(ReadOnlySpan<byte> bytes)
     {
         var output = new List<byte>(bytes.Length);
         foreach (byte b in bytes)

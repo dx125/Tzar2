@@ -1120,43 +1120,47 @@ public static class LegacyMapConverter
             return new ConversationDef(c.Name, phrases.ToImmutable());
         }
 
+        // Iterative depth-first search (phrase graphs of untrusted maps may be long chains).
         private static bool HasCycle(ImmutableArray<PhraseDef>.Builder phrases)
         {
             var state = new byte[phrases.Count];
-            for (int i = 0; i < phrases.Count; i++)
+            var stack = new Stack<(int Node, int Next)>();
+            for (int start = 0; start < phrases.Count; start++)
             {
-                if (Visit(i))
+                if (state[start] != 0)
                 {
-                    return true;
+                    continue;
+                }
+
+                state[start] = 1;
+                stack.Push((start, 0));
+                while (stack.Count > 0)
+                {
+                    (int node, int next) = stack.Pop();
+                    EquatableArray<int> follow = phrases[node].FollowUps;
+                    if (next < follow.Length)
+                    {
+                        stack.Push((node, next + 1));
+                        int f = follow[next];
+                        if (state[f] == 1)
+                        {
+                            return true;
+                        }
+
+                        if (state[f] == 0)
+                        {
+                            state[f] = 1;
+                            stack.Push((f, 0));
+                        }
+                    }
+                    else
+                    {
+                        state[node] = 2;
+                    }
                 }
             }
 
             return false;
-
-            bool Visit(int i)
-            {
-                if (state[i] == 1)
-                {
-                    return true;
-                }
-
-                if (state[i] == 2)
-                {
-                    return false;
-                }
-
-                state[i] = 1;
-                foreach (int f in phrases[i].FollowUps)
-                {
-                    if (Visit(f))
-                    {
-                        return true;
-                    }
-                }
-
-                state[i] = 2;
-                return false;
-            }
         }
 
         private ExpressionDef Expr(string text, string at)

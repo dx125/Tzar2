@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Compiled.Scenario.Expressions;
@@ -56,6 +57,28 @@ public class ScenarioTests
         Assert.Null(e.Root);
         Assert.NotNull(e.Error);
         Assert.Equal(source, e.Source);
+    }
+
+    [Fact]
+    public void Deep_nesting_is_an_error_not_a_stack_overflow()
+    {
+        var scope = new RecordingScope([], []);
+        Assert.Contains("deeper", ExpressionParser.Parse(new string('!', 100_000) + "1", scope).Error, StringComparison.Ordinal);
+        Assert.Contains("deeper", ExpressionParser.Parse(new string('(', 5_000) + "1" + new string(')', 5_000), scope).Error, StringComparison.Ordinal);
+        Assert.Contains("deeper", ExpressionParser.Parse(string.Concat(Enumerable.Repeat("@max(1,", 1_000)) + "1" + new string(')', 1_000), scope).Error, StringComparison.Ordinal);
+        Assert.Null(ExpressionParser.Parse(new string('(', 60) + "1" + new string(')', 60), scope).Error);
+        Assert.Null(ExpressionParser.Parse(new string('-', 150) + "1", scope).Error);
+    }
+
+    [Fact]
+    public void Reserved_spellings_are_the_games()
+    {
+        Assert.Equal("$defence", ExpressionParser.Spelling(ReservedVariable.Defense));
+        Assert.Equal("$canusediplomacy", ExpressionParser.Spelling(ReservedVariable.CanUseDiplomacy));
+        foreach (ReservedVariable v in Enum.GetValues<ReservedVariable>())
+        {
+            Assert.True(ExpressionParser.IsReserved(ExpressionParser.Spelling(v)[1..]));
+        }
     }
 
     [Fact]

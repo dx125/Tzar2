@@ -62,17 +62,7 @@ public static class CampaignJson
             w.WriteEndObject();
         }
 
-        var bytes = new List<byte>(buffer.WrittenCount + 1);
-        foreach (byte b in buffer.WrittenSpan)
-        {
-            if (b != (byte)'\r')
-            {
-                bytes.Add(b);
-            }
-        }
-
-        bytes.Add((byte)'\n');
-        return bytes.ToArray();
+        return ScenarioJson.NormaliseNewlines(buffer.WrittenSpan);
     }
 
     /// <summary>Decodes a document written by <see cref="Write"/>.</summary>

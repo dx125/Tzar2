@@ -34,6 +34,38 @@ public interface IExpressionScope
 /// </summary>
 public static class ExpressionParser
 {
+    /// <summary>Deepest nesting of operators, parentheses and calls a parse accepts (untrusted community maps).</summary>
+    public const int MaxDepth = 200;
+
+    // Canonical spellings, as the original game spells them (docs/formats/wmp.md §9); not derived from enum names.
+    private static readonly Dictionary<ReservedVariable, string> ReservedSpelling = new()
+    {
+        [ReservedVariable.Health] = "$health",
+        [ReservedVariable.MaxHealth] = "$maxhealth",
+        [ReservedVariable.Attack] = "$attack",
+        [ReservedVariable.Defense] = "$defence",
+        [ReservedVariable.Level] = "$level",
+        [ReservedVariable.Manna] = "$manna",
+        [ReservedVariable.MaxManna] = "$maxmanna",
+        [ReservedVariable.Kingdom] = "$kingdom",
+        [ReservedVariable.X] = "$x",
+        [ReservedVariable.Y] = "$y",
+        [ReservedVariable.Gold] = "$gold",
+        [ReservedVariable.Stone] = "$stone",
+        [ReservedVariable.Food] = "$food",
+        [ReservedVariable.Wood] = "$wood",
+        [ReservedVariable.Difficulty] = "$difficulty",
+        [ReservedVariable.UnderFog] = "$underfog",
+        [ReservedVariable.Flags] = "$flags",
+        [ReservedVariable.Program] = "$program",
+        [ReservedVariable.InHolder] = "$inholder",
+        [ReservedVariable.IsSelected] = "$isselected",
+        [ReservedVariable.Cargo] = "$cargo",
+        [ReservedVariable.Race] = "$race",
+        [ReservedVariable.CanUseDiplomacy] = "$canusediplomacy",
+        [ReservedVariable.CanDelObjects] = "$candelobjects",
+    };
+
     private static readonly Dictionary<string, ReservedVariable> Reserved = BuildReserved();
 
     private static readonly Dictionary<string, CallKind> Functions = BuildFunctions();
@@ -42,8 +74,7 @@ public static class ExpressionParser
     public static bool IsReserved(string name) => Reserved.ContainsKey(name);
 
     /// <summary>The canonical spelling of a reserved variable, e.g. <c>$maxhealth</c> (the game's <c>$defence</c>).</summary>
-    public static string Spelling(ReservedVariable variable)
-        => variable == ReservedVariable.Defense ? "$defence" : "$" + variable.ToString().ToLowerInvariant();
+    public static string Spelling(ReservedVariable variable) => ReservedSpelling[variable];
 
     /// <summary>The canonical spelling of a function, e.g. <c>@kingdomcanrescue</c>.</summary>
     public static string Spelling(CallKind function) => "@" + function.ToString().ToLowerInvariant();
@@ -69,10 +100,10 @@ public static class ExpressionParser
         var map = new Dictionary<string, ReservedVariable>(StringComparer.OrdinalIgnoreCase);
         foreach (ReservedVariable v in Enum.GetValues<ReservedVariable>())
         {
-            map[v.ToString()] = v;
+            map[ReservedSpelling[v][1..]] = v;
         }
 
-        map["defence"] = ReservedVariable.Defense;
+        map["defense"] = ReservedVariable.Defense;
         map["mana"] = ReservedVariable.Manna;
         map["maxmana"] = ReservedVariable.MaxManna;
         return map;
@@ -110,6 +141,7 @@ public static class ExpressionParser
         private readonly List<Token> _tokens;
         private readonly IExpressionScope _scope;
         private int _index;
+        private int _depth;
 
         public Parser(string source, IExpressionScope scope)
         {
@@ -156,6 +188,27 @@ public static class ExpressionParser
         private FormatException Error(string message) => new($"{message} at position {Peek.Position + 1}");
 
         private Expr Assignment()
+        {
+            Enter();
+            try
+            {
+                return AssignmentBody();
+            }
+            finally
+            {
+                _depth--;
+            }
+        }
+
+        private void Enter()
+        {
+            if (++_depth > MaxDepth)
+            {
+                throw Error($"expression nested deeper than {MaxDepth}");
+            }
+        }
+
+        private Expr AssignmentBody()
         {
             Expr left = Or();
             if (!IsOp("="))
@@ -215,6 +268,19 @@ public static class ExpressionParser
         }
 
         private Expr Unary()
+        {
+            Enter();
+            try
+            {
+                return UnaryBody();
+            }
+            finally
+            {
+                _depth--;
+            }
+        }
+
+        private Expr UnaryBody()
         {
             if (IsOp("!"))
             {
