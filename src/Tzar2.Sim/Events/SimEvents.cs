@@ -123,6 +123,54 @@ public enum SimEventKind : ushort
 
     /// <summary>Mercenaries or a hero were hired (GAME-14): Entity = the first unit, X = offer slot, Y = units, Arg = type id.</summary>
     Hired = 53,
+
+    // Scenario presentation (legacy triggers, REQ-SCR-03; ADR 0131): values 60-79. Player = 0xFF and X = the targeted
+    // kingdoms (bit = slot) unless stated; Arg = the action index in the scenario, whose texts the game layer resolves.
+
+    /// <summary>Add Quest (Appendix C.7 #1): quest Arg (the Add Quest action index) joins the quest list (F8).</summary>
+    QuestAdded = 60,
+
+    /// <summary>Remove Quest: quest Arg left the quest list.</summary>
+    QuestRemoved = 61,
+
+    /// <summary>Show Message: the pop-up of action Arg.</summary>
+    ScenarioMessage = 62,
+
+    /// <summary>Show Story Screen: the story screen of action Arg.</summary>
+    StoryScreen = 63,
+
+    /// <summary>Send Chat Message: the chat line of action Arg to kingdoms X.</summary>
+    ScenarioChat = 64,
+
+    /// <summary>Lock View: the camera is held on area centre (X, Y) world units for Arg ms (Player = 0xFF: everyone).</summary>
+    ViewLocked = 65,
+
+    /// <summary>Unlock View: the camera is free again.</summary>
+    ViewUnlocked = 66,
+
+    /// <summary>Scroll View: the camera moves to (X, Y) world units; Arg = the action index (its start area).</summary>
+    ViewScrolled = 67,
+
+    /// <summary>
+    /// A conversation waits for a choice: X = conversation index, Y = session serial, Arg = number of candidate phrases
+    /// (the game layer reads them from the controller's view).
+    /// </summary>
+    ConversationOffered = 68,
+
+    /// <summary>A phrase was said: X = conversation index, Y = phrase index, Arg = session serial.</summary>
+    PhraseSaid = 69,
+
+    /// <summary>A conversation ended: X = conversation index, Y = session serial, Arg = 1 when cut by the step guard.</summary>
+    ConversationEnded = 70,
+
+    /// <summary>
+    /// A scenario asked for the next campaign map (Load Map, Player Win, Player Lose): Arg = the action index; Y = 0 Load
+    /// Map, 1 win, 2 lose.
+    /// </summary>
+    MapRequested = 71,
+
+    /// <summary>A scenario error (an action that could not run, the CPU budget, a guard): X = rule, Y = action, Arg = <c>ScenarioFault</c>.</summary>
+    ScenarioFault = 72,
     // GAME-07…11 (ADRs 0090-0096): values 24-39.
 
     /// <summary>A projectile was fired (Entity = shooter, X, Y = where it is aimed, Arg = projectile id | flight ms &lt;&lt; 8).</summary>
@@ -239,6 +287,9 @@ public enum CommandRejection
 
     /// <summary>The tavern offer was already hired this period (GAME-14).</summary>
     OfferTaken = 36,
+
+    /// <summary>No scenario controller, or nothing waits for this player's reply (ADR 0131).</summary>
+    NoScenarioPrompt = 60,
     // GAME-07…11 (ADR 0096): values 15-29.
 
     /// <summary>The holder has no room left (GAME-09).</summary>

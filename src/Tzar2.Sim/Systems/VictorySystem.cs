@@ -239,7 +239,7 @@ public sealed class VictorySystem : ISimSystem
 
         for (int p = 0; p < players; p++)
         {
-            if (!alive[p] && (world.Players[p].Flags & PlayerFlags.Active) != 0)
+            if (!alive[p] && (world.Players[p].Flags & PlayerFlags.Active) != 0 && world.Scenario?.CannotLose(p) != true)
             {
                 Defeat(world, p);
             }
@@ -303,7 +303,7 @@ public sealed class VictorySystem : ISimSystem
                     team = _team[p];
                 }
 
-                if (team >= 0)
+                if (team >= 0 && MayWin(world, team))
                 {
                     Win(world, team);
                 }
@@ -314,7 +314,7 @@ public sealed class VictorySystem : ISimSystem
             case VictoryCondition.ScoreLimit:
             {
                 int best = BestTeam(world);
-                if (best >= 0 && _teamScore[best] >= world.Config.ScoreLimit)
+                if (best >= 0 && _teamScore[best] >= world.Config.ScoreLimit && MayWin(world, best))
                 {
                     Win(world, best);
                 }
@@ -325,7 +325,7 @@ public sealed class VictorySystem : ISimSystem
             case VictoryCondition.TimeLimit:
             {
                 long elapsedMs = (long)(world.Tick.Value + 1) * world.Config.TickLengthMilliseconds;
-                if (elapsedMs >= (long)world.Config.TimeLimitMinutes * 60_000 && BestTeam(world) is >= 0 and var best)
+                if (elapsedMs >= (long)world.Config.TimeLimitMinutes * 60_000 && BestTeam(world) is >= 0 and var best && MayWin(world, best))
                 {
                     Win(world, best);
                 }
@@ -333,6 +333,25 @@ public sealed class VictorySystem : ISimSystem
                 return;
             }
         }
+    }
+
+    // Change Player Status "cannot win" (ADR 0130): a team with such a kingdom does not win automatically.
+    private bool MayWin(World world, int team)
+    {
+        if (world.Scenario is not { } scenario)
+        {
+            return true;
+        }
+
+        for (int p = 0; p < _team.Length; p++)
+        {
+            if (_team[p] == team && scenario.CannotWin(p))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     // The team (lowest slot) with the highest summed score among teams with a kingdom still in the game.

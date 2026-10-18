@@ -44,4 +44,24 @@ public static class GameplayQueries
             && !world.Players[player].HasTechnology(technology) && !ResearchRules.IsResearchPending(world, player, technology)
             && ResearchRules.RequirementsMet(world, player, world.CivilizationOf(building), world.Ruleset.Technologies[technology].Requirements, []);
     }
+
+    /// <summary>The effective attack of a live armed entity (technologies, level, potions, items, status), else 0.</summary>
+    public static int AttackOf(World world, EntityId entity)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        if (!world.Entities.IsAlive(entity) || !world.Identities.Has(entity))
+        {
+            return 0;
+        }
+
+        EntityTypeDefinition type = world.TypeOf(entity);
+        return type.Traits.Armament is { } arm ? CombatStats.Attack(world, entity, type, arm) : 0;
+    }
+
+    /// <summary>The effective defence of a live entity, else 0.</summary>
+    public static int DefenceOf(World world, EntityId entity)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        return world.Entities.IsAlive(entity) && world.Identities.Has(entity) ? CombatStats.Defence(world, entity, world.TypeOf(entity)) : 0;
+    }
 }

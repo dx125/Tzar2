@@ -949,6 +949,20 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-40 | Cursor hotspots | Data/captures | P2 |
 | UNK-41 | Expression edge cases (division by zero, overflow, unknown variables) | Editor experiment | P2 |
 | UNK-42 | Building fire: health threshold at which buildings burn, fire damage per second, which types burn (GAME-03) | Measurement | P1 |
+| UNK-50 | Player Win/Lose effects on the other kingdoms | Editor experiment ([m4-placeholders.md](mechanics/m4-placeholders.md)) | P1 |
+| UNK-51 | Rule pass period and phase; event evaluation order | Timer experiments + captures | P1 |
+| UNK-52 | Extent of an area given as an object | Editor experiment | P2 |
+| UNK-53 | `@rnd` bounds | Editor experiment | P2 |
+| UNK-54 | Typed object specifications: All/Any with several kingdoms; what "destroyed"/"left" count | Editor experiments | P1 |
+| UNK-55 | Change Diplomacy Settings: one or both directions | Editor experiment | P2 |
+| UNK-56 | Explore Area: who sees it, extent, Reveal Fog | Captures | P2 |
+| UNK-57 | Object Order: order keys and targets | Editor experiments | P1 |
+| UNK-58 | Object property overrides (attack/defence/resistance/level) | Editor experiment + HUD reading | P2 |
+| UNK-59 | Empty expressions and reserved-variable writes | Editor experiments | P2 |
+| UNK-60 | Conversation details (who answers, single candidates, result timing, concurrent conversations) | Play converted conversations | P1 |
+| UNK-61 | Spawn Object placement and owner encoding; Lock Units scope | Editor experiments | P2 |
+| UNK-62 | Timer details (restart, stop, unstarted value) | Editor experiments | P2 |
+| UNK-63 | Not Appear objects whose spot is occupied | Editor experiment | P3 |
 | UNK-70 | Decoration placement: pixel offsets of ground objects/patches relative to their tile ([wmp.md §4.4](formats/wmp.md)) | Captures | P2 |
 | UNK-71 | Map header bytes 0x012/0x04C/0x11A/0x138–0x13A (game type, victory condition, fog, explore); kingdom resource order, AI flags, player type, shared-victory bit ([wmp.md §2–3](formats/wmp.md)) | Editor experiment | P1 |
 | UNK-72 | `defeat.messages` map member | Editor experiment | P3 |

@@ -273,6 +273,9 @@ public sealed partial class CommandSystem : ISimSystem
 
             case CommandKind.Cheat:
                 return KingdomCommands.Cheat(world, command);
+
+            case CommandKind.ScenarioReply:
+                return world.Scenario is { } scenario ? scenario.Reply(world, command) : CommandRejection.NoScenarioPrompt;
             case CommandKind.Board:
                 return CombatMagicCommands.Board(world, command, entities);
 
@@ -326,11 +329,13 @@ public sealed partial class CommandSystem : ISimSystem
     // commands and orders to holders themselves are not filtered.
     private ReadOnlySpan<EntityId> Actors(World world, CommandKind kind, ReadOnlySpan<EntityId> entities)
     {
-        if (kind is CommandKind.DebugKill or CommandKind.DebugSpawn or CommandKind.Unload || (world.Helds.Count == 0 && world.Statuses.Count == 0))
+        IScenarioController? scenario = world.Scenario;
+        if (kind is CommandKind.DebugKill or CommandKind.DebugSpawn || (scenario is null && (kind == CommandKind.Unload || (world.Helds.Count == 0 && world.Statuses.Count == 0))))
         {
             return entities;
         }
 
+        bool restrict = kind != CommandKind.Unload && (world.Helds.Count != 0 || world.Statuses.Count != 0);
         bool delete = kind == CommandKind.Delete;
         int n = 0;
         bool filtered = false;
@@ -341,7 +346,8 @@ public sealed partial class CommandSystem : ISimSystem
 
         foreach (EntityId e in entities)
         {
-            if (world.Entities.IsAlive(e) && !delete && (world.IsHeld(e) || !world.CanAct(e)))
+            // Lock Units (ADR 0130): the players' commands skip locked units, deletion included.
+            if (world.Entities.IsAlive(e) && ((restrict && !delete && (world.IsHeld(e) || !world.CanAct(e))) || (scenario is not null && scenario.IsLocked(e))))
             {
                 filtered = true;
                 continue;
