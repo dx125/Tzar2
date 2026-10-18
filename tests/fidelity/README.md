@@ -14,6 +14,7 @@ t2 fidelity analyze capture-....zip --extract tests/fidelity/local-captures/<ses
 * A fact becomes a test once the corresponding feature exists: the future `Tzar2.Fidelity.Tests` compare our
   simulation and renderer with these values within the S4/S5 tolerances.
 
-Committed so far: session `capture-20261018-024524` (first operator run, ADR 0111). `FidelityFactsTests` (Tzar2.Tools.Cli.Tests)
-checks the engine against the verified facts (shadow factor, player-colour order, RGB555 surface); the overall
+Committed so far: session `capture-20261018-024524` (first operator run, ADR 0111). `Tzar2.Fidelity.Tests` and
+`t2 fidelity report` check the engine against every measured fact (the suite of ADR 0112; `manual.yaml` holds values
+read by hand from capture images); the overall
 status is in [docs/mechanics/fidelity-summary.md](../../docs/mechanics/fidelity-summary.md).

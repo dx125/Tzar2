@@ -1,0 +1,30 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: day-clock
+title: Day length and night share (UNK-32)
+resolves: [UNK-32]
+priority: 4
+minutes: 14.5
+default: false                      # batch D
+description: |
+  The only scenario with day/night on. For 14 minutes a region holding the clock globe and a piece of the world view
+  is captured every 2 s; the view's brightness falls at dusk and rises at dawn, two equal crossings give the day
+  length. No input during the burst.
+launch: [-nomovies, -map, MP2.wmp]
+ini:
+  DEFAULTS.DAYNIGHT: 1
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - minimap: [0.5, 0.5]
+  - move: [70, 400]
+  - burst: {name: clock, count: 420, interval_ms: 2000, region: [138, 32, 212, 120]}
+analysis: [day-clock]

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2AppTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Fidelity.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../Shared/*.cs" Link="Shared/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tzar2.Tools.Cli/Tzar2.Tools.Cli.csproj" />
+  </ItemGroup>
+
+</Project>

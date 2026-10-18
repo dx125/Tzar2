@@ -101,7 +101,8 @@ public class ClientTypeReferenceTests
     [ClientAssemblyFact]
     public void The_compiled_client_uses_only_allowed_namespaces()
     {
-        using var stream = File.OpenRead(ClientAssembly);
+        // Read a private copy: a parallel build may hold or rewrite the DLL while this test runs (CI flake on #37).
+        using var stream = new MemoryStream(ReadShared(ClientAssembly));
         using var pe = new PEReader(stream);
         MetadataReader md = pe.GetMetadataReader();
         var bad = new SortedSet<string>(StringComparer.Ordinal);
@@ -127,5 +128,23 @@ public class ClientTypeReferenceTests
     {
         int dot = qualified.LastIndexOf('.');
         return dot > 0 ? qualified[..dot] : qualified;
+    }
+
+    private static byte[] ReadShared(string path)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var copy = new MemoryStream();
+                file.CopyTo(copy);
+                return copy.ToArray();
+            }
+            catch (IOException) when (attempt < 5)
+            {
+                System.Threading.Thread.Sleep(200 * attempt);
+            }
+        }
     }
 }

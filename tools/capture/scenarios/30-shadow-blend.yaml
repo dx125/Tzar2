@@ -6,6 +6,7 @@ title: Shadow darkening factor and overlap behaviour (UNK-03)
 resolves: [UNK-03]
 priority: 1
 minutes: 3
+default: false                      # measured by the first session (2026-10-18); rerun on request
 description: |
   Snapshots of busy areas (towns with buildings, forests) on two more maps, day/night and weather off. Shadowed
   terrain pixels are compared with the known texel underneath (terrain tiles are identified exactly), which gives

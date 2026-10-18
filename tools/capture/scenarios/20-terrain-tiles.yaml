@@ -6,6 +6,7 @@ title: Terrain tile and variant selection on the original maps (UNK-10)
 resolves: [UNK-10, UNK-03]
 priority: 2
 minutes: 4
+default: false                      # measured by the first session (2026-10-18); rerun on request
 description: |
   A 3x3 camera tour (minimap clicks) over three original maps covering the snow, grass and summer sets, with the
   map revealed and no fog. The analysis identifies the tile of every screen cell, aligns the view with the map's

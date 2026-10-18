@@ -5,7 +5,7 @@ id: attack-timing
 title: Attack period and damage per hit from the defender's hit points (UNK-07, UNK-08)
 resolves: [UNK-07, UNK-08]
 priority: 3
-minutes: 3
+minutes: 8.5
 experimental: true
 description: |
   Spawns a defender for kingdom 2 and an attacker for kingdom 1 next to it in an open grass band of MP2, and orders
@@ -13,8 +13,8 @@ description: |
   HEALTH value and narrowed to the values that stay put for a second. Three seconds into the fight the values that
   went down are the defender's hit points; they are sampled every 10 ms for 20 s (the first 4,096 stable addresses
   are sampled as well, as a fallback). The analysis picks the address that steps down repeatedly: the times between
-  steps are the attack period, the steps the damage. HEALTH/RATE values are the reference build's (DATA/EURO
-  UNITS.TXT).
+  steps are the attack period, the steps the damage. HEALTH, RATE, ATTACK and DEFENCE are the reference build's (European table; the first three pairs have the same
+  values in every civilization, so they do not depend on which civilization the cheat spawns).
   In the first session (2026-10-18) nothing fought: the spawned units stayed all-green figures (apparently waiting
   to be placed by a click) and "hmkingdom" changed nothing visible. Now every spawn is placed with a click, and the
   owner is set so that either reading of "hmkingdom N" works: it is sent before the spawn (if it switches the
@@ -22,10 +22,18 @@ description: |
   click clears the selection before switching back, and a minimap click restores the view after every switch.
 launch: [-nomovies, -map, MP2.wmp]
 trials:
+  - name: archer-vs-peon
+    vars: {attacker: archer, defender: peon, defender_hp: "50", rate_stat: "4", attack_stat: "5", defence_stat: "0"}
+  - name: peon-vs-peon
+    vars: {attacker: peon, defender: peon, defender_hp: "50", rate_stat: "3", attack_stat: "5", defence_stat: "0"}
+  - name: archer-vs-archer
+    vars: {attacker: archer, defender: archer, defender_hp: "50", rate_stat: "4", attack_stat: "5", defence_stat: "0"}
   - name: knight-vs-footman
-    vars: {attacker: knight, defender: footman, defender_hp: "65", rate_stat: "4"}
-  - name: archer-vs-maceman
-    vars: {attacker: archer, defender: maceman, defender_hp: "120", rate_stat: "4"}
+    vars: {attacker: knight, defender: footman, defender_hp: "65", rate_stat: "4", attack_stat: "12", defence_stat: "3"}
+  - name: footman-vs-footman
+    vars: {attacker: footman, defender: footman, defender_hp: "65", rate_stat: "5", attack_stat: "6", defence_stat: "3"}
+  - name: maceman-vs-pikeman
+    vars: {attacker: maceman, defender: pikeman, defender_hp: "75", rate_stat: "3", attack_stat: "8", defence_stat: "4"}
 steps:
   # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
   # the map. -explore / -nofog reveal nothing, the cheats do.

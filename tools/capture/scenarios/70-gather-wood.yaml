@@ -1,0 +1,47 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: gather-wood
+title: Load carried and trip time, a tree (UNK-17)
+resolves: [UNK-17]
+priority: 3
+minutes: 1.8
+default: false                      # batch B
+description: |
+  No cheats needed: a starting peasant of MP2 gathers from a tree near the castle while the stockpile is sampled from
+  memory (all four resources start at 1000 on this map). The analysis takes the stockpile counter that steps up: the
+  step is the load a peasant carries, the time between steps one trip (gathering plus walking). The HUD box that
+  changed between the "before" and "after" captures names the resource (the two rock piles are gold and stone).
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: wood
+    vars: {target: wood}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (first session, smoke/castle): peasants at (747, 480), (1005, 480), (747, 710).
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: before, game: false}
+  - memscan: {name: res-all, value: "1000", width: 4}
+  - wait: 1
+  - memscan: {name: res-stable, from: res-all, mode: unchanged}
+  # Select the peasant with a box (units only; the castle starts right of x = 790) so a camera off by up to ~35 px
+  # still finds it. Expected view: smoke/castle of session 1; if the camera lands elsewhere, move the box and targets.
+  - drag: {from: [705, 440], to: [785, 525]}
+  - click: {at: [690, 330], button: right}
+  - memsample: {name: res-stable-series, scan: res-stable, max_addresses: 4096, interval_ms: 100, duration_s: 70}
+  - wait: 30
+  - memscan: {name: res-up, from: res-stable, mode: increased}
+  - memsample: {name: res-series, scan: res-up, max_addresses: 256, interval_ms: 50, duration_s: 40}
+  - wait: 41
+  - snapshot: {name: after, game: false}
+analysis: [gather-rates]

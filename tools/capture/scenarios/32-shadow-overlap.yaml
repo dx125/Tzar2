@@ -1,0 +1,45 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: shadow-overlap
+title: Overlapping shadows (UNK-03 follow-up)
+resolves: [UNK-03]
+priority: 1
+minutes: 3
+description: |
+  The first session measured the shadow factor (c >> 1 per 5-bit channel) but saw few overlapping shadows. These
+  snapshots sit on forests and towns, where tree and building shadows overlap, on a grass and a summer map. The
+  shadow analysis counts the pixels that fit the rule applied twice (double darkening) against those that fit it once.
+launch: [-nomovies, -map, "${map}"]
+trials:
+  - name: mp2-forests
+    vars: {map: MP2.wmp}
+  - name: mp4-forests
+    vars: {map: MP4.wmp}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - snapshot: {name: castle, window: false}
+  - minimap: [0.3, 0.45]
+  - snapshot: {name: f1, window: false}
+  - minimap: [0.7, 0.45]
+  - snapshot: {name: f2, window: false}
+  - minimap: [0.3, 0.6]
+  - snapshot: {name: f3, window: false}
+  - minimap: [0.7, 0.6]
+  - snapshot: {name: f4, window: false}
+  - minimap: [0.5, 0.35]
+  - snapshot: {name: f5, window: false}
+  - minimap: [0.5, 0.65]
+  - snapshot: {name: f6, window: false}
+analysis: [shadow-blend, terrain-tiles]

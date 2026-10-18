@@ -23,6 +23,7 @@
       "tests/Tzar2.Content.Tests/Tzar2.Content.Tests.csproj",
       "tests/Tzar2.Core.Tests/Tzar2.Core.Tests.csproj",
       "tests/Tzar2.Determinism.Tests/Tzar2.Determinism.Tests.csproj",
+      "tests/Tzar2.Fidelity.Tests/Tzar2.Fidelity.Tests.csproj",
       "tests/Tzar2.Formats.Tests/Tzar2.Formats.Tests.csproj",
       "tests/Tzar2.Game.Tests/Tzar2.Game.Tests.csproj",
       "tests/Tzar2.Import.Tests/Tzar2.Import.Tests.csproj",

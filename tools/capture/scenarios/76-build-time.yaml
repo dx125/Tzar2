@@ -1,0 +1,45 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: build-time
+title: Construction time with one builder (UNK-18, TIME column)
+resolves: [UNK-18]
+priority: 3
+minutes: 2
+experimental: true
+description: |
+  No cheats needed: a starting peasant next to the castle of MP2 builds a lumber mill (B, L: the command-card letters
+  of MENU.INI) two tiles away; the site is selected and the selection panel captured every 500 ms. The panel turns into
+  the mill's card when it is finished: the last change of the panel is the completion. The builder's walk (from
+  builder_from to the edge of the site) is subtracted using the peasant's speed measured by unit-speed (batch B).
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: lumber-mill
+    vars: {measure: build, subject: lumber, expected_s: "30", count: "1", builder_from: "747,480", site: "660,560", site_half_px: "48"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (first session, smoke/castle): the castle at the lower right, peasants at (747, 480),
+  # (1005, 480) and (747, 710), trees, two rock piles at (380, 660) and (605, 665), cows around y = 395.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  # Select the peasant with a box (units only; the castle starts right of x = 790) so a camera off by up to ~35 px
+  # still finds it. Expected view: smoke/castle of session 1; if the camera lands elsewhere, move the box and targets.
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - key: L
+  - click: [660, 560]               # place the mill on open grass next to the castle
+  - wait: 0.5
+  - click: [660, 560]               # select the site
+  - move: [70, 400]
+  - burst: {name: panel, count: 140, interval_ms: 500, region: [4, 165, 142, 140]}
+  - snapshot: {name: after, game: false}
+analysis: [region-timing]

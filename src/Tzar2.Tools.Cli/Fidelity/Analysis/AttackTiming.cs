@@ -42,6 +42,8 @@ internal static class AttackTiming
                 e.Add("attacker", trial.Var("attacker"));
                 e.Add("defender", trial.Var("defender"));
                 e.Add("rate_stat", trial.Var("rate_stat"));
+                e.Add("attack_stat", trial.Var("attack_stat"));
+                e.Add("defence_stat", trial.Var("defence_stat"));
                 e.Add("addresses", series.Addresses.Count);
                 e.Add("samples", series.TimesMicroseconds.Count);
                 if (series.TimesMicroseconds.Count > 1)
@@ -77,7 +79,13 @@ internal static class AttackTiming
         return new AnalysisOutcome(found > 0 ? "ok" : "inconclusive", facts, notes);
     }
 
-    public static HitSeries? BestSeries(MemoryProbe.SampleSeries series)
+    public static HitSeries? BestSeries(MemoryProbe.SampleSeries series) => BestSeries(series, rising: false);
+
+    /// <summary>
+    /// The address with the most steps in one direction and at most one step the other way (a hit-point counter going
+    /// down, or a stockpile going up with <paramref name="rising"/>); steps are reported as positive sizes.
+    /// </summary>
+    public static HitSeries? BestSeries(MemoryProbe.SampleSeries series, bool rising)
     {
         HitSeries? best = null;
         for (int a = 0; a < series.Addresses.Count; a++)
@@ -93,12 +101,13 @@ internal static class AttackTiming
             int rises = 0;
             for (int i = 1; i < v.Length; i++)
             {
-                if (v[i] < v[i - 1])
+                long step = rising ? v[i] - v[i - 1] : v[i - 1] - v[i];
+                if (step > 0)
                 {
                     times.Add(series.TimesMicroseconds[i] / 1000.0);
-                    damage.Add(v[i - 1] - v[i]);
+                    damage.Add(step);
                 }
-                else if (v[i] > v[i - 1])
+                else if (step < 0)
                 {
                     rises++;
                 }
@@ -118,7 +127,7 @@ internal static class AttackTiming
         return best;
     }
 
-    private static double Median(double[] values)
+    internal static double Median(double[] values)
     {
         double[] sorted = [.. values.OrderBy(v => v)];
         return sorted.Length % 2 == 1 ? sorted[sorted.Length / 2] : (sorted[(sorted.Length / 2) - 1] + sorted[sorted.Length / 2]) / 2;

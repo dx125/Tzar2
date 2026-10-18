@@ -1,0 +1,17 @@
+schema: tzar2-fidelity-facts/1
+scenario: manual
+title: Values read by hand from capture images (no automatic analysis yet)
+resolves: [UNK-20]
+provenance:
+  edition: GOG v1.10 English (reference build)
+  install_matches_reference: true
+  session: capture-20261018-024524
+  method: read from the window capture named in each entry (ADR 0111, ADR 0112)
+analyses:
+  setup-screen:
+    status: ok
+    notes: []
+    facts:
+      source: smoke/plain window capture "setup" (single-player setup screen of MP2)
+      population_limit_default: 200
+      starting_resources_default: map  # the control shows "Default": the map's own amounts on a preset map
