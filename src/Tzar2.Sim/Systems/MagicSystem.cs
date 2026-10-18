@@ -97,7 +97,7 @@ public sealed class MagicSystem : ISimSystem
         }
 
         bool needsMana = book.IsNone || world.TypeOf(book).Traits.Item!.NeedsMana;
-        if (needsMana && ManaOf(world, caster) < ManaCost(world, s))
+        if (needsMana && ManaOf(world, caster) < ManaCost(world, s, caster))
         {
             return CommandRejectionReason.NoMana;
         }
@@ -121,13 +121,22 @@ public sealed class MagicSystem : ISimSystem
         NoMana,
     }
 
-    /// <summary>A spell's mana: its own plus a summoned type's (cost suffix <c>m</c>).</summary>
-    internal static int ManaCost(World world, SpellDefinition s)
+    /// <summary>
+    /// A spell's mana: its own plus a summoned type's (cost suffix <c>m</c>). The tables price some summons above any
+    /// caster's pool (stone golem 600m, dragon 800m against a mage's <c>max_manna = 100</c>): ⚠ HYPOTHESIS (UNK-26), a
+    /// summon costs at most the caster's whole pool, so it needs a full pool and empties it.
+    /// </summary>
+    internal static int ManaCost(World world, SpellDefinition s, EntityId caster)
     {
         long mana = s.ManaCost;
         if (s.Effect == SpellEffect.Summon && s.Summon >= 0)
         {
             mana += (long)world.Ruleset.EntityTypes[s.Summon].Traits.ManaCost * s.Count;
+            Identity identity = world.Identities.Get(caster);
+            if (world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool is { } pool)
+            {
+                mana = Math.Min(mana, world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max));
+            }
         }
 
         return (int)Math.Min(mana, int.MaxValue);
@@ -227,7 +236,7 @@ public sealed class MagicSystem : ISimSystem
 
         // The cast takes effect: pay (mana, a book's charge, a summon's resources), then apply.
         bool needsMana = c.Book == 0 || world.TypeOf(book).Traits.Item!.NeedsMana;
-        int mana = needsMana ? ManaCost(world, s) : 0;
+        int mana = needsMana ? ManaCost(world, s, caster) : 0;
         if (ManaOf(world, caster) < mana || (s.Effect == SpellEffect.Summon && !CanSummon(world, owner, s)))
         {
             world.StopCasting(caster);

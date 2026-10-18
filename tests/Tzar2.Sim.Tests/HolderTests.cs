@@ -147,6 +147,23 @@ public class HolderTests
     }
 
     [Fact]
+    public void A_garrisoned_soldier_keeps_its_items_across_a_snapshot()
+    {
+        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 12, 5), Unit("euro.footman", 0, 8, 7), Unit("comm.item", MapObject.Nature, 9, 7)), ruleset: Classic);
+        EntityId castle = OfType(d.World, "euro.castle").Single();
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId sword = OfType(d.World, "comm.item").Single();
+        d.Order(0, CommandKind.PickItem, [footman], target: sword);
+        d.RunUntil(() => d.World.IsHeld(sword), 300);
+        d.Order(0, CommandKind.Board, [footman], target: castle);
+        d.RunUntil(() => d.World.IsHeld(footman), 300);
+        byte[] snapshot = d.Sim.CaptureSnapshot();
+        using Simulation restored = Simulation.Restore(snapshot, Classic, d.World.Map.Data);
+        Assert.Equal(d.Sim.ComputeFullHash(), restored.ComputeFullHash());
+        Assert.Equal(footman.Value, restored.World.Helds.Get(sword).Holder);
+    }
+
+    [Fact]
     public void Units_inside_cannot_be_attacked()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 12, 5), Unit("euro.footman", 0, 10, 7), Unit("euro.footman", 1, 6, 7)), ruleset: Classic);

@@ -36,7 +36,8 @@ public sealed partial class World
         {
             Held h = Helds.Components[i];
             EntityId holder = EntityId.FromValue(h.Holder);
-            if (!Entities.IsAlive(holder) || holder == ids[i] || Helds.Has(holder) || !Identities.Has(ids[i]) || !Positions.Has(ids[i]) || !Positions.Has(holder))
+            // Items may be in the inventory of a unit that is itself inside a holder; holders never nest.
+            if (!Entities.IsAlive(holder) || holder == ids[i] || (Helds.Has(holder) && !Items.Has(ids[i])) || !Identities.Has(ids[i]) || !Positions.Has(ids[i]) || !Positions.Has(holder))
             {
                 throw Invalid("invalid holder of a held entity");
             }
