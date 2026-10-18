@@ -15,6 +15,9 @@ namespace Tzar2.Client.Editor;
 /// </summary>
 public static class EditorSmoke
 {
+    /// <summary>A legacy file the smoke run imports through the converter UI (<c>--editor-import</c>), or null.</summary>
+    public static string? ImportPath { get; set; }
+
     /// <summary>Extra smoke steps of later editor parts; each returns a short "name=value" note.</summary>
     public static event Func<Node, EditorScreen, string, Task<string>>? Steps;
 
@@ -127,6 +130,26 @@ public static class EditorSmoke
         }
 
         string notes = play;
+        if (ImportPath is { } legacy)
+        {
+            ImportWindow import = screen.OpenImport();
+            await Frame(host);
+            import.AddPaths([legacy]);
+            import.Convert();
+            await Frame(host);
+            Require(import.Session.Items.Count == 1 && import.Session.Items[0].Succeeded, "legacy import converts");
+            await Shot(host, "4-import");
+            Tzar2.Import.Editing.ImportItem item = import.Session.Items[0];
+            if (!item.IsCampaign)
+            {
+                screen.Open(item.OpenDocument(screen.RulesFor), null);
+                await Frame(host);
+                Require(screen.Document.State.Objects.Count > 0, "the converted map opens in the editor");
+            }
+
+            import.QueueFree();
+            notes += $" import={item.OutputName}";
+        }
         if (Steps is not null)
         {
             foreach (Func<Node, EditorScreen, string, Task<string>> step in Steps.GetInvocationList().Cast<Func<Node, EditorScreen, string, Task<string>>>())

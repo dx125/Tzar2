@@ -17,8 +17,10 @@ public sealed record ViewerArgs
         + "  --skirmish           start a skirmish directly (skips the menus)\n"
         + "  --editor [file]      open the scenario editor (optionally a .t2map)\n"
         + "  --editor-smoke       drive the editor headless (edit, validate, save, reopen) and quit (exit code 0 = OK)\n"
+        + "  --editor-import <f>  a .wmp/.wcm the editor smoke test imports through the converter UI\n"
         + "  --editor [file]      open the scenario editor (optionally a .t2map)\n"
         + "  --editor-smoke       drive the editor headless (edit, validate, save, reopen) and quit (exit code 0 = OK)\n"
+        + "  --editor-import <f>  a .wmp/.wcm the editor smoke test imports through the converter UI\n"
         + "  --autoplay <dir>     play a scripted skirmish, write screenshots into <dir> and quit\n"
         + "  --game-smoke         run a skirmish headless for --ticks ticks and quit (exit code 0 = OK)\n"
         + "  --ticks <n>          ticks for --game-smoke (default 300)\n"
@@ -99,6 +101,9 @@ public sealed record ViewerArgs
     /// <summary>Run the editor smoke test and quit.</summary>
     public bool EditorSmoke { get; init; }
 
+    /// <summary>A legacy file the editor smoke test imports, or null.</summary>
+    public string? EditorImport { get; init; }
+
     /// <summary>Show the usage and quit.</summary>
     public bool Help { get; init; }
 
@@ -156,6 +161,9 @@ public sealed record ViewerArgs
                     break;
                 case "--editor-smoke":
                     result = result with { Editor = true, EditorSmoke = true };
+                    break;
+                case "--editor-import":
+                    result = result with { EditorImport = Value() };
                     break;
                 case "--campaign":
                     result = result with { Campaign = i + 1 < args.Count && !args[i + 1].StartsWith("--", StringComparison.Ordinal) ? args[++i] : "screen" };

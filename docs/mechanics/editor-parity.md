@@ -25,9 +25,9 @@ Status:
 <!-- summary:start -->
 | | Items | Done | Blocked | Planned |
 |---|---|---|---|---|
-| All | 104 | 81 | 1 | 22 |
+| All | 104 | 89 | 1 | 14 |
 
-Parity: **77 %** done.
+Parity: **85 %** done.
 <!-- summary:end -->
 
 ## §18.2 New map
@@ -187,14 +187,14 @@ Parity: **77 %** done.
 
 | Id | Feature | Status | Evidence | Notes |
 |---|---|---|---|---|
-| conv-entry | File → Import legacy map/campaign (one, several, folder), drag & drop, "Add map from legacy file" in the campaign editor | planned |  | the CLI `t2 convert` exists (M4) |
-| conv-report | Report panel: counts, warnings, errors, filters, click-to-locate, export | planned |  |  |
-| conv-codepage | Code page detection with a user override; UTF-8; language tag | planned |  |  |
-| conv-graph | Campaign-graph reconstruction: unreachable maps, dangling names, persistent-unit preview | planned |  |  |
-| conv-resources | Embedded resources extracted and deduplicated | planned |  |  |
-| conv-mapping | Type mapping table (reusable YAML) or flagged placeholders | planned |  |  |
-| conv-local | Non-destructive; output to user data or a chosen folder; provenance | planned |  |  |
-| conv-after | Opens in the editor; "Play converted campaign"; 600-tick smoke test of every map | planned |  |  |
+| conv-entry | File → Import legacy map/campaign (one, several, folder), drag & drop, "Add map from legacy file" in the campaign editor | done | ConverterUiTests.Files_and_folders_queue_once_and_convert_with_reports, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | File → Import legacy map/campaign (files, several, folder), drag and drop on the editor window; "Add map from legacy file" is in the campaign editor (ADR 0155); `t2 convert` stays the CLI |
+| conv-report | Report panel: counts, warnings, errors, filters, click-to-locate, export | done | ConverterUiTests.Report_rows_locate_objects_rules_events_and_actions, ConverterUiTests.The_whole_report_exports_as_json | counts, severity filter, click-to-locate (opens the converted map and selects the object/trigger), JSON export |
+| conv-codepage | Code page detection with a user override; UTF-8; language tag | done | ConverterUiTests.Code_pages_are_detected_and_can_be_overridden_cyrillic_and_spanish | detection improved for Spanish names (ADR 0154); override per session |
+| conv-graph | Campaign-graph reconstruction: unreachable maps, dangling names, persistent-unit preview | done | ConverterUiTests.Campaign_graph_reconstruction_flags_unreachable_and_dangling_maps_and_previews_persistence |  |
+| conv-resources | Embedded resources extracted and deduplicated | done | ConverterUiTests.Campaign_graph_reconstruction_flags_unreachable_and_dangling_maps_and_previews_persistence | BMP → PNG and identical resources stored once (ADR 0121) |
+| conv-mapping | Type mapping table (reusable YAML) or flagged placeholders | done | ConverterUiTests.Unknown_types_become_placeholders_until_the_mapping_table_resolves_them | reusable YAML, the same format as `t2 convert --mapping` |
+| conv-local | Non-destructive; output to user data or a chosen folder; provenance | done | ConverterUiTests.Output_goes_to_the_chosen_folder_and_sources_stay_untouched |  |
+| conv-after | Opens in the editor; "Play converted campaign"; 600-tick smoke test of every map | done | ConverterUiTests.Every_converted_map_passes_the_600_tick_smoke_test_and_the_campaign_plays, ConverterUiTests.Files_and_folders_queue_once_and_convert_with_reports | open in the editor, "Play converted campaign", smoke test of every map |
 
 ## §18.6 Acceptance
 

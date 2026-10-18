@@ -12,10 +12,13 @@
 
   <ItemGroup>
     <Compile Include="../../src/Tzar2.Client/src/Logic/*.cs" Link="Logic/%(Filename)%(Extension)" />
+    <!-- Invented legacy maps for the editor's converter smoke step (REQ-LEGAL-03). -->
+    <Compile Include="../Shared/SyntheticMaps.cs;../Shared/SyntheticFormats.cs" Link="Shared/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../src/Tzar2.Content/Tzar2.Content.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Import/Tzar2.Import.csproj" />
   </ItemGroup>
 
 </Project>

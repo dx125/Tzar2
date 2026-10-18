@@ -11,9 +11,10 @@ namespace Tzar2.Import.Maps;
 public sealed record CodePageGuess(CodePage CodePage, bool Ambiguous, string Language, int HighBytes);
 
 /// <summary>
-/// Heuristic code page detection for map text (REQ-EDT-07): CP1251 when most non-ASCII bytes are runs (Cyrillic words
-/// are written entirely in the upper half), CP1250 when letters specific to Central European languages appear, else
-/// CP1252. The language tag is a guess from the same evidence. Deterministic.
+/// Heuristic code page detection for map text (REQ-EDT-07): CP1251 when the words with non-ASCII bytes are mostly
+/// written in the upper half (Cyrillic words are; a Spanish or German word has a few accented letters among ASCII ones,
+/// even two in a row as in "Peñón"), CP1250 when letters specific to Central European languages appear, else CP1252.
+/// The language tag is a guess from the same evidence. Deterministic.
 /// </summary>
 public static class CodePageDetector
 {
@@ -29,25 +30,36 @@ public static class CodePageDetector
     /// <summary>Guesses the code page of <paramref name="samples"/>.</summary>
     public static CodePageGuess Detect(IEnumerable<byte[]> samples)
     {
-        int high = 0, inRuns = 0, central = 0, spanish = 0, german = 0;
+        int high = 0, upperWords = 0, mixedWords = 0, central = 0, spanish = 0, german = 0;
         foreach (byte[] s in samples)
         {
-            for (int i = 0; i < s.Length; i++)
+            int wordLength = 0, wordHigh = 0;
+            for (int i = 0; i <= s.Length; i++)
             {
-                byte b = s[i];
+                byte b = i < s.Length ? s[i] : (byte)' ';
+                bool letter = b >= 0x80 || (b | 0x20) is >= (byte)'a' and <= (byte)'z';
+                if (letter)
+                {
+                    wordLength++;
+                    wordHigh += b >= 0x80 ? 1 : 0;
+                }
+                else
+                {
+                    // A word written mostly in the upper half reads as Cyrillic; one with a few such bytes as Latin.
+                    if (wordHigh > 0 && wordLength >= 2)
+                    {
+                        _ = wordHigh * 10 >= wordLength * 6 ? upperWords++ : mixedWords++;
+                    }
+
+                    wordLength = wordHigh = 0;
+                }
+
                 if (b < 0x80)
                 {
                     continue;
                 }
 
                 high++;
-                bool prevHigh = i > 0 && s[i - 1] >= 0x80;
-                bool nextHigh = i + 1 < s.Length && s[i + 1] >= 0x80;
-                if (prevHigh || nextHigh)
-                {
-                    inRuns++;
-                }
-
                 central += CentralEuropean.Contains(b) ? 1 : 0;
                 spanish += Spanish.Contains(b) ? 1 : 0;
                 german += German.Contains(b) ? 1 : 0;
@@ -60,7 +72,7 @@ public static class CodePageDetector
         }
 
         bool fewBytes = high < 8;
-        if (inRuns * 2 > high)
+        if (upperWords > mixedWords)
         {
             return new CodePageGuess(CodePage.Windows1251, fewBytes, "ru", high);
         }

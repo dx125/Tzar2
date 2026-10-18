@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Godot;
 using Tzar2.Client.Editor;
 using Tzar2.Content.Editing;
+using Tzar2.Game.Campaigns;
 using Tzar2.Game.Editing;
 using Tzar2.Game.Session;
 
@@ -17,6 +18,7 @@ namespace Tzar2.Client.Game;
 public partial class GameApp
 {
     private MapDocument? _editorDocument;
+    private ICampaignSource? _converted;
     private string? _editorPath;
 
     /// <summary>The editor screen, or null.</summary>
@@ -40,6 +42,12 @@ public partial class GameApp
             ShowMainMenu();
         };
         screen.PlaytestRequested += (options, debug) => StartPlaytest(screen, options, debug);
+        screen.CampaignPlayRequested += source =>
+        {
+            RememberEditor(screen);
+            _converted = source;
+            StartMission(source, null);
+        };
         EditorOpened?.Invoke(screen);
         Replace(screen, music: null);
         if (file is not null)
@@ -120,6 +128,7 @@ public partial class GameApp
             EditorScreen screen = EditorScreen ?? throw new InvalidOperationException("No editor screen.");
             string dir = Path.Combine(Path.GetTempPath(), "tzar2-editor-smoke-" + System.Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Directory.CreateDirectory(dir);
+            Tzar2.Client.Editor.EditorSmoke.ImportPath = _args.EditorImport;
             string line = await Tzar2.Client.Editor.EditorSmoke.RunAsync(this, screen, dir);
             GD.Print(line);
             exit = 0;
