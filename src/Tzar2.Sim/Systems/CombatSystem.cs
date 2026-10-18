@@ -164,12 +164,13 @@ public sealed class CombatSystem : ISimSystem
         int radius = Interaction.RadiusOf(world, attacker);
         EntityId target = EntityId.FromValue(c.Target);
         if (c.Target != 0 && !IsHostileTarget(world, attacker, self.Owner, target)
-            && !(c.Mode == CombatMode.Explicit && (IsButcherTarget(world, self.Owner, target) || IsTrainingTarget(world, self.Owner, target))))
+            && !(c.Mode == CombatMode.Explicit && (IsButcherTarget(world, self.Owner, target) || IsTrainingTarget(world, self.Owner, target)))
+            && !(c.Mode == CombatMode.Scripted && target != attacker && IsTargetable(world, target)))
         {
             c.Target = 0;
             c.HitInMs = -1;
             target = EntityId.None;
-            if (c.Mode is CombatMode.Explicit or CombatMode.Auto)
+            if (c.Mode is CombatMode.Explicit or CombatMode.Auto or CombatMode.Scripted)
             {
                 c.Mode = CombatMode.None;
             }

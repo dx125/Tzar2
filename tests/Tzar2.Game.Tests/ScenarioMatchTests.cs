@@ -48,6 +48,9 @@ public sealed class ScenarioMatchTests
         Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Cheat, (int)Sim.Systems.CheatCode.Next)); // would skip the mission
         Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Cheat, (int)Sim.Systems.CheatCode.Reveal));
         Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Resign, 0));
+        Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.PickItem, 0)); // player orders (ADR 0135)
+        Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.SetDiplomacy, 0));
+        Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Delete, 0));
     }
 
     [Fact]

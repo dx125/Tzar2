@@ -1,6 +1,7 @@
 using System;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
+using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
 using Tzar2.Sim.Kingdoms;
 
@@ -115,6 +116,29 @@ public static class ScenarioOperations
 
         world.Diplomacy.Set(from, to, stance, offers, world.Tick.Value);
         world.Events.Emit(new SimEvent(SimEventKind.DiplomacyChanged, (byte)from, EntityId.None, to, (int)stance, (int)offers));
+    }
+
+    /// <summary>
+    /// Object Order "attack" on an object (Appendix C.7 #16; ADR 0135): <paramref name="attacker"/> drops what it was
+    /// doing and fights <paramref name="target"/> whatever the stances between their kingdoms (a scripted duel between
+    /// allies). The fight ends when the target dies or can no longer be fought, or with the unit's next order.
+    /// </summary>
+    /// <returns>Whether the order was given (an armed, free attacker; a live unit or building as the target).</returns>
+    public static bool ScriptedAttack(World world, EntityId attacker, EntityId target)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        RequireTick(world);
+        if (attacker == target || !world.Entities.IsAlive(attacker) || !world.Entities.IsAlive(target) || world.Combats.IndexOf(attacker) < 0
+            || world.IsHeld(attacker) || world.IsHeld(target) || world.Identities.IndexOf(target) is not (>= 0 and var t)
+            || world.Ruleset.EntityTypes[world.Identities.At(t).TypeId].Traits.Category is not (Content.Compiled.EntityCategory.Unit or Content.Compiled.EntityCategory.Building))
+        {
+            return false;
+        }
+
+        GameplayCommands.ClearTasks(world, attacker, CombatMode.Scripted);
+        Interaction.Halt(world, attacker);
+        world.Combats.Get(attacker).Target = target.Value;
+        return true;
     }
 
     private static void RequireTick(World world)
