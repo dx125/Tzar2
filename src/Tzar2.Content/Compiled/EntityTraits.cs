@@ -87,18 +87,97 @@ public sealed record ProducerDefinition(ImmutableArray<ushort> Produces, int Que
     /// <summary>Largest queue the sim stores per building.</summary>
     public const int MaxQueueCapacity = 16;
 
+    /// <summary>Technology ids researched here, ascending (GAME-06: the building's command card, ADR 0040).</summary>
+    public ImmutableArray<ushort> Researches { get; init; } = [];
+
+    /// <summary>Upgrade ids the entity can buy for itself, ascending (GAME-06).</summary>
+    public ImmutableArray<ushort> Upgrades { get; init; } = [];
+
     /// <summary>Whether the building trains <paramref name="typeId"/>.</summary>
     public bool CanProduce(ushort typeId) => Produces.BinarySearch(typeId) >= 0;
+
+    /// <summary>Whether technology <paramref name="technology"/> is researched here.</summary>
+    public bool CanResearch(ushort technology) => !Researches.IsDefault && Researches.BinarySearch(technology) >= 0;
+
+    /// <summary>Whether the entity can buy upgrade <paramref name="upgrade"/>.</summary>
+    public bool CanUpgrade(ushort upgrade) => !Upgrades.IsDefault && Upgrades.BinarySearch(upgrade) >= 0;
 }
 
-/// <summary>Trait <c>ResourceNode</c> (GAME-01/02): a tree, rock or field holding a resource.</summary>
+/// <summary>
+/// Trait <c>ResourceNode</c> (GAME-01/02): a tree, rock, field, fish patch, cow (milk) or meat pile holding a resource.
+/// Nodes with a footprint are reached at their footprint; footprint-less nodes (fish, meat, cows) at their position.
+/// </summary>
 /// <param name="Resource">Resource type id.</param>
 /// <param name="Amount">Units it holds; <see cref="Unlimited"/> for fields (the manual: "fields produce unlimited amounts of food").</param>
 public sealed record ResourceNodeDefinition(int Resource, int Amount)
 {
     /// <summary><see cref="Amount"/> of a node that never depletes.</summary>
     public const int Unlimited = -1;
+
+    /// <summary>Time to regrow one unit up to <see cref="Amount"/> (cows' milk); 0 = never regrows.</summary>
+    public int RegenMs { get; init; }
+
+    /// <summary>Gather time per unit from this node, overriding the harvester's time for the resource; 0 = the harvester's.</summary>
+    public int GatherMs { get; init; }
+
+    /// <summary>Whether the node stays when empty (cows wait for their milk to regrow) instead of being removed.</summary>
+    public bool KeepWhenEmpty { get; init; }
 }
+
+/// <summary>Which workers may deliver to a drop-off (trait <c>DropOff.access</c>; harbors take fish from boats).</summary>
+[Flags]
+public enum DropOffAccess : byte
+{
+    /// <summary>Nobody.</summary>
+    None = 0,
+
+    /// <summary>Land workers (peasants).</summary>
+    Land = 1,
+
+    /// <summary>Ships (fishing boats).</summary>
+    Water = 2,
+}
+
+/// <summary>Where a building may be placed (trait <c>Building.placement</c>; GAME-02/03).</summary>
+public enum PlacementKind : byte
+{
+    /// <summary>Every blocked tile on walkable land (default).</summary>
+    Land = 0,
+
+    /// <summary>On land with water next to the footprint (harbors): ships dock at the water side.</summary>
+    Coast = 1,
+
+    /// <summary>Across water (bridges): the end tiles on land, the deck over water (ADR 0043).</summary>
+    Bridge = 2,
+}
+
+/// <summary>Trait <c>Capturable</c> (GAME-04): peasants can take the entity over (OBJECTS <c>type = building, capture</c>).</summary>
+/// <param name="Instant">Taken over at once when a capturer reaches it (cows under Cow Poaching) instead of by digging.</param>
+/// <param name="RequiredTechnology">Technology the capturing player needs (-1 = none).</param>
+public sealed record CapturableDefinition(bool Instant, int RequiredTechnology);
+
+/// <summary>
+/// Trait <c>InfluenceEmitter</c> (GAME-04, buildings TSV <c>EMIT (own/other)</c>; ⚠ HYPOTHESIS UNK-19, ADR 0044): the
+/// building adds <see cref="Own"/> to the capture resistance of its owner's buildings nearby and <see cref="Other"/>
+/// (usually negative) to other kingdoms' buildings nearby, fading with distance.
+/// </summary>
+/// <param name="Own">Influence on its owner's buildings.</param>
+/// <param name="Other">Influence on other owners' buildings.</param>
+public sealed record InfluenceDefinition(int Own, int Other);
+
+/// <summary>Trait <c>ManaPool</c> (GAME-01: mana per caster; OBJECTS <c>max_manna</c>).</summary>
+/// <param name="Max">Most mana.</param>
+/// <param name="RegenPerMinute">Mana regrown per minute of game time (UNK-26).</param>
+public sealed record ManaPoolDefinition(int Max, int RegenPerMinute);
+
+/// <summary>Trait <c>Gate</c> (GAME-03): the footprint tiles that open (row-major, same size as the footprint).</summary>
+/// <param name="Passage">1 = the tile is the gate's passage (blocked while closed), 0 = a post.</param>
+public sealed record GateDefinition(ImmutableArray<byte> Passage);
+
+/// <summary>Trait <c>Decay</c> (GAME-02: neglected fields decay and disappear, manual ch. 5; UNK-17).</summary>
+/// <param name="AfterMs">Untended time before the decay starts.</param>
+/// <param name="HealthPerMinute">Hit points lost per minute while neglected; at 0 the entity disappears.</param>
+public sealed record DecayDefinition(int AfterMs, int HealthPerMinute);
 
 /// <summary>
 /// The gameplay traits of a compiled entity type (REQ-SIM-09, TDD §11.2). Every array is immutable; ids refer to the
@@ -166,6 +245,66 @@ public sealed record EntityTraits
 
     /// <summary>Technology that must be researched first (TSV <c>DEPENDS ON</c>, e.g. <c>te_halberd</c>); empty = none.</summary>
     public string RequiredTechnology { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Prerequisites by civilization of the actor (builder or producer; <c>TECHTREE &lt;civ&gt;.INI</c> and the TSV
+    /// <c>DEPENDS ON</c>; ADR 0040), in addition to <see cref="RequiredTypes"/>.
+    /// </summary>
+    public ImmutableArray<RequirementSet> Requirements { get; init; } = [];
+
+    /// <summary>Mana the caster pays to summon the type (cost suffix <c>m</c>, GAME-01; spells are GAME-11).</summary>
+    public int ManaCost { get; init; }
+
+    /// <summary>Mana pool of casters (OBJECTS <c>max_manna</c>), or null.</summary>
+    public ManaPoolDefinition? ManaPool { get; init; }
+
+    /// <summary>Who may deliver to the drop-off (<see cref="DropOffMask"/>).</summary>
+    public DropOffAccess DropOffAccess { get; init; } = DropOffAccess.Land;
+
+    /// <summary>Whether the builders of a completed building start gathering nearby at once (1.05: storage, lumber mill).</summary>
+    public bool AutoGather { get; init; }
+
+    /// <summary>Placement rule of a building.</summary>
+    public PlacementKind Placement { get; init; }
+
+    /// <summary>Capture by peasants (GAME-04), or null.</summary>
+    public CapturableDefinition? Capturable { get; init; }
+
+    /// <summary>Whether the type captures (peasants).</summary>
+    public bool IsCapturer { get; init; }
+
+    /// <summary>Capture influence (EMIT own/other), or null.</summary>
+    public InfluenceDefinition? Influence { get; init; }
+
+    /// <summary>Whether builders can repair the type (buildings, ships, siege; GAME-03).</summary>
+    public bool IsRepairable { get; init; }
+
+    /// <summary>Whether the type burns while badly damaged (GAME-03: badly damaged buildings burn, manual ch. 5).</summary>
+    public bool Burnable { get; init; }
+
+    /// <summary>Whether a destroyed entity leaves a ruin decal (never blocking, ORIG-01).</summary>
+    public bool LeavesRuin { get; init; }
+
+    /// <summary>Whether the type is a wall segment that can be placed by dragging a line (GAME-03).</summary>
+    public bool IsWall { get; init; }
+
+    /// <summary>Gate passage, or null.</summary>
+    public GateDefinition? Gate { get; init; }
+
+    /// <summary>Whether the type is a bridge: its deck makes water passable for land units (GAME-03).</summary>
+    public bool IsBridge { get; init; }
+
+    /// <summary>Whether deleting it needs Shift + Delete (castle and guilds, GAME-04).</summary>
+    public bool ProtectedDelete { get; init; }
+
+    /// <summary>Neglect decay (fields), or null.</summary>
+    public DecayDefinition? Decay { get; init; }
+
+    /// <summary>Type spawned where the entity dies (a cow's meat), or -1.</summary>
+    public int SpawnOnDeath { get; init; } = -1;
+
+    /// <summary>Lifetime of the entity (meat rots), 0 = unlimited.</summary>
+    public int LifetimeMs { get; init; }
 
     /// <summary>Whether the type is a builder.</summary>
     public bool IsBuilder => !Builds.IsDefaultOrEmpty;

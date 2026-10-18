@@ -107,7 +107,7 @@ public sealed class CombatSystem : ISimSystem
         Position position = world.Positions.Get(attacker);
         int radius = Interaction.RadiusOf(world, attacker);
         EntityId target = EntityId.FromValue(c.Target);
-        if (c.Target != 0 && !IsEnemyTarget(world, self.Owner, target))
+        if (c.Target != 0 && !IsEnemyTarget(world, self.Owner, target) && !(c.Mode == CombatMode.Explicit && IsButcherTarget(world, self.Owner, target)))
         {
             c.Target = 0;
             c.HitInMs = -1;
@@ -125,7 +125,7 @@ public sealed class CombatSystem : ISimSystem
             bool scan = c.Mode == CombatMode.AttackMove || (c.Mode == CombatMode.None && arm.AutoAcquire && idle);
             if (scan && (attacker.Index + tick) % acquireEvery == 0)
             {
-                target = Acquire(world, self.Owner, position, radius, Math.Max(type.Traits.SightUnits, arm.RangeUnits));
+                target = Acquire(world, self.Owner, position, radius, Math.Max(Sight(world, self, type), Range(world, attacker, self, type, arm)));
                 if (!target.IsNone)
                 {
                     c.Target = target.Value;
@@ -150,7 +150,8 @@ public sealed class CombatSystem : ISimSystem
 
         int distance = Interaction.EdgeDistance(world, position, radius, target);
         // Hand-to-hand attackers hit a building from the tiles next to it, like workers do (interaction reach).
-        int reach = arm.RangeUnits > 0 ? arm.RangeUnits
+        int range = Range(world, attacker, self, type, arm);
+        int reach = range > 0 ? range
             : world.Footprints.Has(target) ? world.Ruleset.Gameplay.InteractionReachUnits
             : world.Ruleset.Gameplay.MeleeReachUnits;
         if (distance <= reach)
@@ -193,7 +194,7 @@ public sealed class CombatSystem : ISimSystem
         // Out of reach: the swing is lost.
         c.HitInMs = -1;
         c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
-        long sight = Math.Max(type.Traits.SightUnits, arm.RangeUnits);
+        long sight = Math.Max(Sight(world, self, type), range);
         bool mobile = world.Motions.IndexOf(attacker) is >= 0 and var m && world.Motions.At(m).SpeedPerTick > 0;
         if (!mobile || (c.Mode == CombatMode.Auto && distance > sight * LeashFactor) || (c.Mode == CombatMode.AttackMove && distance > sight * LeashFactor))
         {
@@ -272,15 +273,22 @@ public sealed class CombatSystem : ISimSystem
         }
 
         EntityTypeDefinition type = world.TypeOf(attacker);
-
+        byte attackerOwner = world.Identities.Get(attacker).Owner;
         EntityTypeDefinition targetType = world.TypeOf(target);
+        byte targetOwner = world.Identities.Get(target).Owner;
         int bonus = world.Ruleset.BonusBasisPoints(type.Id, targetType.Id);
-        long damage = ((long)type.Traits.Armament!.Attack * (10_000 + bonus) / 10_000) - targetType.Traits.Defence;
-        if (targetType.Traits.Resistance > 0)
+
+        // Technology effects (ADR 0040): the attacker's owner's attack, the target's owner's defence and resistance; ship
+        // cannon levels on the attacker itself.
+        int attack = ResearchRules.LevelBonus(world, attacker, ModifierStat.Attack, world.Stats.Apply(attackerOwner, ModifierStat.Attack, type.Id, type.Traits.Armament!.Attack));
+        int defence = world.Stats.Apply(targetOwner, ModifierStat.Defence, targetType.Id, targetType.Traits.Defence);
+        int resistance = world.Stats.Apply(targetOwner, ModifierStat.Resistance, targetType.Id, targetType.Traits.Resistance);
+        long damage = ((long)attack * (10_000 + bonus) / 10_000) - defence;
+        if (resistance > 0)
         {
             // Buildings: RESISTANCE reduces the damage (manual ch. 4; the scale is UNVERIFIED, UNK-08).
             int scale = world.Ruleset.Gameplay.ResistanceScale;
-            damage = damage * scale / (scale + targetType.Traits.Resistance);
+            damage = damage * scale / (scale + resistance);
         }
 
         int dealt = (int)Math.Clamp(damage, world.Ruleset.Gameplay.MinimumDamage, int.MaxValue);
@@ -307,6 +315,17 @@ public sealed class CombatSystem : ISimSystem
             }
         }
     }
+
+    private static int Range(World world, EntityId attacker, Identity self, EntityTypeDefinition type, ArmamentDefinition arm)
+        => arm.RangeUnits <= 0 ? 0 : ResearchRules.LevelBonus(world, attacker, ModifierStat.Range, world.Stats.Apply(self.Owner, ModifierStat.Range, type.Id, arm.RangeUnits));
+
+    private static int Sight(World world, Identity self, EntityTypeDefinition type)
+        => world.Stats.Apply(self.Owner, ModifierStat.Sight, type.Id, type.Traits.SightUnits);
+
+    // An own animal that leaves meat (a cow) may be attacked on an explicit order: butchering (GAME-02, ADR 0042).
+    private static bool IsButcherTarget(World world, byte owner, EntityId target)
+        => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var i && world.Identities.At(i).Owner == owner
+            && world.Ruleset.EntityTypes[world.Identities.At(i).TypeId].Traits.SpawnOnDeath >= 0 && world.Healths.Get(target).Current > 0;
 
     private static bool HasTask(World world, EntityId entity)
     {

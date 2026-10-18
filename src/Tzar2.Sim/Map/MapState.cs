@@ -31,6 +31,7 @@ public sealed class MapState
 
     private readonly byte[] _basePassability;
     private readonly ushort[] _blockers;
+    private readonly byte[] _bridges;
     private readonly int[] _occupancy;
     private int[] _changedTiles = new int[64];
     private int _changedCount;
@@ -52,6 +53,7 @@ public sealed class MapState
 
         _basePassability = new byte[Width * Height];
         _blockers = new ushort[Width * Height];
+        _bridges = new byte[Width * Height];
         _occupancy = new int[CellWidth * CellHeight];
 
         var terrainMasks = new LocomotorMask[ruleset.TerrainTypes.Count];
@@ -141,7 +143,48 @@ public sealed class MapState
 
         int i = (ty * Width) + tx;
         var mask = (LocomotorMask)_basePassability[i];
+        if (_bridges[i] != 0)
+        {
+            // A completed bridge deck carries land units and closes the water under it to ships (GAME-03, ADR 0043).
+            mask = (mask & ~LocomotorMask.Ship) | LocomotorMask.Land;
+        }
+
         return _blockers[i] != 0 ? mask & LocomotorMask.Air : mask;
+    }
+
+    /// <summary>Bridge deck count per tile.</summary>
+    public ReadOnlySpan<byte> Bridges => _bridges;
+
+    /// <summary>Adds a bridge deck to a tile.</summary>
+    public void AddBridge(int tx, int ty)
+    {
+        int i = TileIndex(tx, ty);
+        _bridges[i] = checked((byte)(_bridges[i] + 1));
+        ObstacleVersion++;
+        if (_bridges[i] == 1)
+        {
+            RecordChange(i);
+            PassabilityVersion++;
+        }
+    }
+
+    /// <summary>Removes a bridge deck from a tile.</summary>
+    /// <exception cref="InvalidOperationException">The tile has no bridge.</exception>
+    public void RemoveBridge(int tx, int ty)
+    {
+        int i = TileIndex(tx, ty);
+        if (_bridges[i] == 0)
+        {
+            throw new InvalidOperationException($"Tile ({tx}, {ty}) has no bridge.");
+        }
+
+        _bridges[i]--;
+        ObstacleVersion++;
+        if (_bridges[i] == 0)
+        {
+            RecordChange(i);
+            PassabilityVersion++;
+        }
     }
 
     /// <summary>Whether <paramref name="locomotor"/> may enter tile (<paramref name="tx"/>, <paramref name="ty"/>).</summary>
@@ -220,7 +263,7 @@ public sealed class MapState
     public void AppendTo(StateHasher hasher)
     {
         ArgumentNullException.ThrowIfNull(hasher);
-        hasher.Add(ObstacleVersion).Add(PassabilityVersion).AddSpan<ushort>(_blockers).AddSpan<int>(_occupancy);
+        hasher.Add(ObstacleVersion).Add(PassabilityVersion).AddSpan<ushort>(_blockers).AddSpan<byte>(_bridges).AddSpan<int>(_occupancy);
     }
 
     /// <summary>
@@ -246,6 +289,24 @@ public sealed class MapState
             {
                 writer.WriteVarUInt64((ulong)(i - previous - 1));
                 writer.WriteVarUInt64(_blockers[i]);
+                previous = i;
+            }
+        }
+
+        nonZero = 0;
+        foreach (byte b in _bridges)
+        {
+            nonZero += b != 0 ? 1 : 0;
+        }
+
+        writer.WriteVarUInt64((ulong)nonZero);
+        previous = -1;
+        for (int i = 0; i < _bridges.Length; i++)
+        {
+            if (_bridges[i] != 0)
+            {
+                writer.WriteVarUInt64((ulong)(i - previous - 1));
+                writer.WriteVarUInt64(_bridges[i]);
                 previous = i;
             }
         }
@@ -277,6 +338,27 @@ public sealed class MapState
             }
 
             _blockers[index] = (ushort)value;
+        }
+
+        Array.Clear(_bridges);
+        count = reader.ReadVarUInt64();
+        if (count > (ulong)_bridges.Length)
+        {
+            throw new InvalidDataException($"Snapshot lists {count} bridge tiles on a {Width}x{Height} map.");
+        }
+
+        index = -1;
+        for (ulong k = 0; k < count; k++)
+        {
+            ulong delta = reader.ReadVarUInt64();
+            ulong value = reader.ReadVarUInt64();
+            index += (long)Math.Min(delta, (ulong)_bridges.Length) + 1;
+            if (index >= _bridges.Length || value is 0 or > byte.MaxValue)
+            {
+                throw new InvalidDataException("Invalid bridge layer in snapshot.");
+            }
+
+            _bridges[index] = (byte)value;
         }
 
         BlockersReplaced = true;

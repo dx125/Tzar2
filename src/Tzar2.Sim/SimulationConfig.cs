@@ -80,7 +80,17 @@ public struct ResourceAmounts
     private int _amount;
 }
 
-/// <summary>Per-player hot state (hashed every tick, REQ-SIM-12): stockpile (GAME-01) and population (GAME-05; ADR 0034).</summary>
+/// <summary>One bit per technology id of the ruleset (GAME-06; at most <see cref="Ruleset.MaxTechnologies"/>).</summary>
+[InlineArray(Ruleset.MaxTechnologies / 64)]
+public struct TechnologyBits
+{
+    private ulong _word;
+}
+
+/// <summary>
+/// Per-player hot state (hashed every tick, REQ-SIM-12): stockpile (GAME-01), population (GAME-05; ADR 0034) and the
+/// researched technologies (GAME-06; ADR 0040).
+/// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct PlayerState
 {
@@ -99,5 +109,24 @@ public struct PlayerState
 
     /// <summary>The match's population limit.</summary>
     public int PopulationLimit;
+
+    /// <summary>
+    /// The kingdom's civilization: an index into <c>Ruleset.Civilizations</c> (set at match start, ADR 0040). Common
+    /// buildings and units (towers, walls, ships) research and upgrade by their owner's technology tree.
+    /// </summary>
+    public int Civilization;
+
+    /// <summary>Padding, always 0.</summary>
+    public int Reserved;
+
+    /// <summary>Researched technologies (bit = technology id).</summary>
+    public TechnologyBits Technologies;
 #pragma warning restore CA1051
+
+    /// <summary>Whether technology <paramref name="technology"/> is researched.</summary>
+    public readonly bool HasTechnology(int technology)
+        => (uint)technology < Ruleset.MaxTechnologies && (Technologies[technology >> 6] & (1UL << (technology & 63))) != 0;
+
+    /// <summary>Marks technology <paramref name="technology"/> researched.</summary>
+    public void AddTechnology(int technology) => Technologies[technology >> 6] |= 1UL << (technology & 63);
 }

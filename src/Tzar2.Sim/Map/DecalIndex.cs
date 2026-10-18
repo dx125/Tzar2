@@ -14,6 +14,9 @@ public enum DecalKind : byte
 
     /// <summary>The body of a killed unit (target of Raise Dead/Necromancy while it exists).</summary>
     Corpse = 1,
+
+    /// <summary>The ruin of a destroyed building (GAME-03; never blocks, ORIG-01). Type id = the building's.</summary>
+    Ruin = 2,
 }
 
 /// <summary>A footprint-less leftover on the ground (REQ-PATH-08). Never part of passability, costs or occupancy.</summary>
@@ -186,7 +189,7 @@ public sealed class DecalIndex
             d.TypeId = reader.ReadUInt16();
             d.Owner = reader.ReadByte();
             d.Kind = (DecalKind)reader.ReadByte();
-            if (d.Kind != DecalKind.Corpse || d.ExpiresTick < previousExpiry)
+            if (d.Kind is not (DecalKind.Corpse or DecalKind.Ruin) || d.ExpiresTick < previousExpiry)
             {
                 throw new InvalidDataException("Invalid decal in snapshot.");
             }

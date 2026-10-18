@@ -17,8 +17,11 @@ public static class PlacementQueries
         return world.Map.ContainsTile(tileX, tileY) && world.Map.IsPassable(Locomotor.Foot, tileX, tileY);
     }
 
-    /// <summary>Whether <paramref name="typeId"/>'s footprint fits with its top-left at the tile (<paramref name="tileX"/>, <paramref name="tileY"/>).</summary>
-    public static bool CanPlace(World world, ushort typeId, int tileX, int tileY)
+    /// <summary>
+    /// Whether <paramref name="typeId"/>'s footprint fits with its top-left at the tile (<paramref name="tileX"/>,
+    /// <paramref name="tileY"/>), under its placement rule (land, coast, bridge); <paramref name="rotated"/> turns it by 90°.
+    /// </summary>
+    public static bool CanPlace(World world, ushort typeId, int tileX, int tileY, bool rotated = false)
     {
         ArgumentNullException.ThrowIfNull(world);
         if (typeId >= world.Ruleset.EntityTypes.Count)
@@ -27,13 +30,17 @@ public static class PlacementQueries
         }
 
         EntityTypeDefinition type = world.Ruleset.EntityTypes[typeId];
-        return type.HasFootprint && GameplayCommands.CanPlace(world, type, tileX, tileY);
+        return type.HasFootprint && GameplayCommands.CanPlace(world, type, tileX, tileY, rotated);
     }
 
-    /// <summary>Whether <paramref name="player"/> has every building <paramref name="typeId"/> requires (and it needs no technology).</summary>
+    /// <summary>
+    /// Whether <paramref name="player"/> has every building and technology <paramref name="typeId"/> requires, by the
+    /// player's civilization's tree (ADR 0040; the acting builder's or producer's civilization decides in commands).
+    /// </summary>
     public static bool RequirementsMet(World world, byte player, ushort typeId)
     {
         ArgumentNullException.ThrowIfNull(world);
-        return typeId < world.Ruleset.EntityTypes.Count && GameplayCommands.RequirementsMet(world, player, world.Ruleset.EntityTypes[typeId]);
+        return typeId < world.Ruleset.EntityTypes.Count
+            && GameplayCommands.RequirementsMet(world, player, world.Ruleset.EntityTypes[typeId], world.PlayerCivilization(player));
     }
 }

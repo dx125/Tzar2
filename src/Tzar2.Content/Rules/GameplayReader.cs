@@ -13,6 +13,10 @@ internal sealed class GameplayReader
         "groupMoveSpeed", "populationLimit", "startingResources", "defaultStartingResources", "minimumDamage", "resistanceScale",
         "interactionReachPx", "meleeReachPx", "acquireIntervalMs", "nodeSearchRadiusTiles", "constructionRefundPercent",
         "productionRefundPercent", "queueCapacity", "speedPixelsPerSecondPerPoint", "attackCycleMs", "hitDelayPercent",
+        "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
+        "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "wallContinueRadiusTiles", "maxWallSegments",
+        "gateOpenReachPx", "manaRegenPerMinute", "gateCloseReachPx", "gateChangeIntervalMs", "maxGateChangesPerTick",
+        "repairCostPercent", "repairerFalloffPercent",
     ];
 
     private readonly RulesetCompiler.SectionSet _settings;
@@ -46,6 +50,9 @@ internal sealed class GameplayReader
     /// <summary>Default production queue length (UNK-20).</summary>
     public int QueueCapacity => Range("queueCapacity", 10, 1, ProducerDefinition.MaxQueueCapacity);
 
+    /// <summary>Default mana regeneration of a <c>ManaPool</c> without its own (UNK-26).</summary>
+    public int ManaRegenPerMinute => Range("manaRegenPerMinute", 0, 0, 1_000_000);
+
     public GameplaySettings Build(LegacyTables? legacy, RulesetCompiler.SectionSet settings)
     {
         GameplaySettings d = GameplaySettings.Default;
@@ -71,6 +78,22 @@ internal sealed class GameplayReader
             NodeSearchRadiusTiles = Range("nodeSearchRadiusTiles", d.NodeSearchRadiusTiles, 0, 64),
             ConstructionRefundBasisPoints = Range("constructionRefundPercent", d.ConstructionRefundBasisPoints / 100, 0, 100) * 100,
             ProductionRefundBasisPoints = Range("productionRefundPercent", d.ProductionRefundBasisPoints / 100, 0, 100) * 100,
+            ResearchRefundBasisPoints = Range("researchRefundPercent", d.ResearchRefundBasisPoints / 100, 0, 100) * 100,
+            CapturePointsPerSecond = Range("capturePointsPerSecond", d.CapturePointsPerSecond, 0, 1_000_000),
+            MinimumCaptureResistance = Range("minimumCaptureResistance", d.MinimumCaptureResistance, 1, 1_000_000),
+            CaptureResetMs = Range("captureResetMs", d.CaptureResetMs, 0, 3_600_000),
+            InfluenceRadiusTiles = Range("influenceRadiusTiles", d.InfluenceRadiusTiles, 0, 128),
+            RepairTimeBasisPoints = Range("repairTimePercent", d.RepairTimeBasisPoints / 100, 1, 10_000) * 100,
+            BurnThresholdBasisPoints = Range("burnThresholdPercent", d.BurnThresholdBasisPoints / 100, 0, 100) * 100,
+            BurnDamagePerMinute = Range("burnDamagePerMinute", d.BurnDamagePerMinute, 0, 1_000_000),
+            WallContinueRadiusTiles = Range("wallContinueRadiusTiles", d.WallContinueRadiusTiles, 0, 64),
+            MaxWallSegments = Range("maxWallSegments", d.MaxWallSegments, 1, 256),
+            GateOpenReachUnits = Range("gateOpenReachPx", d.GateOpenReachUnits / 64, 0, 256) * 64,
+            GateCloseReachUnits = Range("gateCloseReachPx", d.GateCloseReachUnits / 64, 0, 512) * 64,
+            GateChangeIntervalMs = Range("gateChangeIntervalMs", d.GateChangeIntervalMs, 0, 600_000),
+            MaxGateChangesPerTick = Range("maxGateChangesPerTick", d.MaxGateChangesPerTick, 1, 4096),
+            RepairCostBasisPoints = Range("repairCostPercent", d.RepairCostBasisPoints / 100, 0, 1000) * 100,
+            RepairerFalloffBasisPoints = Range("repairerFalloffPercent", d.RepairerFalloffBasisPoints / 100, 0, 100) * 100,
         };
     }
 

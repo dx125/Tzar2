@@ -65,6 +65,8 @@ public sealed class Simulation : IDisposable
         _scheduler.Add(new PathRequestSystem());
         _scheduler.Add(new MovementSystem());
         _scheduler.Add(new CombatSystem());
+        _scheduler.Add(new StructureSystem());
+        _scheduler.Add(new CaptureSystem());
         _scheduler.Add(new CleanupSystem());
     }
 

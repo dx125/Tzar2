@@ -126,6 +126,9 @@ public sealed class NavLayer
     /// <summary>Number of clusters.</summary>
     public int ClusterCount => _clusters.Length;
 
+    /// <summary>Clusters whose regions were rebuilt by incremental updates so far (a cost counter; derived, not state).</summary>
+    public long ClustersRebuilt { get; private set; }
+
     /// <summary>Size of the abstract node id space (<see cref="ClusterCount"/> × <see cref="MaxPortals"/>).</summary>
     public int NodeCapacity => _clusters.Length * MaxPortals;
 
@@ -230,6 +233,7 @@ public sealed class NavLayer
 
         // Regions change only inside dirty clusters; portals and intra costs also in their 4-neighbours.
         int dirty = _dirtyCount;
+        ClustersRebuilt += dirty;
         for (int k = 0; k < dirty; k++)
         {
             BuildRegions(_dirtyList[k]);

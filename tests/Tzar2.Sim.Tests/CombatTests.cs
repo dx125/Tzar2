@@ -145,7 +145,7 @@ public class CombatTests
     }
 
     [Fact]
-    public void Soldiers_destroy_a_building_which_frees_its_tiles_and_leaves_no_corpse()
+    public void Soldiers_destroy_a_building_which_frees_its_tiles_and_leaves_a_ruin_not_a_corpse()
     {
         using var d = new SimDriver(
             TestMap(24, 12, [Structure("euro.house", 1, 12, 4), .. Enumerable.Range(0, 4).Select(i => Unit("euro.footman", 0, 4, 3 + i))]),
@@ -155,12 +155,29 @@ public class CombatTests
         d.Order(0, CommandKind.Attack, squad, target: house);
         d.RunUntil(() => !d.World.Entities.IsAlive(house), 2000);
         Assert.False(d.World.Entities.IsAlive(house));
-        // RESISTANCE 40 (manual ch. 4, scale UNVERIFIED): 9 x 100 / 140 = 6 per hit.
-        Assert.Equal([6], d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).Select(e => e.Event.Arg).Distinct());
+        // RESISTANCE 40 (manual ch. 4, scale UNVERIFIED): 9 x 1000 / 1040 = 8 per hit.
+        Assert.Equal([8], d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).Select(e => e.Event.Arg).Distinct());
         Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 12, 4));
-        Assert.Equal(0, d.World.Decals.Count);
+        Assert.Equal(1, d.World.Decals.Count); // GAME-03: a ruin decal that never blocks (ORIG-01), no corpse
+        Assert.Equal(DecalKind.Ruin, d.World.Decals[0].Kind);
         d.Step();
         Assert.All(squad, s => Assert.Equal(0u, d.World.Combats.Get(s).Target));
+    }
+
+    [Fact]
+    public void Ten_footmen_destroy_an_enemy_barracks_in_bounded_time()
+    {
+        // Owner decision (PR #21, UNK-08): resistanceScale 1000, so melee can take buildings down. Barracks (synthetic):
+        // 1,250 HP, RESISTANCE 300: 9 x 1000 / 1300 = 6 per hit, a hit per second per footman, then fire helps.
+        using var d = new SimDriver(
+            TestMap(32, 16, [Structure("euro.barrack", 1, 18, 6), .. Enumerable.Range(0, 10).Select(i => Unit("euro.footman", 0, 6 + (i % 2), 3 + i))]),
+            ruleset: Classic);
+        EntityId barracks = OfType(d.World, "euro.barrack").Single();
+        d.Order(0, CommandKind.Attack, [.. OfType(d.World, "euro.footman")], target: barracks);
+        int ticks = d.RunUntil(() => !d.World.Entities.IsAlive(barracks), 2400);
+        Assert.False(d.World.Entities.IsAlive(barracks));
+        Assert.Equal([6], d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).Select(e => e.Event.Arg).Distinct());
+        Assert.InRange(ticks, 300, 900); // ~21 s of hitting plus the walk; under 45 s
     }
 
     [Fact]

@@ -205,7 +205,7 @@ public sealed class SessionTests
 
         // The human deletes everything: defeat.
         var batch = new CommandList();
-        batch.Add(CommandKind.Delete, Own(session, 0));
+        batch.Add(CommandKind.Delete, Own(session, 0), flags: CommandFlags.Queue); // Shift + Del: the castle too
         session.Submit(batch);
         session.Step(40);
         Assert.Equal(MatchOutcome.Defeat, session.AcquireFrame(out _)!.Outcome);
@@ -315,7 +315,7 @@ public sealed class SessionTests
 
             if (own.Count > 0)
             {
-                batch.Add(CommandKind.Delete, own.ToArray());
+                batch.Add(CommandKind.Delete, own.ToArray(), flags: CommandFlags.Queue);
             }
         }
     }

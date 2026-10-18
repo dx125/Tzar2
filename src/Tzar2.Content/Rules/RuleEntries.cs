@@ -94,6 +94,12 @@ internal sealed class ResolvedEntry(string key, string source, int line)
 
     public List<ResolvedTrait> Traits { get; } = [];
 
+    /// <summary>
+    /// Traits this entry (or a template it inherits) removed with <c>-Trait:</c>: an entry that inherits it after a parent
+    /// that adds such a trait loses it too (a template's removal is part of what it passes on, ADR 0040).
+    /// </summary>
+    public List<string> Removed { get; } = [];
+
     public ResolvedTrait? Find(string trait)
     {
         foreach (ResolvedTrait t in Traits)
@@ -334,8 +340,19 @@ internal sealed class RulesDocument
                 throw new RulesException(entry.Source, entry.Line, $"{entry.Key}: inherits unknown template '{parentKey}'");
             }
 
-            foreach (ResolvedTrait trait in Resolve(parentIndex, resolved, state, depth + 1).Traits)
+            ResolvedEntry parent = Resolve(parentIndex, resolved, state, depth + 1);
+            foreach (string removed in parent.Removed)
             {
+                output.Traits.RemoveAll(t => string.Equals(t.Name, removed, StringComparison.Ordinal));
+                if (!output.Removed.Contains(removed))
+                {
+                    output.Removed.Add(removed);
+                }
+            }
+
+            foreach (ResolvedTrait trait in parent.Traits)
+            {
+                output.Removed.Remove(trait.Name);
                 ResolvedTrait? existing = output.Find(trait.Name);
                 if (existing is null)
                 {
@@ -362,8 +379,15 @@ internal sealed class RulesDocument
                     output.Traits.Remove(trait);
                 }
 
+                if (!output.Removed.Contains(change.Trait))
+                {
+                    output.Removed.Add(change.Trait);
+                }
+
                 continue;
             }
+
+            output.Removed.Remove(change.Trait);
 
             if (trait is null)
             {

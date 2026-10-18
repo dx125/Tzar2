@@ -138,28 +138,65 @@ public static class RulesetCompiler
 
         List<ResolvedEntry> resolved = document.Resolve();
         var compiled = new List<ResolvedEntry>();
+        var technologyEntries = new List<ResolvedEntry>();
+        var upgradeEntries = new List<ResolvedEntry>();
         foreach (ResolvedEntry e in resolved)
         {
-            if (!e.Key.StartsWith('^'))
+            if (e.Key.StartsWith('^'))
             {
-                compiled.Add(e);
+                continue;
             }
+
+            // Technologies and upgrades (GAME-06) are entries with a Technology/Upgrade trait; ids of their own.
+            (e.Find("Technology") is not null ? technologyEntries : e.Find("Upgrade") is not null ? upgradeEntries : compiled).Add(e);
         }
 
         compiled.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
-        if (compiled.Count > ushort.MaxValue)
+        technologyEntries.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
+        upgradeEntries.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
+        if (compiled.Count > Ruleset.MaxEntityTypes || technologyEntries.Count > Ruleset.MaxTechnologies || upgradeEntries.Count > Ruleset.MaxUpgrades)
         {
-            throw new RulesException(layers[0].Source, 0, "too many entity types");
+            throw new RulesException(layers[0].Source, 0, $"too many entity types, technologies or upgrades (at most {Ruleset.MaxEntityTypes}, {Ruleset.MaxTechnologies}, {Ruleset.MaxUpgrades})");
         }
 
-        // 5. Traits.
-        var context = new EntityCompiler(compiled, resources, gameplay);
+        // 5. Traits, then technologies and upgrades (their effects name entity types).
+        var researchIds = new ResearchIds(technologyEntries, upgradeEntries);
+        var context = new EntityCompiler(compiled, resources, gameplay, researchIds, diagnostics);
         List<EntityTypeDefinition> types = context.CompileAll();
         List<TerrainTypeDefinition> terrain = ReadTerrain(settings);
         GameplaySettings gameplaySettings = gameplay.Build(legacy, settings);
-        List<DamageBonus> bonuses = legacy is not null && settings.Mapping("legacy") is { } config && legacy.Has("data/bonus.ini")
-            ? LegacyBonuses.Compile(legacy.Ini("data/bonus.ini"), config, types, diagnostics)
-            : [];
+        YamlMapping? legacyMapping = settings.Mapping("legacy");
+        LegacyIni? bonusIni = legacy is not null && legacy.Has("data/bonus.ini") ? legacy.Ini("data/bonus.ini") : null;
+        LegacyGroups groups = legacy is null ? LegacyGroups.Empty : LegacyGroups.Read(bonusIni, legacyMapping, settings.SourceOf("legacy"));
+        List<DamageBonus> bonuses = bonusIni is not null ? LegacyBonuses.Compile(bonusIni, groups, types, diagnostics) : [];
+        var research = new ResearchCompiler(types, resources, groups, researchIds, diagnostics);
+        var orderGates = new List<OrderGate>();
+        List<TechnologyDefinition> technologies = research.Technologies(technologyEntries, orderGates);
+        List<UpgradeDefinition> upgrades = research.Upgrades(upgradeEntries);
+        var civilizations = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (EntityTypeDefinition t in types)
+        {
+            if (t.Traits.Civilization.Length > 0)
+            {
+                civilizations.Add(t.Traits.Civilization);
+            }
+        }
+
+        foreach (OrderGate g in orderGates)
+        {
+            civilizations.Add(g.Civilization);
+        }
+
+        int hudMask = -1;
+        if (settings.Field("ruleset", "hudResources") is { } hud)
+        {
+            hudMask = 0;
+            foreach (string r in RulesDocument.StringList(hud, settings.FieldSource("ruleset", "hudResources"), "ruleset.hudResources"))
+            {
+                int id = resources.IndexOf(r);
+                hudMask |= id >= 0 ? 1 << id : throw new RulesException(settings.FieldSource("ruleset", "hudResources"), hud.Line, $"ruleset.hudResources: unknown resource '{r}'");
+            }
+        }
 
         try
         {
@@ -173,7 +210,12 @@ public static class RulesetCompiler
                 decalCap: settings.Int("ruleset", "decalCap") ?? Ruleset.DefaultDecalCap,
                 resourceTypes: resources,
                 gameplay: gameplaySettings,
-                damageBonuses: bonuses);
+                damageBonuses: bonuses,
+                technologies: technologies,
+                upgrades: upgrades,
+                civilizations: [.. civilizations],
+                orderGates: orderGates,
+                hudResourceMask: hudMask);
             return new CompiledRuleset(ruleset, diagnostics, warnings, legacyHash);
         }
         catch (ArgumentException ex)

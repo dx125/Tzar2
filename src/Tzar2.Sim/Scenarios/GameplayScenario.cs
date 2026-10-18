@@ -51,17 +51,27 @@ public sealed class GameplayScenario : IBenchScenario
     private readonly CommandList _tickSet = new();
     private readonly BinaryBufferWriter _wire = new(4096);
     private readonly List<EntityId> _idleWorkers = [];
+    private readonly List<EntityId> _allWorkers = [];
     private readonly List<EntityId> _idleSoldiers = [];
     private readonly List<EntityId> _selection = [];
     private readonly ushort _peon;
     private readonly ushort _footman;
     private readonly ushort _house;
     private readonly ushort _barrack;
+    private readonly ushort _castle;
+    private readonly int _gate;
+    private readonly int _wall;
+    private readonly int _bridge;
+    private readonly bool[] _bridged;
     private Xoshiro256StarStar _bot;
     private long _delivered;
     private long _kills;
     private long _trained;
     private long _built;
+    private long _researched;
+    private long _captured;
+    private long _fires;
+    private long _repaired;
 
     /// <summary>Creates the scenario and its simulation at tick 0.</summary>
     /// <param name="ruleset">The compiled classic ruleset (needs the <c>euro.*</c> and <c>comm.*</c> types).</param>
@@ -79,6 +89,11 @@ public sealed class GameplayScenario : IBenchScenario
         _footman = TypeId(ruleset, "euro.footman");
         _house = TypeId(ruleset, "euro.house");
         _barrack = TypeId(ruleset, "euro.barrack");
+        _castle = TypeId(ruleset, "euro.castle");
+        _gate = ruleset.EntityTypeId("comm.gate_wood");
+        _wall = ruleset.EntityTypeId("comm.wall_wood");
+        _bridge = ruleset.EntityTypeId("comm.bridge");
+        _bridged = new bool[options.Players];
         Map = CreateMap(ruleset, options);
         Simulation = new Simulation(
             ruleset,
@@ -112,6 +127,23 @@ public sealed class GameplayScenario : IBenchScenario
     /// <summary>Buildings completed so far.</summary>
     public long Built => _built;
 
+    /// <summary>Buildings captured, fires started and repairs completed so far (GAME-03/04).</summary>
+    public (long Captured, long Fires, long Repaired) M3Events => (_captured, _fires, _repaired);
+
+    private int BridgeTiles()
+    {
+        int n = 0;
+        foreach (byte b in Simulation.World.Map.Bridges)
+        {
+            n += b != 0 ? 1 : 0;
+        }
+
+        return n;
+    }
+
+    /// <summary>Technologies researched so far (GAME-06).</summary>
+    public long Researched => _researched;
+
     /// <summary>
     /// The map: open grass; per kingdom a base on a ring around the center (castle, barracks, lumber mill, storage,
     /// farm), a forest behind it, a gold rock, peasants at the castle and a block of soldiers in front of the base.
@@ -124,6 +156,7 @@ public sealed class GameplayScenario : IBenchScenario
         var objects = new List<MapObject>();
         var rng = Xoshiro256StarStar.FromSeed(options.Seed ^ 0x3A9UL);
         var used = new bool[size * size];
+        var water = new byte[size * size];
         int center = size / 2;
         int radius = (size / 2) - 24;
         string[] soldierTypes = ["euro.footman", "euro.footman", "euro.archer", "euro.maceman"];
@@ -139,6 +172,24 @@ public sealed class GameplayScenario : IBenchScenario
             Place(objects, used, size, ruleset, "euro.storage", p, bx + 4, by + 7);
             Place(objects, used, size, ruleset, "euro.farm", p, bx + 8, by + 5);
             Place(objects, used, size, ruleset, "comm.res_gold", MapObject.Nature, bx + 12, by + 8);
+
+            // Keep the bot's gate, wall and bridge spots free of trees.
+            Reserve(used, size, bx - 3, by + 1, 1, 3);
+            Reserve(used, size, bx - 6, by - 3, 6, 1);
+            Reserve(used, size, bx + RiverLeft - 1, by + RiverTop + 3, 5, 2);
+
+            // A short river beside the base (columns +2..+4, rows +12..+19) for the bot's bridge (M3, ADR 0045).
+            for (int ry = by + RiverTop; ry < by + RiverTop + 8; ry++)
+            {
+                for (int rx = bx + RiverLeft; rx < bx + RiverLeft + 3; rx++)
+                {
+                    if ((uint)rx < (uint)size && (uint)ry < (uint)size)
+                    {
+                        water[(ry * size) + rx] = 1;
+                        used[(ry * size) + rx] = true;
+                    }
+                }
+            }
             // Houses: enough population room (castle + 30 houses) that the barracks keep training.
             for (int h = 0; h < 30; h++)
             {
@@ -175,7 +226,7 @@ public sealed class GameplayScenario : IBenchScenario
             }
         }
 
-        MapData terrain = ScenarioMaps.Build($"gameplay-{size}", size, size, new byte[size * size], []);
+        MapData terrain = ScenarioMaps.Build($"gameplay-{size}", size, size, water, new byte[size * size]);
         return ScenarioMaps.WithObjects(terrain, objects);
 
         static int Center(int tile, int size) => (Math.Clamp(tile, 0, size - 1) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2);
@@ -224,13 +275,17 @@ public sealed class GameplayScenario : IBenchScenario
                 case SimEventKind.Killed: _kills++; break;
                 case SimEventKind.UnitTrained: _trained++; break;
                 case SimEventKind.ConstructionCompleted: _built++; break;
+                case SimEventKind.ResearchCompleted: _researched++; break;
+                case SimEventKind.Captured: _captured++; break;
+                case SimEventKind.FireStarted: _fires++; break;
+                case SimEventKind.Repaired: _repaired++; break;
             }
         }
     }
 
     /// <inheritdoc />
     public string Describe()
-        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, corpses {Simulation.World.Decals.Count}");
+        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, researched {_researched}, captured {_captured}, fires {_fires}, repaired {_repaired}, gates {Simulation.World.Gates.Count}, bridge tiles {BridgeTiles()}, corpses {Simulation.World.Decals.Count}");
 
     /// <inheritdoc />
     public void Dispose() => Simulation.Dispose();
@@ -240,8 +295,10 @@ public sealed class GameplayScenario : IBenchScenario
     private void Think(World world, byte player, int tick)
     {
         _idleWorkers.Clear();
+        _allWorkers.Clear();
         _idleSoldiers.Clear();
         EntityId barracks = EntityId.None;
+        EntityId castle = EntityId.None;
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         Span<Identity> identities = world.Identities.Components;
         for (int i = 0; i < ids.Length; i++)
@@ -257,8 +314,13 @@ public sealed class GameplayScenario : IBenchScenario
             {
                 barracks = e;
             }
+            else if (type == _castle && castle.IsNone && world.Productions.Has(e))
+            {
+                castle = e;
+            }
             else if (world.Workers.IndexOf(e) is >= 0 and var w)
             {
+                _allWorkers.Add(e);
                 if (world.Workers.At(w).Task == WorkerTask.None && !IsMoving(world, e))
                 {
                     _idleWorkers.Add(e);
@@ -274,18 +336,25 @@ public sealed class GameplayScenario : IBenchScenario
             }
         }
 
-        // Peasants: two build a house every 400 ticks; the rest harvest the node nearest to them.
+        // M3 (ADR 0045): the bot also captures, repairs, attacks houses (fire), builds a gate, drags a wall and bridges
+        // its river, so the cross-OS golden and hash streams cover those systems.
         int first = 0;
-        if (tick % 400 < _options.BotIntervalTicks && _idleWorkers.Count >= 2)
+        if (!castle.IsNone)
         {
-            Position at = world.Positions.Get(_idleWorkers[0]);
+            first = M3Orders(world, player, tick, castle);
+        }
+
+        // Peasants: two build a house every 400 ticks; the rest harvest the node nearest to them.
+        if (tick % 400 < _options.BotIntervalTicks && _idleWorkers.Count >= first + 2)
+        {
+            Position at = world.Positions.Get(_idleWorkers[first]);
             int tx = (at.X / MapState.UnitsPerTile) + _bot.NextInt(-6, 7);
             int ty = (at.Y / MapState.UnitsPerTile) + _bot.NextInt(-6, 7);
             _selection.Clear();
-            _selection.Add(_idleWorkers[0]);
-            _selection.Add(_idleWorkers[1]);
+            _selection.Add(_idleWorkers[first]);
+            _selection.Add(_idleWorkers[first + 1]);
             _batch.Add(CommandKind.Build, Span(_selection), Math.Max(0, tx) * MapState.UnitsPerTile, Math.Max(0, ty) * MapState.UnitsPerTile, arg0: _house);
-            first = 2;
+            first += 2;
         }
 
         for (int i = first; i < _idleWorkers.Count; i++)
@@ -296,6 +365,21 @@ public sealed class GameplayScenario : IBenchScenario
                 _selection.Clear();
                 _selection.Add(_idleWorkers[i]);
                 _batch.Add(CommandKind.Harvest, Span(_selection), target: node);
+            }
+        }
+
+        // GAME-06: the castle researches its technologies one after another (cheaper peasants, faster building...).
+        if (!castle.IsNone && tick % 600 < _options.BotIntervalTicks && world.TypeOf(castle).Traits.Producer is { } producer)
+        {
+            foreach (ushort tech in producer.Researches)
+            {
+                if (!world.Players[player].HasTechnology(tech))
+                {
+                    _selection.Clear();
+                    _selection.Add(castle);
+                    _batch.Add(CommandKind.Research, Span(_selection), arg0: tech);
+                    break;
+                }
             }
         }
 
@@ -316,6 +400,131 @@ public sealed class GameplayScenario : IBenchScenario
                 _batch.Add(CommandKind.Move, Span(_idleSoldiers).Slice(start, n), c + _bot.NextInt(-spread, spread), c + _bot.NextInt(-spread, spread), flags: CommandFlags.Ctrl);
             }
         }
+    }
+
+    private const int RiverLeft = 2;
+    private const int RiverTop = 12;
+
+    // Uses the first idle workers for one M3 order per window; returns how many it used. Soldiers: every 1,000 ticks the
+    // first ten idle ones attack the nearest enemy house.
+    private int M3Orders(World world, byte player, int tick, EntityId castle)
+    {
+        Footprint f = world.Footprints.Get(castle);
+        int bx = f.TileX;
+        int by = f.TileY;
+        int window = _options.BotIntervalTicks;
+        int used = 0;
+        EntityId Take()
+        {
+            return used < _idleWorkers.Count ? _idleWorkers[used++] : EntityId.None;
+        }
+
+        if (tick % 1000 < window && _idleSoldiers.Count >= 10 && NearestEnemy(world, player, _house, world.Positions.Get(castle)) is { IsNone: false } victim)
+        {
+            _batch.Add(CommandKind.Attack, Span(_idleSoldiers)[..10], target: victim);
+            _idleSoldiers.RemoveRange(0, 10);
+        }
+
+        if (tick % 900 < window && _idleWorkers.Count >= used + 2 && NearestEnemy(world, player, _house, world.Positions.Get(castle)) is { IsNone: false } house)
+        {
+            _selection.Clear();
+            _selection.Add(Take());
+            _selection.Add(Take());
+            _batch.Add(CommandKind.Capture, Span(_selection), target: house);
+        }
+
+        if (tick % 300 < window && _idleWorkers.Count > used && DamagedOwn(world, player) is { IsNone: false } damaged)
+        {
+            _selection.Clear();
+            _selection.Add(Take());
+            _batch.Add(CommandKind.Repair, Span(_selection), target: damaged);
+        }
+
+        // Three busy workers (from the end of the list, so the idle passes above keep theirs) get the gate, the wall and
+        // the bridge.
+        EntityId WorkerFromEnd(int k) => _allWorkers.Count > k ? _allWorkers[^(k + 1)] : EntityId.None;
+        EntityId builder = WorkerFromEnd(0);
+        if (tick >= 200 && tick < 200 + window && !builder.IsNone && _gate >= 0)
+        {
+            _selection.Clear();
+            _selection.Add(builder);
+            _batch.Add(CommandKind.Build, Span(_selection), (bx - 3) * MapState.UnitsPerTile, (by + 1) * MapState.UnitsPerTile, arg0: _gate, arg1: 1);
+        }
+
+        if (tick >= 400 && tick < 400 + window && !WorkerFromEnd(1).IsNone && _wall >= 0)
+        {
+            _selection.Clear();
+            _selection.Add(WorkerFromEnd(1));
+            _batch.Add(CommandKind.BuildWall, Span(_selection), (bx - 6) * MapState.UnitsPerTile, (by - 3) * MapState.UnitsPerTile, arg0: _wall, arg1: ((by - 3) << 16) | (bx - 1));
+        }
+
+        if (tick % 350 < window && !WorkerFromEnd(2).IsNone && _bridge >= 0 && !_bridged[player])
+        {
+            _selection.Clear();
+            _selection.Add(WorkerFromEnd(2));
+            _batch.Add(CommandKind.Build, Span(_selection), (bx + RiverLeft - 1) * MapState.UnitsPerTile, (by + RiverTop + 3) * MapState.UnitsPerTile, arg0: _bridge);
+            if (world.Players[player].HasTechnology(world.Ruleset.TechnologyId("te_architecture")))
+            {
+                _bridged[player] = true; // one attempt once the bridge is allowed
+            }
+        }
+
+        return used;
+    }
+
+    private static void Reserve(bool[] used, int size, int x0, int y0, int w, int h)
+    {
+        for (int y = y0; y < y0 + h; y++)
+        {
+            for (int x = x0; x < x0 + w; x++)
+            {
+                if ((uint)x < (uint)size && (uint)y < (uint)size)
+                {
+                    used[(y * size) + x] = true;
+                }
+            }
+        }
+    }
+
+    private static EntityId NearestEnemy(World world, byte player, ushort type, Position from)
+    {
+        EntityId best = EntityId.None;
+        long bestDistance = long.MaxValue;
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            Identity identity = world.Identities.Get(structures[i]);
+            if (identity.TypeId != type || identity.Owner == player || !world.HasPlayer(identity.Owner) || world.Constructions.Has(structures[i]))
+            {
+                continue;
+            }
+
+            Position p = world.Positions.Get(structures[i]);
+            long d = Core.Numerics.IntMath.DistanceSquared(from.X, from.Y, p.X, p.Y);
+            if (d < bestDistance)
+            {
+                bestDistance = d;
+                best = structures[i];
+            }
+        }
+
+        return best;
+    }
+
+    private static EntityId DamagedOwn(World world, byte player)
+    {
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            EntityId s = structures[i];
+            if (world.Identities.Get(s).Owner == player && !world.Constructions.Has(s) && world.TypeOf(s).Traits.IsRepairable
+                && world.Healths.Get(s).Current < world.Healths.Get(s).Max)
+            {
+                return s;
+            }
+        }
+
+        return EntityId.None;
     }
 
     private static EntityId NearestNode(World world, Position from)

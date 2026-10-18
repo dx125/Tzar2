@@ -1,17 +1,20 @@
 # The `classic` ruleset (TDD §11.3, DEC-06): v1.10 behaviour of the GOG reference build.
 #
 # This file holds NO original data. The numbers (costs, times, hit points, attack, defence, sight, range, speed, rate,
-# population, footprints, resource amounts, starting resources, damage bonuses) are read from the user's own imported
-# tables (`legacy:` below; ADR 0032). What this file adds is the mapping of those tables onto traits, and the constants
-# the tables do not contain.
+# population, footprints, resource amounts, starting resources, damage bonuses, technology and upgrade costs and times,
+# technology trees, what each building researches) are read from the user's own imported tables (`legacy:` below;
+# ADRs 0032, 0040). What this file adds is the mapping of those tables onto traits, and the constants and effects the
+# tables do not contain.
 #
 # Values marked `UNVERIFIED (UNK-nn)` are placeholders: not in any original table and not yet measured in the running
-# game. They are listed with their unknowns in docs/mechanics/m2-placeholders.md and get replaced by capture facts
-# (`t2 fidelity`, ADR 0030). Do not tune them for balance: replace them with measurements.
+# game. They are listed with their unknowns in docs/mechanics/m2-placeholders.md and docs/mechanics/m3-placeholders.md
+# and get replaced by capture facts (`t2 fidelity`, ADR 0030). Do not tune them for balance: replace them with
+# measurements.
 #
 # Format (ADR 0031): top-level keys are the sections below or entries. `^Name` entries are templates; `inherits` lists
 # templates; `-Trait:` removes an inherited trait; `field+=`/`field-=` append to/remove from inherited lists. A patch
-# must name an existing entry; a new one says `new: true`.
+# must name an existing entry; a new one says `new: true`. Imported entries inherit `^Unit`/`^Building`/`^Resource`,
+# then `^class.<class>` and `^<civ>.<class>` when they exist.
 
 ruleset:
   name: classic
@@ -19,9 +22,10 @@ ruleset:
   occupancyCellsPerTileAxis: 2        # UNVERIFIED (UNK-11): unit packing per tile
   corpseTtlMs: 120000                 # REQ-PATH-08 default; UNVERIFIED corpse lifetime of the original
   decalCap: 4000
+  hudResources: [food, wood, stone, gold]   # GAME-01: iron exists in the data but not in the HUD (UNK-14)
 
 # GAME-01. Resource type ids are positions in this list. Iron exists in the data (RES.INI, te_ironplus) but not in the
-# HUD (UNK-14).
+# HUD (UNK-14). Mana is per caster (trait ManaPool), not a stockpile.
 resources: [food, wood, stone, gold, iron]
 
 gameplay:
@@ -35,9 +39,11 @@ gameplay:
   speedPixelsPerSecondPerPoint: 12    # UNVERIFIED (UNK-12): px/s per SPEED point (SPEED 4 = 48 px/s)
   attackCycleMs: 6000                 # UNVERIFIED (UNK-07): time between hits = attackCycleMs / RATE
   hitDelayPercent: 50                 # UNVERIFIED (UNK-07): hit frame at this share of the cycle
+  manaRegenPerMinute: 60              # UNVERIFIED (UNK-26): mana a caster regains per minute
   # Combat and work constants.
   minimumDamage: 1                    # UNVERIFIED (UNK-08)
-  resistanceScale: 100                # UNVERIFIED (UNK-08): building damage x 100 / (100 + RESISTANCE) (manual ch. 4)
+  resistanceScale: 1000               # UNVERIFIED (UNK-08): building damage x 1000 / (1000 + RESISTANCE) (manual ch. 4); owner
+                                      # decision: 100 made castles (1000) practically immune to melee; capture uses RESISTANCE alone
   meleeReachPx: 8                     # UNVERIFIED (UNK-07/11): edge-to-edge reach of hand-to-hand attacks
   interactionReachPx: 32              # UNVERIFIED (UNK-17/18): worker reach to a node, drop-off or site
   acquireIntervalMs: 200              # UNVERIFIED: target scan cadence of idle armed units
@@ -45,6 +51,24 @@ gameplay:
   queueCapacity: 10                   # UNVERIFIED (UNK-20): production queue length
   constructionRefundPercent: 100      # UNVERIFIED: refund of a cancelled construction site
   productionRefundPercent: 100        # UNVERIFIED: refund of a cancelled queued unit
+  researchRefundPercent: 100          # UNVERIFIED: refund of a cancelled research or upgrade
+  # GAME-03: repair, fire, ruins, walls, gates (ADR 0043).
+  repairTimePercent: 100              # UNVERIFIED (UNK-18): a full repair by one peasant takes this share of the build time
+  burnThresholdPercent: 50            # UNVERIFIED (UNK-42): buildings below this share of their hit points burn
+  burnDamagePerMinute: 60             # UNVERIFIED (UNK-42): hit points a burning building loses per minute
+  wallContinueRadiusTiles: 6          # UNVERIFIED: builders move on to the next segment of a dragged wall within this
+  maxWallSegments: 64                 # UNVERIFIED: most segments one dragged wall places
+  repairCostPercent: 50               # UNVERIFIED (UNK-18): a full repair costs this share of the construction cost, pro rata (owner decision)
+  repairerFalloffPercent: 25          # UNVERIFIED (UNK-18): repairers on one building add 100%, 75%, 50%, 25%, then nothing (owner decision)
+  gateOpenReachPx: 32                 # UNVERIFIED: an automatic gate opens for its owner's units this close
+  gateCloseReachPx: 64                # UNVERIFIED: ... and closes when none is this close (hysteresis)
+  gateChangeIntervalMs: 1000          # UNVERIFIED: least time between two changes of one gate (owner decision)
+  maxGateChangesPerTick: 4            # engine bound: gate changes applied per tick (the rest wait); 16 cost 15 ms p99 (review)
+  # GAME-04: capture (ADR 0044; ⚠ HYPOTHESIS UNK-19 for the EMIT influence).
+  capturePointsPerSecond: 10          # UNVERIFIED (UNK-19): capture points per capturing peasant per second
+  minimumCaptureResistance: 1         # UNVERIFIED (UNK-19)
+  captureResetMs: 5000                # UNVERIFIED (UNK-19): progress is lost after this long without a capturer
+  influenceRadiusTiles: 16            # UNVERIFIED (UNK-19): EMIT fades linearly to 0 at this distance
 
 # Terrain types of the M2 test maps (the terrain-set conversion of §9.1 replaces this list with the original sets).
 terrain:
@@ -54,17 +78,23 @@ terrain:
 legacy:
   # Table prefixes: DATA/<civ> UNITS.TXT, DATA/<civ> BUILDINGS.TXT; also the `[civ]` sections of OBJECTS/*.INI.
   civilizations: [euro, asia, arab, comm]
-  # The subset of classes compiled for M2 basic play (§25: gathering, building, production, combat). M3 extends it.
-  units: [peon, footman, archer, maceman, pikeman, knight, heavy_cavalry, horse_samurai]
-  buildings: [castle, house, barrack, storage, lumber, farm, field]
-  # Cost suffixes (GAME-01; "m" = mana is per caster, not imported here).
-  costSuffixes: { f: food, w: wood, s: stone, g: gold, i: iron }
-  # Producer column of the unit tables -> building class.
-  producers: { Castle: castle, Barracks: barrack, Workshop: workshop, Harbor: harbor, "Mage Tower": magetower, Cathedral: cathedral, Mosque: mosque, Market: market }
-  # Resource rocks: amount from RES.INI [Others].
+  # Every unit and building of the tables (M3: GAME-01...06). Classes in both tables (towers) are buildings that take
+  # their armament and hit points from the unit table.
+  units: all
+  buildings: all
+  # Cost suffixes (GAME-01; "m" = mana is paid by the caster, not from the stockpile).
+  costSuffixes: { f: food, w: wood, s: stone, g: gold, i: iron, m: mana }
+  # Producer column of the unit tables -> building class (common units are trained in every civilization's building).
+  producers: { Castle: castle, Barracks: barrack, Workshop: workshop, Harbor: harbor, "Mage Tower": magetower, Cathedral: cathedral, Mosque: mosque, Market: market, Farm: farm, Monastey: shaolinn, "War Guild": academy }
+  # Resource nodes: amount from RES.INI [Others]. Fish patches sit on water and have no footprint (ADR 0042).
   resourceNodes:
     res_gold: { resource: gold, amount: golden rocks }
     res_stone: { resource: stone, amount: rocks }
+    fishpatch: { resource: food, amount: fish patch, footprint: false }
+  # ⚠ HYPOTHESIS (ADR 0042): cows keep their milk as max_manna; it becomes the food they hold.
+  milkClasses: [cow]
+  # Technology trees per civilization: [depend] prerequisites, [required] buildings, [orders] gated orders (ADR 0040).
+  techTrees: { euro: "data/techtree euro.ini", asia: "data/techtree asia.ini", arab: "data/techtree arab.ini" }
   # Starting-resource levels -> RES.INI sections.
   startingResources: { low: Low, medium: Medium, high: High }
   # Civilization prefixes of class names in BONUS.INI.
@@ -72,7 +102,7 @@ legacy:
   # Hash of what the compiler reads from the tables of the clean reference build; another value means a modified
   # installation (a warning in the import and ruleset reports, not an error). Changes with the lists above.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "12BCCFB408824815"
+  referenceDataHash: "1088530FE84250E1"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
@@ -84,6 +114,9 @@ legacy:
 
 ^Building:
   Armor: { defence: 0 }               # RESISTANCE (from the table) reduces damage instead, see gameplay.resistanceScale
+  Repairable: {}                      # GAME-03: peasants repair buildings
+  Burnable: {}                        # GAME-03: badly damaged buildings burn (threshold and damage UNVERIFIED, UNK-42)
+  RuinOnDeath: {}                     # GAME-03: ruins (a decal that never blocks, ORIG-01)
 
 ^Resource: {}
 
@@ -91,32 +124,116 @@ legacy:
   Mobile: { locomotor: mounted }
   Collision: { radius: 10 }           # UNVERIFIED (UNK-11)
 
+^Ship:
+  Mobile: { locomotor: ship }
+  Collision: { radius: 16 }           # UNVERIFIED (UNK-11)
+  Repairable: {}                      # GAME-03: peasants repair ships (manual ch. 5)
+  -CorpseOnDeath:                     # ships sink
+
+^Siege:
+  Mobile: { locomotor: large }
+  Collision: { radius: 12 }           # UNVERIFIED (UNK-11)
+  Repairable: {}                      # GAME-03: peasants repair siege weapons (manual ch. 5)
+  -CorpseOnDeath:
+
 # Peasants (manual §5.4: build, repair, capture, harvest...).
 ^class.peon:
   Armament: { autoAcquire: false }    # UNVERIFIED: idle peasants do not start fights
   Builder: { civilizations: [own, comm] }
+  Capturer: {}                        # GAME-04
   Harvester:
     capacity: 10                      # UNVERIFIED (UNK-17)
-    gatherMs: { food: 1000, wood: 1000, stone: 1000, gold: 1000 }   # UNVERIFIED (UNK-17): per unit
+    gatherMs: { food: 1000, wood: 1000, stone: 1000, gold: 1000, iron: 1000 }   # UNVERIFIED (UNK-17): per unit
+
+^class.fishing_boat:
+  inherits: [^Ship]
+  Harvester:
+    capacity: 20                      # UNVERIFIED (UNK-17)
+    gatherMs: { food: 1000 }          # UNVERIFIED (UNK-17)
+^class.galleon: { inherits: [^Ship] }
+^class.hulk: { inherits: [^Ship] }
+^class.xebec: { inherits: [^Ship] }
+^class.catapult: { inherits: [^Siege] }
+^class.hcatapult: { inherits: [^Siege] }
+^class.ballista: { inherits: [^Siege] }
+
+# The tables give armored chariots and caravans no SPEED.
+^class.chariot: { Mobile: { speed: 4 } }   # UNVERIFIED (UNK-12)
+^class.trader: { Mobile: { speed: 4 } }    # UNVERIFIED (UNK-12): caravans (trade itself is GAME-14)
 
 ^class.knight: { inherits: [^Cavalry] }
 ^class.heavy_cavalry: { inherits: [^Cavalry] }
 ^class.horse_samurai: { inherits: [^Cavalry] }
 
-# Drop-offs (GAME-02; manual §5.4.1.2: castle stores all resources, farm food, lumbermill wood, storage gold and iron;
-# stone at the storage follows the Stone Mining technology there, E.3).
+# Cows (GAME-02): peasants milk them (the food they hold regrows) and butcher them for meat; Arab peasants steal enemy
+# cows after Cow Poaching (manual ch. 6).
+^class.cow:
+  ResourceNode:
+    regenMs: 4000                     # UNVERIFIED (UNK-17): milk regrows one unit per 4 s
+    gatherMs: 1500                    # UNVERIFIED (UNK-17): milking time per unit
+    keepWhenEmpty: true
+  SpawnOnDeath: { type: comm.meat }
+  Capturable: { instant: true, technology: te_cowpoaching }
+
+# Drop-offs (GAME-02; manual §5.4.1.2 and ch. 6: castle stores all resources, farm food, lumbermill wood; storage per
+# civilization; the harbor stores fish). Lumber mills and storages send their builders gathering (1.05).
 ^class.castle:
   DropOff: { resources: [food, wood, stone, gold, iron] }
+  ProtectedDelete: {}                 # GAME-04: Shift + Del
 ^class.farm:
   DropOff: { resources: [food] }
 ^class.lumber:
-  DropOff: { resources: [wood] }
+  DropOff: { resources: [wood], autoGather: true }
 ^class.storage:
-  DropOff: { resources: [stone, gold, iron] }   # UNVERIFIED: stone
+  DropOff: { resources: [stone, gold, iron], autoGather: true }
+^euro.storage:
+  DropOff: { resources: [gold, iron] }          # manual ch. 5: "a place for storing iron and gold"
+^asia.storage:
+  DropOff: { resources: [gold, stone] }         # manual ch. 5: "storing gold and stone"
+^arab.storage:
+  DropOff: { resources: [iron, gold, stone] }   # manual ch. 5: "storing iron, gold and stone"
+^class.harbor:
+  DropOff: { resources: [food], access: [water] }   # UNVERIFIED: only boats deliver here
+  Building: { placement: coast }
 
-# Fields produce unlimited food (manual §5.5) and need constant care (decay: UNK-17, not in M2).
+# Guilds are deletable only with Shift + Del (GAME-04).
+^class.cathedral: { ProtectedDelete: {} }
+^class.mosque: { ProtectedDelete: {} }
+^class.shaolinn: { ProtectedDelete: {} }
+^class.magetower: { ProtectedDelete: {} }
+^class.tcguild: { ProtectedDelete: {} }
+^class.academy: { ProtectedDelete: {} }
+
+# Fields produce unlimited food (manual §5.5) and need constant care: neglected, they decay and disappear.
 ^class.field:
   ResourceNode: { resource: food, amount: unlimited }
+  DropOff: { autoGather: true }       # UNVERIFIED: the builder starts farming the new field
+  Decay: { afterMs: 60000, healthPerMinute: 30 }   # UNVERIFIED (UNK-17)
+  -Burnable:
+  -RuinOnDeath:
+
+# Walls are dragged as lines; gates open; bridges carry land units over water (GAME-03, ADR 0043).
+^class.wall_wood:
+  Wall: {}
+  -Burnable:
+  -RuinOnDeath:
+^class.wall_stone:
+  Wall: {}
+  -Burnable:
+  -RuinOnDeath:
+^class.gate_wood:
+  Building: { width: 3, height: 1 }   # UNVERIFIED (UNK-02): no footprint box in the data
+  Gate: { passage: ["010"] }          # UNVERIFIED: the middle tile opens
+  -Burnable:
+^class.gate_stone:
+  Building: { width: 3, height: 1 }   # UNVERIFIED (UNK-02)
+  Gate: { passage: ["010"] }
+  -Burnable:
+^class.bridge:
+  Building: { placement: bridge }
+  Bridge: {}
+  -Burnable:
+  -RuinOnDeath:
 
 # ---- entries not in the unit/building tables ----------------------------------------------------------------------
 
@@ -127,3 +244,73 @@ comm.tree:
   Legacy: { class: tree, civ: comm }
   Building: { width: 1, height: 1 }
   ResourceNode: { resource: wood, amount: 100 }   # UNVERIFIED (UNK-17): wood per tree
+
+# Meat left by a slaughtered cow (GAME-02): a footprint-less pile that rots (never blocks, ORIG-01/05).
+comm.meat:
+  new: true
+  inherits: [^Resource]
+  Legacy: { class: meat, civ: comm }
+  ResourceNode: { resource: food, amount: 100 }   # UNVERIFIED (UNK-17)
+  Lifetime: { ms: 120000 }                        # UNVERIFIED (UNK-17)
+
+# ---- technology effects (GAME-06, ADR 0040) ------------------------------------------------------------------------
+# Costs, times, prerequisites and which building researches what come from the tables. The effects are not in any
+# table (the original hard-codes them): the manual (ch. 6) says what each technology does; every magnitude below is
+# UNVERIFIED (UNK-21). Technologies that only unlock units, buildings, spells or orders need no effect: their trees do
+# that. Stats marked (GAME-08/09/11/14) are kept in the modifier tables for the later systems that consume them.
+
+te_fields: { Technology: { effects: [{ stat: gatherRate, percent: 25, classes: [field] }] } }        # UNVERIFIED (UNK-21)
+te_irrigation: { Technology: { effects: [{ stat: gatherRate, percent: 25, classes: [field] }] } }    # UNVERIFIED (UNK-21)
+te_woodplus: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [tree] }] } }       # UNVERIFIED (UNK-21)
+te_stoneplus: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_stone] }] } } # UNVERIFIED (UNK-21)
+te_goldplus: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_gold] }] } }   # UNVERIFIED (UNK-21)
+te_ironplus: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_iron] }] } }   # UNVERIFIED (UNK-14/21): no iron rock exists
+te_orefloatation: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_gold, res_stone, res_iron] }] } }   # UNVERIFIED (UNK-21)
+te_feudalism: { Technology: { effects: [{ stat: cost, percent: -20, classes: [peon] }] } }          # UNVERIFIED (UNK-21)
+te_slavery: { Technology: { effects: [{ stat: cost, percent: -20, classes: [peon] }] } }            # UNVERIFIED (UNK-21)
+te_horsemanship: { Technology: { effects: [{ stat: cost, percent: -20, groups: [mounted] }] } }     # UNVERIFIED (UNK-21)
+te_meditation: { Technology: { effects: [{ stat: cost, percent: -20, classes: [monk] }] } }         # UNVERIFIED (UNK-21)
+te_architecture: { Technology: { effects: [{ stat: buildRate, percent: 25, category: building }] } } # UNVERIFIED (UNK-21)
+te_greatwall: { Technology: { effects: [{ stat: maxHealth, percent: 25, classes: [wall_stone, gate_stone, tower_stone, tower_stone2] }] } }   # UNVERIFIED (UNK-21)
+te_fanaticism: { Technology: { effects: [{ stat: resistance, percent: 20, category: building }] } } # UNVERIFIED (UNK-19/21)
+te_budhism: { Technology: { effects: [{ stat: resistance, percent: 20, category: building }] } }    # UNVERIFIED (UNK-19/21)
+te_supplystorage: { Technology: { effects: [{ stat: populationProvided, add: 2, classes: [house] }] } }   # UNVERIFIED (UNK-20/21)
+te_seafood: { Technology: { effects: [{ stat: populationProvided, add: 2, classes: [house] }] } }   # UNVERIFIED (UNK-20/21)
+te_temperiron: { Technology: { effects: [{ stat: attack, percent: 10, damage: sword, category: unit }] } }   # UNVERIFIED (UNK-21)
+te_scimitar: { Technology: { effects: [{ stat: attack, percent: 10, damage: sword, category: unit }] } }     # UNVERIFIED (UNK-21)
+te_crossbow: { Technology: { effects: [{ stat: attack, percent: 10, damage: arrow }] } }             # UNVERIFIED (UNK-21)
+te_chemistry: { Technology: { effects: [{ stat: attack, percent: 20, damage: arrow }] } }            # UNVERIFIED (UNK-21)
+te_engineering: { Technology: { effects: [{ stat: attack, percent: 20, groups: [siege] }] } }        # UNVERIFIED (UNK-21)
+te_kungfu: { Technology: { effects: [{ stat: attack, percent: 20, classes: [peon, monk, priest] }] } }   # UNVERIFIED (UNK-21)
+te_scalearmor: { Technology: { effects: [{ stat: defence, add: 1, groups: [infantry_units] }] } }    # UNVERIFIED (UNK-21)
+te_chainmail: { Technology: { effects: [{ stat: defence, add: 1, groups: [infantry_units] }] } }     # UNVERIFIED (UNK-21)
+te_ridinghorses:
+  Technology:
+    effects:
+      - { stat: attack, percent: 10, groups: [mounted] }        # UNVERIFIED (UNK-21)
+      - { stat: defence, add: 1, groups: [mounted] }            # UNVERIFIED (UNK-21)
+te_concentration: { Technology: { effects: [{ stat: manaRegen, percent: 50, category: unit }] } }   # UNVERIFIED (UNK-26)
+# Consumed by GAME-08 (experience), GAME-09 (holders), GAME-11 (spells), GAME-14 (trade/tavern).
+te_learning: { Technology: { effects: [{ stat: experienceCap, add: 4, category: unit }] } }          # UNVERIFIED (UNK-23)
+te_heroism: { Technology: { effects: [{ stat: experienceCap, add: 1000, category: unit }] } }        # UNVERIFIED (UNK-23): "unlimited"
+te_nobility: { Technology: { effects: [{ stat: abilityPower, add: 1, category: unit }] } }           # UNVERIFIED (UNK-23): leadership
+te_honor: { Technology: { effects: [{ stat: abilityPower, percent: 25, category: unit }] } }         # UNVERIFIED (UNK-23)
+te_warfare: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }     # UNVERIFIED (UNK-23)
+te_tactics: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }     # UNVERIFIED (UNK-23)
+te_suntzubook: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }  # UNVERIFIED (UNK-23)
+te_bodybuilding: { Technology: { effects: [{ stat: healthPerLevel, add: 5, category: unit }] } }     # UNVERIFIED (UNK-23)
+te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes: [monk] }] } }       # UNVERIFIED (UNK-23)
+te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, add: 4, groups: [ships] }] } } # UNVERIFIED (UNK-24)
+te_inquisition: { Technology: { effects: [{ stat: abilityPower, percent: 50, classes: [priest] }] } }   # UNVERIFIED (UNK-26)
+te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 4, classes: [priest] }] } }        # UNVERIFIED (UNK-26)
+te_tradetaxes: { Technology: { effects: [{ stat: income, percent: 10, classes: [market] }] } }       # UNVERIFIED (UNK-28)
+te_banking: { Technology: { effects: [{ stat: income, percent: 10, classes: [castle] }] } }          # UNVERIFIED (UNK-28)
+
+# Ship cannon levels (UPGRADES.INI to_ship_level2-6): bought per galleon in order; each adds attack (UNVERIFIED UNK-21).
+comm.galleon:
+  Researcher: { upgrades+=: [to_ship_level3, to_ship_level4, to_ship_level5, to_ship_level6] }
+to_ship_level2: { Upgrade: { effects: [{ stat: attack, add: 5 }] } }                                    # UNVERIFIED (UNK-21)
+to_ship_level3: { Upgrade: { after: [to_ship_level2], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
+to_ship_level4: { Upgrade: { after: [to_ship_level3], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
+to_ship_level5: { Upgrade: { after: [to_ship_level4], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
+to_ship_level6: { Upgrade: { after: [to_ship_level5], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)

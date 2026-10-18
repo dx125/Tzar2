@@ -14,10 +14,19 @@ namespace Tzar2.Content.Compiled;
 public sealed class Ruleset
 {
     /// <summary>Format version of <see cref="ContentHash"/>'s encoding; bump when fields are added.</summary>
-    public const int HashVersion = 3;
+    public const int HashVersion = 4;
 
     /// <summary>Most resource types a ruleset may define (players store one amount per type).</summary>
     public const int MaxResourceTypes = 8;
+
+    /// <summary>Most technologies (players keep one research bit each).</summary>
+    public const int MaxTechnologies = 256;
+
+    /// <summary>Most upgrades (entities keep one bit each for level upgrades).</summary>
+    public const int MaxUpgrades = 32;
+
+    /// <summary>Most entity types (production queues encode research and upgrades above them, ADR 0040).</summary>
+    public const int MaxEntityTypes = 0x4000;
 
     /// <summary>Default occupancy sub-cells per tile axis (TDD §9.1: 2×2 cells per tile; UNK-11).</summary>
     public const int DefaultOccupancyCellsPerTileAxis = 2;
@@ -38,6 +47,12 @@ public sealed class Ruleset
     private readonly int[] _bonusStart;
     private readonly string[] _sortedKeys;
     private readonly ushort[] _sortedIds;
+    private readonly TechnologyDefinition[] _technologies;
+    private readonly UpgradeDefinition[] _upgrades;
+    private readonly string[] _civilizations;
+    private readonly OrderGate[] _orderGates;
+    private readonly string[] _orderGateKeys;
+    private readonly int[] _orderGateIndex;
 
     /// <summary>Creates a ruleset; ids must equal list positions.</summary>
     /// <param name="name">Ruleset name.</param>
@@ -50,6 +65,11 @@ public sealed class Ruleset
     /// <param name="resourceTypes">Resource type keys by id (GAME-01), at most <see cref="MaxResourceTypes"/>.</param>
     /// <param name="gameplay">Gameplay constants (null = <see cref="GameplaySettings.Default"/>).</param>
     /// <param name="damageBonuses">Attack bonuses per (attacker type, target type) pair (<c>BONUS.INI</c>); pairs must be unique.</param>
+    /// <param name="technologies">Technologies by id (GAME-06).</param>
+    /// <param name="upgrades">Upgrades by id (GAME-06).</param>
+    /// <param name="civilizations">Civilization keys (<c>euro</c>, <c>asia</c>, <c>arab</c>, <c>comm</c>).</param>
+    /// <param name="orderGates">Orders that need a technology per civilization (<c>TECHTREE [orders]</c>).</param>
+    /// <param name="hudResourceMask">Resource types the HUD shows (bit = id; -1 = all; GAME-01: iron is hidden).</param>
     /// <exception cref="ArgumentException">The lists are empty, ids do not match positions, keys repeat, or a trait refers to an unknown id.</exception>
     public Ruleset(
         string name,
@@ -61,7 +81,12 @@ public sealed class Ruleset
         int decalCap = DefaultDecalCap,
         IReadOnlyList<string>? resourceTypes = null,
         GameplaySettings? gameplay = null,
-        IReadOnlyList<DamageBonus>? damageBonuses = null)
+        IReadOnlyList<DamageBonus>? damageBonuses = null,
+        IReadOnlyList<TechnologyDefinition>? technologies = null,
+        IReadOnlyList<UpgradeDefinition>? upgrades = null,
+        IReadOnlyList<string>? civilizations = null,
+        IReadOnlyList<OrderGate>? orderGates = null,
+        int hudResourceMask = -1)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentNullException.ThrowIfNull(terrainTypes);
@@ -81,7 +106,7 @@ public sealed class Ruleset
             throw new ArgumentException("A ruleset needs 1-256 terrain types.", nameof(terrainTypes));
         }
 
-        if (entityTypes.Count > ushort.MaxValue)
+        if (entityTypes.Count > MaxEntityTypes)
         {
             throw new ArgumentException("Too many entity types.", nameof(entityTypes));
         }
@@ -133,11 +158,40 @@ public sealed class Ruleset
 
         Gameplay = gameplay ?? GameplaySettings.Default;
         Gameplay.Validate(_resourceTypes.Length);
+        _civilizations = [.. civilizations ?? []];
+        keys.Clear();
+        foreach (string civ in _civilizations)
+        {
+            if (string.IsNullOrEmpty(civ) || !keys.Add(civ))
+            {
+                throw new ArgumentException("Civilization keys must be unique and non-empty.", nameof(civilizations));
+            }
+        }
+
+        _technologies = [.. technologies ?? []];
+        _upgrades = [.. upgrades ?? []];
+        if (_technologies.Length > MaxTechnologies || _upgrades.Length > MaxUpgrades)
+        {
+            throw new ArgumentException($"At most {MaxTechnologies} technologies and {MaxUpgrades} upgrades.", nameof(technologies));
+        }
+
+        _orderGates = [.. orderGates ?? []];
+        _orderGateKeys = new string[_orderGates.Length];
+        _orderGateIndex = new int[_orderGates.Length];
+        for (int i = 0; i < _orderGates.Length; i++)
+        {
+            _orderGateKeys[i] = (_orderGates[i].Order ?? string.Empty) + "\n" + (_orderGates[i].Civilization ?? string.Empty);
+            _orderGateIndex[i] = i;
+        }
+
+        Array.Sort(_orderGateKeys, _orderGateIndex, StringComparer.Ordinal);
+        HudResourceMask = hudResourceMask & (int)((1u << _resourceTypes.Length) - 1);
         foreach (EntityTypeDefinition e in _entityTypes)
         {
             ValidateTraits(e);
         }
 
+        ValidateTechnologies(keys);
         (_bonuses, _bonusStart) = IndexBonuses(damageBonuses ?? [], _entityTypes.Length);
         _sortedKeys = new string[_entityTypes.Length];
         _sortedIds = new ushort[_entityTypes.Length];
@@ -187,6 +241,21 @@ public sealed class Ruleset
     /// <summary>All attack bonuses, sorted by attacker then target type id.</summary>
     public IReadOnlyList<DamageBonus> DamageBonuses => _bonuses;
 
+    /// <summary>Technologies by id (GAME-06).</summary>
+    public IReadOnlyList<TechnologyDefinition> Technologies => _technologies;
+
+    /// <summary>Upgrades by id (GAME-06).</summary>
+    public IReadOnlyList<UpgradeDefinition> Upgrades => _upgrades;
+
+    /// <summary>Civilization keys.</summary>
+    public IReadOnlyList<string> Civilizations => _civilizations;
+
+    /// <summary>Orders that need a technology per civilization (consumed by the systems that implement the orders).</summary>
+    public IReadOnlyList<OrderGate> OrderGates => _orderGates;
+
+    /// <summary>Resource types the HUD shows (bit = resource type id; GAME-01: iron exists in the data but not in the HUD).</summary>
+    public int HudResourceMask { get; }
+
     /// <summary>xxHash64 of every field, in declaration order; replays and lobbies compare it (§19.4).</summary>
     public ulong ContentHash { get; }
 
@@ -220,6 +289,44 @@ public sealed class Ruleset
         }
 
         return 0;
+    }
+
+    /// <summary>The id of technology <paramref name="key"/>, or -1.</summary>
+    public int TechnologyId(string key)
+    {
+        for (int i = 0; i < _technologies.Length; i++)
+        {
+            if (string.Equals(_technologies[i].Key, key, StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// The technology <paramref name="civilization"/> needs for <paramref name="order"/> (<c>TECHTREE [orders]</c>: a spell,
+    /// loan, bribe...), or -1 when the order is not gated for it (binary search; for the systems of GAME-11/14).
+    /// </summary>
+    public int OrderTechnology(string order, string civilization)
+    {
+        int i = Array.BinarySearch(_orderGateKeys, order + "\n" + civilization, StringComparer.Ordinal);
+        return i >= 0 ? _orderGates[_orderGateIndex[i]].Technology : -1;
+    }
+
+    /// <summary>The id of upgrade <paramref name="key"/>, or -1.</summary>
+    public int UpgradeId(string key)
+    {
+        for (int i = 0; i < _upgrades.Length; i++)
+        {
+            if (string.Equals(_upgrades[i].Key, key, StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>The id of the resource type <paramref name="key"/>, or -1.</summary>
@@ -298,9 +405,14 @@ public sealed class Ruleset
         CheckTypeIds(t.RequiredTypes, where, "requires", requireFootprint: true);
         if (t.Producer is { } producer)
         {
-            if (!e.HasFootprint)
+            if (!e.HasFootprint && !producer.Produces.IsEmpty)
             {
                 throw new ArgumentException($"{where}: only buildings can produce.");
+            }
+
+            if (producer.Researches.IsDefault || producer.Upgrades.IsDefault)
+            {
+                throw new ArgumentException($"{where}: researches and upgrades must not be default.");
             }
 
             ArgumentOutOfRangeException.ThrowIfLessThan(producer.QueueCapacity, 1, where);
@@ -316,19 +428,189 @@ public sealed class Ruleset
         }
 
         if (t.ResourceNode is { } node
-            && ((uint)node.Resource >= (uint)resources || (node.Amount < 1 && node.Amount != ResourceNodeDefinition.Unlimited) || !e.HasFootprint))
+            && ((uint)node.Resource >= (uint)resources || (node.Amount < 1 && node.Amount != ResourceNodeDefinition.Unlimited)
+                || node.RegenMs < 0 || node.GatherMs < 0 || (node.RegenMs > 0 && node.Amount < 1)))
         {
             throw new ArgumentException($"{where}: invalid resource node.");
         }
 
-        if ((uint)t.DropOffMask >= (1u << resources) || (t.DropOffMask != 0 && !e.HasFootprint))
+        if ((uint)t.DropOffMask >= (1u << resources) || (t.DropOffMask != 0 && (!e.HasFootprint || t.DropOffAccess == DropOffAccess.None))
+            || t.DropOffAccess > (DropOffAccess.Land | DropOffAccess.Water) || t.Placement > PlacementKind.Bridge)
         {
             throw new ArgumentException($"{where}: invalid drop-off.");
+        }
+
+        ArgumentOutOfRangeException.ThrowIfNegative(t.ManaCost, where);
+        ArgumentOutOfRangeException.ThrowIfNegative(t.LifetimeMs, where);
+        if (t.ManaPool is { } mana && (mana.Max < 0 || mana.RegenPerMinute < 0 || mana.Max > 1_000_000 || mana.RegenPerMinute > 1_000_000))
+        {
+            throw new ArgumentException($"{where}: invalid mana pool.");
+        }
+
+        if (t.SpawnOnDeath >= _entityTypes.Length || t.SpawnOnDeath < -1
+            || (t.SpawnOnDeath >= 0 && (_entityTypes[t.SpawnOnDeath].HasFootprint || _entityTypes[t.SpawnOnDeath].IsMobile)))
+        {
+            throw new ArgumentException($"{where}: spawn on death must name an immobile type without a footprint (a resource pile).");
+        }
+
+        if (t.Gate is { } gate && (!e.HasFootprint || gate.Passage.IsDefault || gate.Passage.Length != e.FootprintWidth * e.FootprintHeight))
+        {
+            throw new ArgumentException($"{where}: a gate needs one passage cell per footprint tile.");
+        }
+
+        if ((t.IsWall || t.IsBridge || t.Burnable || t.LeavesRuin || t.ProtectedDelete || t.Placement != PlacementKind.Land) && !e.HasFootprint)
+        {
+            throw new ArgumentException($"{where}: wall, bridge, burning, ruin, protected delete and placement rules need a footprint.");
+        }
+
+        if (t.Decay is { } decay && (decay.AfterMs < 0 || decay.HealthPerMinute < 0))
+        {
+            throw new ArgumentException($"{where}: invalid decay.");
+        }
+
+        if (t.Requirements.IsDefault)
+        {
+            throw new ArgumentException($"{where}: requirements must not be default.");
+        }
+
+        foreach (RequirementSet set in t.Requirements)
+        {
+            CheckTypeIds(set.Types, where, "requires", requireFootprint: true);
         }
 
         if ((t.Harvester is not null || t.IsBuilder) && !e.IsMobile)
         {
             throw new ArgumentException($"{where}: workers must be mobile.");
+        }
+    }
+
+    /// <summary>Checks that <paramref name="ids"/> are ascending ids below <paramref name="count"/>.</summary>
+    internal static void CheckAscendingIds(ImmutableArray<ushort> ids, int count, string what)
+    {
+        if (ids.IsDefault)
+        {
+            throw new ArgumentException($"{what} must not be default.");
+        }
+
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (ids[i] >= count || (i > 0 && ids[i] <= ids[i - 1]))
+            {
+                throw new ArgumentException($"{what} must list known ids in ascending order.");
+            }
+        }
+    }
+
+    // Technology, upgrade and order-gate cross-references, and the research lists of producers.
+    private void ValidateTechnologies(HashSet<string> keys)
+    {
+        keys.Clear();
+        for (int i = 0; i < _technologies.Length; i++)
+        {
+            TechnologyDefinition t = _technologies[i] ?? throw new ArgumentException("Null technology.");
+            if (t.Id != i || string.IsNullOrEmpty(t.Key) || !keys.Add(t.Key))
+            {
+                throw new ArgumentException($"Technology '{t.Key}' must have id {i} and a unique key.");
+            }
+
+            ValidateResearch($"Technology '{t.Key}'", t.Cost, t.TimeMs, t.Requirements, t.Effects);
+        }
+
+        keys.Clear();
+        for (int i = 0; i < _upgrades.Length; i++)
+        {
+            UpgradeDefinition u = _upgrades[i] ?? throw new ArgumentException("Null upgrade.");
+            string where = $"Upgrade '{u.Key}'";
+            if (u.Id != i || string.IsNullOrEmpty(u.Key) || !keys.Add(u.Key))
+            {
+                throw new ArgumentException($"{where} must have id {i} and a unique key.");
+            }
+
+            ValidateResearch(where, u.Cost, u.TimeMs, u.Requirements, u.Effects);
+            CheckAscendingIds(u.After, _upgrades.Length, $"{where}: after");
+            if (u.Conversions.IsDefault)
+            {
+                throw new ArgumentException($"{where}: conversions must not be default.");
+            }
+
+            for (int k = 0; k < u.Conversions.Length; k++)
+            {
+                (ushort from, ushort to) = u.Conversions[k];
+                if (from >= _entityTypes.Length || to >= _entityTypes.Length || from == to || (k > 0 && from <= u.Conversions[k - 1].From))
+                {
+                    throw new ArgumentException($"{where}: conversions must name known, different types, sorted by the source type.");
+                }
+
+                EntityTypeDefinition a = _entityTypes[from];
+                EntityTypeDefinition b = _entityTypes[to];
+                if (a.FootprintWidth != b.FootprintWidth || a.FootprintHeight != b.FootprintHeight || a.IsMobile != b.IsMobile)
+                {
+                    throw new ArgumentException($"{where}: '{a.Key}' and '{b.Key}' must have the same footprint to convert in place.");
+                }
+
+                // The traits whose sim state lives in its own store must agree, so a converted entity's stores stay valid.
+                EntityTraits ta = a.Traits;
+                EntityTraits tb = b.Traits;
+                if ((ta.Gate is null) != (tb.Gate is null) || ta.Burnable != tb.Burnable || (ta.Capturable is null) != (tb.Capturable is null)
+                    || (ta.Decay is null) != (tb.Decay is null) || (ta.ManaPool is null) != (tb.ManaPool is null) || (ta.LifetimeMs > 0) != (tb.LifetimeMs > 0)
+                    || ta.IsBridge != tb.IsBridge || (ta.ResourceNode is null) != (tb.ResourceNode is null) || ta.IsRepairable != tb.IsRepairable
+                    || (ta.Harvester is null) != (tb.Harvester is null) || ta.IsBuilder != tb.IsBuilder || ta.IsCapturer != tb.IsCapturer)
+                {
+                    throw new ArgumentException($"{where}: '{a.Key}' and '{b.Key}' must agree on gate, fire, capture, decay, mana, lifetime, bridge, resource, repair and worker traits to convert in place.");
+                }
+            }
+        }
+
+        foreach (OrderGate g in _orderGates)
+        {
+            if (string.IsNullOrEmpty(g.Order) || g.Technology >= _technologies.Length || Array.IndexOf(_civilizations, g.Civilization) < 0)
+            {
+                throw new ArgumentException($"Order gate '{g.Order}' names an unknown technology or civilization.");
+            }
+        }
+
+        foreach (EntityTypeDefinition e in _entityTypes)
+        {
+            if (e.Traits.Producer is { } p)
+            {
+                CheckAscendingIds(p.Researches, _technologies.Length, $"Entity type '{e.Key}': researches");
+                CheckAscendingIds(p.Upgrades, _upgrades.Length, $"Entity type '{e.Key}': upgrades");
+            }
+
+            foreach (RequirementSet set in e.Traits.Requirements)
+            {
+                CheckAscendingIds(set.Technologies, _technologies.Length, $"Entity type '{e.Key}': required technologies");
+            }
+
+            if (e.Traits.Capturable is { } c && c.RequiredTechnology >= _technologies.Length)
+            {
+                throw new ArgumentException($"Entity type '{e.Key}': unknown capture technology.");
+            }
+        }
+    }
+
+    private void ValidateResearch(string where, ImmutableArray<int> cost, int timeMs, ImmutableArray<RequirementSet> requirements, ImmutableArray<ModifierDefinition> effects)
+    {
+        if (cost.IsDefault || (!cost.IsEmpty && cost.Length != _resourceTypes.Length) || requirements.IsDefault || effects.IsDefault)
+        {
+            throw new ArgumentException($"{where}: the cost needs one amount per resource type; requirements and effects must not be default.");
+        }
+
+        foreach (int c in cost)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(c, where);
+        }
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(timeMs, 1, where);
+        foreach (RequirementSet set in requirements)
+        {
+            CheckAscendingIds(set.Technologies, _technologies.Length, $"{where}: required technologies");
+            CheckTypeIds(set.Types, where, "requires", requireFootprint: true);
+        }
+
+        foreach (ModifierDefinition m in effects)
+        {
+            m.Validate(_entityTypes.Length);
         }
     }
 
@@ -381,7 +663,11 @@ public sealed class Ruleset
         GameplaySettings g = Gameplay;
         hasher.Add((byte)g.GroupMoveSpeed).Add(g.PopulationLimit).Add(g.DefaultStartingResources).Add(g.MinimumDamage).Add(g.ResistanceScale)
             .Add(g.InteractionReachUnits).Add(g.MeleeReachUnits).Add(g.AcquireIntervalMs).Add(g.NodeSearchRadiusTiles)
-            .Add(g.ConstructionRefundBasisPoints).Add(g.ProductionRefundBasisPoints).Add(g.StartingResources.Length);
+            .Add(g.ConstructionRefundBasisPoints).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints).Add(g.CapturePointsPerSecond)
+            .Add(g.MinimumCaptureResistance).Add(g.CaptureResetMs).Add(g.InfluenceRadiusTiles).Add(g.RepairTimeBasisPoints)
+            .Add(g.BurnThresholdBasisPoints).Add(g.BurnDamagePerMinute).Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
+            .Add(g.GateOpenReachUnits).Add(g.GateCloseReachUnits).Add(g.GateChangeIntervalMs).Add(g.MaxGateChangesPerTick)
+            .Add(g.RepairCostBasisPoints).Add(g.RepairerFalloffBasisPoints).Add(g.StartingResources.Length);
         foreach (StartingResources level in g.StartingResources)
         {
             hasher.Add(Encoding.UTF8.GetBytes(level.Key)).AddSpan<int>(level.Amounts.AsSpan());
@@ -393,7 +679,59 @@ public sealed class Ruleset
             hasher.Add((int)b.Attacker).Add((int)b.Target).Add(b.BasisPoints);
         }
 
+        hasher.Add(HudResourceMask).Add(_civilizations.Length);
+        foreach (string civ in _civilizations)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(civ));
+        }
+
+        hasher.Add(_technologies.Length);
+        foreach (TechnologyDefinition t in _technologies)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(t.Key)).Add(Encoding.UTF8.GetBytes(t.Name)).AddSpan<int>(t.Cost.AsSpan()).Add(t.TimeMs);
+            AddRequirements(hasher, t.Requirements);
+            AddModifiers(hasher, t.Effects);
+        }
+
+        hasher.Add(_upgrades.Length);
+        foreach (UpgradeDefinition u in _upgrades)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(u.Key)).Add(Encoding.UTF8.GetBytes(u.Name)).AddSpan<int>(u.Cost.AsSpan()).Add(u.TimeMs)
+                .AddSpan<ushort>(u.After.AsSpan()).Add(u.Conversions.Length);
+            foreach ((ushort from, ushort to) in u.Conversions)
+            {
+                hasher.Add((int)from).Add((int)to);
+            }
+
+            AddRequirements(hasher, u.Requirements);
+            AddModifiers(hasher, u.Effects);
+        }
+
+        hasher.Add(_orderGates.Length);
+        foreach (OrderGate gate in _orderGates)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(gate.Order)).Add(Encoding.UTF8.GetBytes(gate.Civilization)).Add((int)gate.Technology);
+        }
+
         return hasher.GetCurrentHash();
+    }
+
+    private static void AddRequirements(StateHasher hasher, ImmutableArray<RequirementSet> sets)
+    {
+        hasher.Add(sets.Length);
+        foreach (RequirementSet s in sets)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(s.Civilization)).AddSpan<ushort>(s.Technologies.AsSpan()).AddSpan<ushort>(s.Types.AsSpan()).Add(s.Unsatisfiable);
+        }
+    }
+
+    private static void AddModifiers(StateHasher hasher, ImmutableArray<ModifierDefinition> modifiers)
+    {
+        hasher.Add(modifiers.Length);
+        foreach (ModifierDefinition m in modifiers)
+        {
+            hasher.Add((byte)m.Stat).Add(m.Add).Add(m.BasisPoints).AddSpan<ushort>(m.Types.AsSpan());
+        }
     }
 
     private static void AddTraits(StateHasher hasher, EntityTraits t)
@@ -402,7 +740,39 @@ public sealed class Ruleset
             .AddSpan<int>(t.Cost.AsSpan()).Add(t.BuildTimeMs).Add(t.SightUnits).Add(t.Defence).Add(t.Resistance)
             .Add(t.DropOffMask).Add(t.PopulationCost).Add(t.PopulationProvided)
             .AddSpan<ushort>(t.Builds.AsSpan()).AddSpan<ushort>(t.RequiredTypes.AsSpan())
-            .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology));
+            .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology)).Add(t.ManaCost).Add((byte)t.DropOffAccess).Add(t.AutoGather).Add((byte)t.Placement)
+            .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete)
+            .Add(t.SpawnOnDeath).Add(t.LifetimeMs);
+        AddRequirements(hasher, t.Requirements);
+        hasher.Add(t.ManaPool is not null);
+        if (t.ManaPool is { } mana)
+        {
+            hasher.Add(mana.Max).Add(mana.RegenPerMinute);
+        }
+
+        hasher.Add(t.Capturable is not null);
+        if (t.Capturable is { } capture)
+        {
+            hasher.Add(capture.Instant).Add(capture.RequiredTechnology);
+        }
+
+        hasher.Add(t.Influence is not null);
+        if (t.Influence is { } influence)
+        {
+            hasher.Add(influence.Own).Add(influence.Other);
+        }
+
+        hasher.Add(t.Gate is not null);
+        if (t.Gate is { } gate)
+        {
+            hasher.AddSpan<byte>(gate.Passage.AsSpan());
+        }
+
+        hasher.Add(t.Decay is not null);
+        if (t.Decay is { } decay)
+        {
+            hasher.Add(decay.AfterMs).Add(decay.HealthPerMinute);
+        }
         hasher.Add(t.Armament is not null);
         if (t.Armament is { } a)
         {
@@ -418,13 +788,13 @@ public sealed class Ruleset
         hasher.Add(t.Producer is not null);
         if (t.Producer is { } p)
         {
-            hasher.Add(p.QueueCapacity).AddSpan<ushort>(p.Produces.AsSpan());
+            hasher.Add(p.QueueCapacity).AddSpan<ushort>(p.Produces.AsSpan()).AddSpan<ushort>(p.Researches.AsSpan()).AddSpan<ushort>(p.Upgrades.AsSpan());
         }
 
         hasher.Add(t.ResourceNode is not null);
         if (t.ResourceNode is { } n)
         {
-            hasher.Add(n.Resource).Add(n.Amount);
+            hasher.Add(n.Resource).Add(n.Amount).Add(n.RegenMs).Add(n.GatherMs).Add(n.KeepWhenEmpty);
         }
     }
 }
