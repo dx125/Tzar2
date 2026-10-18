@@ -92,6 +92,36 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
         Assert.True(a.HumanDelivered > 0, "the human's harvest order did not reach the sim");
     }
 
+    /// <summary>Game minutes per map type: long enough for the Hard AI's first wave (after 4 minutes, ADR 0052) to land.</summary>
+    private const int MapTypeMinutes = 6;
+
+    [Theory]
+    [InlineData(Tzar2.Content.MapGen.RandomMapType.Random)]
+    [InlineData(Tzar2.Content.MapGen.RandomMapType.Archipelagos)]
+    [InlineData(Tzar2.Content.MapGen.RandomMapType.Dry)]
+    [InlineData(Tzar2.Content.MapGen.RandomMapType.Island)]
+    [InlineData(Tzar2.Content.MapGen.RandomMapType.Continental)]
+    [InlineData(Tzar2.Content.MapGen.RandomMapType.Lakes)]
+    public void A_human_against_a_hard_ai_plays_every_random_map_type(Tzar2.Content.MapGen.RandomMapType type)
+    {
+        MatchSetup setup = Setup() with { Map = new RandomMapSource(type, size: Tzar2.Content.MapGen.RandomMapSize.Tiny) };
+        Outcome a = Play(setup, Rules.Value, MapTypeMinutes);
+        Outcome b = Play(setup, Rules.Value, MapTypeMinutes);
+        string map = setup.Map.Create(Rules.Value, setup).Name;
+        output.WriteLine($"{type} ({map}): {a}");
+        Assert.Equal(a, b);
+        Assert.True(a.AiBuilt > 0, $"{map}: the AI completed no building");
+        Assert.True(a.AiTrained > 0, $"{map}: the AI trained no unit");
+
+        // Archipelagos and Island (also when Random resolves to them) separate the kingdoms by water; the sim has no
+        // ships yet, so land armies cannot reach the human there (naval stream: transports and warships, ADR 0052).
+        bool naval = map.Contains("archipelagos", StringComparison.OrdinalIgnoreCase) || map.Contains("island", StringComparison.OrdinalIgnoreCase);
+        if (!naval)
+        {
+            Assert.True(a.AiHitsOnHuman > 0, $"{map}: the AI never hit the human kingdom in {MapTypeMinutes} minutes");
+        }
+    }
+
     [Fact]
     public void Another_seed_gives_another_match_of_the_same_length()
     {
