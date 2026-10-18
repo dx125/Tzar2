@@ -29,10 +29,13 @@ internal sealed class CaptureRunner
     private readonly string _sessionDir;
     private readonly CaptureLog _log;
     private readonly Action<TimeSpan> _sleep;
+    private readonly TimeProvider _time;
 
+    /// <param name="time">The clock for every timestamp and deadline; tests pass a virtual one and a <paramref name="sleep"/> that advances it.</param>
     public CaptureRunner(SessionConfig session, IGameEnvironment environment, Func<IGameDriver> driverFactory, string sessionDir, CaptureLog log,
-        Action<TimeSpan>? sleep = null)
+        Action<TimeSpan>? sleep = null, TimeProvider? time = null)
     {
+        _time = time ?? TimeProvider.System;
         _session = session;
         _environment = environment;
         _driverFactory = driverFactory;
@@ -102,7 +105,7 @@ internal sealed class CaptureRunner
         // An argument that expands to nothing (an empty variable) is dropped, so trials can switch flags on and off.
         var launch = scenario.Launch.Select(a => ScenarioLoader.Expand(a, vars)).Where(a => a.Length > 0).ToList();
         var record = new TrialRecord(scenario.Id, trial.Name, vars, ini, wrapper, launch);
-        long epoch = Stopwatch.GetTimestamp();
+        long epoch = _time.GetTimestamp();
         record.Epoch = epoch;
 
         _environment.ApplySettings(ini, wrapper);
@@ -243,15 +246,15 @@ internal sealed class CaptureRunner
 
     private void Wait(IGameDriver driver, TimeSpan duration)
     {
-        var watch = Stopwatch.StartNew();
-        while (watch.Elapsed < duration && !driver.HasExited && !Cancellation.IsCancellationRequested)
+        long start = _time.GetTimestamp();
+        while (_time.GetElapsedTime(start) < duration && !driver.HasExited && !Cancellation.IsCancellationRequested)
         {
-            TimeSpan left = duration - watch.Elapsed;
+            TimeSpan left = duration - _time.GetElapsedTime(start);
             _sleep(left < TimeSpan.FromMilliseconds(250) ? left : TimeSpan.FromMilliseconds(250));
         }
     }
 
-    private static double Ms(long epoch) => Math.Round(Stopwatch.GetElapsedTime(epoch).TotalMilliseconds, 3);
+    private double Ms(long epoch) => Math.Round(_time.GetElapsedTime(epoch).TotalMilliseconds, 3);
 
     private sealed record StepContext(IGameDriver Driver, string TrialDir, IReadOnlyDictionary<string, string> Vars, TrialRecord Record, long Epoch,
         List<(Task<int> Task, CancellationTokenSource Cancel, string Name)> Samplers)
@@ -441,12 +444,12 @@ internal sealed class CaptureRunner
     private string? GameSnapshot(IGameDriver driver)
     {
         var before = new HashSet<string>(ListSnapshots(), StringComparer.OrdinalIgnoreCase);
-        long started = Stopwatch.GetTimestamp();
+        long started = _time.GetTimestamp();
         Tap(driver, KeyNames.Get("F11"), false, false, false, _session.Timing.KeyHoldMs);
         var deadline = TimeSpan.FromMilliseconds(_session.Timing.SnapshotTimeoutMs);
         long lastSize = -1;
         string? candidate = null;
-        while (Stopwatch.GetElapsedTime(started) < deadline)
+        while (_time.GetElapsedTime(started) < deadline)
         {
             candidate ??= ListSnapshots().FirstOrDefault(f => !before.Contains(f));
             if (candidate is not null)
@@ -502,7 +505,7 @@ internal sealed class CaptureRunner
         var tags = step.Tags.ToDictionary(t => t.Key, t => ScenarioLoader.Expand(t.Value, ctx.Vars), StringComparer.Ordinal);
         var frames = new List<(string File, double TimeMs)>();
         int failures = 0;
-        long start = Stopwatch.GetTimestamp();
+        long start = _time.GetTimestamp();
         for (int i = 0; i < step.Count && !ctx.Driver.HasExited; i++)
         {
             double t = Ms(ctx.Epoch);
@@ -526,7 +529,7 @@ internal sealed class CaptureRunner
                 frames.Add((file, t));
             }
 
-            TimeSpan next = TimeSpan.FromMilliseconds(step.IntervalMs * (i + 1)) - Stopwatch.GetElapsedTime(start);
+            TimeSpan next = TimeSpan.FromMilliseconds(step.IntervalMs * (i + 1)) - _time.GetElapsedTime(start);
             if (next > TimeSpan.Zero)
             {
                 _sleep(next);
@@ -636,7 +639,11 @@ internal sealed class CaptureRunner
         {
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read, 1 << 16);
             return MemoryProbe.Sample(reader, addresses, scan.Width, TimeSpan.FromMilliseconds(step.IntervalMs), TimeSpan.FromSeconds(step.DurationSeconds),
-                stream, epoch, cancel.Token);
+                stream, epoch, cancel.Token, _time, _time == TimeProvider.System ? null : (d, c) =>
+                {
+                    _sleep(d);
+                    return c.IsCancellationRequested;
+                });
         });
         ctx.Samplers.Add((task, cancel, name));
         ctx.Record.Captures.Add(new CaptureRecord("memsample", name, file, Ms(ctx.Epoch), new Dictionary<string, string> { ["scan"] = step.Scan }, ctx.Camera, 0, 0,

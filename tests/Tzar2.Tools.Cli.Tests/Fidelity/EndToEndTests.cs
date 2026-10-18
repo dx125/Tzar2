@@ -28,16 +28,28 @@ public class EndToEndTests
     private static readonly SyntheticWorld World = new();
     private static readonly GamePalette Palette = GamePalette.Parse(SyntheticFormats.Pal());
 
-    private sealed class TimedMemory : IMemoryReader
+    /// <summary>A clock that only moves when a (fake) sleep advances it, so timing-based scenarios are exact and instant.</summary>
+    private sealed class VirtualClock : TimeProvider
     {
-        private readonly long _start = Stopwatch.GetTimestamp();
+        private long _ns;
+
+        public override long TimestampFrequency => 1_000_000_000;
+
+        public override long GetTimestamp() => Interlocked.Read(ref _ns);
+
+        public void Advance(TimeSpan by) => Interlocked.Add(ref _ns, by.Ticks * 100);
+    }
+
+    private sealed class TimedMemory(VirtualClock clock) : IMemoryReader
+    {
+        private readonly long _start = clock.GetTimestamp();
 
         public IReadOnlyList<MemoryRegion> WritableRegions() => [new MemoryRegion(0x2000, 64)];
 
         public int Read(ulong address, Span<byte> buffer)
         {
             buffer.Clear();
-            long hp = Math.Max(0, 65 - (5 * (long)(Stopwatch.GetElapsedTime(_start).TotalMilliseconds / 150)));
+            long hp = Math.Max(0, 65 - (5 * (long)(clock.GetElapsedTime(_start).TotalMilliseconds / 150)));
             if (address <= 0x2008 && address + (ulong)buffer.Length >= 0x200C)
             {
                 BitConverter.GetBytes((int)hp).CopyTo(buffer[(int)(0x2008 - address)..]);
@@ -71,11 +83,11 @@ public class EndToEndTests
         return driver;
     }
 
-    private static void Run(string sessionDir, string root, string body, string id, Func<string, FakeGameDriver> driver, bool realTime = false)
+    private static void Run(string sessionDir, string root, string body, string id, Func<string, FakeGameDriver> driver, VirtualClock? clock = null)
     {
         var env = new FakeEnvironment(root);
         using var log = new CaptureLog(TextWriter.Null, null);
-        var runner = new CaptureRunner(CaptureRunnerTests.Session(), env, () => driver(env.SnapshotDirectories[0]), sessionDir, log, realTime ? Thread.Sleep : _ => { });
+        var runner = new CaptureRunner(CaptureRunnerTests.Session(), env, () => driver(env.SnapshotDirectories[0]), sessionDir, log, clock is null ? _ => { } : clock.Advance, clock);
         Assert.All(runner.Run([CaptureRunnerTests.Scenario(body, id)]), r => Assert.Equal("ok", r.Status));
     }
 
@@ -149,10 +161,11 @@ public class EndToEndTests
             return driver;
         });
 
-        // Unit speed: a red square moving at 120 px/s (knight, SPEED 6) and 80 px/s (peon, SPEED 4), in real time.
+        // Unit speed: a red square moving at 120 px/s (knight, SPEED 6) and 80 px/s (peon, SPEED 4), on a virtual clock.
         ushort[] background = World.Render(300, 300);
         var speeds = new Dictionary<string, double> { ["knight"] = 120, ["peon"] = 80 };
         string trialName = "knight";
+        var clock = new VirtualClock();
         Run(sessionDir, dir.Path, """
             trials:
               - name: knight
@@ -173,10 +186,10 @@ public class EndToEndTests
             {
                 if (start == 0)
                 {
-                    start = Stopwatch.GetTimestamp();
+                    start = clock.GetTimestamp();
                 }
 
-                int x0 = 300 + (int)(speed * Stopwatch.GetElapsedTime(start).TotalSeconds);
+                int x0 = 300 + (int)(speed * clock.GetElapsedTime(start).TotalSeconds);
                 ushort[] frame = (ushort[])background.Clone();
                 for (int y = 380; y < 400; y++)
                 {
@@ -186,9 +199,9 @@ public class EndToEndTests
                 return frame;
             };
             return driver;
-        }, realTime: true);
+        }, clock);
 
-        // Attack timing: hit points 65, -5 every 150 ms.
+        // Attack timing: hit points 65, -5 every 150 ms of virtual time.
         Run(sessionDir, dir.Path, """
             trials:
               - name: main
@@ -197,7 +210,7 @@ public class EndToEndTests
               - memscan: {name: hp, value: 65}
               - memsample: {name: series, scan: hp, interval_ms: 5, duration_s: 1}
             analysis: [attack-timing]
-            """, "attack-timing", d => new FakeGameDriver(d) { Memory = new TimedMemory() }, realTime: true);
+            """, "attack-timing", d => new FakeGameDriver(d) { Memory = new TimedMemory(clock) }, clock);
 
         File.WriteAllText(Path.Combine(sessionDir, "session.json"),
             """{"session_id": "capture-test", "started_utc": "2026-10-17T10:00:00Z", "install": {"edition": "GOG v1.10 English", "matches_reference": true, "exe_md5": "d178304615a9058739ebafe3393fafb3"}, "harness": {"version": "test", "commit": "abc"}, "renderer": "fake", "machine": {"os": "test"}}""");

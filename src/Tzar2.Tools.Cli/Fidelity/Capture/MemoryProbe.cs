@@ -114,11 +114,14 @@ internal static class MemoryProbe
     /// <summary>
     /// Samples addresses every <paramref name="interval"/> until the duration elapses or <paramref name="cancel"/> fires,
     /// writing the <c>T2MS</c> sample file: "T2MS", u32 version 1, u32 address count, u32 width, u64 addresses,
-    /// then records of (i64 microseconds since <paramref name="epoch"/>, count × width-byte values).
+    /// then records of (i64 microseconds since <paramref name="epoch"/>, count × width-byte values). <paramref name="wait"/>
+    /// sleeps for the remainder of an interval and returns true when cancelled; the default blocks on the token.
     /// </summary>
     public static int Sample(IMemoryReader reader, IReadOnlyList<ulong> addresses, int width, TimeSpan interval, TimeSpan duration,
-        Stream output, long epoch, CancellationToken cancel)
+        Stream output, long epoch, CancellationToken cancel, TimeProvider? time = null, Func<TimeSpan, CancellationToken, bool>? wait = null)
     {
+        time ??= TimeProvider.System;
+        wait ??= static (d, c) => c.WaitHandle.WaitOne(d);
         Span<byte> header = stackalloc byte[16];
         "T2MS"u8.CopyTo(header);
         BinaryPrimitives.WriteUInt32LittleEndian(header[4..], 1);
@@ -133,12 +136,12 @@ internal static class MemoryProbe
         }
 
         byte[] record = new byte[8 + (addresses.Count * width)];
-        long start = Stopwatch.GetTimestamp();
+        long start = time.GetTimestamp();
         int samples = 0;
-        while (!cancel.IsCancellationRequested && Stopwatch.GetElapsedTime(start) < duration)
+        while (!cancel.IsCancellationRequested && time.GetElapsedTime(start) < duration)
         {
-            long t = Stopwatch.GetTimestamp();
-            BinaryPrimitives.WriteInt64LittleEndian(record, (long)Stopwatch.GetElapsedTime(epoch, t).TotalMicroseconds);
+            long t = time.GetTimestamp();
+            BinaryPrimitives.WriteInt64LittleEndian(record, (long)time.GetElapsedTime(epoch, t).TotalMicroseconds);
             for (int i = 0; i < addresses.Count; i++)
             {
                 Span<byte> slot = record.AsSpan(8 + (i * width), width);
@@ -150,8 +153,8 @@ internal static class MemoryProbe
 
             output.Write(record);
             samples++;
-            TimeSpan wait = interval - Stopwatch.GetElapsedTime(t);
-            if (wait > TimeSpan.Zero && cancel.WaitHandle.WaitOne(wait))
+            TimeSpan left = interval - time.GetElapsedTime(t);
+            if (left > TimeSpan.Zero && wait(left, cancel))
             {
                 break;
             }
