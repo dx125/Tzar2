@@ -8,26 +8,45 @@ default: false
 experimental: true
 description: |
   Draft for TDD S4 (combat outcomes within 5 % over 100 trials): one unit of each side fights to the death and
-  the survivor's remaining hit points are sampled from memory. Not run by default; it needs the spawn and
-  kingdom commands confirmed by the smoke scenario and an outcome analysis that is not written yet (only the
-  quality check runs). Run with -Scenarios combat-pairs when asked.
-launch: [-nomovies, -explore, -nofog, -map, MP2]
+  the survivor's remaining hit points are sampled from memory. Not run by default; it needs the spawn and kingdom
+  commands confirmed (see attack-timing, which uses the same set-up) and an outcome analysis that is not written
+  yet (only the quality check runs). Run with -Scenarios combat-pairs when asked.
+launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: footman-vs-footman
     vars: {a: footman, b: footman, a_hp: "65"}
   - name: knight-vs-pikeman
     vars: {a: knight, b: pikeman, a_hp: "120"}
 steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
   - minimap: [0.5, 0.5]
   - wait: 1
-  - move: [587, 399]
+  - move: [600, 340]
   - chat: "${cheat}spawn ${a}"
+  - click: [600, 340]               # place
   - wait: 1
   - memscan: {name: a-hp, value: "${a_hp}", width: 4}
+  - click: [720, 280]               # empty ground: clear the selection
+  # b for kingdom 2, whichever way "hmkingdom" works (see attack-timing).
   - chat: "${cheat}kingdom 2"
-  - move: [651, 399]
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [660, 340]
   - chat: "${cheat}spawn ${b}"
+  - click: [660, 340]               # place
+  - click: [660, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]
   - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
   - memsample: {name: a-hp-series, scan: a-hp, max_addresses: 4096, interval_ms: 50, duration_s: 40}
   - move: [70, 400]
   - burst: {name: fight, count: 20, interval_ms: 2000, region: [150, 30, 874, 738]}

@@ -37,8 +37,11 @@ internal static class CncDdraw
         ["border"] = "true",
         ["resizable"] = "false",
         ["renderer"] = "gdi",
-        ["adjmouse"] = "false",
-        ["devmode"] = "false",
+        // devmode: otherwise the windowed wrapper captures the cursor on the first click into the window and swallows
+        // that click (PLAY on the setup screen never registered, Windows 11 run of 2026-10-18). adjmouse: the value of
+        // cnc-ddraw's own [Tzar] profile.
+        ["adjmouse"] = "true",
+        ["devmode"] = "true",
         ["savesettings"] = "0",
         ["posX"] = "-32000",
         ["posY"] = "-32000",

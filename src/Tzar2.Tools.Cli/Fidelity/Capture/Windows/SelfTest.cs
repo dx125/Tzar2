@@ -47,6 +47,10 @@ internal static unsafe class SelfTest
 
         Report(sizeof(Input) == 40 ? "PASS" : "FAIL", "INPUT layout", $"{sizeof(Input)} bytes (expected 40)");
         Report(sizeof(MemoryBasicInformation) == 48 ? "PASS" : "FAIL", "MEMORY_BASIC_INFORMATION layout", $"{sizeof(MemoryBasicInformation)} bytes (expected 48)");
+        IReadOnlyDictionary<string, string> devices = MachineSettings.IniFor(DeviceProbe.Detect());
+        Report("INFO", "device counts for tzar.ini", devices.Count == 0 ? "none detected" : string.Join(", ", devices.Select(kv => $"{kv.Key}={kv.Value}")));
+        IReadOnlyList<string> shims = DeviceProbe.CompatDatabases("Tzar.exe");
+        Report(shims.Count == 0 ? "PASS" : "WARN", "compatibility databases for Tzar.exe", shims.Count == 0 ? "none" : $"{string.Join(", ", shims)} (the capture prints the workaround)");
 
         Win32GameDriver.EnsureDpiAware();
         nint hwnd = 0;

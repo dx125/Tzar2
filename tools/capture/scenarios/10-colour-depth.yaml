@@ -8,15 +8,24 @@ description: |
   Pairs of the game's own F11 snapshot (its 16-bit surface, lossless) and a capture of the window (what Windows
   shows) at the same moment, once with cnc-ddraw's default RGB565 surface and once with RGB555 (rgb555=true).
   The analysis reports the surface masks, the art -> surface conversion and the surface -> screen expansion.
-launch: [-nomovies, -explore, -nofog, -map, "${map}"]
+launch: [-nomovies, -map, "${map}"]
 trials:
   - name: surface-565
-    vars: {map: MP2}
+    vars: {map: MP2.wmp}
     wrapper: {rgb555: "false"}
   - name: surface-555
-    vars: {map: MP2}
+    vars: {map: MP2.wmp}
     wrapper: {rgb555: "true"}
 steps:
+  # Start (first session, 2026-10-18): "-map <name>.wmp" opens the setup screen; an empty-background click absorbs a
+  # wrapper cursor grab, if any; PLAY starts the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
   - minimap: [0.3, 0.3]
   - wait: 1
   - snapshot: a

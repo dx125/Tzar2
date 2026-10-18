@@ -381,6 +381,21 @@ internal static class FidelityCommand
         log.Info($"  {sync.Copied} files copied ({sync.BytesCopied / (1 << 20)} MiB), {sync.Unchanged} unchanged");
         string rendererDescription = PrepareRenderer(renderer, install, workDir, home, log, out renderer);
         log.Info($"Renderer: {rendererDescription}");
+        foreach (string line in MachineSettings.CompatDatabaseWarning(DeviceProbe.CompatDatabases(Path.GetFileName(exe)), install))
+        {
+            log.Warn(line);
+        }
+
+        // The game refuses to start when tzar.ini's device counts differ from this PC's (MachineSettings); the session
+        // file never carries them, an explicit value there still wins.
+        IReadOnlyDictionary<string, string> detected = MachineSettings.IniFor(DeviceProbe.Detect());
+        log.Info($"This PC (work copy's tzar.ini only): {(detected.Count == 0 ? "no devices detected" : string.Join(", ", detected.Select(kv => $"{kv.Key}={kv.Value}")))}");
+        if (detected.Count < 5)
+        {
+            log.Warn("Some device counts could not be read; the install's values are kept for them. If the game says \"Invalid TZAR configuration\", run Setup.exe in the work copy and put the values it writes into session.yaml (ini:), locally.");
+        }
+
+        session = session with { Ini = MachineSettings.Underlay(session.Ini, detected) };
 
         using var registry = new RegistryGuard();
         registry.Set(RegistryGuard.GameKey, "Path", workDir);

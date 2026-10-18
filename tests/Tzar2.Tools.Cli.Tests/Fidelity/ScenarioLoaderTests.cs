@@ -32,6 +32,26 @@ public class ScenarioLoaderTests
         Assert.False(scenarios.Single(s => s.Id == "combat-pairs").Default);
         // The default session must fit in about half an hour of the operator's time.
         Assert.InRange(scenarios.Where(s => s.Default).Sum(s => s.Minutes), 5, 35);
+
+        // What the first session (2026-10-18) established: only "-map <name>.wmp" loads a map, and it opens the setup
+        // screen, so every scenario clicks PLAY; -explore / -nofog do nothing (the cheats reveal); a spawned unit is
+        // placed with a click at the cursor.
+        foreach (ScenarioSpec s in scenarios)
+        {
+            int map = s.Launch.ToList().IndexOf("-map");
+            Assert.True(map >= 0 && map + 1 < s.Launch.Count, $"{s.Id}: no -map");
+            Assert.True(s.Launch[map + 1].EndsWith(".wmp", System.StringComparison.Ordinal) || s.Trials.All(t => t.Vars["map"].EndsWith(".wmp", System.StringComparison.Ordinal)), $"{s.Id}: -map needs <name>.wmp");
+            Assert.DoesNotContain("-explore", s.Launch);
+            Assert.DoesNotContain("-nofog", s.Launch);
+            Assert.Contains(s.Steps, step => step is ClickStep c && c.At == new ScreenPoint(772, 596));
+            for (int i = 0; i < s.Steps.Count; i++)
+            {
+                if (s.Steps[i] is ChatStep chat && chat.Text.Contains("spawn", System.StringComparison.Ordinal))
+                {
+                    Assert.True(s.Steps.Skip(i + 1).OfType<ClickStep>().FirstOrDefault() is { Button: MouseButton.Left }, $"{s.Id}: line {chat.Line} spawns without a placing click");
+                }
+            }
+        }
     }
 
     [Fact]
