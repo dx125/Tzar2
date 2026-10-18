@@ -30,6 +30,9 @@ public class ScenarioTests
     [InlineData("@VardalWon = 1", "(?@VardalWon = 1)")]
     [InlineData("@PlayMovie(movies\\outro.ddv)", "playmovie('movies\\outro.ddv')")]
     [InlineData("@build()", "build()")]
+    [InlineData("$v=@rnd(1,4), $w=1", "[(var0 = rnd(1, 4)); (var1 = 1)]")]
+    [InlineData("a && b &&\r\n!c", "((ev0 && ev1) && not(ev2))")]
+    [InlineData("@setfood(4, @food(4) +\r\n 2)\r\nT1 = 0", "[setfood(4, (food(4) + 2)); (timer3 = 0)]")]
     [InlineData("$isselected==1 && $Defence > $cargo", "(($isselected == 1) && ($defence > $cargo))")]
     public void Parser_builds_resolved_trees(string source, string expected)
     {

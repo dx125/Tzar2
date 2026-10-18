@@ -43,7 +43,7 @@ public sealed record UnaryExpr(UnaryOp Op, Expr Operand) : Expr;
 public sealed record BinaryExpr(BinaryOp Op, Expr Left, Expr Right) : Expr;
 
 /// <summary>An assignment <c>target = value</c>; its value is the assigned value.</summary>
-/// <param name="Target">A <see cref="UserVar"/>, or a <see cref="ReservedVar"/> (Set Object Properties, Object Expression).</param>
+/// <param name="Target">A <see cref="UserVar"/>, a <see cref="ReservedVar"/> (Set Object Properties, Object Expression), a <see cref="TimerRef"/> (sets the timer, e.g. <c>Clock = 0</c>) or an <see cref="UnknownRef"/> (no effect).</param>
 /// <param name="Value">The assigned expression.</param>
 public sealed record AssignExpr(Expr Target, Expr Value) : Expr;
 
