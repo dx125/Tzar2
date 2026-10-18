@@ -187,6 +187,14 @@ public sealed record StopTimerAction(string Name, int SetTimerActionIndex) : Act
 /// <param name="Name">Action name.</param>
 public sealed record UnlockViewAction(string Name) : ActionDef(Name);
 
+/// <summary>
+/// The legacy "Delay" action (code 27; not in the manual). ⚠ UNVERIFIED (UNK-76): presumably delays the remaining
+/// actions of the rule by <see cref="TimeMs"/>.
+/// </summary>
+/// <param name="Name">Action name.</param>
+/// <param name="TimeMs">Delay.</param>
+public sealed record DelayAction(string Name, int TimeMs) : ActionDef(Name);
+
 /// <summary>An action kind the converter does not understand; kept so nothing is lost silently. Does nothing.</summary>
 /// <param name="Name">Action name.</param>
 /// <param name="LegacyCode">The legacy type code.</param>

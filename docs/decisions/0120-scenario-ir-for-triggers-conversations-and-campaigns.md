@@ -48,6 +48,19 @@ converter must report problems in expressions (REQ-EDT-06), so the parser can't 
   * Precedence: assignment (right-associative), `||`, `&&`, equality, relational, additive, multiplicative, unary.
   * Evaluation semantics belong to the Scripting VM: integer width, division by zero, short-circuiting, `rnd` bounds
     (UNK-41).
+* **The language as the original implements it** is larger than Appendix C.6. The game's own name table and the
+  maps in the reference build show the additions (docs/formats/wmp.md §7); all are additive IR changes.
+  * Several statements separated by line breaks or `;` (`SequenceExpr`).
+  * Further reserved variables (`$difficulty`, `$isselected`, `$cargo`, `$inholder`, `$race`…; the game spells
+    `$defence`).
+  * About thirty further `@functions` (`@max`, `@setai`, `@kingdomcanrescue`, `@playmovie(path)` with a raw-text
+    argument as `TextArg`…).
+  * `#name` variables, kept with their `#` (campaign scope? ⚠ UNK-74).
+  * Unknown `@name`s without arguments, which become `UnknownRef`.
+  * The undocumented `Delay` action (`DelayAction`, UNK-76) and the editor's object categories
+    (`CategoryObjects`: any, major objects, units, military units, buildings).
+
+  Arity is not checked by the parser.
 * **Encoding:** `ScenarioJson` is the canonical JSON (`scenario.json` in a `.t2map`). Fields come in a fixed order,
   unions carry a `kind`, text is unescaped UTF-8, and newlines are LF. Expressions are stored as source text and
   re-parsed against the scenario's own tables on reading, which gives the same tree. `ScenarioData.ContentHash` is

@@ -52,7 +52,18 @@ public sealed record AssignExpr(Expr Target, Expr Value) : Expr;
 /// <param name="Arguments">Arguments (one for resources, two for rnd).</param>
 public sealed record CallExpr(CallKind Function, EquatableArray<Expr> Arguments) : Expr;
 
-/// <summary>Reserved variables (Appendix C.6).</summary>
+/// <summary>Several statements (separated by line breaks or <c>;</c>); the value is the last statement's.</summary>
+/// <param name="Statements">The statements, in order.</param>
+public sealed record SequenceExpr(EquatableArray<Expr> Statements) : Expr;
+
+/// <summary>A raw text argument, e.g. the movie path of <c>@PlayMovie(movies\outro.ddv)</c>.</summary>
+/// <param name="Text">The text between the parentheses, trimmed.</param>
+public sealed record TextArg(string Text) : Expr;
+
+/// <summary>
+/// Reserved variables of the current object or player. The first group is Appendix C.6; the rest are the further
+/// names the original game recognises (ADR 0120). Semantics beyond C.6 are ⚠ UNVERIFIED (UNK-73).
+/// </summary>
 public enum ReservedVariable : byte
 {
     /// <summary><c>$health</c>.</summary>
@@ -96,9 +107,42 @@ public enum ReservedVariable : byte
 
     /// <summary><c>$wood</c>.</summary>
     Wood,
+
+    /// <summary><c>$difficulty</c>.</summary>
+    Difficulty,
+
+    /// <summary><c>$underfog</c>.</summary>
+    UnderFog,
+
+    /// <summary><c>$flags</c>.</summary>
+    Flags,
+
+    /// <summary><c>$program</c>.</summary>
+    Program,
+
+    /// <summary><c>$inholder</c>.</summary>
+    InHolder,
+
+    /// <summary><c>$isselected</c>.</summary>
+    IsSelected,
+
+    /// <summary><c>$cargo</c>.</summary>
+    Cargo,
+
+    /// <summary><c>$race</c>.</summary>
+    Race,
+
+    /// <summary><c>$canusediplomacy</c>.</summary>
+    CanUseDiplomacy,
+
+    /// <summary><c>$candelobjects</c>.</summary>
+    CanDelObjects,
 }
 
-/// <summary>Built-in functions.</summary>
+/// <summary>
+/// Built-in functions (<c>@name(…)</c>, case-insensitive). The first five are Appendix C.6; the rest are the further
+/// names the original game recognises (ADR 0120), semantics ⚠ UNVERIFIED (UNK-73). Arity is not checked here.
+/// </summary>
 public enum CallKind : byte
 {
     /// <summary><c>@gold(player)</c>.</summary>
@@ -115,6 +159,90 @@ public enum CallKind : byte
 
     /// <summary><c>@rnd(min, max)</c> (bounds inclusive, ⚠ UNVERIFIED).</summary>
     Rnd,
+
+    /// <summary><c>@max(a, b)</c>.</summary>
+    Max,
+
+    /// <summary><c>@min(a, b)</c>.</summary>
+    Min,
+
+    /// <summary><c>@count(…)</c>.</summary>
+    Count,
+
+    /// <summary><c>@inprogress(…)</c>.</summary>
+    InProgress,
+
+    /// <summary><c>@setnoattacktime(…)</c>.</summary>
+    SetNoAttackTime,
+
+    /// <summary><c>@setgold(player, amount)</c>.</summary>
+    SetGold,
+
+    /// <summary><c>@setstone(player, amount)</c>.</summary>
+    SetStone,
+
+    /// <summary><c>@setwood(player, amount)</c>.</summary>
+    SetWood,
+
+    /// <summary><c>@setfood(player, amount)</c>.</summary>
+    SetFood,
+
+    /// <summary><c>@build(…)</c>.</summary>
+    Build,
+
+    /// <summary><c>@setpoplimit(player, limit)</c>.</summary>
+    SetPopLimit,
+
+    /// <summary><c>@hassharedres(a, b)</c>.</summary>
+    HasSharedRes,
+
+    /// <summary><c>@hassharedunits(a, b)</c>.</summary>
+    HasSharedUnits,
+
+    /// <summary><c>@hassharedvision(a, b)</c>.</summary>
+    HasSharedVision,
+
+    /// <summary><c>@isenemy(a, b)</c>.</summary>
+    IsEnemy,
+
+    /// <summary><c>@isneutral(a, b)</c>.</summary>
+    IsNeutral,
+
+    /// <summary><c>@isally(a, b)</c>.</summary>
+    IsAlly,
+
+    /// <summary><c>@getdiplomacy(a, b)</c>.</summary>
+    GetDiplomacy,
+
+    /// <summary><c>@gettime()</c>.</summary>
+    GetTime,
+
+    /// <summary><c>@settime(hour)</c>.</summary>
+    SetTime,
+
+    /// <summary><c>@god(on)</c>.</summary>
+    God,
+
+    /// <summary><c>@clearselection()</c>.</summary>
+    ClearSelection,
+
+    /// <summary><c>@unselect(…)</c>.</summary>
+    Unselect,
+
+    /// <summary><c>@select(…)</c>.</summary>
+    Select,
+
+    /// <summary><c>@setai(player, mode)</c>.</summary>
+    SetAi,
+
+    /// <summary><c>@kingdomcanrescue(player, on)</c>.</summary>
+    KingdomCanRescue,
+
+    /// <summary><c>@str(text)</c> (raw text argument).</summary>
+    Str,
+
+    /// <summary><c>@playmovie(path)</c> (raw text argument).</summary>
+    PlayMovie,
 }
 
 /// <summary>Unary operators.</summary>
