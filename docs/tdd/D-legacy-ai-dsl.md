@@ -89,3 +89,13 @@ rule when trigger MakeSomeFootmen have 20 footman end
 * The interpreter produces **goals**. Executors (TDD §16.1) turn goals into commands deterministically.
 * Provide a debug overlay: per AI player, the active rules, flags, goals and the current executor tasks.
 * Missing includes → a warning, and the rule set continues (compatibility with partial installs).
+
+## D.7 Implementation (M3 part B)
+* Parser, compiler, interpreter and executors: `Tzar2.AI` — [ADR 0050](../decisions/0050-legacy-ai-dsl-toolchain-and-interpreter.md)
+  (grammar as implemented, diagnostics, limits, semantics), [ADR 0051](../decisions/0051-ai-in-the-lockstep.md) (the AI
+  in the lockstep), [ADR 0052](../decisions/0052-ai-executors-and-default-script.md) (executors, default script).
+* Every ⚠ point above has a placeholder decision in [ai-placeholders.md](../mechanics/ai-placeholders.md); notable
+  differences from D.4: percentages are shares of the **population limit**, and rule actions re-run in every pass while
+  the rule is active (only `say` fires once per activation).
+* `t2 ai check <DATA/AI folder | package>` parses and compiles scripts and prints located messages (`AI1xxx` syntax,
+  `AI2xxx` loading, `AI3xxx` names).
