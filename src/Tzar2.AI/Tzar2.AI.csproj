@@ -8,7 +8,12 @@
     <IsTrimmable>true</IsTrimmable>
     <Tzar2Deterministic>true</Tzar2Deterministic>
     <Tzar2NoIO>true</Tzar2NoIO>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tzar2.AI.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
