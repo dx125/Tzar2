@@ -137,7 +137,7 @@ public sealed class SessionTests
     public void A_right_click_on_an_enemy_unit_ends_in_a_kill()
     {
         // The client's order path end to end: frame entities -> EntityInfo -> OrderResolver -> session -> sim.
-        using var session = new GameSession(Setup(), Rules.Value, fog: false, computerPlayers: false);
+        using var session = new GameSession(Setup() with { ComputerAi = false }, Rules.Value, fog: false);
         World world = session.Simulation.World;
         FrameEntity[] all = session.AcquireFrame(out _)!.Entities.ToArray();
         EntityInfo Info(FrameEntity e)

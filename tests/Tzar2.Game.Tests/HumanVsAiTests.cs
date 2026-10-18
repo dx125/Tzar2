@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Tzar2.AI.Legacy.Program;
+using System.Text;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Rules;
 using Tzar2.Content.Vfs;
@@ -10,6 +10,7 @@ using Tzar2.Core.Hashing;
 using Tzar2.Core.Ids;
 using Tzar2.Game.Maps;
 using Tzar2.Game.Session;
+using Tzar2.Replay;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Events;
@@ -21,7 +22,8 @@ namespace Tzar2.Game.Tests;
 /// <summary>
 /// End to end (ADR 0073): a skirmish of the local (human) kingdom against a Hard legacy-AI kingdom through
 /// <see cref="GameSession"/> — lobby setup, the AI in the sim pipeline, the human's commands through the local
-/// scheduler — runs for minutes, deterministically, and the AI builds, trains and attacks.
+/// scheduler — runs for minutes, deterministically, and the AI builds, trains and attacks; the AI script is part of the
+/// match identity (fingerprint, replay header, snapshots).
 /// </summary>
 public sealed class HumanVsAiTests(ITestOutputHelper output)
 {
@@ -38,17 +40,19 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
         Seed = seed,
     };
 
-    internal static Outcome Play(MatchSetup setup, Ruleset rules, AiProgram? program, int minutes)
+    internal static Outcome Play(MatchSetup setup, Ruleset rules, int minutes)
     {
-        using var session = new GameSession(setup, rules, program);
-        World world = session.Simulation.World;
-        var stream = new StateHasher();
+        using var session = new GameSession(setup, rules);
+        return Play(session, minutes * 60 * 1000 / session.Simulation.World.Config.TickLengthMilliseconds, new StateHasher());
+    }
+
+    private static Outcome Play(GameSession session, int ticks, StateHasher stream)
+    {
         var events = new List<SimEvent>();
         int built = 0, trained = 0, hits = 0, delivered = 0;
-        int ticks = minutes * 60 * 1000 / world.Config.TickLengthMilliseconds;
         for (int t = 0; t < ticks; t++)
         {
-            if (t == 5)
+            if (session.Simulation.World.Tick.Value == 5)
             {
                 // The human sends its peasants to the nearest trees, as a player's first right click would.
                 HumanHarvest(session);
@@ -77,8 +81,8 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
     [Fact]
     public void A_human_against_a_hard_ai_plays_deterministically_and_the_ai_builds_trains_and_attacks()
     {
-        Outcome a = Play(Setup(), Rules.Value, program: null, Minutes);
-        Outcome b = Play(Setup(), Rules.Value, program: null, Minutes);
+        Outcome a = Play(Setup(), Rules.Value, Minutes);
+        Outcome b = Play(Setup(), Rules.Value, Minutes);
         output.WriteLine(a.ToString());
         Assert.Equal(a, b);
         Assert.True(a.AiCommands > 50, $"the AI issued {a.AiCommands} commands");
@@ -86,7 +90,66 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
         Assert.True(a.AiTrained > 0, "the AI trained no unit");
         Assert.True(a.AiHitsOnHuman > 0, "the AI never hit the human kingdom");
         Assert.True(a.HumanDelivered > 0, "the human's harvest order did not reach the sim");
-        Assert.NotEqual(Play(Setup(seed: 12), Rules.Value, program: null, 1).Final, a.Final);
+    }
+
+    [Fact]
+    public void Another_seed_gives_another_match_of_the_same_length()
+    {
+        Outcome a = Play(Setup(seed: 11), Rules.Value, 2);
+        Outcome b = Play(Setup(seed: 12), Rules.Value, 2);
+        Assert.NotEqual(a.Stream, b.Stream);
+        Assert.NotEqual(a.Final, b.Final);
+    }
+
+    [Fact]
+    public void A_snapshot_taken_mid_match_continues_with_the_same_hash_stream()
+    {
+        // Straight: 4 minutes. Split: 2 minutes, snapshot, restore (the AI is re-attached and reads its state back), 2
+        // more minutes. The per-tick hashes and the final full hash must match.
+        int half = 2 * 60 * 20;
+        using var straight = new GameSession(Setup(), Rules.Value);
+        Outcome whole = Play(straight, 2 * half, new StateHasher());
+
+        var stream = new StateHasher();
+        using var first = new GameSession(Setup(), Rules.Value);
+        Play(first, half, stream);
+        byte[] snapshot = first.CaptureSnapshot();
+        using GameSession second = GameSession.Restore(Setup(), Rules.Value, snapshot);
+        Assert.NotNull(second.Ai);
+        Outcome resumed = Play(second, half, stream);
+        Assert.Equal(whole.Stream, resumed.Stream);
+        Assert.Equal(whole.Final, resumed.Final);
+
+        // A snapshot saved with one AI script is refused by a setup with another.
+        Assert.Throws<InvalidDataException>(() => GameSession.Restore(Setup() with { Ai = OtherScript() }, Rules.Value, snapshot));
+    }
+
+    [Fact]
+    public void Another_script_changes_the_fingerprint_the_replay_header_and_the_full_hash()
+    {
+        SkirmishAi other = OtherScript();
+        Assert.True(other.IsOriginal);
+        Assert.NotEqual(SkirmishAi.EngineDefault.ContentHash, other.ContentHash);
+
+        using var a = new GameSession(Setup(), Rules.Value);
+        using var b = new GameSession(Setup() with { Ai = other }, Rules.Value);
+        Assert.Equal([new ReplayAiProgram(1, SkirmishAi.EngineDefault.ContentHash)], a.Fingerprint.AiPrograms.ToArray());
+        Assert.NotEqual(a.Fingerprint.Value, b.Fingerprint.Value);
+        Assert.Equal(a.Fingerprint.AiPrograms.ToArray(), a.ReplayHeader().AiPrograms.ToArray());
+
+        // Already at tick 1 the full-state hash differs (the AI state carries the program hash).
+        a.Step(1);
+        b.Step(1);
+        Assert.NotEqual(a.Simulation.ComputeFullHash(), b.Simulation.ComputeFullHash());
+
+        // A peer with another script is refused at match start, naming the kingdom.
+        var e = Assert.Throws<MatchMismatchException>(() => new GameSession(Setup(), Rules.Value, peers: [b.Fingerprint]));
+        Assert.Contains("kingdom 2", e.Message, StringComparison.Ordinal);
+        using var agreed = new GameSession(Setup(), Rules.Value, peers: [a.Fingerprint]);
+
+        // The replay header keeps the AI programs.
+        var recorder = new ReplayRecorder(a.ReplayHeader());
+        Assert.Equal(a.Fingerprint.AiPrograms.ToArray(), ReplayFile.Parse(recorder.Finish()).Header.AiPrograms.ToArray());
     }
 
     [PackageFact]
@@ -94,28 +157,51 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
     {
         using PackageSource package = PackageSource.Open(ImportedPackageSkirmishTests.PackagePath!);
         Ruleset rules = RulesetLoader.Compile(package).Ruleset;
-        AiProgram program = AiScripts.ForSkirmish(package, out bool original);
-        Assert.True(original, "the package's random.ais did not compile");
+        SkirmishAi ai = SkirmishAi.Resolve(package);
+        Assert.True(ai.IsOriginal, ai.Notice);
         MatchSetup setup = Setup() with
         {
             Map = new SkirmishTestMap(96),
             Players = [new PlayerSetup(0, "euro", ControllerKind.Human), new PlayerSetup(1, "arab", ControllerKind.Computer, Difficulty.Hard)],
+            Ai = ai,
         };
-        Outcome a = Play(setup, rules, program, 15);
+        Outcome a = Play(setup, rules, 15);
         output.WriteLine(a.ToString());
-        Assert.Equal(a, Play(setup, rules, program, 15));
+        Assert.Equal(a, Play(setup, rules, 15));
         Assert.True(a.AiBuilt > 0 && a.AiTrained > 0, a.ToString());
     }
 
     [Fact]
-    public void Without_scripts_in_the_package_the_engine_default_is_used()
+    public void Without_usable_scripts_in_the_package_the_engine_default_is_used_with_a_notice()
     {
-        AiProgram program = AiScripts.ForSkirmish(new MemorySource("empty"), out bool original);
-        Assert.False(original);
-        Assert.False(program.HasErrors);
-        AiProgram broken = AiScripts.ForSkirmish(new MemorySource("broken").Add(AiScripts.PackageFolder + "random.ais", "this is not a script ("u8), out original);
-        Assert.False(original);
-        Assert.False(broken.HasErrors);
+        Assert.Null(SkirmishAi.Resolve(null).Notice);
+        SkirmishAi empty = SkirmishAi.Resolve(new MemorySource("empty"));
+        Assert.False(empty.IsOriginal);
+        Assert.Equal(SkirmishAi.EngineDefault.ContentHash, empty.ContentHash);
+        Assert.Contains("not in the package", empty.Notice, StringComparison.Ordinal);
+        SkirmishAi broken = SkirmishAi.Resolve(new MemorySource("broken").Add(SkirmishAi.PackageFolder + "random.ais", "this is not a script ("u8));
+        Assert.False(broken.IsOriginal);
+        Assert.Equal(SkirmishAi.EngineDefault.ContentHash, broken.ContentHash);
+        Assert.Contains("do not compile", broken.Notice, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_ai_runs_on_the_sim_thread_at_top_speed_without_faults()
+    {
+        using var session = new GameSession(Setup(), Rules.Value);
+        session.SpeedIndex = GameSession.SpeedSteps.Length - 1;
+        session.Start();
+        System.Threading.SpinWait.SpinUntil(() => session.TicksRun >= 600 || session.Fault is not null, TimeSpan.FromSeconds(60));
+        Assert.Null(session.Fault);
+        Assert.True(session.TicksRun >= 600);
+    }
+
+    // A "package" whose random.ais is the engine default plus one rule: another program, still valid.
+    private static SkirmishAi OtherScript()
+    {
+        string text = Encoding.UTF8.GetString(new EngineDefaultsSource().ReadAllBytes(SkirmishAi.EngineDefaultPath))
+            + "\nrule say \"another script\" forget THIS end\n";
+        return SkirmishAi.Resolve(new MemorySource("other").Add(SkirmishAi.PackageFolder + "random.ais", Encoding.UTF8.GetBytes(text)));
     }
 
     private static void HumanHarvest(GameSession session)

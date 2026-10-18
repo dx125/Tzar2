@@ -74,6 +74,35 @@ public abstract partial class ArtScreen : Control
         return button;
     }
 
+    /// <summary>A warning line (e.g. the AI fell back to the engine default), wrapped to the screen width.</summary>
+    protected void Notice(string? text, Vector2I at)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        int max = Math.Max(200, (int)Size.X - Origin.X - at.X - 40);
+        var line = new System.Text.StringBuilder();
+        int y = 0;
+        foreach (string word in text.Split(' '))
+        {
+            string next = line.Length == 0 ? word : line + " " + word;
+            if (line.Length > 0 && Ui.Measure(next) > max)
+            {
+                Text(at + new Vector2I(0, y), line.ToString(), UiAssets.SmallFont, new Color(1f, 0.6f, 0.4f));
+                y += 14;
+                line.Clear().Append(word);
+            }
+            else
+            {
+                line.Clear().Append(next);
+            }
+        }
+
+        Text(at + new Vector2I(0, y), line.ToString(), UiAssets.SmallFont, new Color(1f, 0.6f, 0.4f));
+    }
+
     /// <summary>An invisible click area relative to the background (labels baked into the art, UNK-15).</summary>
     protected Button Area(Rect2I rect, Action pressed)
     {
@@ -88,9 +117,10 @@ public abstract partial class ArtScreen : Control
 public partial class MainMenuScreen : ArtScreen
 {
     /// <summary>Creates the menu.</summary>
-    public MainMenuScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen)
+    public MainMenuScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, string? notice = null)
         : base(ui, screen, "art/screens/s_main/back.t2img")
     {
+        Notice(notice, new Vector2I(8, 566));
         string Label(string key, string fallback) => catalog?.Text("mainscr", key, fallback) ?? fallback;
         var size = new Vector2I(235, 25);
         const string Image = "art/screens/s_main/btn.t2img";
@@ -178,9 +208,10 @@ public partial class SkirmishSetupScreen : ArtScreen
     private readonly TextureRect _map;
 
     /// <summary>Creates the dialog.</summary>
-    public SkirmishSetupScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, SkirmishOptions options, Func<SkirmishOptions, Image?>? preview = null)
+    public SkirmishSetupScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, SkirmishOptions options, Func<SkirmishOptions, Image?>? preview = null, string? notice = null)
         : base(ui, screen, "art/screens/s_singlesetup/back.t2img")
     {
+        Notice(notice, new Vector2I(66, 88));
         _options = options;
         _catalog = catalog;
         _preview = preview;

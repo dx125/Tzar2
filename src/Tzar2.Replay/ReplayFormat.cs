@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using Tzar2.Core.Ids;
 using Tzar2.Core.Numerics;
@@ -8,6 +9,11 @@ using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 
 namespace Tzar2.Replay;
+
+/// <summary>The AI program of one computer kingdom, by content hash (ADR 0073: re-simulating needs the same script).</summary>
+/// <param name="Slot">The player slot.</param>
+/// <param name="ProgramHash">The compiled program's content hash.</param>
+public readonly record struct ReplayAiProgram(byte Slot, ulong ProgramHash);
 
 /// <summary>The header of a <c>.t2rep</c> replay (REQ-NET-09): what is needed to re-simulate and verify it.</summary>
 public sealed record ReplayHeader
@@ -32,6 +38,9 @@ public sealed record ReplayHeader
 
     /// <summary>Ticks between keyframe snapshots (REQ-NET-09: every 60 s of game time = 1,200 ticks at 20 Hz).</summary>
     public int KeyframeIntervalTicks { get; init; } = 1200;
+
+    /// <summary>The AI program of every computer kingdom, ascending by slot (empty: no AI).</summary>
+    public ImmutableArray<ReplayAiProgram> AiPrograms { get; init; } = [];
 
     /// <summary>Creates the header for a simulation at tick 0.</summary>
     public static ReplayHeader For(Simulation simulation, string engineVersion)
@@ -69,7 +78,7 @@ public sealed class ReplayRecorder
     public const uint Magic = 0x50523254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 2;
+    public const int FormatVersion = 3;
 
     internal const byte TagEnd = 0;
     internal const byte TagTick = 1;
@@ -103,6 +112,13 @@ public sealed class ReplayRecorder
         _writer.WriteByte((byte)header.OverflowMode);
         _writer.WriteVarUInt64((ulong)header.HashIntervalTicks);
         _writer.WriteVarUInt64((ulong)header.KeyframeIntervalTicks);
+        ImmutableArray<ReplayAiProgram> ai = header.AiPrograms.IsDefault ? [] : header.AiPrograms;
+        _writer.WriteVarUInt64((ulong)ai.Length);
+        foreach (ReplayAiProgram program in ai)
+        {
+            _writer.WriteByte(program.Slot);
+            _writer.WriteUInt64(program.ProgramHash);
+        }
     }
 
     /// <summary>The header.</summary>
@@ -274,7 +290,21 @@ public sealed class ReplayFile
         byte overflow = reader.ReadByte();
         int hashInterval = ReadInt(ref reader, int.MaxValue);
         int keyframeInterval = ReadInt(ref reader, int.MaxValue);
-        if (players < 1 || fullInterval < 1 || tickLength < 1 || pathBudget < 1 || hashInterval < 1 || keyframeInterval < 1 || overflow > 1)
+        int aiCount = ReadInt(ref reader, 16);
+        var ai = ImmutableArray.CreateBuilder<ReplayAiProgram>(aiCount);
+        for (int i = 0; i < aiCount; i++)
+        {
+            byte slot = reader.ReadByte();
+            ulong hash = reader.ReadUInt64();
+            if (i > 0 && slot <= ai[i - 1].Slot)
+            {
+                throw new InvalidDataException("AI programs out of slot order.");
+            }
+
+            ai.Add(new ReplayAiProgram(slot, hash));
+        }
+        if (players < 1 || fullInterval < 1 || tickLength < 1 || pathBudget < 1 || hashInterval < 1 || keyframeInterval < 1 || overflow > 1
+            || (ai.Count > 0 && ai[ai.Count - 1].Slot >= players))
         {
             throw new InvalidDataException("Invalid replay header.");
         }
@@ -298,6 +328,7 @@ public sealed class ReplayFile
             OverflowMode = (OverflowMode)overflow,
             HashIntervalTicks = hashInterval,
             KeyframeIntervalTicks = keyframeInterval,
+            AiPrograms = ai.MoveToImmutable(),
         };
 
         // A tick record is at least 4 bytes, so this bounds the index by the input size.

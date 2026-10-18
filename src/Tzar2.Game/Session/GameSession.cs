@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Tzar2.AI;
-using Tzar2.AI.Legacy.Program;
 using Tzar2.AI.Runtime;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Events;
+using Tzar2.Replay;
 
 namespace Tzar2.Game.Session;
 
@@ -44,17 +44,20 @@ public sealed class GameSession : IDisposable
     private Exception? _fault;
 
     /// <summary>Creates the match at tick 0.</summary>
-    /// <param name="setup">Players and settings.</param>
+    /// <param name="setup">Players, settings and the AI script (<see cref="MatchSetup.Ai"/>).</param>
     /// <param name="ruleset">The compiled ruleset named by <see cref="MatchSetup.Ruleset"/>.</param>
-    /// <param name="ai">
-    /// The strategy script of the computer kingdoms (null = the engine default, <see cref="AiScripts.Default"/>); see
-    /// <see cref="AiScripts.ForSkirmish"/> for the user's original scripts.
+    /// <param name="fog">Whether the frames show the local player's fog.</param>
+    /// <param name="peers">
+    /// The fingerprints of the other peers (multiplayer lobbies, M6); a peer whose match differs — including another
+    /// resolved AI script — is refused before the first tick.
     /// </param>
-    /// <param name="fog">Whether to compute fog for the local player.</param>
-    /// <param name="computerPlayers">
-    /// Whether computer slots get the AI (false: they stay idle — tests that need a passive opponent).
-    /// </param>
-    public GameSession(MatchSetup setup, Ruleset ruleset, AiProgram? ai = null, bool fog = true, bool computerPlayers = true)
+    /// <exception cref="MatchMismatchException">A peer's match differs.</exception>
+    public GameSession(MatchSetup setup, Ruleset ruleset, bool fog = true, IReadOnlyList<MatchFingerprint>? peers = null)
+        : this(setup, ruleset, fog, peers, snapshot: null)
+    {
+    }
+
+    private GameSession(MatchSetup setup, Ruleset ruleset, bool fog, IReadOnlyList<MatchFingerprint>? peers, byte[]? snapshot)
     {
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(ruleset);
@@ -64,26 +67,30 @@ public sealed class GameSession : IDisposable
         LocalPlayer = setup.LocalPlayer;
         Map = setup.Map.Create(ruleset, setup);
         Map.Validate(ruleset);
-        Simulation = new Simulation(
-            ruleset,
-            Map,
-            new SimulationConfig
+        Fingerprint = MatchFingerprint.Of(setup, ruleset, Map);
+        foreach (MatchFingerprint peer in peers ?? [])
+        {
+            Fingerprint.EnsureCompatible(peer);
+        }
+
+        if (snapshot is null)
+        {
+            Simulation = new Simulation(ruleset, Map, Config(setup));
+
+            // The kingdoms' civilizations come from the lobby (the tech tree and the AI's script bindings use them).
+            foreach (PlayerSetup p in setup.Players)
             {
-                MatchSeed = setup.Seed,
-                PlayerCount = setup.Players.Count,
-                StartingResources = setup.StartingResources,
-                PopulationLimit = setup.PopulationLimit,
-                Victory = setup.Victory,
-                GameType = setup.GameType,
-                ScoreLimit = setup.ScoreLimit,
-                TimeLimitMinutes = setup.TimeLimitMinutes,
-                NoFog = setup.NoFog,
-                Explored = setup.Explored,
-                DayNight = setup.DayNight,
-                Weather = setup.Weather,
-                Teams = setup.Teams,
-                CheatsAllowed = setup.CheatsAllowed,
-            });
+                if (System.Linq.Enumerable.Contains(ruleset.Civilizations, p.Civilization, StringComparer.Ordinal))
+                {
+                    Simulation.World.SetCivilization(p.Slot, p.Civilization);
+                }
+            }
+        }
+        else
+        {
+            Simulation = Simulation.Restore(snapshot, ruleset, Map);
+        }
+
         _slots = setup.Players.Count;
         _pending = new CommandList[_slots];
         for (int i = 0; i < _slots; i++)
@@ -91,35 +98,72 @@ public sealed class GameSession : IDisposable
             _pending[i] = new CommandList();
         }
 
-        // The kingdoms' civilizations come from the lobby (the tech tree and the AI's script bindings use them).
-        foreach (PlayerSetup p in setup.Players)
-        {
-            if (System.Linq.Enumerable.Contains(ruleset.Civilizations, p.Civilization, StringComparer.Ordinal))
-            {
-                Simulation.World.SetCivilization(p.Slot, p.Civilization);
-            }
-        }
-
         // Computer kingdoms: the legacy AI joins the sim pipeline before the first tick, exactly as on every lockstep
-        // peer (ADR 0051): its orders are commands validated in the same tick, its state is in the snapshots.
+        // peer (ADR 0051): its orders are commands validated in the same tick, its state is in the snapshots (a restored
+        // match reads it back, and refuses a snapshot saved with another script).
         var computers = new List<AiPlayerSettings>();
-        if (computerPlayers)
+        if (setup.ComputerAi)
         {
-            AiProgram program = ai ?? AiScripts.Default();
             foreach (PlayerSetup p in setup.Players)
             {
                 if (p.Controller == ControllerKind.Computer)
                 {
-                    computers.Add(new AiPlayerSettings { Slot = p.Slot, Program = program, Civilization = p.Civilization, Difficulty = AiScripts.ToAi(p.Difficulty) });
+                    computers.Add(new AiPlayerSettings { Slot = p.Slot, Program = setup.Ai.Program, Civilization = p.Civilization, Difficulty = SkirmishAi.ToAi(p.Difficulty) });
                 }
             }
         }
 
         Ai = computers.Count > 0 ? LegacyAiSystem.Attach(Simulation, computers) : null;
-
         _fog = fog;
         Publish();
     }
+
+    /// <summary>
+    /// Continues a match from a snapshot taken by <see cref="CaptureSnapshot"/> (saves, reconnects): the same setup
+    /// rebuilds the map and re-attaches the AI, whose state comes from the snapshot.
+    /// </summary>
+    /// <exception cref="System.IO.InvalidDataException">The snapshot does not belong to this setup (map, ruleset, AI script).</exception>
+    public static GameSession Restore(MatchSetup setup, Ruleset ruleset, byte[] snapshot, bool fog = true)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return new GameSession(setup, ruleset, fog, peers: null, snapshot);
+    }
+
+    /// <summary>A snapshot of the match between ticks (not while the sim thread runs).</summary>
+    /// <exception cref="InvalidOperationException">The sim thread is running.</exception>
+    public byte[] CaptureSnapshot()
+    {
+        if (_thread is not null)
+        {
+            throw new InvalidOperationException("Pause and stop the sim thread before capturing a snapshot.");
+        }
+
+        return Simulation.CaptureSnapshot();
+    }
+
+    /// <summary>What the peers agreed on (ruleset, map, settings, AI programs).</summary>
+    public MatchFingerprint Fingerprint { get; }
+
+    /// <summary>The replay header of this match (with the AI program of every computer kingdom).</summary>
+    public ReplayHeader ReplayHeader() => Tzar2.Replay.ReplayHeader.For(Simulation, GameInfo.Version) with { AiPrograms = Setup.AiPrograms };
+
+    private static SimulationConfig Config(MatchSetup setup) => new()
+    {
+        MatchSeed = setup.Seed,
+        PlayerCount = setup.Players.Count,
+        StartingResources = setup.StartingResources,
+        PopulationLimit = setup.PopulationLimit,
+        Victory = setup.Victory,
+        GameType = setup.GameType,
+        ScoreLimit = setup.ScoreLimit,
+        TimeLimitMinutes = setup.TimeLimitMinutes,
+        NoFog = setup.NoFog,
+        Explored = setup.Explored,
+        DayNight = setup.DayNight,
+        Weather = setup.Weather,
+        Teams = setup.Teams,
+        CheatsAllowed = setup.CheatsAllowed,
+    };
 
     /// <summary>The setup.</summary>
     public MatchSetup Setup { get; }
@@ -184,6 +228,7 @@ public sealed class GameSession : IDisposable
     internal void SubmitAs(byte slot, CommandList batch)
     {
         ArgumentNullException.ThrowIfNull(batch);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(slot, _slots);
         lock (_gate)
         {
             _pending[slot].AppendStamped(slot, batch);
