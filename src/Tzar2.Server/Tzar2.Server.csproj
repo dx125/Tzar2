@@ -7,6 +7,8 @@
     <Description>Headless relay and lobby service (TDD §19.7).</Description>
     <InvariantGlobalization>true</InvariantGlobalization>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- Source-generated winmm interop for the 1 ms timer resolution on Windows (LibraryImport). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

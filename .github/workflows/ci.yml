@@ -130,6 +130,32 @@ jobs:
           name: test-results-${{ matrix.os }}
           path: TestResults
 
+  server-docker:
+    # TDD §19.7 / ADR 0161: the relay/lobby service builds as a Linux container, starts, answers its HTTP API, a UDP
+    # browse query and a lobby creation, and stops cleanly on SIGTERM.
+    name: Relay server - Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - name: Build the image
+        run: docker build -f src/Tzar2.Server/Dockerfile -t tzar2-server:ci .
+      - name: Run it and probe the API
+        run: |
+          set -euo pipefail
+          docker run -d --name relay -p 18080:8080 -p 47625:47625/udp tzar2-server:ci
+          for i in $(seq 1 30); do curl -fsS localhost:18080/healthz && break; sleep 1; done
+          curl -fsS localhost:18080/metrics | grep -q '^tzar2_lobbies 0$'
+          test "$(curl -fsS localhost:18080/lobbies)" = "[]"
+          dotnet build tests/Tzar2.Server.Tests -c Release
+          TZAR2_RELAY=127.0.0.1:47625 dotnet test tests/Tzar2.Server.Tests -c Release --no-build --filter "FullyQualifiedName~ContainerProbe"
+          docker stop -t 10 relay
+          docker logs relay | tee relay.log
+          grep -q '"event":"service.stop"' relay.log
+
   determinism:
     # TDD §22.2 / ADR 0017: the sim golden hash on every OS. The test fails on any difference from the committed value;
     # the t2 bench run writes the per-tick hash stream, and determinism-compare diffs the streams across OSes.
