@@ -16,7 +16,9 @@ internal static class WorldReader
         "loanGrowDelayMs", "loanInterestPercent", "claimReachPx", "claimIntervalMs", "guardRadiusTiles", "wanderRadiusTiles",
         "wanderIntervalMs", "dayLengthMs", "dayStartMinute", "nightStartMinute", "nightEndMinute", "weatherPeriodMs",
         "weatherChancePercent", "weather", "scoreGatherDivisor", "scoreKillDivisor", "scoreBuildDivisor", "scorePerTechnology",
-        "victoryIntervalTicks", "deathmatchStartingResources", "cheatSmallResources", "cheatLargeResources",
+        "victoryIntervalTicks", "deathmatchStartingResources", "cheatSmallResources", "cheatLargeResources", "tavernRefreshMs",
+        "mercenaryOffers", "heroOffers", "mercenaryGroupMin", "mercenaryGroupMax", "mercenaryCostPercent", "heroCostPercent",
+        "mercenaryLevel", "fameGroupBonus", "fameLevelBonus", "fameCostPercent",
     ];
 
     public static WorldSettings Build(RulesetCompiler.SectionSet settings, GameplaySettings gameplay)
@@ -80,6 +82,17 @@ internal static class WorldReader
             DeathmatchStartingResources = deathmatch,
             CheatSmallResources = Range(settings, "cheatSmallResources", d.CheatSmallResources, 0, 10_000_000),
             CheatLargeResources = Range(settings, "cheatLargeResources", d.CheatLargeResources, 0, 10_000_000),
+            TavernRefreshMs = Range(settings, "tavernRefreshMs", d.TavernRefreshMs, 1_000, int.MaxValue),
+            MercenaryOffers = Range(settings, "mercenaryOffers", d.MercenaryOffers, 0, WorldSettings.MaxTavernOffers),
+            HeroOffers = Range(settings, "heroOffers", d.HeroOffers, 0, WorldSettings.MaxTavernOffers),
+            MercenaryGroupMin = Range(settings, "mercenaryGroupMin", d.MercenaryGroupMin, 1, 31),
+            MercenaryGroupMax = Range(settings, "mercenaryGroupMax", d.MercenaryGroupMax, 1, 31),
+            MercenaryCostPercent = Range(settings, "mercenaryCostPercent", d.MercenaryCostPercent, 0, 100_000),
+            HeroCostPercent = Range(settings, "heroCostPercent", d.HeroCostPercent, 0, 100_000),
+            MercenaryLevel = Range(settings, "mercenaryLevel", d.MercenaryLevel, 0, 1_000),
+            FameGroupBonus = Range(settings, "fameGroupBonus", d.FameGroupBonus, 0, 16),
+            FameLevelBonus = Range(settings, "fameLevelBonus", d.FameLevelBonus, 0, 1_000),
+            FameCostPercent = Range(settings, "fameCostPercent", d.FameCostPercent, 0, 1_000),
         };
     }
 

@@ -385,7 +385,7 @@ internal static class KingdomCommands
     }
 
     // A technology the ruleset does not have (a mod without it) is no requirement.
-    private static bool HasTechnology(World world, byte player, string key)
+    internal static bool HasTechnology(World world, byte player, string key)
     {
         int id = world.Ruleset.TechnologyId(key);
         return id < 0 || world.Players[player].HasTechnology(id) || world.IgnoresRequirements(player);

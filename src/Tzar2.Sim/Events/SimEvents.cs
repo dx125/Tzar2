@@ -120,6 +120,9 @@ public enum SimEventKind : ushort
 
     /// <summary>A cheat code was applied (GAME-19): Arg = <c>CheatCode</c>.</summary>
     CheatUsed = 52,
+
+    /// <summary>Mercenaries or a hero were hired (GAME-14): Entity = the first unit, X = offer slot, Y = units, Arg = type id.</summary>
+    Hired = 53,
     // GAME-07…11 (ADRs 0090-0096): values 24-39.
 
     /// <summary>A projectile was fired (Entity = shooter, X, Y = where it is aimed, Arg = projectile id | flight ms &lt;&lt; 8).</summary>
@@ -230,6 +233,12 @@ public enum CommandRejection
 
     /// <summary>No loan to repay (GAME-14).</summary>
     NoLoan = 34,
+
+    /// <summary>No population room or entity slot for the hired units (GAME-14).</summary>
+    NoRoom = 35,
+
+    /// <summary>The tavern offer was already hired this period (GAME-14).</summary>
+    OfferTaken = 36,
     // GAME-07…11 (ADR 0096): values 15-29.
 
     /// <summary>The holder has no room left (GAME-09).</summary>
