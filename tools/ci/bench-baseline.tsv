@@ -2,27 +2,32 @@
 # Per scenario and runner CPU model: the runs recorded, the median tick p50 and p99 (ms), the median calibration-normalized
 # p50, and the tolerances (factors) check-bench.sh allows: 1.10 / 1.30 from three runs on; provisional rows (fewer runs)
 # 1.25 / 1.50; the AMD EPYC 9V45, whose nightly medians spread up to 11%, 1.20 / 1.50 (b4 1.30 / 1.60).
-# Recorded from 24 probe nightlies of the s2/gameplay/b4/stress steps on main 729f335 plus this PR (2026-10-18).
+# Recorded from 36 probe nightlies of the nightly bench steps on main 729f335 and 45a07e6 (AI: 12) plus this PR (2026-10-18).
 # To add or re-record rows see ADR 0080 ("Adding or re-recording a baseline row").
 # B3 has no row: its p50 is dominated by idle ticks (30% spread on one CPU model); B3 is gated by its planning check.
 # name	cpu	runs	p50	p99	normalized p50	p50 tolerance	p99 tolerance
-b4	AMD EPYC 7763 64-Core Processor	9	0.698	1.250	0.684	1.10	1.30
-b4	AMD EPYC 9V45 96-Core Processor	2	0.374	0.708	0.458	1.30	1.60
-b4	AMD EPYC 9V74 80-Core Processor	2	0.556	1.031	0.599	1.25	1.50
-b4	INTEL(R) XEON(R) PLATINUM 8573C	3	0.686	1.148	0.531	1.10	1.30
-b4	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	1	0.720	1.250	0.623	1.25	1.50
-gameplay	AMD EPYC 7763 64-Core Processor	15	2.871	7.937	2.823	1.10	1.30
-gameplay	AMD EPYC 9V45 96-Core Processor	2	1.724	4.925	2.101	1.25	1.50
-gameplay	AMD EPYC 9V74 80-Core Processor	2	2.297	6.361	2.494	1.25	1.50
-gameplay	INTEL(R) XEON(R) PLATINUM 8573C	3	2.821	7.581	2.193	1.10	1.30
-gameplay	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	2	3.290	8.234	2.830	1.25	1.50
-s2	AMD EPYC 7763 64-Core Processor	15	2.834	5.700	2.791	1.10	1.30
-s2	AMD EPYC 9V45 96-Core Processor	2	1.827	4.080	2.199	1.25	1.50
-s2	AMD EPYC 9V74 80-Core Processor	2	2.335	4.732	2.500	1.25	1.50
-s2	INTEL(R) XEON(R) PLATINUM 8573C	3	3.101	5.865	2.388	1.10	1.30
-s2	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	2	3.141	5.793	2.699	1.25	1.50
-stress	AMD EPYC 7763 64-Core Processor	9	6.413	8.585	6.300	1.10	1.30
-stress	AMD EPYC 9V45 96-Core Processor	2	4.248	5.896	5.034	1.25	1.50
-stress	AMD EPYC 9V74 80-Core Processor	2	5.178	7.087	5.533	1.25	1.50
-stress	INTEL(R) XEON(R) PLATINUM 8573C	3	7.033	9.380	5.286	1.10	1.30
-stress	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	1	6.972	9.288	5.936	1.25	1.50
+ai	AMD EPYC 7763 64-Core Processor	8	0.660	2.588	0.649	1.10	1.30
+ai	AMD EPYC 9V45 96-Core Processor	1	0.357	1.728	0.413	1.25	1.50
+ai	AMD EPYC 9V74 80-Core Processor	1	0.517	2.135	0.555	1.25	1.50
+ai	INTEL(R) XEON(R) PLATINUM 8573C	1	0.675	2.783	0.507	1.25	1.50
+ai	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	1	0.687	2.700	0.589	1.25	1.50
+b4	AMD EPYC 7763 64-Core Processor	17	0.696	1.286	0.686	1.10	1.30
+b4	AMD EPYC 9V45 96-Core Processor	3	0.392	0.729	0.454	1.30	1.60
+b4	AMD EPYC 9V74 80-Core Processor	3	0.558	1.032	0.597	1.10	1.30
+b4	INTEL(R) XEON(R) PLATINUM 8573C	4	0.689	1.150	0.530	1.10	1.30
+b4	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	2	0.724	1.247	0.625	1.25	1.50
+gameplay	AMD EPYC 7763 64-Core Processor	23	2.871	7.937	2.802	1.10	1.30
+gameplay	AMD EPYC 9V45 96-Core Processor	3	1.739	5.036	2.088	1.20	1.50
+gameplay	AMD EPYC 9V74 80-Core Processor	3	2.323	6.332	2.511	1.10	1.30
+gameplay	INTEL(R) XEON(R) PLATINUM 8573C	4	2.841	7.793	2.192	1.10	1.30
+gameplay	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	3	3.173	8.191	2.732	1.10	1.30
+s2	AMD EPYC 7763 64-Core Processor	23	2.834	5.700	2.783	1.10	1.30
+s2	AMD EPYC 9V45 96-Core Processor	3	1.804	3.805	2.113	1.20	1.50
+s2	AMD EPYC 9V74 80-Core Processor	3	2.345	4.728	2.523	1.10	1.30
+s2	INTEL(R) XEON(R) PLATINUM 8573C	4	3.116	5.875	2.373	1.10	1.30
+s2	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	3	3.123	5.702	2.676	1.10	1.30
+stress	AMD EPYC 7763 64-Core Processor	17	6.481	8.680	6.335	1.10	1.30
+stress	AMD EPYC 9V45 96-Core Processor	3	4.093	5.454	4.934	1.20	1.50
+stress	AMD EPYC 9V74 80-Core Processor	3	5.204	7.171	5.518	1.10	1.30
+stress	INTEL(R) XEON(R) PLATINUM 8573C	4	7.032	9.384	5.280	1.10	1.30
+stress	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	2	6.976	9.280	5.970	1.25	1.50

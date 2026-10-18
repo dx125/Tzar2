@@ -116,8 +116,8 @@ jobs:
     # 10% and p99 within 30% of the row (provisional rows and an unknown CPU model are looser and warn). Gating: s2 (the
     # §4.3 S2 proxy: 4,000 units on 512², 8 players, AI-like order rate), B3 (500 move orders planned within 3 ticks),
     # B4 (no stuck units, corpses never change passability; ADR 0026), gameplay (resources delivered, fights happen;
-    # ADR 0039) and ai (8 legacy AIs: every AI gathers, builds, trains and fights; ADR 0052; one 20-minute run, absolute
-    # budget only until it has baseline rows). The synthetic stress scenario (16 move orders per player every tick, churn 2) is informational with its
+    # ADR 0039) and ai (8 legacy AIs: every AI gathers, builds, trains and fights; ADR 0052; one 20-minute run, checked
+    # against single-run rows). The synthetic stress scenario (16 move orders per player every tick, churn 2) is informational with its
     # own budget (p99 <= 12 ms on the runner, and the same relative checks): warnings, never failures.
     name: Benchmarks
     runs-on: ubuntu-latest

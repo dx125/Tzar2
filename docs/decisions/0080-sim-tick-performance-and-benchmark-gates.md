@@ -74,8 +74,9 @@ like-for-like (a best-of-N against a median would quietly loosen them):
    the median normalized p50 of the recorded models. Normalization leaves up to 34% (s2) and 50% (b4) between the
    recorded models, so this catches only large steps (roughly 35-60%, depending on where the new model falls); it is a
    stopgap until the model's row is recorded.
-B3 has no relative row (its p50 is idle ticks); its planning-within-3-ticks check gates it. The stress scenario runs
-the same checks as warnings.
+B3 has no relative row (its p50 is idle ticks); its planning-within-3-ticks check gates it. The ai scenario (8 legacy
+AIs for 20 minutes of game time, ADR 0052) runs once per nightly and its rows are single-run medians (its p50 spread
+on one CPU model is 6%). The stress scenario runs the same checks as warnings.
 
 What this guarantees: on a CPU model with a non-provisional row, a 10% slowdown of the median tick fails the nightly
 about half of the time at the measured noise (±3-6% per run, less for a median of three), and a 15% slowdown nearly
@@ -116,7 +117,9 @@ Full hash: p99 1.3 ms on both sides (unchanged by design). Local Apple M5, 1 wor
 The relative gates were validated on the first rebase onto main with M3 stream F (#23: fog, day/night, diplomacy, …):
 against rows recorded on the previous main, the gameplay p99 check failed on the EPYC 7763 (p99 5.8 → 7.9-8.1 ms,
 +37%; p50 +8%, s2 p50 +6%, b4 p50 +7%). That cost is intended (new systems), so the rows were re-recorded on main
-729f335 (24 probe nightlies); it is the kind of step the gate is there to surface.
+729f335 (24 probe nightlies); it is the kind of step the gate is there to surface. The legacy AI (#20, main 45a07e6)
+moved none of the rows beyond run-to-run noise (EPYC 7763 within ±1.5%); its 12 probe nightlies were added to the
+rows, together with the ai scenario's own rows.
 
 ## Alternatives considered
 
