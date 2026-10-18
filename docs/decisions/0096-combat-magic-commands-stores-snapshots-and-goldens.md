@@ -36,8 +36,11 @@ appends to the same enums and stores.
   300 ticks later, casts lightning at enemies and heals friends, bombards the center (attack ground) and picks items
   up; archers, towers and siege fire projectiles. Re-pinned on top of stream F (reasons in the tests): gameplay
   ruleset `CDF88159DCB8216C`, stream `14CA89CFE290A0DE`, final `259C6906C08AB4A3`; CI gameplay bench `4F22CD50EF776506`;
-  synthetic movement `B12B61103AA6CEB6` / `806340E79AAFCB5C` (layout only). Snapshot format 7, hashed layout 6, ruleset
-  hash version 6 (after stream F's 6 / 5 / 5).
+  synthetic movement `B12B61103AA6CEB6` / `806340E79AAFCB5C` (layout only). Snapshot format 8, hashed layout 6, ruleset
+  hash version 6 (after stream F's 6 / 5 / 5 and the legacy AI's format 7). On top of the legacy AI (ADR 0051) its
+  military executor skips units inside holders and invisible units the AI's kingdom does not detect, so it never aims at
+  what its player could not see; AI golden commands `D94B60AC85254137`, stream `4D4B6AC077327910`, final
+  `9A285B0A5C97566B`; CI AI bench `BCF3170D175046F4` (combat and magic change the games the AIs play).
 
 Measured (Apple M5, macOS arm64, Release, .NET 10, shared machine with other agents, ±30%):
 

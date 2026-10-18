@@ -117,12 +117,12 @@ public sealed class MilitaryExecutor : IAiExecutor
             }
 
             AiCensusPlayer enemy = context.Census.Player(q);
-            Consider(world, enemy.Buildings, q, x0, y0, ref best, ref player, ref entity, ref x, ref y);
-            Consider(world, enemy.Sites, q, x0, y0, ref best, ref player, ref entity, ref x, ref y);
+            Consider(world, context.Slot, enemy.Buildings, q, x0, y0, ref best, ref player, ref entity, ref x, ref y);
+            Consider(world, context.Slot, enemy.Sites, q, x0, y0, ref best, ref player, ref entity, ref x, ref y);
             if (!preferBuildings || player < 0)
             {
-                Consider(world, enemy.Army, q, x0, y0, ref best, ref player, ref entity, ref x, ref y);
-                Consider(world, enemy.Workers, q, x0, y0, ref best, ref player, ref entity, ref x, ref y);
+                Consider(world, context.Slot, enemy.Army, q, x0, y0, ref best, ref player, ref entity, ref x, ref y);
+                Consider(world, context.Slot, enemy.Workers, q, x0, y0, ref best, ref player, ref entity, ref x, ref y);
             }
         }
 
@@ -220,6 +220,11 @@ public sealed class MilitaryExecutor : IAiExecutor
 
             foreach (EntityId e in context.Census.Player(q).Army)
             {
+                if (!MayTarget(world, context.Slot, e))
+                {
+                    continue;
+                }
+
                 Position p = world.Positions.Get(e);
                 if (p.X < bx0 || p.X >= bx1 || p.Y < by0 || p.Y >= by1)
                 {
@@ -375,10 +380,15 @@ public sealed class MilitaryExecutor : IAiExecutor
         return c >= 0 && m >= 0 && world.Combats.At(c).Target == 0 && world.Motions.At(m).State != MotionState.Moving;
     }
 
-    private static void Consider(World world, List<EntityId> entities, int owner, int x0, int y0, ref long best, ref int player, ref EntityId entity, ref int x, ref int y)
+    private static void Consider(World world, int slot, List<EntityId> entities, int owner, int x0, int y0, ref long best, ref int player, ref EntityId entity, ref int x, ref int y)
     {
         foreach (EntityId e in entities)
         {
+            if (!MayTarget(world, slot, e))
+            {
+                continue;
+            }
+
             Position p = world.Positions.Get(e);
             long d = AiExecutorContext.Distance(x0, y0, p.X, p.Y);
             if (d < best)
@@ -391,6 +401,11 @@ public sealed class MilitaryExecutor : IAiExecutor
             }
         }
     }
+
+    // Units inside holders are not on the map; invisible ones only where a detector of the AI's kingdom sees them
+    // (GAME-09/11/12): the AI never aims at what its player could not see or hit.
+    private static bool MayTarget(World world, int slot, EntityId e)
+        => !world.IsHeld(e) && !(world.IsCloaked(e) && world.Visibility.IsConcealedFrom(world, slot, e, world.Positions.Get(e)));
 
     private static void IssueGroups(AiExecutorContext context, List<EntityId> units, CommandKind kind, EntityId target, int x, int y, CommandFlags flags)
     {
