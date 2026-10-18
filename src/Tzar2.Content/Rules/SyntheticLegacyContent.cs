@@ -133,6 +133,8 @@ public static class SyntheticLegacyContent
             [],
             ["Galleon", "galleon", "810f,1190w", "49", "15", "11", "1150", "33", "1", "5", "5", "Harbor", "te_mapmaking"],
             ["Fishing Boat", "fishing_boat", "110f,190w", "19", "11", "7", "55", "2", "1", "5", "5", "Harbor", "*"],
+            ["Hulk", "hulk", "430f,610w", "37", "13", "10", "820", "21", "1", "5", "5", "Harbor", "*"],
+            ["Xebec", "xebec", "260f,370w", "29", "14", "9", "540", "13", "1", "6", "4", "Harbor", "*"],
             [],
             ["Watch tower", "tower_wood", "310w", "29", "11", "7", "390", "6", "1", "", "4", "", "*"],
             ["Guard tower", "tower_wood2", "305w", "34", "15", "11", "990", "11", "1", "", "4", "", "*"],
@@ -178,7 +180,7 @@ public static class SyntheticLegacyContent
             ("groups",
             [
                 ("mounted", "e knight"), ("arrow_unit", "archer"), ("infantry_units", "footman, archer, pikeman, maceman"),
-                ("siege", "catapult"), ("ships", "galleon, fishing_boat"),
+                ("siege", "catapult"), ("ships", "galleon, hulk, xebec, fishing_boat"),
             ]),
             ("footman", [("mounted", "+55%")]),
             ("arrow_unit", [("footman", "-25%")]),
@@ -399,6 +401,8 @@ public static class SyntheticLegacyContent
         AddObject(source, "tower_stone2", "building, capture", "comm", "tower_stone2", file: "tower stone2", extra: [("max_damage", "45"), ("min_attack_range", "1")]);
         AddObject(source, "catapult", "unit", "comm", "catapult", teren: "1", extra: [("min_attack_range", "3")]);
         AddObjectSections(source, "GALLEON", [("general", [("class", "galleon"), ("teren", "2"), ("type", "unit")]), ("damage", [("00", "85,15"), ("01", "75,25"), ("02", "65,35")]), ("comm", [("image", "galleon"), ("menu", "e_galleon"), ("max_obj_in_holder", "20")]), ("accept", [("earthunits", string.Empty)])]);
+        AddObjectSections(source, "HULK", [("general", [("class", "hulk"), ("teren", "2"), ("type", "unit")]), ("comm", [("image", "hulk"), ("max_obj_in_holder", "12")]), ("accept", [("earthunits", string.Empty)])]);
+        AddObjectSections(source, "XEBEC", [("general", [("class", "xebec"), ("teren", "2"), ("type", "unit")]), ("comm", [("image", "xebec"), ("max_obj_in_holder", "6")]), ("accept", [("earthunits", string.Empty)])]);
         AddObject(source, "fishing_boat", "unit", "comm", "boat", teren: "2");
         AddObject(source, "cow", "unit, animal", "comm", "cow", teren: "1", extra: [("max_manna", "40")]);
         AddObject(source, "trader", "unit, mounted", "euro", "caravan");
