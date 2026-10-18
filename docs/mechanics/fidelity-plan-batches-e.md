@@ -1,6 +1,7 @@
 # Plan: capture batches E–I and the editor session (towards the M3 gate)
 
-Status: **plan** (implementation follows once PR #37 has merged; ADR 0113 will record it). The M3 gate is passing / all
+Status: **implemented** as ADR 0113 (scenario files `tools/capture/scenarios/8*-9*.yaml`; batch times there are the
+final estimates: E ~18, F ~25, G ~13, H ~22, I ~11 minutes). This page keeps the ranking and the reasoning. The M3 gate is passing / all
 30 TDD §22.3 checks (ADR 0112); 80 % = 24 checks. Batches A–D can settle at most 9. This plan covers the other 21.
 
 ## Ground rules (lessons of session 1, ADR 0110)

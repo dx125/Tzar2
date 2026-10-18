@@ -18,5 +18,7 @@ internal static class AnalysisCatalog
         "gather-rates",
         "region-timing",
         "day-clock",
+        "counter-rate",
+        "combat-outcomes",
     };
 }

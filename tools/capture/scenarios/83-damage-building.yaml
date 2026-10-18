@@ -1,0 +1,56 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: damage-building
+title: Damage to a building: RESISTANCE (UNK-08)
+resolves: [UNK-08]
+priority: 5
+minutes: 2.2
+default: false                      # batch E (ADR 0113)
+experimental: true
+description: |
+  A lumber mill (HEALTH 800, RESISTANCE 80) is built at once with hmbuildozer next to the castle; a spawned knight is
+  ordered to attack it (A, then the mill: the forced attack of the command card). The mill's hit points are found in
+  memory; the step is the damage after RESISTANCE (engine: x 1000 / (1000 + RESISTANCE)).
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: knight-vs-lumber
+    vars: {attacker: knight, defender: lumber, defender_hp: "800", rate_stat: "4", attack_stat: "12", defence_stat: "0", bonus_percent: "0", resistance: "80"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - chat: "${cheat}buildozer"
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - key: L
+  - click: [660, 560]               # the mill, finished at once
+  - wait: 2
+  - chat: "${cheat}buildozer"       # off again
+  - memscan: {name: hp-all, value: "800", width: 4}
+  - wait: 1
+  - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
+  - move: [560, 470]
+  - chat: "${cheat}spawn knight"
+  - click: [560, 470]               # place
+  - click: [560, 470]               # select the knight
+  - key: A
+  - click: [660, 560]               # forced attack on the own mill
+  - wait: 4
+  - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
+  - memsample: {name: hp-series, scan: hp-hit, max_addresses: 256, interval_ms: 10, duration_s: 15}
+  - wait: 16
+  - key: S
+  - snapshot: after
+analysis: [attack-timing]

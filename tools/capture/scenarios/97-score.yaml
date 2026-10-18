@@ -1,0 +1,37 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: score
+title: The score screen after a short game (UNK-29)
+resolves: [UNK-29]
+priority: 5
+minutes: 2
+default: false                      # batch G (ADR 0113)
+description: |
+  The castle trains three peasants, then hmnext ends the game; the end screen is captured (window) for the score's
+  parts, read by hand into manual.yaml (ADR 0113).
+launch: [-nomovies, -map, MP2.wmp]
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - key: {key: C, ctrl: true}
+  - key: P
+  - key: P
+  - key: P
+  - wait: 35
+  - chat: "${cheat}next"
+  - wait: 3
+  - snapshot: {name: end-1, game: false}
+  - wait: 3
+  - snapshot: {name: end-2, game: false}
+  - click: [512, 600]
+  - wait: 3
+  - snapshot: {name: end-3, game: false}
+analysis: [capture-quality]

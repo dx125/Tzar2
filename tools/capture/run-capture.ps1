@@ -30,8 +30,9 @@ param(
     # Scenario ids (see: t2 fidelity scenarios). Default: the default set. "all" runs every scenario.
     [string[]]$Scenarios = @(),
     # A prepared batch of at most 30 minutes (ADR 0112): A = cheats, colours, combat, shadows, production;
-    # B = unit speeds (first half) and gathering; C = unit speeds (second half); D = the day clock. Overrides -Scenarios.
-    [ValidateSet("A", "B", "C", "D")][string]$Batch = "",
+    # B = unit speeds (first half) and gathering; C = unit speeds (second half); D = the day clock; E-I: ADR 0113.
+    # Overrides -Scenarios.
+    [ValidateSet("A", "B", "C", "D", "E", "F", "G", "H", "I")][string]$Batch = "",
     # Where the session folder and the zip go.
     [string]$Out = (Join-Path ([Environment]::GetFolderPath("UserProfile")) "Tzar2Capture"),
     # cnc-ddraw (default: a pinned, verified DirectDraw wrapper that runs the game in a window),
@@ -49,6 +50,13 @@ $batches = @{
     "B" = @("unit-speed", "gather-wood", "gather-rock-a", "gather-rock-b", "gather-cow")
     "C" = @("unit-speed-more")
     "D" = @("day-clock")
+    # ADR 0113 (after batch A's cheat findings): E = combat details, research, gathering, capture; F = fire, repair,
+    # healing, field decay, experience; G = magic, loans, score; H = combat outcomes; I = trade and gambling.
+    "E" = @("smoke", "group-speed", "research-feudalism", "damage-bonuses", "damage-building", "gather-wood-far", "capture-time-1", "capture-time-3", "build-card")
+    "F" = @("smoke", "fire-repair-10s", "fire-repair-20s", "fire-repair-30s", "healing", "field-decay", "experience")
+    "G" = @("smoke", "mana-spell", "loans", "score")
+    "H" = @("smoke", "combat-outcomes")
+    "I" = @("smoke", "trade", "gamble")
 }
 if ($Batch) { $Scenarios = $batches[$Batch] }
 $repo = Resolve-Path (Join-Path $PSScriptRoot "../..")

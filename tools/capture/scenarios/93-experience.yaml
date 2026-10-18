@@ -1,0 +1,238 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: experience
+title: Experience per kill and level effects (UNK-23)
+resolves: [UNK-23]
+priority: 5
+minutes: 6
+default: false                      # batch F (ADR 0113)
+experimental: true
+description: |
+  An invulnerable knight (hmgod) kills twelve spawned enemy peasants one by one; after every kill the knight's
+  selection panel is captured (window only). Experience, level, attack and defence are read from the panel by hand
+  into tests/fidelity/facts/manual.yaml (ADR 0113), since they have no known memory address yet.
+launch: [-nomovies, -map, MP2.wmp]
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}god"
+  - move: [600, 340]
+  - chat: "${cheat}spawn knight"
+  - click: [600, 340]               # place
+  - drag: {from: [560, 300], to: [640, 390]}
+  - snapshot: {name: panel-0, game: false, tags: {kills: "0"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-1, game: false, tags: {kills: "1"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-2, game: false, tags: {kills: "2"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-3, game: false, tags: {kills: "3"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-4, game: false, tags: {kills: "4"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-5, game: false, tags: {kills: "5"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-6, game: false, tags: {kills: "6"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-7, game: false, tags: {kills: "7"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-8, game: false, tags: {kills: "8"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-9, game: false, tags: {kills: "9"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-10, game: false, tags: {kills: "10"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-11, game: false, tags: {kills: "11"}}
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [680, 340]
+  - chat: "${cheat}spawn peon"
+  - click: [680, 340]               # place
+  - click: [680, 340]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - drag: {from: [560, 300], to: [720, 390]}
+  - click: {at: [680, 340], button: right}
+  - wait: 6
+  - drag: {from: [560, 300], to: [720, 390]}
+  - snapshot: {name: panel-12, game: false, tags: {kills: "12"}}
+analysis: [capture-quality]

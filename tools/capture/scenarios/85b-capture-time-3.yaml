@@ -1,0 +1,57 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: capture-time-3
+title: Capture time with three peasants (UNK-19)
+resolves: [UNK-19]
+priority: 5
+minutes: 1.7
+default: false                      # batch E (ADR 0113)
+experimental: true
+description: |
+  A house (RESISTANCE 50) is spawned for kingdom 2 in the open middle of MP2; 1 or 3 spawned peasants of kingdom 1 are
+  ordered to capture it (C, then the house). The house's square is captured every 250 ms: its colour changes from
+  red to blue when it changes owner.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: three-peasants
+    vars: {measure: capture, subject: house, n: "3", resistance: "50", count: "1"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - chat: "${cheat}kingdom 2"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [650, 320]
+  - chat: "${cheat}spawn house"
+  - click: [650, 320]               # place
+  - click: [650, 320]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [720, 280]               # clear the selection
+  - chat: "${cheat}kingdom 1"
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [560, 390]
+  - chat: "${cheat}spawn peon"
+  - click: [560, 390]               # place
+  - move: [600, 395]
+  - chat: "${cheat}spawn peon"
+  - click: [600, 395]               # place
+  - move: [520, 395]
+  - chat: "${cheat}spawn peon"
+  - click: [520, 395]               # place
+  - drag: {from: [505, 370], to: [615, 410]}               # 3 peasant(s)
+  - key: C
+  - click: [650, 320]
+  - move: [70, 400]
+  - burst: {name: house, count: 160, interval_ms: 250, region: [612, 284, 76, 76]}
+analysis: [region-timing]

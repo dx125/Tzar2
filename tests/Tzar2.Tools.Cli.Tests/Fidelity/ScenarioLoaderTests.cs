@@ -33,10 +33,10 @@ public class ScenarioLoaderTests
         // The default session must fit in about half an hour of the operator's time.
         Assert.InRange(scenarios.Where(s => s.Default).Sum(s => s.Minutes), 5, 35);
 
-        // run-capture.ps1 -Batch A|B|C|D (ADR 0112): every id exists and every batch fits in half an hour.
+        // run-capture.ps1 -Batch A ... I (ADR 0112): every id exists and every batch fits in half an hour.
         string script = File.ReadAllText(Path.Combine(OriginPaths.RepositoryRoot, "tools", "capture", "run-capture.ps1"));
-        var batches = System.Text.RegularExpressions.Regex.Matches(script, "\"([ABCD])\" = @\\(([^)]*)\\)");
-        Assert.Equal(4, batches.Count);
+        var batches = System.Text.RegularExpressions.Regex.Matches(script, "\"([A-I])\" = @\\(([^)]*)\\)");
+        Assert.Equal(9, batches.Count);
         foreach (System.Text.RegularExpressions.Match batch in batches)
         {
             string[] ids = batch.Groups[2].Value.Split(',').Select(x => x.Trim().Trim('"')).ToArray();

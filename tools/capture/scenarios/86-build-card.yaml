@@ -1,0 +1,47 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: build-card
+title: Build menu layout (discovery for batches F, G, I)
+resolves: []
+priority: 5
+minutes: 1
+default: false                      # batch E (ADR 0113)
+description: |
+  Window captures of the peasant's build card and its three category sub-menus (guilds, common, rare), so the button
+  positions the later batches assume (2 x 4 grid at x 45/105, y 355/415/475/530) can be checked before they run.
+launch: [-nomovies, -map, MP2.wmp]
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - wait: 1
+  - snapshot: {name: build-card, game: false}
+  - click: [45, 355]
+  - wait: 1
+  - snapshot: {name: card-1, game: false}
+  - key: Escape
+  - key: B
+  - click: [105, 355]
+  - wait: 1
+  - snapshot: {name: card-2, game: false}
+  - key: Escape
+  - key: B
+  - click: [45, 415]
+  - wait: 1
+  - snapshot: {name: card-3, game: false}
+  - key: Escape
+analysis: [capture-quality]

@@ -1,0 +1,51 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: loans
+title: The first loan (UNK-28)
+resolves: [UNK-28]
+priority: 5
+minutes: 2.5
+default: false                      # batch G (ADR 0113)
+experimental: true
+description: |
+  A tavern is built at once (B, the "common" button, N); the tavern's loan menu (L) takes a gold loan (G). The gold
+  stockpile (MP2: 1000) is followed in memory: the step is the loan.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: gold
+    vars: {quantity: gold, subject: loan, primary: gold-series, direction: up}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - memscan: {name: gold-all, value: "1000", width: 4}
+  - wait: 1
+  - memscan: {name: gold-stable, from: gold-all, mode: unchanged}
+  - chat: "${cheat}buildozer"
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - click: [105, 355]               # the "common" category (checked by build-card in batch E)
+  - key: N
+  - click: [470, 450]
+  - wait: 2
+  - chat: "${cheat}buildozer"
+  - click: [470, 450]               # select the tavern
+  - memsample: {name: gold-series, scan: gold-stable, max_addresses: 4096, interval_ms: 200, duration_s: 20}
+  - key: L
+  - key: G
+  - wait: 3
+  - snapshot: {name: after-loan, game: false}
+  - wait: 18
+analysis: [counter-rate]

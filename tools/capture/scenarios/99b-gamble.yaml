@@ -1,0 +1,72 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: gamble
+title: Gambling at the tavern (discovery, UNK-28)
+resolves: [UNK-28]
+priority: 5
+minutes: 3
+default: false                      # batch I (ADR 0113)
+experimental: true
+description: |
+  Discovery run: a tavern is built at once (B, the "common" category, N), its gamble dialog (G) opened and captured;
+  Enter then places the default bet ten times with the gold stockpile followed in memory. The captures show the
+  dialog, so a 40-bet scenario at fixed odds can follow.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: default-bet
+    vars: {quantity: gold, subject: gamble, primary: gold-series, direction: up}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - memscan: {name: gold-all, value: "1000", width: 4}
+  - wait: 1
+  - memscan: {name: gold-stable, from: gold-all, mode: unchanged}
+  - chat: "${cheat}buildozer"
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - click: [105, 355]               # the "common" category (checked by build-card in batch E)
+  - key: N
+  - click: [470, 450]
+  - wait: 2
+  - chat: "${cheat}buildozer"
+  - click: [470, 450]               # select the tavern
+  - key: G
+  - wait: 1
+  - snapshot: {name: gamble-dialog, game: false}
+  - memsample: {name: gold-series, scan: gold-stable, max_addresses: 4096, interval_ms: 200, duration_s: 40}
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - key: Enter
+  - wait: 3
+  - snapshot: {name: after-bets, game: false}
+  - wait: 8
+analysis: [counter-rate]

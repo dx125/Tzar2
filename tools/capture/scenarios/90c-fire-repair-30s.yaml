@@ -1,0 +1,73 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: fire-repair-30s
+title: Burning threshold, fire damage and repair rate (UNK-42, UNK-18)
+resolves: [UNK-42, UNK-18]
+priority: 5
+minutes: 3
+default: false                      # batch F (ADR 0113)
+experimental: true
+description: |
+  A lumber mill (HEALTH 800) is built at once; three spawned knights attack it (forced attack) and stop after a fixed time (here 30 s; three scenarios: 10, 20, 30 s), leaving it at different hit points. Then 40 s with nobody near (a burning mill keeps losing hit points: the
+  threshold lies between the highest share that burns and the lowest that does not), then one peasant repairs it for
+  40 s. The mill's hit points are sampled through all three phases. (Adjust the stop times once batch A has measured the
+  knight's damage per second against buildings.)
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: stop-30s
+    vars: {quantity: hp, subject: lumber, max_value: "800", primary: hp-attack, direction: down, stop_s: "30", n: "1"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
+  - key: {key: C, ctrl: true}
+  - key: Space
+  - wait: 1
+  - chat: "${cheat}buildozer"
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: B
+  - key: L
+  - click: [660, 560]
+  - wait: 2
+  - chat: "${cheat}buildozer"
+  - memscan: {name: hp-all, value: "800", width: 4}
+  - wait: 1
+  - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
+  - move: [560, 470]
+  - chat: "${cheat}spawn knight"
+  - click: [560, 470]               # place
+  - move: [560, 515]
+  - chat: "${cheat}spawn knight"
+  - click: [560, 515]               # place
+  - move: [520, 490]
+  - chat: "${cheat}spawn knight"
+  - click: [520, 490]               # place
+  - drag: {from: [500, 450], to: [590, 540]}
+  - key: A
+  - click: [660, 560]
+  - wait: 3
+  - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
+  - memsample: {name: hp-attack, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 30}
+  - wait: 30
+  - drag: {from: [500, 450], to: [720, 640]}
+  - key: S
+  - click: {at: [400, 380], button: right}   # away from the mill
+  - memsample: {name: hp-burn, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 40}
+  - wait: 41
+  # A starting peasant, selected with a box (units only; the castle starts right of x = 790).
+  - drag: {from: [705, 440], to: [785, 525]}
+  - key: R
+  - click: [660, 560]
+  - memsample: {name: hp-repair, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 40}
+  - wait: 41
+  - snapshot: after
+analysis: [counter-rate]

@@ -48,6 +48,7 @@ internal static class FidelityCommand
                 "scenarios" => Scenarios(rest, stdout, stderr),
                 "selftest" => SelfTestCommand(rest, stdout, stderr),
                 "report" => Report(rest, stdout),
+                "maps" => Maps(rest, stdout),
                 _ => Unknown(args[0], stderr),
             };
         }
@@ -65,7 +66,7 @@ internal static class FidelityCommand
 
     private static int Unknown(string sub, TextWriter stderr)
     {
-        stderr.WriteLine($"t2 fidelity: unknown subcommand '{sub}' (capture, analyze, check, scenarios, selftest, report).");
+        stderr.WriteLine($"t2 fidelity: unknown subcommand '{sub}' (capture, analyze, check, scenarios, selftest, report, maps).");
         return ExitCodes.UsageError;
     }
 
@@ -82,6 +83,7 @@ internal static class FidelityCommand
         o.WriteLine("  scenarios [--capture-dir <dir>] validate and list the scenarios with their durations");
         o.WriteLine("  selftest [--allow-no-input]     Windows only: capture, input and memory checks without the game");
         o.WriteLine("  report [--facts <dir>]          the fidelity suite (ADR 0112): pass % per area against the engine");
+        o.WriteLine("  maps <dir> [--facts <dir>]      statistics of random maps saved from the original (<type>-<n>.wmp, ADR 0113)");
         o.WriteLine();
         o.WriteLine("<capture-dir> holds session.yaml and scenarios/*.yaml (default: tools/capture in the repository).");
     }
@@ -149,6 +151,22 @@ internal static class FidelityCommand
         MemSampleStep m => [m.Name],
         _ => [],
     };
+
+    // ---- maps ------------------------------------------------------------------------------------------------------
+
+    private static int Maps(string[] args, TextWriter stdout)
+    {
+        var o = Options.Parse(args, ["--facts"], [], positional: 1);
+        string factsDir = o.Get("--facts") ?? Path.Combine(RepositoryRoot() ?? throw new OptionException("--facts is required outside the repository"), "tests", "fidelity", "facts");
+        if (!Directory.Exists(o.Positional[0]))
+        {
+            throw new OptionException($"'{o.Positional[0]}' is not a folder");
+        }
+
+        var stats = RandomMapStats.Write(o.Positional[0], factsDir, stdout);
+        stdout.WriteLine($"wrote {Path.Combine(factsDir, "random-maps.yaml")}: {stats.Count} maps ({string.Join(", ", stats.GroupBy(s => s.Type).Select(g => $"{g.Key} {g.Count()}"))})");
+        return stats.Count > 0 ? ExitCodes.Success : ExitCodes.Mismatch;
+    }
 
     // ---- report ----------------------------------------------------------------------------------------------------
 
