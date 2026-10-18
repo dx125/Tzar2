@@ -31,6 +31,8 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
 
     private static readonly Lazy<Ruleset> Rules = new(() => SyntheticLegacyContent.CompileRuleset());
 
+    internal static Ruleset SyntheticRules => Rules.Value;
+
     internal sealed record Outcome(ulong Stream, ulong Final, int AiBuilt, int AiTrained, int AiHitsOnHuman, int HumanDelivered, long AiCommands);
 
     internal static MatchSetup Setup(ulong seed = 11) => new()
@@ -95,6 +97,20 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
     /// <summary>Game minutes per map type: long enough for the Hard AI's first wave (after 4 minutes, ADR 0052) to land.</summary>
     private const int MapTypeMinutes = 6;
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Tzar2.Content.MapGen.RandomMapType, Lazy<(Outcome A, Outcome B, string Map)>> MapTypeRuns = new();
+
+    internal static MatchSetup MapTypeSetup(Tzar2.Content.MapGen.RandomMapType type)
+        => Setup() with { Map = new RandomMapSource(type, size: Tzar2.Content.MapGen.RandomMapSize.Tiny) };
+
+    // Two runs per map type, shared by the theories below (each map type is played twice, once).
+    private static (Outcome A, Outcome B, string Map) MapTypeRun(Tzar2.Content.MapGen.RandomMapType type)
+        => MapTypeRuns.GetOrAdd(type, t => new Lazy<(Outcome, Outcome, string)>(() =>
+        {
+            MatchSetup setup = MapTypeSetup(t);
+            string map = setup.Map.Create(Rules.Value, setup).Name;
+            return (Play(setup, Rules.Value, MapTypeMinutes), Play(setup, Rules.Value, MapTypeMinutes), map);
+        })).Value;
+
     [Theory]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Random)]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Archipelagos)]
@@ -104,22 +120,47 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Lakes)]
     public void A_human_against_a_hard_ai_plays_every_random_map_type(Tzar2.Content.MapGen.RandomMapType type)
     {
-        MatchSetup setup = Setup() with { Map = new RandomMapSource(type, size: Tzar2.Content.MapGen.RandomMapSize.Tiny) };
-        Outcome a = Play(setup, Rules.Value, MapTypeMinutes);
-        Outcome b = Play(setup, Rules.Value, MapTypeMinutes);
-        string map = setup.Map.Create(Rules.Value, setup).Name;
+        (Outcome a, Outcome b, string map) = MapTypeRun(type);
         output.WriteLine($"{type} ({map}): {a}");
         Assert.Equal(a, b);
         Assert.True(a.AiBuilt > 0, $"{map}: the AI completed no building");
         Assert.True(a.AiTrained > 0, $"{map}: the AI trained no unit");
+    }
 
-        // Archipelagos and Island (also when Random resolves to them) separate the kingdoms by water; the sim has no
-        // ships yet, so land armies cannot reach the human there (naval stream: transports and warships, ADR 0052).
-        bool naval = map.Contains("archipelagos", StringComparison.OrdinalIgnoreCase) || map.Contains("island", StringComparison.OrdinalIgnoreCase);
-        if (!naval)
+    /// <summary>
+    /// The attack check follows reachability, not the map type: wherever the AI's land army can walk to the human's
+    /// castle it must attack. Rows whose castles water separates are skipped (<see cref="LandReachableMapTypeAttribute"/>)
+    /// until the naval stream gives the sim ships; then the attribute must also accept ship-reachable castles.
+    /// </summary>
+    [Theory]
+    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Random)]
+    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Archipelagos)]
+    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Dry)]
+    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Island)]
+    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Continental)]
+    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Lakes)]
+    public void The_hard_ai_attacks_the_human_wherever_its_castle_is_land_reachable(Tzar2.Content.MapGen.RandomMapType type)
+    {
+        (Outcome a, _, string map) = MapTypeRun(type);
+        output.WriteLine($"{type} ({map}): {a.AiHitsOnHuman} AI hits on the human");
+        Assert.True(a.AiHitsOnHuman > 0, $"{map}: the castles are land-connected, but the AI never hit the human kingdom in {MapTypeMinutes} minutes");
+    }
+
+    /// <summary>Whether a foot unit of slot a can walk from next to a's castle to next to b's castle (the peasants' nav layer).</summary>
+    internal static bool CastlesLandConnected(World world, byte a, byte b)
+    {
+        world.Navigation.EnsureUpToDate();
+        EntityId peasant = world.Identities.Entities.ToArray().First(e => world.TypeOf(e).Traits.Harvester is not null);
+        Tzar2.Sim.Navigation.NavLayer layer = world.Navigation.ForType(world.Identities.Get(peasant).TypeId)!;
+        int Near(byte owner)
         {
-            Assert.True(a.AiHitsOnHuman > 0, $"{map}: the AI never hit the human kingdom in {MapTypeMinutes} minutes");
+            EntityId castle = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == owner && world.TypeOf(e).Traits.LegacyClass == "castle");
+            Sim.Components.Position p = world.Positions.Get(castle);
+            return Tzar2.Sim.Navigation.NavQueries.NearestWalkable(layer, p.X / MapData.UnitsPerTile, p.Y / MapData.UnitsPerTile, 8);
         }
+
+        int from = Near(a), to = Near(b);
+        return from >= 0 && to >= 0 && layer.AreConnected(from, to);
     }
 
     [Fact]
@@ -249,4 +290,27 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
 
     private static long Distance(Sim.Components.Position a, Sim.Components.Position b)
         => ((long)(a.X - b.X) * (a.X - b.X)) + ((long)(a.Y - b.Y) * (a.Y - b.Y));
+}
+
+/// <summary>
+/// A map-type row of the attack theory, skipped with the reason when the generated map's castles (AI kingdom 2, human
+/// kingdom 1) are not land-connected: decided from the map's navigation layer, not from the map type.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+public sealed class LandReachableMapTypeAttribute : Xunit.Sdk.DataAttribute
+{
+    private readonly Tzar2.Content.MapGen.RandomMapType _type;
+
+    public LandReachableMapTypeAttribute(Tzar2.Content.MapGen.RandomMapType type)
+    {
+        _type = type;
+        MatchSetup setup = HumanVsAiTests.MapTypeSetup(type);
+        using var probe = new GameSession(setup with { ComputerAi = false }, HumanVsAiTests.SyntheticRules);
+        if (!HumanVsAiTests.CastlesLandConnected(probe.Simulation.World, 1, 0))
+        {
+            Skip = $"{probe.Map.Name}: water separates the AI's castle from the human's, and the sim has no ships until the naval stream";
+        }
+    }
+
+    public override IEnumerable<object[]> GetData(System.Reflection.MethodInfo testMethod) => [[_type]];
 }
