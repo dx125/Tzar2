@@ -21,6 +21,9 @@ public enum ScenarioFault
     /// <summary>An action of a type the converter could not decode was skipped.</summary>
     UnknownAction = 5,
 
+    /// <summary>A built-in function the rebuild does not implement yet ran as a no-op (UNK-64).</summary>
+    UnsupportedFunction = 7,
+
     /// <summary>A reserved variable cannot be written there (<c>$x</c>, <c>$y</c>, <c>$maxmanna</c>, or no current object).</summary>
     ReadOnlyVariable = 6,
 }

@@ -80,10 +80,48 @@ public sealed partial class LegacyTriggerSystem
                 return value;
             }
 
-            case CallExpr c when c.Function == CallKind.Rnd:
+            case CallExpr c:
+                return Call(c);
+            case SequenceExpr sequence:
             {
-                int lo = Eval(c.Arguments[0]);
-                int hi = Eval(c.Arguments[1]);
+                int last = 0;
+                foreach (Expr statement in sequence.Statements)
+                {
+                    last = Eval(statement);
+                }
+
+                return last;
+            }
+
+            case TextArg:
+                return 0;
+            default:
+                return 0;
+        }
+    }
+
+    // The i-th argument's value, 0 when missing (the original does not check arity; ADR 0120).
+    private int Arg(CallExpr c, int i) => i < c.Arguments.Length ? Eval(c.Arguments[i]) : 0;
+
+    // Built-in functions (Appendix C.6 and the game's further names, ADR 0120). Kingdoms are legacy 1-8. Beyond C.6 the
+    // semantics are UNVERIFIED (UNK-64); functions that only drive the original's interface (selection, movies) are
+    // no-ops here, and those whose effect the rebuild does not have yet return 0 with a fault.
+    private int Call(CallExpr c)
+    {
+        switch (c.Function)
+        {
+            case CallKind.Gold:
+                return Resource(Arg(c, 0) - 1, _gold);
+            case CallKind.Stone:
+                return Resource(Arg(c, 0) - 1, _stone);
+            case CallKind.Food:
+                return Resource(Arg(c, 0) - 1, _food);
+            case CallKind.Wood:
+                return Resource(Arg(c, 0) - 1, _wood);
+            case CallKind.Rnd:
+            {
+                int lo = Arg(c, 0);
+                int hi = Arg(c, 1);
                 if (lo > hi)
                 {
                     (lo, hi) = (hi, lo);
@@ -94,17 +132,112 @@ public sealed partial class LegacyTriggerSystem
                 return (int)(lo + (long)(_world.Rng.Scripts.NextUInt64() % (ulong)span));
             }
 
-            case CallExpr c:
-                return Resource(Eval(c.Arguments[0]) - 1, c.Function switch
+            case CallKind.Max:
+            case CallKind.Min:
+            {
+                int value = Arg(c, 0);
+                for (int i = 1; i < c.Arguments.Length; i++)
                 {
-                    CallKind.Gold => _gold,
-                    CallKind.Stone => _stone,
-                    CallKind.Food => _food,
-                    _ => _wood,
-                });
+                    int next = Eval(c.Arguments[i]);
+                    value = c.Function == CallKind.Max ? Math.Max(value, next) : Math.Min(value, next);
+                }
+
+                return value;
+            }
+
+            case CallKind.SetGold:
+                return SetResource(Arg(c, 0) - 1, _gold, Arg(c, 1));
+            case CallKind.SetStone:
+                return SetResource(Arg(c, 0) - 1, _stone, Arg(c, 1));
+            case CallKind.SetWood:
+                return SetResource(Arg(c, 0) - 1, _wood, Arg(c, 1));
+            case CallKind.SetFood:
+                return SetResource(Arg(c, 0) - 1, _food, Arg(c, 1));
+            case CallKind.SetPopLimit:
+            {
+                int player = Arg(c, 0) - 1;
+                int limit = Math.Clamp(Arg(c, 1), 0, 100_000);
+                if (_world.HasPlayer(player))
+                {
+                    _world.Players[player].PopulationLimit = limit;
+                }
+
+                return limit;
+            }
+
+            case CallKind.HasSharedRes:
+                return Pair(c, Sim.Kingdoms.Sharing.Resources, null);
+            case CallKind.HasSharedUnits:
+                return Pair(c, Sim.Kingdoms.Sharing.UnitControl, null);
+            case CallKind.HasSharedVision:
+                return Pair(c, Sim.Kingdoms.Sharing.Vision, null);
+            case CallKind.IsAlly:
+                return Pair(c, Sim.Kingdoms.Sharing.None, Sim.Kingdoms.Stance.Ally);
+            case CallKind.IsEnemy:
+                return Pair(c, Sim.Kingdoms.Sharing.None, Sim.Kingdoms.Stance.Enemy);
+            case CallKind.IsNeutral:
+                return Pair(c, Sim.Kingdoms.Sharing.None, Sim.Kingdoms.Stance.Neutral);
+            case CallKind.GetDiplomacy:
+            {
+                // The IR's stance order (Ally 0, Enemy 1, Neutral 2; UNVERIFIED encoding).
+                int a = Arg(c, 0) - 1;
+                int b = Arg(c, 1) - 1;
+                if (!_world.HasPlayer(a) || !_world.HasPlayer(b) || a == b)
+                {
+                    return 0;
+                }
+
+                return _world.Diplomacy.StanceOf(a, b) switch { Sim.Kingdoms.Stance.Ally => 0, Sim.Kingdoms.Stance.Enemy => 1, _ => 2 };
+            }
+
+            case CallKind.GetTime:
+                return _world.MinuteAt(_world.Tick.Value) / 60; // the hour of the day clock (UNVERIFIED unit, UNK-64)
+            case CallKind.Select:
+            case CallKind.Unselect:
+            case CallKind.ClearSelection:
+            case CallKind.PlayMovie:
+            case CallKind.Str:
+                EvalArguments(c);
+                return 0;
             default:
+                // SetTime, God, SetAi, KingdomCanRescue, SetNoAttackTime, Count, InProgress, Build: not yet (UNK-64).
+                EvalArguments(c);
+                Fault(ScenarioFault.UnsupportedFunction);
                 return 0;
         }
+    }
+
+    private void EvalArguments(CallExpr c)
+    {
+        for (int i = 0; i < c.Arguments.Length; i++)
+        {
+            Eval(c.Arguments[i]);
+        }
+    }
+
+    // A test between two legacy kingdoms: a sharing (both offer it, allies) or a stance of the first towards the second.
+    private int Pair(CallExpr c, Sim.Kingdoms.Sharing sharing, Sim.Kingdoms.Stance? stance)
+    {
+        int a = Arg(c, 0) - 1;
+        int b = Arg(c, 1) - 1;
+        if (!_world.HasPlayer(a) || !_world.HasPlayer(b) || a == b)
+        {
+            return 0;
+        }
+
+        bool pass = stance is { } st ? _world.Diplomacy.StanceOf(a, b) == st : _world.Diplomacy.Shares(a, b, sharing);
+        return pass ? 1 : 0;
+    }
+
+    private int SetResource(int player, int resource, int amount)
+    {
+        amount = Math.Max(0, amount);
+        if (_world.HasPlayer(player) && resource >= 0)
+        {
+            _world.Players[player].Resources[resource] = amount;
+        }
+
+        return amount;
     }
 
     private int Binary(BinaryOp op, int a, int b)
@@ -177,9 +310,33 @@ public sealed partial class LegacyTriggerSystem
                 return _world.Positions.Get(e).X / Sim.Map.MapState.UnitsPerTile;
             case ReservedVariable.Y:
                 return _world.Positions.Get(e).Y / Sim.Map.MapState.UnitsPerTile;
-            default:
+            case ReservedVariable.Gold or ReservedVariable.Stone or ReservedVariable.Food or ReservedVariable.Wood:
                 return Resource(identity.Owner, ResourceOf(variable));
+            case ReservedVariable.InHolder:
+                return _world.IsHeld(e) ? 1 : 0;
+            case ReservedVariable.Cargo:
+                return _world.Workers.Has(e) ? _world.Workers.Get(e).CarryAmount : 0;
+            case ReservedVariable.Race:
+                return _world.HasPlayer(identity.Owner) ? _world.Players[identity.Owner].Civilization + 1 : 0;
+            case ReservedVariable.UnderFog:
+                return UnderFog(e) ? 1 : 0;
+            default:
+                return 0; // Difficulty, Flags, Program, IsSelected, CanUseDiplomacy, CanDelObjects: UNVERIFIED, UNK-64
         }
+    }
+
+    // Hidden from every responder (human) kingdom (UNVERIFIED reading of $underfog, UNK-64).
+    private bool UnderFog(EntityId e)
+    {
+        for (int p = 0; p < _world.Players.Length; p++)
+        {
+            if ((_options.ResponderMask & (1u << p)) != 0 && _world.Visibility.CanSee(_world, p, e))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private int ResourceOf(ReservedVariable variable) => variable switch

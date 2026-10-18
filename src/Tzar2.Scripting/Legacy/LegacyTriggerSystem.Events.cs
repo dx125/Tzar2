@@ -12,9 +12,9 @@ public sealed partial class LegacyTriggerSystem
     /// <summary>Memory cells an event keeps between passes (<see cref="TriggerShape.EventMemory"/>).</summary>
     internal static int MemoryOf(EventDef e) => e switch
     {
-        ObjectDestroyedEvent { Objects: TypedObjects } => 16,
+        ObjectDestroyedEvent { Objects: TypedObjects or CategoryObjects } => 16,
         ObjectLeaveHolderEvent { Objects: NamedObjects n } => n.ObjectIndices.Length,
-        ObjectLeaveHolderEvent { Objects: TypedObjects } => 16,
+        ObjectLeaveHolderEvent { Objects: TypedObjects or CategoryObjects } => 16,
         _ => 0,
     };
 
@@ -57,6 +57,8 @@ public sealed partial class LegacyTriggerSystem
 
             case ObjectDestroyedEvent { Objects: TypedObjects typed }:
                 return Compare(typed, memory);
+            case ObjectDestroyedEvent { Objects: CategoryObjects category }:
+                return Compare(category.Players, category.Comparison, category.Count, category.Quantifier, memory);
             case ObjectExistEvent e:
                 return Holds(e.Objects, static _ => true);
             case ObjectsEnterHolderEvent e:
@@ -89,6 +91,8 @@ public sealed partial class LegacyTriggerSystem
 
             case ObjectLeaveHolderEvent { Objects: TypedObjects typed }:
                 return Compare(typed, memory);
+            case ObjectLeaveHolderEvent { Objects: CategoryObjects category }:
+                return Compare(category.Players, category.Comparison, category.Count, category.Quantifier, memory);
             case PlayerDefeatedEvent e:
                 return AnyPlayer(e.Players, PlayerFlags.Defeated);
             case PlayerWonEvent e:
@@ -145,9 +149,16 @@ public sealed partial class LegacyTriggerSystem
                 switch (_scenario.Events[index])
                 {
                     case ObjectDestroyedEvent { Objects: TypedObjects typed } when ev.Kind == SimEventKind.Destroyed:
-                        if (ev.Arg == TypeOf(typed) && ev.Player < 16 && InMask(typed.Players, ev.Player))
+                        if (ev.Arg == TypeOf(typed) && InMask(typed.Players, ev.Player))
                         {
-                            memory[ev.Player] = (int)Math.Min((long)memory[ev.Player] + 1, int.MaxValue);
+                            Count(memory, ev.Player);
+                        }
+
+                        break;
+                    case ObjectDestroyedEvent { Objects: CategoryObjects category } when ev.Kind == SimEventKind.Destroyed:
+                        if ((uint)ev.Arg < (uint)_world.Ruleset.EntityTypes.Count && InMask(category.Players, ev.Player) && InCategory(category.Category, _world.Ruleset.EntityTypes[ev.Arg]))
+                        {
+                            Count(memory, ev.Player);
                         }
 
                         break;
@@ -169,12 +180,18 @@ public sealed partial class LegacyTriggerSystem
                                 }
                             }
                         }
-                        else if (leave.Objects is TypedObjects typed && _world.Entities.IsAlive(ev.Entity) && _world.Identities.Has(ev.Entity))
+                        else if (_world.Entities.IsAlive(ev.Entity) && _world.Identities.Has(ev.Entity))
                         {
                             Sim.Components.Identity id = _world.Identities.Get(ev.Entity);
-                            if (id.TypeId == TypeOf(typed) && InMask(typed.Players, id.Owner))
+                            bool match = leave.Objects switch
                             {
-                                memory[id.Owner] = (int)Math.Min((long)memory[id.Owner] + 1, int.MaxValue);
+                                TypedObjects typed => id.TypeId == TypeOf(typed) && InMask(typed.Players, id.Owner),
+                                CategoryObjects category => InMask(category.Players, id.Owner) && InCategory(category.Category, _world.Ruleset.EntityTypes[id.TypeId]),
+                                _ => false,
+                            };
+                            if (match)
+                            {
+                                Count(memory, id.Owner);
                             }
                         }
 
@@ -182,6 +199,16 @@ public sealed partial class LegacyTriggerSystem
                     }
                 }
             }
+        }
+    }
+
+    // One more removal or unloading for a sim owner (Nature counts at legacy bit 9).
+    private static void Count(int[] memory, int owner)
+    {
+        int cell = owner == Content.Compiled.MapObject.Nature ? 9 : owner;
+        if ((uint)cell < (uint)memory.Length)
+        {
+            memory[cell] = (int)Math.Min((long)memory[cell] + 1, int.MaxValue);
         }
     }
 

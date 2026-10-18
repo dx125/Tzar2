@@ -110,12 +110,55 @@ public sealed partial class LegacyTriggerSystem
 
                 break;
             }
+
+            case CategoryObjects category:
+            {
+                ReadOnlySpan<EntityId> ids = _world.Identities.Entities;
+                ReadOnlySpan<Identity> identities = _world.Identities.Components;
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    _steps++;
+                    if (InMask(category.Players, identities[i].Owner) && InCategory(category.Category, _world.Ruleset.EntityTypes[identities[i].TypeId]))
+                    {
+                        into.Add(ids[i]);
+                    }
+                }
+
+                break;
+            }
         }
 
         return into;
     }
 
-    private static bool InMask(ushort legacyMask, int owner) => owner < 16 && (legacyMask & (1 << owner)) != 0;
+    /// <summary>
+    /// The editor's type-filter categories (ADR 0120): units, military units (armed units that neither gather nor
+    /// build), buildings, "major objects" = units and buildings (UNVERIFIED, UNK-75), any object.
+    /// </summary>
+    internal static bool InCategory(ObjectCategory category, Content.Compiled.EntityTypeDefinition type)
+    {
+        Content.Compiled.EntityTraits t = type.Traits;
+        bool unit = t.Category == Content.Compiled.EntityCategory.Unit;
+        bool building = t.Category == Content.Compiled.EntityCategory.Building;
+        return category switch
+        {
+            ObjectCategory.Units => unit,
+            ObjectCategory.MilitaryUnits => unit && t.Armament is not null && t.Harvester is null && !t.IsBuilder,
+            ObjectCategory.Buildings => building,
+            ObjectCategory.MajorObjects => unit || building,
+            _ => true,
+        };
+    }
+
+    // Legacy mask bit of an owner: kingdoms 1-8 are bits 0-7, Nature is legacy owner 10 (bit 9; ADR 0120).
+    private static bool InMask(ushort legacyMask, int owner)
+        => owner == Content.Compiled.MapObject.Nature ? (legacyMask & (1 << 9)) != 0 : owner < 8 && (legacyMask & (1 << owner)) != 0;
+
+    /// <summary>
+    /// A legacy owner as a sim owner: kingdoms 1-8 are slots 0-7; 0 (none), 9 (Rescue) and 10 (Nature) are Nature
+    /// (UNVERIFIED: the rebuild has no Rescue kingdom yet, UNK-61). -1 when invalid.
+    /// </summary>
+    private int OwnerOf(int legacy) => legacy is 0 or 9 or 10 ? Content.Compiled.MapObject.Nature : _world.HasPlayer(legacy - 1) ? legacy - 1 : -1;
 
     /// <summary>
     /// Whether a spec holds for a per-object test. Named: All = every listed object exists and passes (a missing one
@@ -155,39 +198,48 @@ public sealed partial class LegacyTriggerSystem
             }
 
             case TypedObjects typed:
-            {
-                Span<int> counts = stackalloc int[16];
-                foreach (EntityId e in Collect(typed, _scratch))
-                {
-                    _steps++;
-                    if (test(e))
-                    {
-                        counts[_world.Identities.Get(e).Owner]++;
-                    }
-                }
-
-                return Compare(typed, counts);
-            }
+                return Compare(typed.Players, typed.Comparison, typed.Count, typed.Quantifier, Counts(typed, test));
+            case CategoryObjects category:
+                return Compare(category.Players, category.Comparison, category.Count, category.Quantifier, Counts(category, test));
 
             default:
                 return false;
         }
     }
 
-    // Per kingdom of the mask: count against the spec's comparison, combined by the quantifier.
-    private static bool Compare(TypedObjects typed, ReadOnlySpan<int> counts)
+    // Passing objects per legacy owner bit (kingdoms 0-7, Nature 9).
+    private int[] Counts(ObjectSpec spec, Func<EntityId, bool> test)
     {
-        bool all = typed.Quantifier == Quantifier.All;
+        Array.Clear(_counts);
+        foreach (EntityId e in Collect(spec, _scratch))
+        {
+            _steps++;
+            if (test(e))
+            {
+                byte owner = _world.Identities.Get(e).Owner;
+                _counts[owner == Content.Compiled.MapObject.Nature ? 9 : owner]++;
+            }
+        }
+
+        return _counts;
+    }
+
+    private readonly int[] _counts = new int[16];
+
+    // Per kingdom of the mask: count against the spec's comparison, combined by the quantifier.
+    private static bool Compare(ushort players, CountComparison comparison, int count, Quantifier quantifier, ReadOnlySpan<int> counts)
+    {
+        bool all = quantifier == Quantifier.All;
         bool any = false;
         for (int p = 0; p < 16; p++)
         {
-            if ((typed.Players & (1 << p)) == 0)
+            if ((players & (1 << p)) == 0)
             {
                 continue;
             }
 
             int n = p < counts.Length ? counts[p] : 0;
-            bool pass = typed.Comparison == CountComparison.AtLeast ? n >= typed.Count : n <= typed.Count;
+            bool pass = comparison == CountComparison.AtLeast ? n >= count : n <= count;
             if (all && !pass)
             {
                 return false;
@@ -196,6 +248,9 @@ public sealed partial class LegacyTriggerSystem
             any |= pass;
         }
 
-        return all ? typed.Players != 0 : any;
+        return all ? players != 0 : any;
     }
+
+    private static bool Compare(TypedObjects typed, ReadOnlySpan<int> counts)
+        => Compare(typed.Players, typed.Comparison, typed.Count, typed.Quantifier, counts);
 }

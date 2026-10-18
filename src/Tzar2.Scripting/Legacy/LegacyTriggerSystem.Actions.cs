@@ -27,8 +27,8 @@ public sealed partial class LegacyTriggerSystem
     private int _rule = -1;
     private int _action = -1;
 
-    /// <summary>Runs one action of a firing rule (Appendix C.7). Returns true for Keep Rule.</summary>
-    private bool Run(int index)
+    /// <summary>Runs one action of a firing rule (Appendix C.7).</summary>
+    private void Run(int index)
     {
         _action = index;
         _steps++;
@@ -123,7 +123,8 @@ public sealed partial class LegacyTriggerSystem
                 Evaluate(expression.Expression, 0, EntityId.None);
                 break;
             case KeepRuleAction:
-                return true;
+            case DelayAction: // at the end of a list there is nothing to delay
+                break;
             case LoadMapAction:
                 RequestMap(index, 0);
                 break;
@@ -217,8 +218,6 @@ public sealed partial class LegacyTriggerSystem
                 Fault(ScenarioFault.ActionFailed);
                 break;
         }
-
-        return false;
     }
 
     private void Present(SimEventKind kind, uint mask, int actionIndex)
@@ -278,8 +277,17 @@ public sealed partial class LegacyTriggerSystem
 
                 return false;
             case TypedObjects typed:
+            {
                 MapObject o = _world.Map.Data.Objects[index];
                 return string.Equals(o.TypeKey, typed.TypeKey, StringComparison.Ordinal) && InMask(typed.Players, o.Owner);
+            }
+
+            case CategoryObjects category:
+            {
+                MapObject o = _world.Map.Data.Objects[index];
+                int type = _world.Ruleset.EntityTypeId(o.TypeKey);
+                return type >= 0 && InMask(category.Players, o.Owner) && InCategory(category.Category, _world.Ruleset.EntityTypes[type]);
+            }
             default:
                 return false;
         }
@@ -354,12 +362,12 @@ public sealed partial class LegacyTriggerSystem
         }
     }
 
-    // Spawn Object: Count objects of the type for the owner (0 = Nature, UNVERIFIED), on the area's free tiles from its
-    // centre outwards.
+    // Spawn Object: Count objects of the type for the owner (legacy 1-8; 0, 9 and 10 become Nature, UNVERIFIED), on the
+    // area's free tiles from its centre outwards.
     private void Spawn(SpawnObjectAction spawn)
     {
         int type = _world.Ruleset.EntityTypeId(spawn.TypeKey);
-        int owner = spawn.Owner == 0 ? MapObject.Nature : spawn.Owner - 1;
+        int owner = OwnerOf(spawn.Owner);
         WorldRect area = Resolve(spawn.Area);
         if (type < 0 || !_world.IsValidOwner(owner) || area.IsEmpty)
         {

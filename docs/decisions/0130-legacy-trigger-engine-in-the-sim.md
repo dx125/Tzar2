@@ -4,7 +4,7 @@
 * **Date:** 2026-10-18
 * **Deciders:** implementation agent M4-B
 * **Related:** TDD §7.2, §8.5 step 2, §8.7 (REQ-SIM-12/13), §17.1 (REQ-SCR-01/02/03), §21, Appendix C, REQ-ARCH-01/03,
-  UNK-38, UNK-41, UNK-50…UNK-63 ([m4-placeholders.md](../mechanics/m4-placeholders.md)); ADR 0019, ADR 0051, ADR 0106,
+  UNK-38, UNK-41, UNK-50…UNK-66 ([m4-placeholders.md](../mechanics/m4-placeholders.md)); ADR 0019, ADR 0051, ADR 0106,
   ADR 0120
 
 ## Context
@@ -50,6 +50,10 @@ the tick budget. Tzar2.Sim cannot reference Tzar2.Scripting (§7.2). The AI solv
 * **Arithmetic** is 32-bit signed and saturating; division and remainder by zero give 0 and a `ScenarioFault` event;
   unknown names are 0; `@rnd(a, b)` draws from the `scripts` RNG stream with inclusive bounds (UNK-41, UNK-53).
   Faults never stop the match.
+* **Beyond Appendix C** (the converter found these in real maps, ADR 0120): statement sequences (value of the last),
+  the further functions and reserved variables (UNK-64), the Delay action, which parks the rest of a rule's action list
+  in the state and runs it when its game time is up (UNK-65), object categories (units, military units, buildings,
+  major objects, any) wherever a typed specification is allowed, and the legacy owner codes 0/9/10 (UNK-66).
 * **Victory by triggers:** Player Win / Player Lose set the sim's outcome flags (and a `MapRequested` event when they
   name a next map); `VictorySystem` (ADR 0106) keeps evaluating the match's own condition, which converted scenarios
   usually set to Not Specified.

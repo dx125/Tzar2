@@ -21,6 +21,12 @@ public struct TimerState
     public long ValueMs;
 }
 
+/// <summary>The rest of a rule's action list, parked by a Delay action (UNK-65).</summary>
+/// <param name="Rule">The rule.</param>
+/// <param name="Next">Position in its action list to continue at.</param>
+/// <param name="RemainingMs">Game time left.</param>
+public readonly record struct DelayedActions(int Rule, int Next, long RemainingMs);
+
 /// <summary>The sizes of a scenario that bound and validate its runtime state.</summary>
 /// <param name="Variables">User variables.</param>
 /// <param name="Events">Event instances.</param>
@@ -30,7 +36,8 @@ public struct TimerState
 /// <param name="Objects">Map objects.</param>
 /// <param name="Players">Kingdoms of the match.</param>
 /// <param name="EventMemory">Memory cells per event (named objects or players; 0 for stateless events).</param>
-public sealed record TriggerShape(int Variables, int Events, int Actions, int Rules, int[] Conversations, int Objects, int Players, int[] EventMemory);
+/// <param name="RuleLengths">Actions per rule.</param>
+public sealed record TriggerShape(int Variables, int Events, int Actions, int Rules, int[] Conversations, int Objects, int Players, int[] EventMemory, int[] RuleLengths);
 
 /// <summary>
 /// The complete runtime state of a legacy scenario (REQ-SIM-13 "script variables and trigger states"; ADR 0130): the
@@ -47,6 +54,9 @@ public sealed class TriggerState
 
     /// <summary>Most candidate phrases offered at once.</summary>
     public const int MaxCandidates = 64;
+
+    /// <summary>Most delayed action lists at once.</summary>
+    public const int MaxDelayed = 1024;
 
     /// <summary>Most locked entities.</summary>
     public const int MaxLocked = 1 << 16;
@@ -129,6 +139,9 @@ public sealed class TriggerState
     /// <summary>Conversations started while another ran, in order.</summary>
     public List<int> QueuedConversations { get; } = [];
 
+    /// <summary>Action lists parked by Delay actions, in the order they were parked.</summary>
+    public List<DelayedActions> Delayed { get; } = [];
+
     /// <summary>The last next-map request: the action index, or -1.</summary>
     public int MapRequestAction { get; set; } = -1;
 
@@ -152,7 +165,7 @@ public sealed class TriggerState
         }
     }
 
-    private const byte Version = 1;
+    private const byte Version = 2;
 
     /// <summary>Writes the state canonically.</summary>
     public void WriteTo(BinaryBufferWriter writer)
@@ -219,6 +232,13 @@ public sealed class TriggerState
         WriteList(writer, QueuedConversations);
         writer.WriteVarInt64(MapRequestAction);
         writer.WriteBoolean(Halted);
+        writer.WriteVarUInt64((ulong)Delayed.Count);
+        foreach (DelayedActions d in Delayed)
+        {
+            writer.WriteVarInt64(d.Rule);
+            writer.WriteVarInt64(d.Next);
+            writer.WriteVarInt64(d.RemainingMs);
+        }
     }
 
     /// <summary>Reads a state written by <see cref="WriteTo"/> for a scenario of <paramref name="shape"/>.</summary>
@@ -334,6 +354,24 @@ public sealed class TriggerState
             ReadList(ref r, s.QueuedConversations, 0, shape.Conversations.Length - 1, MaxQueuedConversations, distinct: false);
             s.MapRequestAction = Int(r.ReadVarInt64(), -1, shape.Actions - 1, "map request");
             s.Halted = r.ReadBoolean();
+            ulong delayed = r.ReadVarUInt64();
+            if (delayed > MaxDelayed)
+            {
+                throw new InvalidDataException("Too many delayed action lists.");
+            }
+
+            for (ulong i = 0; i < delayed; i++)
+            {
+                int rule = Int(r.ReadVarInt64(), 0, shape.Rules - 1, "delayed rule");
+                int next = Int(r.ReadVarInt64(), 1, shape.RuleLengths[rule] - 1, "delayed position");
+                long remaining = r.ReadVarInt64();
+                if (remaining < 0 || remaining > int.MaxValue)
+                {
+                    throw new InvalidDataException("Delayed time out of range.");
+                }
+
+                s.Delayed.Add(new DelayedActions(rule, next, remaining));
+            }
             if (s.Conversation < 0 && (s.Candidates.Count != 0 || s.PendingReply >= 0))
             {
                 throw new InvalidDataException("Conversation candidates without a conversation.");
