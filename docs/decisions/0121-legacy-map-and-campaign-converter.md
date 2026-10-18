@@ -108,10 +108,24 @@ A file passes when it converts with zero errors. The corpus runner reports the p
 
 * On the reference build: **9/9 files (7 maps, 2 campaigns, 33 maps in all), 100 %, 0 errors.** With the imported
   classic ruleset there are also 0 placeholders.
-* The remaining warnings are genuine source problems: a missing portrait, an empty Stop Timer, a conversation
-  cycle, unknown names in expressions.
+* The 6 remaining warnings are genuine source problems: two missing portraits, an empty Stop Timer, a conversation
+  cycle, two unknown names in expressions.
 * There is no community corpus in the repository or on the development machine. `OriginConversionTests` asserts
   ≥ 90 % when `TZAR2_CORPUS` is set.
+
+### Legal (REQ-LEGAL-01/02)
+
+No original file, byte or text is committed; tests use synthetic maps written by a test-only writer from invented
+values. Two lists recovered from the original are recorded as **interoperability facts**, with the same treatment as
+the cheat names ([original-switches-and-cheats.md](../mechanics/original-switches-and-cheats.md)), so the converter
+can read the format:
+
+* the 144 class names of `LegacyClasses`, in the order the format numbers them. They are the `class =` identifiers
+  of the data files.
+* the expression vocabulary (reserved variable and function names) of ADR 0120.
+
+Both are names of the format's interface, not creative content. The product owner is informed (coordinator decision,
+2026-10-18).
 
 ## Alternatives considered
 
@@ -126,9 +140,10 @@ A file passes when it converts with zero errors. The corpus runner reports the p
 
 * Stream B (trigger engine, campaigns) loads `map.bin` + `scenario.json` + `campaign.json`, or calls the converter
   directly. The editor (M5) reuses the converter and the report model for its import panel.
-* The classic ruleset has no entity type for referenced decorations (signs, ruins that triggers make vanish). With a
-  ruleset, these references are dropped with a warning in three campaign maps. A visual-object type in the ruleset
-  would fix it.
+* The classic ruleset gains the inert entity `comm.ground_object` (no traits besides `Legacy`), so decorations that
+  triggers or conversations refer to (signs, ruins that vanish) stay objects with the ruleset too. With the imported
+  ruleset, the reference build then converts with 0 placeholders and no dropped references. Entity type ids after
+  it shift, so the gameplay and AI golden hashes are updated in the same change.
 * The open format points (UNK-70…80) default conservatively and are listed in every affected report. A later editor
   experiment on Windows (capture harness machine) can settle them.
 * Packages are larger than the sources (stored PNG); compression is a follow-up.

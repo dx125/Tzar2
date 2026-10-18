@@ -21,10 +21,10 @@ namespace Tzar2.Determinism.Tests;
 public class AiGoldenHashTests(ITestOutputHelper output)
 {
     // Changing the AI (interpreter, executors, default script), a gameplay system, the scenario or the hashed layout changes
-    // these values on purpose: update them in the same commit and say why. History: (M3 part B) first; PR #20 review (duplicate goals once per run, bounded site searches); rebase onto M3-A (#21: economy, construction and research rules change the match); research state and executor (the AI state now records the research view, players get their civilization set); M3-F (#23: fog, diplomacy, victory change the match; the AI respects stances).
-    private const ulong GoldenCommandStream = 0xD94B60AC85254137UL;
-    private const ulong GoldenHashStream = 0x4D4B6AC077327910UL;
-    private const ulong GoldenFinalFullHash = 0x9A285B0A5C97566BUL;
+    // these values on purpose: update them in the same commit and say why. History: (M3 part B) first; PR #20 review (duplicate goals once per run, bounded site searches); rebase onto M3-A (#21: economy, construction and research rules change the match); research state and executor (the AI state now records the research view, players get their civilization set); M3-F (#23: fog, diplomacy, victory change the match; the AI respects stances); M4-A (ADR 0121: the inert entity comm.ground_object shifts entity type ids, so command and state hashes change).
+    private const ulong GoldenCommandStream = 0x46A3D9867FC87F72UL;
+    private const ulong GoldenHashStream = 0x10018CA1744D8FF5UL;
+    private const ulong GoldenFinalFullHash = 0xF1DD39EE98A34731UL;
 
     private const int Ticks = 9600;
 

@@ -31,7 +31,7 @@ public class RulesetCompilerTests
                 "arab.jihad_warrior", "arab.magicworkshop", "arab.peon", "comm.bat", "comm.bear", "comm.bird",
                 "comm.bridge", "comm.carpet", "comm.catapult", "comm.cow", "comm.dragon", "comm.dummy", "comm.dwarf",
                 "comm.eagle", "comm.field", "comm.fishing_boat", "comm.fishpatch", "comm.fog_revealer", "comm.galleon",
-                "comm.gate_stone", "comm.gate_wood", "comm.ghost", "comm.item", "comm.item_armor", "comm.item_flag",
+                "comm.gate_stone", "comm.gate_wood", "comm.ghost", "comm.ground_object", "comm.item", "comm.item_armor", "comm.item_flag",
                 "comm.item_health", "comm.item_magic", "comm.item_plusplus", "comm.item_scroll", "comm.item_soul",
                 "comm.jinn", "comm.magicgateway", "comm.meat", "comm.ork", "comm.res_gold", "comm.res_stone",
                 "comm.resitem", "comm.skeleton", "comm.tower_stone", "comm.tower_stone2", "comm.tower_wood",

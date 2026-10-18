@@ -51,16 +51,32 @@ public class OriginConversionTests
         }
     }
 
-    [Fact]
+    [CorpusFact]
     public void Community_corpus_converts_at_least_90_percent()
     {
-        string? root = Environment.GetEnvironmentVariable(LegacyCorpus.EnvironmentVariable);
-        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
-        {
-            return; // No community corpus on this machine (TDD §22.5: it lives outside the repository).
-        }
-
-        IReadOnlyList<CorpusEntry> entries = LegacyCorpus.Run(root);
+        IReadOnlyList<CorpusEntry> entries = LegacyCorpus.Run(CorpusFactAttribute.Root!);
         Assert.True(LegacyCorpus.PassPermille(entries) >= 900, LegacyCorpus.Summary(entries));
+    }
+}
+
+/// <summary>A fact that needs a community corpus folder (<c>TZAR2_CORPUS</c>); skipped when it is unset.</summary>
+internal sealed class CorpusFactAttribute : FactAttribute
+{
+    public CorpusFactAttribute()
+    {
+        if (Root is null)
+        {
+            Skip = "Needs a community map corpus: set " + LegacyCorpus.EnvironmentVariable + " to a folder of .wmp/.wcm files.";
+        }
+    }
+
+    /// <summary>The corpus folder, or null.</summary>
+    public static string? Root
+    {
+        get
+        {
+            string? root = Environment.GetEnvironmentVariable(LegacyCorpus.EnvironmentVariable);
+            return !string.IsNullOrWhiteSpace(root) && Directory.Exists(root) ? root : null;
+        }
     }
 }
