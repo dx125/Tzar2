@@ -1116,10 +1116,14 @@ public static class CampaignAutoplay
                     Goal = $"{line.Name}: {moved.Count} of {units.Count} units over the line";
                     if (stranded.Count > 0)
                     {
-                        // Over the line only by water: a ferry to the line at the units' row (or column).
-                        Position at = Pos(world, stranded[0]);
-                        int edge = Math.Clamp(bound.Limit + (bound.Below ? -1 : 1), 0, (bound.Vertical ? world.Map.Height : world.Map.Width) - 1);
-                        var beyond = bound.Vertical ? new Position(at.X, (edge * Tile) + (Tile / 2)) : new Position((edge * Tile) + (Tile / 2), at.Y);
+                        // Over the line only by water: a ferry to ground beyond the line (the nearest walkable tile on
+                        // the far side, nearest the units' row or column).
+                        if (Beyond(world, stranded[0], bound.Vertical, bound.Limit, bound.Below) is not { } beyond)
+                        {
+                            Goal = $"{line.Name}: no ground beyond the line";
+                            return moved.Count > 0;
+                        }
+
                         return Ferry(world, me, line.Name, stranded, beyond) || moved.Count > 0;
                     }
 
@@ -1797,6 +1801,49 @@ public static class CampaignAutoplay
                         or Content.Compiled.Scenario.Expressions.BinaryOp.Greater or Content.Compiled.Scenario.Expressions.BinaryOp.GreaterOrEqual)
                     {
                         return (v == Content.Compiled.Scenario.Expressions.ReservedVariable.Y, limit, below);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // Walkable ground for the unit's layer on the far side of the line (any component), nearest the unit's row (or
+        // column), within 32 tiles of the line.
+        private static Position? Beyond(World world, EntityId unit, bool vertical, int limit, bool below)
+        {
+            if (!world.Navigation.IsBuilt || world.Navigation.ForType(world.Identities.Get(unit).TypeId) is not { } nav)
+            {
+                return null;
+            }
+
+            Position at = Pos(world, unit);
+            int size = vertical ? nav.Height : nav.Width;
+            int other = vertical ? at.X / Tile : at.Y / Tile;
+            int otherSize = vertical ? nav.Width : nav.Height;
+            for (int d = 0; d < otherSize; d++)
+            {
+                foreach (int o in new[] { other - d, other + d })
+                {
+                    if (o < 0 || o >= otherSize)
+                    {
+                        continue;
+                    }
+
+                    for (int step = 0; step < 32; step++)
+                    {
+                        int line = below ? limit - step : limit + step;
+                        if (line < 0 || line >= size)
+                        {
+                            break;
+                        }
+
+                        int x = vertical ? o : line;
+                        int y = vertical ? line : o;
+                        if (nav.IsWalkable(x, y))
+                        {
+                            return new Position(nav.CenterX((y * nav.Width) + x), nav.CenterY((y * nav.Width) + x));
+                        }
                     }
                 }
             }
