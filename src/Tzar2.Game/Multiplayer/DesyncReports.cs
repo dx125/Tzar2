@@ -1,0 +1,142 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
+using System.Linq;
+using Tzar2.Content.Compiled;
+using Tzar2.Game.Session;
+using Tzar2.Net.Protocol;
+using Tzar2.Net.Relay;
+using Tzar2.Sim;
+using Tzar2.Sim.Snapshots;
+
+namespace Tzar2.Game.Multiplayer;
+
+/// <summary>A lobby slot as a match description needs it.</summary>
+internal readonly record struct LobbySlotData(SlotState State, string Name, byte[] Choice);
+
+/// <summary>How a lobby becomes a match: its occupied slots, in slot order, are the kingdoms (ADR 0162).</summary>
+internal static class LobbyDescription
+{
+    /// <summary>The description of the match, and the relay slot of each kingdom and back (255 = none).</summary>
+    /// <exception cref="InvalidDataException">The lobby does not fit the saved game being resumed, or the ruleset has no castle.</exception>
+    public static (MatchDescriptor Descriptor, byte[] SimSlotOf, byte[] LobbySlotOf) Build(
+        MatchSettings settings, IReadOnlyList<LobbySlotData> slots, Ruleset ruleset, MultiplayerSave? save)
+    {
+        var players = ImmutableArray.CreateBuilder<MatchPlayer>();
+        byte[] simOf = Enumerable.Repeat((byte)255, Limits.MaxSlots).ToArray();
+        var lobbyOf = new List<byte>();
+        for (int i = 0; i < slots.Count && i < Limits.MaxSlots; i++)
+        {
+            LobbySlotData s = slots[i];
+            if (s.State is not (SlotState.Human or SlotState.Computer))
+            {
+                continue;
+            }
+
+            byte sim = (byte)players.Count;
+            simOf[i] = sim;
+            lobbyOf.Add((byte)i);
+            SlotChoice choice = SlotChoice.Parse(s.Choice);
+            if (save is not null)
+            {
+                MatchPlayer old = sim < save.Descriptor.Players.Length ? save.Descriptor.Players[sim]
+                    : throw new InvalidDataException("The lobby has more kingdoms than the saved game.");
+                choice = new SlotChoice(old.Civilization, old.Team, old.Difficulty);
+            }
+
+            string civ = ruleset.EntityTypeId(choice.Civilization + ".castle") >= 0 ? choice.Civilization : FirstCivilization(ruleset);
+            ControllerKind controller = s.State == SlotState.Human ? ControllerKind.Human : ControllerKind.Computer;
+            players.Add(new MatchPlayer(sim, s.State == SlotState.Human ? s.Name : string.Empty, civ, controller, choice.Difficulty, choice.Team));
+        }
+
+        if (players.Count == 0)
+        {
+            throw new InvalidDataException("The lobby has no kingdoms.");
+        }
+
+        if (save is not null && players.Count != save.Descriptor.Players.Length)
+        {
+            throw new InvalidDataException($"The saved game has {save.Descriptor.Players.Length} kingdoms, the lobby {players.Count}.");
+        }
+
+        MatchSettings effective = save is null
+            ? settings
+            : save.Descriptor.Settings with { ResumeSnapshotHash = settings.ResumeSnapshotHash, SpeedPercent = settings.SpeedPercent };
+        return (new MatchDescriptor(effective, players.ToImmutable()), simOf, [.. lobbyOf]);
+    }
+
+    private static string FirstCivilization(Ruleset ruleset)
+    {
+        foreach (string civ in ruleset.Civilizations)
+        {
+            if (ruleset.EntityTypeId(civ + ".castle") >= 0)
+            {
+                return civ;
+            }
+        }
+
+        throw new InvalidDataException("The ruleset has no civilization with a castle.");
+    }
+}
+
+/// <summary>
+/// Reads desync reports (REQ-NET-04; ADR 0165): rebuilds the match from the report's lobby settings and slots, restores
+/// two peers' snapshots and diffs them component by component (<see cref="SnapshotDiff"/>).
+/// </summary>
+public static class DesyncReports
+{
+    /// <summary>Reads a <c>.t2desync</c> file's bytes.</summary>
+    /// <exception cref="InvalidDataException">Malformed.</exception>
+    public static DesyncBundle Read(ReadOnlySpan<byte> bytes) => DesyncBundle.Parse(bytes);
+
+    /// <summary>The match setup of the report (to restore its snapshots).</summary>
+    /// <exception cref="InvalidDataException">The report has no lobby description.</exception>
+    public static MatchSetup Setup(DesyncBundle bundle, Ruleset ruleset, SkirmishAi ai)
+    {
+        ArgumentNullException.ThrowIfNull(bundle);
+        ArgumentNullException.ThrowIfNull(ruleset);
+        if (bundle.Settings.Length == 0 || bundle.LobbySlots.Length == 0)
+        {
+            throw new InvalidDataException("The report does not describe its lobby.");
+        }
+
+        MatchSettings settings = MatchSettings.Parse(bundle.Settings);
+        (MatchDescriptor descriptor, _, _) = LobbyDescription.Build(
+            settings with { ResumeSnapshotHash = 0 }, bundle.LobbySlots.Select(s => new LobbySlotData(s.State, s.Name, s.Choice)).ToArray(), ruleset, save: null);
+        return descriptor.ToSetup(ai, multiplayer: true, localSlot: null);
+    }
+
+    /// <summary>The differences between the current snapshots of lobby slots <paramref name="a"/> and <paramref name="b"/>.</summary>
+    public static IReadOnlyList<SnapshotDifference> Diff(DesyncBundle bundle, Ruleset ruleset, SkirmishAi ai, byte a, byte b, int max = 500)
+        => Compare(bundle, ruleset, ai, a, b, before: false, max);
+
+    /// <summary>The differences between the "before" keyframes of lobby slots <paramref name="a"/> and <paramref name="b"/>.</summary>
+    public static IReadOnlyList<SnapshotDifference> DiffBefore(DesyncBundle bundle, Ruleset ruleset, SkirmishAi ai, byte a, byte b, int max = 500)
+        => Compare(bundle, ruleset, ai, a, b, before: true, max);
+
+    /// <summary>The differences between two snapshots of the same match.</summary>
+    public static IReadOnlyList<SnapshotDifference> Diff(MatchSetup setup, Ruleset ruleset, byte[] left, byte[] right, int max = 500)
+    {
+        ArgumentNullException.ThrowIfNull(setup);
+        ArgumentNullException.ThrowIfNull(ruleset);
+        MapData map = setup.Map.Create(ruleset, setup);
+        using Simulation x = Simulation.Restore(left, ruleset, map);
+        using Simulation y = Simulation.Restore(right, ruleset, map);
+        return SnapshotDiff.Compare(x.World, y.World, max);
+    }
+
+    private static IReadOnlyList<SnapshotDifference> Compare(DesyncBundle bundle, Ruleset ruleset, SkirmishAi ai, byte a, byte b, bool before, int max)
+    {
+        DesyncSlotReport ra = bundle.Slots.FirstOrDefault(s => s.Slot == a) ?? throw new InvalidDataException($"The report has no snapshot of slot {a}.");
+        DesyncSlotReport rb = bundle.Slots.FirstOrDefault(s => s.Slot == b) ?? throw new InvalidDataException($"The report has no snapshot of slot {b}.");
+        byte[] left = before ? ra.Before : ra.After;
+        byte[] right = before ? rb.Before : rb.After;
+        if (left.Length == 0 || right.Length == 0)
+        {
+            throw new InvalidDataException("A snapshot is missing from the report.");
+        }
+
+        return Diff(Setup(bundle, ruleset, ai), ruleset, left, right, max);
+    }
+}

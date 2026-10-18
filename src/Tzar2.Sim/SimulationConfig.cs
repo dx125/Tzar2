@@ -163,6 +163,12 @@ public enum PlayerFlags
 
     /// <summary>The kingdom resigned (GAME-13: also set with <see cref="Defeated"/>).</summary>
     Resigned = 8,
+
+    /// <summary>
+    /// A computer runs the kingdom in place of its dropped human (REQ-NET-07 drop policy; ADR 0163): set and cleared only
+    /// by <see cref="Commands.CommandKind.SetController"/>, which the game layer issues from the relay's control events.
+    /// </summary>
+    AiControlled = 16,
 }
 
 /// <summary>A stockpile: one amount per resource type id of the ruleset (GAME-01; at most <see cref="Ruleset.MaxResourceTypes"/>).</summary>

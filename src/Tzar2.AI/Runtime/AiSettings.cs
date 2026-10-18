@@ -47,6 +47,12 @@ public sealed record AiPlayerSettings
 
     /// <summary>Lobby "AI resign" flag (1.09): the AI may resign on its own (<c>have resign</c>).</summary>
     public bool MayResign { get; init; } = true;
+
+    /// <summary>
+    /// A human kingdom of a multiplayer match: the AI is attached from the start but stays idle until the kingdom is
+    /// handed to the computer (<see cref="PlayerFlags.AiControlled"/>, REQ-NET-07 drop policy; ADR 0163).
+    /// </summary>
+    public bool Standby { get; init; }
 }
 
 /// <summary>

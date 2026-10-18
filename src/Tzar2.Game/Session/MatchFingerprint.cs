@@ -73,6 +73,12 @@ public sealed record MatchFingerprint(ulong RulesetHash, ulong MapHash, ulong Se
             h.Add(p.Slot).Add(Encoding.UTF8.GetBytes(p.Civilization)).Add((int)p.Controller).Add((int)p.Difficulty);
         }
 
+        // Multiplayer (standby AIs, ADR 0163) and ranked matches; single-player skirmishes hash as before.
+        if (setup.Multiplayer || setup.Ranked)
+        {
+            h.Add(0x4D50).Add(setup.Multiplayer ? 1 : 0).Add(setup.Ranked ? 1 : 0);
+        }
+
         // The scenario and the trigger settings are part of the match (ADR 0130); plain skirmishes hash as before.
         if (setup.Scenario is { } scenario)
         {

@@ -115,6 +115,13 @@ public enum CommandKind : ushort
     /// heroes; see <c>TavernOffers</c>), paid at once; Mercenaries / Heroes' Quest needed.
     /// </summary>
     Hire = 47,
+
+    /// <summary>
+    /// Multiplayer drop policy (REQ-NET-07, ADR 0163): Arg0 = 1 a computer takes the kingdom over
+    /// (<see cref="PlayerFlags.AiControlled"/>), 0 gives it back to its human. Issued only by the game layer from the
+    /// relay's control events, in the same tick on every peer; peers' own batches never carry it (the game drops it).
+    /// </summary>
+    SetController = 48,
     // GAME-07…11 (ADR 0096): values 20-39.
 
     /// <summary>The listed units walk to own holder <see cref="Command.Target"/> (castle, outpost, ship, carpet) and enter it (GAME-09).</summary>

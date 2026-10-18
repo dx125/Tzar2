@@ -822,7 +822,7 @@ public sealed partial class World
     {
         foreach (PlayerState player in _players)
         {
-            if ((player.Flags & ~(PlayerFlags.Active | PlayerFlags.Defeated | PlayerFlags.Victorious | PlayerFlags.Resigned)) != 0
+            if ((player.Flags & ~(PlayerFlags.Active | PlayerFlags.Defeated | PlayerFlags.Victorious | PlayerFlags.Resigned | PlayerFlags.AiControlled)) != 0
                 || (player.Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious)) == (PlayerFlags.Defeated | PlayerFlags.Victorious))
             {
                 throw Invalid($"invalid player flags {player.Flags}");
