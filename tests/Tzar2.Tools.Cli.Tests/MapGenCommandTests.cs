@@ -66,5 +66,24 @@ public sealed class MapGenCommandTests : IDisposable
         Assert.Contains("1…4 players", error, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Mapgen_reports_an_unusable_output_path()
+    {
+        Directory.CreateDirectory(_dir);
+        string file = Path.Combine(_dir, "a-file");
+        File.WriteAllText(file, "x");
+        (int code, _, string error) = Run("mapgen", "--size", "tiny", "--out", file);
+        Assert.Equal(ExitCodes.UsageError, code);
+        Assert.StartsWith("t2 mapgen: cannot use", error, StringComparison.Ordinal);
+
+        (code, _, error) = Run("mapgen", "--size", "tiny", "--out", Path.Combine(file, "below"));
+        Assert.Equal(ExitCodes.UsageError, code);
+        Assert.StartsWith("t2 mapgen: cannot use", error, StringComparison.Ordinal);
+
+        (code, _, error) = Run("mapgen", "--size", "real-world", "--scale", "16", "--out", _dir);
+        Assert.Equal(ExitCodes.UsageError, code);
+        Assert.Contains("wider than 4096", error, StringComparison.Ordinal);
+    }
+
     private static string Hash(string output) => output.Split(' ').Single(w => w.StartsWith("hash=", StringComparison.Ordinal));
 }

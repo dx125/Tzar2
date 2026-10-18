@@ -58,15 +58,20 @@ is the UNK-10 hypothesis implemented by `TerrainComposer`. The `classic` ruleset
   one of the five, drawn from the stream. (Readings, not facts: see the placeholders register.)
 * **Validation and termination:** `MapGenValidator` checks the finished `MapData`: terrain set and ids consistent, every
   tile drawable, footprints on land and not overlapping, units on free land and fish on open water, a castle centred on
-  each start, castles at least `MinSeparation` apart and evenly spaced, land maps — every castle reaches every other on
-  foot with trees blocking; naval maps — every kingdom's land reaches the open sea, and starting gold, stone, trees, cows
-  and fish reachable (trees cut) near each castle. An attempt that fails a construction step or validation is retried
+  each start, castles at least `MinSeparation` apart and evenly spaced. Reachability treats every footprint as a
+  blocker, castles included (a kingdom is the set of walkable components next to its castle): land maps — every kingdom
+  shares a component with player 0's; naval maps — every kingdom has its own island and its land reaches the open sea.
+  Starting gold, stone, trees, cows and fish must be reachable (trees cut) near each castle, and a resource counts only
+  for the castle it is nearest to, so on crowded small maps a neighbour's starting kit does not count; the builder
+  places starting resources only where their own castle is the nearest one. An attempt that fails a construction step or validation is retried
   with the next attempt seed; after `MaxAttempts` (default 8) `MapGenException` is thrown. Earlier failures are kept in
   `GeneratedMap.Notes`.
 * **Objects:** a `MapGenCatalog` maps roles (castle, peasant, tree, gold, stone, fish patch, cow, bear, gateway, tower,
   town house, item, ground object, ground patch) to ruleset keys (`{civ}` templates) and footprints. `Classic` names
   the classic keys with placeholder footprints so maps can be generated and hashed without original data;
-  `RestrictTo(ruleset)` keeps the civilizations and roles a compiled ruleset defines and takes its footprints. Starting
+  `RestrictTo(ruleset)` keeps the civilizations and roles a compiled ruleset defines and takes the envelope (widest ×
+  tallest) of their footprints across the kept civilizations, so every civilization's real footprint fits the planned
+  rectangle. Starting
   resources of the kingdoms (RES.INI levels) stay a match setting of the sim, not map content.
 * **Tooling:** `t2 mapgen --type --set --size --seed --players [--teams --civs --resources --features] --out <dir>`
   writes a debug dump (`.t2mapgen`: "T2MG", version 1, the layers and objects, the content hash; not the `.t2map`
@@ -108,5 +113,7 @@ Measured (Apple M-series, Release, .NET 10): Real World 512² with 8 players and
 
 * Type semantics: is the original "Island" one shared island (our reading) or one island per kingdom, and
   "Continental" one continent (ours) or several? Is "Random" one of the other types (ours) or a type of its own?
+* GAME-18 lists "guarded town" and "towers" as separate options; the strings file names one setting (`t_gslocations`)
+  "Towers" in one dialog and "Guarded Town" in another, so we have one `GuardedTowns` flag. Are they one option?
 * Default check-box states of the random-map dialogs (we: trees, rocks, patches, animals on; cliffs, rivers, guarded
   town, gateways, magic items off).

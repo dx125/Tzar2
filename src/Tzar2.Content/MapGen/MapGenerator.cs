@@ -78,6 +78,11 @@ public static class MapGenerator
 
     private static void Check(MapGenOptions o)
     {
+        if (o.Catalog is null)
+        {
+            throw new ArgumentNullException(nameof(o), "MapGenOptions.Catalog is null.");
+        }
+
         if (!Enum.IsDefined(o.Type) || !Enum.IsDefined(o.Size) || !Enum.IsDefined(o.TerrainSet) || !Enum.IsDefined(o.Resources))
         {
             throw new ArgumentException("Unknown map type, size, terrain set or resource level.", nameof(o));

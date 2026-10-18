@@ -83,7 +83,21 @@ internal static class MapGenCommand
 
         if (outDir is not null)
         {
-            Directory.CreateDirectory(outDir);
+            try
+            {
+                Directory.CreateDirectory(outDir);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            {
+                stderr.WriteLine($"t2 mapgen: cannot use '{outDir}' as the output directory: {ex.Message}");
+                return ExitCodes.UsageError;
+            }
+        }
+
+        if (scale > 0 && (long)scale * RandomMapNames.Side(options.Size) > 4096)
+        {
+            stderr.WriteLine($"t2 mapgen: --scale {scale} makes a {RandomMapNames.Name(options.Size)} preview wider than 4096 px.");
+            return ExitCodes.UsageError;
         }
 
         var jobs = new List<MapGenOptions>();
@@ -102,15 +116,22 @@ internal static class MapGenCommand
             jobs.Add(options);
         }
 
-        // Warm the JIT up once so the reported times are steady-state.
-        MapGenerator.Generate(options with { Size = RandomMapSize.Tiny, Players = Math.Min(options.Players, 2), Teams = [], Civilizations = [] });
         long worst = 0;
+        bool warm = false;
         foreach (MapGenOptions job in jobs)
         {
             GeneratedMap map;
-            var watch = Stopwatch.StartNew();
+            Stopwatch watch;
             try
             {
+                if (!warm)
+                {
+                    // Warm the JIT up once so the reported times are steady-state.
+                    MapGenerator.Generate(job with { Size = RandomMapSize.Tiny, Players = Math.Min(job.Players, 2), Teams = [], Civilizations = [] });
+                    warm = true;
+                }
+
+                watch = Stopwatch.StartNew();
                 map = MapGenerator.Generate(job);
             }
             catch (ArgumentException ex)
@@ -137,11 +158,19 @@ internal static class MapGenCommand
             if (outDir is not null)
             {
                 string stem = Path.Combine(outDir, map.Map.Name);
-                WriteDump(stem + ".t2mapgen", map.Map);
-                WriteSummary(stem + ".json", map, ms);
-                int s = scale > 0 ? scale : Math.Clamp(1024 / map.Map.Width, 1, 8);
-                byte[] rgba = Preview.Render(map, s);
-                PngWriter.Write(stem + ".png", map.Map.Width * s, map.Map.Height * s, rgba);
+                try
+                {
+                    WriteDump(stem + ".t2mapgen", map.Map);
+                    WriteSummary(stem + ".json", map, ms);
+                    int s = scale > 0 ? scale : Math.Clamp(1024 / map.Map.Width, 1, 8);
+                    byte[] rgba = Preview.Render(map, s);
+                    PngWriter.Write(stem + ".png", map.Map.Width * s, map.Map.Height * s, rgba);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    stderr.WriteLine($"t2 mapgen: cannot write '{stem}.*': {ex.Message}");
+                    return ExitCodes.UsageError;
+                }
             }
         }
 
@@ -288,8 +317,8 @@ internal static class MapGenCommand
         output.WriteLine("  --resources <r>   low|normal|high (default normal)");
         output.WriteLine("  --features a,b,…  trees,rocks,patches,animals,cliffs,rivers,guardedtowns,gateways,magicitems, all, none, default");
         output.WriteLine("  --out <dir>       write <name>.t2mapgen (debug dump), <name>.json and <name>.png");
-        output.WriteLine("  --scale <n>       preview pixels per tile (default 1024 / side)");
-        output.WriteLine("  --sweep           every type × terrain set of the size; reports the slowest time");
+        output.WriteLine("  --scale <n>       preview pixels per tile (default 1024 / side; side × scale ≤ 4096)");
+        output.WriteLine("  --sweep           every type × terrain set of the size (ignores --type and --set); reports the slowest time");
     }
 
     /// <summary>The PNG preview: invented colours per terrain-set index and object role.</summary>

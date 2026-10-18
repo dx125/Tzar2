@@ -173,7 +173,7 @@ public sealed class MapGenCatalog
                 continue;
             }
 
-            EntityTypeDefinition? type = null;
+            int width = 0, height = 0;
             bool all = true;
             foreach (string civ in civs)
             {
@@ -184,17 +184,15 @@ public sealed class MapGenCatalog
                     break;
                 }
 
-                // Footprints of a role must not differ between civilizations: the largest one is kept.
+                // One footprint per role for every civilization: the envelope (widest × tallest) covers each of them.
                 EntityTypeDefinition t = ruleset.EntityTypes[id];
-                if (type is null || t.FootprintWidth * t.FootprintHeight > type.FootprintWidth * type.FootprintHeight)
-                {
-                    type = t;
-                }
+                width = Math.Max(width, t.FootprintWidth);
+                height = Math.Max(height, t.FootprintHeight);
             }
 
-            if (all && type is not null)
+            if (all)
             {
-                kinds[r] = kind with { Width = type.FootprintWidth, Height = type.FootprintHeight };
+                kinds[r] = kind with { Width = width, Height = height };
             }
         }
 

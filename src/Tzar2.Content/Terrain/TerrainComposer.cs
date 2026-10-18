@@ -206,6 +206,7 @@ public sealed class TerrainComposer
         int width = grid.Width * TileSize, height = grid.Height * TileSize;
         byte[] pixels = new byte[width * height * 2];
         var issues = new List<string>();
+        Func<int, int, bool> usable = HasUsableTransition;
         for (int ty = 0; ty < grid.Height; ty++)
         {
             for (int tx = 0; tx < grid.Width; tx++)
@@ -216,7 +217,7 @@ public sealed class TerrainComposer
                 bool twoTerrains = Distinct(corners) == 2;
                 TerrainFile? transition = lo != hi ? _set.TransitionOf(lo, hi) : null;
                 ImageAsset? overlay = transition is { IsUnresolved: false } ? Image(transition.Asset) : null;
-                if (!IsDrawnByRule(corners, HasUsableTransition))
+                if (!IsDrawnByRule(corners, usable))
                 {
                     issues.Add(string.Create(CultureInfo.InvariantCulture,
                         $"tile {tx},{ty}: {(twoTerrains ? $"no usable transition for pair {lo}{hi}" : "three or more terrains")} (UNK-10); drew {lo}'s base"));

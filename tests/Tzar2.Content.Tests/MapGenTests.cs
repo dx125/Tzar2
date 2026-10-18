@@ -13,6 +13,8 @@ namespace Tzar2.Content.Tests;
 /// <summary>The random map generator (GAME-18, ADR 0060): validity over many seeds, determinism, options.</summary>
 public class MapGenTests
 {
+    private const ulong PlainMapHash = 0xF44F5662664EA940UL;
+
     private static readonly RandomMapType[] Types = [RandomMapType.Archipelagos, RandomMapType.Island, RandomMapType.Continental, RandomMapType.Lakes, RandomMapType.Dry];
 
     public static TheoryData<RandomMapType, RandomMapSize, int> Matrix()
@@ -284,9 +286,107 @@ public class MapGenTests
         var plain = new MapData("m", 2, 2, corners, [], []);
         Assert.Null(plain.TerrainSet);
         Assert.Equal(0, plain.SetTerrainCorners.Length);
+        Assert.Equal(PlainMapHash, plain.ContentHash); // pinned: maps without a terrain set hash as before the change
         var withSet = new MapData("m", 2, 2, corners, [], [], null, "grass", corners);
         Assert.NotEqual(plain.ContentHash, withSet.ContentHash);
         Assert.Throws<ArgumentException>(() => new MapData("m", 2, 2, corners, [], [], null, "grass", []));
         Assert.Throws<ArgumentException>(() => new MapData("m", 2, 2, corners, [], [], null, null, corners));
+    }
+
+    [Fact]
+    public void A_castle_is_no_passage_between_two_other_kingdoms()
+    {
+        // Review repro: the only land link between players 0 and 2 runs through player 1's castle.
+        const int side = 64;
+        byte[] land = new byte[side * side];
+        for (int y = 0; y < side; y++)
+        {
+            for (int x = 0; x < side; x++)
+            {
+                bool band = y is >= 20 and <= 44;
+                bool on = x is >= 30 and <= 34 ? y is >= 30 and <= 34 : x is 29 or 35 ? y is >= 29 and <= 35 : band;
+                land[(y * side) + x] = (byte)(on ? 1 : 0);
+            }
+        }
+
+        int stride = side + 1;
+        byte[] set = new byte[stride * stride];
+        byte[] ids = new byte[stride * stride];
+        for (int cy = 0; cy <= side; cy++)
+        {
+            for (int cx = 0; cx <= side; cx++)
+            {
+                bool water = true;
+                for (int ty = cy - 1; ty <= cy; ty++)
+                {
+                    for (int tx = cx - 1; tx <= cx; tx++)
+                    {
+                        water &= !((uint)tx < side && (uint)ty < side && land[(ty * side) + tx] != 0);
+                    }
+                }
+
+                set[(cy * stride) + cx] = (byte)(water ? 0 : 1);
+                ids[(cy * stride) + cx] = (byte)(water ? 1 : 0);
+            }
+        }
+
+        int[] centres = [10, 32, 54];
+        var objects = centres.Select((c, p) => MapObject.AtTile("euro.castle", (byte)p, c - 2, 30)).ToList();
+        var map = new MapData("repro", side, side, ids, [], [], objects, "grass", set);
+        var options = new MapGenOptions { Type = RandomMapType.Dry, Size = RandomMapSize.Tiny, Players = 3, Resources = MapResourceLevel.Low, Features = MapFeatures.None };
+        ImmutableArray<StartPosition> starts = [.. centres.Select((c, p) => new StartPosition(p, c, 32, p, "euro"))];
+        IReadOnlyList<string> issues = MapGenValidator.Validate(map, starts, options, RandomMapType.Dry);
+        Assert.Contains("player 2 cannot reach player 0 by land", issues);
+        Assert.DoesNotContain("player 1 cannot reach player 0 by land", issues);
+    }
+
+    [Fact]
+    public void Restricting_to_a_ruleset_keeps_the_footprint_envelope_of_all_civilizations()
+    {
+        TerrainTypeDefinition[] terrain = [new(0, "grass", LocomotorMask.Land | LocomotorMask.Air, false), new(1, "water", LocomotorMask.Ship | LocomotorMask.Air, true)];
+        EntityTypeDefinition[] types =
+        [
+            new(0, "euro.castle", Locomotor.Foot, 0, 100, footprintWidth: 5, footprintHeight: 5),
+            new(1, "asia.castle", Locomotor.Foot, 0, 100, footprintWidth: 4, footprintHeight: 6),
+            new(2, "euro.peon", Locomotor.Foot, 100, 10),
+            new(3, "asia.peon", Locomotor.Foot, 100, 10),
+            new(4, "comm.tree", Locomotor.Foot, 0, 10, footprintWidth: 1, footprintHeight: 1),
+        ];
+        var ruleset = new Ruleset("two-civs", terrain, types);
+        MapGenCatalog catalog = MapGenCatalog.Classic.RestrictTo(ruleset);
+        Assert.Equal(["euro", "asia"], catalog.Civilizations.ToArray());
+        Assert.Equal((5, 6), (catalog.Kind(MapObjectRole.Castle)!.Value.Width, catalog.Kind(MapObjectRole.Castle)!.Value.Height));
+        Assert.Null(catalog.Kind(MapObjectRole.Gold));
+
+        MapGenOptions options = new MapGenOptions { Players = 2, Civilizations = ["euro", "asia"], Seed = 8 }.BindTo(ruleset);
+        Assert.Equal((0, 1), (options.LandTerrainId, options.WaterTerrainId));
+        Assert.Empty(MapGenValidator.Validate(MapGenerator.Generate(options)));
+    }
+
+    [Fact]
+    public void Archipelago_kingdoms_sharing_an_island_fail_validation()
+    {
+        GeneratedMap map = MapGenerator.Generate(new MapGenOptions { Type = RandomMapType.Archipelagos, Size = RandomMapSize.Medium, Players = 2, Seed = 6 });
+        StartPosition a = map.Starts[0];
+        ImmutableArray<StartPosition> same = [a, a with { Player = 1 }];
+        Assert.Contains(MapGenValidator.Validate(map.Map, same, map.Options, map.ResolvedType), i => i.Contains("share an island", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Crowded_maps_keep_each_kingdoms_starting_resources_nearest_its_own_castle()
+    {
+        for (ulong seed = 1; seed <= 6; seed++)
+        {
+            Assert.Empty(MapGenValidator.Validate(MapGenerator.Generate(new MapGenOptions { Size = RandomMapSize.Medium, Players = 8, Seed = seed, Type = RandomMapType.Dry })));
+        }
+    }
+
+    [Fact]
+    public void A_start_off_the_map_and_a_missing_catalog_are_reported()
+    {
+        GeneratedMap map = MapGenerator.Generate(new MapGenOptions { Size = RandomMapSize.Tiny, Seed = 4 });
+        ImmutableArray<StartPosition> bad = [map.Starts[0], map.Starts[1] with { TileX = 500 }];
+        Assert.Contains(MapGenValidator.Validate(map.Map, bad, map.Options, map.ResolvedType), i => i.Contains("off the map", StringComparison.Ordinal));
+        Assert.Throws<ArgumentNullException>(() => MapGenerator.Generate(new MapGenOptions { Catalog = null! }));
     }
 }

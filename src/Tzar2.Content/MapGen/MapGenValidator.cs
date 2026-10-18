@@ -77,13 +77,14 @@ public static class MapGenValidator
         byte[] land = new byte[w * h];
         byte[] ship = new byte[w * h];
         int undrawn = 0;
+        Func<int, int, bool> hasTransition = profile.HasTransition;
         for (int y = 0; y < h; y++)
         {
             for (int x = 0; x < w; x++)
             {
                 int c = (y * stride) + x;
                 (int, int, int, int) corners = (set[c], set[c + 1], set[c + stride + 1], set[c + stride]);
-                if (!TerrainComposer.IsDrawnByRule(corners, profile.HasTransition) && undrawn++ == 0)
+                if (!TerrainComposer.IsDrawnByRule(corners, hasTransition) && undrawn++ == 0)
                 {
                     issues.Add(Say($"tile {x},{y}: corners {corners} are not drawable by the transition rule"));
                 }
@@ -110,11 +111,19 @@ public static class MapGenValidator
             return issues;
         }
 
+        foreach (StartPosition s in starts)
+        {
+            if ((uint)s.TileX >= (uint)w || (uint)s.TileY >= (uint)h)
+            {
+                issues.Add(Say($"player {s.Player}: start {s.TileX},{s.TileY} is off the map"));
+                return issues;
+            }
+        }
+
         // Footprints: on land, not overlapping. Objects without a footprint: on a free land tile (fish: on open water).
         MapGenCatalog catalog = options.Catalog;
         var roles = RoleLookup(catalog);
         byte[] blocked = new byte[w * h];
-        byte[] castle = new byte[w * h];
         byte[] tree = new byte[w * h];
         var positions = new List<(MapObjectRole Role, int X, int Y, int W, int H, byte Owner)>(map.Objects.Length);
         foreach (MapObject o in map.Objects)
@@ -151,7 +160,6 @@ public static class MapGenValidator
                     }
 
                     blocked[t] = 1;
-                    castle[t] = (byte)(role == MapObjectRole.Castle ? 1 : 0);
                     tree[t] = (byte)(role == MapObjectRole.Tree ? 1 : 0);
                 }
             }
@@ -179,13 +187,19 @@ public static class MapGenValidator
 
         // Starts: a castle of the player centred on the start, fair spacing.
         var nearest = new int[starts.Length];
+        var castles = new (int X, int Y, int W, int H)[starts.Length];
         for (int p = 0; p < starts.Length; p++)
         {
             StartPosition s = starts[p];
             bool found = false;
+            castles[p] = (s.TileX, s.TileY, 1, 1);
             foreach ((MapObjectRole role, int x, int y, int ow, int oh, byte owner) in positions)
             {
-                found |= role == MapObjectRole.Castle && owner == s.Player && x + (ow / 2) == s.TileX && y + (oh / 2) == s.TileY;
+                if (!found && role == MapObjectRole.Castle && owner == s.Player && x + (ow / 2) == s.TileX && y + (oh / 2) == s.TileY)
+                {
+                    found = true;
+                    castles[p] = (x, y, ow, oh);
+                }
             }
 
             if (!found)
@@ -225,11 +239,13 @@ public static class MapGenValidator
             }
         }
 
-        // Reachability: land maps — every castle reaches every other on foot; naval maps — every castle reaches the ocean.
+        // Reachability: every footprint blocks, castles too. A castle's kingdom is the set of components of the free
+        // tiles next to it. Land maps — every kingdom shares a component with player 0's; naval maps — every kingdom is
+        // on its own island and its land reaches the open sea.
         byte[] passable = new byte[w * h];
         for (int t = 0; t < passable.Length; t++)
         {
-            passable[t] = (byte)(land[t] != 0 && (blocked[t] == 0 || castle[t] != 0) ? 1 : 0);
+            passable[t] = (byte)(land[t] != 0 && blocked[t] == 0 ? 1 : 0);
         }
 
         int[] landLabel = Label(passable, w, h);
@@ -242,43 +258,59 @@ public static class MapGenValidator
         }
 
         int[] reachLabel = Label(reach, w, h);
+        int[] islandLabel = Label(land, w, h);
         int[] shipLabel = Label(ship, w, h);
         int ocean = LargestLabel(shipLabel);
         bool naval = type == RandomMapType.Archipelagos;
+        List<int> home = AroundFootprint(landLabel, castles[0], w, h);
         for (int p = 0; p < starts.Length; p++)
         {
             StartPosition s = starts[p];
-            int label = landLabel[(s.TileY * w) + s.TileX];
-            if (label < 0)
+            for (int q = 0; naval && q < p; q++)
             {
-                issues.Add(Say($"player {s.Player}: castle centre {s.TileX},{s.TileY} is not on walkable land"));
+                if (islandLabel[(s.TileY * w) + s.TileX] == islandLabel[(starts[q].TileY * w) + starts[q].TileX])
+                {
+                    issues.Add(Say($"players {starts[q].Player} and {s.Player} share an island"));
+                }
+            }
+
+            List<int> labels = AroundFootprint(landLabel, castles[p], w, h);
+            if (labels.Count == 0)
+            {
+                issues.Add(Say($"player {s.Player}: no walkable land next to the castle at {s.TileX},{s.TileY}"));
                 continue;
             }
 
-            if (!naval && label != landLabel[(starts[0].TileY * w) + starts[0].TileX])
+            if (!naval && !labels.Exists(home.Contains))
             {
                 issues.Add(Say($"player {s.Player} cannot reach player {starts[0].Player} by land"));
             }
 
-            if (naval && (ocean < 0 || !TouchesLabel(landLabel, label, shipLabel, ocean, w, h)))
+            if (naval && (ocean < 0 || !labels.Exists(l => TouchesLabel(landLabel, l, shipLabel, ocean, w, h))))
             {
                 issues.Add(Say($"player {s.Player}'s land does not reach the open sea"));
             }
 
-            CheckResources(issues, s, positions, reachLabel, reachLabel[(s.TileY * w) + s.TileX], options, naval, w, h);
+            CheckResources(issues, starts, p, positions, reachLabel, AroundFootprint(reachLabel, castles[p], w, h), options, naval, w, h);
         }
 
         return issues;
     }
 
-    private static void CheckResources(List<string> issues, StartPosition s, List<(MapObjectRole Role, int X, int Y, int W, int H, byte Owner)> positions, int[] landLabel, int label, MapGenOptions options, bool naval, int w, int h)
+    private static void CheckResources(List<string> issues, ImmutableArray<StartPosition> starts, int p, List<(MapObjectRole Role, int X, int Y, int W, int H, byte Owner)> positions, int[] landLabel, List<int> labels, MapGenOptions options, bool naval, int w, int h)
     {
+        StartPosition s = starts[p];
         int gold = 0, stone = 0, trees = 0, cows = 0, fish = 0;
         foreach ((MapObjectRole role, int x, int y, int ow, int oh, _) in positions)
         {
             int d = Distance(s.TileX, s.TileY, x + (ow / 2), y + (oh / 2));
-            bool reachable = ow == 0 ? landLabel[(y * w) + x] == label : Borders(landLabel, label, x, y, ow, oh, w, h);
-            if (role == MapObjectRole.FishPatch && Near(landLabel, label, x, y, FishReach, w, h))
+            if (!NearestCastle(starts, p, x + (ow / 2), y + (oh / 2), d))
+            {
+                continue; // on small crowded maps a neighbour's starting resources do not count for this kingdom
+            }
+
+            bool reachable = ow == 0 ? labels.Contains(landLabel[(y * w) + x]) : AroundFootprint(landLabel, (x, y, ow, oh), w, h).Exists(labels.Contains);
+            if (role == MapObjectRole.FishPatch && Near(landLabel, labels, x, y, FishReach, w, h))
             {
                 fish++;
             }
@@ -314,13 +346,13 @@ public static class MapGenValidator
     }
 
     // Whether a tile of component `label` lies within `r` tiles (Chebyshev) of (x0, y0).
-    private static bool Near(int[] labels, int label, int x0, int y0, int r, int w, int h)
+    private static bool Near(int[] labels, List<int> wanted, int x0, int y0, int r, int w, int h)
     {
         for (int y = Math.Max(0, y0 - r); y <= Math.Min(h - 1, y0 + r); y++)
         {
             for (int x = Math.Max(0, x0 - r); x <= Math.Min(w - 1, x0 + r); x++)
             {
-                if (labels[(y * w) + x] == label)
+                if (labels[(y * w) + x] >= 0 && wanted.Contains(labels[(y * w) + x]))
                 {
                     return true;
                 }
@@ -330,22 +362,38 @@ public static class MapGenValidator
         return false;
     }
 
-    // Whether a footprint has a 4-neighbour tile in component `label`.
-    private static bool Borders(int[] labels, int label, int x0, int y0, int fw, int fh, int w, int h)
+    // Whether no other castle is closer to (x, y) than castle p (ties count for both).
+    internal static bool NearestCastle(ImmutableArray<StartPosition> starts, int p, int x, int y, int d)
     {
-        for (int y = y0 - 1; y <= y0 + fh; y++)
+        for (int q = 0; q < starts.Length; q++)
         {
-            for (int x = x0 - 1; x <= x0 + fw; x++)
+            if (q != p && Distance(starts[q].TileX, starts[q].TileY, x, y) < d)
             {
-                bool edge = (y == y0 - 1 || y == y0 + fh) != (x == x0 - 1 || x == x0 + fw);
-                if (edge && (uint)x < (uint)w && (uint)y < (uint)h && labels[(y * w) + x] == label)
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // The components (ascending, no duplicates) of the tiles 4-adjacent to a footprint.
+    private static List<int> AroundFootprint(int[] labels, (int X, int Y, int W, int H) f, int w, int h)
+    {
+        var found = new List<int>();
+        for (int y = f.Y - 1; y <= f.Y + f.H; y++)
+        {
+            for (int x = f.X - 1; x <= f.X + f.W; x++)
+            {
+                bool edge = (y == f.Y - 1 || y == f.Y + f.H) != (x == f.X - 1 || x == f.X + f.W);
+                if (edge && (uint)x < (uint)w && (uint)y < (uint)h && labels[(y * w) + x] >= 0 && !found.Contains(labels[(y * w) + x]))
                 {
-                    return true;
+                    found.Add(labels[(y * w) + x]);
                 }
             }
         }
 
-        return false;
+        found.Sort();
+        return found;
     }
 
     private static bool TouchesLabel(int[] landLabel, int label, int[] shipLabel, int ocean, int w, int h)

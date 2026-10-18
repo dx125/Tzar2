@@ -102,7 +102,7 @@ internal sealed partial class MapBuilder
 
             (int cx, int cy) = Polar(_sx[p], _sy[p], d, angle);
             int tx = cx - (kind.Width / 2), ty = cy - (kind.Height / 2);
-            if (OnStartLand(cx, cy, p) && CanPlace(tx, ty, kind.Width, kind.Height, 1))
+            if (OnStartLand(cx, cy, p) && Mine(p, cx, cy) && CanPlace(tx, ty, kind.Width, kind.Height, 1))
             {
                 Put(role, kind, MapObject.Nature, tx, ty, string.Empty);
                 return true;
@@ -134,7 +134,7 @@ internal sealed partial class MapBuilder
                 int t = _queue[head++];
                 int x = t % _s, y = t / _s;
                 int d = MapGenValidator.Distance(x, y, _sx[p], _sy[p]);
-                if (!TreeAllowed(t) || d > limit || d <= _startRadius - 2)
+                if (!TreeAllowed(t) || d > limit || d <= _startRadius - 2 || d != _startDist[t])
                 {
                     continue;
                 }
@@ -189,7 +189,7 @@ internal sealed partial class MapBuilder
                 continue;
             }
 
-            if (Math.Max(Math.Abs(x - firstX), Math.Abs(y - firstY)) >= 3)
+            if (Math.Max(Math.Abs(x - firstX), Math.Abs(y - firstY)) >= 3 && Mine(p, x, y))
             {
                 PutUnit(MapObjectRole.FishPatch, fish, MapObject.Nature, x, y, string.Empty);
                 (firstX, firstY) = (x, y);
@@ -518,6 +518,10 @@ internal sealed partial class MapBuilder
                 y + (int)((distance * Tzar2.Core.Numerics.Trig.Sin(a).Raw) >> Tzar2.Core.Numerics.Fixed.FractionBits));
     }
 
+    // Castle p is (one of) the nearest castles to (x, y): starting resources are not shared with a neighbour.
+    private bool Mine(int p, int x, int y)
+        => MapGenValidator.Distance(x, y, _sx[p], _sy[p]) == _startDist[Idx(x, y)];
+
     private bool OnStartLand(int x, int y, int p)
         => (uint)x < (uint)_s && (uint)y < (uint)_s && _label[Idx(x, y)] >= 0 && _label[Idx(x, y)] == _label[Idx(_sx[p], _sy[p])];
 
@@ -529,7 +533,7 @@ internal sealed partial class MapBuilder
             int d = attempt < 48 ? _rng.NextInt(dmin, dmax + 1) : dmin + ((attempt - 48) / 32);
             int angle = attempt < 48 ? _rng.NextInt(Tzar2.Core.Numerics.Angle.UnitsPerTurn) : ((attempt - 48) % 32) * (Tzar2.Core.Numerics.Angle.UnitsPerTurn / 32);
             (x, y) = Polar(cx, cy, d, angle);
-            if (FreeLand(x, y) && OnStartLand(x, y, p))
+            if (FreeLand(x, y) && OnStartLand(x, y, p) && Mine(p, x, y))
             {
                 return true;
             }

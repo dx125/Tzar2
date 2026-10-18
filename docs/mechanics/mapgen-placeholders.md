@@ -56,7 +56,7 @@ Where the value lives (all in `src/Tzar2.Content/MapGen/`): **Options** = `MapGe
 | Pond / speck cleanup | water < 16 tiles → land; land < 10 tiles → water | Builder `Cleanup` |
 | Terrain layers (set: terrain on parent, ‰ of parent, blob size) | grass 2/1 700 20, 3/2 150 8, 4/1 60 6; summer 2/1 650 20, 4/2 120 8, 5/2 150 10; desert 2/1 350 16, 3/1 120 10, 5/1 40 6; winter 3/1 300 16, 2/1 100 10, 4/2 250 6 | Profile |
 | Starting resources (all kingdoms equal) | gold and stone: 1 each (High: 2) at 8–12 tiles; a forest of min-trees + 10 at 9–15 tiles; 4 cows at 4–8 tiles (Animals); 2 fish patches near the harbor spot (Archipelagos) | Builder `PlaceKingdoms` |
-| Resource radius / minima (validator) | 16 tiles; trees 30/40/60 (Low/Normal/High), 1 gold, 1 stone, 3 cows (Animals); naval: 1 fish within 8 tiles of the kingdom's land | Validator |
+| Resource radius / minima (validator) | 16 tiles, counting only resources whose nearest castle is this one; trees 30/40/60 (Low/Normal/High), 1 gold, 1 stone, 3 cows (Animals); naval: 1 fish within 8 tiles of the kingdom's land (any water, an inland lake counts too) | Validator |
 | Castle spacing (validator) | ≥ max(12, side × 0.40/0.29/0.20/0.15 for ≤2/≤4/≤6/more players); nearest-neighbour spread ≤ ¼ of the mean | Validator |
 | Map resources | gold and stone: one each per 3,600 / 2,400 / 1,500 land tiles (Low/Normal/High), ≥ 9 tiles apart, ≥ start area + 10 from castles | Builder `ScatterRocks` |
 | Forests | 10 % / 15 % / 21 % of tree-capable free land (Low/Normal/High) in noise blobs of 12 + side/64 tiles, plus 0.6 % single trees | Builder `PlaceForests` |
