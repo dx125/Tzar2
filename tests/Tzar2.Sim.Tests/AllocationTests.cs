@@ -30,6 +30,37 @@ public class AllocationTests
         AssertSteadyStateDoesNotAllocate(scenario, workers);
     }
 
+    /// <summary>
+    /// Periodic group move orders to new goals on a map large enough for routes, flow fields and long plans (AI-like
+    /// order rate, ADR 0080): path requests, plan buffers and the flow-field cache must reach a steady state.
+    /// </summary>
+#if DEBUG
+    [Theory(Skip = "The allocation gate runs on optimized (Release) builds; Debug code is JIT-compiled without boxing elision.")]
+#else
+    [Theory]
+#endif
+    [InlineData(1)]
+    [InlineData(4)]
+    public void Periodic_move_orders_to_new_goals_do_not_allocate(int workers)
+    {
+        SyntheticScenarioOptions options = TestWorlds.SmallScenario with
+        {
+            MapSize = 256,
+            EntityCount = 1600,
+            OrdersPerPlayerPerTick = 24,
+            ChurnPerPlayerPerTick = 0,
+            OrderIntervalTicks = 10,
+        };
+        using var scenario = new SyntheticScenario(options, workers);
+        World world = scenario.Simulation.World;
+        for (int t = 0; t < 600 || (world.FlowFields.FieldsAllocated < Tzar2.Sim.Navigation.FlowFieldCache.Capacity && t < 20_000); t++)
+        {
+            scenario.RunTick();
+        }
+
+        AssertSteadyStateDoesNotAllocate(scenario, workers);
+    }
+
     /// <summary>The gameplay systems (production, economy, workers, combat) under the economy-and-combat scenario.</summary>
 #if DEBUG
     [Theory(Skip = "The allocation gate runs on optimized (Release) builds; Debug code is JIT-compiled without boxing elision.")]

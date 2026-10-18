@@ -17,10 +17,11 @@ public sealed class PathStore
     /// <summary>Most values per plan.</summary>
     public const int MaxValues = 1 << 17;
 
-    // Every slot starts with a small buffer and keeps buffers up to KeepBuffer when cleared; only longer ones go back
-    // to the shared pool. Steady-state planning then stops allocating quickly.
+    // Every slot starts with a small buffer; a cleared slot returns any longer one to the shared pool. Slots must not
+    // hoard longer buffers: each slot would then slowly upgrade to the longest plan it ever had, allocating long after
+    // the start (periodic orders to new goals, ADR 0080). Shared, the pool only holds what the plans alive at once need.
     private const int SmallBuffer = 64;
-    private const int KeepBuffer = 512;
+    private const int KeepBuffer = SmallBuffer;
 
     private int[][] _points = [];
     private Stack<int[]>?[] _free = [];
