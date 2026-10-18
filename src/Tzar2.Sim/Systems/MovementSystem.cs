@@ -133,6 +133,8 @@ public sealed class MovementSystem : ISimSystem
         // Route following is the bulk of the pre-pass and touches only the unit's own motion: it runs as fork/join jobs
         // first; its plan clears and re-plan requests are applied below in unit order, so the outcome (including the
         // path-request queue order) is the same as a sequential pass (ADR 0080).
+        // If a route job throws, other jobs have already marked their re-plans without the Apply below; the simulation
+        // is then faulted and refuses to continue (Simulation.IsFaulted), so the half-applied state is never used.
         _route.Prepare(world, nav, tick);
         context.Workers.Run(_route, _route.JobCount);
         _routeScratch.Reset();

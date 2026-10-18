@@ -400,7 +400,10 @@ public sealed class PathSearch
             byte[] tree = cluster.Trees[i];
             int local = start;
             int cost = 0;
-            while (true)
+            portalCost[i] = int.MaxValue;
+
+            // A tree path visits each cluster tile at most once; the bound only guards against a corrupt tree.
+            for (int steps = 0; steps <= NavLayer.ClusterTiles; steps++)
             {
                 byte code = tree[local];
                 if (code >= NavLayer.TreeRoot)

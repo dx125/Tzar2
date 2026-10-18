@@ -22,6 +22,7 @@ internal sealed class TickProfiler : ITickProfiler
     private readonly int[] _stack = new int[MaxDepth];
     private readonly long[] _started = new long[MaxDepth];
     private int _depth;
+    private int _overflow;
     private int _tick = -1;
 
     public TickProfiler(int ticks) => _ticks = ticks;
@@ -31,13 +32,20 @@ internal sealed class TickProfiler : ITickProfiler
     {
         _tick++;
         _depth = 0;
+        _overflow = 0;
     }
 
     /// <inheritdoc />
     public void Begin(string section)
     {
-        if (_tick < 0 || _tick >= _ticks || _depth == MaxDepth)
+        if (_tick < 0 || _tick >= _ticks)
         {
+            return;
+        }
+
+        if (_depth == MaxDepth)
+        {
+            _overflow++; // too deep to record; its End must not pop a recorded section
             return;
         }
 
@@ -57,7 +65,18 @@ internal sealed class TickProfiler : ITickProfiler
     /// <inheritdoc />
     public void End()
     {
-        if (_tick < 0 || _tick >= _ticks || _depth == 0)
+        if (_tick < 0 || _tick >= _ticks)
+        {
+            return;
+        }
+
+        if (_overflow > 0)
+        {
+            _overflow--;
+            return;
+        }
+
+        if (_depth == 0)
         {
             return;
         }

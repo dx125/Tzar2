@@ -59,34 +59,46 @@ render snapshot). `t2 bench` always prints the table (`section ms …`); the CLI
   its own budget of p99 ≤ 12 ms on the runner and the same 10% relative check, reported as warnings only.
 * B3, B4 and gameplay stay gating as before (ADR 0026, ADR 0039).
 
-**Gates (`tools/ci/check-bench.sh`).** Each gated scenario runs twice and the run with the lower p50 is checked (noise
-only adds time):
+**Gates (`tools/ci/check-bench.sh`).** Each gated scenario runs three times; the checked p50 and p99 are the medians
+over the runs, and the baselines use the same statistic (the median of single runs), so the tolerances are
+like-for-like (a best-of-N against a median would quietly loosen them):
 1. absolute: tick p99 ≤ 12 ms on the runner (4 vCPUs, weaker than the §4.3 6-core reference, so this is
    conservative);
-2. relative (§21 "regressions > 10% fail"): tick p50 ≤ 1.10 × the baseline for the runner's **CPU model** in
-   `tools/ci/bench-baseline.tsv` (median over the recording runs, the slowest run for models seen fewer than three
-   times). For a CPU model without a row, the p50 normalized by a calibration loop must stay within 25% of the slowest
-   recorded normalized p50. B3 has no relative row (its p50 is idle ticks); its planning-within-3-ticks check gates it.
+2. relative, against the row for the runner's **CPU model** in `tools/ci/bench-baseline.tsv` (name, CPU, runs, p50,
+   p99, normalized p50, p50 tolerance, p99 tolerance): p50 ≤ row p50 × 1.10 (§21 "regressions > 10% fail") and
+   p99 ≤ row p99 × 1.30 (p99 is noisier; without this a 2× p99 regression would pass under the 12 ms budget). Rows
+   recorded from fewer than three runs are **provisional**: 1.25 / 1.50, and every check warns until the row is
+   re-recorded. The AMD EPYC 9V45 is the noisiest model (medians of three runs spread up to 11% between nightlies):
+   1.20 / 1.50 there, b4 1.30 / 1.60.
+3. a CPU model without a row: a `::warning::` on every run, and the calibration-normalized p50 must stay within 35% of
+   the median normalized p50 of the recorded models. Normalization leaves up to 34% (s2) and 50% (b4) between the
+   recorded models, so this catches only large steps (roughly 35-60%, depending on where the new model falls); it is a
+   stopgap until the model's row is recorded.
+B3 has no relative row (its p50 is idle ticks); its planning-within-3-ticks check gates it. The stress scenario runs
+the same checks as warnings.
+
+What this guarantees: on a CPU model with a non-provisional row, a 10% slowdown of the median tick fails the nightly
+about half of the time at the measured noise (±3-6% per run, less for a median of three), and a 15% slowdown nearly
+always; p99 regressions above 30% fail. Provisional rows and new models are looser, and say so in the log.
 
 **Calibration.** `t2 bench` measures a frozen workload (8-connected Dijkstra searches with a binary heap over a 256²
 grid; best of 7 runs) and prints `calibration` and `normalized` (= time × 25 ms / calibration). An 8 MB pointer chase
 was tried first and rejected: it tracked memory latency (3× between runner models) rather than the sim (1.7×). The
-Dijkstra loop leaves about 20% between models, which is why same-model baselines are the primary relative gate and
-normalization only the fallback. The workload must never change (it re-bases every normalized number).
+Dijkstra loop still leaves 34-50% between models, which is why same-model baselines are the relative gate and
+normalization only the stopgap for new models. The workload must never change (it re-bases every normalized number).
 
 **Baselines** are re-recorded, never edited by hand, when a change is meant to cost time: every check prints its
-`baseline` row (name, CPU model, p50, normalized p50).
+`baseline` row (name, CPU model, runs, median p50, median p99, normalized p50).
 
-**Adding or re-recording a baseline row** (a runner with a new CPU model, which the log reports as "no baseline for
-this CPU", or an intended slowdown):
-1. Open the nightly run's `Benchmarks` job (or its `t2-bench` artifact) and copy the
-   `baseline<TAB>name<TAB>cpu<TAB>p50<TAB>normalized p50` lines that `check-bench.sh` printed for s2, gameplay, b4 and
-   stress.
-2. Prefer three or more runs on that CPU model (`gh workflow run nightly.yml --ref <branch>` repeatedly): take the
-   median p50 per scenario; with fewer runs take the slowest.
-3. Drop the leading `baseline` field and add or replace the rows in `tools/ci/bench-baseline.tsv` (tab-separated, one
-   row per scenario and CPU model). For an intended slowdown, replace the rows of every CPU model, and say why in the
-   commit message.
+**Adding or re-recording a baseline row** (a runner with a new CPU model, reported as "no baseline row for <cpu>", a
+provisional row, or an intended slowdown):
+1. Open the nightly run's `Benchmarks` job (or its `t2-bench` artifact) and copy the `baseline` lines that
+   `check-bench.sh` printed for s2, gameplay, b4 and stress (each is already the median of that night's three runs).
+2. Collect three or more nightlies on that CPU model (`gh workflow run nightly.yml --ref <branch>` repeatedly) and take
+   the median of their p50, p99 and normalized p50 values per scenario; the runs column is the number of nightlies.
+3. Drop the leading `baseline` field and add or replace the row in `tools/ci/bench-baseline.tsv` (tab-separated, one
+   row per scenario and CPU model) with tolerances 1.10 / 1.30, or 1.25 / 1.50 if fewer than three nightlies. For an
+   intended slowdown, replace the rows of every CPU model, and say why in the commit message.
 
 ### Measurements
 
@@ -101,6 +113,11 @@ Full hash: p99 1.3 ms on both sides (unchanged by design). Local Apple M5, 1 wor
 8.4 → 5.6 ms. After, across the four CPU models (4 workers): s2 p50 2.0–3.6 ms, p99 4.3–5.7 ms; stress p50
 3.8–6.8 ms, p99 6.9–9.1 ms; gameplay p99 3.8–5.7 ms.
 
+The relative gates were validated on the first rebase onto main with M3 stream F (#23: fog, day/night, diplomacy, …):
+against rows recorded on the previous main, the gameplay p99 check failed on the EPYC 7763 (p99 5.8 → 7.9-8.1 ms,
++37%; p50 +8%, s2 p50 +6%, b4 p50 +7%). That cost is intended (new systems), so the rows were re-recorded on main
+729f335 (24 probe nightlies); it is the kind of step the gate is there to surface.
+
 ## Alternatives considered
 
 * **Keep the order flood as the gate:** it measures a load no match produces (each player re-ordering 16 units 20
@@ -109,8 +126,8 @@ Full hash: p99 1.3 ms on both sides (unchanged by design). Local Apple M5, 1 wor
 * **Make the gameplay scenario the S2 gate at 512² and 4,000 units:** closest in content, but at 512² the armies do
   not meet or train within minutes of game time with the current bot, and stream A is changing economy and
   construction; revisit when the AI (M3) plays real matches (B1).
-* **Normalize everything by the calibration loop with one baseline:** 20% residual between CPU models is too much for a
-  10% gate.
+* **Normalize everything by the calibration loop with one baseline:** a 34-50% residual between CPU models is too much
+  for a 10% gate.
 * **Drop the occupancy grid from the full hash** (about 4 MB of the 4.5 MB hashed every 20 ticks; it is derived from
   positions, which are hashed): would cut ~1 ms from 5% of ticks, but changes the full hash defined by REQ-SIM-12 /
   ADR 0016 and every golden value. Decided (coordinator, 2026-10-18): the full hash keeps the occupancy grid.
@@ -119,7 +136,8 @@ Full hash: p99 1.3 ms on both sides (unchanged by design). Local Apple M5, 1 wor
 
 ## Consequences
 
-* The nightly measures what §4.3 asks for and still catches 10% regressions on the CPU models it has seen.
+* The nightly measures what §4.3 asks for and catches 10-15% median-tick and 30% p99 regressions on the CPU models
+  with recorded rows (see "What this guarantees").
 * A new runner CPU model is caught only by the loose normalized check until its row is recorded; add rows from that
   run's `baseline` output.
 * The remaining hot spots, in order: the abstract A* (~38 µs per long query: heap and ~3,500 edge relaxations), the

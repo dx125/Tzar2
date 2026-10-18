@@ -110,15 +110,15 @@ jobs:
           path: s2-out
 
   benchmarks:
-    # TDD §21 nightly gates (ADR 0080), each through tools/ci/check-bench.sh: an absolute budget on the tick p99 (<= 12 ms;
-    # the 4-vCPU runner is weaker than the 6-core reference CPU of §4.3) and a relative one: the tick p50 must stay within
-    # 10% of tools/ci/bench-baseline.tsv for the runner's CPU model (runners come with different CPUs; an unknown model
-    # is compared calibration-normalized with a looser bound). Gating: s2 (the §4.3 S2 proxy: 4,000 units on 512²,
-    # 8 players, AI-like order rate), B3 (500 move orders planned within 3 ticks), B4 (no stuck units, corpses never
-    # change passability; ADR 0026), gameplay (resources delivered, fights happen; ADR 0039) and ai (every AI gathers,
-    # builds, trains and fights; ADR 0052; absolute budget only, no baseline rows yet). The synthetic stress
-    # scenario (16 move orders per player every tick, churn 2) is informational with its own budget (p99 <= 12 ms on the
-    # runner, within 10% of its baseline): warnings, never failures.
+    # TDD §21 nightly gates (ADR 0080), each through tools/ci/check-bench.sh on the medians of three runs: an absolute
+    # budget on the tick p99 (<= 12 ms; the 4-vCPU runner is weaker than the 6-core reference CPU of §4.3) and relative
+    # ones against tools/ci/bench-baseline.tsv for the runner's CPU model (runners come with different CPUs): p50 within
+    # 10% and p99 within 30% of the row (provisional rows and an unknown CPU model are looser and warn). Gating: s2 (the
+    # §4.3 S2 proxy: 4,000 units on 512², 8 players, AI-like order rate), B3 (500 move orders planned within 3 ticks),
+    # B4 (no stuck units, corpses never change passability; ADR 0026), gameplay (resources delivered, fights happen;
+    # ADR 0039) and ai (8 legacy AIs: every AI gathers, builds, trains and fights; ADR 0052; one 20-minute run, absolute
+    # budget only until it has baseline rows). The synthetic stress scenario (16 move orders per player every tick, churn 2) is informational with its
+    # own budget (p99 <= 12 ms on the runner, and the same relative checks): warnings, never failures.
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
@@ -128,14 +128,14 @@ jobs:
           global-json-file: global.json
           dotnet-version: 8.0.x
       - run: dotnet build -c Release src/Tzar2.Tools.Cli
-      # Every scenario runs twice; check-bench.sh checks the faster run (noise on a shared runner only adds time).
+      # Gated scenarios run three times; check-bench.sh checks the medians (the statistic the baselines use).
       - name: S2 proxy tick budget (t2 bench s2, 4,000 units on 512², 8 players)
         run: |
           set -euo pipefail
-          for run in 1 2; do
+          for run in 1 2 3; do
             dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario s2 --workers 4 | tee "bench-s2-$run.txt"
           done
-          tools/ci/check-bench.sh s2 12 bench-s2-1.txt bench-s2-2.txt
+          tools/ci/check-bench.sh s2 12 bench-s2-1.txt bench-s2-2.txt bench-s2-3.txt
       - name: B3 maze mass move (t2 bench, 500 orders on a 512² maze)
         run: |
           set -euo pipefail
@@ -146,10 +146,10 @@ jobs:
       - name: Gameplay economy and combat at scale (t2 bench, 8 kingdoms, 2,400 soldiers, 480 peasants)
         run: |
           set -euo pipefail
-          for run in 1 2; do
+          for run in 1 2 3; do
             dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario gameplay --players 8 --workers 4 | tee "bench-gameplay-$run.txt"
           done
-          tools/ci/check-bench.sh gameplay 12 bench-gameplay-1.txt bench-gameplay-2.txt
+          tools/ci/check-bench.sh gameplay 12 bench-gameplay-1.txt bench-gameplay-2.txt bench-gameplay-3.txt
       - name: AI against AI (t2 bench, 8 legacy AIs on 256², 20 minutes of game time; ADR 0051/0052)
         run: |
           set -euo pipefail
@@ -158,17 +158,17 @@ jobs:
       - name: B4 mass death then traffic (t2 bench)
         run: |
           set -euo pipefail
-          for run in 1 2; do
+          for run in 1 2 3; do
             dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario b4 --workers 4 | tee "bench-b4-$run.txt"
           done
-          tools/ci/check-bench.sh b4 12 bench-b4-1.txt bench-b4-2.txt
+          tools/ci/check-bench.sh b4 12 bench-b4-1.txt bench-b4-2.txt bench-b4-3.txt
       - name: Synthetic stress, informational (t2 bench, 16 orders/player/tick, churn 2)
         run: |
           set -euo pipefail
-          for run in 1 2; do
+          for run in 1 2 3; do
             dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --ticks 2000 --warmup 200 --churn 2 --workers 4 | tee "bench-stress-$run.txt"
           done
-          tools/ci/check-bench.sh stress 12 --informational bench-stress-1.txt bench-stress-2.txt
+          tools/ci/check-bench.sh stress 12 --informational bench-stress-1.txt bench-stress-2.txt bench-stress-3.txt
       - name: Benchmark summary
         if: always()
         run: |
