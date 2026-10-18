@@ -38,7 +38,7 @@ public partial class PropertiesPanel : VBoxContainer
         DocumentState s = _c.Document.State;
         if (ids.IsEmpty || s.Find(ids[0]) is not { } first)
         {
-            Forms.Label(_body, "Nothing selected. Click an object, or drag a rectangle (Shift adds).");
+            Forms.Label(_body, "Nothing selected. Click an object, or drag a rectangle (Shift adds).").AutowrapMode = TextServer.AutowrapMode.WordSmart;
             return;
         }
 

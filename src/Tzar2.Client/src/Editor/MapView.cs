@@ -359,9 +359,28 @@ public partial class MapView : Control
                     }
                 }
 
-                foreach (EditorObject o in doc.State.Objects)
+            }
+
+            // Object marks: the footprint outline of structures and an owner dot, so every object is visible and
+            // pickable even where the package has no sprite for it.
+            var cull = new Rect2(pan.X - t, pan.Y - t, size.X + (2 * t), size.Y + (2 * t));
+            foreach (EditorObject o in doc.State.Objects)
+            {
+                var foot = new Vector2(o.X / UnitsPerPixel, o.Y / UnitsPerPixel);
+                if (!cull.HasPoint(foot) || c.Layers.IsHidden(LayerSettings.LayerOf(o, c.Palette)))
                 {
-                    DrawRect(new Rect2((o.X / UnitsPerPixel) - 4, (o.Y / UnitsPerPixel) - 4, 8, 8), o.Owner < 8 ? Colours.Player(o.Owner) : new Color(0.1f, 0.3f, 0.1f));
+                    continue;
+                }
+
+                Color colour = o.Owner < 8 ? Colours.Player(o.Owner) : new Color(0.15f, 0.35f, 0.12f);
+                if (c.Ruleset.EntityTypeId(o.TypeKey) is >= 0 and var type && c.Ruleset.EntityTypes[type].HasFootprint)
+                {
+                    (int fx, int fy, int fw, int fh) = Occupancy.Footprint(c.Ruleset.EntityTypes[type], o.Placement);
+                    DrawRect(new Rect2(fx * t, fy * t, fw * t, fh * t), new Color(colour, 0.55f), filled: false, width: 1);
+                }
+                else
+                {
+                    DrawCircle(foot, 3, colour);
                 }
             }
 

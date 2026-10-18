@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Godot;
 using Tzar2.Client.Editor;
 using Tzar2.Content.Editing;
+using Tzar2.Game.Editing;
+using Tzar2.Game.Session;
 
 namespace Tzar2.Client.Game;
 
@@ -37,6 +39,7 @@ public partial class GameApp
             _editorPath = null;
             ShowMainMenu();
         };
+        screen.PlaytestRequested += (options, debug) => StartPlaytest(screen, options, debug);
         EditorOpened?.Invoke(screen);
         Replace(screen, music: null);
         if (file is not null)
@@ -47,6 +50,59 @@ public partial class GameApp
 
     /// <summary>Raised when an editor screen is created, so the other editor parts (triggers, converter, campaign, playtest) attach to it.</summary>
     public event Action<EditorScreen>? EditorOpened;
+
+    /// <summary>The trigger debugger of the running playtest, or null.</summary>
+    public TriggerDebugger? Debugger { get; private set; }
+
+    /// <summary>
+    /// Plays the editor's map (TDD §18.3 playtest, ADR 0153): the document is built and started as a scenario match, as
+    /// the chosen kingdom, optionally revealed, optionally with the trigger debugger; leaving the game returns to the
+    /// editor with the same document and undo history.
+    /// </summary>
+    public GameSession? StartPlaytest(EditorScreen editor, PlaytestOptions options, bool debug)
+    {
+        ArgumentNullException.ThrowIfNull(editor);
+        if (_rules is null)
+        {
+            return null;
+        }
+
+        RememberEditor(editor);
+        GameSession session;
+        try
+        {
+            session = Playtest.Start(editor.Document, _rules, options);
+        }
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+        {
+            editor.Status("The map cannot start: " + e.Message);
+            return null;
+        }
+
+        var game = new GameScreen(_store, _ui!, session, editor.Document.TerrainSet ?? "grass", _args.SoundFont, _settings) { KeepSpeed = true };
+        DebuggerWindow? window = null;
+        if (debug && session.Scenario is not null)
+        {
+            Debugger = new TriggerDebugger(session);
+            window = new DebuggerWindow(Debugger, session);
+            AddChild(window);
+            window.Show();
+        }
+
+        void Back()
+        {
+            window?.QueueFree();
+            Debugger?.Dispose();
+            Debugger = null;
+            ShowEditor();
+        }
+
+        game.QuitRequested += Back;
+        game.Finished += (_, _) => Back();
+        game.MapRequested += notice => GD.Print("Playtest: the scenario asks for the next map '" + notice.Text + "'.");
+        Replace(game, music: null);
+        return session;
+    }
 
     // Keeps the document while another screen (playtest) is shown.
     private void RememberEditor(EditorScreen screen)

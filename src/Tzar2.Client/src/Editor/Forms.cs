@@ -200,7 +200,17 @@ public static class Forms
         window.AddChild(margin);
         window.CloseRequested += window.QueueFree;
         host.AddChild(window);
-        window.PopupCentered();
+        ShowCentered(window);
         return window;
+    }
+
+    /// <summary>Shows a window centred in the main window, never at a negative position (small or headless screens).</summary>
+    public static void ShowCentered(Window window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        Vector2I screen = window.GetTree()?.Root.Size ?? new Vector2I(1024, 768);
+        window.Size = new Vector2I(Math.Min(window.Size.X, Math.Max(200, screen.X)), Math.Min(window.Size.Y, Math.Max(200, screen.Y)));
+        window.Position = new Vector2I(Math.Max(0, (screen.X - window.Size.X) / 2), Math.Max(0, (screen.Y - window.Size.Y) / 2));
+        window.Show();
     }
 }

@@ -25,9 +25,9 @@ Status:
 <!-- summary:start -->
 | | Items | Done | Blocked | Planned |
 |---|---|---|---|---|
-| All | 104 | 68 | 0 | 36 |
+| All | 104 | 81 | 1 | 22 |
 
-Parity: **65 %** done.
+Parity: **77 %** done.
 <!-- summary:end -->
 
 ## §18.2 New map
@@ -132,15 +132,15 @@ Parity: **65 %** done.
 
 | Id | Feature | Status | Evidence | Notes |
 |---|---|---|---|---|
-| rules-lists | Action and event lists, rule list | planned |  |  |
-| rules-condition | Condition editor | planned |  |  |
-| rules-order | Action ordering | planned |  |  |
-| rules-actions | All 27 actions (and Delay) with their property pages | planned |  |  |
-| rules-events | All 8 events with their property pages | planned |  |  |
-| rules-expression | Expression editor | planned |  |  |
-| conv-list | Conversation list | planned |  |  |
-| conv-phrases | Phrases: source, condition, result, text, icon, sound, follow-ups | planned |  |  |
-| conv-initial | Initial-phrase flags | planned |  |  |
+| rules-lists | Action and event lists, rule list | done | TriggerEditorTests.Rules_conditions_and_action_ordering, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | Triggers → Rules, Events, Actions tabs |
+| rules-condition | Condition editor | done | TriggerEditorTests.Rules_conditions_and_action_ordering | live check with the error position, unknown names listed |
+| rules-order | Action ordering | done | TriggerEditorTests.Rules_conditions_and_action_ordering, DocumentTests.Moving_an_action_keeps_rules_and_references_pointing_at_the_same_actions |  |
+| rules-actions | All 27 actions (and Delay) with their property pages | done | TriggerEditorTests.Every_event_and_action_of_the_IR_has_a_property_page, TriggerEditorTests.Every_field_reads_and_writes_back | pages generated from TriggerSchema (ADR 0153) |
+| rules-events | All 8 events with their property pages | done | TriggerEditorTests.Every_event_and_action_of_the_IR_has_a_property_page, TriggerEditorTests.Every_field_reads_and_writes_back |  |
+| rules-expression | Expression editor | done | TriggerEditorTests.Expression_vocabulary_and_completion, TriggerEditorTests.Renaming_an_event_timer_or_variable_rewrites_every_expression | vocabulary insert menu; rename rewrites every use |
+| conv-list | Conversation list | done | TriggerEditorTests.Conversations_phrases_initial_flags_and_follow_ups |  |
+| conv-phrases | Phrases: source, condition, result, text, icon, sound, follow-ups | done | TriggerEditorTests.Conversations_phrases_initial_flags_and_follow_ups, ValidationTests.Conversations_follow_the_original_limits_and_cycles_are_reported |  |
+| conv-initial | Initial-phrase flags | done | TriggerEditorTests.Conversations_phrases_initial_flags_and_follow_ups |  |
 
 ## §18.2 Campaign editor
 
@@ -159,16 +159,16 @@ Parity: **65 %** done.
 |---|---|---|---|---|
 | m-undo | Every operation undoable, unlimited history, survives save (REQ-EDT-02) | done | DocumentTests.Terrain_strokes_are_one_step_and_undo_restores_every_layer, DocumentTests.History_is_unlimited_and_survives_save, DocumentTests.Deleting_a_referenced_object_cleans_the_triggers_and_undo_brings_everything_back | ADR 0151 |
 | m-validation | Live validation panel: errors/warnings, click to locate, play blocked only for blocking errors | done | ValidationTests.Unknown_types_and_bad_owners_block_play_but_the_map_stays_editable, ValidationTests.Expression_names_and_trigger_references_are_checked, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | panel re-validates 0.5 s after every change; click locates; only Blocking findings block play |
-| m-playtest | Playtest as any player, time controls, reveal map | planned |  |  |
-| m-debugger | Trigger debugger: last results, variable watch, breakpoints, step, event log | planned |  |  |
+| m-playtest | Playtest as any player, time controls, reveal map | done | TriggerEditorTests.Playtest_as_any_kingdom_with_the_map_revealed, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | Play menu: as any kingdom, reveal map; the game's speed keys and pause are the time controls |
+| m-debugger | Trigger debugger: last results, variable watch, breakpoints, step, event log | done | TriggerEditorTests.The_debugger_watches_variables_tracks_results_and_breaks_on_rules_and_actions, TriggerEditorTests.A_debugged_playtest_plays_exactly_like_an_undebugged_one | breaks after the tick in which the rule fires or the action runs (ADR 0153) |
 | m-campaign-graph | Visual campaign graph: entries, persistence mapping, carried variables | planned |  |  |
-| m-areas-groups | Named areas and object groups reusable across triggers | planned |  | stored in `editor.json` (PackageTests.Ids_areas_and_groups_survive_in_editor_json) |
+| m-areas-groups | Named areas and object groups reusable across triggers | done | TriggerEditorTests.Named_areas_and_object_groups_follow_their_edits, PackageTests.Ids_areas_and_groups_survive_in_editor_json | reused by value: editing one updates every equal trigger area / object set |
 | m-search-replace | Search and replace of object references | done | DocumentTests.Search_and_replace_of_object_references |  |
 | m-copy-paste | Copy/paste and prefabs across maps | done | ToolTests.Copy_paste_across_maps_and_prefabs, ControllerTests.Copy_paste_through_text_and_locked_layers_are_not_selectable | system clipboard; prefabs are the same JSON as files |
 | m-transforms | Multi-select transforms | done | ToolTests.Multi_select_transforms |  |
 | m-layers | Layers with lock/hide | done | ToolTests.Layers_hide_and_lock, ControllerTests.Copy_paste_through_text_and_locked_layers_are_not_selectable |  |
-| m-lua | Lua script editor: highlighting, API completion, inline errors | planned |  |  |
-| m-localization | Localization tables for map strings (export/import `.po`) | planned |  |  |
+| m-lua | Lua script editor: highlighting, API completion, inline errors | blocked | TriggerEditorTests.Lua_scripts_are_stored_and_checked | scripts/*.lua are stored, highlighted and syntax-checked (strings, comments, brackets, blocks); API auto-complete and host diagnostics need the Lua host and API v1, which TDD §25 schedules for M8 |
+| m-localization | Localization tables for map strings (export/import `.po`) | done | TriggerEditorTests.Localization_exports_and_imports_po | gettext .po export and import of every player-visible text |
 | m-mod-palettes | Mod-aware palettes | done | ToolTests.Palette_sections_are_mod_aware_and_items_have_groups | the palette is built from the compiled ruleset |
 | s-authentic-import | (SHOULD) Asset import with an "authentic" conversion | planned |  |  |
 | s-random-templates | (SHOULD, post-1.0 acceptable) Random-map templates editable | planned |  |  |

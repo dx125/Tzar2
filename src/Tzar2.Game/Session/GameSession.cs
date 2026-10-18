@@ -44,6 +44,7 @@ public sealed class GameSession : IDisposable
     private volatile bool _stop;
     private volatile int _speedIndex = 3;
     private volatile bool _paused;
+    private int _stepRequests;
     private Exception? _fault;
 
     /// <summary>Creates the match at tick 0.</summary>
@@ -327,6 +328,18 @@ public sealed class GameSession : IDisposable
     }
 
     /// <summary>
+    /// Runs one tick while paused (the editor's trigger debugger "step", ADR 0153); ignored when the session is not
+    /// paused or has no sim thread.
+    /// </summary>
+    public void StepPaused() => Interlocked.Increment(ref _stepRequests);
+
+    /// <summary>
+    /// Raised on the sim thread after every tick, before the frame is published (the trigger debugger reads the trigger
+    /// state there, ADR 0153). Handlers must not change the simulation.
+    /// </summary>
+    public event Action<GameSession>? AfterTick;
+
+    /// <summary>
     /// Queues the local player's commands for the next tick (main thread). The list is copied; its player fields are
     /// ignored and stamped with <see cref="LocalPlayer"/> (ADR 0009).
     /// </summary>
@@ -423,6 +436,14 @@ public sealed class GameSession : IDisposable
             {
                 ServeSnapshot();
                 double now = clock.Elapsed.TotalMilliseconds;
+                if (_paused && Volatile.Read(ref _stepRequests) > 0 && !HoldsForScenario)
+                {
+                    Interlocked.Decrement(ref _stepRequests);
+                    RunTick();
+                    due = now;
+                    continue;
+                }
+
                 if (_paused || HoldsForScenario)
                 {
                     due = now;
@@ -489,7 +510,7 @@ public sealed class GameSession : IDisposable
         }
 
         _holdForScenario = Scenario is { AwaitingReply: true } && SinglePlayer;
-
+        AfterTick?.Invoke(this);
         Publish();
     }
 
