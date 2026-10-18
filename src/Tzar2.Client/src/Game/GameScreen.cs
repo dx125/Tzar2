@@ -931,7 +931,7 @@ public partial class GameScreen : Node
         if (ids.Count > 0)
         {
             var batch = new CommandList();
-            batch.Add(CommandKind.Delete, ids.ToArray());
+            batch.Add(CommandKind.Delete, ids.ToArray(), flags: important ? CommandFlags.Queue : CommandFlags.None); // Shift + Del (sim: castle and guilds)
             _session.Submit(batch);
         }
     }
