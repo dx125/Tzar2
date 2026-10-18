@@ -141,6 +141,24 @@ public sealed class TerrainComposer
     public static int MaskOf((int Tl, int Tr, int Br, int Bl) corners, int a)
         => (corners.Tl == a ? 1 : 0) | (corners.Tr == a ? 2 : 0) | (corners.Br == a ? 4 : 0) | (corners.Bl == a ? 8 : 0);
 
+    /// <summary>
+    /// The one rule (UNK-10 assumptions above) for whether a tile is drawn as specified: its corners hold one terrain, or
+    /// exactly two whose pair has a usable transition (<paramref name="hasTransition"/>, called with the lower terrain
+    /// first). Tiles that fail it are drawn as the lowest terrain's base and reported. The random map generator paints
+    /// only tiles that pass it (ADR 0060).
+    /// </summary>
+    public static bool IsDrawnByRule((int Tl, int Tr, int Br, int Bl) corners, Func<int, int, bool> hasTransition)
+    {
+        ArgumentNullException.ThrowIfNull(hasTransition);
+        int lo = Math.Min(Math.Min(corners.Tl, corners.Tr), Math.Min(corners.Br, corners.Bl));
+        int hi = Math.Max(Math.Max(corners.Tl, corners.Tr), Math.Max(corners.Br, corners.Bl));
+        return lo == hi || (Distinct(corners) == 2 && hasTransition(lo, hi));
+    }
+
+    /// <summary>Whether this composer's set has a transition for (<paramref name="a"/>, <paramref name="b"/>) that it can draw.</summary>
+    public bool HasUsableTransition(int a, int b)
+        => _set.TransitionOf(a, b) is { IsUnresolved: false } transition && Image(transition.Asset) is not null;
+
     /// <summary>Animation frames of terrain <paramref name="terrain"/>'s base texture (water: 5, others 1).</summary>
     public int BaseFrames(int terrain)
     {
@@ -188,6 +206,7 @@ public sealed class TerrainComposer
         int width = grid.Width * TileSize, height = grid.Height * TileSize;
         byte[] pixels = new byte[width * height * 2];
         var issues = new List<string>();
+        Func<int, int, bool> usable = HasUsableTransition;
         for (int ty = 0; ty < grid.Height; ty++)
         {
             for (int tx = 0; tx < grid.Width; tx++)
@@ -198,7 +217,7 @@ public sealed class TerrainComposer
                 bool twoTerrains = Distinct(corners) == 2;
                 TerrainFile? transition = lo != hi ? _set.TransitionOf(lo, hi) : null;
                 ImageAsset? overlay = transition is { IsUnresolved: false } ? Image(transition.Asset) : null;
-                if (lo != hi && (!twoTerrains || overlay is null))
+                if (!IsDrawnByRule(corners, usable))
                 {
                     issues.Add(string.Create(CultureInfo.InvariantCulture,
                         $"tile {tx},{ty}: {(twoTerrains ? $"no usable transition for pair {lo}{hi}" : "three or more terrains")} (UNK-10); drew {lo}'s base"));
