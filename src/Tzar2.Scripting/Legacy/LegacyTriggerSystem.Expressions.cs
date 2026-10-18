@@ -78,12 +78,14 @@ public sealed partial class LegacyTriggerSystem
                 }
                 else if (a.Target is TimerRef timer)
                 {
-                    // `Clock = 0` resets a timer (the originals do this); a timer that never started starts counting up
-                    // from the value (UNVERIFIED, UNK-62).
+                    // `Clock = 100000` sets a timer's value (the originals preset and reset timers this way). It does not
+                    // start a timer: that stays the Set Timer action's job, so a preset timer holds its value until then
+                    // (UNVERIFIED, UNK-62; the original campaign's wave timers only make sense this way).
                     ref TimerState t = ref _state.Timers[timer.ActionIndex];
                     if (!t.Started)
                     {
-                        t = new TimerState { Started = true, Running = true, CountDown = false };
+                        bool down = _scenario.Actions[timer.ActionIndex] is Content.Compiled.Scenario.SetTimerAction { CountDown: true };
+                        t = new TimerState { Started = true, Running = false, CountDown = down };
                     }
 
                     t.ValueMs = Math.Max(0, value);

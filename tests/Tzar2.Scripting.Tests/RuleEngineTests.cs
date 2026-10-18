@@ -175,7 +175,7 @@ public class RuleEngineTests
     }
 
     [Fact]
-    public void Assigning_a_timer_sets_its_value_and_starts_a_new_one()
+    public void Assigning_a_timer_sets_its_value_and_presets_one_not_started_yet()
     {
         var b = new ScenarioBuilder();
         b.Unit("euro.peon", 0, 3, 3);
@@ -187,9 +187,10 @@ public class RuleEngineTests
         using TriggerDriver d = b.Start();
         d.Seconds(3);
         Assert.Equal(2, d.Variable("resets"));
-        d.Seconds(1);
+        d.Seconds(2);
         Assert.True(d.State.Timers[1].Started);
-        Assert.True(d.State.Timers[1].ValueMs >= 500);
+        Assert.False(d.State.Timers[1].Running); // preset: it holds the value until its Set Timer action runs
+        Assert.Equal(500, d.State.Timers[1].ValueMs);
     }
 
     [Fact]
