@@ -81,6 +81,9 @@ public sealed record AiOptions
     /// <summary>Economy tuning.</summary>
     public EconomyOptions Economy { get; init; } = new();
 
+    /// <summary>Naval tuning (ADR 0144).</summary>
+    public NavalOptions Naval { get; init; } = new();
+
     /// <summary>Technology state: <see cref="AiTechnologies.Sim"/> (the players' researched technologies, GAME-06) by default.</summary>
     public IAiTechnologies Technologies { get; init; } = AiTechnologies.Sim;
 
@@ -103,6 +106,8 @@ public sealed record AiOptions
         ArgumentNullException.ThrowIfNull(ExtraExecutors);
         Military.Validate();
         Economy.Validate();
+        ArgumentNullException.ThrowIfNull(Naval);
+        Naval.Validate();
     }
 }
 

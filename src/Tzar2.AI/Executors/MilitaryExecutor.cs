@@ -62,7 +62,10 @@ public sealed class MilitaryExecutor : IAiExecutor
         bool threatened = Defend(context);
         if (state.WavePhase == AiWavePhase.Attacking)
         {
-            Attack(context, gx, gy);
+            if (state.NavalPhase == AiNavalPhase.None)
+            {
+                Attack(context, gx, gy); // a wave at sea is the naval executor's until it lands (ADR 0144)
+            }
         }
         else if (!threatened)
         {
@@ -129,7 +132,7 @@ public sealed class MilitaryExecutor : IAiExecutor
         return player >= 0;
     }
 
-    private static void PruneWave(AiExecutorContext context)
+    internal static void PruneWave(AiExecutorContext context)
     {
         World world = context.World;
         List<uint> wave = context.State.WaveUnits;
@@ -404,6 +407,8 @@ public sealed class MilitaryExecutor : IAiExecutor
 
     // Units inside holders are not on the map; invisible ones only where a detector of the AI's kingdom sees them
     // (GAME-09/11/12): the AI never aims at what its player could not see or hit.
+    internal static bool MayTargetUnit(World world, int slot, EntityId e) => MayTarget(world, slot, e);
+
     private static bool MayTarget(World world, int slot, EntityId e)
         => !world.IsHeld(e) && !(world.IsCloaked(e) && world.Visibility.IsConcealedFrom(world, slot, e, world.Positions.Get(e)));
 

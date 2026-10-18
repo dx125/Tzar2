@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 
 namespace Tzar2.AI.Tests;
 
-/// <summary>M3 exit "skirmish vs. Hard AI on all map types": the AI plays every land random-map type (GAME-18).</summary>
+/// <summary>M3 exit "skirmish vs. Hard AI on all map types": the AI plays every random-map type, overseas by ship (GAME-18, ADR 0144).</summary>
 public class AiRandomMapTests(ITestOutputHelper output)
 {
     [Theory]
@@ -33,10 +33,11 @@ public class AiRandomMapTests(ITestOutputHelper output)
             Assert.True(scenario.Delivered(p) > 1000 && scenario.Built(p) > 2 && scenario.Trained(p) > 5, scenario.Describe());
         }
 
-        // Land maps: the kingdoms reach each other within eight minutes. Islands need ships (not in the sim yet).
-        if (generated.ResolvedType is not (RandomMapType.Archipelagos or RandomMapType.Island))
+        // Every type: the kingdoms reach each other within eight minutes, overseas by ship (ADR 0144).
+        Assert.True(Enumerable.Range(0, players).Sum(scenario.DamageDealt) > 0, scenario.Describe());
+        if (generated.ResolvedType != RandomMapType.Archipelagos)
         {
-            Assert.True(Enumerable.Range(0, players).Sum(scenario.DamageDealt) > 0, scenario.Describe());
+            Assert.All(Enumerable.Range(0, players), p => Assert.Equal(0, scenario.Ships(p))); // land-connected: no navy (ADR 0144)
         }
     }
 }

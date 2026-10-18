@@ -26,7 +26,7 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
     /// <summary>The snapshot extension key.</summary>
     public const string ExtensionKey = "ai.legacy";
 
-    private const byte StateVersion = 2;
+    private const byte StateVersion = 3;
 
     private readonly World _world;
     private readonly AiOptions _options;
@@ -81,7 +81,8 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
 
         Diagnostics = diagnostics.ToImmutable();
         _optionsFingerprint = Fingerprint(options, _world.Ruleset.ResourceTypes);
-        var executors = new List<IAiExecutor> { new ConstructionExecutor(), new ProductionExecutor(), new ResearchExecutor(), new EconomyExecutor(), new MilitaryExecutor() };
+        // The naval executor runs first: it reserves what its harbor and ships cost (it does nothing on land maps).
+        var executors = new List<IAiExecutor> { new NavalExecutor(), new ConstructionExecutor(), new ProductionExecutor(), new ResearchExecutor(), new EconomyExecutor(), new MilitaryExecutor() };
         executors.AddRange(options.ExtraExecutors);
         _executors = [.. executors];
     }
@@ -203,6 +204,8 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
 
         h.Add(e.DemandShare).Add(e.SurplusStock).Add(e.AssignmentsPerRun).Add(e.RebalancesPerRun).Add(e.WorkersPerSmallNode)
             .Add(e.WorkersPerLargeNode).Add(e.WorkersPerField).Add(e.SmallNodeAmount).Add(e.MaxNodeDistanceTiles);
+        NavalOptions n = o.Naval;
+        h.Add(n.FishingBoats).Add(n.Transports).Add(n.Warships).Add(n.FishRadiusTiles).Add(n.EmbarkTimeoutMs).Add(n.SailRetryMs).Add(n.TransportLeadMs);
         AddText(h, o.Technologies.GetType().FullName ?? string.Empty);
         h.Add(o.ExtraExecutors.Count);
         foreach (IAiExecutor x in o.ExtraExecutors)

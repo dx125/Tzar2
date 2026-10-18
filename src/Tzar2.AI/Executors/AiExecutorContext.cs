@@ -288,6 +288,18 @@ public sealed class AiExecutorContext
         return true;
     }
 
+    /// <summary>
+    /// Holds back from the run's later commands what <paramref name="cost"/> needs (saving up for something dear across
+    /// runs; ADR 0144).
+    /// </summary>
+    public void Reserve(ImmutableArray<int> cost)
+    {
+        for (int r = 0; r < cost.Length && r < _budget.Length; r++)
+        {
+            _budget[r] -= Math.Min(Math.Max(0, cost[r]), _budget[r]);
+        }
+    }
+
     /// <summary>Takes <paramref name="cost"/> × <paramref name="count"/> from the run's budget.</summary>
     public void Spend(ImmutableArray<int> cost, int count = 1)
     {
