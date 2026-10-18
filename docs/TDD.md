@@ -718,6 +718,7 @@ A utility/behaviour-tree layer above the same executors, scriptable in Lua and e
 ### 18.1 Principles
 * **REQ-EDT-01:** The editor is a mode of the Godot client (DEC-11): same renderer, same sim, instant playtest. Windows in 1.0; macOS/Linux with the platform-expansion phase; tablets get viewing and light editing after that (DEC-14).
 * **REQ-EDT-02:** Every operation is undoable (command pattern, unlimited history, survives save within a session). The map document model is engine-agnostic (`Tzar2.Content`), so the CLI can validate and convert maps headlessly.
+* *As built in M5* ([ADR 0150](decisions/0150-editor-model-in-the-allowed-assemblies.md), [ADR 0151](decisions/0151-editor-documents-undo-and-byte-identical-packages.md)): the document model, undo, validation and packages are `Tzar2.Content.Editing`, the converter integration is `Tzar2.Import.Editing`, playtest and the trigger debugger are `Tzar2.Game.Editing`; the Godot editor mode is a view over them. Progress: [editor-parity.md](mechanics/editor-parity.md).
 
 ### 18.2 Parity checklist (from the original Editor Manual; all MUST)
 | Area | Features |
