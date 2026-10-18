@@ -76,6 +76,18 @@ public sealed partial class LegacyTriggerSystem
                 {
                     WriteReserved(reserved.Variable, value);
                 }
+                else if (a.Target is TimerRef timer)
+                {
+                    // `Clock = 0` resets a timer (the originals do this); a timer that never started starts counting up
+                    // from the value (UNVERIFIED, UNK-62).
+                    ref TimerState t = ref _state.Timers[timer.ActionIndex];
+                    if (!t.Started)
+                    {
+                        t = new TimerState { Started = true, Running = true, CountDown = false };
+                    }
+
+                    t.ValueMs = Math.Max(0, value);
+                }
 
                 return value;
             }

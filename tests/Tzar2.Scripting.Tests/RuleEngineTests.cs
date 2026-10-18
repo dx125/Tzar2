@@ -175,6 +175,24 @@ public class RuleEngineTests
     }
 
     [Fact]
+    public void Assigning_a_timer_sets_its_value_and_starts_a_new_one()
+    {
+        var b = new ScenarioBuilder();
+        b.Unit("euro.peon", 0, 3, 3);
+        int clock = b.Action(new SetTimerAction("Clock", b.Expr("0"), CountDown: false));
+        b.Action(new SetTimerAction("Spare", b.Expr("0"), CountDown: false));
+        b.Rule("1", clock);
+        b.Rule("Clock >= 1000", b.Action(new KeepRuleAction("keep")), b.Action(new ExpressionAction("reset", b.Expr("Clock = 0, $resets = $resets + 1"))));
+        b.Rule("$resets == 2", b.Action(new ExpressionAction("spare", b.Expr("Spare = 500"))));
+        using TriggerDriver d = b.Start();
+        d.Seconds(3);
+        Assert.Equal(2, d.Variable("resets"));
+        d.Seconds(1);
+        Assert.True(d.State.Timers[1].Started);
+        Assert.True(d.State.Timers[1].ValueMs >= 500);
+    }
+
+    [Fact]
     public void Attaching_rejects_a_scenario_for_another_map_or_a_started_match()
     {
         var b = new ScenarioBuilder();
