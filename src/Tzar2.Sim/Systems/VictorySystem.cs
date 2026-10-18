@@ -250,7 +250,8 @@ public sealed class VictorySystem : ISimSystem
             return;
         }
 
-        // Victory teams: a kingdom's team is the lowest slot it shares victory with (sharing is symmetric).
+        // Victory teams: a kingdom's team is the lowest slot it shares victory directly with (not transitive:
+        // A↔B and B↔C does not make A and C a team unless A↔C also holds, ADR 0107 review finding).
         if (_team.Length != players)
         {
             _team = new int[players];
@@ -263,9 +264,17 @@ public sealed class VictorySystem : ISimSystem
             _team[p] = p;
             for (int q = 0; q < p; q++)
             {
-                if (SharesVictory(world, p, q))
+                if (!SharesVictory(world, p, q))
                 {
-                    _team[p] = _team[q];
+                    continue;
+                }
+
+                int leader = _team[q];
+                // Only join the team if P directly shares with its leader (no transitive chains: A↔B and B↔C
+                // does not make A and C one team unless A↔C also holds; review finding on PR #23).
+                if (leader == q || SharesVictory(world, p, leader))
+                {
+                    _team[p] = leader;
                     break;
                 }
             }

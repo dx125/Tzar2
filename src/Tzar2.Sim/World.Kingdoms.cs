@@ -327,7 +327,7 @@ public sealed partial class World
             if (trader is null || r.DockA == 0 || r.DockB == 0 || r.DockA == r.DockB || r.GoodsA >= resources || r.GoodsB >= resources
                 || r.Amount < 1 || r.Amount > trader.Capacity || r.Carry < 0 || r.Carry > trader.Capacity || r.TimerMs < 0
                 || r.Phase is < TradePhase.ToA or > TradePhase.ToB || r.LoadedAt > 2 || (r.Carry > 0) != (r.LoadedAt != 0)
-                || (r.Carry > 0 && r.CarryResource >= resources) || r.Reserved != 0 || !Map.ContainsPoint(r.LoadX, r.LoadY))
+                || (r.Carry > 0 && r.CarryResource >= resources) || r.Reserved != 0 || r.Reserved1 != 0 || !Map.ContainsPoint(r.LoadX, r.LoadY))
             {
                 throw new InvalidDataException("Snapshot violates a world invariant: invalid trade route.");
             }

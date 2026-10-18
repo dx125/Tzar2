@@ -78,7 +78,7 @@ public class WorldSnapshotTests
     [
         "negative statistics", "loan of no resource", "cheat without the flag", "unknown stance", "self stance", "unknown sharing",
         "trade route on a footman", "route between one dock", "nature home on a kingdom's unit", "record of own building",
-        "record of a unit type", "explored beyond the map", "outcome in the future",
+        "record of a unit type", "explored beyond the map", "outcome in the future", "trade route reserved1 padding",
     ];
 
     [Theory]
@@ -114,6 +114,9 @@ public class WorldSnapshotTests
                 break;
             case "explored beyond the map": world.Visibility.ExploredBits(0)[^1] = ulong.MaxValue; break;
             case "outcome in the future": world.Kingdoms[0].OutcomeTick = 99; break;
+            case "trade route reserved1 padding":
+                world.TradeRoutes.Set(trader, new TradeRoute { DockA = market.Value, DockB = house.Value, Amount = 1, Phase = TradePhase.ToA, Reserved1 = 1 });
+                break;
         }
 
         byte[] snapshot = Snapshots.WorldSnapshot.Capture(world);

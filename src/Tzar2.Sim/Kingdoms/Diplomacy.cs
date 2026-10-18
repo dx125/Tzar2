@@ -48,6 +48,9 @@ public sealed class Diplomacy
 {
     private const Sharing KnownSharing = Sharing.Vision | Sharing.Resources | Sharing.UnitControl | Sharing.Victory;
 
+    /// <summary>The change tick of a self-entry or a pair that was never changed (before any valid tick).</summary>
+    internal const int NeverChangedTick = int.MinValue / 2;
+
     private readonly int _players;
     private readonly Stance[] _stances;
     private readonly Sharing[] _offers;
@@ -61,7 +64,7 @@ public sealed class Diplomacy
         _offers = new Sharing[players * players];
         _changedTick = new int[players * players];
         _visionSources = new uint[players];
-        _changedTick.AsSpan().Fill(int.MinValue / 2);
+        _changedTick.AsSpan().Fill(NeverChangedTick);
         Refresh();
     }
 
@@ -191,7 +194,7 @@ public sealed class Diplomacy
         {
             bool self = i / _players == i % _players;
             if (_stances[i] > Stance.Ally || (_offers[i] & ~KnownSharing) != 0 || _changedTick[i] > tick
-                || (self && (_stances[i] != Stance.Enemy || _offers[i] != Sharing.None || _changedTick[i] != int.MinValue / 2)))
+                || (self && (_stances[i] != Stance.Enemy || _offers[i] != Sharing.None || _changedTick[i] != NeverChangedTick)))
             {
                 throw new InvalidDataException("Snapshot violates a world invariant: invalid diplomacy.");
             }

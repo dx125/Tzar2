@@ -194,4 +194,40 @@ public class MatchTests
         d.Step();
         Assert.True((w.Players[0].Flags & PlayerFlags.Victorious) != 0);
     }
+
+    [Fact]
+    public void A_transitive_chain_does_not_make_enemies_one_team()
+    {
+        // Review finding: A↔B shared victory, B↔C shared victory, but A and C are enemies. The three kingdoms
+        // must NOT form one team: B and C are a team, A is alone, and the match continues (two factions alive).
+        MapData map = TestMap(48, 16, Unit("euro.peon", 0, 5, 5), Unit("euro.peon", 1, 20, 5), Unit("euro.peon", 2, 40, 5));
+        using var d = new SimDriver(map, players: 3, ruleset: Classic, configure: c => c with { Victory = VictoryCondition.Standard });
+        World w = d.World;
+        // 0↔1 ally with shared victory.
+        d.Order(0, CommandKind.SetDiplomacy, [], x: 1, arg0: (int)Stance.Ally, arg1: (int)Sharing.Victory);
+        d.Order(1, CommandKind.SetDiplomacy, [], x: 0, arg0: (int)Stance.Ally, arg1: (int)Sharing.Victory);
+        d.Step();
+        // Wait for the stance-change interval so 1↔2 can be set.
+        for (int t = 0; t < 210; t++)
+        {
+            d.Step();
+        }
+
+        // 1↔2 ally with shared victory (but 0 and 2 stay enemies).
+        d.Order(1, CommandKind.SetDiplomacy, [], x: 2, arg0: (int)Stance.Ally, arg1: (int)Sharing.Victory);
+        d.Order(2, CommandKind.SetDiplomacy, [], x: 1, arg0: (int)Stance.Ally, arg1: (int)Sharing.Victory);
+        d.Step();
+        Assert.True(w.Diplomacy.Shares(0, 1, Sharing.Victory));
+        Assert.True(w.Diplomacy.Shares(1, 2, Sharing.Victory));
+        Assert.False(w.Diplomacy.Shares(0, 2, Sharing.Victory));
+
+        // Kill kingdom 1 (the bridge between 0 and 2). 0 and 2 remain, each on its own team (they do not share
+        // victory directly), so the match continues — neither wins.
+        d.Order(0, CommandKind.DebugKill, [OfType(w, "euro.peon", 1).Single()]);
+        d.RunUntil(() => (w.Players[1].Flags & PlayerFlags.Defeated) != 0, 60);
+        Assert.True((w.Players[1].Flags & PlayerFlags.Defeated) != 0);
+        Assert.False(VictorySystem.IsOver(w)); // the match is NOT over: 0 and 2 are separate teams
+        Assert.Equal(PlayerFlags.None, w.Players[0].Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious));
+        Assert.Equal(PlayerFlags.None, w.Players[2].Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious));
+    }
 }
