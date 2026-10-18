@@ -28,7 +28,7 @@ public static class WorldSnapshot
     public const uint Magic = 0x4E533254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 5;
+    public const int FormatVersion = 6;
 
     /// <summary>Writes a snapshot of <paramref name="world"/>.</summary>
     public static void Capture(World world, BinaryBufferWriter writer, StateHasher hasher)
@@ -48,6 +48,16 @@ public static class WorldSnapshot
         writer.WriteVarUInt64((ulong)config.PathBudgetPerTick);
         writer.WriteVarUInt64((ulong)(config.StartingResources + 1));
         writer.WriteVarUInt64((ulong)(config.PopulationLimit + 1));
+        writer.WriteBoolean(config.NoFog);
+        writer.WriteBoolean(config.Explored);
+        writer.WriteByte((byte)config.Victory);
+        writer.WriteByte((byte)config.GameType);
+        writer.WriteVarUInt64((ulong)config.ScoreLimit);
+        writer.WriteVarUInt64((ulong)config.TimeLimitMinutes);
+        writer.WriteBoolean(config.DayNight);
+        writer.WriteBoolean(config.Weather);
+        writer.WriteUInt64(config.Teams);
+        writer.WriteBoolean(config.Ranked);
         writer.WriteVarUInt64((ulong)world.Tick.Value);
         world.Entities.WriteTo(writer);
         world.Rng.WriteTo(writer);
@@ -57,6 +67,7 @@ public static class WorldSnapshot
         writer.WriteVarUInt64((ulong)world.NextGroupId);
         world.Paths.WriteTo(writer);
         world.PathQueue.WriteTo(writer);
+        world.WriteKingdomsTo(writer);
         writer.WriteVarUInt64((ulong)world.Components.All.Length);
         foreach (IComponentStore store in world.Components.All)
         {
@@ -128,6 +139,7 @@ public static class WorldSnapshot
         world.NextGroupId = (int)nextGroup;
         world.Paths.ReadFrom(ref reader);
         world.PathQueue.ReadFrom(ref reader);
+        world.ReadKingdomsFrom(ref reader);
         ulong storeCount = reader.ReadVarUInt64();
         if (storeCount != (ulong)world.Components.All.Length)
         {
@@ -201,6 +213,22 @@ public static class WorldSnapshot
         ulong pathBudget = reader.ReadVarUInt64();
         ulong startingResources = reader.ReadVarUInt64();
         ulong populationLimit = reader.ReadVarUInt64();
+        bool noFog = reader.ReadBoolean();
+        bool explored = reader.ReadBoolean();
+        byte victory = reader.ReadByte();
+        byte gameType = reader.ReadByte();
+        ulong scoreLimit = reader.ReadVarUInt64();
+        ulong timeLimit = reader.ReadVarUInt64();
+        bool dayNight = reader.ReadBoolean();
+        bool weather = reader.ReadBoolean();
+        ulong teams = reader.ReadUInt64();
+        bool ranked = reader.ReadBoolean();
+        if (victory > (byte)VictoryCondition.NotSpecified || gameType > (byte)GameType.Deathmatch || scoreLimit is 0 or > 100_000_000
+            || timeLimit is 0 or > 10_000 || (ranked && cheats))
+        {
+            throw new InvalidDataException("Invalid configuration in snapshot.");
+        }
+
         if (players is 0 or > 16 || fullHashInterval is 0 or > int.MaxValue || tickLength is 0 or > 1000 || pathBudget is 0 or > int.MaxValue
             || startingResources > 16 || populationLimit > 100_001)
         {
@@ -217,6 +245,16 @@ public static class WorldSnapshot
             PathBudgetPerTick = (int)pathBudget,
             StartingResources = (int)startingResources - 1,
             PopulationLimit = (int)populationLimit - 1,
+            NoFog = noFog,
+            Explored = explored,
+            Victory = (VictoryCondition)victory,
+            GameType = (GameType)gameType,
+            ScoreLimit = (int)scoreLimit,
+            TimeLimitMinutes = (int)timeLimit,
+            DayNight = dayNight,
+            Weather = weather,
+            Teams = (players < 16 && (teams >> ((int)players * 4)) != 0) ? throw new InvalidDataException("Invalid teams in snapshot.") : teams,
+            Ranked = ranked,
         };
     }
 }

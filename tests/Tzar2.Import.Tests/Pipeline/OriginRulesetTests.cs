@@ -225,6 +225,35 @@ public sealed class OriginRulesetTests(ITestOutputHelper output) : IDisposable
         return compiled.Ruleset;
     }
 
+    /// <summary>
+    /// M3 stream F (ADRs 0103, 0104): the world traits land on the reference build's types: magic gateways summon dwarves
+    /// and orcs (producer column "Gate") and ghosts and skeletons, caravans and the trading ships trade, markets and
+    /// harbors are docks, taverns, wild animals.
+    /// </summary>
+    [OriginFact]
+    public void Classic_gives_the_reference_types_their_world_traits()
+    {
+        Ruleset classic = CompileFromOrigin(OriginPaths.RequireOrigin(), out _);
+        EntityTypeDefinition gateway = Get(classic, "comm.magicgateway");
+        Assert.Equal(ClaimBy.Military, gateway.Traits.World.Claim);
+        foreach (string unit in new[] { "comm.ork", "comm.dwarf", "comm.ghost", "comm.skeleton" })
+        {
+            Assert.True(gateway.Traits.Producer!.CanProduce((ushort)classic.EntityTypeId(unit)), unit);
+        }
+
+        Assert.Equal(DropOffAccess.Land, Get(classic, "euro.trader").Traits.World.Trader!.Access);
+        Assert.Equal(DropOffAccess.Water, Get(classic, "comm.galleon").Traits.World.Trader!.Access);
+        Assert.Null(Get(classic, "comm.fishing_boat").Traits.World.Trader);
+        Assert.Equal(DropOffAccess.Land, Get(classic, "asia.market").Traits.World.TradeDock);
+        Assert.Equal(DropOffAccess.Water, Get(classic, "arab.harbor").Traits.World.TradeDock);
+        Assert.True(Get(classic, "euro.tavern").Traits.World.IsTavern);
+        Assert.True(Get(classic, "comm.bear").Traits.World.Guards);
+        Assert.True(Get(classic, "comm.bird").Traits.World.IsAmbient);
+        Assert.True(Get(classic, "euro.knight").Traits.World.IsMilitary);
+        Assert.False(Get(classic, "euro.peon").Traits.World.IsMilitary);
+        Assert.True(Get(classic, "euro.spy").Traits.World.DetectUnits > 0);
+    }
+
     private static EntityTypeDefinition Get(Ruleset ruleset, string key)
     {
         int id = ruleset.EntityTypeId(key);

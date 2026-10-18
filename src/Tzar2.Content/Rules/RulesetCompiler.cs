@@ -45,7 +45,7 @@ public static class RulesetCompiler
     /// <summary>VFS folder of ruleset files.</summary>
     public const string RulesFolder = "rules/";
 
-    private static readonly string[] Sections = ["ruleset", "resources", "gameplay", "terrain", "legacy"];
+    private static readonly string[] Sections = ["ruleset", "resources", "gameplay", "terrain", "legacy", "world"];
 
     /// <summary>Compiles the ruleset <paramref name="name"/> (e.g. <c>classic</c>).</summary>
     /// <exception cref="RulesException">A file is missing or malformed, or an entry is invalid.</exception>
@@ -215,7 +215,8 @@ public static class RulesetCompiler
                 upgrades: upgrades,
                 civilizations: [.. civilizations],
                 orderGates: orderGates,
-                hudResourceMask: hudMask);
+                hudResourceMask: hudMask,
+                world: WorldReader.Build(settings, gameplaySettings));
             return new CompiledRuleset(ruleset, diagnostics, warnings, legacyHash);
         }
         catch (ArgumentException ex)
@@ -420,7 +421,7 @@ public static class RulesetCompiler
 
         public void Apply(string section, YamlNode value, string source)
         {
-            if (section is "ruleset" or "gameplay" or "legacy")
+            if (section is "ruleset" or "gameplay" or "legacy" or "world")
             {
                 YamlMapping map = Map(value, source, section);
                 foreach (KeyValuePair<string, YamlNode> f in map.Entries)

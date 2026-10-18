@@ -1,6 +1,6 @@
 # 0071. Draw the skirmish with the viewer's renderer pieces, a presentation catalog from the imported tables, and isolated placeholders
 
-* **Status:** Accepted
+* **Status:** Accepted; the fog layer, day clock and rain now come from the sim ([0101](0101-incremental-per-kingdom-visibility.md), [0105](0105-day-clock-and-weather.md))
 * **Date:** 2026-10-17
 * **Deciders:** implementation agent (M3 stream D)
 * **Related:** TDD §13 (REQ-GFX-01…07), §13.5–§13.8, §14 (REQ-AUD-01/02), §15.1; DEC-05, DEC-07, DEC-10, DEC-11;

@@ -11,10 +11,10 @@ namespace Tzar2.Content.Compiled;
 /// only; REQ-ARCH-01). Immutable. The rules compiler (<c>Tzar2.Content.Rules.RulesetCompiler</c>, §11.2) produces it
 /// from YAML and the imported tables; the M2 movement tests build small ones in code.
 /// </summary>
-public sealed class Ruleset
+public sealed partial class Ruleset
 {
     /// <summary>Format version of <see cref="ContentHash"/>'s encoding; bump when fields are added.</summary>
-    public const int HashVersion = 4;
+    public const int HashVersion = 5;
 
     /// <summary>Most resource types a ruleset may define (players store one amount per type).</summary>
     public const int MaxResourceTypes = 8;
@@ -69,6 +69,7 @@ public sealed class Ruleset
     /// <param name="upgrades">Upgrades by id (GAME-06).</param>
     /// <param name="civilizations">Civilization keys (<c>euro</c>, <c>asia</c>, <c>arab</c>, <c>comm</c>).</param>
     /// <param name="orderGates">Orders that need a technology per civilization (<c>TECHTREE [orders]</c>).</param>
+    /// <param name="world">World-system constants (null = <see cref="WorldSettings.Default"/>; ADR 0100).</param>
     /// <param name="hudResourceMask">Resource types the HUD shows (bit = id; -1 = all; GAME-01: iron is hidden).</param>
     /// <exception cref="ArgumentException">The lists are empty, ids do not match positions, keys repeat, or a trait refers to an unknown id.</exception>
     public Ruleset(
@@ -86,7 +87,8 @@ public sealed class Ruleset
         IReadOnlyList<UpgradeDefinition>? upgrades = null,
         IReadOnlyList<string>? civilizations = null,
         IReadOnlyList<OrderGate>? orderGates = null,
-        int hudResourceMask = -1)
+        int hudResourceMask = -1,
+        WorldSettings? world = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentNullException.ThrowIfNull(terrainTypes);
@@ -158,6 +160,8 @@ public sealed class Ruleset
 
         Gameplay = gameplay ?? GameplaySettings.Default;
         Gameplay.Validate(_resourceTypes.Length);
+        World = world ?? WorldSettings.Default;
+        World.Validate();
         _civilizations = [.. civilizations ?? []];
         keys.Clear();
         foreach (string civ in _civilizations)
@@ -401,6 +405,7 @@ public sealed class Ruleset
         ArgumentOutOfRangeException.ThrowIfNegative(t.PopulationProvided, where);
         t.Armament?.Validate();
         t.Harvester?.Validate(resources);
+        ValidateWorldTraits(e, where);
         CheckTypeIds(t.Builds, where, "builds", requireFootprint: true);
         CheckTypeIds(t.RequiredTypes, where, "requires", requireFootprint: true);
         if (t.Producer is { } producer)
@@ -713,6 +718,7 @@ public sealed class Ruleset
             hasher.Add(Encoding.UTF8.GetBytes(gate.Order)).Add(Encoding.UTF8.GetBytes(gate.Civilization)).Add((int)gate.Technology);
         }
 
+        AddWorld(hasher);
         return hasher.GetCurrentHash();
     }
 
@@ -796,6 +802,8 @@ public sealed class Ruleset
         {
             hasher.Add(n.Resource).Add(n.Amount).Add(n.RegenMs).Add(n.GatherMs).Add(n.KeepWhenEmpty);
         }
+
+        AddWorldTraits(hasher, t.World);
     }
 }
 

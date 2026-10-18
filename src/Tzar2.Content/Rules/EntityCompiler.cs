@@ -10,7 +10,7 @@ namespace Tzar2.Content.Rules;
 /// which the caller sorted by key. Every trait and field is checked: an unknown trait or field is an error, so typos in
 /// rules fail at compile time with their file and line.
 /// </summary>
-internal sealed class EntityCompiler
+internal sealed partial class EntityCompiler
 {
     private const int UnitsPerTile = 2048;
     private const int UnitsPerPixel = 64;
@@ -54,6 +54,12 @@ internal sealed class EntityCompiler
         ["Decay"] = ["afterMs", "healthPerMinute"],
         ["SpawnOnDeath"] = ["type"],
         ["Lifetime"] = ["ms"],
+        ["Trader"] = ["capacity", "access", "technology"],
+        ["TradeDock"] = ["access"],
+        ["Tavern"] = [],
+        ["ClaimOnTouch"] = ["by"],
+        ["Animal"] = ["wanders", "guards", "ambient"],
+        ["Detector"] = ["radius"],
     };
 
     private readonly List<ResolvedEntry> _entries;
@@ -176,6 +182,10 @@ internal sealed class EntityCompiler
                 Decay = d.Decay,
                 SpawnOnDeath = spawnOnDeath,
                 LifetimeMs = d.LifetimeMs,
+                World = d.World with
+                {
+                    IsMilitary = d.Category == EntityCategory.Unit && d.Armament is not null && d.Harvester is null && !d.IsBuilder && d.World.Trader is null,
+                },
             };
             try
             {
@@ -581,6 +591,7 @@ internal sealed class EntityCompiler
             d.Gate = new GateDefinition([.. ReadMask(passage, d.FootprintWidth, d.FootprintHeight, Where("Gate", "passage"))]);
         }
 
+        d.World = ReadWorldTraits(entry, key);
         d.Category = d.ResourceNode is not null && d.SpeedUnitsPerSecond == 0 ? EntityCategory.Resource
             : d.FootprintWidth > 0 ? EntityCategory.Building
             : d.SpeedUnitsPerSecond > 0 ? EntityCategory.Unit
@@ -733,5 +744,6 @@ internal sealed class EntityCompiler
         public DecayDefinition? Decay;
         public (string Key, RuleValue At)? SpawnOnDeath;
         public int LifetimeMs;
+        public WorldTraits World = WorldTraits.None;
     }
 }

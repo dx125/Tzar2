@@ -46,9 +46,6 @@ public sealed class MatchStats
 /// </summary>
 public partial class GameScreen : Node
 {
-    /// <summary>⚠ PLACEHOLDER day length (UNK-32: the original's day clock is not measured).</summary>
-    public const int DayLengthMs = 12 * 60 * 1000;
-
     /// <summary>Edge-scroll speed in pixels per second (⚠ the original's scroll speeds are not measured).</summary>
     public const int ScrollSpeed = 720;
 
@@ -324,8 +321,8 @@ public partial class GameScreen : Node
         UpdateCursor();
         _workSoundBudget = Settings.NatureSounds ? 2 : 0;
 
-        // ⚠ Placeholder weather: with weather effects on, a rain shower every 12 minutes of game time for 3 minutes.
-        Rain = ForceRain || (Settings.Weather && (frame.Tick.Value * frame.TickMs / 180_000) % 4 == 2);
+        // The sim's weather (GAME-16, ADR 0105); the setting only hides the overlay.
+        Rain = ForceRain || (Settings.Weather && frame.Weather == Tzar2.Content.Compiled.WeatherKind.Rain);
 
         if (frame.Outcome != MatchOutcome.None && !_outcomeShown)
         {
@@ -461,12 +458,27 @@ public partial class GameScreen : Node
         };
     }
 
-    /// <summary>Time of day of a frame (0 = midnight); the match starts at 10:00.</summary>
+    /// <summary>Time of day of a frame (0 = midnight): the sim's day clock (GAME-16, ADR 0105).</summary>
     public static float DayPhase(GameFrame frame)
     {
         ArgumentNullException.ThrowIfNull(frame);
-        long ms = ((long)frame.Tick.Value * frame.TickMs) + (DayLengthMs * 10 / 24);
-        return (ms % DayLengthMs) / (float)DayLengthMs;
+        return frame.DayMinute / 1440f;
+    }
+
+    // F4 (GAME-17): every kingdom's score and statistics from the sim.
+    private void ShowScores()
+    {
+        if (_frame is null)
+        {
+            return;
+        }
+
+        for (int p = 0; p < _frame.Players.Length; p++)
+        {
+            Tzar2.Sim.Kingdoms.KingdomState k = _frame.Players[p].Statistics;
+            Message($"Kingdom {p + 1}: score {_frame.Players[p].Score}, trained {k.UnitsTrained}, killed {k.UnitsKilled}, lost {k.UnitsLost}, "
+                + $"built {k.BuildingsBuilt}, destroyed {k.BuildingsDestroyed}, gathered {k.GatheredTotal}");
+        }
     }
 
     private WorldOptions Barred()
@@ -774,7 +786,7 @@ public partial class GameScreen : Node
                 ShowMenu();
                 break;
             case GameAction.Scores:
-                Message($"Trained {Stats.Trained}, built {Stats.Built}, gathered {Stats.Gathered}, kills {Stats.Kills}, losses {Stats.Losses}");
+                ShowScores();
                 break;
             case GameAction.Objectives:
                 Message(_catalog.Text("sp_setupmap", "vcond_0", "Standard") + ": destroy every enemy unit and building.");

@@ -3,6 +3,7 @@ using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim;
 using Tzar2.Sim.Components;
+using Tzar2.Sim.Kingdoms;
 using Tzar2.Sim.Map;
 using Tzar2.Sim.Systems;
 
@@ -19,10 +20,12 @@ public static class FrameBuilder
     /// <summary>Fills <paramref name="frame"/>.</summary>
     /// <param name="frame">The frame to overwrite.</param>
     /// <param name="world">The world after the tick.</param>
-    /// <param name="fog">The local player's fog (null = everything visible).</param>
-    /// <param name="defeated">Defeated slots (bit per slot).</param>
+    /// <param name="viewer">
+    /// The kingdom whose view the frame shows (GAME-12: the sim's visibility; units only in sight, other kingdoms'
+    /// structures and resources as last seen), or null for everything.
+    /// </param>
     /// <param name="outcome">The local outcome.</param>
-    public static void Fill(GameFrame frame, World world, FogOfWar? fog, int defeated, MatchOutcome outcome)
+    public static void Fill(GameFrame frame, World world, byte? viewer, MatchOutcome outcome)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(world);
@@ -33,7 +36,8 @@ public static class FrameBuilder
 
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         Span<Identity> identities = world.Identities.Components;
-        FrameEntity[] entities = frame.EntityBuffer(ids.Length);
+        // Room for the remembered structures too (at most one per entity slot), so the buffer is not reallocated below.
+        FrameEntity[] entities = frame.EntityBuffer(ids.Length + (viewer is { } room ? world.Visibility.Memory(room).Length : 0));
         int n = 0;
         for (int i = 0; i < ids.Length; i++)
         {
@@ -47,6 +51,12 @@ public static class FrameBuilder
             Identity identity = identities[i];
             EntityTypeDefinition type = world.Ruleset.EntityTypes[identity.TypeId];
             Position position = world.Positions.At(p);
+            if (viewer is { } v && !world.Visibility.CanSee(world, v, id))
+            {
+                // Out of sight: units are not shown; structures as the viewer last saw them (below).
+                continue;
+            }
+
             ref FrameEntity e = ref entities[n++];
             e = default;
             e.Id = id;
@@ -142,7 +152,15 @@ public static class FrameBuilder
             }
         }
 
+        if (viewer is { } who)
+        {
+            n = AddRemembered(frame, world, who, n);
+        }
+
         frame.EntityCount = n;
+        frame.DayMinute = world.DayMinute;
+        frame.IsNight = world.IsNight;
+        frame.Weather = world.Weather;
 
         // Corpses: the decal ring holds expiry ticks; age = TTL − remaining.
         DecalIndex decals = world.Decals;
@@ -181,18 +199,21 @@ public static class FrameBuilder
 
             fp.Population = state.Population;
             fp.PopulationCap = state.PopulationCap;
-            fp.Defeated = (defeated & (1 << p)) != 0 || (state.Flags & PlayerFlags.Defeated) != 0;
+            fp.Defeated = (state.Flags & PlayerFlags.Defeated) != 0;
+            fp.Victorious = (state.Flags & PlayerFlags.Victorious) != 0;
+            fp.Statistics = world.Kingdoms[p];
+            fp.Score = VictorySystem.Score(world.Ruleset.World, world.Kingdoms[p]);
         }
 
         int tiles = world.Map.Width * world.Map.Height;
-        if (fog is not null)
+        if (viewer is { } fogOf)
         {
             if (frame.Visibility.Length != tiles)
             {
                 frame.Visibility = new byte[tiles];
             }
 
-            fog.State.CopyTo(frame.Visibility);
+            world.Visibility.WriteStates(fogOf, frame.Visibility);
         }
         else if (frame.Visibility.Length != 0)
         {
@@ -224,6 +245,49 @@ public static class FrameBuilder
     }
 
     /// <summary>The gathering animation for a resource type id: wood → chop, food → farm, others → mine.</summary>
+    // Structures the viewer remembers but does not see now: the real entity's last-seen state, or a ghost of one that is
+    // gone (destroyed or recycled) without the viewer having seen it go.
+    private static int AddRemembered(GameFrame frame, World world, byte viewer, int n)
+    {
+        ReadOnlySpan<Ghost> memory = world.Visibility.Memory(viewer);
+        int high = Math.Min(memory.Length, world.Entities.HighWater);
+        for (int index = 0; index < high; index++)
+        {
+            Ghost g = memory[index];
+            if (g.Entity == 0)
+            {
+                continue;
+            }
+
+            EntityId id = EntityId.FromValue(g.Entity);
+            if (world.Entities.IsAlive(id) && world.Visibility.CanSee(world, viewer, id))
+            {
+                continue; // shown as it is
+            }
+
+            EntityTypeDefinition type = world.Ruleset.EntityTypes[g.TypeId];
+            FrameEntity[] entities = frame.EntityBuffer(n + 1);
+            ref FrameEntity e = ref entities[n++];
+            e = default;
+            e.Id = id;
+            e.TypeId = g.TypeId;
+            e.Owner = g.Owner;
+            e.TileX = g.TileX;
+            e.TileY = g.TileY;
+            e.X = (g.TileX * MapState.UnitsPerTile) + (type.FootprintWidth * MapState.UnitsPerTile / 2);
+            e.Y = (g.TileY * MapState.UnitsPerTile) + (type.FootprintHeight * MapState.UnitsPerTile / 2);
+            e.MaxHealth = type.MaxHealth;
+            e.Health = (int)((long)type.MaxHealth * g.HealthPermille / 1000);
+            e.SwingMs = -1;
+            e.CarryResource = Worker.NoResource;
+            e.ConstructionPermille = g.Site != 0 ? g.BuildPermille : -1;
+            e.ResourceLeft = -1;
+            e.Remembered = true;
+        }
+
+        return n;
+    }
+
     public static UnitActivity GatherActivity(Ruleset ruleset, int resource)
     {
         ArgumentNullException.ThrowIfNull(ruleset);

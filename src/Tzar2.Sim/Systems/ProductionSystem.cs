@@ -107,7 +107,8 @@ public sealed class ProductionSystem : ISimSystem
             ref Construction construction = ref world.Constructions.At(c);
             Identity identity = world.Identities.Get(site);
             (_, int bp) = world.Stats.Modifier(identity.Owner, ModifierStat.BuildRate, identity.TypeId);
-            long scaled = ((long)tickMs * (10_000 + Math.Max(bp, -9_999))) + construction.CarryBasisPoints;
+            long scaled = world.BuildsInstantly(identity.Owner) ? (long)construction.TotalMs * 10_000 // hmbuildozer (GAME-19)
+                : ((long)tickMs * (10_000 + Math.Max(bp, -9_999))) + construction.CarryBasisPoints;
             int before = construction.ProgressMs;
             construction.ProgressMs = (int)Math.Min(construction.TotalMs, before + (scaled / 10_000));
             construction.CarryBasisPoints = construction.ProgressMs >= construction.TotalMs ? 0 : (int)(scaled % 10_000);
@@ -321,7 +322,7 @@ public sealed class ProductionSystem : ISimSystem
             int timeMs = ItemTime(world, item);
             if (q.ProgressMs < timeMs)
             {
-                q.ProgressMs = Math.Min(timeMs, q.ProgressMs + tickMs);
+                q.ProgressMs = world.BuildsInstantly(world.Identities.Get(producer).Owner) ? timeMs : Math.Min(timeMs, q.ProgressMs + tickMs);
                 if (q.ProgressMs < timeMs)
                 {
                     continue;

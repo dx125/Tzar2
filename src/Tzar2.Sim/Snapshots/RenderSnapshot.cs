@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
@@ -61,6 +62,7 @@ public sealed class RenderSnapshot
 {
     private RenderEntity[] _entities = new RenderEntity[256];
     private SimEvent[] _events = new SimEvent[64];
+    private byte[] _visibility = [];
     private int _entityCount;
     private int _eventCount;
 
@@ -76,10 +78,47 @@ public sealed class RenderSnapshot
     /// <summary>The tick's events in emission order.</summary>
     public ReadOnlySpan<SimEvent> Events => _events.AsSpan(0, _eventCount);
 
-    internal void Fill(World world, Tick tick, ulong stateHash)
+    /// <summary>The kingdom whose view this is (GAME-12), or -1 when everything is shown.</summary>
+    public int Viewer { get; private set; } = -1;
+
+    /// <summary>
+    /// The viewer's fog layer: one <c>TileVisibility</c> byte per tile, row-major (0 unexplored, 1 explored, 2 in sight); empty
+    /// without a viewer. The sim computes it (ADR 0101): the presentation derives no fog of its own.
+    /// </summary>
+    public ReadOnlySpan<byte> Visibility => _visibility;
+
+    /// <summary>Minute of the 24-hour day clock (GAME-16).</summary>
+    public int DayMinute { get; private set; }
+
+    /// <summary>Whether it is night (GAME-16).</summary>
+    public bool IsNight { get; private set; }
+
+    /// <summary>The weather (GAME-16).</summary>
+    public WeatherKind Weather { get; private set; }
+
+    internal void Fill(World world, Tick tick, ulong stateHash, int viewer)
     {
         Tick = tick;
         StateHash = stateHash;
+        Viewer = world.HasPlayer(viewer) ? viewer : -1;
+        DayMinute = world.DayMinute;
+        IsNight = world.IsNight;
+        Weather = world.Weather;
+        int tiles = world.Map.Width * world.Map.Height;
+        if (Viewer < 0)
+        {
+            _visibility = [];
+        }
+        else
+        {
+            if (_visibility.Length != tiles)
+            {
+                _visibility = new byte[tiles];
+            }
+
+            world.Visibility.WriteStates(Viewer, _visibility);
+        }
+
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         Span<Identity> identities = world.Identities.Components;
         if (_entities.Length < ids.Length)
@@ -94,6 +133,11 @@ public sealed class RenderSnapshot
             if (p < 0)
             {
                 continue;
+            }
+
+            if (Viewer >= 0 && !world.Visibility.CanSee(world, Viewer, ids[i]))
+            {
+                continue; // out of the viewer's sight (GAME-12)
             }
 
             ref Position position = ref world.Positions.At(p);
@@ -132,10 +176,13 @@ public sealed class RenderSnapshotExchange
     private int _shared = 2;
     private bool _hasFront;
 
+    /// <summary>The kingdom whose view is published (GAME-12: its fog layer, only what it sees), or -1 for everything.</summary>
+    public int Viewer { get; set; } = -1;
+
     /// <summary>Fills the back buffer from <paramref name="world"/> and publishes it (sim thread only).</summary>
     internal void Publish(World world, Tick tick, ulong stateHash)
     {
-        _buffers[_back].Fill(world, tick, stateHash);
+        _buffers[_back].Fill(world, tick, stateHash, Viewer);
         _back = Interlocked.Exchange(ref _shared, _back | FreshFlag) & IndexMask;
     }
 

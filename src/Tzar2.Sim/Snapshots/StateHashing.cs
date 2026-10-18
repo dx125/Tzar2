@@ -16,7 +16,7 @@ namespace Tzar2.Sim.Snapshots;
 public static class StateHashing
 {
     /// <summary>Changes whenever the hashed layout changes; part of every hash.</summary>
-    public const int LayoutVersion = 4;
+    public const int LayoutVersion = 5;
 
     /// <summary>Computes the per-tick hash of <paramref name="world"/>.</summary>
     public static ulong ComputeTickHash(World world, StateHasher hasher)
@@ -50,6 +50,7 @@ public static class StateHashing
         hasher.Add(world.NextGroupId);
         world.Paths.AppendTo(hasher);
         world.PathQueue.AppendTo(hasher);
+        world.Visibility.AppendTo(hasher);
         return hasher.GetHashAndReset();
     }
 
@@ -71,6 +72,7 @@ public static class StateHashing
         }
 
         hasher.AddSpan<PlayerState>(world.Players);
+        world.AppendKingdomsTo(hasher);
         world.Rng.AppendTo(hasher);
     }
 }

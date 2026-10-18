@@ -83,11 +83,41 @@ public enum CommandKind : ushort
     /// <summary>Set the listed gates: Arg0 = 0 close, 1 open (both manual), 2 automatic (GAME-03).</summary>
     SetGate = 17,
 
+    /// <summary>
+    /// Diplomacy (GAME-13): towards kingdom X take stance Arg0 (<c>Stance</c>) and offer Arg1 (<c>Sharing</c> flags). At most
+    /// one change per pair per <c>world.diplomacyChangeIntervalMs</c>; sharing takes effect only when both kingdoms offer it.
+    /// </summary>
+    SetDiplomacy = 40,
+
+    /// <summary>Tribute (GAME-13): send Arg1 of resource Arg0 to kingdom X (rate-limited, bounded, never overflowing).</summary>
+    Tribute = 41,
+
+    /// <summary>Resign (GAME-13/17): the kingdom is defeated at once.</summary>
+    Resign = 42,
+
+    /// <summary>
+    /// Trade (GAME-14): the listed traders cycle between dock <see cref="Command.Target"/> (A) and the dock at (X, Y) (B),
+    /// loading resource (Arg0 &amp; 0xFF) at A and (Arg0 &gt;&gt; 8 &amp; 0xFF) at B, Arg1 per trip (0 = full load).
+    /// </summary>
+    Trade = 43,
+
+    /// <summary>Tavern conversion (GAME-14): in a listed tavern give Arg1 of resource (Arg0 &amp; 0xFF) for a tenth as much of (Arg0 &gt;&gt; 8).</summary>
+    Convert = 44,
+
+    /// <summary>Gambling (GAME-14, Gambling): stake Arg1 of resource (Arg0 &amp; 0xFF) at odds index (Arg0 &gt;&gt; 8) in a listed tavern.</summary>
+    Gamble = 45,
+
+    /// <summary>Loans (GAME-14, Usury): Arg1 = 0 take a loan of resource Arg0 in a listed tavern, 1 repay the outstanding loan.</summary>
+    Loan = 46,
+
     /// <summary>Debug: spawn Arg1 (1-64) units of type Arg0 at (X, Y); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugSpawn = 0xF000,
 
     /// <summary>Debug: kill the listed entities of any owner (leaving corpses); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugKill = 0xF001,
+
+    /// <summary>Cheat code Arg0 (<c>CheatCode</c>, the <c>hm*</c> chat codes, GAME-19); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
+    Cheat = 0xF010,
 }
 
 /// <summary>Input modifiers carried by a command (TDD §9.3: Shift/Ctrl/Alt variants of orders).</summary>

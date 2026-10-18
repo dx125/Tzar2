@@ -117,6 +117,9 @@ public struct FrameEntity
 
     /// <summary>Attack target of an armed entity, or none.</summary>
     public EntityId Target;
+
+    /// <summary>A structure out of sight, drawn as the local kingdom last saw it (GAME-12); its state may be stale.</summary>
+    public bool Remembered;
 #pragma warning restore CA1051
 }
 
@@ -143,6 +146,15 @@ public struct FramePlayer
 
     /// <summary>Whether the kingdom is defeated.</summary>
     public bool Defeated;
+
+    /// <summary>Whether the kingdom won (GAME-17).</summary>
+    public bool Victorious;
+
+    /// <summary>Score (F4; GAME-17, UNK-29 placeholder formula).</summary>
+    public long Score;
+
+    /// <summary>Match statistics (F4 and the statistics file; GAME-17).</summary>
+    public Tzar2.Sim.Kingdoms.KingdomState Statistics;
 #pragma warning restore CA1051
 }
 
@@ -203,6 +215,15 @@ public sealed class GameFrame
 
     /// <summary>Whether the session is paused.</summary>
     public bool Paused { get; internal set; }
+
+    /// <summary>Minute of the sim's 24-hour day clock (GAME-16; noon when day/night is off).</summary>
+    public int DayMinute { get; internal set; } = 720;
+
+    /// <summary>Whether it is night (GAME-16).</summary>
+    public bool IsNight { get; internal set; }
+
+    /// <summary>The sim's weather (GAME-16).</summary>
+    public Tzar2.Content.Compiled.WeatherKind Weather { get; internal set; }
 
     internal FrameEntity[] EntityBuffer(int count)
     {

@@ -80,5 +80,68 @@ Shift + Delete; what each technology does (not how much).
 | Contested capture | the first digging player keeps the progress while digging | `CaptureSystem` | UNK-19 |
 | Captured building | loses its queue and rally point | `World.ChangeOwner` | — |
 | Rally default action | harvest the target node / help build the site / attack the enemy, else move | `ProductionSystem` | — |
-| Gates for enemies | anyone passes an open gate (per-player passability is a pathfinding follow-up) | `StructureSystem` | — |
+| Gates for enemies | ~~anyone passes an open gate~~ — stream F: only the owner and the kingdoms it treats as allies (a movement bar, ADR 0102; planning still treats an open gate as open) | `World.GateBars`, `MovementSystem` | — |
 | Bridge deck | land locomotors cross, ships do not; a site carries nobody | `MapState` | — |
+
+# Stream F: GAME-12 … GAME-17, GAME-19 (UNVERIFIED)
+
+ADRs 0100-0107. The same rules as above: **YAML** = the `world:` section or a trait in `content/engine/rules/classic.yaml`,
+**code** = a rule of a sim system. From the data (not placeholders): which classes are gateways, markets, harbors,
+taverns, caravans and trading ships (OBJECTS, MENU.INI, manual ch. 5); the gateway's summons (COMM UNITS producer "Gate",
+MENU.INI `[magic_gateway]`); rain and snow per terrain set (`<SET>.TERRAIN.INI`); the 1:10 conversion and the loan of 1,000
+then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Explore (STRINGS.INI, manuals).
+
+## Values
+
+| Value | Placeholder | Where | Unknown | How to resolve |
+|---|---|---|---|---|
+| Sight shape | a tile disk dx² + dy² ≤ r² + r around the unit's tile; r = round((sight + half the footprint) / tile) | code (`Visibility`) | UNK-27 | fog edge captures around a lone unit |
+| Sight without a table value | 2 tiles | YAML `world.defaultSightTiles` | — | captures |
+| Night sight | 100% (night does not change sight) | YAML `world.nightSightPercent` | UNK-09 | sight captures at night |
+| Last-seen refresh | every 4 ticks per structure (a glimpse shorter than that may be missed) | YAML `world.memoryRefreshTicks` | — | engine bound |
+| Construction sites reveal | like the finished building | code (`Visibility`) | — | observation |
+| Detector radius (spies, ninjas) | 5 tiles | YAML `^class.spy/ninja.Detector` | — | detection captures (stream E cloaking) |
+| Stance change interval | 10 s per pair (anti flip-flop) | YAML `world.diplomacyChangeIntervalMs` | — | engine bound (owner decision welcome) |
+| Tribute | once per second, ≤ 100,000, no fee | YAML `world.tributeIntervalMs`, `maxTributeAmount` | — | tribute dialog captures (fee?) |
+| Stockpile cap | 10⁹ (overflow guard of world-system incomes) | YAML `world.stockpileCap` | — | engine bound |
+| Teams | start as mutual allies sharing vision and victory | code (`Diplomacy.ApplyTeams`) | — | lobby captures |
+| Shared resources | the payer's stockpile first, then allies in slot order | code (`SharedStockpile`) | — | observation |
+| Shared unit control | movement, attack and trade orders only | code (`CommandSystem`, `GameplayCommands.Attack`) | — | observation |
+| Trade load | caravan 100, galleon 200, hulk 150, xebec 100 | YAML `^class.*.Trader.capacity` | UNK-28 | trade captures |
+| Trade profit | 1% of the load per tile between the docks (straight line), none below 8 tiles, at most 300% | YAML `world.trade*` | UNK-28 | caravan income vs. distance captures |
+| Trade dock time | 2 s | YAML `world.tradeDockMs` | UNK-28 | captures |
+| Unaffordable load | the trader leaves empty | code (`TradeSystem`) | — | observation |
+| Gambling | odds 2, 3, 5, 10; win chance (1 − 10%) / odds; stake ≤ 10,000 | YAML `world.gamble*` | UNK-28 | gamble dialog captures |
+| Loans | no interest; the raise to the next limit comes 120 s after a repayment; only whole multiples convert | YAML `world.loan*` | UNK-28 | loan captures |
+| Claim reach | 16 px edge to edge, checked every 0.5 s | YAML `world.claimReachPx`, `claimIntervalMs` | — | gateway captures |
+| Claiming from another kingdom | not possible: only Nature-owned gateways and cows are claimed | code (`NatureSystem`) | — | observation |
+| Wild cows | claimed by any kingdom's unit touching them; they wander | YAML `^class.cow` | UNK-17 | observation |
+| Bears | wander 6 tiles, guard 10 tiles from home | YAML `world.wanderRadiusTiles`, `guardRadiusTiles` | — | observation |
+| Birds and eagles | air, SPEED 5/6, 10 HP, never targets | YAML `comm.bird`, `comm.eagle` | — | observation |
+| Day length | 12 min; the match starts at 10:00; night 19:00-06:00 | YAML `world.day*`, `night*` | UNK-32 | clock globe captures |
+| Weather | 3-minute periods, 25% with weather | YAML `world.weather*` | UNK-09 | captures |
+| Score | gathered/10 + killed value/10 + built value/10 + 100 per technology | YAML `world.score*` | UNK-29 | F4 captures |
+| Defeat | Standard: no unit and no building (walls, gates, bridges, fields excluded); Destroy Castles: no castle | code (`VictorySystem`) | — | end-of-game captures |
+| Time limit tie | the team with the lower slot | code (`VictorySystem`) | — | — |
+| Deathmatch | every kingdom starts on the High resources | YAML `world.deathmatchStartingResources` | — | lobby captures |
+| Cheat resources | hmdvaleva 2,000, hmpetleva 5,000 of each | YAML `world.cheat*` | UNK-30 | testing the codes |
+| Cheat semantics | hmgod: no damage to own units and buildings; hmbuildozer: instant; hmnotech: no requirements; hmnext: win | code (`KingdomCommands.Cheat`) | UNK-30 | testing the codes |
+
+## Rules in code
+
+| Rule | Placeholder | System | Unknown |
+|---|---|---|---|
+| Allied victory | a team = kingdoms that are mutual allies and both offer shared victory | `VictorySystem` | — |
+| Defeated kingdoms | their commands are refused, their entities stay | `CommandSystem`, `VictorySystem` | — |
+| Explicit attacks | follow the stance like automatic ones (allies never; neutrals' military only) | `GameplayCommands.Attack` | — |
+| Gateways and wild cows | never combat targets while Nature owns them | `World.MayAttack` | — |
+
+## Backlog (owner decisions on PR #23)
+
+* **King of the Hill, Capture the Flag** (lobby strings `g_type_1`, `g_type_2`): out of M3 scope; TDD GAME-17 names
+  Standard and Deathmatch only. No code.
+* **Tavern mercenaries and heroes:** a follow-up once streams E and F have both landed; whichever rebases second wires
+  the hire orders to the `Tavern` trait (ADR 0103).
+* **Per-kingdom gate routing** (REQ-PATH-01 per-player portals): backlog; the movement bar of ADR 0102 is enough for M3.
+* **Confirmed defaults:** lobby teams start with shared victory; the 10 s stance-change interval stays (engine bound,
+  UNVERIFIED).

@@ -34,9 +34,9 @@ waits for. "Blocked" rows close by themselves when the features land (items, dip
 | `menu-f10` | F10 | Same as F1 | done | |
 | `save` | F2 | Save dialog | blocked | saves are M6 (§19.5) |
 | `load` | F3 | Load dialog | blocked | saves are M6 |
-| `scores` | F4 | Scores | partial | shows the running statistics as a message; the full score screen is the results dialog |
-| `diplomacy` | F5 | Diplomacy screen | blocked | diplomacy is not in the sim yet |
-| `tribute` | F6 | Tribute dialog | blocked | tribute is not in the sim yet |
+| `scores` | F4 | Scores | partial | every kingdom's sim score and statistics as messages (ADR 0106); the full score screen is the results dialog |
+| `diplomacy` | F5 | Diplomacy screen | blocked | the sim has diplomacy (SetDiplomacy, ADR 0102); the dialog is not built yet |
+| `tribute` | F6 | Tribute dialog | blocked | the sim has tribute (ADR 0102); the dialog is not built yet |
 | `objectives` | F8 | Current objectives | partial | skirmish victory condition only; quests are M4 |
 | `options` | F9 | Options | partial | toggles day/night (Shift+F9 also rain); a full options dialog follows the dialog set of REQ-UI-02 |
 | `screenshot` | F11 | Saves a snapshot of the screen | done | PNG in the user folder |
