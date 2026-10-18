@@ -25,7 +25,7 @@ internal static class CombatMagicCommands
         int applied = 0;
         foreach (EntityId unit in entities)
         {
-            if (!IsOwnedUnit(world, unit, command.Player) || unit == holder)
+            if (!IsCommandedUnit(world, unit, command.Player) || unit == holder)
             {
                 continue;
             }
@@ -48,10 +48,16 @@ internal static class CombatMagicCommands
         return applied > 0 ? null : last;
     }
 
-    /// <summary>Whether <paramref name="unit"/> may enter <paramref name="holder"/> now: own, completed, accepting, with room.</summary>
+    /// <summary>
+    /// Whether <paramref name="unit"/> may enter <paramref name="holder"/> now: the player's own holder (or the unit's
+    /// kingdom's, or one of a kingdom that may command the unit: shared unit control, GAME-13, ADR 0135), completed,
+    /// accepting, with room.
+    /// </summary>
     public static CommandRejection? CanBoard(World world, byte player, EntityId unit, EntityId holder)
     {
-        if (!world.Entities.IsAlive(holder) || world.Identities.IndexOf(holder) is not (>= 0 and var h) || world.Identities.At(h).Owner != player
+        if (!world.Entities.IsAlive(holder) || world.Identities.IndexOf(holder) is not (>= 0 and var h) || !world.Identities.Has(unit)
+            || (world.Identities.At(h).Owner is var keeper && keeper != player && keeper != world.Identities.Get(unit).Owner
+                && !world.Diplomacy.MayCommand(keeper, world.Identities.Get(unit).Owner))
             || world.TypeOf(holder).Traits.Holder is not { } def || !world.Holders.Has(holder) || world.IsHeld(holder) || world.IsHeld(unit))
         {
             return CommandRejection.InvalidArgument;
@@ -72,7 +78,7 @@ internal static class CombatMagicCommands
         bool any = false;
         foreach (EntityId holder in entities)
         {
-            if (!world.Entities.IsAlive(holder) || world.Identities.Get(holder).Owner != command.Player || world.Holders.IndexOf(holder) is not (>= 0 and var hs)
+            if (!world.MayCommand(command.Player, holder) || world.Holders.IndexOf(holder) is not (>= 0 and var hs)
                 || world.Holders.At(hs).Count == 0)
             {
                 continue;
@@ -103,7 +109,7 @@ internal static class CombatMagicCommands
         int applied = 0;
         foreach (EntityId unit in entities)
         {
-            if (!IsOwnedUnit(world, unit, command.Player))
+            if (!IsCommandedUnit(world, unit, command.Player))
             {
                 continue;
             }
@@ -179,7 +185,7 @@ internal static class CombatMagicCommands
         int applied = 0;
         foreach (EntityId unit in entities)
         {
-            if (IsOwnedUnit(world, unit, command.Player) && ItemInSlot(world, unit, command.Arg0) is { IsNone: false } item)
+            if (IsCommandedUnit(world, unit, command.Player) && ItemInSlot(world, unit, command.Arg0) is { IsNone: false } item)
             {
                 Position at = world.Positions.Get(unit);
                 world.DropItemAt(item, at.X, at.Y);
@@ -728,6 +734,11 @@ internal static class CombatMagicCommands
 
         return EntityId.FromValue(world.Inventories.At(i).Items[slot]);
     }
+
+    // A free unit of the player, or of a kingdom that shares unit control with it (GAME-13): boarding, unloading and
+    // carrying items are orders such a player gives too (ADR 0135).
+    private static bool IsCommandedUnit(World world, EntityId unit, byte player)
+        => world.MayCommand(player, unit) && world.Motions.Has(unit) && !world.IsHeld(unit);
 
     private static bool IsOwnedUnit(World world, EntityId unit, byte player)
         => world.Entities.IsAlive(unit) && world.Identities.IndexOf(unit) is >= 0 and var i && world.Identities.At(i).Owner == player

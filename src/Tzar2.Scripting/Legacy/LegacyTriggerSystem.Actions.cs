@@ -317,7 +317,8 @@ public sealed partial class LegacyTriggerSystem
 
     // Object Order: the objects are ordered to the area's centre as commands of their owners, through the commands'
     // validation (ADR 0130). Order keys (ORDERS.INI): attack → attack-move, patrol, stop, anything else → move
-    // (UNVERIFIED mapping, UNK-57).
+    // (UNVERIFIED mapping, UNK-57). An attack on an object area fights that object itself, whatever the stances (a
+    // scripted duel between allies, ADR 0135; UNVERIFIED, UNK-57).
     private void Order(ObjectOrderAction order)
     {
         WorldRect area = Resolve(order.Area);
@@ -327,6 +328,17 @@ public sealed partial class LegacyTriggerSystem
         }
 
         string key = order.OrderKey;
+        if (order.Area is ObjectArea target && key.Contains("attack", StringComparison.OrdinalIgnoreCase) && MapEntity(target.ObjectIndex) is var victim
+            && victim != EntityId.None)
+        {
+            foreach (EntityId e in Collect(order.Objects, _targets))
+            {
+                ScenarioOperations.ScriptedAttack(_world, e, victim);
+            }
+
+            return;
+        }
+
         CommandKind kind = key.Contains("patrol", StringComparison.OrdinalIgnoreCase) ? CommandKind.Patrol
             : key.Contains("stop", StringComparison.OrdinalIgnoreCase) ? CommandKind.Stop : CommandKind.Move;
         CommandFlags flags = key.Contains("attack", StringComparison.OrdinalIgnoreCase) ? CommandFlags.Ctrl : CommandFlags.None;

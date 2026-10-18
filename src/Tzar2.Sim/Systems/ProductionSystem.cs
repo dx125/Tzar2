@@ -349,7 +349,10 @@ public sealed class ProductionSystem : ISimSystem
                 continue;
             }
 
-            PopFirst(ref q);
+            // The new unit may be a producer itself (a type that trains or builds): adding its queue to the sorted store
+            // can move this producer's entry, so it is looked up again (and the loop goes on after it).
+            i = world.Productions.IndexOf(producer);
+            PopFirst(ref world.Productions.At(i));
         }
 
         foreach ((EntityId entity, ushort item) in _finished)
@@ -390,7 +393,7 @@ public sealed class ProductionSystem : ISimSystem
         q.Paid[q.Count] = default;
     }
 
-    // Spawning a unit adds to other stores only (units never produce), so references into the production store stay valid.
+    // Spawning a unit may add a production queue (a unit type that produces): the caller looks its producer up again.
     private static ProductionStall TryRelease(World world, EntityId producer, ref Production q, EntityTypeDefinition type)
     {
         Identity owner = world.Identities.Get(producer);

@@ -24,6 +24,12 @@ public enum CombatMode : byte
 
     /// <summary>Attack ground (order attack_ground; ADR 0091): fires at the point <see cref="Combat.ChaseX"/>, <see cref="Combat.ChaseY"/>.</summary>
     Ground = 4,
+
+    /// <summary>
+    /// Ordered by the scenario to fight this target (an Object Order "attack" on an object, ADR 0135): stances do not
+    /// matter, so a script can stage a duel between allies; ends like <see cref="Explicit"/>.
+    /// </summary>
+    Scripted = 5,
 }
 
 /// <summary>

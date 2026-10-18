@@ -183,6 +183,22 @@ public class ActionTests
     }
 
     [Fact]
+    public void Object_order_attack_on_an_object_stages_a_fight_between_allies()
+    {
+        var b = new ScenarioBuilder();
+        int hero = b.Unit("euro.footman", 0, 10, 8);
+        int rival = b.Unit("euro.footman", 1, 12, 8);
+        using TriggerDriver d = Once(
+            b,
+            new ChangeDiplomacyAction("friends", 1, 2, Content.Compiled.Scenario.Stance.Ally, SharedVision: false, SharedResources: false, CommandUnits: false),
+            new ObjectOrderAction("duel", All(hero), new ObjectArea(rival, RadiusTiles: 0), "attack"));
+        Assert.Equal(SimStance.Ally, d.World.Diplomacy.StanceOf(0, 1));
+        Assert.Equal(CombatMode.Scripted, d.World.Combats.Get(d.Object(hero)).Mode);
+        d.Seconds(5);
+        Assert.Contains(d.Of(SimEventKind.Damaged), e => e.Entity == d.Object(rival));
+    }
+
+    [Fact]
     public void Object_order_moves_units_of_any_kingdom_even_when_locked()
     {
         var b = new ScenarioBuilder();
