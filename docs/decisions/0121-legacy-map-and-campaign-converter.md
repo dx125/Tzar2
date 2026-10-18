@@ -143,7 +143,10 @@ Both are names of the format's interface, not creative content. The product owne
 * The classic ruleset gains the inert entity `comm.ground_object` (no traits besides `Legacy`), so decorations that
   triggers or conversations refer to (signs, ruins that vanish) stay objects with the ruleset too. With the imported
   ruleset, the reference build then converts with 0 placeholders and no dropped references. Entity type ids after
-  it shift, so the gameplay and AI golden hashes are updated in the same change.
+  it shift, so the gameplay and AI golden hashes are updated in the same change. New pins:
+  * gameplay test: ruleset `4B4E708303593D9C`, stream `0695453CE18F72D8`, final `1D30A33EA10034D2`;
+  * AI test: commands `46A3D9867FC87F72`, states `10018CA1744D8FF5`, final `F1DD39EE98A34731`;
+  * CI benches: gameplay `6A7F06689584448E`, AI `3549B7B07BC08CA6`; the sim bench `806340E79AAFCB5C` is unchanged.
 * The open format points (UNK-70…80) default conservatively and are listed in every affected report. A later editor
   experiment on Windows (capture harness machine) can settle them.
 * Packages are larger than the sources (stored PNG); compression is a follow-up.
