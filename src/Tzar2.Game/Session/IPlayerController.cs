@@ -11,6 +11,10 @@ namespace Tzar2.Game.Session;
 /// </summary>
 public interface IPlayerController
 {
-    /// <summary>Plans this tick's orders of <paramref name="player"/>. Must not change the world.</summary>
+    /// <summary>
+    /// Plans this tick's orders of <paramref name="player"/>. The world is passed for reading only: a controller must
+    /// never write a component or a player state (that would bypass the command stream, so replays and lockstep peers
+    /// would not see it). <c>ControllerTests</c> checks the state hash around every call of the bundled controllers.
+    /// </summary>
     void Think(World world, byte player, CommandList batch);
 }

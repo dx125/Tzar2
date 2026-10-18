@@ -21,6 +21,7 @@ public sealed class PlaceholderAi : IPlayerController
     private readonly Difficulty _difficulty;
     private readonly List<EntityId> _idle = [];
     private readonly List<EntityId> _army = [];
+    private readonly List<EntityId> _woodcutters = [];
     private int _harvestRotation;
 
     /// <summary>Creates the controller.</summary>
@@ -63,6 +64,8 @@ public sealed class PlaceholderAi : IPlayerController
         Ruleset rules = world.Ruleset;
         _idle.Clear();
         _army.Clear();
+        _woodcutters.Clear();
+        int soldiers = 0, farmers = 0;
         EntityId castle = EntityId.None, barracks = EntityId.None, site = EntityId.None;
         int peasants = 0, houses = 0, fields = 0;
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
@@ -107,13 +110,28 @@ public sealed class PlaceholderAi : IPlayerController
                 {
                     _idle.Add(id);
                 }
+                else if (w >= 0 && world.Workers.At(w).Task == WorkerTask.Harvest)
+                {
+                    string res = Name(rules, world.Workers.At(w).NodeResource);
+                    farmers += res == "food" ? 1 : 0;
+                    if (res == "wood")
+                    {
+                        _woodcutters.Add(id);
+                    }
+                }
             }
             else if (type.IsMobile && type.Traits.Armament is not null)
             {
+                // Every soldier not fighting counts toward the attack; only the ones standing get the order (the others
+                // are already on their way).
                 int c = world.Combats.IndexOf(id);
-                if (!Moving(world, id) && (c < 0 || world.Combats.At(c).Target == 0))
+                if (c < 0 || world.Combats.At(c).Target == 0)
                 {
-                    _army.Add(id);
+                    soldiers++;
+                    if (!Moving(world, id))
+                    {
+                        _army.Add(id);
+                    }
                 }
             }
         }
@@ -123,7 +141,7 @@ public sealed class PlaceholderAi : IPlayerController
             return;
         }
 
-        ref PlayerState stock = ref world.Players[player];
+        PlayerState stock = world.Players[player]; // a copy: controllers only read the world
         string civ = rules.EntityTypes[world.Identities.Get(castle).TypeId].Traits.Civilization;
         Position home = world.Positions.Get(castle);
 
@@ -142,6 +160,20 @@ public sealed class PlaceholderAi : IPlayerController
             if (!node.IsNone)
             {
                 batch.Add(CommandKind.Harvest, [peasant], target: node);
+            }
+        }
+
+        // Food shortage with fields: move woodcutters to the fields, one per field at most.
+        int foodId = rules.ResourceId("food");
+        if (foodId >= 0 && fields > farmers && stock.Resources[foodId] < 150)
+        {
+            for (int i = 0; i < Math.Min(_woodcutters.Count, Math.Min(2, fields - farmers)); i++)
+            {
+                EntityId field = NearestNode(world, world.Positions.Get(_woodcutters[i]), foodId, player);
+                if (!field.IsNone)
+                {
+                    batch.Add(CommandKind.Harvest, [_woodcutters[i]], target: field);
+                }
             }
         }
 
@@ -165,7 +197,7 @@ public sealed class PlaceholderAi : IPlayerController
         }
 
         int peon = rules.EntityTypeId(civ + ".peon");
-        if (peasants < 12 && peon >= 0 && Affordable(rules.EntityTypes[peon], ref stock) && world.Productions.IndexOf(castle) >= 0
+        if (peasants < 12 && peon >= 0 && Affordable(rules.EntityTypes[peon], in stock) && world.Productions.IndexOf(castle) >= 0
             && world.Productions.Get(castle).Count == 0)
         {
             batch.Add(CommandKind.Train, [castle], arg0: peon, arg1: 1);
@@ -178,7 +210,7 @@ public sealed class PlaceholderAi : IPlayerController
             if (producer is not null && producer.Produces.Length > 0)
             {
                 ushort pick = producer.Produces[(world.Tick.Value / IntervalTicks) % Math.Min(3, producer.Produces.Length)];
-                if (Affordable(rules.EntityTypes[pick], ref stock) && PlacementQueries.RequirementsMet(world, player, pick))
+                if (Affordable(rules.EntityTypes[pick], in stock) && PlacementQueries.RequirementsMet(world, player, pick))
                 {
                     batch.Add(CommandKind.Train, [barracks], arg0: pick, arg1: 1);
                 }
@@ -186,7 +218,7 @@ public sealed class PlaceholderAi : IPlayerController
         }
 
         // Attack: move-advance (Ctrl) on the nearest enemy building.
-        if (_army.Count >= AttackArmySize && world.Tick.Value >= GraceTicks)
+        if (soldiers >= AttackArmySize && _army.Count > 0 && world.Tick.Value >= GraceTicks)
         {
             EntityId enemy = NearestEnemyStructure(world, player, home);
             if (!enemy.IsNone)
@@ -203,7 +235,10 @@ public sealed class PlaceholderAi : IPlayerController
         return m >= 0 && (world.Motions.At(m).VelocityX != 0 || world.Motions.At(m).VelocityY != 0 || world.Motions.At(m).State != MotionState.Idle);
     }
 
-    private static bool Affordable(EntityTypeDefinition type, ref PlayerState stock)
+    private static string Name(Ruleset rules, byte resource)
+        => resource < rules.ResourceTypes.Count ? rules.ResourceTypes[resource] : string.Empty;
+
+    private static bool Affordable(EntityTypeDefinition type, in PlayerState stock)
     {
         for (int r = 0; r < type.Traits.Cost.Length; r++)
         {
@@ -239,8 +274,8 @@ public sealed class PlaceholderAi : IPlayerController
         }
 
         EntityTypeDefinition type = world.Ruleset.EntityTypes[typeId];
-        ref PlayerState stock = ref world.Players[player];
-        if (!Affordable(type, ref stock) || !PlacementQueries.RequirementsMet(world, player, (ushort)typeId))
+        PlayerState stock = world.Players[player];
+        if (!Affordable(type, in stock) || !PlacementQueries.RequirementsMet(world, player, (ushort)typeId))
         {
             return;
         }

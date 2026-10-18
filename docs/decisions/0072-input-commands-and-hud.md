@@ -46,6 +46,9 @@ must be reproduced from the imported bitmaps and `LAYOUT.INI` geometry.
 
 ## Consequences
 
+* The placement ghost also refuses unexplored tiles. This is a presentation rule only (the sim and computer players may
+  build in the fog); if the original enforces it, it moves into the sim's placement check.
+
 * New sim features (items, diplomacy, experience, repair, rally kinds) flip a binding from blocked to done and add the
   command in `OrderResolver`/the card classifier.
 * Only `LAYOUT1024H` is wired in the game (the 800 and left/right layouts load through the same class); a layout option

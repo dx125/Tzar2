@@ -26,7 +26,7 @@ corpses, fog and placement legality. There is no visibility system and no victor
    with the local slot (`CommandList.AppendStamped`, as the relay does in ADR 0009). Input delay is zero; the network
    scheduler (M6) replaces this class without changing callers.
 3. **AI hook.** `IPlayerController.Think(World, slot, CommandList)` runs on the sim thread before each tick for every
-   computer slot, reading the world and emitting commands like a client. `PlaceholderAi` (gather, houses, fields,
+   computer slot, reading the world and emitting commands like a client. `Think` only reads: writing a component or a player state would bypass the command stream that replays and lockstep peers see (`Controllers_only_read_the_world` checks the full-state hash around every call of the bundled controller). A defeated slot's controller is no longer called. `PlaceholderAi` (gather, houses, fields,
    barracks, training, a move-advance on the nearest enemy building) keeps the skirmish playable until the legacy AI
    (stream B) implements the interface. It is clearly marked as a placeholder.
 4. **Game frames.** After each tick the session fills a `GameFrame` on the sim thread (`FrameBuilder`): the

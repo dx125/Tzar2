@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
 
@@ -107,7 +108,8 @@ public static class OrderResolver
 
         CommandFlags flags = Flags(mods);
         var move = new List<EntityId>();
-        if (target is { } t && t.Owner != player && t.Owner != 0xFF && !t.IsResourceNode)
+        // Enemies are units and buildings of another owner, Nature's animals and creatures included (as in the sim).
+        if (target is { } t && t.Owner != player && t.Category is EntityCategory.Unit or EntityCategory.Building && !t.IsResourceNode)
         {
             var attackers = new List<EntityId>();
             foreach (EntityInfo e in mobile)

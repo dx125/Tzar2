@@ -30,6 +30,7 @@ public sealed class UiAssets : IDisposable
     private readonly Dictionary<string, Image?> _images = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Texture2D> _cells = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (FontAsset Font, Image Strip)?> _fonts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Image> _tintedStrips = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ImageTexture> _texts = new(StringComparer.Ordinal);
 
     /// <summary>Creates the cache over <paramref name="store"/>.</summary>
@@ -110,6 +111,11 @@ public sealed class UiAssets : IDisposable
         }
 
         (FontAsset asset, Image strip) = loaded;
+        if (c != Colors.White)
+        {
+            strip = Tinted(font, strip, c);
+        }
+
         IReadOnlyList<PlacedGlyph> glyphs = asset.Layout(text);
         int width = Math.Max(1, asset.Measure(text)), height = asset.CellHeight;
         foreach (PlacedGlyph g in glyphs)
@@ -123,25 +129,10 @@ public sealed class UiAssets : IDisposable
             image.BlendRect(strip, new Rect2I(0, g.Glyph * asset.CellHeight, g.Width, asset.CellHeight), new Vector2I(g.X, g.Y));
         }
 
-        if (c != Colors.White)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    Color p = image.GetPixel(x, y);
-                    if (p.A > 0)
-                    {
-                        image.SetPixel(x, y, new Color(p.R * c.R, p.G * c.G, p.B * c.B, p.A * c.A));
-                    }
-                }
-            }
-        }
-
         var texture = ImageTexture.CreateFromImage(image);
         if (_texts.Count > 4096)
         {
-            _texts.Clear();
+            ClearTexts();
         }
 
         _texts[key] = texture;
@@ -154,10 +145,49 @@ public sealed class UiAssets : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        ClearTexts();
+        foreach (ImageTexture? t in _textures.Values)
+        {
+            t?.Dispose();
+        }
+
         _textures.Clear();
         _cells.Clear();
-        _texts.Clear();
         _images.Clear();
+        _tintedStrips.Clear();
+    }
+
+    private void ClearTexts()
+    {
+        foreach (ImageTexture t in _texts.Values)
+        {
+            t.Dispose();
+        }
+
+        _texts.Clear();
+    }
+
+    // The glyph strip tinted once per colour (texts are then plain blits).
+    private Image Tinted(string font, Image strip, Color c)
+    {
+        string key = $"{font}|{c.ToHtml()}";
+        if (_tintedStrips.TryGetValue(key, out Image? tinted))
+        {
+            return tinted;
+        }
+
+        byte[] data = strip.GetData();
+        for (int i = 0; i < data.Length; i += 4)
+        {
+            data[i] = (byte)(data[i] * c.R);
+            data[i + 1] = (byte)(data[i + 1] * c.G);
+            data[i + 2] = (byte)(data[i + 2] * c.B);
+            data[i + 3] = (byte)(data[i + 3] * c.A);
+        }
+
+        tinted = Godot.Image.CreateFromData(strip.GetWidth(), strip.GetHeight(), false, Godot.Image.Format.Rgba8, data);
+        _tintedStrips[key] = tinted;
+        return tinted;
     }
 
     private (FontAsset Font, Image Strip)? LoadFont(string font)

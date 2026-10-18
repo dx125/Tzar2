@@ -17,6 +17,13 @@ public sealed class FrameInterpolator
 
     private Dictionary<uint, (int X, int Y)> _previous = [];
     private Dictionary<uint, (int X, int Y)> _current = [];
+    private int _currentTick = -1;
+
+    /// <summary>
+    /// Ticks between the previous and the newest frame (≥ 1). At high game speeds the reader skips frames, so the blend
+    /// must span this many tick intervals, not one.
+    /// </summary>
+    public int TickSpan { get; private set; } = 1;
 
     /// <summary>Records a newly acquired frame; the frame before it becomes the blend source.</summary>
     public void Push(GameFrame frame)
@@ -24,6 +31,8 @@ public sealed class FrameInterpolator
         ArgumentNullException.ThrowIfNull(frame);
         (_previous, _current) = (_current, _previous);
         _current.Clear();
+        TickSpan = _currentTick >= 0 ? Math.Max(1, frame.Tick.Value - _currentTick) : 1;
+        _currentTick = frame.Tick.Value;
         foreach (ref readonly FrameEntity e in frame.Entities)
         {
             _current[e.Id.Value] = (e.X, e.Y);

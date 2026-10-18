@@ -144,7 +144,7 @@ public partial class Hud : Control
     public event Action<int, bool>? CardPressed;
 
     /// <summary>Raised when the minimap is clicked or dragged (map share 0-1, right button).</summary>
-    public event Action<Vector2, bool>? MinimapPressed;
+    public event Action<Vector2, bool, Tzar2.Game.Input.KeyMods>? MinimapPressed;
 
     /// <summary>MENU button.</summary>
     public event Action? MenuPressed;
@@ -301,6 +301,7 @@ public partial class Hud : Control
     {
         Vector2 local;
         bool right;
+        Tzar2.Game.Input.KeyMods mods = e is InputEventWithModifiers m ? KeyMap.Mods(m) : Tzar2.Game.Input.KeyMods.None;
         if (e is InputEventMouseButton { Pressed: true } mb)
         {
             local = mb.Position;
@@ -316,7 +317,7 @@ public partial class Hud : Control
             return;
         }
 
-        MinimapPressed?.Invoke(new Vector2(local.X / _layout.Minimap.Size.X, local.Y / _layout.Minimap.Size.Y), right);
+        MinimapPressed?.Invoke(new Vector2(local.X / _layout.Minimap.Size.X, local.Y / _layout.Minimap.Size.Y), right, mods);
         AcceptEvent();
     }
 

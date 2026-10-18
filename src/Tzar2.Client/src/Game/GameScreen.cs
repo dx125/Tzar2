@@ -93,9 +93,11 @@ public partial class GameScreen : Node
     private bool _outcomeShown;
     private double _outcomeAt = -1;
     private ImageTexture? _minimapTexture;
+    private byte[] _minimapBytes = [];
     private Image? _minimapImage;
     private int _workSoundBudget;
     private Rid _boxItem;
+    private bool _faultShown;
 
     /// <summary>Creates the screen for a session that has not started yet.</summary>
     public GameScreen(ContentStore store, UiAssets ui, GameSession session, string terrainSet, string? soundFont, GameSettings? settings = null)
@@ -224,7 +226,7 @@ public partial class GameScreen : Node
         _hud = new Hud(_ui, layout, _catalog);
         hudLayer.AddChild(_hud);
         _hud.CardPressed += OnCard;
-        _hud.MinimapPressed += OnMinimap;
+        _hud.MinimapPressed += (share, right, mods) => OnMinimap(share, right, mods);
         _hud.MenuPressed += () => ShowMenu();
         _hud.DiplomacyPressed += () => Message(_catalog.Text("game_scr", "diplomacy", "DIPLOMACY") + ": not available yet");
         _hud.ChatPressed += () => Message(_catalog.Text("game_scr", "chat", "CHAT") + ": needs multiplayer");
@@ -298,23 +300,25 @@ public partial class GameScreen : Node
             Accept(frame);
         }
 
-        if (_session.Fault is { } fault)
+        if (_session.Fault is { } fault && !_faultShown)
         {
+            _faultShown = true;
             Message("The simulation stopped: " + fault.Message);
+            GD.PrintErr("Simulation fault: " + fault);
         }
 
         _session.DrainEvents(_events);
         HandleEvents(frame);
         _events.Clear();
         Scroll(delta);
-        _selection.Prune(id => _indexById.ContainsKey(id.Value));
+        _selection.Prune(Selectable);
 
         HudLayout layout = _hud.Layout;
         double interval = frame.TickMs * 100.0 / Math.Max(1, frame.SpeedPercent);
-        int alpha = frame.Paused ? 1000 : FrameInterpolator.Alpha((_now - _frameArrived) * 1000.0, interval);
+        int alpha = frame.Paused ? 1000 : FrameInterpolator.Alpha((_now - _frameArrived) * 1000.0, interval * _interpolator.TickSpan);
         long timeMs = (long)(_now * 1000);
         float phase = DayPhase(frame);
-        _world.Render(frame, _interpolator, alpha, _pan, layout.View.Position, layout.View.Size, timeMs, _selection.Selected, _session.LocalPlayer, Barred(), Darkness(phase), CurrentGhost(frame));
+        _world.Render(frame, fresh, _interpolator, alpha, _pan, layout.View.Position, layout.View.Size, timeMs, _selection.Selected, _session.LocalPlayer, Barred(), Darkness(phase), CurrentGhost(frame));
         DrawBox();
         UpdateHud(frame, phase);
         UpdateCursor();
@@ -485,6 +489,25 @@ public partial class GameScreen : Node
         }
 
         RefreshCard();
+    }
+
+    // Own entities stay selected while they exist; others only while they are visible (they vanish into the fog).
+    private bool Selectable(EntityId id)
+    {
+        if (_frame is null || _world is null || !_indexById.TryGetValue(id.Value, out int i))
+        {
+            return false;
+        }
+
+        FrameEntity e = _frame.Entities[i];
+        byte[] fog = _frame.Visibility;
+        if (e.Owner == _session.LocalPlayer || !_options.Fog || fog.Length != _world.MapWidth * _world.MapHeight)
+        {
+            return true;
+        }
+
+        int tx = Math.Clamp(e.X / 2048, 0, _world.MapWidth - 1), ty = Math.Clamp(e.Y / 2048, 0, _world.MapHeight - 1);
+        return fog[(ty * _world.MapWidth) + tx] == 2;
     }
 
     private EntityInfo InfoOf(in FrameEntity e)
@@ -983,8 +1006,6 @@ public partial class GameScreen : Node
             Math.Clamp(_pan.Y, 0, Math.Max(0, (_world.MapHeight * 32) - view.Y)));
     }
 
-    private void OnMinimap(Vector2 share, bool right) => OnMinimap(share, right, KeyMods.None);
-
     private void OnMinimap(Vector2 share, bool right, KeyMods mods)
     {
         if (_world is null)
@@ -1322,17 +1343,19 @@ public partial class GameScreen : Node
 
                     break;
                 case SimEventKind.Killed:
-                    if (_lastByIndex.TryGetValue(e.Entity.Index, out var dead))
+                    // The event carries the victim's owner (Player) and type (Arg); index-based lookups can already
+                    // see a newer entity in the slot, because the frame is accepted before the events are drained.
+                    if (e.Player == me)
                     {
-                        if (dead.Owner == me)
-                        {
-                            Stats.Losses++;
-                        }
-                        else if (_lastByIndex.TryGetValue(e.X, out var killer) && killer.Owner == me)
-                        {
-                            Stats.Kills++;
-                        }
+                        Stats.Losses++;
+                    }
+                    else if (_lastByIndex.TryGetValue(e.X, out var killer) && killer.Owner == me)
+                    {
+                        Stats.Kills++;
+                    }
 
+                    if (_lastByIndex.TryGetValue(e.Entity.Index, out var dead) && dead.Type == (ushort)e.Arg)
+                    {
                         _mixer?.PlaySet(_catalog.Type((ushort)e.Arg).SoundDie, SoundCategory.Effects, _catalog.SoundPriority("death"), Distance(dead.X, dead.Y));
                     }
 
@@ -1545,6 +1568,21 @@ public partial class GameScreen : Node
         int w = _world.MapWidth, h = _world.MapHeight;
         Color[] terrain = _world.Terrain.TileColours;
         byte[] fog = _options.Fog ? frame.Visibility : [];
+        if (_minimapBytes.Length != w * h * 4)
+        {
+            _minimapBytes = new byte[w * h * 4];
+        }
+
+        // One buffer and one upload (no per-pixel engine calls).
+        void Put(int x, int y, Color c)
+        {
+            int o = ((y * w) + x) * 4;
+            _minimapBytes[o] = (byte)(c.R * 255);
+            _minimapBytes[o + 1] = (byte)(c.G * 255);
+            _minimapBytes[o + 2] = (byte)(c.B * 255);
+            _minimapBytes[o + 3] = 255;
+        }
+
         for (int y = 0; y < h; y++)
         {
             for (int x = 0; x < w; x++)
@@ -1556,7 +1594,7 @@ public partial class GameScreen : Node
                     c = v == 0 ? Colors.Black : v == 1 ? c.Darkened(0.5f) : c;
                 }
 
-                _minimapImage.SetPixel(x, y, c);
+                Put(x, y, c);
             }
         }
 
@@ -1591,11 +1629,12 @@ public partial class GameScreen : Node
             {
                 for (int dx = 0; dx < size && left + dx < w; dx++)
                 {
-                    _minimapImage.SetPixel(left + dx, top + dy, c);
+                    Put(left + dx, top + dy, c);
                 }
             }
         }
 
+        _minimapImage.SetData(w, h, false, Image.Format.Rgba8, _minimapBytes);
         _minimapTexture.Update(_minimapImage);
         Vector2 map = new(w * 32, h * 32);
         _hud.SetMinimap(_minimapTexture, new Rect2(_pan / map, _hud.Layout.View.Size / map));

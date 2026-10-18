@@ -70,6 +70,8 @@ public sealed class WorldRenderer : IDisposable
     private readonly List<Pickable> _pickables = [];
     private readonly HashSet<uint> _selected = [];
     private long _timeMs;
+    private bool _lightsValid;
+    private ImageTexture? _lightPatternTexture;
 
     /// <summary>Creates the renderer for a match.</summary>
     public WorldRenderer(Node host, Rid canvas, Ruleset rules, PresentationCatalog catalog, SpriteBank bank, TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load, Image? lightPattern)
@@ -105,7 +107,8 @@ public sealed class WorldRenderer : IDisposable
         _fogMaterial.SetShaderParameter("map_pixels", new Vector2(MapWidth * TilePixels, MapHeight * TilePixels));
         if (lightPattern is not null)
         {
-            _fogMaterial.SetShaderParameter("light_pattern", ImageTexture.CreateFromImage(lightPattern));
+            _lightPatternTexture = ImageTexture.CreateFromImage(lightPattern);
+            _fogMaterial.SetShaderParameter("light_pattern", _lightPatternTexture);
         }
 
         _fogItem = Item(50);
@@ -132,6 +135,7 @@ public sealed class WorldRenderer : IDisposable
     /// <summary>Draws <paramref name="frame"/>.</summary>
     public void Render(
         GameFrame frame,
+        bool fresh,
         FrameInterpolator interpolator,
         int alpha,
         Vector2I pan,
@@ -228,7 +232,7 @@ public sealed class WorldRenderer : IDisposable
 
         _objects.Commit();
 
-        UpdateFogAndLight(frame, useFog, localPlayer, options.DayNight ? darkness : 0f);
+        UpdateFogAndLight(frame, fresh, useFog, localPlayer, options.DayNight ? darkness : 0f);
     }
 
     /// <inheritdoc/>
@@ -246,6 +250,9 @@ public sealed class WorldRenderer : IDisposable
         _fogMaterial.Dispose();
         _fogTexture.Dispose();
         _lightTexture.Dispose();
+        _lightPatternTexture?.Dispose();
+        _fogImage.Dispose();
+        _lightImage.Dispose();
     }
 
     private int Fog(byte[] fog, int x, int y)
@@ -449,10 +456,19 @@ public sealed class WorldRenderer : IDisposable
         Corners(_marksOver, rect, ghost.Legal ? Colors.Green : Colors.Red);
     }
 
-    private void UpdateFogAndLight(GameFrame frame, bool useFog, byte localPlayer, float darkness)
+    private void UpdateFogAndLight(GameFrame frame, bool fresh, bool useFog, byte localPlayer, float darkness)
     {
         _fogMaterial.SetShaderParameter("fog_enabled", useFog);
         _fogMaterial.SetShaderParameter("darkness", darkness);
+
+        // The layers change with the sim (fog every 4 ticks, lights as units move): upload on new frames only.
+        bool lightsNeeded = darkness > 0f;
+        if (!fresh && !(lightsNeeded && !_lightsValid))
+        {
+            return;
+        }
+
+        _lightsValid = lightsNeeded;
         if (useFog)
         {
             byte[] fog = frame.Visibility;

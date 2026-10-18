@@ -181,7 +181,13 @@ public sealed class GameSession : IDisposable
     public void Dispose()
     {
         _stop = true;
-        _thread?.Join(TimeSpan.FromSeconds(5));
+        if (_thread is not null && !_thread.Join(TimeSpan.FromSeconds(5)))
+        {
+            // The sim thread is stuck in a tick: leave the simulation to it rather than dispose it under its feet.
+            System.Diagnostics.Trace.TraceWarning("Tzar2 sim thread did not stop within 5 s; the simulation is not disposed.");
+            return;
+        }
+
         _thread = null;
         Simulation.Dispose();
     }

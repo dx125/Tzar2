@@ -187,12 +187,137 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public void A_kingdom_without_units_and_buildings_is_defeated()
+    public void A_kingdom_without_units_and_buildings_is_defeated_and_its_controller_stops()
     {
-        MatchSetup setup = Setup() with { Players = [new PlayerSetup(0, "euro", ControllerKind.Human), new PlayerSetup(1, "euro", ControllerKind.Computer)] };
-        using var session = new GameSession(setup, Rules.Value, _ => new IdleController());
+        // Three kingdoms: 1 deletes everything it owns; 0 (human) and 2 stay. 1 is defeated, the match goes on.
+        var suicide = new SuicideController();
+        MatchSetup setup = Setup(players: 3);
+        using var session = new GameSession(setup, Rules.Value, p => p.Slot == 1 ? suicide : new IdleController());
         session.Step(40);
-        Assert.Equal(MatchOutcome.None, session.AcquireFrame(out _)!.Outcome);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        Assert.True(frame.Players[1].Defeated);
+        Assert.False(frame.Players[0].Defeated);
+        Assert.False(frame.Players[2].Defeated);
+        Assert.Equal(MatchOutcome.None, frame.Outcome);
+        int calls = suicide.Calls;
+        session.Step(40);
+        Assert.Equal(calls, suicide.Calls);
+
+        // The human deletes everything: defeat.
+        var batch = new CommandList();
+        batch.Add(CommandKind.Delete, Own(session, 0));
+        session.Submit(batch);
+        session.Step(40);
+        Assert.Equal(MatchOutcome.Defeat, session.AcquireFrame(out _)!.Outcome);
+    }
+
+    [Fact]
+    public void The_last_kingdom_standing_wins()
+    {
+        using var session = new GameSession(Setup(), Rules.Value, _ => new SuicideController());
+        session.Step(40);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        Assert.Equal(MatchOutcome.Victory, frame.Outcome);
+        Assert.True(frame.Players[1].Defeated);
+    }
+
+    [Fact]
+    public void Controllers_only_read_the_world()
+    {
+        // The bundled computer player must change the world only through commands (replays and lockstep see those).
+        using var session = new GameSession(Setup(), Rules.Value, _ => new IdleController());
+        var ai = new PlaceholderAi(Difficulty.Hard);
+        var batch = new CommandList();
+        for (int tick = 0; tick < 2000; tick++)
+        {
+            ulong before = session.Simulation.ComputeFullHash();
+            batch.Clear();
+            ai.Think(session.Simulation.World, 0, batch);
+            Assert.Equal(before, session.Simulation.ComputeFullHash());
+            if (batch.Count > 0)
+            {
+                session.Submit(batch);
+            }
+
+            session.Step(1);
+        }
+    }
+
+    [Fact]
+    public void Frames_cross_threads_without_tearing()
+    {
+        // Writer fills the back buffer with one value per frame; the reader must never see a mix.
+        var exchange = new FrameExchange();
+        using var stop = new System.Threading.CancellationTokenSource();
+        var writer = new System.Threading.Thread(() =>
+        {
+            for (int n = 1; !stop.IsCancellationRequested; n++)
+            {
+                GameFrame back = exchange.Back;
+                FrameEntity[] buffer = back.EntityBuffer(64);
+                for (int i = 0; i < 64; i++)
+                {
+                    buffer[i] = new FrameEntity { X = n, Y = n };
+                }
+
+                back.EntityCount = 64;
+                back.Tick = new Tick(n);
+                exchange.Publish();
+            }
+        });
+        writer.Start();
+        int seen = 0, last = 0;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        while (watch.ElapsedMilliseconds < 500)
+        {
+            GameFrame? f = exchange.AcquireLatest(out bool fresh);
+            if (f is null || !fresh)
+            {
+                continue;
+            }
+
+            int value = f.Entities[0].X;
+            foreach (FrameEntity e in f.Entities)
+            {
+                Assert.Equal(value, e.X);
+            }
+
+            Assert.Equal(value, f.Tick.Value);
+            Assert.True(value > last);
+            last = value;
+            seen++;
+        }
+
+        stop.Cancel();
+        writer.Join();
+        Assert.True(seen > 10);
+    }
+
+    private static EntityId[] Own(GameSession session, byte owner)
+        => session.AcquireFrame(out _)!.Entities.ToArray().Where(e => e.Owner == owner).Select(e => e.Id).ToArray();
+
+    private sealed class SuicideController : IPlayerController
+    {
+        public int Calls { get; private set; }
+
+        public void Think(World world, byte player, CommandList batch)
+        {
+            Calls++;
+            var own = new List<EntityId>();
+            ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+            for (int i = 0; i < ids.Length; i++)
+            {
+                if (world.Identities.Components[i].Owner == player)
+                {
+                    own.Add(ids[i]);
+                }
+            }
+
+            if (own.Count > 0)
+            {
+                batch.Add(CommandKind.Delete, own.ToArray());
+            }
+        }
     }
 
     [Fact]
@@ -208,6 +333,7 @@ public sealed class SessionTests
         Assert.Equal((1000, 500), interpolator.Position(e[0], 1000));
         Assert.Equal((0, 0), interpolator.Position(e[0], 0));
         Assert.Equal((50_000, 0), interpolator.Position(e[1], 500));
+        Assert.Equal(1, interpolator.TickSpan);
         Assert.Equal(500, FrameInterpolator.Alpha(25, 50));
         Assert.Equal(1000, FrameInterpolator.Alpha(80, 50));
 

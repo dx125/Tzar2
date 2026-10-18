@@ -164,6 +164,16 @@ public sealed class OrderTests
     }
 
     [Fact]
+    public void Nature_creatures_and_buildings_are_attacked_but_resources_are_not()
+    {
+        EntityInfo bear = SelectionTests.Unit(9, owner: 0xFF);
+        Assert.Equal(CommandKind.Attack, Assert.Single(OrderResolver.RightClick([SelectionTests.Unit(1)], bear, 0, 0, KeyMods.None, Me)).Kind);
+        EntityInfo tower = SelectionTests.Building(8, owner: 0xFF);
+        Assert.Equal(CommandKind.Attack, Assert.Single(OrderResolver.RightClick([SelectionTests.Unit(1)], tower, 0, 0, KeyMods.None, Me)).Kind);
+        Assert.Equal(CommandKind.Move, Assert.Single(OrderResolver.RightClick([SelectionTests.Unit(1)], SelectionTests.Tree(7), 0, 0, KeyMods.None, Me)).Kind);
+    }
+
+    [Fact]
     public void Right_click_on_a_resource_sends_harvesters_and_moves_the_rest()
     {
         IReadOnlyList<PlannedCommand> c = OrderResolver.RightClick([SelectionTests.Unit(1, harvester: true), SelectionTests.Unit(2)], SelectionTests.Tree(7), 5, 5, KeyMods.None, Me);
