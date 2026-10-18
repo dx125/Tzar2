@@ -72,7 +72,7 @@ public sealed class TerrainGrid
     }
 }
 
-/// <summary>Result of <see cref="TerrainComposer.Compose"/>.</summary>
+/// <summary>Result of <see cref="TerrainComposer.Compose(TerrainGrid, int)"/>.</summary>
 /// <param name="Width">Pixels across.</param>
 /// <param name="Height">Pixels down.</param>
 /// <param name="Pixels">RGB5A1 words, little-endian, row-major, all opaque (bit 15 set).</param>
@@ -199,10 +199,19 @@ public sealed class TerrainComposer
     }
 
     /// <summary>Composes animation frame <paramref name="frame"/> of <paramref name="grid"/>.</summary>
-    public TerrainImage Compose(TerrainGrid grid, int frame)
+    public TerrainImage Compose(TerrainGrid grid, int frame) => Compose(grid, frame, 0, 0);
+
+    /// <summary>
+    /// Composes animation frame <paramref name="frame"/> of <paramref name="grid"/>, a window of a larger map whose
+    /// top-left tile is (<paramref name="originX"/>, <paramref name="originY"/>): base tiles and variants follow the map
+    /// coordinates, so chunks composed separately join without seams.
+    /// </summary>
+    public TerrainImage Compose(TerrainGrid grid, int frame, int originX, int originY)
     {
         ArgumentNullException.ThrowIfNull(grid);
         ArgumentOutOfRangeException.ThrowIfNegative(frame);
+        ArgumentOutOfRangeException.ThrowIfNegative(originX);
+        ArgumentOutOfRangeException.ThrowIfNegative(originY);
         int width = grid.Width * TileSize, height = grid.Height * TileSize;
         byte[] pixels = new byte[width * height * 2];
         var issues = new List<string>();
@@ -233,7 +242,7 @@ public sealed class TerrainComposer
                     frames = Math.Max(1, size.Frames);
                 }
 
-                int column = (VariantOf(tx, ty, variants) * frames) + (frame % frames);
+                int column = (VariantOf(originX + tx, originY + ty, variants) * frames) + (frame % frames);
                 for (int py = 0; py < TileSize; py++)
                 {
                     for (int px = 0; px < TileSize; px++)
@@ -241,7 +250,7 @@ public sealed class TerrainComposer
                         int word;
                         if (lo == hi)
                         {
-                            word = BasePixel(lo, tx, ty, px, py, frame);
+                            word = BasePixel(lo, originX + tx, originY + ty, px, py, frame);
                         }
                         else
                         {
@@ -255,7 +264,7 @@ public sealed class TerrainComposer
                             }
                             else
                             {
-                                word = BasePixel((t & 0x7FFF) == KeyMagenta ? lo : hi, tx, ty, px, py, frame);
+                                word = BasePixel((t & 0x7FFF) == KeyMagenta ? lo : hi, originX + tx, originY + ty, px, py, frame);
                             }
                         }
 
