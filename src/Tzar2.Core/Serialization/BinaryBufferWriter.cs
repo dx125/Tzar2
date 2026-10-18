@@ -35,6 +35,14 @@ public sealed class BinaryBufferWriter
     /// <summary>Discards everything written, keeping the buffer.</summary>
     public void Clear() => _length = 0;
 
+    /// <summary>Drops everything written after the first <paramref name="length"/> bytes.</summary>
+    public void Truncate(int length)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(length, _length);
+        _length = length;
+    }
+
     /// <summary>Writes one byte.</summary>
     public void WriteByte(byte value) => Reserve(1)[0] = value;
 

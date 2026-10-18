@@ -3,13 +3,22 @@
   <PropertyGroup>
     <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
     <RootNamespace>Tzar2.Net</RootNamespace>
-    <Description>Lockstep scheduler, protocol and transports.</Description>
+    <Description>Lockstep scheduler, wire protocol, relay and lobby (shared by the server and the LAN host), LAN discovery, transports.</Description>
     <IsAotCompatible>true</IsAotCompatible>
     <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Tzar2.Net.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Tzar2.Core/Tzar2.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- DEC-08 transport (MIT, ADR 0009); the only package Tzar2.Net may use (ADR 0011). -->
+    <PackageReference Include="LiteNetLib" />
   </ItemGroup>
 
 </Project>

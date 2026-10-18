@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FsCheck" />
+    <PackageReference Include="FsCheck.Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../src/Tzar2.Net/Tzar2.Net.csproj" />
   </ItemGroup>
 
