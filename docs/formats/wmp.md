@@ -102,7 +102,7 @@ the defaults (Standard, Standard, fog on, unexplored).
 | 0x44 | u32 × 4 | starting resources. The order is ⚠ UNVERIFIED (UNK-71); the tutorial's numbers suggest **gold, stone, food, wood**. |
 | 0x54 | u16, u16 | start location tile (x, y); 0xFFFF = none |
 | 0x58 | u8 | civilisation: 1 European, 2 Arabian, 3 Asian. 0 (random) is never seen. |
-| 0x59 | char[32] | AI script file (`random.ais`, `r_army.ais`…); empty = default |
+| 0x59 | char[32] | AI script file name (one of `DATA/AI/*.ais`); empty = default |
 | 0x79 | u8 | ⚠ UNVERIFIED (UNK-71): 0–3, read as bit 0 economy AI, bit 1 war AI |
 | 0x7A | u8 | ⚠ UNVERIFIED (UNK-71): 0/1, read as player type (0 human-or-AI, 1 AI only, 2 rescue) |
 
@@ -169,7 +169,7 @@ Evidence: every named hero has 0x1000; the "No AI" groups of footmen and ships h
 |---|---|---|
 | 0 | u16 | object id |
 | 2 | char[128] | title. This is the object's name for triggers and campaign persistence. |
-| 130 | char[128] | portrait path, e.g. `USER\Woolin.bmp`. A small variant `USER\Woolin small.bmp` exists beside it. |
+| 130 | char[128] | portrait path, e.g. `USER\<name>.bmp`; a small variant `USER\<name> small.bmp` exists beside it. |
 
 ### 4.4 Class extensions (from offset 0x38)
 
@@ -306,8 +306,8 @@ decimal in every map.
 
 0 default action, 1 move, 2 attack, 3 capture, 4 load, 5 unload, 6 pick items, 7 patrol, 8 move advance (attack
 move), 9 guard, 10 stand ground, 11 attack ground, 12 stop, 13 drop items. These follow the editor's order list.
-The corpus confirms 0, 1, 2, 5, 6, 7, 8 and 9 by the action names ("Peon1 dig", "Galleon unloads", "Knights
-patrol"…).
+The corpus confirms 0, 1, 2, 5, 6, 7, 8 and 9: the authors' action names describe digging, unloading, patrolling,
+guarding and so on.
 
 ## 7. Conversations (`conv`)
 
@@ -345,11 +345,11 @@ Expressions are text in the language of Appendix C.6, plus what the game's own n
 * **Functions**, case-insensitive: `@gold @stone @food @wood @rnd @max @min @count @inprogress @setnoattacktime
   @setgold @setstone @setwood @setfood @build @setpoplimit @hassharedres @hassharedunits @hassharedvision @isenemy
   @isneutral @isally @getdiplomacy @gettime @settime @god @clearselection @unselect @select @setai
-  @kingdomcanrescue @str @playmovie`. `@playmovie(movies\outro.ddv)` takes raw text. Semantics beyond C.6 are
+  @kingdomcanrescue @str @playmovie`. `@playmovie(<path of a movie>)` takes raw text. Semantics beyond C.6 are
   UNK-73.
-* **`#name`** variables appear in the campaign (`#Druid = 1`); presumably campaign-scoped (UNK-74).
-* **Timers are assignable** (`Clock = 0` resets a timer).
-* Unknown `@names` (`@VardalWon = 1`) are accepted by the original editor. The game reports "Assigning value to
+* **`#name`** variables appear in the campaign (`#Name = 1`); presumably campaign-scoped (UNK-74).
+* **Timers are assignable** (`<timer> = 0` resets a timer).
+* Unknown `@names` (`@Name = 1`) are accepted by the original editor. The game reports "Assigning value to
   const/function" at run time; the converter treats them as unknown names that evaluate to 0.
 
 ## 10. Unknowns (this document)

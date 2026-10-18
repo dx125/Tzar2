@@ -1,8 +1,7 @@
 # HPFS containers (`.wmp` maps, `.wcm` campaigns)
 
 Status: **container resolved** (all 7 maps, both campaigns and the 26 maps embedded in the
-campaigns read with zero inconsistencies). Map payload schema: **open**, only the outline
-below is known. Partially resolves **UNK-04** and RISK-02.
+campaigns read with zero inconsistencies). Map payload: see [wmp.md](wmp.md). Partially resolves **UNK-04** and RISK-02.
 Prototype: [`tools/re/hpfs.py`](../../tools/re/hpfs.py) (`--recurse` opens embedded maps,
 `--extract <dir>` writes the members; extract only into a scratch directory, never the repo).
 
@@ -79,7 +78,7 @@ convention unverified; irrelevant for reading). Campaigns are packed by `TzarCam
 and have no free blocks. Validation in the prototype: every block is referenced at most
 once; maps have exactly their free count unreferenced, campaigns none.
 
-## 5. Map members (outline for RE-03)
+## 5. Map members (outline; full payload in [wmp.md](wmp.md))
 
 A map (`<name>.wmp`, top level or `MAPS/<name>.wmp` inside a campaign) contains, in
 `MAPS/`, files named `<MAPNAME>.<part>`:

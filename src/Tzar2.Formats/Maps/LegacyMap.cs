@@ -57,7 +57,7 @@ public sealed record LegacyMap(
 }
 
 /// <summary>A member of a container kept as is.</summary>
-/// <param name="Path">Path inside the container, <c>/</c>-separated, as stored (e.g. <c>USER/Woolin.BMP</c>).</param>
+/// <param name="Path">Path inside the container, <c>/</c>-separated, as stored (e.g. <c>USER/Hero.BMP</c>).</param>
 /// <param name="Data">Content.</param>
 public sealed record LegacyFile(string Path, byte[] Data);
 
@@ -269,7 +269,7 @@ public sealed record LegacyItem(
 /// <summary>An <c>objext</c> record: title and portrait of an object.</summary>
 /// <param name="ObjectId">Object id.</param>
 /// <param name="Title">Title (the object's name for triggers and persistence).</param>
-/// <param name="Icon">Portrait path as written (e.g. <c>USER\Woolin.bmp</c>), or empty.</param>
+/// <param name="Icon">Portrait path as written (e.g. <c>USER\Hero.bmp</c>), or empty.</param>
 public sealed record LegacyObjectExtra(ushort ObjectId, string Title, string Icon);
 
 /// <summary>A rule record.</summary>

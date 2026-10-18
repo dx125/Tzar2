@@ -22,7 +22,7 @@ public sealed class LegacyConversionOptions
 }
 
 /// <summary>A user resource of a converted map (image, sound, music, AI script).</summary>
-/// <param name="Path">Package path under <c>assets/</c>, normalised (e.g. <c>user/woolin.png</c>).</param>
+/// <param name="Path">Package path under <c>assets/</c>, normalised (e.g. <c>user/hero.png</c>).</param>
 /// <param name="SourcePath">Path inside the legacy container.</param>
 /// <param name="Data">Content (converted to PNG for BMP images).</param>
 public sealed record UserResource(string Path, string SourcePath, byte[] Data);
