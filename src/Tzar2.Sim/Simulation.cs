@@ -103,6 +103,13 @@ public sealed class Simulation : IDisposable
     /// <summary>Optional render output; when set, a <see cref="RenderSnapshot"/> is published after every tick.</summary>
     public RenderSnapshotExchange? RenderOutput { get; set; }
 
+    /// <summary>Optional profiler for the sections of every tick (diagnostics only; never affects results).</summary>
+    public ITickProfiler? Profiler
+    {
+        get => _context.Profiler;
+        set => _context.Profiler = value;
+    }
+
     /// <summary>Whether a tick threw; the simulation then refuses to continue.</summary>
     public bool IsFaulted { get; private set; }
 
@@ -149,11 +156,24 @@ public sealed class Simulation : IDisposable
 
             // Step 18: hashes describe the state after tick T, i.e. the state in which tick T+1 begins.
             World.Tick = tick + 1;
+            ITickProfiler? profiler = _context.Profiler;
+            profiler?.Begin("hash");
             ulong hash = StateHashing.ComputeTickHash(World, _hasher);
-            ulong? full = World.Tick.Value % World.Config.FullHashIntervalTicks == 0
-                ? StateHashing.ComputeFullHash(World, _hasher)
-                : null;
-            RenderOutput?.Publish(World, tick, hash);
+            profiler?.End();
+            ulong? full = null;
+            if (World.Tick.Value % World.Config.FullHashIntervalTicks == 0)
+            {
+                profiler?.Begin("full hash");
+                full = StateHashing.ComputeFullHash(World, _hasher);
+                profiler?.End();
+            }
+
+            if (RenderOutput is { } output)
+            {
+                profiler?.Begin("render snapshot");
+                output.Publish(World, tick, hash);
+                profiler?.End();
+            }
             return new TickResult(tick, hash, full);
         }
         catch

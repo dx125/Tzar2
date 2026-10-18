@@ -76,8 +76,8 @@ public sealed class MovementSystem : ISimSystem
     private const int OutGiveUp = 4;
 
     private readonly SteerJob _steer = new();
-    private readonly LocalSearch _goalSearch = new();
-    private readonly byte[] _goalTree = new byte[NavLayer.ClusterTiles];
+    private readonly RouteJob _route = new();
+    private readonly RouteScratch _routeScratch = new();
     private readonly ResolveJob _resolve = new();
     private readonly Frame _frame = new();
 
@@ -93,10 +93,15 @@ public sealed class MovementSystem : ISimSystem
         ArgumentNullException.ThrowIfNull(context);
         World world = context.World;
         NavigationGrid nav = world.Navigation;
+        ITickProfiler? profiler = context.Profiler;
         nav.EnsureUpToDate();
         world.RefreshGateBars();
-        PrePass(world, nav);
+        profiler?.Begin("pre-pass");
+        PrePass(context, world, nav);
+        profiler?.End();
+        profiler?.Begin("capture");
         _frame.Capture(world);
+        profiler?.End();
         int jobs = (_frame.Count + ChunkSize - 1) / ChunkSize;
         if (jobs == 0)
         {
@@ -105,19 +110,33 @@ public sealed class MovementSystem : ISimSystem
 
         _steer.Frame = _frame;
         _steer.World = world;
+        profiler?.Begin("steer");
         context.Workers.Run(_steer, jobs);
+        profiler?.End();
         _resolve.Frame = _frame;
         _resolve.World = world;
+        profiler?.Begin("resolve");
         context.Workers.Run(_resolve, jobs);
+        profiler?.End();
+        profiler?.Begin("merge");
         Merge(world);
+        profiler?.End();
     }
 
     // ----- pre-pass ----------------------------------------------------------------------------------------------
 
-    private void PrePass(World world, NavigationGrid nav)
+    private void PrePass(SimContext context, World world, NavigationGrid nav)
     {
         ComponentStore<Motion> motions = world.Motions;
         int tick = world.Tick.Value;
+
+        // Route following is the bulk of the pre-pass and touches only the unit's own motion: it runs as fork/join jobs
+        // first; its plan clears and re-plan requests are applied below in unit order, so the outcome (including the
+        // path-request queue order) is the same as a sequential pass (ADR 0080).
+        _route.Prepare(world, nav, tick);
+        context.Workers.Run(_route, _route.JobCount);
+        _routeScratch.Reset();
+        ReadOnlySpan<RouteAction> routed = _route.Actions;
         for (int i = 0; i < motions.Count; i++)
         {
             EntityId entity = motions.Entities[i];
@@ -125,6 +144,12 @@ public sealed class MovementSystem : ISimSystem
             if (m.Order == MotionOrder.Follow && (tick + entity.Index) % FollowInterval == 0)
             {
                 CheckFollow(world, entity, ref m);
+            }
+
+            if (routed[i] != RouteAction.Skipped)
+            {
+                Apply(world, entity, ref m, routed[i]);
+                continue;
             }
 
             if (m.State != MotionState.Moving || m.Layer == NavigationGrid.NoLayer)
@@ -143,7 +168,7 @@ public sealed class MovementSystem : ISimSystem
             }
             else if (m.Mode == MotionMode.Route)
             {
-                UpdateRoute(world, entity, ref m, layer, nav.Version, tick);
+                Apply(world, entity, ref m, UpdateRoute(world, entity, ref m, layer, nav.Version, tick, _routeScratch));
             }
             else if (m.Mode == MotionMode.Direct && m.PlanVersion != nav.Version)
             {
@@ -159,6 +184,36 @@ public sealed class MovementSystem : ISimSystem
                 }
             }
         }
+    }
+
+    // Whether the route job handles the unit: a moving unit on a route that has no follow check this tick (a follow
+    // check may change its motion first, so such a unit is done in the sequential pass).
+    private static bool RoutedInParallel(in Motion m, EntityId entity, int tick)
+        => m.State == MotionState.Moving && m.Layer != NavigationGrid.NoLayer && m.Mode == MotionMode.Route
+           && !(m.Order == MotionOrder.Follow && (tick + entity.Index) % FollowInterval == 0);
+
+    private static void Apply(World world, EntityId entity, ref Motion m, RouteAction action)
+    {
+        if (action == RouteAction.Replan)
+        {
+            world.Paths.Clear(entity.Index);
+            world.PathQueue.Enqueue(new PathRequest { Entity = entity.Value, Serial = m.RequestSerial, Group = 0 });
+        }
+        else if (action == RouteAction.ClearPlan)
+        {
+            world.Paths.Clear(entity.Index);
+        }
+    }
+
+    // The motion part of Replan; the caller applies the plan clear and the request (Apply).
+    private static RouteAction MarkReplan(ref Motion m)
+    {
+        m.RequestSerial++;
+        m.GoalTile = -1;
+        m.Mode = MotionMode.Waiting;
+        m.StallTicks = 0;
+        m.BestDistance = int.MaxValue;
+        return RouteAction.Replan;
     }
 
     private static void CheckFollow(World world, EntityId entity, ref Motion m)
@@ -315,15 +370,14 @@ public sealed class MovementSystem : ISimSystem
 
     // Route mode: find the exit portal of the unit's cluster on the route and steer down that portal's tree (crossing
     // into the next cluster's portal tree, then the goal's tree), up to LookAhead visible tiles ahead.
-    private void UpdateRoute(World world, EntityId entity, ref Motion m, NavLayer layer, int version, int tick)
+    private static RouteAction UpdateRoute(World world, EntityId entity, ref Motion m, NavLayer layer, int version, int tick, RouteScratch scratch)
     {
         if (m.PlanVersion != version)
         {
             // Passability changed somewhere: keep the route if its remaining portals are unchanged, else plan again.
             if (!PathSearch.RouteValid(layer, world.Paths.Get(entity.Index), m.PathCursor - 2))
             {
-                Replan(world, entity, ref m);
-                return;
+                return MarkReplan(ref m);
             }
 
             m.PlanVersion = version;
@@ -333,7 +387,7 @@ public sealed class MovementSystem : ISimSystem
         int tile = layer.TileOf(p.X, p.Y);
         if (!layer.IsWalkable(tile))
         {
-            return;
+            return RouteAction.None;
         }
 
         ReadOnlySpan<int> plan = world.Paths.Get(entity.Index);
@@ -355,8 +409,7 @@ public sealed class MovementSystem : ISimSystem
             }
             else
             {
-                Replan(world, entity, ref m); // pushed off the route
-                return;
+                return MarkReplan(ref m); // pushed off the route
             }
         }
 
@@ -375,12 +428,12 @@ public sealed class MovementSystem : ISimSystem
         bool reached = IntMath.DistanceSquared(p.X, p.Y, m.SteerX, m.SteerY) <= 768L * 768;
         if (!reached && (tick + entity.Index) % RefreshTicks != 0)
         {
-            return;
+            return RouteAction.None;
         }
 
         // Progress: tiles left along the tree to the portal (or goal) being approached (Euclidean distance would
         // grow on winding legs).
-        int left = TreeDistance(layer, nodes, exit, tile, goalTile);
+        int left = TreeDistance(layer, nodes, exit, tile, goalTile, scratch);
         if (left >= 0 && ((long)left * NavLayer.StraightCost) + 256 < m.BestDistance)
         {
             m.BestDistance = left * NavLayer.StraightCost;
@@ -395,8 +448,7 @@ public sealed class MovementSystem : ISimSystem
             m.SteerY = m.TargetY;
             m.BestDistance = int.MaxValue;
             m.StallTicks = 0;
-            world.Paths.Clear(entity.Index);
-            return;
+            return RouteAction.ClearPlan;
         }
 
         int width = layer.Width;
@@ -418,11 +470,11 @@ public sealed class MovementSystem : ISimSystem
 
                 if (!goalTreeReady)
                 {
-                    _goalSearch.Dijkstra(layer, layer.ClusterAt(c), goalTile, _goalTree, null);
+                    scratch.GoalTree(layer, c, goalTile);
                     goalTreeReady = true;
                 }
 
-                code = _goalTree[layer.ClusterAt(c).LocalIndex(cur, width)];
+                code = scratch.Tree[layer.ClusterAt(c).LocalIndex(cur, width)];
                 if (code == NavLayer.TreeRoot)
                 {
                     bestX = m.TargetX;
@@ -496,16 +548,16 @@ public sealed class MovementSystem : ISimSystem
 
         if (bestX == int.MinValue)
         {
-            Replan(world, entity, ref m);
-            return;
+            return MarkReplan(ref m);
         }
 
         m.SteerX = bestX;
         m.SteerY = bestY;
+        return RouteAction.None;
     }
 
     // Steps from `tile` to the root of the tree it descends (the exit portal, or the goal), or -1.
-    private int TreeDistance(NavLayer layer, ReadOnlySpan<int> nodes, int exit, int tile, int goalTile)
+    private static int TreeDistance(NavLayer layer, ReadOnlySpan<int> nodes, int exit, int tile, int goalTile, RouteScratch scratch)
     {
         int c = layer.ClusterOf(tile);
         NavLayer.Cluster cluster = layer.ClusterAt(c);
@@ -526,8 +578,8 @@ public sealed class MovementSystem : ISimSystem
                 return -1;
             }
 
-            _goalSearch.Dijkstra(layer, cluster, goalTile, _goalTree, null);
-            tree = _goalTree;
+            scratch.GoalTree(layer, c, goalTile);
+            tree = scratch.Tree;
         }
 
         int width = layer.Width;
@@ -581,16 +633,7 @@ public sealed class MovementSystem : ISimSystem
     }
 
     /// <summary>Re-plans an own path to the current target (keeps the group's slot, speed and settle radius).</summary>
-    private static void Replan(World world, EntityId entity, ref Motion m)
-    {
-        m.RequestSerial++;
-        m.GoalTile = -1;
-        m.Mode = MotionMode.Waiting;
-        m.StallTicks = 0;
-        m.BestDistance = int.MaxValue;
-        world.Paths.Clear(entity.Index);
-        world.PathQueue.Enqueue(new PathRequest { Entity = entity.Value, Serial = m.RequestSerial, Group = 0 });
-    }
+    private static void Replan(World world, EntityId entity, ref Motion m) => Apply(world, entity, ref m, MarkReplan(ref m));
 
     // ----- merge -------------------------------------------------------------------------------------------------
 
@@ -829,6 +872,112 @@ public sealed class MovementSystem : ISimSystem
         }
 
         return (px, py);
+    }
+
+    /// <summary>What the route update leaves to the sequential pass.</summary>
+    private enum RouteAction : byte
+    {
+        /// <summary>Nothing.</summary>
+        None,
+
+        /// <summary>Clear the plan (switched to direct steering).</summary>
+        ClearPlan,
+
+        /// <summary>Clear the plan and queue the re-plan request (the motion is already marked).</summary>
+        Replan,
+
+        /// <summary>Not handled by the route job.</summary>
+        Skipped,
+    }
+
+    /// <summary>
+    /// Scratch for route updates: the goal cluster's tree. A cluster search is a pure function of the layer, the cluster
+    /// and the root, so the last tree is reused while those match (the layer does not change during the pre-pass).
+    /// </summary>
+    private sealed class RouteScratch
+    {
+        private readonly LocalSearch _search = new();
+        private NavLayer? _layer;
+        private int _cluster = -1;
+        private int _root = -1;
+
+        public byte[] Tree { get; } = new byte[NavLayer.ClusterTiles];
+
+        public void Reset() => _layer = null;
+
+        public void GoalTree(NavLayer layer, int cluster, int root)
+        {
+            if (ReferenceEquals(layer, _layer) && cluster == _cluster && root == _root)
+            {
+                return;
+            }
+
+            _search.Dijkstra(layer, layer.ClusterAt(cluster), root, Tree, null);
+            _layer = layer;
+            _cluster = cluster;
+            _root = root;
+        }
+    }
+
+    /// <summary>Route updates over chunks of <see cref="ChunkSize"/> units; each job has its own scratch.</summary>
+    private sealed class RouteJob : IParallelJob
+    {
+        private RouteScratch[] _scratch = [];
+        private RouteAction[] _actions = [];
+        private World _world = null!;
+        private NavigationGrid _nav = null!;
+        private int _tick;
+        private int _count;
+
+        public int JobCount { get; private set; }
+
+        public ReadOnlySpan<RouteAction> Actions => _actions.AsSpan(0, _count);
+
+        public void Prepare(World world, NavigationGrid nav, int tick)
+        {
+            _world = world;
+            _nav = nav;
+            _tick = tick;
+            _count = world.Motions.Count;
+            JobCount = (_count + ChunkSize - 1) / ChunkSize;
+            if (_actions.Length < _count)
+            {
+                _actions = new RouteAction[Math.Max(_count, _actions.Length * 2)];
+            }
+
+            if (_scratch.Length < JobCount)
+            {
+                RouteScratch[] grown = new RouteScratch[JobCount];
+                _scratch.CopyTo(grown, 0);
+                for (int j = _scratch.Length; j < grown.Length; j++)
+                {
+                    grown[j] = new RouteScratch();
+                }
+
+                _scratch = grown;
+            }
+
+            for (int j = 0; j < JobCount; j++)
+            {
+                _scratch[j].Reset();
+            }
+        }
+
+        public void Execute(int jobIndex)
+        {
+            ComponentStore<Motion> motions = _world.Motions;
+            RouteScratch scratch = _scratch[jobIndex];
+            int version = _nav.Version;
+            int end = Math.Min(_count, (jobIndex + 1) * ChunkSize);
+            for (int i = jobIndex * ChunkSize; i < end; i++)
+            {
+                EntityId entity = motions.Entities[i];
+                ref Motion m = ref motions.At(i);
+                _actions[i] = RoutedInParallel(m, entity, _tick)
+                    ? UpdateRoute(_world, entity, ref m, _nav.Layers[m.Layer], version, _tick, scratch)
+                    : RouteAction.Skipped;
+            }
+        }
     }
 
     /// <summary>The per-tick flat copy of the mobile units, parallel to the motion store.</summary>

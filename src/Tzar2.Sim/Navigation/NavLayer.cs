@@ -337,6 +337,9 @@ public sealed class NavLayer
     /// <summary>CSR edge costs.</summary>
     internal int[] GraphAdjCost { get; private set; } = [];
 
+    /// <summary>CSR: the neighbour's tile column | row &lt;&lt; 16 (read with the edge, for the search heuristic).</summary>
+    internal int[] GraphAdjPos { get; private set; } = [];
+
     /// <summary>Tile column per compact node.</summary>
     internal int[] GraphX { get; private set; } = [];
 
@@ -402,6 +405,7 @@ public sealed class NavLayer
         {
             GraphAdjNode = new int[Math.Max(edges, GraphAdjNode.Length * 2)];
             GraphAdjCost = new int[GraphAdjNode.Length];
+            GraphAdjPos = new int[GraphAdjNode.Length];
         }
 
         int e = 0;
@@ -415,6 +419,7 @@ public sealed class NavLayer
             if (partner >= 0)
             {
                 GraphAdjNode[e] = GraphCompactOf[partner];
+                GraphAdjPos[e] = GraphX[GraphAdjNode[e]] | (GraphY[GraphAdjNode[e]] << 16);
                 GraphAdjCost[e++] = StraightCost;
             }
 
@@ -426,6 +431,7 @@ public sealed class NavLayer
                 if (cost >= 0)
                 {
                     GraphAdjNode[e] = GraphCompactOf[baseNode + j];
+                    GraphAdjPos[e] = GraphX[GraphAdjNode[e]] | (GraphY[GraphAdjNode[e]] << 16);
                     GraphAdjCost[e++] = cost;
                 }
             }

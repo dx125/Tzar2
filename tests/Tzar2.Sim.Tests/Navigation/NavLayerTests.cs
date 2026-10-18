@@ -285,6 +285,37 @@ public class NavLayerTests(ITestOutputHelper output)
         Assert.Null(nav.ForType(SyntheticScenario.House));
     }
 
+    [Property(MaxTest = 30)]
+    public void Route_queries_cost_and_charge_exactly_what_the_cluster_searches_give(ulong seed)
+    {
+        // FindRoute reads the start and goal costs off the portal trees (ADR 0080); FindTilePath still runs the two
+        // cluster searches. Same abstract search, so the cost and the charged expansions must be identical.
+        var rng = Xoshiro256StarStar.FromSeed(seed);
+        int size = rng.NextInt(70, 160);
+        World world = NewWorld(RandomMap(size, rng.NextInt(300, 2500), seed));
+        NavLayer layer = LandLayer(world);
+        var route = new PathSearch();
+        var tiles = new PathSearch();
+        int compared = 0;
+        for (int q = 0; q < 40; q++)
+        {
+            int start = rng.NextInt(size * size);
+            int goal = rng.NextInt(size * size);
+            if (!layer.IsWalkable(start) || !layer.IsWalkable(goal) || !layer.AreConnected(start, goal))
+            {
+                continue;
+            }
+
+            Assert.True(route.FindRoute(layer, start, goal));
+            Assert.True(tiles.FindTilePath(layer, start, goal));
+            Assert.Equal(tiles.Cost, route.Cost);
+            Assert.Equal(tiles.Expanded, route.Expanded);
+            compared++;
+        }
+
+        Assert.True(compared > 0);
+    }
+
     [Fact]
     public void Buildings_block_and_unblock_incrementally()
     {

@@ -21,11 +21,10 @@ public sealed class PathSearch
     private readonly byte[] _goalTree = new byte[NavLayer.ClusterTiles];
     private readonly int[] _goalCost = new int[NavLayer.ClusterTiles];
     private readonly int[] _startCost = new int[NavLayer.ClusterTiles];
+    private readonly int[] _startPortalCost = new int[NavLayer.MaxPortals];
+    private readonly int[] _goalPortalCost = new int[NavLayer.MaxPortals];
     private readonly MinHeap _open = new(1024);
-    private int[] _g = [];
-    private int[] _parent = [];
-    private int[] _seen = [];
-    private int[] _closed = [];
+    private NodeState[] _state = [];
     private int _stamp;
     private int[] _tiles = new int[256];
     private int[] _nodes = new int[64];
@@ -117,18 +116,34 @@ public sealed class PathSearch
         int cg = layer.ClusterOf(goal);
         NavLayer.Cluster startCluster = layer.ClusterAt(cs);
         NavLayer.Cluster goalCluster = layer.ClusterAt(cg);
-        _local.Dijkstra(layer, startCluster, start, _startTree, _startCost);
-        Expanded += _local.Expanded;
         if (cs == cg && layer.RegionOf(start) == layer.RegionOf(goal))
         {
             // Within one region of one cluster: the start tree already holds the path.
+            _local.Dijkstra(layer, startCluster, start, _startTree, _startCost);
+            Expanded += _local.Expanded;
             Cost = _startCost[startCluster.LocalIndex(goal, layer.Width)];
             AppendTreeTrace(layer, startCluster, goal, _startTree, reverse: true);
             return true;
         }
 
-        _local.Dijkstra(layer, goalCluster, goal, _goalTree, _goalCost);
-        Expanded += _local.Expanded;
+        if (refine)
+        {
+            // Refinement traces the start and goal trees, so search them.
+            _local.Dijkstra(layer, startCluster, start, _startTree, _startCost);
+            Expanded += _local.Expanded;
+            PortalCostsFromSearch(layer, startCluster, _startCost, _startPortalCost);
+            _local.Dijkstra(layer, goalCluster, goal, _goalTree, _goalCost);
+            Expanded += _local.Expanded;
+            PortalCostsFromSearch(layer, goalCluster, _goalCost, _goalPortalCost);
+        }
+        else
+        {
+            // A route needs only the start's and goal's costs to their clusters' portals: read them off the portals'
+            // precomputed trees, and charge what the two cluster searches would expand (ADR 0080).
+            Expanded += PortalCostsFromTrees(layer, startCluster, start, _startPortalCost);
+            Expanded += PortalCostsFromTrees(layer, goalCluster, goal, _goalPortalCost);
+        }
+
         if (!AbstractSearch(layer, start, goal, cs, startCluster, cg, goalCluster, out int virtualCost))
         {
             return false;
@@ -356,6 +371,62 @@ public sealed class PathSearch
         return true;
     }
 
+    // Per portal of the cluster: the cost from a cluster search's result (int.MaxValue = unreached).
+    private static void PortalCostsFromSearch(NavLayer layer, NavLayer.Cluster cluster, int[] costs, int[] portalCost)
+    {
+        for (int i = 0; i < cluster.PortalCount; i++)
+        {
+            portalCost[i] = costs[cluster.LocalIndex(cluster.PortalTile[i], layer.Width)];
+        }
+    }
+
+    // Per portal of the cluster in the tile's region: the cost between the tile and the portal, read by walking the
+    // portal's tree from the tile (a shortest-path tree, and steps are symmetric, so this is exactly what a cluster
+    // search from the tile finds). Other portals get int.MaxValue. Returns the tile's region size: the tiles a cluster
+    // search from the tile settles, i.e. its Expanded count.
+    private static int PortalCostsFromTrees(NavLayer layer, NavLayer.Cluster cluster, int tile, int[] portalCost)
+    {
+        int width = layer.Width;
+        byte region = layer.RegionOf(tile);
+        int start = cluster.LocalIndex(tile, width);
+        for (int i = 0; i < cluster.PortalCount; i++)
+        {
+            if (cluster.PortalRegion[i] != region)
+            {
+                portalCost[i] = int.MaxValue;
+                continue;
+            }
+
+            byte[] tree = cluster.Trees[i];
+            int local = start;
+            int cost = 0;
+            while (true)
+            {
+                byte code = tree[local];
+                if (code >= NavLayer.TreeRoot)
+                {
+                    portalCost[i] = code == NavLayer.TreeRoot ? cost : int.MaxValue;
+                    break;
+                }
+
+                cost += (code & 1) == 0 ? NavLayer.StraightCost : NavLayer.DiagonalCost;
+                local += NavLayer.DirX[code] + (NavLayer.DirY[code] * NavLayer.ClusterSize);
+            }
+        }
+
+        int settled = 0;
+        for (int y = cluster.Y; y < cluster.Y + cluster.H; y++)
+        {
+            int row = y * width;
+            for (int x = cluster.X; x < cluster.X + cluster.W; x++)
+            {
+                settled += layer.RegionOf(row + x) == region ? 1 : 0;
+            }
+        }
+
+        return settled;
+    }
+
     /// <summary>Octile distance between two tiles in cost units.</summary>
     public static int Octile(int width, int a, int b)
     {
@@ -465,22 +536,20 @@ public sealed class PathSearch
         cost = 0;
         int n = layer.GraphNodeCount;
         int capacity = n + 1;
-        if (_g.Length < capacity)
+        if (_state.Length < capacity)
         {
-            int size = Math.Max(capacity, _g.Length * 2);
-            _g = new int[size];
-            _parent = new int[size];
-            _seen = new int[size];
-            _closed = new int[size];
+            _state = new NodeState[Math.Max(capacity, _state.Length * 2)];
             _stamp = 0;
         }
 
         if (++_stamp == int.MaxValue)
         {
-            Array.Clear(_seen);
-            Array.Clear(_closed);
+            Array.Clear(_state);
             _stamp = 1;
         }
+
+        NodeState[] state = _state;
+        int stamp = _stamp;
 
         int virtualGoal = n;
         int width = layer.Width;
@@ -491,15 +560,14 @@ public sealed class PathSearch
         int[] adjStart = layer.GraphAdjStart;
         int[] adjNode = layer.GraphAdjNode;
         int[] adjCost = layer.GraphAdjCost;
-        int[] nodeX = layer.GraphX;
-        int[] nodeY = layer.GraphY;
+        int[] adjPos = layer.GraphAdjPos;
         int[] nodeCluster = layer.GraphCluster;
         byte[] nodeRegion = layer.GraphRegion;
-        int[] nodeTile = layer.GraphTile;
+        int[] nodeId = layer.GraphNodeId;
         byte startRegion = layer.RegionOf(start);
         for (int i = 0; i < startCluster.PortalCount; i++)
         {
-            int c = _startCost[startCluster.LocalIndex(startCluster.PortalTile[i], width)];
+            int c = _startPortalCost[i];
             if (startCluster.PortalRegion[i] == startRegion && c != int.MaxValue)
             {
                 Relax(compactOf[(cs * NavLayer.MaxPortals) + i], c, -1, startCluster.PortalX[i], startCluster.PortalY[i]);
@@ -510,23 +578,24 @@ public sealed class PathSearch
         while (_open.Count > 0)
         {
             int node = _open.Pop(out _);
-            if (_closed[node] == _stamp)
+            ref NodeState current = ref state[node];
+            if (current.Closed == stamp)
             {
                 continue;
             }
 
-            _closed[node] = _stamp;
+            current.Closed = stamp;
             Expanded++;
             if (node == virtualGoal)
             {
-                cost = _g[node];
+                cost = current.G;
                 return true;
             }
 
-            int g = _g[node];
+            int g = current.G;
             if (nodeCluster[node] == cg && nodeRegion[node] == goalRegion)
             {
-                int toGoal = _goalCost[goalCluster.LocalIndex(nodeTile[node], width)];
+                int toGoal = _goalPortalCost[nodeId[node] % NavLayer.MaxPortals];
                 if (toGoal != int.MaxValue)
                 {
                     Relax(virtualGoal, g + toGoal, node, _goalX, _goalY);
@@ -536,9 +605,10 @@ public sealed class PathSearch
             for (int e = adjStart[node]; e < adjStart[node + 1]; e++)
             {
                 int target = adjNode[e];
-                if (_closed[target] != _stamp)
+                if (state[target].Closed != stamp)
                 {
-                    Relax(target, g + adjCost[e], node, nodeX[target], nodeY[target]);
+                    int pos = adjPos[e];
+                    Relax(target, g + adjCost[e], node, pos & 0xFFFF, pos >> 16);
                 }
             }
         }
@@ -549,7 +619,8 @@ public sealed class PathSearch
     // The heuristic (octile distance from the node's tile to the goal) is computed only for improving relaxations.
     private void Relax(int node, int g, int parent, int x, int y)
     {
-        if (_seen[node] == _stamp && g >= _g[node])
+        ref NodeState s = ref _state[node];
+        if (s.Seen == _stamp && g >= s.G)
         {
             return;
         }
@@ -559,9 +630,9 @@ public sealed class PathSearch
         int h = dx > dy
             ? (NavLayer.StraightCost * dx) + ((NavLayer.DiagonalCost - NavLayer.StraightCost) * dy)
             : (NavLayer.StraightCost * dy) + ((NavLayer.DiagonalCost - NavLayer.StraightCost) * dx);
-        _seen[node] = _stamp;
-        _g[node] = g;
-        _parent[node] = parent;
+        s.Seen = _stamp;
+        s.G = g;
+        s.Parent = parent;
         _open.Push(((ulong)(uint)(g + h) << 32) | (uint)h, node);
     }
 
@@ -570,7 +641,7 @@ public sealed class PathSearch
     {
         int count = 0;
         int[] nodeId = layer.GraphNodeId;
-        for (int n = _parent[layer.GraphNodeCount]; n >= 0; n = _parent[n])
+        for (int n = _state[layer.GraphNodeCount].Parent; n >= 0; n = _state[n].Parent)
         {
             if (count == _nodes.Length)
             {
@@ -666,5 +737,14 @@ public sealed class PathSearch
         _waypoints[2 * WaypointCount] = x;
         _waypoints[(2 * WaypointCount) + 1] = y;
         WaypointCount++;
+    }
+
+    // Search state of one abstract node (one cache line holds four).
+    private struct NodeState
+    {
+        public int Seen;
+        public int Closed;
+        public int G;
+        public int Parent;
     }
 }
