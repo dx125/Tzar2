@@ -117,6 +117,13 @@ public static class Shore
         return Interaction.NearestNode(world, owner, resource, x, y, radiusTiles, Content.Compiled.Locomotor.Ship);
     }
 
+    /// <summary>The edge distance from a point to an entity (structures: to the footprint; units: minus the radius).</summary>
+    public static int EdgeDistance(World world, Position from, Core.Ids.EntityId to)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        return Interaction.EdgeDistance(world, from, 0, to);
+    }
+
     /// <summary>How far around a blocked point (a building) its land is looked for (tiles).</summary>
     public const int ComponentSearchTiles = 6;
 

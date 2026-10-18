@@ -31,11 +31,15 @@ attacked there; the test only skipped the assertion.
     nearest it) — after everyone is aboard or 60 s; a transport still loaded after 60 s is told again. The military
     executor leaves the wave alone meanwhile and takes it on after the landing.
   * *Patrol*: idle armed ships that are not kept for a landing (and the kept transport while no wave is out) attack
-    the nearest enemy ship within 30 tiles, else move-advance to the water off the enemy town.
+    the nearest enemy ship within 30 tiles, else the nearest of the 8 enemy buildings and units nearest to them that a
+    water point of their sea is within their range of, else move-advance to the water off the enemy town.
 * **State**: `AiPlayerState` version 2 adds the naval phase, its start tick, the landings count and the transports
   (at most 16; none outside a landing) and the last look whether an enemy is overseas (every 10 s); the system state
   version is 3; `NavalOptions` are validated and part of the
   options fingerprint.
+* `HumanVsAiTests` (#36) asserts the AI's hits on the human wherever the castles are reachable by land or across a
+  shared sea (its row attribute now accepts ship-reachable castles); Archipelagos plays 12 minutes there, since a passive
+  human keeps nothing in a ship's range and the first landing comes a little after 9.
 * `AiRandomMapTests` asserts damage on all six map types again and no ships on land-connected ones; `AiNavalTests`
   asserts landings, fishing and soldiers standing on the other island within 12 minutes on Archipelagos, a snapshot
   in the middle of a landing, and rejection of corrupt naval state.

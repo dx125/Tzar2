@@ -632,7 +632,7 @@ public sealed class NavalExecutor : IAiExecutor
             }
 
             Position at = world.Positions.Get(ship);
-            if (NearestEnemyShip(context, at, out EntityId enemy))
+            if (NearestEnemyShip(context, at, out EntityId enemy) || (overseas && CoastalTarget(context, ship, landType, out enemy)))
             {
                 Order(context, ship, CommandKind.Attack, 0, 0, enemy, CommandFlags.None);
                 continue;
@@ -688,6 +688,88 @@ public sealed class NavalExecutor : IAiExecutor
         }
 
         return !best.IsNone;
+    }
+
+    /// <summary>How many enemy buildings and units (nearest to the ship first) a patrol checks for one it can bombard.</summary>
+    internal const int CoastalCandidates = 8;
+
+    // An enemy building or unit that a water point of the ship's sea is within the ship's range of (its dock nearest to
+    // it), among the ones nearest to the ship; the nearest such one.
+    private static bool CoastalTarget(AiExecutorContext context, EntityId ship, ushort landType, out EntityId target)
+    {
+        World world = context.World;
+        target = EntityId.None;
+        EntityTypeDefinition type = world.TypeOf(ship);
+        long range = type.Traits.Armament!.RangeUnits;
+        Position at = world.Positions.Get(ship);
+        Span<long> distances = stackalloc long[CoastalCandidates];
+        Span<uint> candidates = stackalloc uint[CoastalCandidates];
+        int n = 0;
+        for (int q = 0; q < context.Census.PlayerCount; q++)
+        {
+            if (!AiCensus.IsEnemy(world, context.Slot, q))
+            {
+                continue;
+            }
+
+            AiCensusPlayer enemy = context.Census.Player(q);
+            Offer(context, at, enemy.Buildings, distances, candidates, ref n);
+            Offer(context, at, enemy.Workers, distances, candidates, ref n);
+            Offer(context, at, enemy.Army, distances, candidates, ref n);
+        }
+
+        for (int k = 0; k < n; k++)
+        {
+            EntityId e = EntityId.FromValue(candidates[k]);
+            Position p = world.Positions.Get(e);
+            int component = Shore.LandComponentAt(world, landType, p.X, p.Y);
+            if (Shore.FindDock(world, type.Id, at, landType, component, p.X, p.Y, out _, out Position water)
+                && Shore.EdgeDistance(world, water, e) <= range)
+            {
+                target = e;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Keeps the CoastalCandidates targetable entities nearest to the ship, sorted (ties: lower entity id first).
+    private static void Offer(AiExecutorContext context, Position at, List<EntityId> entities, Span<long> distances, Span<uint> candidates, ref int n)
+    {
+        foreach (EntityId e in entities)
+        {
+            if (!MilitaryExecutor.MayTargetUnit(context.World, context.Slot, e))
+            {
+                continue;
+            }
+
+            Position p = context.World.Positions.Get(e);
+            long d = AiExecutorContext.Distance(at.X, at.Y, p.X, p.Y);
+            int k;
+            if (n < distances.Length)
+            {
+                k = n++;
+            }
+            else if (d < distances[n - 1] || (d == distances[n - 1] && e.Value < candidates[n - 1]))
+            {
+                k = n - 1; // replaces the farthest
+            }
+            else
+            {
+                continue;
+            }
+
+            while (k > 0 && (distances[k - 1] > d || (distances[k - 1] == d && candidates[k - 1] > e.Value)))
+            {
+                distances[k] = distances[k - 1];
+                candidates[k] = candidates[k - 1];
+                k--;
+            }
+
+            distances[k] = d;
+            candidates[k] = e.Value;
+        }
     }
 
     // The water next to the shore nearest to the town of the enemy the wave goes for (else the nearest enemy).
