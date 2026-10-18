@@ -31,7 +31,7 @@ update).
 | Destroyed producer | its queue is lost without a refund | code (`World.Destroy`) | — | observation |
 | Collision radius | 7 px (cavalry 10 px) | YAML `^Unit`/`^Cavalry.Collision.radius` | UNK-11 | dense formation captures |
 | Occupancy cells per tile | 2 × 2 | YAML `ruleset.occupancyCellsPerTileAxis` | UNK-11 | same |
-| Building damage reduction | damage × 100 / (100 + RESISTANCE); RESISTANCE from the buildings table; defence 0 (owner decision: follow the manual, manual.pdf ch. 4 "The Interface", § 4 "The Selection View", p. 24: "RESISTANCE - reduces the amount of damage a building suffers when attacked") | YAML `gameplay.resistanceScale`, `^Building.Armor` | UNK-08; RESISTANCE also feeds capture later (GAME-04) | damage grid on buildings |
+| Building damage reduction | damage × 1000 / (1000 + RESISTANCE) (owner decision, PR #21: the first placeholder, scale 100, left castles with RESISTANCE 1000 at 1 damage per footman hit — two footmen needed ~80 min; 1000 halves damage to a castle and takes a third off barracks); RESISTANCE from the buildings table; defence 0 (owner decision: follow the manual, manual.pdf ch. 4 "The Interface", § 4 "The Selection View", p. 24: "RESISTANCE - reduces the amount of damage a building suffers when attacked") | YAML `gameplay.resistanceScale`, `^Building.Armor` | UNK-08; RESISTANCE also feeds capture later (GAME-04) | damage grid on buildings |
 | Corpse lifetime | 120 s | YAML `ruleset.corpseTtlMs` | — (REQ-PATH-08 default) | capture |
 | Idle peasants fight back | no auto-acquire for peasants | YAML `^class.peon.Armament.autoAcquire` | — | observation |
 | Storage accepts stone | stone, gold, iron (manual: "iron and gold") | YAML `^class.storage.DropOff` | — | observation |

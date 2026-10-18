@@ -42,7 +42,8 @@ gameplay:
   manaRegenPerMinute: 60              # UNVERIFIED (UNK-26): mana a caster regains per minute
   # Combat and work constants.
   minimumDamage: 1                    # UNVERIFIED (UNK-08)
-  resistanceScale: 100                # UNVERIFIED (UNK-08): building damage x 100 / (100 + RESISTANCE) (manual ch. 4)
+  resistanceScale: 1000               # UNVERIFIED (UNK-08): building damage x 1000 / (1000 + RESISTANCE) (manual ch. 4); owner
+                                      # decision: 100 made castles (1000) practically immune to melee; capture uses RESISTANCE alone
   meleeReachPx: 8                     # UNVERIFIED (UNK-07/11): edge-to-edge reach of hand-to-hand attacks
   interactionReachPx: 32              # UNVERIFIED (UNK-17/18): worker reach to a node, drop-off or site
   acquireIntervalMs: 200              # UNVERIFIED: target scan cadence of idle armed units

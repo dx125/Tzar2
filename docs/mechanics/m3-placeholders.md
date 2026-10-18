@@ -53,6 +53,7 @@ Shift + Delete; what each technology does (not how much).
 | Bridge footprint | the sprite box (`bridge_horz`), ends on land | import + code | UNK-02 | editor placement |
 | Harbor water | within 2 tiles of the footprint | code (`GameplayCommands.CoastReachTiles`) | UNK-02 | editor placement |
 | Shore reach | +1 tile for boats at buildings and peasants at ships | code (`Interaction.WorkerReaches`) | UNK-11 | captures (and the terrain-set conversion) |
+| Building damage scale | damage × 1000 / (1000 + RESISTANCE) (was 100 in M2: castles were practically immune to melee; owner decision on PR #21) | YAML `gameplay.resistanceScale` | UNK-08 | damage grid on buildings |
 | Capture rate | 10 points per digging peasant per second | YAML `gameplay.capturePointsPerSecond` | UNK-19 | capture captures |
 | Capture reset | progress lost after 5 s without diggers | YAML `gameplay.captureResetMs` | UNK-19 | same |
 | EMIT influence | own buildings' EMIT adds, others' subtracts, linearly to 0 at 16 tiles (⚠ HYPOTHESIS) | YAML `gameplay.influenceRadiusTiles` + code (`CaptureSystem`) | UNK-19 | capture times near and far from towns |

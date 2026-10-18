@@ -107,7 +107,7 @@ public class RulesetCompilerTests
         Assert.Equal(EntityCategory.Building, castle.Traits.Category);
         Assert.Equal(700, castle.Traits.Resistance); // buildings TSV RESISTANCE
         Assert.Equal(0, Type(Classic, "comm.field").Traits.Resistance); // "*"
-        Assert.Equal(100, Classic.Gameplay.ResistanceScale);
+        Assert.Equal(1000, Classic.Gameplay.ResistanceScale);
 
         Assert.Equal(["euro.archer", "euro.footman", "euro.knight", "euro.maceman", "euro.pikeman"],
             Type(Classic, "euro.barrack").Traits.Producer!.Produces.Select(id => Classic.EntityTypes[id].Key));

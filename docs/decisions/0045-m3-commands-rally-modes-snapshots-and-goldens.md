@@ -26,8 +26,14 @@ carry and validate (ADR 0019).
   rebuilt. Snapshot format 5, hashed layout 4, ruleset hash version 4.
 * **Systems:** step 10 `StructureSystem` (gates, fire, mana), step 12 `CaptureSystem`; step 17 removes expired
   lifetimes before recycling slots.
+* **Building damage scale** (owner decision on this PR, UNK-08): `gameplay.resistanceScale` goes from 100 to 1000, so
+  a hit on a building does `damage × 1000 / (1000 + RESISTANCE)` (castle ×0.5, barracks ×0.67, house ×0.95). With
+  100, a castle (RESISTANCE 1000) took 1 damage per footman hit — two footmen needed about 80 minutes (found by the
+  client's autoplay). Still UNVERIFIED until the damage grid capture. Capture difficulty does not use the scale: it
+  uses RESISTANCE itself (after Fanaticism/Buddhism) plus the EMIT influence (ADR 0044). A scenario test has ten
+  footmen destroy an enemy barracks in bounded time.
 * **Goldens and benchmark.** The gameplay bot now also researches its castle's technologies one after another.
-  Golden values re-pinned (reasons in the tests): gameplay ruleset `650E0DFABEB53BC8`, stream `1585F386DAC3B94B`, final
+  Golden values re-pinned (reasons in the tests): gameplay ruleset `9892A5C9AA3B592E` (after the resistance-scale change below), stream `1585F386DAC3B94B`, final
   `93F6F2D1928AFD4A`; CI gameplay bench `E7B122B9022986E5`; synthetic movement `B435A37AFB3A1448` /
   `5A3E1509E520C33D` (layout only, behaviour unchanged).
 

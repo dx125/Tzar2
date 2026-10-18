@@ -64,3 +64,7 @@ the amount of damage a unit suffers"; BONUS.INI gives ±% per attacker/target gr
 * The fidelity suite (§22.3) replaces the formula, cycle and reaches with measured facts; the code paths stay.
 * Experience, holders' damage split (`[damage]` per class), towers and siege are M3; the damage class is already
   compiled for the holders.
+
+## Amendment (M3 stream A, PR #21)
+
+Owner decision: `resistanceScale` is 1000 instead of 100 (still UNVERIFIED, UNK-08); see ADR 0045.
