@@ -146,22 +146,28 @@ public sealed class GameSession : IDisposable
         return new GameSession(setup, ruleset, fog, peers: null, snapshot);
     }
 
-    private TaskCompletionSource<byte[]>? _snapshotRequest;
+    private TaskCompletionSource<(byte[] Snapshot, int Tick)>? _snapshotRequest;
 
     /// <summary>
-    /// A snapshot taken by the sim thread between two ticks while it runs (quick save; ADR 0133). Blocks the caller until
-    /// the sim thread took it; without a sim thread it captures directly.
+    /// A snapshot of the running match (quick save; ADR 0133) with the tick it belongs to. It is always taken by the
+    /// thread that runs the ticks, between two ticks: with a sim thread, this call posts a request that the thread
+    /// serves at the top of its loop (never inside <c>RunTick</c>) and blocks until then; without one it captures
+    /// directly. The tick is read together with the snapshot, so they always match.
     /// </summary>
-    /// <exception cref="TimeoutException">The sim thread did not answer within 10 s.</exception>
-    public byte[] CaptureSnapshotNow()
+    /// <exception cref="TimeoutException">The sim thread did not answer within 10 s (stopped or faulted).</exception>
+    public (byte[] Snapshot, int Tick) CaptureSnapshotNow()
     {
         if (_thread is null)
         {
-            return Simulation.CaptureSnapshot();
+            return (Simulation.CaptureSnapshot(), Simulation.World.Tick.Value);
         }
 
-        var request = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
-        Volatile.Write(ref _snapshotRequest, request);
+        var request = new TaskCompletionSource<(byte[] Snapshot, int Tick)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (Interlocked.CompareExchange(ref _snapshotRequest, request, null) is not null)
+        {
+            throw new InvalidOperationException("Another snapshot request is pending.");
+        }
+
         return request.Task.Wait(TimeSpan.FromSeconds(10)) ? request.Task.Result : throw new TimeoutException("The sim thread did not take the snapshot.");
     }
 
@@ -188,7 +194,7 @@ public sealed class GameSession : IDisposable
         {
             try
             {
-                request.SetResult(Simulation.CaptureSnapshot());
+                request.SetResult((Simulation.CaptureSnapshot(), Simulation.World.Tick.Value));
             }
 #pragma warning disable CA1031 // The requester gets the failure.
             catch (Exception e)

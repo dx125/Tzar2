@@ -27,12 +27,15 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
 
     private const uint Magic = 0x56533254; // "T2SV"
 
-    /// <summary>Saves a mission between two ticks (the sim thread, if running, takes the snapshot).</summary>
+    /// <summary>
+    /// Saves a mission between two ticks: with a running sim thread, that thread takes the snapshot at the top of its
+    /// loop, never mid-tick (<see cref="GameSession.CaptureSnapshotNow"/>).
+    /// </summary>
     public static SaveGame Capture(GameSession session, string campaignId, string mapId, CampaignProgress? progress, string label)
     {
         ArgumentNullException.ThrowIfNull(session);
-        byte[] snapshot = session.CaptureSnapshotNow();
-        return new SaveGame(campaignId, mapId, label, session.Simulation.World.Tick.Value, progress, snapshot);
+        (byte[] snapshot, int tick) = session.CaptureSnapshotNow();
+        return new SaveGame(campaignId, mapId, label, tick, progress, snapshot);
     }
 
     /// <summary>The save as bytes.</summary>

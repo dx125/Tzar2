@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Rules;
@@ -116,6 +117,39 @@ public sealed class CampaignTests(ITestOutputHelper output)
         finally
         {
             Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Saves_taken_while_the_sim_thread_runs_at_full_speed_restore_to_the_uninterrupted_state()
+    {
+        InMemoryCampaignSource source = DemoCampaign.Create();
+        CampaignProgress progress = CampaignFlow.Begin(source.Campaign);
+        // The watch map: no conversation, so single player never holds the clock.
+        MatchSetup setup = ScenarioMatch.Setup(source.Load("watch"), Rules.Value, progress, computerAi: true);
+        var saves = new List<SaveGame>();
+        using (var live = new GameSession(setup, Rules.Value))
+        {
+            live.SpeedIndex = GameSession.SpeedSteps.Length - 1;
+            live.Start();
+            for (int i = 0; i < 5; i++)
+            {
+                SpinWait.SpinUntil(() => live.TicksRun >= (i + 1) * 15, TimeSpan.FromSeconds(30));
+                saves.Add(SaveGame.Capture(live, source.Campaign.Id, "watch", progress, "live " + i));
+            }
+        }
+
+        Assert.Equal(saves.Count, saves.Select(s => s.Tick).Distinct().Count());
+        using var reference = new GameSession(setup, Rules.Value);
+        foreach (SaveGame save in saves.OrderBy(s => s.Tick))
+        {
+            reference.Step(save.Tick - reference.Simulation.World.Tick.Value);
+            using GameSession restored = SaveGame.FromBytes(save.ToBytes()).Resume(source, Rules.Value);
+            Assert.Equal(reference.Simulation.ComputeFullHash(), restored.Simulation.ComputeFullHash());
+            restored.Step(20);
+            using var check = new GameSession(setup, Rules.Value);
+            check.Step(save.Tick + 20);
+            Assert.Equal(check.Simulation.ComputeFullHash(), restored.Simulation.ComputeFullHash());
         }
     }
 
