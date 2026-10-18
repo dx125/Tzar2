@@ -35,6 +35,12 @@ public sealed record GameplayScenarioOptions
 
     /// <summary>Ticks between two bot passes of one kingdom.</summary>
     public int BotIntervalTicks { get; init; } = 40;
+
+    /// <summary>
+    /// Taverns for kingdoms 0 and 1 (of three or more), who hire there (ADR 0108). Off by default: the benchmark workloads
+    /// must not change (ADR 0080); the gameplay golden turns it on.
+    /// </summary>
+    public bool Taverns { get; init; }
 }
 
 /// <summary>
@@ -205,7 +211,7 @@ public sealed partial class GameplayScenario : IBenchScenario
 
             // A tavern (ADR 0108) for kingdoms 0 and 1 of three or more (as their alliance and trade): they hire a mercenary
             // group and a hero; two-kingdom runs (the allocation gate) keep their map.
-            if (ruleset.EntityTypeId("euro.tavern") >= 0 && p < 2 && options.Players >= 3)
+            if (options.Taverns && ruleset.EntityTypeId("euro.tavern") >= 0 && p < 2 && options.Players >= 3)
             {
                 Place(objects, used, size, ruleset, "euro.tavern", p, bx - 6, by - 8);
             }

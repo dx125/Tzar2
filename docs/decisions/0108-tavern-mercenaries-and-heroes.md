@@ -50,7 +50,7 @@ fills them at run time. What is offered, at what price and how often is unknown 
 
 * The client has no tavern menu yet; `TavernOffers.Offer` and `CostOf` give it the offers and prices.
 * Captures of the tavern menus (what types, how many, prices, refresh) replace the constants.
-* Goldens: the gameplay bot's kingdoms 0 and 1 (of three or more) get a tavern and hire offer 0 and the hero at tick 600
-  (two-kingdom runs keep their map: the allocation gate needs its battle). Re-pinned: gameplay ruleset
-  `7C807B7471809ECC`, stream `BFA7F2738E087580`, final `A1F0F5296E4CDFA5`; CI gameplay bench `B7ED413E7817363E`. The
-  synthetic and AI bench hashes are unchanged (`KingdomState` keeps its size: the new fields fill its padding).
+* Goldens: with `GameplayScenarioOptions.Taverns` (on in the gameplay golden, off by default so the benchmark workloads
+  stay the same, ADR 0080) kingdoms 0 and 1 (of three or more) get a tavern and hire offer 0 and the hero at tick 600.
+  Re-pinned: gameplay ruleset `7C807B7471809ECC`, stream `BFA7F2738E087580`, final `A1F0F5296E4CDFA5`. The CI bench hashes
+  (synthetic, gameplay, AI) are unchanged (`KingdomState` keeps its size: the new fields fill its padding).
