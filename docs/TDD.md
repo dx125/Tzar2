@@ -960,6 +960,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-78 | Which "use default" object flag covers level/resistance; whether recorded values override the ruleset | Editor experiment | P2 |
 | UNK-79 | Second part of Player Win/Lose's `next map|?` text | Editor experiment | P3 |
 | UNK-80 | Trigger area rectangles: inclusive or exclusive right/bottom; rectangles past the map edge | Editor experiment | P2 |
+| UNK-81 | Cliff passability: whether every tile of a 2×2 cliff piece blocks, and how units cross cliff rings ([wmp.md §5](formats/wmp.md)) | Captures in the original (walk a unit along a cliff ring) | P1 |
 
 ---
 

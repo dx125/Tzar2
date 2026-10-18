@@ -198,13 +198,20 @@ Custom ambient sounds are editor objects of class `sound_object`. None of the 33
 |---|---|
 | 0–3 | transition shape `s` (0–13) |
 | 4–9 | terrain pair `a·8 + b` (a, b = terrain-set indices 0–7, 0 = water) |
-| 10 | cliff |
+| 10 | cliff: then bits 0–9 are **not** terrain (below) |
 | 11–15 | tree: 0 none, 1–31 = cell of the set's tree strip (1–3 stumps, 4–5 bushes, 6–10 pines, 11–31 deciduous; `[treename]` counts) |
+
+A **cliff tile** (bit 10) stores a cliff piece instead of terrain in bits 0–9. Pieces are 2 × 2 tiles: bit 0 is the
+column and bit 4 the row inside the piece, bits 1–3 a variant, bits 5–8 the shape (4 corner/end, 5 horizontal run,
+6 vertical run, up to 10), and bit 9 selects the second cliff graphic set. The terrain under a cliff is not stored;
+the converter takes it from the nearest non-cliff corner. Whether every cliff tile blocks movement, or only part of a
+piece, is ⚠ UNVERIFIED (UNK-81): in one campaign map, cliff rings fully enclose a goal area that is presumably
+reached on foot.
 
 When a = b the tile is solid. Otherwise its corner mask is `m = s + 1`, with bits TL = 1, TR = 2, BR = 4, BL = 8. A
 set bit means that corner is terrain `a`, a clear bit means `b`. This matches the transition-strip rows of
-[bmp.md §3.2](bmp.md), where `a` is the magenta key. Corners derived this way agree between neighbouring tiles for
-99.45 % of the 6.4 million shared corner pairs in the reference maps. The converter builds the (side+1)² corner grid
+[bmp.md §3.2](bmp.md), where `a` is the magenta key. Corners derived this way agree between neighbouring non-cliff tiles
+for more than 99 % of the shared corner pairs in the reference maps. The converter builds the (side+1)² corner grid
 by majority vote and reports the disagreeing corners. The variant column of a transition is not stored (UNK-10).
 
 ## 6. Triggers
@@ -367,6 +374,7 @@ Expressions are text in the language of Appendix C.6, plus what the game's own n
 | UNK-78 | Which "use default" bit covers level and resistance; whether recorded values with a clear bit always override the ruleset |
 | UNK-79 | The second part of Player Win/Lose's `next map|?` |
 | UNK-80 | Area rectangles: inclusive or exclusive right/bottom; rectangles past the edge |
+| UNK-81 | Cliff passability: whether all four tiles of a cliff piece block, and how units cross cliff rings |
 
 ## 11. Reproducing
 
