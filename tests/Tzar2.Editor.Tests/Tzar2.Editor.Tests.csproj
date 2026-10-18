@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The scenario and campaign editor (TDD §18, M5, ADR 0150): the document model and undo (Tzar2.Content.Editing), the
+    converter integration (Tzar2.Import.Editing), playtest and the trigger debugger (Tzar2.Game.Editing), and the §18.6
+    acceptance suite. Headless: the Godot editor mode is a view over these models (its smoke test is in Tzar2.Client.Tests).
+  -->
+  <PropertyGroup>
+    <TargetFramework>$(Tzar2LibraryTargetFramework)</TargetFramework>
+    <RootNamespace>Tzar2.Editor.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../Shared/*.cs" Link="Shared/%(Filename)%(Extension)" />
+    <Compile Include="../Shared/Scenario/*.cs" Link="Shared/Scenario/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Tzar2.Content/Tzar2.Content.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Import/Tzar2.Import.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Game/Tzar2.Game.csproj" />
+  </ItemGroup>
+
+</Project>
