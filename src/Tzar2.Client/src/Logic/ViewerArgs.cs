@@ -21,7 +21,8 @@ public sealed record ViewerArgs
         + "  --editor-smoke       drive the editor headless (edit, validate, save, reopen) and quit (exit code 0 = OK)\n"
         + "  --autoplay <dir>     play a scripted skirmish, write screenshots into <dir> and quit\n"
         + "  --game-smoke         run a skirmish headless for --ticks ticks and quit (exit code 0 = OK)\n"
-        + "  --ticks <n>          ticks for --game-smoke (default 300)\n"
+        + "  --mp-smoke           host a LAN match against a computer headless, then play its replay, and quit\n"
+        + "  --ticks <n>          ticks for --game-smoke and --mp-smoke (default 300)\n"
         + "  --seed <n>           match seed\n"
         + "  --map-type <type>    random map type (random, archipelagos, island, continental, lakes, dry)\n"
         + "  --map-size <size>    random map size (tiny ... enormous), or a number: the test map's side in tiles\n"
@@ -65,6 +66,9 @@ public sealed record ViewerArgs
 
     /// <summary>Headless game smoke test.</summary>
     public bool GameSmoke { get; init; }
+
+    /// <summary>Headless multiplayer smoke test: a LAN host, a match against a computer, then its replay (ADR 0168).</summary>
+    public bool MultiplayerSmoke { get; init; }
 
     /// <summary>Ticks of the game smoke test.</summary>
     public int Ticks { get; init; } = 300;
@@ -165,6 +169,9 @@ public sealed record ViewerArgs
                     break;
                 case "--game-smoke":
                     result = result with { GameSmoke = true, Skirmish = true };
+                    break;
+                case "--mp-smoke":
+                    result = result with { MultiplayerSmoke = true };
                     break;
                 case "--ticks":
                     result = result with { Ticks = Number(Value(), 1, 1_000_000, 300) };

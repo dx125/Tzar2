@@ -226,7 +226,13 @@ public partial class GameScreen : Node
         _hud.MinimapPressed += (share, right, mods) => OnMinimap(share, right, mods);
         _hud.MenuPressed += () => ShowMenu();
         _hud.DiplomacyPressed += () => Message(_catalog.Text("game_scr", "diplomacy", "DIPLOMACY") + ": not available yet");
-        _hud.ChatPressed += () => Message(_catalog.Text("game_scr", "chat", "CHAT") + ": needs multiplayer");
+        _hud.ChatPressed += () =>
+        {
+            if (!_session.IsMultiplayer)
+            {
+                Message(_catalog.Text("game_scr", "chat", "CHAT") + ": needs multiplayer");
+            }
+        };
         _selection.Changed += () =>
         {
             _menuStack.Clear();
