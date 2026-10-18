@@ -77,6 +77,17 @@ normalization only the fallback. The workload must never change (it re-bases eve
 **Baselines** are re-recorded, never edited by hand, when a change is meant to cost time: every check prints its
 `baseline` row (name, CPU model, p50, normalized p50).
 
+**Adding or re-recording a baseline row** (a runner with a new CPU model, which the log reports as "no baseline for
+this CPU", or an intended slowdown):
+1. Open the nightly run's `Benchmarks` job (or its `t2-bench` artifact) and copy the
+   `baseline<TAB>name<TAB>cpu<TAB>p50<TAB>normalized p50` lines that `check-bench.sh` printed for s2, gameplay, b4 and
+   stress.
+2. Prefer three or more runs on that CPU model (`gh workflow run nightly.yml --ref <branch>` repeatedly): take the
+   median p50 per scenario; with fewer runs take the slowest.
+3. Drop the leading `baseline` field and add or replace the rows in `tools/ci/bench-baseline.tsv` (tab-separated, one
+   row per scenario and CPU model). For an intended slowdown, replace the rows of every CPU model, and say why in the
+   commit message.
+
 ### Measurements
 
 Same CI runner (AMD EPYC 7763, 4 vCPUs), stress scenario, before → after, two alternating rounds:
@@ -102,7 +113,7 @@ Full hash: p99 1.3 ms on both sides (unchanged by design). Local Apple M5, 1 wor
   10% gate.
 * **Drop the occupancy grid from the full hash** (about 4 MB of the 4.5 MB hashed every 20 ticks; it is derived from
   positions, which are hashed): would cut ~1 ms from 5% of ticks, but changes the full hash defined by REQ-SIM-12 /
-  ADR 0016 and every golden value; left as an open question.
+  ADR 0016 and every golden value. Decided (coordinator, 2026-10-18): the full hash keeps the occupancy grid.
 * **Cache per-unit cluster searches across requests:** slots of a group are different tiles, so there is little reuse;
   the tree read removes the searches instead.
 
@@ -119,5 +130,5 @@ Full hash: p99 1.3 ms on both sides (unchanged by design). Local Apple M5, 1 wor
 
 ## Questions for the product owner
 
-* Is 2 group orders per second per AI player (24 units each) the right S2 order rate, or should the proxy follow a
-  measured APM of the original's Hard AI (UNK register)?
+* The S2 order rate (2 group orders of 24 units per second per AI player) is accepted for now (coordinator,
+  2026-10-18); retune it from AI telemetry once the M3 AI plays matches.

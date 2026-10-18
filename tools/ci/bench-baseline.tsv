@@ -1,6 +1,7 @@
 # Nightly t2 bench baselines (ADR 0080), recorded on GitHub ubuntu-24.04 runners (4 vCPUs, 4 sim workers): tick p50 per
 # scenario and runner CPU model (the median over the recording runs; the slowest run for models seen fewer than three
 # times), and the calibration-normalized p50. tools/ci/check-bench.sh prints the row of every run.
+# To add or re-record rows see ADR 0080 ("Adding or re-recording a baseline row").
 # B3 has no row: its p50 is dominated by idle ticks (30% spread on one CPU model); B3 is gated by its planning check.
 # name	cpu	p50 ms	normalized p50 ms
 b4	AMD EPYC 7763 64-Core Processor	0.655	0.648
