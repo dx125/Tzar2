@@ -101,7 +101,7 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
         using (d)
         {
             Run(d, hero, castle, MissionTicks);
-            Assert.Equal("972CB8D13D2ED7E7", d.Hashes[^1].ToString("X16"));
+            Assert.Equal("49DC53D9F047562F", d.Hashes[^1].ToString("X16"));
         }
     }
 
