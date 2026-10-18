@@ -106,6 +106,17 @@ public partial class GameApp : Node
                 _ = new AutoplayDriver(this, dir).RunAsync();
             }
         }
+        else if (_args.Campaign is { } campaign)
+        {
+            if (campaign == "play")
+            {
+                StartMission(DemoCampaign(), null);
+            }
+            else
+            {
+                ShowCampaigns();
+            }
+        }
         else
         {
             ShowMainMenu();
@@ -126,6 +137,7 @@ public partial class GameApp : Node
     {
         var menu = new MainMenuScreen(_ui!, _catalog, Screen, _ai.Notice);
         menu.SinglePlayer += ShowSetup;
+        menu.Campaign += ShowCampaigns;
         menu.MultiplayerPressed += () => GD.Print("Multiplayer is M6.");
         menu.Credits += () => GD.Print("Credits: see text/local/credits.txt of your package.");
         menu.Viewer += () => ViewerRequested?.Invoke();

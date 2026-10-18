@@ -124,6 +124,7 @@ public partial class MainMenuScreen : ArtScreen
         string Label(string key, string fallback) => catalog?.Text("mainscr", key, fallback) ?? fallback;
         var size = new Vector2I(235, 25);
         const string Image = "art/screens/s_main/btn.t2img";
+        Button(new Vector2I(270, 215), size, Image, Label("campaign", "CAMPAIGN"), () => Campaign?.Invoke());
         Button(new Vector2I(270, 275), size, Image, Label("single", "SINGLE PLAYER"), () => SinglePlayer?.Invoke());
         Button(new Vector2I(270, 335), size, Image, Label("multi", "MULTIPLAYER"), () => MultiplayerPressed?.Invoke());
         Button(new Vector2I(270, 395), size, Image, "ASSET VIEWER", () => Viewer?.Invoke());
@@ -134,6 +135,9 @@ public partial class MainMenuScreen : ArtScreen
 
     /// <summary>SINGLE PLAYER.</summary>
     public event Action? SinglePlayer;
+
+    /// <summary>CAMPAIGN (ADR 0133).</summary>
+    public event Action? Campaign;
 
     /// <summary>MULTIPLAYER.</summary>
     public event Action? MultiplayerPressed;

@@ -32,8 +32,8 @@ waits for. "Blocked" rows close by themselves when the features land (items, dip
 |---|---|---|---|---|
 | `menu` | F1 | Opens the game menu | done | Load/save entries of the menu are M6 |
 | `menu-f10` | F10 | Same as F1 | done | |
-| `save` | F2 | Save dialog | blocked | saves are M6 (§19.5) |
-| `load` | F3 | Load dialog | blocked | saves are M6 |
+| `save` | F2 | Save dialog | partial | quick save of campaign missions (ADR 0133); the save dialog and skirmish/MP saves are M6 |
+| `load` | F3 | Load dialog | partial | quick load of campaign missions (ADR 0133); the load dialog is M6 |
 | `scores` | F4 | Scores | partial | every kingdom's sim score and statistics as messages (ADR 0106); the full score screen is the results dialog |
 | `diplomacy` | F5 | Diplomacy screen | blocked | the sim has diplomacy (SetDiplomacy, ADR 0102); the dialog is not built yet |
 | `tribute` | F6 | Tribute dialog | blocked | the sim has tribute (ADR 0102); the dialog is not built yet |
