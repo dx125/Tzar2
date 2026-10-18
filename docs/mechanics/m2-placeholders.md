@@ -56,8 +56,8 @@ What the session could and could not settle for this register (facts: `tests/fid
 |---|---|---|---|
 | Damage | `max(min, attack × (1 + bonus) − defence)`, truncated toward zero; buildings then × scale / (scale + RESISTANCE) (owner decision: keep the flat formula until the damage capture) | `CombatSystem` | UNK-08 |
 | Several BONUS.INI matches | summed | `LegacyBonuses` | UNK-08 |
-| Ranged attacks | land at the hit frame (no projectile flight time) | `CombatSystem` | UNK-07, RE-06 |
-| Splash, friendly fire | none | `CombatSystem` | UNK-22 |
+| Ranged attacks | ~~land at the hit frame~~ — M3 stream E: projectiles with flight time (ADR 0091, m3-placeholders.md) | `CombatSystem` | UNK-07, RE-06 |
+| Splash, friendly fire | ~~none~~ — M3 stream E: splash per projectile, no friendly fire (ADR 0091) | `CombatSystem` | UNK-22 |
 | Target choice | nearest by edge distance, lower index on ties; scans every 200 ms | `CombatSystem` | — |
 | Simultaneous hits | all hits landing in a tick apply together; units killed in that tick still land theirs | `CombatSystem` | UNK-07 |
 | Nature's units | hostile to every kingdom and attackable | `CombatSystem` | — |
