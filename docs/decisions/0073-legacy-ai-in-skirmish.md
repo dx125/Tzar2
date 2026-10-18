@@ -44,7 +44,10 @@ system's validation in the same tick, with its state in the snapshot extension `
    and the full hash at tick 1, and its peer is refused; another seed of equal length gives another match; the AI runs
    on the sim thread at top speed without faults.
 6. **`ClientTypeReferenceTests`** keep the client at type level to Game, Content, Import and the presentation
-   contract from Core and Sim (ids, commands, events), on the sources and on the compiled client assembly.
+   contract of REQ-ARCH-03, which is only the namespaces `Tzar2.Core.Ids`, `Tzar2.Sim.Commands` and `Tzar2.Sim.Events`
+   (never the sim's world, simulation, components or kingdom state; kingdom statistics reach the client as the Game
+   type `KingdomStatistics`), on the sources and on the compiled client assembly (skipped with a reason when the
+   Godot build is absent). TDD §7.2 records this exception for `Tzar2.Client`.
 
 ## Alternatives considered
 

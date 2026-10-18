@@ -475,7 +475,7 @@ public partial class GameScreen : Node
 
         for (int p = 0; p < _frame.Players.Length; p++)
         {
-            Tzar2.Sim.Kingdoms.KingdomState k = _frame.Players[p].Statistics;
+            KingdomStatistics k = _frame.Players[p].Statistics;
             Message($"Kingdom {p + 1}: score {_frame.Players[p].Score}, trained {k.UnitsTrained}, killed {k.UnitsKilled}, lost {k.UnitsLost}, "
                 + $"built {k.BuildingsBuilt}, destroyed {k.BuildingsDestroyed}, gathered {k.GatheredTotal}");
         }

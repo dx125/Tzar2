@@ -325,7 +325,7 @@ flowchart TB
 | `Tzar2.Net` | Lockstep scheduler, input-delay control, protocol, transports (LiteNetLib; Steam optional), lobby client | Core |
 | `Tzar2.Replay` | Replay record/playback, keyframes, verification | Core, Sim |
 | `Tzar2.Game` | Match setup, session orchestration, campaign state machine, save/load, settings | everything above except Formats/Import |
-| `Tzar2.Client` (Godot project) | Rendering, audio, input, UI, editor, platform integration | Game, Content, Import (first-run wizard and the editor's legacy map/campaign converter) |
+| `Tzar2.Client` (Godot project) | Rendering, audio, input, UI, editor, platform integration | Game, Content, Import (first-run wizard and the editor's legacy map/campaign converter) + Core ids / Sim commands+events as the presentation contract (REQ-ARCH-03; namespaces `Tzar2.Core.Ids`, `Tzar2.Sim.Commands`, `Tzar2.Sim.Events` only, ADR 0073) |
 | `Tzar2.Server` | Relay + lobby service (headless, Docker) | Core, Net |
 | `Tzar2.Tools.Cli` (`t2`) | `import`, `convert` (legacy maps/campaigns, §18.5), `verify-original` (check a local install against the reference manifest), `validate`, `pack`, `replay verify`, `desync diff`, `bench`, `fidelity capture`, `dump` | all non-Godot |
 | `Tzar2.Analyzers` | Roslyn analyzers enforcing determinism & AOT rules | — |

@@ -154,8 +154,44 @@ public struct FramePlayer
     public long Score;
 
     /// <summary>Match statistics (F4 and the statistics file; GAME-17).</summary>
-    public Tzar2.Sim.Kingdoms.KingdomState Statistics;
+    public KingdomStatistics Statistics;
 #pragma warning restore CA1051
+}
+
+/// <summary>
+/// A kingdom's match statistics for the presentation (F4, results screen; GAME-17): the counters of the sim's kingdom
+/// state, copied so the client does not depend on sim state types (§7.2, ADR 0073).
+/// </summary>
+/// <param name="UnitsTrained">Units trained.</param>
+/// <param name="UnitsKilled">Enemy units killed.</param>
+/// <param name="UnitsLost">Own units lost.</param>
+/// <param name="BuildingsBuilt">Buildings completed.</param>
+/// <param name="BuildingsLost">Own buildings lost.</param>
+/// <param name="BuildingsDestroyed">Enemy buildings destroyed.</param>
+/// <param name="BuildingsCaptured">Buildings captured.</param>
+/// <param name="TechnologiesResearched">Technologies researched.</param>
+/// <param name="GatheredTotal">Resources gathered in total.</param>
+/// <param name="TradeIncome">Trade income.</param>
+/// <param name="TributeSent">Tribute sent.</param>
+/// <param name="TributeReceived">Tribute received.</param>
+public readonly record struct KingdomStatistics(
+    int UnitsTrained,
+    int UnitsKilled,
+    int UnitsLost,
+    int BuildingsBuilt,
+    int BuildingsLost,
+    int BuildingsDestroyed,
+    int BuildingsCaptured,
+    int TechnologiesResearched,
+    long GatheredTotal,
+    long TradeIncome,
+    long TributeSent,
+    long TributeReceived)
+{
+    /// <summary>The statistics of a sim kingdom state.</summary>
+    public static KingdomStatistics From(in Tzar2.Sim.Kingdoms.KingdomState k) => new(
+        k.UnitsTrained, k.UnitsKilled, k.UnitsLost, k.BuildingsBuilt, k.BuildingsLost, k.BuildingsDestroyed, k.BuildingsCaptured,
+        k.TechnologiesResearched, k.GatheredTotal, k.TradeIncome, k.TributeSent, k.TributeReceived);
 }
 
 /// <summary>Eight resource amounts.</summary>
