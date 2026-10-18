@@ -8,9 +8,10 @@ namespace Tzar2.Content.Rules;
 
 /// <summary>
 /// The engine-default package (REQ-DATA-02: mounted first, below the imported base): the rules files of the built-in
-/// rulesets (<c>rules/classic.yaml</c>, <c>rules/remastered.yaml</c>) from <c>content/engine/</c> in the repository,
-/// embedded in this assembly. They contain no original data: <c>classic</c> names the tables to import, the numbers come
-/// from the user's own install (DEC-05).
+/// rulesets (<c>rules/classic.yaml</c>, <c>rules/remastered.yaml</c>) and Tzar2's own default AI script
+/// (<c>ai/skirmish.ais</c>, ADR 0052) from <c>content/engine/</c> in the repository, embedded in this assembly. They
+/// contain no original data: <c>classic</c> names the tables to import, the numbers come from the user's own install
+/// (DEC-05).
 /// </summary>
 public sealed class EngineDefaultsSource : IContentSource
 {

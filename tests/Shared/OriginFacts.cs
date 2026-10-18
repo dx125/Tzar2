@@ -72,6 +72,18 @@ internal sealed class OriginFactAttribute : FactAttribute
     }
 }
 
+/// <summary>A theory that needs the original install; skipped when <c>TZAR2_ORIGIN</c> is unset.</summary>
+internal sealed class OriginTheoryAttribute : TheoryAttribute
+{
+    public OriginTheoryAttribute()
+    {
+        if (OriginPaths.Origin is null)
+        {
+            Skip = "Needs the original install: set TZAR2_ORIGIN to a GOG v1.10 EN folder.";
+        }
+    }
+}
+
 /// <summary>A fact that needs the original install and the local goldens.</summary>
 internal sealed class GoldenFactAttribute : FactAttribute
 {
