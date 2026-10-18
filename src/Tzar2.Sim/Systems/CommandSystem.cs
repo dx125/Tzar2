@@ -318,6 +318,9 @@ public sealed partial class CommandSystem : ISimSystem
             case CommandKind.CraftItem:
                 return CombatMagicCommands.CraftItem(world, command, entities);
 
+            case CommandKind.Explore:
+                return NavalCommands.Explore(world, command, entities);
+
             default:
                 return CommandRejection.UnknownKind;
         }

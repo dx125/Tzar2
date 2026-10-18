@@ -188,7 +188,7 @@ public sealed class CombatSystem : ISimSystem
                     sight = Math.Max(Range(world, attacker, self, type, arm), world.Ruleset.Gameplay.MeleeReachUnits);
                 }
 
-                target = Acquire(world, attacker, self.Owner, position, radius, sight, arm.MinRangeUnits);
+                target = Acquire(world, attacker, self.Owner, position, radius, sight, arm.MinRangeUnits, PlaneOf(type), Range(world, attacker, self, type, arm));
                 if (!target.IsNone)
                 {
                     c.Target = target.Value;
@@ -261,8 +261,9 @@ public sealed class CombatSystem : ISimSystem
         long leash = Math.Max(Sight(world, self, type), range);
         bool mobile = world.Motions.IndexOf(attacker) is >= 0 and var m && world.Motions.At(m).SpeedPerTick > 0;
         bool tooClose = distance < arm.MinRangeUnits;
-        if (!mobile || (c.Mode == CombatMode.Auto && (distance > leash * LeashFactor || stance == CombatStance.StandGround || tooClose))
-            || (c.Mode == CombatMode.AttackMove && (distance > leash * LeashFactor || tooClose)))
+        bool across = IsAcrossShore(PlaneOf(type), PlaneOf(world.TypeOf(target))); // REQ-PATH-09: no chasing across the shore
+        if (!mobile || (c.Mode == CombatMode.Auto && (distance > leash * LeashFactor || stance == CombatStance.StandGround || tooClose || across))
+            || (c.Mode == CombatMode.AttackMove && (distance > leash * LeashFactor || tooClose || across)))
         {
             c.Target = 0;
             c.Mode = c.Mode == CombatMode.AttackMove ? CombatMode.AttackMove : CombatMode.None;
@@ -681,6 +682,12 @@ public sealed class CombatSystem : ISimSystem
         }
     }
 
+    // Movement planes for naval combat: 0 land (and buildings), 1 water (ships), 2 air.
+    private static byte PlaneOf(EntityTypeDefinition type)
+        => !type.IsMobile ? (byte)0 : type.Locomotor == Locomotor.Ship ? (byte)1 : type.Locomotor == Locomotor.Air ? (byte)2 : (byte)0;
+
+    private static bool IsAcrossShore(byte a, byte b) => a != b && a != 2 && b != 2;
+
     private static CombatStance StanceOf(World world, EntityId entity)
         => world.Stances.Count != 0 && world.Stances.IndexOf(entity) is >= 0 and var s ? world.Stances.At(s).Value : CombatStance.Aggressive;
 
@@ -806,7 +813,7 @@ public sealed class CombatSystem : ISimSystem
 
     private static uint OwnerBit(byte owner) => owner == MapObject.Nature ? 1u << NatureBit : 1u << (owner & 15);
 
-    private EntityId Acquire(World world, EntityId scanner, byte owner, Position position, int radius, long sight, int minRange)
+    private EntityId Acquire(World world, EntityId scanner, byte owner, Position position, int radius, long sight, int minRange, byte plane, int range)
     {
         EntityId best = EntityId.None;
         long bestDistance = long.MaxValue;
@@ -858,6 +865,12 @@ public sealed class CombatSystem : ISimSystem
                     }
 
                     if (identities[dense].Owner == owner && !confused && !world.IsConfused(candidate))
+                    {
+                        continue;
+                    }
+
+                    // Across the shore (a ship and something on land) only what is in range now: neither can go there.
+                    if (d > range && IsAcrossShore(plane, PlaneOf(world.Ruleset.EntityTypes[identities[dense].TypeId])))
                     {
                         continue;
                     }

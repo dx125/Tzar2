@@ -221,7 +221,7 @@ public sealed partial class World
         Held held = Helds.Get(unit);
         EntityId holder = EntityId.FromValue(held.Holder);
         EntityTypeDefinition type = TypeOf(unit);
-        if (!FindExit(holder, type.Locomotor, towardX, towardY, out int x, out int y))
+        if (!ExitPoint(holder, type.Id, towardX, towardY, out int x, out int y))
         {
             return false;
         }
@@ -252,14 +252,19 @@ public sealed partial class World
         return true;
     }
 
-    // Where a unit leaving a holder stands: next to a building's footprint, or the nearest passable tile around a
-    // ship or carpet (ties: row-major order).
-    private bool FindExit(EntityId holder, Locomotor locomotor, int towardX, int towardY, out int x, out int y)
+    /// <summary>
+    /// Where a unit of <paramref name="unitType"/> leaving a holder stands: next to a building's footprint, or the
+    /// nearest tile around a ship or carpet that its navigation layer can stand on (ties: row-major order).
+    /// </summary>
+    internal bool ExitPoint(EntityId holder, ushort unitType, int towardX, int towardY, out int x, out int y)
     {
+        Locomotor locomotor = Ruleset.EntityTypes[unitType].Locomotor;
         if (Footprints.Has(holder))
         {
             return Interaction.ApproachPoint(this, holder, towardX, towardY, locomotor, out x, out y);
         }
+
+        Navigation.NavLayer? layer = Navigation.ForType(unitType);
 
         Position at = Positions.Get(holder);
         int cx = at.X / MapState.UnitsPerTile;
@@ -279,6 +284,10 @@ public sealed partial class World
 
                 int px = (tx * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2);
                 int py = (ty * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2);
+                if (layer is not null && !layer.IsWalkablePoint(px, py))
+                {
+                    continue; // too narrow for the unit's clearance (REQ-PATH-09)
+                }
                 long d = Core.Numerics.IntMath.DistanceSquared(px, py, towardX, towardY) + Core.Numerics.IntMath.DistanceSquared(px, py, at.X, at.Y);
                 if (d < best)
                 {

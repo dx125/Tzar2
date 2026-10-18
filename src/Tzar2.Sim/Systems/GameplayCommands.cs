@@ -27,6 +27,8 @@ internal static class GameplayCommands
     {
         TradeSystem.Cancel(world, unit); // GAME-14: another order ends a trade route
         world.CancelErrandAndCast(unit); // GAME-09…11: errands and spells in progress end too (ADR 0096)
+        world.Dockings.Remove(unit); // a ship's way to the shore and exploring end too (ADRs 0140, 0143)
+        world.Explorers.Remove(unit);
         int w = world.Workers.IndexOf(unit);
         if (w >= 0)
         {
@@ -78,9 +80,10 @@ internal static class GameplayCommands
     {
         int w = OwnedWorker(world, entity, player);
         int resource = world.TypeOf(node).Traits.ResourceNode!.Resource;
-        if (w < 0 || world.TypeOf(entity).Traits.Harvester is not { } harvester || !harvester.CanGather(resource))
+        if (w < 0 || world.TypeOf(entity).Traits.Harvester is not { } harvester || !harvester.CanGather(resource)
+            || !Interaction.CanReachNode(world, world.TypeOf(entity).Locomotor, node))
         {
-            return false;
+            return false; // boats fish, peasants gather on land (GAME-02, ADR 0141)
         }
 
         ClearTasks(world, entity);
@@ -597,7 +600,13 @@ internal static class GameplayCommands
             return CommandRejection.InvalidArgument;
         }
 
-        return Assign(world, command.Player, target, 0, entities, WorkerTask.Repair) > 0 ? null : CommandRejection.NoValidEntities;
+        if (Assign(world, command.Player, target, 0, entities, WorkerTask.Repair) == 0)
+        {
+            return CommandRejection.NoValidEntities;
+        }
+
+        NavalCommands.MeetAtShore(world, target, entities, DockPurpose.Repair); // a ship comes to its repairers (GAME-03)
+        return null;
     }
 
     /// <summary>

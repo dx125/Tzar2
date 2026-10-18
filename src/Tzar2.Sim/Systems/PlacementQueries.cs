@@ -10,6 +10,9 @@ namespace Tzar2.Sim.Systems;
 /// </summary>
 public static class PlacementQueries
 {
+    /// <summary>How far from a coast building's footprint the water for its ships may be (tiles; UNVERIFIED, UNK-02).</summary>
+    public const int CoastReachTiles = GameplayCommands.CoastReachTiles;
+
     /// <summary>Whether a footprint tile at (<paramref name="tileX"/>, <paramref name="tileY"/>) may be covered: walkable land without a structure.</summary>
     public static bool IsBuildableTile(World world, int tileX, int tileY)
     {

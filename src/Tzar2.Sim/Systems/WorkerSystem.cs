@@ -77,7 +77,7 @@ public sealed class WorkerSystem : ISimSystem
                 byte owner = world.Identities.Get(worker).Owner;
                 if (!Interaction.IsHarvestable(world, node, w.NodeResource, owner))
                 {
-                    node = Interaction.NearestNode(world, owner, w.NodeResource, w.NodeX, w.NodeY, world.Ruleset.Gameplay.NodeSearchRadiusTiles);
+                    node = Interaction.NearestNode(world, owner, w.NodeResource, w.NodeX, w.NodeY, world.Ruleset.Gameplay.NodeSearchRadiusTiles, world.TypeOf(worker).Locomotor);
                     if (node.IsNone)
                     {
                         if (w.CarryAmount > 0)
@@ -279,6 +279,11 @@ public sealed class WorkerSystem : ISimSystem
 
         w.Phase = WorkerPhase.ToTarget;
         w.TimerMs = 0;
+        if (world.Dockings.Has(target))
+        {
+            w.Retries = 0; // the ship is on its way to the shore (ADR 0140): wait for it, do not give up
+        }
+
         if (!Approach(world, worker, ref w, target, position, type))
         {
             Idle(ref w);
