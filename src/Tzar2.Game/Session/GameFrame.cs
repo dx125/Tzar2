@@ -261,6 +261,9 @@ public sealed class GameFrame
     /// <summary>The sim's weather (GAME-16).</summary>
     public Tzar2.Content.Compiled.WeatherKind Weather { get; internal set; }
 
+    /// <summary>The quest log and the conversation waiting for a choice (immutable), or null without a scenario.</summary>
+    public Scenario.ScenarioView? Scenario { get; internal set; }
+
     internal FrameEntity[] EntityBuffer(int count)
     {
         if (_entities.Length < count)

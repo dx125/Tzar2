@@ -307,6 +307,7 @@ public partial class GameScreen : Node
         _session.DrainEvents(_events);
         HandleEvents(frame);
         _events.Clear();
+        UpdateScenario(frame);
         Scroll(delta);
         _selection.Prune(Selectable);
 
@@ -788,6 +789,9 @@ public partial class GameScreen : Node
             case GameAction.Scores:
                 ShowScores();
                 break;
+            case GameAction.Objectives when _session.Scenario is not null:
+                ShowQuests();
+                break;
             case GameAction.Objectives:
                 Message(_catalog.Text("sp_setupmap", "vcond_0", "Standard") + ": destroy every enemy unit and building.");
                 break;
@@ -977,7 +981,7 @@ public partial class GameScreen : Node
 
     private void Scroll(double delta)
     {
-        if (_hud is null)
+        if (_hud is null || ViewLocked)
         {
             return;
         }

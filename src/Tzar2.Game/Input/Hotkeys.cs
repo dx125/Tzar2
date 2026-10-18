@@ -103,7 +103,7 @@ public sealed class HotkeyTable
             new("scores", GameKey.F4, KeyMods.None, GameAction.Scores, 0, Partial, "every kingdom's sim score and statistics as messages (ADR 0106)"),
             new("diplomacy", GameKey.F5, KeyMods.None, GameAction.Diplomacy, 0, Blocked, "the sim has diplomacy (SetDiplomacy, ADR 0102); the dialog is not built yet"),
             new("tribute", GameKey.F6, KeyMods.None, GameAction.Tribute, 0, Blocked, "the sim has tribute (ADR 0102); the dialog is not built yet"),
-            new("objectives", GameKey.F8, KeyMods.None, GameAction.Objectives, 0, Partial, "skirmish objective message only (quests are M4)"),
+            new("objectives", GameKey.F8, KeyMods.None, GameAction.Objectives, 0, Done, "the quest log of scenario maps (ADR 0132); the objective message in skirmishes"),
             new("options", GameKey.F9, KeyMods.None, GameAction.Options, 0, Partial, "volume and game-speed options only"),
             new("screenshot", GameKey.F11, KeyMods.None, GameAction.Screenshot, 0, Done, "PNG into the user folder"),
             new("chat", GameKey.Enter, KeyMods.None, GameAction.Chat, 0, Blocked, "chat needs multiplayer (M6)"),

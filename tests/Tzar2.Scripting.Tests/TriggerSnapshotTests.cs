@@ -9,6 +9,8 @@ using Tzar2.Sim.Events;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tzar2.Tests.Scenario;
+
 namespace Tzar2.Scripting.Tests;
 
 /// <summary>

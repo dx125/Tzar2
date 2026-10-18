@@ -4,7 +4,8 @@ using Tzar2.Content.Compiled.Scenario.Expressions;
 using Tzar2.Scripting.Legacy;
 using Tzar2.Sim.Events;
 using Xunit;
-using static Tzar2.Scripting.Tests.ScenarioBuilder;
+using Tzar2.Tests.Scenario;
+using static Tzar2.Tests.Scenario.ScenarioBuilder;
 
 namespace Tzar2.Scripting.Tests;
 

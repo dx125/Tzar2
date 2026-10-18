@@ -14,4 +14,8 @@
     <ProjectReference Include="../../src/Tzar2.Import/Tzar2.Import.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="../Shared/Scenario/*.cs" Link="Shared/Scenario/%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>
