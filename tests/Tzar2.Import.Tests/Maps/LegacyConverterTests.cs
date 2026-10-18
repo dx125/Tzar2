@@ -32,7 +32,7 @@ public class LegacyConverterTests
         tiles[1] = SyntheticMap.Transition(0, 1, 1 | 8);
         tiles[9] = SyntheticMap.Solid(1, tree: 12);
         tiles[10] = SyntheticMap.Solid(1, tree: 2);
-        tiles[11] = SyntheticMap.Solid(1, cliff: true);
+        tiles[11] = tiles[12] = tiles[19] = tiles[20] = 0x0400;   // a 2×2 cliff piece: bits 0–9 are not terrain (read as terrain they would be water)
         m.Tiles = tiles;
         m.Kingdoms[0].StartX = 3;
         m.Kingdoms[0].StartY = 4;
@@ -111,6 +111,7 @@ public class LegacyConverterTests
         Assert.Equal(0, map.SetTerrainCorners[0]);              // tile 0 is water
         Assert.Equal(1, map.TerrainAt(0, 0));                    // classic id of water
         Assert.Equal(1, map.CliffTiles[11]);
+        Assert.Equal(1, map.SetTerrainCorners[(2 * 9) + 4]);   // the corner inside the cliff piece is land, not water
         Assert.Equal(0, map.CliffTiles[10]);
 
         Assert.Equal(["euro.knight", "arab.castle", "asia.peon", "comm.cow", "comm.ground_object", "comm.res_gold", "comm.tree"], map.Objects.Select(o => o.TypeKey).ToArray());
