@@ -572,7 +572,7 @@ public sealed class World
             }
 
             EntityTraits traits = Ruleset.EntityTypes[typeId].Traits;
-            if (o.Owner == MapObject.Nature && (traits.Harvester is not null || traits.IsBuilder || traits.Producer is not null || traits.DropOffMask != 0))
+            if (o.Owner == MapObject.Nature && (traits.Harvester is not null || traits.IsBuilder || traits.IsCapturer || traits.Producer is { Produces.IsEmpty: false } || traits.DropOffMask != 0))
             {
                 throw new ArgumentException($"Map object '{o.TypeKey}' works for a kingdom (worker, producer or drop-off) and cannot belong to Nature.", nameof(data));
             }
