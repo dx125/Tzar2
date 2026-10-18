@@ -2,6 +2,8 @@ using System.Reflection;
 using Tzar2.Core;
 using Xunit;
 
+using Tzar2.Tests.Scenario;
+
 namespace Tzar2.Scripting.Tests;
 
 public class ScriptingAssemblyTests

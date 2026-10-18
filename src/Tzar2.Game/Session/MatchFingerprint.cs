@@ -73,6 +73,12 @@ public sealed record MatchFingerprint(ulong RulesetHash, ulong MapHash, ulong Se
             h.Add(p.Slot).Add(Encoding.UTF8.GetBytes(p.Civilization)).Add((int)p.Controller).Add((int)p.Difficulty);
         }
 
+        // The scenario and the trigger settings are part of the match (ADR 0130); plain skirmishes hash as before.
+        if (setup.Scenario is { } scenario)
+        {
+            h.Add(0x5343454E).Add(scenario.ContentHash).Add(setup.EffectiveTriggerOptions.Fingerprint());
+        }
+
         return new MatchFingerprint(ruleset.ContentHash, map.ContentHash, h.GetCurrentHash(), setup.AiPrograms);
     }
 

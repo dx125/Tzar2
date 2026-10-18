@@ -1,6 +1,7 @@
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Sim.Commands;
-using static Tzar2.Scripting.Tests.ScenarioBuilder;
+using Tzar2.Tests.Scenario;
+using static Tzar2.Tests.Scenario.ScenarioBuilder;
 
 namespace Tzar2.Scripting.Tests;
 

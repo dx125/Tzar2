@@ -95,6 +95,33 @@ public sealed record MatchSetup
     /// <summary>Whether computer kingdoms run the AI (false: they stay idle — tests that need a passive opponent).</summary>
     public bool ComputerAi { get; init; } = true;
 
+    /// <summary>
+    /// The scenario of a converted or authored map (legacy triggers, conversations, quests; ADR 0120, ADR 0130), or null
+    /// for a plain skirmish. Its <see cref="Content.Compiled.Scenario.ScenarioData.ObjectCount"/> must match the map.
+    /// </summary>
+    public Content.Compiled.Scenario.ScenarioData? Scenario { get; init; }
+
+    /// <summary>Trigger engine settings (null: the defaults with the human kingdoms as responders).</summary>
+    public Scripting.Legacy.TriggerOptions? TriggerOptions { get; init; }
+
+    /// <summary>The trigger settings the match runs with.</summary>
+    public Scripting.Legacy.TriggerOptions EffectiveTriggerOptions => TriggerOptions ?? Scripting.Legacy.TriggerOptions.Default with { ResponderMask = HumanMask != 0 ? HumanMask : 0xFF };
+
+    /// <summary>The kingdoms (bit = slot) that answer conversations: the human ones.</summary>
+    public uint HumanMask
+    {
+        get
+        {
+            uint mask = 0;
+            foreach (PlayerSetup p in Players)
+            {
+                mask |= p.Controller == ControllerKind.Human ? 1u << p.Slot : 0;
+            }
+
+            return mask;
+        }
+    }
+
     /// <summary>The AI program of every computer kingdom, ascending by slot (match fingerprint, replay header).</summary>
     public System.Collections.Immutable.ImmutableArray<Replay.ReplayAiProgram> AiPrograms
     {
@@ -165,6 +192,15 @@ public sealed record MatchSetup
             throw new ArgumentException("A local skirmish has at most one human player.", nameof(ruleset));
         }
     }
+}
+
+/// <summary>A map built elsewhere (a converted or authored scenario map, a campaign mission; ADR 0132).</summary>
+/// <param name="Name">Display name.</param>
+/// <param name="Map">The map.</param>
+public sealed record FixedMapSource(string Name, MapData Map) : IMapSource
+{
+    /// <inheritdoc />
+    public MapData Create(Ruleset ruleset, MatchSetup setup) => Map;
 }
 
 /// <summary>

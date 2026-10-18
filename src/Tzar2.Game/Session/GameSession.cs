@@ -9,7 +9,9 @@ using Tzar2.Core.Ids;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Events;
+using Tzar2.Game.Scenario;
 using Tzar2.Replay;
+using Tzar2.Scripting.Legacy;
 
 namespace Tzar2.Game.Session;
 
@@ -68,6 +70,7 @@ public sealed class GameSession : IDisposable
         Map = setup.Map.Create(ruleset, setup);
         Map.Validate(ruleset);
         Fingerprint = MatchFingerprint.Of(setup, ruleset, Map);
+        SinglePlayer = peers is null || peers.Count == 0;
         foreach (MatchFingerprint peer in peers ?? [])
         {
             Fingerprint.EnsureCompatible(peer);
@@ -114,6 +117,13 @@ public sealed class GameSession : IDisposable
         }
 
         Ai = computers.Count > 0 ? LegacyAiSystem.Attach(Simulation, computers) : null;
+
+        // The scenario's triggers (ADR 0130) join the pipeline the same way; their state is in the snapshot too.
+        if (setup.Scenario is { } scenario)
+        {
+            Scenario = new ScenarioPresenter(LegacyTriggerSystem.Attach(Simulation, scenario, setup.EffectiveTriggerOptions), Simulation.World, LocalPlayer);
+        }
+
         _fog = fog;
         Publish();
     }
@@ -168,6 +178,41 @@ public sealed class GameSession : IDisposable
     /// <summary>The setup.</summary>
     public MatchSetup Setup { get; }
 
+    /// <summary>Whether this is a local single-player match (no peers): scenario prompts pause it (REQ-SCR-03).</summary>
+    public bool SinglePlayer { get; private init; } = true;
+
+    /// <summary>The scenario presentation (quests, conversations, story screens), or null without a scenario.</summary>
+    public ScenarioPresenter? Scenario { get; }
+
+    /// <summary>
+    /// Single player pauses while a conversation waits for the player's choice (Appendix C.8; ADR 0131): the sim thread
+    /// holds the clock until a reply is submitted, then runs the tick that carries it.
+    /// </summary>
+    public bool HoldsForScenario => _holdForScenario && !_replyQueued;
+
+    private volatile bool _holdForScenario;
+    private volatile bool _replyQueued;
+    private readonly List<ScenarioNotice> _notices = [];
+
+    /// <summary>Moves the scenario notices of every tick since the last call into <paramref name="into"/> (main thread).</summary>
+    public void DrainNotices(List<ScenarioNotice> into)
+    {
+        ArgumentNullException.ThrowIfNull(into);
+        lock (_gate)
+        {
+            into.AddRange(_notices);
+            _notices.Clear();
+        }
+    }
+
+    /// <summary>Answers the waiting conversation with candidate <paramref name="position"/> (main thread).</summary>
+    public void ReplyToConversation(int serial, int position)
+    {
+        var batch = new CommandList();
+        ScenarioPresenter.Reply(batch, serial, position);
+        Submit(batch);
+    }
+
     /// <summary>The AI of the computer kingdoms, or null when there are none (diagnostics; owned by the sim thread).</summary>
     public LegacyAiSystem? Ai { get; }
 
@@ -221,6 +266,14 @@ public sealed class GameSession : IDisposable
         lock (_gate)
         {
             _pending[LocalPlayer].AppendStamped(LocalPlayer, batch);
+        }
+
+        for (int i = 0; i < batch.Count; i++)
+        {
+            if (batch[i].Kind == CommandKind.ScenarioReply)
+            {
+                _replyQueued = true;
+            }
         }
     }
 
@@ -299,7 +352,7 @@ public sealed class GameSession : IDisposable
             while (!_stop)
             {
                 double now = clock.Elapsed.TotalMilliseconds;
-                if (_paused)
+                if (_paused || HoldsForScenario)
                 {
                     due = now;
                     Thread.Sleep(5);
@@ -341,6 +394,7 @@ public sealed class GameSession : IDisposable
             }
         }
 
+        bool replied = _replyQueued;
         Simulation.Tick(_tickSet);
         Interlocked.Increment(ref _ticksRun);
 
@@ -351,7 +405,19 @@ public sealed class GameSession : IDisposable
             {
                 _events.AddRange(world.Events.Events);
             }
+
+            if (Scenario is { } scenario && _notices.Count < 4096)
+            {
+                scenario.Update(world.Events.Events, _notices);
+            }
         }
+
+        if (replied)
+        {
+            _replyQueued = false;
+        }
+
+        _holdForScenario = Scenario is { AwaitingReply: true } && SinglePlayer;
 
         Publish();
     }
@@ -390,6 +456,7 @@ public sealed class GameSession : IDisposable
         FrameBuilder.Fill(frame, Simulation.World, _fog ? LocalPlayer : null, Outcome());
         frame.SpeedPercent = SpeedPercent;
         frame.Paused = _paused;
+        frame.Scenario = Scenario?.View;
         _frames.Publish();
     }
 }

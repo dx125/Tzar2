@@ -9,4 +9,8 @@
     <ProjectReference Include="../../src/Tzar2.Game/Tzar2.Game.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="../Shared/Scenario/*.cs" Link="Shared/Scenario/%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

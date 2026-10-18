@@ -9,7 +9,8 @@ using Tzar2.Sim.Events;
 using Tzar2.Sim.Kingdoms;
 using Tzar2.Sim.Systems;
 using Xunit;
-using static Tzar2.Scripting.Tests.ScenarioBuilder;
+using Tzar2.Tests.Scenario;
+using static Tzar2.Tests.Scenario.ScenarioBuilder;
 using SimStance = Tzar2.Sim.Kingdoms.Stance;
 
 namespace Tzar2.Scripting.Tests;
