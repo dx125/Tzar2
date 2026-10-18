@@ -119,7 +119,15 @@ against rows recorded on the previous main, the gameplay p99 check failed on the
 +37%; p50 +8%, s2 p50 +6%, b4 p50 +7%). That cost is intended (new systems), so the rows were re-recorded on main
 729f335 (24 probe nightlies); it is the kind of step the gate is there to surface. The legacy AI (#20, main 45a07e6)
 moved none of the rows beyond run-to-run noise (EPYC 7763 within ±1.5%); its 12 probe nightlies were added to the
-rows, together with the ai scenario's own rows.
+rows, together with the ai scenario's own rows. M3 stream E (#24: combat with projectiles, experience, holders,
+items, magic; its gameplay scenario adds a mage, a priest and a catapult per base, garrisons and items at the center)
+was checked with six probe nightlies on b934270 (four EPYC 7763, two EPYC 9V74): s2 is unchanged (p50 2.72-2.77 vs
+2.834 ms on the 7763, 2.23 / 2.37 vs 2.345 ms on the 9V74), gameplay p50 is +5% on the 7763 (2.98-3.05 vs 2.871 ms;
+p99 7.95-8.18 vs 7.94 ms) and +5-8% on the 9V74 (2.44 / 2.50 vs 2.323 ms), ai p50 is within ±3%. The gameplay step
+is the scenario's new content (projectiles in flight, the combat section +0.07 ms p50 locally after acquisition was
+made to test distance before the status and diplomacy lookups); it is inside the 10% tolerance, so the rows were
+kept. One earlier nightly on f2dcf04 failed s2 on an EPYC 9V74 (p50 2.897 ms, normalized 2.409 vs 2.523 ms, i.e. a
+slow runner); the re-run on the same commit and the six probes passed.
 
 ## Alternatives considered
 
