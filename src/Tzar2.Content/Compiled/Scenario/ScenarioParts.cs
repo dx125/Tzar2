@@ -71,6 +71,7 @@ public sealed record CustomSoundDef(string Name, ResourceRef Sound, SoundRepeat 
 /// <param name="Resistance">Building resistance override.</param>
 /// <param name="Icon">Custom 44×44 icon.</param>
 /// <param name="BigIcon">Custom 96×96 icon.</param>
+/// <param name="Item">Item properties of an item object, or null.</param>
 public sealed record ObjectInfo(
     string Name,
     string Title,
@@ -83,11 +84,41 @@ public sealed record ObjectInfo(
     int? Level = null,
     int? Resistance = null,
     ResourceRef? Icon = null,
-    ResourceRef? BigIcon = null)
+    ResourceRef? BigIcon = null,
+    ItemInfo? Item = null)
 {
     /// <summary>An object without scenario properties.</summary>
     public static ObjectInfo Plain { get; } = new(string.Empty, string.Empty, ObjectFlags.None);
 }
+
+/// <summary>Item properties (Appendix C.2 "Items"); a null field is "not set / default".</summary>
+/// <param name="Definition">Item definition name (the legacy item name).</param>
+/// <param name="Value">Bonus value (weapon attack, armor defence, potion amount; meaning by item class).</param>
+/// <param name="Amount">Resource amount of a resource item.</param>
+/// <param name="MagicType">Spell book magic type.</param>
+/// <param name="NeedsMana">Spell book needs mana.</param>
+/// <param name="CooldownSeconds">Spell book time restriction.</param>
+/// <param name="Charges">Spell book max charges.</param>
+/// <param name="Text">Scroll text (UTF-8).</param>
+/// <param name="Image">Scroll image.</param>
+/// <param name="Sound">Scroll sound.</param>
+/// <param name="Music">Scroll music.</param>
+/// <param name="ScrollTimeMs">Scroll time.</param>
+/// <param name="AutoClose">Scroll closes by itself.</param>
+public sealed record ItemInfo(
+    string Definition,
+    int? Value = null,
+    int? Amount = null,
+    int? MagicType = null,
+    bool? NeedsMana = null,
+    int? CooldownSeconds = null,
+    int? Charges = null,
+    string? Text = null,
+    ResourceRef? Image = null,
+    ResourceRef? Sound = null,
+    ResourceRef? Music = null,
+    int? ScrollTimeMs = null,
+    bool? AutoClose = null);
 
 /// <summary>Object flags (Appendix C.2).</summary>
 [System.Flags]
@@ -104,6 +135,9 @@ public enum ObjectFlags : byte
 
     /// <summary>The "No AI" checkbox (⚠ meaning contradictory in the manual, UNK-37).</summary>
     NoAi = 4,
+
+    /// <summary>Owned by the Rescue pseudo-kingdom (the map object's owner is then Nature).</summary>
+    Rescue = 8,
 }
 
 /// <summary>Who controls a kingdom.</summary>

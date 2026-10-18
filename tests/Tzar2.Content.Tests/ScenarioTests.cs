@@ -128,6 +128,7 @@ public class ScenarioTests
             new ObjectInAreaEvent("near", named, new RectArea(1, 2, 3, 4)),
             new ObjectExpressionEvent("weak", typed, ExpressionParser.Parse("$health < 10", scope)),
             new UnknownEvent("odd", 99, ImmutableArray.Create<byte>(1, 2, 3)),
+            new ObjectsEnterHolderEvent("boarded", named, -1, typed),
         ];
         ActionDef[] actions =
         [
@@ -152,7 +153,7 @@ public class ScenarioTests
         return new ScenarioData(
             new MapProperties("Title", "Me", "Desc", GameType.Standard, VictoryCondition.DestroyCastle, 200, 2, true, false),
             2,
-            ImmutableArray.Create(new ObjectInfo("hero", "The Hero", ObjectFlags.Persistent, Level: 3), ObjectInfo.Plain),
+            ImmutableArray.Create(new ObjectInfo("hero", "The Hero", ObjectFlags.Persistent | ObjectFlags.Rescue, Level: 3), ObjectInfo.Plain with { Item = new ItemInfo("scroll", Text: "Hi", Image: new ResourceRef("user/s.png"), ScrollTimeMs: 10000, AutoClose: true) }),
             ImmutableArray.Create(new KingdomDef(1, "K", "T", Civilization.Asian, PlayerType.HumanOrAi, true, 100, 200, 300, 400, "", true, false, true, 5, 6, ImmutableArray.Create("e_tower"), default, default, default, ImmutableArray.Create("te_x"))),
             ImmutableArray.Create(new DiplomacyDef(1, 2, Stance.Ally, true, false, true)),
             scope.Variables.ToImmutableArray(),

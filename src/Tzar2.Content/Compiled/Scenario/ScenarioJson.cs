@@ -160,6 +160,30 @@ public static class ScenarioJson
             OptionalInt("resistance", o.Resistance);
             Resource("icon", o.Icon);
             Resource("bigIcon", o.BigIcon);
+            if (o.Item is null)
+            {
+                w.WriteNull("item");
+            }
+            else
+            {
+                ItemInfo i = o.Item;
+                w.WriteStartObject("item");
+                w.WriteString("definition", i.Definition);
+                OptionalInt("value", i.Value);
+                OptionalInt("amount", i.Amount);
+                OptionalInt("magicType", i.MagicType);
+                OptionalBool("needsMana", i.NeedsMana);
+                OptionalInt("cooldown", i.CooldownSeconds);
+                OptionalInt("charges", i.Charges);
+                OptionalString("text", i.Text);
+                Resource("image", i.Image);
+                Resource("sound", i.Sound);
+                Resource("music", i.Music);
+                OptionalInt("scrollTime", i.ScrollTimeMs);
+                OptionalBool("autoClose", i.AutoClose);
+                w.WriteEndObject();
+            }
+
             w.WriteEndObject();
         }
 
@@ -235,6 +259,18 @@ public static class ScenarioJson
             w.WriteEndObject();
         }
 
+        private void OptionalObjects(string name, ObjectSpec? spec)
+        {
+            if (spec is null)
+            {
+                w.WriteNull(name);
+            }
+            else
+            {
+                Objects(name, spec);
+            }
+        }
+
         private void Area(string name, AreaSpec area)
         {
             w.WriteStartObject(name);
@@ -278,11 +314,13 @@ public static class ScenarioJson
                     w.WriteString("kind", "enterHolder");
                     Objects("objects", x.Objects);
                     w.WriteNumber("holder", x.HolderIndex);
+                    OptionalObjects("holders", x.Holders);
                     break;
                 case ObjectLeaveHolderEvent x:
                     w.WriteString("kind", "leaveHolder");
                     Objects("objects", x.Objects);
                     w.WriteNumber("holder", x.HolderIndex);
+                    OptionalObjects("holders", x.Holders);
                     break;
                 case ObjectExistEvent x:
                     w.WriteString("kind", "objectExist");
@@ -472,6 +510,18 @@ public static class ScenarioJson
             w.WriteEndObject();
         }
 
+        private void OptionalBool(string name, bool? value)
+        {
+            if (value is bool v)
+            {
+                w.WriteBoolean(name, v);
+            }
+            else
+            {
+                w.WriteNull(name);
+            }
+        }
+
         private void OptionalString(string name, string? value)
         {
             if (value is null)
@@ -628,7 +678,32 @@ public static class ScenarioJson
             OptionalInt(e, "level"),
             OptionalInt(e, "resistance"),
             Resource(e, "icon"),
-            Resource(e, "bigIcon"));
+            Resource(e, "bigIcon"),
+            Item(e.GetProperty("item")));
+
+        private static ItemInfo? Item(JsonElement e) => e.ValueKind == JsonValueKind.Null ? null : new ItemInfo(
+            Str(e, "definition"),
+            OptionalInt(e, "value"),
+            OptionalInt(e, "amount"),
+            OptionalInt(e, "magicType"),
+            OptionalBool(e, "needsMana"),
+            OptionalInt(e, "cooldown"),
+            OptionalInt(e, "charges"),
+            OptionalStr(e, "text"),
+            Resource(e, "image"),
+            Resource(e, "sound"),
+            Resource(e, "music"),
+            OptionalInt(e, "scrollTime"),
+            OptionalBool(e, "autoClose"));
+
+        private static bool? OptionalBool(JsonElement e, string name)
+        {
+            JsonElement v = e.GetProperty(name);
+            return v.ValueKind == JsonValueKind.Null ? null : v.GetBoolean();
+        }
+
+        private static ObjectSpec? OptionalObjects(JsonElement e, string name)
+            => e.GetProperty(name).ValueKind == JsonValueKind.Null ? null : Objects(e, name);
 
         private static KingdomDef Kingdom(JsonElement e) => new(
             Int(e, "number"),
@@ -686,8 +761,8 @@ public static class ScenarioJson
             {
                 "objectInArea" => new ObjectInAreaEvent(n, Objects(e, "objects"), Area(e, "area")),
                 "objectDestroyed" => new ObjectDestroyedEvent(n, Objects(e, "objects")),
-                "enterHolder" => new ObjectsEnterHolderEvent(n, Objects(e, "objects"), Int(e, "holder")),
-                "leaveHolder" => new ObjectLeaveHolderEvent(n, Objects(e, "objects"), Int(e, "holder")),
+                "enterHolder" => new ObjectsEnterHolderEvent(n, Objects(e, "objects"), Int(e, "holder"), OptionalObjects(e, "holders")),
+                "leaveHolder" => new ObjectLeaveHolderEvent(n, Objects(e, "objects"), Int(e, "holder"), OptionalObjects(e, "holders")),
                 "objectExist" => new ObjectExistEvent(n, Objects(e, "objects")),
                 "playerDefeated" => new PlayerDefeatedEvent(n, Mask(e, "players")),
                 "playerWon" => new PlayerWonEvent(n, Mask(e, "players")),
