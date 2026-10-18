@@ -24,6 +24,9 @@ public enum ScenarioFault
     /// <summary>A built-in function the rebuild does not implement yet ran as a no-op (UNK-64).</summary>
     UnsupportedFunction = 7,
 
+    /// <summary>A rule spent the hard step cap of a tick and was cut where it stood (ADR 0130).</summary>
+    RuleCut = 8,
+
     /// <summary>A reserved variable cannot be written there (<c>$x</c>, <c>$y</c>, <c>$maxmanna</c>, or no current object).</summary>
     ReadOnlyVariable = 6,
 }
@@ -49,6 +52,12 @@ public sealed record TriggerOptions
     /// </summary>
     public int StepBudgetPerTick { get; init; } = 200_000;
 
+    /// <summary>
+    /// Steps after which a tick cuts the rule that is running (ADR 0130): with the per-rule bounds checked at attach, the
+    /// worst case per tick is this cap (the budget is reached within it).
+    /// </summary>
+    public int HardStepCapPerTick { get; init; } = 1_000_000;
+
     /// <summary>Most phrases one conversation session says before it is cut (REQ-SCR-02 runtime loop guard).</summary>
     public int MaxConversationSteps { get; init; } = 256;
 
@@ -71,6 +80,7 @@ public sealed record TriggerOptions
         ArgumentOutOfRangeException.ThrowIfLessThan(IntervalMs, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(IntervalMs, 3_600_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(StepBudgetPerTick, 100);
+        ArgumentOutOfRangeException.ThrowIfLessThan(HardStepCapPerTick, StepBudgetPerTick);
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxConversationSteps, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxConversationSteps, 100_000);
         ArgumentOutOfRangeException.ThrowIfNegative(ObjectAreaRadiusTiles);
@@ -79,5 +89,5 @@ public sealed record TriggerOptions
 
     /// <summary>A fingerprint of every value.</summary>
     public ulong Fingerprint()
-        => new StateHasher().Add(IntervalMs).Add(StepBudgetPerTick).Add(MaxConversationSteps).Add(ObjectAreaRadiusTiles).Add((int)ResponderMask).GetCurrentHash();
+        => new StateHasher().Add(IntervalMs).Add(StepBudgetPerTick).Add(HardStepCapPerTick).Add(MaxConversationSteps).Add(ObjectAreaRadiusTiles).Add((int)ResponderMask).GetCurrentHash();
 }

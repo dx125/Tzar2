@@ -33,6 +33,14 @@ the tick budget. Tzar2.Sim cannot reference Tzar2.Scripting (§7.2). The AI solv
 * **CPU budget:** a deterministic count of steps (expression nodes, object tests, spawn tiles), `StepBudgetPerTick`
   (default 200,000). When a pass has spent it, it stops after the current rule and continues in the next tick from
   that rule with the same event values (the cursor is state). Every tick finishes at least one rule.
+* **Cost bound of one rule** (scenarios are untrusted; review of #31): at attach a rule keeps at most 256 actions
+  (`MaxActionsPerRule`), and an expression may have at most 4,096 nodes and 256 levels (`MaxExpressionNodes`,
+  `MaxExpressionDepth`, checked iteratively). Larger rules are truncated and larger expressions treated as empty, each
+  with an entry in `LegacyTriggerSystem.Diagnostics`. Loop-like costs (typed specifications over every entity, Spawn
+  Object tiles, Set Object Properties per object) count steps too, and `HardStepCapPerTick` (default 1,000,000) cuts
+  the rule that reaches it where it stands (`ScenarioFault.RuleCut`); the pass continues next tick. A tick therefore
+  spends at most the hard cap plus the unwinding of the cut rule, whatever the scenario. Conversation chains are bounded
+  by `MaxConversationSteps`, delayed action lists by 1,024, queued conversations by 64.
 * **Events** follow Appendix C.5 as state tests: in area, exist, destroyed (named: dead and not hidden), in holder,
   player defeated/won (any kingdom of the mask), object expression (reserved variables are the object's properties).
   Typed specifications count per kingdom of the mask, and All/Any combine the kingdoms (UNK-54). "Destroyed" of a type

@@ -66,10 +66,11 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
         }
 
         _countingEvents = [.. counting];
+        Bound(scenario);
         _keeps = new bool[scenario.Rules.Length];
         for (int r = 0; r < _keeps.Length; r++)
         {
-            foreach (int a in scenario.Rules[r].ActionIndices)
+            foreach (int a in _ruleActions[r])
             {
                 _keeps[r] |= scenario.Actions[a] is KeepRuleAction;
             }
@@ -78,7 +79,7 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
         var ruleLengths = new int[scenario.Rules.Length];
         for (int r = 0; r < ruleLengths.Length; r++)
         {
-            ruleLengths[r] = scenario.Rules[r].ActionIndices.Length;
+            ruleLengths[r] = _ruleActions[r].Length;
         }
 
         _shape = new TriggerShape(scenario.Variables.Length, scenario.Events.Length, scenario.Actions.Length, scenario.Rules.Length, conversations, scenario.ObjectCount, world.Players.Length, memory, ruleLengths);
@@ -274,6 +275,12 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
             }
 
             RunActions(r, 0);
+            if (OverCap)
+            {
+                // A rule that spent the hard cap is cut where it stood; the pass continues next tick (ADR 0130).
+                Fault(ScenarioFault.RuleCut);
+                return;
+            }
         }
 
         _rule = -1;
@@ -285,8 +292,8 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
     private void RunActions(int r, int from)
     {
         _rule = r;
-        EquatableArray<int> actions = _scenario.Rules[r].ActionIndices;
-        for (int k = from; k < actions.Length; k++)
+        int[] actions = _ruleActions[r];
+        for (int k = from; k < actions.Length && !OverCap; k++)
         {
             int action = actions[k];
             if (_scenario.Actions[action] is DelayAction delay && k + 1 < actions.Length)

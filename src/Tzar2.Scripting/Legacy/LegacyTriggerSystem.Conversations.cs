@@ -108,7 +108,7 @@ public sealed partial class LegacyTriggerSystem
         if (_state.QueuedConversations.Count > 0)
         {
             int next = _state.QueuedConversations[0];
-            _state.QueuedConversations.RemoveAt(0);
+            _state.QueuedConversations.RemoveAt(0); // at most 64 entries: the shift is negligible
             StartConversation(next);
         }
     }

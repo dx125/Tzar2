@@ -36,7 +36,7 @@ public class RuleEngineTests
     [InlineData("0 && $never = 9", 0)]
     [InlineData("1 || ($never = 9)", 1)]
     [InlineData("nosuchname + 4", 4)]
-    [InlineData("$health + $gold", 0)]
+    [InlineData("$health + $gold", 500)] // no current object: $health 0, $gold the human player's (500 synthetic start)
     public void Expressions_use_saturating_32_bit_integers(string expression, int expected)
         => Assert.Equal(expected, Value(expression));
 

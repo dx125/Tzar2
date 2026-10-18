@@ -303,6 +303,7 @@ public sealed partial class LegacyTriggerSystem
         }
 
         int radius = Math.Clamp(Math.Max(area.X1 - area.X0, area.Y1 - area.Y0) / Tile / 2, 1, Visibility.MaxRadiusTiles);
+        // At least one tick: an Explore Area of 0 ms still flashes the area (UNVERIFIED, UNK-56).
         int ticks = Math.Max(1, (int)Math.Min(int.MaxValue / 2, (long)Math.Max(0, explore.TimeMs) / _world.Config.TickLengthMilliseconds));
         int expires = (int)Math.Min(int.MaxValue / 2, (long)_world.Tick.Value + ticks);
         for (int p = 0; p < _world.Players.Length; p++)
@@ -385,7 +386,7 @@ public sealed partial class LegacyTriggerSystem
         int cy = y0 + (h / 2);
         int placed = 0;
         int rings = Math.Max(w, h);
-        for (int ring = 0; ring <= rings && placed < count; ring++)
+        for (int ring = 0; ring <= rings && placed < count && !OverCap; ring++)
         {
             for (int dy = -ring; dy <= ring && placed < count; dy++)
             {

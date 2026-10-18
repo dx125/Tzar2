@@ -19,7 +19,7 @@ public sealed partial class LegacyTriggerSystem
     /// <summary>Evaluates an expression; an empty or unparsable one gives <paramref name="empty"/>.</summary>
     private int Evaluate(ExpressionDef expression, int empty, EntityId current)
     {
-        if (expression.Root is not { } root)
+        if (expression.Root is not { } root || _rejected.Contains(expression))
         {
             return empty;
         }
@@ -38,7 +38,11 @@ public sealed partial class LegacyTriggerSystem
 
     private int Eval(Expr node)
     {
-        _steps++;
+        if (++_steps > _options.HardStepCapPerTick)
+        {
+            return 0; // over the hard cap: the rule is being cut (ADR 0130)
+        }
+
         switch (node)
         {
             case IntLiteral literal:
@@ -298,7 +302,16 @@ public sealed partial class LegacyTriggerSystem
         EntityId e = _current;
         if (e == EntityId.None || !_world.Entities.IsAlive(e) || !_world.Identities.Has(e))
         {
-            return 0; // no current object (a rule condition): UNVERIFIED, UNK-38
+            // No current object (a rule condition, an Expression action): the current player is the human one, so
+            // `$wood > 40` reads the player's stockpile (the original tutorial relies on it); other properties read 0
+            // (UNVERIFIED, UNK-38).
+            int player = CurrentPlayer();
+            return variable switch
+            {
+                ReservedVariable.Gold or ReservedVariable.Stone or ReservedVariable.Food or ReservedVariable.Wood => Resource(player, ResourceOf(variable)),
+                ReservedVariable.Kingdom => _world.HasPlayer(player) ? player + 1 : 0,
+                _ => 0,
+            };
         }
 
         Identity identity = _world.Identities.Get(e);
@@ -339,6 +352,20 @@ public sealed partial class LegacyTriggerSystem
         }
     }
 
+    // The current player of expressions without a current object: the first responder (human) kingdom.
+    private int CurrentPlayer()
+    {
+        for (int p = 0; p < _world.Players.Length; p++)
+        {
+            if ((_options.ResponderMask & (1u << p)) != 0)
+            {
+                return p;
+            }
+        }
+
+        return -1;
+    }
+
     // Hidden from every responder (human) kingdom (UNVERIFIED reading of $underfog, UNK-64).
     private bool UnderFog(EntityId e)
     {
@@ -367,6 +394,14 @@ public sealed partial class LegacyTriggerSystem
         EntityId e = _current;
         if (e == EntityId.None || !_world.Entities.IsAlive(e) || !_world.Identities.Has(e))
         {
+            // No current object: resources are the human player's (see ReadReserved).
+            if (variable is ReservedVariable.Gold or ReservedVariable.Stone or ReservedVariable.Food or ReservedVariable.Wood
+                && CurrentPlayer() is var player && _world.HasPlayer(player) && ResourceOf(variable) >= 0)
+            {
+                _world.Players[player].Resources[ResourceOf(variable)] = Math.Max(0, value);
+                return;
+            }
+
             Fault(ScenarioFault.ReadOnlyVariable);
             return;
         }

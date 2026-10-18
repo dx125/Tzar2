@@ -99,7 +99,7 @@ public sealed partial class LegacyTriggerSystem
 
                 ReadOnlySpan<EntityId> ids = _world.Identities.Entities;
                 ReadOnlySpan<Identity> identities = _world.Identities.Components;
-                for (int i = 0; i < ids.Length; i++)
+                for (int i = 0; i < ids.Length && !OverCap; i++)
                 {
                     _steps++;
                     if (identities[i].TypeId == type && InMask(typed.Players, identities[i].Owner))
@@ -115,7 +115,7 @@ public sealed partial class LegacyTriggerSystem
             {
                 ReadOnlySpan<EntityId> ids = _world.Identities.Entities;
                 ReadOnlySpan<Identity> identities = _world.Identities.Components;
-                for (int i = 0; i < ids.Length; i++)
+                for (int i = 0; i < ids.Length && !OverCap; i++)
                 {
                     _steps++;
                     if (InMask(category.Players, identities[i].Owner) && InCategory(category.Category, _world.Ruleset.EntityTypes[identities[i].TypeId]))
@@ -135,7 +135,7 @@ public sealed partial class LegacyTriggerSystem
     /// The editor's type-filter categories (ADR 0120): units, military units (armed units that neither gather nor
     /// build), buildings, "major objects" = units and buildings (UNVERIFIED, UNK-75), any object.
     /// </summary>
-    internal static bool InCategory(ObjectCategory category, Content.Compiled.EntityTypeDefinition type)
+    public static bool InCategory(ObjectCategory category, Content.Compiled.EntityTypeDefinition type)
     {
         Content.Compiled.EntityTraits t = type.Traits;
         bool unit = t.Category == Content.Compiled.EntityCategory.Unit;
@@ -213,7 +213,11 @@ public sealed partial class LegacyTriggerSystem
         Array.Clear(_counts);
         foreach (EntityId e in Collect(spec, _scratch))
         {
-            _steps++;
+            if (++_steps > _options.HardStepCapPerTick)
+            {
+                break;
+            }
+
             if (test(e))
             {
                 byte owner = _world.Identities.Get(e).Owner;
@@ -224,6 +228,7 @@ public sealed partial class LegacyTriggerSystem
         return _counts;
     }
 
+    // Shared scratch of Counts: Holds is not re-entrant (no test function calls Holds).
     private readonly int[] _counts = new int[16];
 
     // Per kingdom of the mask: count against the spec's comparison, combined by the quantifier.
