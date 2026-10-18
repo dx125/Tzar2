@@ -18,10 +18,10 @@ namespace Tzar2.Determinism.Tests;
 public class GameplayGoldenHashTests(ITestOutputHelper output)
 {
     // Changing the rules compiler, the classic YAML, the synthetic tables, a gameplay system, the scenario or the hashed
-    // layout changes these values on purpose: update them in the same commit and say why. History: (M2 part C) first; (M3 A) every unit, building, technology and upgrade imported.
-    private const ulong GoldenRulesetHash = 0x84BC373609E0B32DUL;
-    private const ulong GoldenHashStream = 0x66969E55A3C7D43BUL;
-    private const ulong GoldenFinalFullHash = 0xA84210BA0BA770A1UL;
+    // layout changes these values on purpose: update them in the same commit and say why. History: (M2 part C) first; (M3 A, ADRs 0040-0044) every unit, building, technology and upgrade imported; research, upgrades, capture, repair, fire, gates, bridges and the new stores; the bot researches castle technologies.
+    private const ulong GoldenRulesetHash = 0x650E0DFABEB53BC8UL;
+    private const ulong GoldenHashStream = 0x1585F386DAC3B94BUL;
+    private const ulong GoldenFinalFullHash = 0x93F6F2D1928AFD4AUL;
 
     private const int Ticks = 1600;
 
@@ -51,7 +51,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
 
         ulong final = scenario.Simulation.ComputeFullHash();
         output.WriteLine($"workers={workers} runtime={Environment.Version} ruleset={ruleset.ContentHash:X16} stream={stream.GetCurrentHash():X16} final={final:X16} {scenario.Describe()}");
-        Assert.True(scenario.Delivered > 0 && scenario.Kills > 0 && scenario.Trained > 0 && scenario.Built > 0, scenario.Describe());
+        Assert.True(scenario.Delivered > 0 && scenario.Kills > 0 && scenario.Trained > 0 && scenario.Built > 0 && scenario.Researched > 0, scenario.Describe());
         Assert.Equal(GoldenRulesetHash, ruleset.ContentHash);
         Assert.Equal(GoldenHashStream, stream.GetCurrentHash());
         Assert.Equal(GoldenFinalFullHash, final);

@@ -55,6 +55,14 @@ public sealed class World
         ResourceStocks = Components.RegisterHot<ResourceStock>("game.resource");
         Constructions = Components.RegisterHot<Construction>("game.construction");
         Productions = Components.RegisterHot<Production>("game.production");
+        UpgradeLevels = Components.RegisterHot<UpgradeLevels>("game.upgrades");
+        CaptureStates = Components.RegisterHot<CaptureState>("game.capture");
+        Gates = Components.RegisterHot<GateState>("game.gate");
+        Burnings = Components.RegisterHot<Burning>("game.burning");
+        Neglects = Components.RegisterHot<Neglect>("game.neglect");
+        Manas = Components.RegisterHot<ManaState>("game.mana");
+        Lifetimes = Components.RegisterHot<Lifetime>("game.lifetime");
+        Stats = new PlayerStats(ruleset, config.PlayerCount);
         Decals = new DecalIndex(ruleset.DecalCap);
         Navigation = new NavigationGrid(Map, ruleset);
         CorpseTtlTicks = (ruleset.CorpseTtlMilliseconds + config.TickLengthMilliseconds - 1) / config.TickLengthMilliseconds;
@@ -123,6 +131,30 @@ public sealed class World
     /// <summary>Training queues of completed producers (hot).</summary>
     public ComponentStore<Production> Productions { get; }
 
+    /// <summary>Level upgrades bought by entities (hot; GAME-06).</summary>
+    public ComponentStore<UpgradeLevels> UpgradeLevels { get; }
+
+    /// <summary>Capture progress of buildings being captured (hot; GAME-04).</summary>
+    public ComponentStore<CaptureState> CaptureStates { get; }
+
+    /// <summary>Open/closed state of completed gates (hot; GAME-03).</summary>
+    public ComponentStore<GateState> Gates { get; }
+
+    /// <summary>Burning buildings (hot; GAME-03).</summary>
+    public ComponentStore<Burning> Burnings { get; }
+
+    /// <summary>Neglect of decaying entities (fields; hot; GAME-02).</summary>
+    public ComponentStore<Neglect> Neglects { get; }
+
+    /// <summary>Mana of casters (hot; GAME-01).</summary>
+    public ComponentStore<ManaState> Manas { get; }
+
+    /// <summary>Entities that expire (meat; hot).</summary>
+    public ComponentStore<Lifetime> Lifetimes { get; }
+
+    /// <summary>Technology effects per player and type (derived from <see cref="PlayerState.Technologies"/>; not state).</summary>
+    public PlayerStats Stats { get; }
+
     /// <summary>Corpses and other footprint-less leftovers (ORIG-01, REQ-PATH-08).</summary>
     public DecalIndex Decals { get; }
 
@@ -155,6 +187,46 @@ public sealed class World
 
     /// <summary>The type of a live entity.</summary>
     public EntityTypeDefinition TypeOf(EntityId entity) => Ruleset.EntityTypes[Identities.Get(entity).TypeId];
+
+    /// <summary>
+    /// The civilization whose technology tree applies to what a live entity does (ADR 0040): its type's civilization
+    /// (<c>euro.blacksmith</c> → <c>euro</c>), or, for common types (towers, walls, ships: <c>comm</c>), its owner's.
+    /// </summary>
+    public string CivilizationOf(EntityId entity)
+    {
+        Identity identity = Identities.Get(entity);
+        string civ = Ruleset.EntityTypes[identity.TypeId].Traits.Civilization;
+        return civ.Length > 0 && civ != "comm" ? civ : PlayerCivilization(identity.Owner);
+    }
+
+    /// <summary>The civilization key of a player (empty for Nature or a ruleset without civilizations).</summary>
+    public string PlayerCivilization(int player)
+        => HasPlayer(player) && (uint)_players[player].Civilization < (uint)Ruleset.Civilizations.Count ? Ruleset.Civilizations[_players[player].Civilization] : string.Empty;
+
+    /// <summary>Sets a player's civilization (match setup, before the first tick: the lobby's choice).</summary>
+    /// <exception cref="ArgumentException">The civilization is not in the ruleset.</exception>
+    public void SetCivilization(int player, string civilization)
+    {
+        RequireUnlocked();
+        int index = -1;
+        for (int i = 0; i < Ruleset.Civilizations.Count; i++)
+        {
+            if (string.Equals(Ruleset.Civilizations[i], civilization, StringComparison.Ordinal))
+            {
+                index = i;
+            }
+        }
+
+        if (!HasPlayer(player) || index < 0)
+        {
+            throw new ArgumentException($"Unknown player {player} or civilization '{civilization}'.", nameof(civilization));
+        }
+
+        _players[player].Civilization = index;
+    }
+
+    /// <summary>Maximum hit points of <paramref name="type"/> for <paramref name="owner"/> (technology effects, ADR 0040).</summary>
+    public int MaxHealthFor(int owner, EntityTypeDefinition type) => Math.Max(1, Stats.Apply(owner, ModifierStat.MaxHealth, type.Id, type.MaxHealth));
 
     /// <summary>
     /// Whether structural mutations are refused: <c>true</c> between ticks of a <see cref="Simulation"/> (after the first
@@ -226,7 +298,8 @@ public sealed class World
         EntityId entity = Entities.Create();
         Positions.Set(entity, new Position(x, y));
         Identities.Set(entity, new Identity { TypeId = typeId, Owner = (byte)owner });
-        Healths.Set(entity, new Health { Current = type.MaxHealth, Max = type.MaxHealth });
+        int maxHealth = MaxHealthFor(owner, type);
+        Healths.Set(entity, new Health { Current = maxHealth, Max = maxHealth });
         if (type.SpeedUnitsPerSecond > 0)
         {
             Motions.Set(entity, new Motion
@@ -245,9 +318,14 @@ public sealed class World
             });
         }
 
-        int cell = Map.CellIndexAt(x, y);
-        OccupancyCells.Set(entity, new OccupancyCell { Cell = cell });
-        Map.AddOccupant(cell);
+        // Immobile entities without a footprint (fish patches, meat) take no room: they never crowd movers (ORIG-01).
+        if (type.IsMobile)
+        {
+            int cell = Map.CellIndexAt(x, y);
+            OccupancyCells.Set(entity, new OccupancyCell { Cell = cell });
+            Map.AddOccupant(cell);
+        }
+
         AddTraitComponents(entity, type, underConstruction: false);
         Events.Emit(new SimEvent(SimEventKind.Spawned, (byte)owner, entity, x, y, typeId));
         return entity;
@@ -266,8 +344,9 @@ public sealed class World
     /// Place a construction site (GAME-03): it blocks its tiles at once, starts with 1 hit point and grows to full health
     /// as builders add progress; it neither produces nor accepts drop-offs until completed.
     /// </param>
+    /// <param name="rotated">Turn the footprint by 90° (gates and bridges built the other way, GAME-03).</param>
     /// <exception cref="ArgumentOutOfRangeException">The type has no footprint, or the footprint leaves the map.</exception>
-    public EntityId PlaceStructure(ushort typeId, int owner, int tileX, int tileY, bool underConstruction = false)
+    public EntityId PlaceStructure(ushort typeId, int owner, int tileX, int tileY, bool underConstruction = false, bool rotated = false)
     {
         RequireUnlocked();
         if (typeId >= Ruleset.EntityTypes.Count || !Ruleset.EntityTypes[typeId].HasFootprint)
@@ -281,23 +360,151 @@ public sealed class World
         }
 
         EntityTypeDefinition type = Ruleset.EntityTypes[typeId];
-        if (!Map.ContainsTile(tileX, tileY) || !Map.ContainsTile(tileX + type.FootprintWidth - 1, tileY + type.FootprintHeight - 1))
+        var footprint = new Footprint { TileX = tileX, TileY = tileY, Rotated = rotated && type.FootprintWidth != type.FootprintHeight ? (byte)1 : (byte)0 };
+        int w = footprint.Width(type.FootprintWidth, type.FootprintHeight);
+        int h = footprint.Height(type.FootprintWidth, type.FootprintHeight);
+        if (!Map.ContainsTile(tileX, tileY) || !Map.ContainsTile(tileX + w - 1, tileY + h - 1))
         {
             throw new ArgumentOutOfRangeException(nameof(tileX), "The footprint leaves the map.");
         }
 
         EntityId entity = Entities.Create();
-        int x = (tileX * MapState.UnitsPerTile) + (type.FootprintWidth * MapState.UnitsPerTile / 2);
-        int y = (tileY * MapState.UnitsPerTile) + (type.FootprintHeight * MapState.UnitsPerTile / 2);
+        int x = (tileX * MapState.UnitsPerTile) + (w * MapState.UnitsPerTile / 2);
+        int y = (tileY * MapState.UnitsPerTile) + (h * MapState.UnitsPerTile / 2);
         Positions.Set(entity, new Position(x, y));
         Identities.Set(entity, new Identity { TypeId = typeId, Owner = (byte)owner });
         bool site = underConstruction && type.Traits.BuildTimeMs > 0;
-        Healths.Set(entity, new Health { Current = site ? 1 : type.MaxHealth, Max = type.MaxHealth });
-        Footprints.Set(entity, new Footprint { TileX = tileX, TileY = tileY });
-        ApplyFootprint(type, tileX, tileY, add: true);
+        int maxHealth = MaxHealthFor(owner, type);
+        Healths.Set(entity, new Health { Current = site ? 1 : maxHealth, Max = maxHealth });
+        Footprints.Set(entity, footprint);
         AddTraitComponents(entity, type, site);
+        ApplyStructure(entity, add: true);
         Events.Emit(new SimEvent(SimEventKind.Spawned, (byte)owner, entity, x, y, typeId));
         return entity;
+    }
+
+    /// <summary>The footprint rectangle of a structure in tiles (rotation applied).</summary>
+    public (int TileX, int TileY, int Width, int Height) FootprintRect(EntityId structure)
+    {
+        Footprint f = Footprints.Get(structure);
+        EntityTypeDefinition type = TypeOf(structure);
+        return (f.TileX, f.TileY, f.Width(type.FootprintWidth, type.FootprintHeight), f.Height(type.FootprintWidth, type.FootprintHeight));
+    }
+
+    /// <summary>
+    /// Changes the owner of a live entity (GAME-04 capture, cow poaching): its queue is lost, its fight ends, its hit
+    /// points follow the new owner's technologies (damage taken stays taken), capture progress on it is dropped.
+    /// </summary>
+    public void ChangeOwner(EntityId entity, byte newOwner)
+    {
+        RequireUnlocked();
+        RequireAlive(entity);
+        if (!HasPlayer(newOwner))
+        {
+            throw new ArgumentOutOfRangeException(nameof(newOwner));
+        }
+
+        ref Identity identity = ref Identities.Get(entity);
+        identity.Owner = newOwner;
+        EntityTypeDefinition type = Ruleset.EntityTypes[identity.TypeId];
+        Productions.Remove(entity);
+        if (type.Traits.Producer is not null && !Constructions.Has(entity))
+        {
+            Productions.Set(entity, default);
+        }
+
+        if (Combats.IndexOf(entity) is >= 0 and var c)
+        {
+            Combats.At(c) = new Combat { HitInMs = -1, ChaseTick = -1, CooldownMs = Combats.At(c).CooldownMs };
+        }
+
+        if (Workers.IndexOf(entity) is >= 0 and var w)
+        {
+            Workers.At(w) = new Worker { CarryResource = Worker.NoResource, NodeResource = Worker.NoResource };
+        }
+
+        CaptureStates.Remove(entity);
+        RefreshMaxHealth(entity);
+    }
+
+    /// <summary>
+    /// Converts a live entity into another type in place (GAME-06 conversion upgrades: wood tower → guard tower). The
+    /// footprint size is the same (checked by the ruleset); the blocked tiles, armament, queue and hit points follow the
+    /// new type (damage taken stays taken).
+    /// </summary>
+    public void ConvertType(EntityId entity, ushort newType)
+    {
+        RequireUnlocked();
+        RequireAlive(entity);
+        EntityTypeDefinition next = Ruleset.EntityTypes[newType];
+        bool structure = Footprints.Has(entity);
+        if (structure)
+        {
+            ApplyStructure(entity, add: false);
+        }
+
+        ref Identity identity = ref Identities.Get(entity);
+        identity.TypeId = newType;
+        if (structure)
+        {
+            ApplyStructure(entity, add: true);
+        }
+
+        if (next.Traits.Armament is null)
+        {
+            Combats.Remove(entity);
+        }
+        else if (!Combats.Has(entity) && !Constructions.Has(entity))
+        {
+            Combats.Set(entity, new Combat { HitInMs = -1, ChaseTick = -1 });
+        }
+
+        if (next.Traits.Producer is null)
+        {
+            Productions.Remove(entity);
+        }
+
+        if (Motions.IndexOf(entity) is >= 0 and var m)
+        {
+            ref Motion motion = ref Motions.At(m);
+            motion.SpeedPerTick = SpeedPerTick(newType);
+            motion.Radius = next.Radius;
+            motion.Layer = Navigation.LayerOfType(newType);
+        }
+
+        RefreshMaxHealth(entity);
+    }
+
+    /// <summary>Recomputes a live entity's maximum hit points (owner's technologies); the damage it took stays taken.</summary>
+    public void RefreshMaxHealth(EntityId entity)
+    {
+        ref Health health = ref Healths.Get(entity);
+        int max = MaxHealthFor(Identities.Get(entity).Owner, TypeOf(entity));
+        if (Constructions.Has(entity))
+        {
+            // A site grows toward its maximum as it is built.
+            health.Max = max;
+            health.Current = Math.Clamp(health.Current, 1, max);
+            return;
+        }
+
+        int damage = health.Max - health.Current;
+        health.Max = max;
+        health.Current = Math.Clamp(max - damage, 1, max);
+    }
+
+    /// <summary>Opens or closes a gate's passage tiles (GAME-03).</summary>
+    internal void SetGateOpen(EntityId gate, bool open)
+    {
+        ref GateState state = ref Gates.Get(gate);
+        if ((state.Open != 0) == open)
+        {
+            return;
+        }
+
+        ApplyStructure(gate, add: false);
+        state.Open = open ? (byte)1 : (byte)0;
+        ApplyStructure(gate, add: true);
     }
 
     /// <summary>
@@ -308,8 +515,28 @@ public sealed class World
     {
         RequireUnlocked();
         RequireAlive(entity);
-        Constructions.Remove(entity);
         EntityTypeDefinition type = TypeOf(entity);
+        bool reshape = type.Traits.IsBridge || type.Traits.Gate is not null;
+        if (reshape)
+        {
+            ApplyStructure(entity, add: false); // a bridge deck and a gate passage exist only once completed
+        }
+
+        Constructions.Remove(entity);
+        if (type.Traits.Gate is not null && !Gates.Has(entity))
+        {
+            Gates.Set(entity, new GateState { Mode = GateMode.Automatic });
+        }
+
+        if (reshape)
+        {
+            ApplyStructure(entity, add: true);
+        }
+
+        if (type.Traits.Decay is not null && !Neglects.Has(entity))
+        {
+            Neglects.Set(entity, default);
+        }
         if (type.Traits.Producer is not null && !Productions.Has(entity) && HasPlayer(Identities.Get(entity).Owner))
         {
             Productions.Set(entity, default);
@@ -360,6 +587,7 @@ public sealed class World
             }
         }
 
+        AssignCivilizations();
         GameplaySettings g = Ruleset.Gameplay;
         int level = Config.StartingResources >= 0 ? Config.StartingResources : g.DefaultStartingResources;
         int limit = Config.PopulationLimit >= 0 ? Config.PopulationLimit : g.PopulationLimit;
@@ -382,6 +610,47 @@ public sealed class World
         }
     }
 
+    // A kingdom's civilization at match start: that of its first own object of a civilization (castle, peasants), else
+    // the first civilization of the ruleset that is not the common one (ADR 0040; the lobby can set it).
+    private void AssignCivilizations()
+    {
+        int fallback = 0;
+        for (int i = 0; i < Ruleset.Civilizations.Count; i++)
+        {
+            if (Ruleset.Civilizations[i] != "comm")
+            {
+                fallback = i;
+                break;
+            }
+        }
+
+        var assigned = new bool[_players.Length];
+        for (int p = 0; p < _players.Length; p++)
+        {
+            _players[p].Civilization = fallback;
+        }
+
+        ReadOnlySpan<Identity> identities = Identities.Components;
+        for (int i = 0; i < identities.Length; i++)
+        {
+            int owner = identities[i].Owner;
+            string civ = Ruleset.EntityTypes[identities[i].TypeId].Traits.Civilization;
+            if (!HasPlayer(owner) || assigned[owner] || civ.Length == 0 || civ == "comm")
+            {
+                continue;
+            }
+
+            for (int c = 0; c < Ruleset.Civilizations.Count; c++)
+            {
+                if (Ruleset.Civilizations[c] == civ)
+                {
+                    _players[owner].Civilization = c;
+                    assigned[owner] = true;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// Kills an entity: records a corpse decal if its type leaves one (it never blocks movement, ORIG-01), then
     /// destroys it.
@@ -397,13 +666,15 @@ public sealed class World
 
         int p = Identities.IndexOf(entity);
         int q = Positions.IndexOf(entity);
-        if (p >= 0 && q >= 0 && CorpseTtlTicks > 0)
+        if (p >= 0 && q >= 0)
         {
             Identity identity = Identities.At(p);
             EntityTypeDefinition type = Ruleset.EntityTypes[identity.TypeId];
-            if (type.LeavesCorpse && !type.HasFootprint)
+            Position position = Positions.At(q);
+            bool ruin = type.HasFootprint && type.Traits.LeavesRuin && !Constructions.Has(entity);
+            if (CorpseTtlTicks > 0 && ((type.LeavesCorpse && !type.HasFootprint) || ruin))
             {
-                Position position = Positions.At(q);
+                // Corpses and ruins never block (ORIG-01, REQ-PATH-08); they share the decal lifetime.
                 Decals.Add(new Decal
                 {
                     X = position.X,
@@ -411,8 +682,16 @@ public sealed class World
                     ExpiresTick = Tick.Value + CorpseTtlTicks,
                     TypeId = identity.TypeId,
                     Owner = identity.Owner,
-                    Kind = DecalKind.Corpse,
+                    Kind = ruin ? DecalKind.Ruin : DecalKind.Corpse,
                 });
+            }
+
+            if (type.Traits.SpawnOnDeath >= 0 && Entities.RemainingCapacity >= 1)
+            {
+                // A slaughtered cow leaves meat (GAME-02): a footprint-less node owned by Nature that anyone may harvest.
+                Destroy(entity);
+                Spawn((ushort)type.Traits.SpawnOnDeath, MapObject.Nature, position.X, position.Y);
+                return true;
             }
         }
 
@@ -445,11 +724,9 @@ public sealed class World
             Map.RemoveOccupant(OccupancyCells.At(cellPosition).Cell);
         }
 
-        int footprintPosition = Footprints.IndexOf(entity);
-        if (footprintPosition >= 0)
+        if (Footprints.Has(entity))
         {
-            Footprint footprint = Footprints.At(footprintPosition);
-            ApplyFootprint(Ruleset.EntityTypes[typeId], footprint.TileX, footprint.TileY, add: false);
+            ApplyStructure(entity, add: false);
         }
 
         foreach (IComponentStore store in Components.All)
@@ -490,6 +767,24 @@ public sealed class World
                     throw Invalid("invalid stockpile");
                 }
             }
+
+            if (player.Reserved != 0 || player.Civilization < 0 || (player.Civilization >= Ruleset.Civilizations.Count && player.Civilization != 0))
+            {
+                throw Invalid("invalid civilization");
+            }
+
+            for (int t = Ruleset.Technologies.Count; t < Ruleset.MaxTechnologies; t++)
+            {
+                if (player.HasTechnology(t))
+                {
+                    throw Invalid("a technology the ruleset does not have is researched");
+                }
+            }
+        }
+
+        for (int p = 0; p < _players.Length; p++)
+        {
+            Stats.Rebuild(p, _players[p]);
         }
 
         foreach (Position p in Positions.Components)
@@ -578,6 +873,7 @@ public sealed class World
 
         Map.RebuildOccupancy(cells);
         ValidateGameplayComponents();
+        ValidateM3Components();
 
         static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
     }
@@ -589,9 +885,9 @@ public sealed class World
         // The systems read these components of every entity in a gameplay store without checking.
         RequireCore(Combats.Entities, mobile: false, structure: false);
         RequireCore(Workers.Entities, mobile: true, structure: false);
-        RequireCore(ResourceStocks.Entities, mobile: false, structure: true);
+        RequireCore(ResourceStocks.Entities, mobile: false, structure: false); // fish patches and meat have no footprint
         RequireCore(Constructions.Entities, mobile: false, structure: true);
-        RequireCore(Productions.Entities, mobile: false, structure: true);
+        RequireCore(Productions.Entities, mobile: false, structure: true); // structures, or mobile units buying level upgrades
         RequirePlayerOwner(Workers.Entities);
         RequirePlayerOwner(Constructions.Entities);
         RequirePlayerOwner(Productions.Entities);
@@ -618,16 +914,20 @@ public sealed class World
             Worker w = workers[i];
             EntityTraits t = TypeOf(ids[i]).Traits;
             int capacity = t.Harvester?.Capacity ?? 0;
-            if ((t.Harvester is null && !t.IsBuilder) || w.Task > WorkerTask.Build
-                || (w.Task == WorkerTask.Harvest && t.Harvester is null) || (w.Task == WorkerTask.Build && !t.IsBuilder)
+            if ((t.Harvester is null && !t.IsBuilder && !t.IsCapturer) || w.Task > WorkerTask.Capture
+                || (w.Task == WorkerTask.Harvest && t.Harvester is null) || (w.Task is WorkerTask.Build or WorkerTask.Repair && !t.IsBuilder)
+                || (w.Task == WorkerTask.Capture && !t.IsCapturer)
                 || w.Phase != w.Task switch
                 {
                     WorkerTask.None => WorkerPhase.None,
                     WorkerTask.Harvest when w.Phase is WorkerPhase.ToNode or WorkerPhase.Gathering or WorkerPhase.ToDropOff => w.Phase,
                     WorkerTask.Build when w.Phase is WorkerPhase.ToSite or WorkerPhase.Building => w.Phase,
+                    WorkerTask.Repair when w.Phase is WorkerPhase.ToTarget or WorkerPhase.Repairing => w.Phase,
+                    WorkerTask.Capture when w.Phase is WorkerPhase.ToTarget or WorkerPhase.Capturing => w.Phase,
                     _ => (WorkerPhase)0xFF,
-                } || w.Phase > WorkerPhase.Building || w.CarryAmount < 0
-                || w.CarryAmount > capacity || w.TimerMs < 0 || w.Retries < 0 || (w.CarryAmount > 0 && w.CarryResource == Worker.NoResource)
+                } || w.Phase > WorkerPhase.Capturing || w.CarryAmount < 0
+                || w.CarryAmount > Math.Max(capacity, Stats.Apply(Identities.Get(ids[i]).Owner, ModifierStat.CarryCapacity, Identities.Get(ids[i]).TypeId, capacity))
+                || w.TimerMs < 0 || w.Retries < 0 || (w.CarryAmount > 0 && w.CarryResource == Worker.NoResource)
                 || (w.CarryResource != Worker.NoResource && w.CarryResource >= resources)
                 || (w.NodeResource != Worker.NoResource && w.NodeResource >= resources))
             {
@@ -639,7 +939,8 @@ public sealed class World
         Span<ResourceStock> stocks = ResourceStocks.Components;
         for (int i = 0; i < ids.Length; i++)
         {
-            if (TypeOf(ids[i]).Traits.ResourceNode is not { } node || stocks[i].Amount < -1 || (stocks[i].Amount == -1) != (node.Amount == -1))
+            if (TypeOf(ids[i]).Traits.ResourceNode is not { } node || stocks[i].Amount < -1 || (stocks[i].Amount == -1) != (node.Amount == -1)
+                || (node.Amount >= 0 && stocks[i].Amount > node.Amount) || stocks[i].RegenMs < 0 || stocks[i].RegenMs > Math.Max(node.RegenMs, 0))
             {
                 throw Invalid("invalid resource stock");
             }
@@ -650,7 +951,8 @@ public sealed class World
         for (int i = 0; i < ids.Length; i++)
         {
             Construction c = sites[i];
-            if (!Footprints.Has(ids[i]) || c.TotalMs != TypeOf(ids[i]).Traits.BuildTimeMs || c.ProgressMs < 0 || c.ProgressMs > c.TotalMs)
+            if (!Footprints.Has(ids[i]) || c.TotalMs != TypeOf(ids[i]).Traits.BuildTimeMs || c.ProgressMs < 0 || c.ProgressMs > c.TotalMs
+                || c.CarryBasisPoints is < 0 or >= 10_000)
             {
                 throw Invalid("invalid construction site");
             }
@@ -663,17 +965,107 @@ public sealed class World
             Production q = queues[i];
             ProducerDefinition? producer = TypeOf(ids[i]).Traits.Producer;
             if (producer is null || Constructions.Has(ids[i]) || q.Count > producer.QueueCapacity || q.ProgressMs < 0 || q.HasRally > 1
-                || q.Stall > (byte)ProductionStall.EntityLimit || q.Reserved != 0 || (q.HasRally == 1 && !Map.ContainsPoint(q.RallyX, q.RallyY)))
+                || q.Stall > (byte)ProductionStall.EntityLimit || q.RallyMode > RallyMode.MoveAdvance
+                || (q.HasRally == 1 && !Map.ContainsPoint(q.RallyX, q.RallyY)) || (q.HasRally == 0 && (q.RallyTarget != 0 || q.RallyMode != 0)))
             {
                 throw Invalid("invalid production queue");
             }
 
             for (int k = 0; k < ProducerDefinition.MaxQueueCapacity; k++)
             {
-                if (k < q.Count ? !producer.CanProduce(q.Queue[k]) : q.Queue[k] != 0)
+                if (k < q.Count ? !Systems.ResearchRules.IsValidQueueItem(this, producer, q.Queue[k]) : q.Queue[k] != 0)
                 {
                     throw Invalid("invalid production queue item");
                 }
+            }
+        }
+
+        static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
+    }
+
+    // M3 stores (ADRs 0040-0044): each entity's type must have the matching trait, values in range, padding zero.
+    private void ValidateM3Components()
+    {
+        RequireCore(UpgradeLevels.Entities, mobile: false, structure: false);
+        RequireCore(CaptureStates.Entities, mobile: false, structure: false);
+        RequireCore(Gates.Entities, mobile: false, structure: true);
+        RequireCore(Burnings.Entities, mobile: false, structure: true);
+        RequireCore(Neglects.Entities, mobile: false, structure: true);
+        RequireCore(Manas.Entities, mobile: false, structure: false);
+        RequireCore(Lifetimes.Entities, mobile: false, structure: false);
+        int upgrades = Ruleset.Upgrades.Count;
+        uint knownUpgrades = upgrades >= 32 ? uint.MaxValue : (1u << upgrades) - 1;
+        ReadOnlySpan<EntityId> ids = UpgradeLevels.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if ((UpgradeLevels.Components[i].Mask & ~knownUpgrades) != 0 || TypeOf(ids[i]).Traits.Producer is null)
+            {
+                throw Invalid("invalid upgrade levels");
+            }
+        }
+
+        ids = CaptureStates.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            CaptureState c = CaptureStates.Components[i];
+            if (TypeOf(ids[i]).Traits.Capturable is null || !HasPlayer(c.Player) || c.Player == Identities.Get(ids[i]).Owner || c.MilliPoints < 0
+                || c.IdleMs < 0 || c.Reserved0 != 0 || c.Reserved1 != 0 || c.Reserved2 != 0)
+            {
+                throw Invalid("invalid capture state");
+            }
+        }
+
+        ids = Gates.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            GateState g = Gates.Components[i];
+            if (TypeOf(ids[i]).Traits.Gate is null || Constructions.Has(ids[i]) || g.Open > 1 || g.Mode > GateMode.Automatic || g.Reserved0 != 0 || g.Reserved1 != 0)
+            {
+                throw Invalid("invalid gate state");
+            }
+        }
+
+        ids = Burnings.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (!TypeOf(ids[i]).Traits.Burnable || Burnings.Components[i].AccumMs < 0 || Burnings.Components[i].AccumMs >= 60_000)
+            {
+                throw Invalid("invalid fire state");
+            }
+        }
+
+        ids = Neglects.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (TypeOf(ids[i]).Traits.Decay is null || Neglects.Components[i].UntendedMs < 0 || Neglects.Components[i].AccumMs is < 0 or >= 60_000)
+            {
+                throw Invalid("invalid neglect state");
+            }
+        }
+
+        ids = Manas.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (TypeOf(ids[i]).Traits.ManaPool is null || Manas.Components[i].MilliMana < 0)
+            {
+                throw Invalid("invalid mana");
+            }
+        }
+
+        ids = Lifetimes.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (TypeOf(ids[i]).Traits.LifetimeMs <= 0 || Lifetimes.Components[i].ExpiresTick < Tick.Value)
+            {
+                throw Invalid("invalid lifetime");
+            }
+        }
+
+        foreach (Footprint f in Footprints.Components)
+        {
+            if (f.Rotated > 1 || f.Reserved0 != 0 || f.Reserved1 != 0 || f.Reserved2 != 0)
+            {
+                throw Invalid("invalid footprint");
             }
         }
 
@@ -696,7 +1088,7 @@ public sealed class World
     {
         foreach (EntityId e in ids)
         {
-            if (!Identities.Has(e) || !Positions.Has(e) || !Healths.Has(e) || (mobile && !Motions.Has(e)) || (structure && !Footprints.Has(e)))
+            if (!Identities.Has(e) || !Positions.Has(e) || !Healths.Has(e) || (mobile && !Motions.Has(e)) || (structure && !Footprints.Has(e) && !Motions.Has(e)))
             {
                 throw new System.IO.InvalidDataException($"Snapshot violates a world invariant: {e} lacks a core component of its gameplay state.");
             }
@@ -708,16 +1100,37 @@ public sealed class World
     private void AddTraitComponents(EntityId entity, EntityTypeDefinition type, bool underConstruction)
     {
         EntityTraits t = type.Traits;
-        bool player = HasPlayer(Identities.Get(entity).Owner);
-        if (player && (t.Harvester is not null || t.IsBuilder))
+        byte owner = Identities.Get(entity).Owner;
+        bool player = HasPlayer(owner);
+        if (player && (t.Harvester is not null || t.IsBuilder || t.IsCapturer))
         {
             Workers.Set(entity, new Worker { CarryResource = Worker.NoResource, NodeResource = Worker.NoResource });
+        }
+
+        if (t.LifetimeMs > 0)
+        {
+            Lifetimes.Set(entity, new Lifetime { ExpiresTick = Tick.Value + ((t.LifetimeMs + Config.TickLengthMilliseconds - 1) / Config.TickLengthMilliseconds) });
         }
 
         if (underConstruction)
         {
             Constructions.Set(entity, new Construction { TotalMs = t.BuildTimeMs });
             return; // a site neither fights nor produces until completed
+        }
+
+        if (t.ManaPool is { } mana)
+        {
+            Manas.Set(entity, new ManaState { MilliMana = (int)Math.Min((long)Stats.Apply(owner, ModifierStat.ManaMax, type.Id, mana.Max) * 1000, int.MaxValue) });
+        }
+
+        if (t.Gate is not null)
+        {
+            Gates.Set(entity, new GateState { Mode = GateMode.Automatic });
+        }
+
+        if (t.Decay is not null)
+        {
+            Neglects.Set(entity, default);
         }
 
         if (t.Armament is not null)
@@ -772,25 +1185,59 @@ public sealed class World
         }
     }
 
-    private void ApplyFootprint(EntityTypeDefinition type, int tileX, int tileY, bool add)
+    // Adds or removes what a structure puts on the map: blockers on its mask tiles (an open gate's passage excepted), or a
+    // completed bridge's deck on every tile (a bridge site puts nothing, ADR 0043). Rotation applies.
+    private void ApplyStructure(EntityId entity, bool add)
     {
-        ReadOnlySpan<byte> mask = type.Footprint;
-        for (int dy = 0; dy < type.FootprintHeight; dy++)
+        Footprint f = Footprints.Get(entity);
+        EntityTypeDefinition type = TypeOf(entity);
+        int w = f.Width(type.FootprintWidth, type.FootprintHeight);
+        int h = f.Height(type.FootprintWidth, type.FootprintHeight);
+        bool site = Constructions.Has(entity);
+        if (type.Traits.IsBridge)
         {
-            for (int dx = 0; dx < type.FootprintWidth; dx++)
+            if (site)
             {
-                if (mask[(dy * type.FootprintWidth) + dx] == 0)
+                return;
+            }
+
+            for (int dy = 0; dy < h; dy++)
+            {
+                for (int dx = 0; dx < w; dx++)
+                {
+                    if (add)
+                    {
+                        Map.AddBridge(f.TileX + dx, f.TileY + dy);
+                    }
+                    else
+                    {
+                        Map.RemoveBridge(f.TileX + dx, f.TileY + dy);
+                    }
+                }
+            }
+
+            return;
+        }
+
+        ReadOnlySpan<byte> mask = type.Footprint;
+        bool open = !site && Gates.IndexOf(entity) is >= 0 and var g && Gates.At(g).Open != 0;
+        for (int dy = 0; dy < h; dy++)
+        {
+            for (int dx = 0; dx < w; dx++)
+            {
+                int k = f.MaskIndex(dx, dy, type.FootprintWidth);
+                if (mask[k] == 0 || (open && type.Traits.Gate!.Passage[k] != 0))
                 {
                     continue;
                 }
 
                 if (add)
                 {
-                    Map.AddBlocker(tileX + dx, tileY + dy);
+                    Map.AddBlocker(f.TileX + dx, f.TileY + dy);
                 }
                 else
                 {
-                    Map.RemoveBlocker(tileX + dx, tileY + dy);
+                    Map.RemoveBlocker(f.TileX + dx, f.TileY + dy);
                 }
             }
         }

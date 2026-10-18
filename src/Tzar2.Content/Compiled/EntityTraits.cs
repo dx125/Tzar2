@@ -174,7 +174,7 @@ public sealed record ManaPoolDefinition(int Max, int RegenPerMinute);
 /// <param name="Passage">1 = the tile is the gate's passage (blocked while closed), 0 = a post.</param>
 public sealed record GateDefinition(ImmutableArray<byte> Passage);
 
-/// <summary>Trait <c>Decay</c> (GAME-02: fields "require constant care. If they are neglected..."; UNK-17).</summary>
+/// <summary>Trait <c>Decay</c> (GAME-02: neglected fields decay and disappear, manual ch. 5; UNK-17).</summary>
 /// <param name="AfterMs">Untended time before the decay starts.</param>
 /// <param name="HealthPerMinute">Hit points lost per minute while neglected; at 0 the entity disappears.</param>
 public sealed record DecayDefinition(int AfterMs, int HealthPerMinute);
@@ -279,7 +279,7 @@ public sealed record EntityTraits
     /// <summary>Whether builders can repair the type (buildings, ships, siege; GAME-03).</summary>
     public bool IsRepairable { get; init; }
 
-    /// <summary>Whether the type burns while badly damaged (GAME-03: "damaged buildings will catch fire").</summary>
+    /// <summary>Whether the type burns while badly damaged (GAME-03: badly damaged buildings burn, manual ch. 5).</summary>
     public bool Burnable { get; init; }
 
     /// <summary>Whether a destroyed entity leaves a ruin decal (never blocking, ORIG-01).</summary>

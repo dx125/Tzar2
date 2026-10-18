@@ -214,6 +214,30 @@ public struct Footprint : IComponent
 
     /// <summary>Top tile row.</summary>
     public int TileY;
+
+    /// <summary>
+    /// 1 when the type's footprint is turned by 90° (gates and bridges placed the other way, GAME-03: the type's W×H
+    /// mask is read transposed, H×W on the map).
+    /// </summary>
+    public byte Rotated;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved0;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved1;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved2;
+
+    /// <summary>Footprint width on the map for a type of the given size.</summary>
+    public readonly int Width(int typeWidth, int typeHeight) => Rotated != 0 ? typeHeight : typeWidth;
+
+    /// <summary>Footprint height on the map for a type of the given size.</summary>
+    public readonly int Height(int typeWidth, int typeHeight) => Rotated != 0 ? typeWidth : typeHeight;
+
+    /// <summary>The type-mask index of map cell (<paramref name="dx"/>, <paramref name="dy"/>) of the footprint.</summary>
+    public readonly int MaskIndex(int dx, int dy, int typeWidth) => Rotated != 0 ? (dx * typeWidth) + dy : (dy * typeWidth) + dx;
 }
 
 #pragma warning restore CA1051

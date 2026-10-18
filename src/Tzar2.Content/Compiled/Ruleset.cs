@@ -633,7 +633,7 @@ public sealed class Ruleset
             .Add(g.InteractionReachUnits).Add(g.MeleeReachUnits).Add(g.AcquireIntervalMs).Add(g.NodeSearchRadiusTiles)
             .Add(g.ConstructionRefundBasisPoints).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints).Add(g.CapturePointsPerSecond)
             .Add(g.MinimumCaptureResistance).Add(g.CaptureResetMs).Add(g.InfluenceRadiusTiles).Add(g.RepairTimeBasisPoints)
-            .Add(g.BurnThresholdBasisPoints).Add(g.BurnDamagePerMinute).Add(g.RuinTtlMs).Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
+            .Add(g.BurnThresholdBasisPoints).Add(g.BurnDamagePerMinute).Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
             .Add(g.GateOpenReachUnits).Add(g.StartingResources.Length);
         foreach (StartingResources level in g.StartingResources)
         {

@@ -158,15 +158,28 @@ public sealed class CommandSystem : ISimSystem
             case CommandKind.Delete:
             {
                 int deleted = 0;
+                bool protectedSkipped = false;
                 foreach (EntityId entity in entities)
                 {
-                    if (IsOwned(world, entity, command.Player) && world.Destroy(entity))
+                    if (!IsOwned(world, entity, command.Player))
+                    {
+                        continue;
+                    }
+
+                    // GAME-04: the castle and guilds are deleted only with Shift + Delete.
+                    if (world.TypeOf(entity).Traits.ProtectedDelete && (command.Flags & CommandFlags.Queue) == 0)
+                    {
+                        protectedSkipped = true;
+                        continue;
+                    }
+
+                    if (world.Destroy(entity))
                     {
                         deleted++;
                     }
                 }
 
-                return deleted > 0 ? null : CommandRejection.NoValidEntities;
+                return deleted > 0 ? null : protectedSkipped ? CommandRejection.ShiftDeleteRequired : CommandRejection.NoValidEntities;
             }
 
             case CommandKind.DebugSpawn:
@@ -215,6 +228,24 @@ public sealed class CommandSystem : ISimSystem
 
             case CommandKind.Attack:
                 return GameplayCommands.Attack(world, command, entities);
+
+            case CommandKind.Research:
+                return GameplayCommands.Research(world, command, entities);
+
+            case CommandKind.Upgrade:
+                return GameplayCommands.Upgrade(world, command, entities);
+
+            case CommandKind.Repair:
+                return GameplayCommands.Repair(world, command, entities);
+
+            case CommandKind.Capture:
+                return GameplayCommands.Capture(world, command, entities);
+
+            case CommandKind.BuildWall:
+                return GameplayCommands.BuildWall(world, command, entities);
+
+            case CommandKind.SetGate:
+                return GameplayCommands.SetGate(world, command, entities);
 
             default:
                 return CommandRejection.UnknownKind;

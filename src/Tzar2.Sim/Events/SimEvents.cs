@@ -57,6 +57,24 @@ public enum SimEventKind : ushort
 
     /// <summary>An entity was killed in combat (Entity = victim, X = killer index, Arg = victim type id).</summary>
     Killed = 15,
+
+    /// <summary>A technology was researched (Entity = the building, Player = researcher, Arg = technology id).</summary>
+    ResearchCompleted = 16,
+
+    /// <summary>An upgrade completed (Entity = upgraded entity, X = old type id, Y = new type id, Arg = upgrade id).</summary>
+    UpgradeCompleted = 17,
+
+    /// <summary>An entity changed owner by capture (Entity, Player = new owner, X = old owner, Arg = type id).</summary>
+    Captured = 18,
+
+    /// <summary>A repair brought an entity back to full health (Entity, Arg = type id).</summary>
+    Repaired = 19,
+
+    /// <summary>A neglected field decayed away, or a building burned down (Entity, Arg = type id).</summary>
+    Decayed = 20,
+
+    /// <summary>A building caught fire (Entity, Arg = type id).</summary>
+    FireStarted = 21,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>
@@ -94,6 +112,12 @@ public enum CommandRejection
 
     /// <summary>Every listed producer's queue is full.</summary>
     QueueFull = 11,
+
+    /// <summary>The technology is researched already, or queued somewhere (one research per technology, 1.10).</summary>
+    AlreadyResearched = 12,
+
+    /// <summary>The castle and guilds are deleted only with Shift + Delete (GAME-04).</summary>
+    ShiftDeleteRequired = 13,
 }
 
 /// <summary>One simulation event. Output only: events are not part of the state, hashes or snapshots.</summary>

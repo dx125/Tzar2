@@ -17,10 +17,23 @@ internal static class Interaction
     /// <summary>The footprint rectangle of a structure in world units, half-open [X0, X1) × [Y0, Y1).</summary>
     public static (int X0, int Y0, int X1, int Y1) Rect(World world, EntityId structure)
     {
-        Footprint f = world.Footprints.Get(structure);
-        EntityTypeDefinition type = world.TypeOf(structure);
-        return (f.TileX * MapState.UnitsPerTile, f.TileY * MapState.UnitsPerTile,
-            (f.TileX + type.FootprintWidth) * MapState.UnitsPerTile, (f.TileY + type.FootprintHeight) * MapState.UnitsPerTile);
+        (int tx, int ty, int w, int h) = world.FootprintRect(structure);
+        return (tx * MapState.UnitsPerTile, ty * MapState.UnitsPerTile, (tx + w) * MapState.UnitsPerTile, (ty + h) * MapState.UnitsPerTile);
+    }
+
+    /// <summary>
+    /// Squared distance from a point to an entity's body: its footprint rectangle (structures), else its center
+    /// (units, fish patches, meat; their radius is not subtracted).
+    /// </summary>
+    public static long DistanceSquaredTo(World world, int x, int y, EntityId entity)
+    {
+        if (world.Footprints.Has(entity))
+        {
+            return DistanceSquaredToRect(x, y, Rect(world, entity));
+        }
+
+        Position p = world.Positions.Get(entity);
+        return IntMath.DistanceSquared(x, y, p.X, p.Y);
     }
 
     /// <summary>Squared distance from a point to a rectangle (0 inside).</summary>
@@ -57,11 +70,33 @@ internal static class Interaction
         return (int)Math.Clamp(d - fromRadius, 0, int.MaxValue);
     }
 
-    /// <summary>Whether a unit at <paramref name="position"/> reaches the footprint of <paramref name="structure"/>.</summary>
-    public static bool Reaches(World world, Position position, int radius, EntityId structure)
+    /// <summary>
+    /// Whether a worker reaches <paramref name="target"/> to work on it. Across the shore (a ship at a building, a peasant
+    /// at a ship) the reach is one tile longer: the shore tiles between land and water carry neither (ADR 0042).
+    /// </summary>
+    public static bool WorkerReaches(World world, EntityId worker, EntityId target)
+    {
+        EntityTypeDefinition type = world.TypeOf(worker);
+        EntityTypeDefinition other = world.TypeOf(target);
+        bool shipWorker = type.Locomotor == Locomotor.Ship;
+        bool across = shipWorker ? world.Footprints.Has(target) : other.IsMobile && other.Locomotor == Locomotor.Ship;
+        int extra = across ? MapState.UnitsPerTile : 0;
+        return Reaches(world, world.Positions.Get(worker), type.Radius + extra, target);
+    }
+
+    /// <summary>
+    /// Whether a unit at <paramref name="position"/> reaches <paramref name="target"/>: its footprint (structures), or
+    /// its body (units: cows, ships; footprint-less nodes: fish patches, meat) within the interaction reach.
+    /// </summary>
+    public static bool Reaches(World world, Position position, int radius, EntityId target)
     {
         long reach = (long)radius + world.Ruleset.Gameplay.InteractionReachUnits;
-        return DistanceSquaredToRect(position.X, position.Y, Rect(world, structure)) <= reach * reach;
+        if (!world.Footprints.Has(target))
+        {
+            reach += RadiusOf(world, target);
+        }
+
+        return DistanceSquaredTo(world, position.X, position.Y, target) <= reach * reach;
     }
 
     /// <summary>
@@ -72,18 +107,17 @@ internal static class Interaction
     /// <returns><c>false</c> when no ring tile is walkable for <paramref name="locomotor"/>.</returns>
     public static bool ApproachPoint(World world, EntityId structure, int towardX, int towardY, Locomotor locomotor, out int x, out int y)
     {
-        Footprint f = world.Footprints.Get(structure);
-        EntityTypeDefinition type = world.TypeOf(structure);
+        (int fx, int fy, int fw, int fh) = world.FootprintRect(structure);
         MapState map = world.Map;
         for (int ring = 1; ring <= 3; ring++)
         {
             long best = long.MaxValue;
             int bx = 0;
             int by = 0;
-            int x0 = f.TileX - ring;
-            int y0 = f.TileY - ring;
-            int x1 = f.TileX + type.FootprintWidth - 1 + ring;
-            int y1 = f.TileY + type.FootprintHeight - 1 + ring;
+            int x0 = fx - ring;
+            int y0 = fy - ring;
+            int x1 = fx + fw - 1 + ring;
+            int y1 = fy + fh - 1 + ring;
             for (int ty = y0; ty <= y1; ty++)
             {
                 bool edgeRow = ty == y0 || ty == y1;
@@ -124,10 +158,11 @@ internal static class Interaction
         => world.Entities.IsAlive(entity) && world.Footprints.Has(entity) && !world.Constructions.Has(entity);
 
     /// <summary>
-    /// The owner's completed drop-off accepting <paramref name="resource"/> nearest to <paramref name="from"/> (edge
-    /// distance; ties: lower entity index), or <see cref="EntityId.None"/>.
+    /// The owner's completed drop-off accepting <paramref name="resource"/> from workers of <paramref name="access"/>
+    /// (land workers, or boats at harbors) nearest to <paramref name="from"/> (edge distance; ties: lower entity index),
+    /// or <see cref="EntityId.None"/>.
     /// </summary>
-    public static EntityId NearestDropOff(World world, byte owner, int resource, Position from)
+    public static EntityId NearestDropOff(World world, byte owner, int resource, Position from, DropOffAccess access = DropOffAccess.Land)
     {
         EntityId best = EntityId.None;
         long bestDistance = long.MaxValue;
@@ -136,7 +171,8 @@ internal static class Interaction
         {
             EntityId s = structures[i];
             Identity identity = world.Identities.Get(s);
-            if (identity.Owner != owner || !world.Ruleset.EntityTypes[identity.TypeId].Traits.AcceptsDropOff(resource) || world.Constructions.Has(s))
+            EntityTraits traits = world.Ruleset.EntityTypes[identity.TypeId].Traits;
+            if (identity.Owner != owner || !traits.AcceptsDropOff(resource) || (traits.DropOffAccess & access) == 0 || world.Constructions.Has(s))
             {
                 continue;
             }
@@ -172,7 +208,7 @@ internal static class Interaction
                 continue;
             }
 
-            long d = DistanceSquaredToRect(x, y, Rect(world, nodes[i]));
+            long d = DistanceSquaredTo(world, x, y, nodes[i]);
             if (d < bestDistance)
             {
                 bestDistance = d;
@@ -181,6 +217,35 @@ internal static class Interaction
         }
 
         return best;
+    }
+
+    /// <summary>The access a worker of <paramref name="type"/> delivers with: boats at water drop-offs, others on land.</summary>
+    public static DropOffAccess AccessOf(EntityTypeDefinition type) => type.Locomotor == Locomotor.Ship ? DropOffAccess.Water : DropOffAccess.Land;
+
+    /// <summary>Whether <paramref name="node"/> can be gathered now: alive, not empty, not a site, of the resource, allowed.</summary>
+    public static bool IsHarvestable(World world, EntityId node, int resource, byte owner)
+    {
+        int s = world.ResourceStocks.IndexOf(node);
+        return s >= 0 && world.Entities.IsAlive(node) && world.ResourceStocks.At(s).Amount != 0 && !world.Constructions.Has(node)
+            && world.TypeOf(node).Traits.ResourceNode!.Resource == resource && MayHarvest(world, owner, node);
+    }
+
+    /// <summary>
+    /// Where a worker goes to work on <paramref name="target"/>: the walkable tile next to a structure nearest to the
+    /// worker, or the position of a footprint-less target (a cow, a fish patch, meat).
+    /// </summary>
+    public static (int X, int Y) WorkPoint(World world, EntityId target, Position from, Locomotor locomotor)
+    {
+        if (world.Footprints.Has(target))
+        {
+            if (ApproachPoint(world, target, from.X, from.Y, locomotor, out int x, out int y))
+            {
+                return (x, y);
+            }
+        }
+
+        Position p = world.Positions.Get(target);
+        return (p.X, p.Y);
     }
 
     /// <summary>

@@ -14,7 +14,7 @@ internal sealed class GameplayReader
         "interactionReachPx", "meleeReachPx", "acquireIntervalMs", "nodeSearchRadiusTiles", "constructionRefundPercent",
         "productionRefundPercent", "queueCapacity", "speedPixelsPerSecondPerPoint", "attackCycleMs", "hitDelayPercent",
         "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
-        "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "ruinTtlMs", "wallContinueRadiusTiles", "maxWallSegments",
+        "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "wallContinueRadiusTiles", "maxWallSegments",
         "gateOpenReachPx", "manaRegenPerMinute",
     ];
 
@@ -85,7 +85,6 @@ internal sealed class GameplayReader
             RepairTimeBasisPoints = Range("repairTimePercent", d.RepairTimeBasisPoints / 100, 1, 10_000) * 100,
             BurnThresholdBasisPoints = Range("burnThresholdPercent", d.BurnThresholdBasisPoints / 100, 0, 100) * 100,
             BurnDamagePerMinute = Range("burnDamagePerMinute", d.BurnDamagePerMinute, 0, 1_000_000),
-            RuinTtlMs = Range("ruinTtlMs", d.RuinTtlMs, 0, 3_600_000),
             WallContinueRadiusTiles = Range("wallContinueRadiusTiles", d.WallContinueRadiusTiles, 0, 64),
             MaxWallSegments = Range("maxWallSegments", d.MaxWallSegments, 1, 256),
             GateOpenReachUnits = Range("gateOpenReachPx", d.GateOpenReachUnits / 64, 0, 256) * 64,

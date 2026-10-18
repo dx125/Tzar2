@@ -55,7 +55,6 @@ gameplay:
   repairTimePercent: 100              # UNVERIFIED (UNK-18): a full repair by one peasant takes this share of the build time
   burnThresholdPercent: 50            # UNVERIFIED (UNK-42): buildings below this share of their hit points burn
   burnDamagePerMinute: 60             # UNVERIFIED (UNK-42): hit points a burning building loses per minute
-  ruinTtlMs: 120000                   # UNVERIFIED: lifetime of a ruin decal
   wallContinueRadiusTiles: 6          # UNVERIFIED: builders move on to the next segment of a dragged wall within this
   maxWallSegments: 64                 # UNVERIFIED: most segments one dragged wall places
   gateOpenReachPx: 32                 # UNVERIFIED: an automatic gate opens for its owner's units this close
@@ -110,7 +109,7 @@ legacy:
 ^Building:
   Armor: { defence: 0 }               # RESISTANCE (from the table) reduces damage instead, see gameplay.resistanceScale
   Repairable: {}                      # GAME-03: peasants repair buildings
-  Burnable: {}                        # GAME-03: "damaged buildings will catch fire" (threshold and damage UNVERIFIED, UNK-42)
+  Burnable: {}                        # GAME-03: badly damaged buildings burn (threshold and damage UNVERIFIED, UNK-42)
   RuinOnDeath: {}                     # GAME-03: ruins (a decal that never blocks, ORIG-01)
 
 ^Resource: {}

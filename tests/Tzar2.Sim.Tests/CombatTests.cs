@@ -145,7 +145,7 @@ public class CombatTests
     }
 
     [Fact]
-    public void Soldiers_destroy_a_building_which_frees_its_tiles_and_leaves_no_corpse()
+    public void Soldiers_destroy_a_building_which_frees_its_tiles_and_leaves_a_ruin_not_a_corpse()
     {
         using var d = new SimDriver(
             TestMap(24, 12, [Structure("euro.house", 1, 12, 4), .. Enumerable.Range(0, 4).Select(i => Unit("euro.footman", 0, 4, 3 + i))]),
@@ -158,7 +158,8 @@ public class CombatTests
         // RESISTANCE 40 (manual ch. 4, scale UNVERIFIED): 9 x 100 / 140 = 6 per hit.
         Assert.Equal([6], d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).Select(e => e.Event.Arg).Distinct());
         Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 12, 4));
-        Assert.Equal(0, d.World.Decals.Count);
+        Assert.Equal(1, d.World.Decals.Count); // GAME-03: a ruin decal that never blocks (ORIG-01), no corpse
+        Assert.Equal(DecalKind.Ruin, d.World.Decals[0].Kind);
         d.Step();
         Assert.All(squad, s => Assert.Equal(0u, d.World.Combats.Get(s).Target));
     }

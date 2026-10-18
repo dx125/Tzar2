@@ -57,11 +57,13 @@ public sealed class GameplayScenario : IBenchScenario
     private readonly ushort _footman;
     private readonly ushort _house;
     private readonly ushort _barrack;
+    private readonly ushort _castle;
     private Xoshiro256StarStar _bot;
     private long _delivered;
     private long _kills;
     private long _trained;
     private long _built;
+    private long _researched;
 
     /// <summary>Creates the scenario and its simulation at tick 0.</summary>
     /// <param name="ruleset">The compiled classic ruleset (needs the <c>euro.*</c> and <c>comm.*</c> types).</param>
@@ -79,6 +81,7 @@ public sealed class GameplayScenario : IBenchScenario
         _footman = TypeId(ruleset, "euro.footman");
         _house = TypeId(ruleset, "euro.house");
         _barrack = TypeId(ruleset, "euro.barrack");
+        _castle = TypeId(ruleset, "euro.castle");
         Map = CreateMap(ruleset, options);
         Simulation = new Simulation(
             ruleset,
@@ -111,6 +114,9 @@ public sealed class GameplayScenario : IBenchScenario
 
     /// <summary>Buildings completed so far.</summary>
     public long Built => _built;
+
+    /// <summary>Technologies researched so far (GAME-06).</summary>
+    public long Researched => _researched;
 
     /// <summary>
     /// The map: open grass; per kingdom a base on a ring around the center (castle, barracks, lumber mill, storage,
@@ -224,13 +230,14 @@ public sealed class GameplayScenario : IBenchScenario
                 case SimEventKind.Killed: _kills++; break;
                 case SimEventKind.UnitTrained: _trained++; break;
                 case SimEventKind.ConstructionCompleted: _built++; break;
+                case SimEventKind.ResearchCompleted: _researched++; break;
             }
         }
     }
 
     /// <inheritdoc />
     public string Describe()
-        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, corpses {Simulation.World.Decals.Count}");
+        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, researched {_researched}, corpses {Simulation.World.Decals.Count}");
 
     /// <inheritdoc />
     public void Dispose() => Simulation.Dispose();
@@ -242,6 +249,7 @@ public sealed class GameplayScenario : IBenchScenario
         _idleWorkers.Clear();
         _idleSoldiers.Clear();
         EntityId barracks = EntityId.None;
+        EntityId castle = EntityId.None;
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         Span<Identity> identities = world.Identities.Components;
         for (int i = 0; i < ids.Length; i++)
@@ -256,6 +264,10 @@ public sealed class GameplayScenario : IBenchScenario
             if (type == _barrack && barracks.IsNone && world.Productions.Has(e))
             {
                 barracks = e;
+            }
+            else if (type == _castle && castle.IsNone && world.Productions.Has(e))
+            {
+                castle = e;
             }
             else if (world.Workers.IndexOf(e) is >= 0 and var w)
             {
@@ -296,6 +308,21 @@ public sealed class GameplayScenario : IBenchScenario
                 _selection.Clear();
                 _selection.Add(_idleWorkers[i]);
                 _batch.Add(CommandKind.Harvest, Span(_selection), target: node);
+            }
+        }
+
+        // GAME-06: the castle researches its technologies one after another (cheaper peasants, faster building...).
+        if (!castle.IsNone && tick % 600 < _options.BotIntervalTicks && world.TypeOf(castle).Traits.Producer is { } producer)
+        {
+            foreach (ushort tech in producer.Researches)
+            {
+                if (!world.Players[player].HasTechnology(tech))
+                {
+                    _selection.Clear();
+                    _selection.Add(castle);
+                    _batch.Add(CommandKind.Research, Span(_selection), arg0: tech);
+                    break;
+                }
             }
         }
 

@@ -36,7 +36,8 @@ public enum CommandKind : ushort
 
     /// <summary>
     /// Construct (GAME-03): a new building of type Arg0 with its footprint's top-left at the tile containing (X, Y), paid
-    /// at placement; or, with <see cref="Command.Target"/> set, help build that existing construction site.
+    /// at placement; Arg1 = 1 turns the footprint by 90° (gates and bridges, GAME-03). With <see cref="Command.Target"/>
+    /// set, help build that existing construction site.
     /// </summary>
     Build = 7,
 
@@ -49,11 +50,38 @@ public enum CommandKind : ushort
     /// </summary>
     Cancel = 9,
 
-    /// <summary>Set the rally point of the listed producers to (X, Y); Arg0 = 1 clears it.</summary>
+    /// <summary>
+    /// Set the rally point of the listed producers to (X, Y); Arg0 = 1 clears it. Arg1 = <c>RallyMode</c> (0 move, 1 default
+    /// action on <see cref="Command.Target"/>, 2 move-advance; TDD §9.3).
+    /// </summary>
     SetRally = 10,
 
-    /// <summary>Attack <see cref="Command.Target"/> until it dies (GAME-07).</summary>
+    /// <summary>Attack <see cref="Command.Target"/> until it dies (GAME-07). Own cows may be attacked: butchering for meat.</summary>
     Attack = 11,
+
+    /// <summary>
+    /// Research technology Arg0 (GAME-06): queued in the first listed own building that researches it, paid when queued;
+    /// rejected if researched or queued anywhere already.
+    /// </summary>
+    Research = 12,
+
+    /// <summary>Buy upgrade Arg0 for each listed own entity that offers it (towers, walls, gates, galleons), paid when queued.</summary>
+    Upgrade = 13,
+
+    /// <summary>Repair own damaged building, ship or siege weapon <see cref="Command.Target"/> (GAME-03).</summary>
+    Repair = 14,
+
+    /// <summary>Capture enemy building <see cref="Command.Target"/> (GAME-04), or steal an enemy cow under Cow Poaching.</summary>
+    Capture = 15,
+
+    /// <summary>
+    /// Drag a wall (GAME-03): segments of wall type Arg0 on the straight tile line from (X, Y) to the tile packed in
+    /// Arg1 (<c>tileY &lt;&lt; 16 | tileX</c>), each a site paid when placed; tiles that do not fit are skipped.
+    /// </summary>
+    BuildWall = 16,
+
+    /// <summary>Set the listed gates: Arg0 = 0 close, 1 open (both manual), 2 automatic (GAME-03).</summary>
+    SetGate = 17,
 
     /// <summary>Debug: spawn Arg1 (1-64) units of type Arg0 at (X, Y); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugSpawn = 0xF000,

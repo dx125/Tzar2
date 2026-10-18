@@ -94,9 +94,6 @@ public sealed record GameplaySettings
     /// <summary>Hit points a burning building loses per minute (UNK-42).</summary>
     public int BurnDamagePerMinute { get; init; } = 60;
 
-    /// <summary>Lifetime of a ruin decal (REQ-PATH-08: never blocking).</summary>
-    public int RuinTtlMs { get; init; } = 120_000;
-
     /// <summary>Radius in tiles in which a builder looks for the next unfinished segment of the wall it built.</summary>
     public int WallContinueRadiusTiles { get; init; } = 6;
 
@@ -122,7 +119,6 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(BurnThresholdBasisPoints, 10_000);
         ArgumentOutOfRangeException.ThrowIfNegative(BurnDamagePerMinute);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(BurnDamagePerMinute, 1_000_000);
-        ArgumentOutOfRangeException.ThrowIfNegative(RuinTtlMs);
         ArgumentOutOfRangeException.ThrowIfNegative(WallContinueRadiusTiles);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(WallContinueRadiusTiles, 64);
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxWallSegments, 1);
