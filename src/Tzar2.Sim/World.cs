@@ -653,9 +653,14 @@ public sealed partial class World
                 throw new ArgumentException($"Map object '{o.TypeKey}' works for a kingdom (worker, producer or drop-off) and cannot belong to Nature.", nameof(data));
             }
 
-            _mapObjectEntities[objectIndex++] = Ruleset.EntityTypes[typeId].HasFootprint
-                ? PlaceStructure(typeId, o.Owner, o.X / MapState.UnitsPerTile, o.Y / MapState.UnitsPerTile)
+            EntityId placed = Ruleset.EntityTypes[typeId].HasFootprint
+                ? PlaceStructure(typeId, o.Owner, o.X / MapState.UnitsPerTile, o.Y / MapState.UnitsPerTile, rotated: (o.Flags & MapObjectFlags.Rotated) != 0)
                 : Spawn(typeId, o.Owner, o.X, o.Y);
+            _mapObjectEntities[objectIndex++] = placed;
+            if (o.HasExtras)
+            {
+                ApplyMapObjectExtras(placed, o);
+            }
         }
 
         AssignCivilizations();
@@ -678,6 +683,23 @@ public sealed partial class World
                     player.Resources[r] = g.StartingResources[level].Amounts[r];
                 }
             }
+        }
+    }
+
+    // Editor placement extras of a map object (ADR 0152): facing, a gate placed open (it then stays open until ordered,
+    // manual mode), and a resource amount other than the type's default.
+    private void ApplyMapObjectExtras(EntityId entity, MapObject o)
+    {
+        Identities.Get(entity).Facing = (byte)(o.Facing & 7);
+        if ((o.Flags & MapObjectFlags.Open) != 0 && Gates.Has(entity))
+        {
+            Gates.Get(entity).Mode = GateMode.Manual;
+            SetGateOpen(entity, true);
+        }
+
+        if (o.Amount > 0 && ResourceStocks.Has(entity))
+        {
+            ResourceStocks.Get(entity).Amount = o.Amount;
         }
     }
 

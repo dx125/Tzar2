@@ -81,6 +81,9 @@ public sealed class MapConversion
     /// <summary>Next-map names used by Load Map / Player Win / Player Lose actions: (action index, kind, name).</summary>
     public IReadOnlyList<(int ActionIndex, CampaignEdgeKind Kind, string MapName)> Transitions { get; init; } = [];
 
+    /// <summary>Legacy object index (the <c>object #N</c> of report locations) → index in <see cref="MapData.Objects"/>, for click-to-locate.</summary>
+    public IReadOnlyDictionary<int, int> LegacyObjectIndices { get; init; } = new Dictionary<int, int>();
+
     /// <summary>Whether conversion succeeded.</summary>
     public bool Succeeded => Map is not null && Scenario is not null && Report.Succeeded;
 }

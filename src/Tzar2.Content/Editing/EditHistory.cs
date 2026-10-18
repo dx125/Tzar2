@@ -93,6 +93,13 @@ public sealed class EditHistory
         return step;
     }
 
+    // A freshly created document starts without history (its creation steps are not undoable).
+    internal void Clear()
+    {
+        _undo.Clear();
+        _redo.Clear();
+    }
+
     internal EditStep PopUndo()
     {
         if (_undo.Count == 0)

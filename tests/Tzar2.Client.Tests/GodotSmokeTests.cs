@@ -208,6 +208,42 @@ public sealed class GodotSmokeTests : IDisposable
     }
 
     [GodotFact]
+    public void The_editor_edits_validates_saves_and_reopens_a_map_headless()
+    {
+        // TDD §18 (M5): the editor mode on the synthetic package: brush strokes, placement, walls, trees, starting
+        // locations, rubber band and Alt-drag through the real screen, then save → reopen → byte-identical.
+        string package = Path.Combine(_dir, "editor.t2pkg");
+        GamePackage().WriteTo(package);
+        (int exit, string output) = GodotRunner.RunClient("--config", Path.Combine(_dir, "editor.cfg"), "--package", package, "--editor-smoke");
+        _output.WriteLine(output);
+        Assert.Equal(0, exit);
+        string line = output.Split('\n').Single(l => l.StartsWith("EDITOR SMOKE OK", StringComparison.Ordinal));
+        Assert.Contains("blocking=0", line, StringComparison.Ordinal);
+        Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);
+    }
+
+    // The synthetic art plus the synthetic legacy tables, so the classic ruleset compiles.
+    private static PackageWriter GamePackage()
+    {
+        var writer = new PackageWriter();
+        var tables = Tzar2.Content.Rules.SyntheticLegacyContent.CreateTables();
+        foreach (string path in tables.Paths)
+        {
+            writer.Add(path, tables.ReadAllBytes(path));
+        }
+
+        foreach (KeyValuePair<string, byte[]> entry in SyntheticPackage.Build().Entries)
+        {
+            if (!writer.Contains(entry.Key))
+            {
+                writer.Add(entry.Key, entry.Value);
+            }
+        }
+
+        return writer;
+    }
+
+    [GodotFact]
     public void Without_a_package_the_first_run_screen_is_shown()
     {
         (int exit, string output) = GodotRunner.RunClient("--config", Path.Combine(_dir, "empty.cfg"), "--smoke");

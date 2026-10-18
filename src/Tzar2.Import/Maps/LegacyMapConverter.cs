@@ -108,6 +108,7 @@ public static class LegacyMapConverter
         private readonly LegacyConversionOptions _options;
         private readonly LegacyTypeResolver _types;
         private readonly Dictionary<int, int> _indexById = [];
+        private readonly SortedDictionary<int, int> _legacyIndices = [];
         private readonly List<MapObject> _objects = [];
         private readonly List<ObjectInfo> _infos = [];
         private readonly List<Decoration> _decorations = [];
@@ -162,6 +163,7 @@ public static class LegacyMapConverter
                 Placeholders = _placeholders,
                 Strings = _strings,
                 Transitions = _transitions,
+                LegacyObjectIndices = _legacyIndices,
             };
 
             void Count()
@@ -432,7 +434,10 @@ public static class LegacyMapConverter
                 }
 
                 int index = _objects.Count;
-                _objects.Add(new MapObject(key, owner, (o.X * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2), (o.Y * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2)));
+                // A rock's or fish patch's own amount (REQ-EDT-03 lossless; ADR 0152); items keep theirs in ItemInfo.
+                int amount = o.Amount is int a && a > 0 && o.ClassName is "res_gold" or "res_stone" or "fishpatch" ? a : 0;
+                _objects.Add(new MapObject(key, owner, (o.X * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2), (o.Y * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2)) { Amount = amount });
+                _legacyIndices[o.Index] = index;
                 _infos.Add(Info(o, extras.TryGetValue(o.Id, out LegacyObjectExtra? extra) ? extra : null));
                 if (o.Id != 0xFFFF && !_indexById.TryAdd(o.Id, index))
                 {

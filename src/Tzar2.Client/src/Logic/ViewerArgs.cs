@@ -15,6 +15,10 @@ public sealed record ViewerArgs
         + "  --package <path>     imported package (.t2pkg from 't2 import', or an unpacked folder)\n"
         + "  --viewer             open the asset viewer instead of the game\n"
         + "  --skirmish           start a skirmish directly (skips the menus)\n"
+        + "  --editor [file]      open the scenario editor (optionally a .t2map)\n"
+        + "  --editor-smoke       drive the editor headless (edit, validate, save, reopen) and quit (exit code 0 = OK)\n"
+        + "  --editor [file]      open the scenario editor (optionally a .t2map)\n"
+        + "  --editor-smoke       drive the editor headless (edit, validate, save, reopen) and quit (exit code 0 = OK)\n"
         + "  --autoplay <dir>     play a scripted skirmish, write screenshots into <dir> and quit\n"
         + "  --game-smoke         run a skirmish headless for --ticks ticks and quit (exit code 0 = OK)\n"
         + "  --ticks <n>          ticks for --game-smoke (default 300)\n"
@@ -86,6 +90,15 @@ public sealed record ViewerArgs
     /// <summary>Whether the asset viewer is the mode.</summary>
     public bool IsViewerMode => Viewer || Smoke || CaptureDir is not null;
 
+    /// <summary>Open the scenario editor.</summary>
+    public bool Editor { get; init; }
+
+    /// <summary>A <c>.t2map</c> to open in the editor, or null.</summary>
+    public string? EditorFile { get; init; }
+
+    /// <summary>Run the editor smoke test and quit.</summary>
+    public bool EditorSmoke { get; init; }
+
     /// <summary>Show the usage and quit.</summary>
     public bool Help { get; init; }
 
@@ -137,6 +150,12 @@ public sealed record ViewerArgs
                     break;
                 case "--skirmish":
                     result = result with { Skirmish = true };
+                    break;
+                case "--editor":
+                    result = result with { Editor = true, EditorFile = i + 1 < args.Count && !args[i + 1].StartsWith("--", StringComparison.Ordinal) ? args[++i] : null };
+                    break;
+                case "--editor-smoke":
+                    result = result with { Editor = true, EditorSmoke = true };
                     break;
                 case "--campaign":
                     result = result with { Campaign = i + 1 < args.Count && !args[i + 1].StartsWith("--", StringComparison.Ordinal) ? args[++i] : "screen" };

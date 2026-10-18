@@ -128,6 +128,7 @@ public partial class MainMenuScreen : ArtScreen
         Button(new Vector2I(270, 275), size, Image, Label("single", "SINGLE PLAYER"), () => SinglePlayer?.Invoke());
         Button(new Vector2I(270, 335), size, Image, Label("multi", "MULTIPLAYER"), () => MultiplayerPressed?.Invoke());
         Button(new Vector2I(270, 395), size, Image, "ASSET VIEWER", () => Viewer?.Invoke());
+        Button(new Vector2I(520, 395), new Vector2I(120, 25), Image, "EDITOR", () => Editor?.Invoke());
         Button(new Vector2I(270, 455), size, Image, Label("credits", "CREDITS"), () => Credits?.Invoke());
         Button(new Vector2I(270, 515), size, Image, Label("quit", "QUIT"), () => Quit?.Invoke());
         Text(new Vector2I(8, 584), $"{Tzar2.Game.GameInfo.Codename} {Tzar2.Game.GameInfo.Version}", UiAssets.SmallFont, new Color(0.7f, 0.7f, 0.6f));
@@ -144,6 +145,9 @@ public partial class MainMenuScreen : ArtScreen
 
     /// <summary>The asset viewer (dev tool, DEC-11).</summary>
     public event Action? Viewer;
+
+    /// <summary>The scenario and campaign editor (TDD §18).</summary>
+    public event Action? Editor;
 
     /// <summary>CREDITS.</summary>
     public event Action? Credits;

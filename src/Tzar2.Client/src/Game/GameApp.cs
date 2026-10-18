@@ -106,6 +106,14 @@ public partial class GameApp : Node
                 _ = new AutoplayDriver(this, dir).RunAsync();
             }
         }
+        else if (_args.Editor)
+        {
+            ShowEditor(_args.EditorFile);
+            if (_args.EditorSmoke)
+            {
+                _ = EditorSmokeAsync();
+            }
+        }
         else if (_args.Campaign is { } campaign)
         {
             if (campaign == "play")
@@ -141,6 +149,7 @@ public partial class GameApp : Node
         menu.MultiplayerPressed += () => GD.Print("Multiplayer is M6.");
         menu.Credits += () => GD.Print("Credits: see text/local/credits.txt of your package.");
         menu.Viewer += () => ViewerRequested?.Invoke();
+        menu.Editor += () => ShowEditor();
         menu.Quit += () => GetTree().Quit();
         Replace(menu, music: "music/intro.mid");
     }
