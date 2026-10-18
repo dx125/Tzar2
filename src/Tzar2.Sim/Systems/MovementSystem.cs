@@ -1228,6 +1228,10 @@ public sealed class MovementSystem : ISimSystem
             {
                 f.Out[i] = OutArrived; // settle where the crowd allows (ORIG-02: never orbit)
             }
+            else if (final && m.StallTicks >= SettleTicks && (contacts >> 16) > 0 && toTarget <= m.SettleRadius + MapState.UnitsPerTile)
+            {
+                f.Out[i] = OutArrived; // the goal itself is taken by a unit standing there: settle next to it (ADR 0146)
+            }
             else if (m.StallTicks >= ReplanTicks && (contacts >> 16) > 0 && toTarget <= (2L * m.SettleRadius) + (2 * MapState.UnitsPerTile))
             {
                 f.Out[i] = OutArrived; // jammed against the units that already settled around the goal: settle here

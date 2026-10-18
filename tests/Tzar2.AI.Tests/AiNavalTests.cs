@@ -31,7 +31,7 @@ public class AiNavalTests(ITestOutputHelper output)
         World w = scenario.Simulation.World;
         bool fished = false;
         bool ashore = false;
-        for (int t = 0; t < 12 * 60 * 20; t++)
+        for (int t = 0; t < 15 * 60 * 20; t++) // 15 minutes: a transport sunk while loading makes a second try (ADR 0146)
         {
             scenario.RunTick();
             fished |= w.Workers.Entities.ToArray().Any(e => w.IsShip(e) && w.Workers.Get(e).CarryAmount > 0);

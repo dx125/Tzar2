@@ -95,6 +95,11 @@ public sealed class ErrandSystem : ISimSystem
             return false;
         }
 
+        if (world.Dockings.Has(target))
+        {
+            e.Retries = 0; // the ship is on its way to meet it (ADR 0140): wait for it, do not give up
+        }
+
         if (++e.Retries > MaxRetries)
         {
             e.Kind = ErrandKind.None;
@@ -102,7 +107,22 @@ public sealed class ErrandSystem : ISimSystem
         }
 
         e.MoveTick = tick;
-        (int x, int y) = Interaction.WorkPoint(world, target, world.Positions.Get(unit), world.TypeOf(unit).Locomotor);
+        Position from = world.Positions.Get(unit);
+        (int x, int y) = Interaction.WorkPoint(world, target, from, world.TypeOf(unit).Locomotor);
+        if (e.Kind == ErrandKind.Board && world.IsShip(target) && !world.IsShip(unit))
+        {
+            // To the land next to the ship, not to the point of land nearest to its position (which may lie across a
+            // spit); a ship that is not at a shore the unit can reach is asked to come again (ADR 0146).
+            if (Shore.LandingNear(world, world.Identities.Get(unit).TypeId, from, world.Positions.Get(target), out Position landing))
+            {
+                (x, y) = (landing.X, landing.Y);
+            }
+            else if (e.Retries == (MaxRetries / 2) + 1 && !world.Dockings.Has(target))
+            {
+                NavalCommands.MeetAtShore(world, target, [unit], DockPurpose.Board);
+            }
+        }
+
         Interaction.MoveTo(world, unit, x, y);
         return false;
     }
