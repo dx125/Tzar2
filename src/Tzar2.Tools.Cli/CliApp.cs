@@ -12,7 +12,6 @@ internal static class CliApp
     // Subcommands of TDD §7.2 that later milestones implement.
     private static readonly (string Name, string Milestone, string Summary)[] Planned =
     [
-        ("convert", "M4", "convert legacy .wmp maps and .wcm campaigns (§18.5)"),
         ("validate", "M3", "validate packages, rules and maps"),
         ("pack", "M1", "build a package from a directory"),
         ("replay verify", "M6", "verify the state hashes of a replay headlessly"),
@@ -63,6 +62,11 @@ internal static class CliApp
             return DumpCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
         }
 
+        if (args[0] == "convert")
+        {
+            return ConvertCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
+        }
+
         if (args[0] == "ai")
         {
             return AiCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
@@ -94,6 +98,7 @@ internal static class CliApp
             ("dump <file> [entries]", "dump a package or legacy file; --out <dir> writes PNGs"),
             ("mapgen [options]", "generate a random map; --out <dir> writes a debug dump, a summary and a PNG preview"),
             ("bench [options]", "run the synthetic sim benchmark; reports tick p50/p99 and the final hash"),
+            ("convert <file|folder>", "convert legacy .wmp maps and .wcm campaigns into .t2map/.t2camp (§18.5)"),
             ("ai check <folder|package>", "parse and compile legacy AI scripts; prints located messages"),
             ("fidelity capture|analyze|check|scenarios|selftest", "capture harness: measure the original game (Windows), turn captures into facts"),
         };
