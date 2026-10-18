@@ -134,6 +134,11 @@ public sealed class AiPlayerState
 
     internal List<uint> Transports { get; } = [];
 
+    /// <summary>Whether an enemy town was overseas at the last look (<see cref="OverseasTick"/>).</summary>
+    internal bool Overseas { get; set; }
+
+    internal int OverseasTick { get; set; } = int.MinValue / 2;
+
     /// <summary>Waves carried across the water so far (ADR 0144).</summary>
     public int Landings { get; internal set; }
 
@@ -210,6 +215,8 @@ public sealed class AiPlayerState
 
         w.WriteByte((byte)NavalPhase);
         w.WriteVarInt64(NavalTick);
+        w.WriteBoolean(Overseas);
+        w.WriteVarInt64(OverseasTick);
         w.WriteVarInt64(Landings);
         w.WriteVarUInt64((ulong)Transports.Count);
         foreach (uint ship in Transports)
@@ -273,6 +280,8 @@ public sealed class AiPlayerState
 
         NavalPhase = (AiNavalPhase)naval;
         NavalTick = ReadInt(ref r, int.MinValue, int.MaxValue);
+        Overseas = r.ReadBoolean();
+        OverseasTick = ReadInt(ref r, int.MinValue, int.MaxValue);
         Landings = ReadInt(ref r, 0, int.MaxValue);
         ulong ships = r.ReadVarUInt64();
         if (ships > MaxTransports || (NavalPhase == AiNavalPhase.None && ships != 0))

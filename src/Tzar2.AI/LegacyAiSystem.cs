@@ -205,7 +205,7 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
         h.Add(e.DemandShare).Add(e.SurplusStock).Add(e.AssignmentsPerRun).Add(e.RebalancesPerRun).Add(e.WorkersPerSmallNode)
             .Add(e.WorkersPerLargeNode).Add(e.WorkersPerField).Add(e.SmallNodeAmount).Add(e.MaxNodeDistanceTiles);
         NavalOptions n = o.Naval;
-        h.Add(n.FishingBoats).Add(n.Transports).Add(n.Warships).Add(n.FishRadiusTiles).Add(n.EmbarkTimeoutMs).Add(n.SailRetryMs).Add(n.TransportLeadMs);
+        h.Add(n.FishingBoats).Add(n.Transports).Add(n.Warships).Add(n.FishRadiusTiles).Add(n.EmbarkTimeoutMs).Add(n.SailRetryMs).Add(n.TransportLeadMs).Add(n.OverseasCheckMs);
         AddText(h, o.Technologies.GetType().FullName ?? string.Empty);
         h.Add(o.ExtraExecutors.Count);
         foreach (IAiExecutor x in o.ExtraExecutors)

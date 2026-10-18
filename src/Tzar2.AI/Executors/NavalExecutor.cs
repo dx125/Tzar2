@@ -34,6 +34,9 @@ public sealed record NavalOptions
     /// <summary>A wave that is not aboard after this long sails with those who are (or gives up if none are).</summary>
     public int EmbarkTimeoutMs { get; init; } = 60_000;
 
+    /// <summary>How often the AI looks whether an enemy town is overseas.</summary>
+    public int OverseasCheckMs { get; init; } = 10_000;
+
     /// <summary>Transports still loaded after this long are told to unload again.</summary>
     public int SailRetryMs { get; init; } = 60_000;
 
@@ -47,6 +50,7 @@ public sealed record NavalOptions
         ArgumentOutOfRangeException.ThrowIfLessThan(EmbarkTimeoutMs, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(SailRetryMs, 1);
         ArgumentOutOfRangeException.ThrowIfNegative(TransportLeadMs);
+        ArgumentOutOfRangeException.ThrowIfLessThan(OverseasCheckMs, 1);
     }
 }
 
@@ -91,8 +95,18 @@ public sealed class NavalExecutor : IAiExecutor
             return;
         }
 
-        int home = Shore.LandComponentAt(context.World, landType, me.Town.X, me.Town.Y);
-        bool overseas = home >= 0 && AnyEnemyOverseas(context, landType, home);
+        // The look at the map is not free: every 10 s (and at once while ships or a landing are in play).
+        World world = context.World;
+        int tick = world.Tick.Value;
+        if (((long)tick - state.OverseasTick) * world.Config.TickLengthMilliseconds >= context.Options.Naval.OverseasCheckMs
+            || me.Ships.Count > 0 || state.NavalPhase != AiNavalPhase.None)
+        {
+            int home = Shore.LandComponentAt(world, landType, me.Town.X, me.Town.Y);
+            state.Overseas = home >= 0 && AnyEnemyOverseas(context, landType, home);
+            state.OverseasTick = tick;
+        }
+
+        bool overseas = state.Overseas;
         if (!overseas && me.Ships.Count == 0 && state.NavalPhase == AiNavalPhase.None)
         {
             return; // a land map: nothing to do

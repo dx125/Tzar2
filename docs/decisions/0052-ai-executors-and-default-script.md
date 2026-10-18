@@ -66,7 +66,7 @@ and combat; technologies, capture, repair, trade, magic, ships and diplomacy com
   first as its start module asks) and `dm.ais` play the same map on the synthetic ruleset.
 * On generated random maps (ADR 0060; Medium, seed 7, 8 minutes) Hard AIs develop on all six types (~9,000 resource
   units, ~40 buildings, ~65 units each) and fight on Continental, Lakes, Dry and Random; on Island and Archipelagos
-  only where land connects them (no ships in the sim yet).
+  only where land connects them (no ships in the sim yet; superseded by ADR 0144: on Archipelagos the AIs land by ship).
 * Diplomacy (GAME-13): waves, targeting and `enemy` conditions consider only kingdoms the AI's stance is Enemy
   towards; defence also answers neutral soldiers; allies are never targeted (tested with a team of two AIs against a
   third). The executors do not consult fog (GAME-12): counting and targeting are global, like the scripts' `enemy`

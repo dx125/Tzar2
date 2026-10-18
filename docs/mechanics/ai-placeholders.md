@@ -63,10 +63,15 @@ First capture (2026-10-18, ADR 0111): no AI scenario yet, nothing here changed. 
 | E13 | Targeting | idle wave soldiers attack the enemy object nearest to the wave (outright within 12 tiles, else move-advance) | military executor |
 | E14 | Retreat | a wave below 25 % of its launch size goes back to the gather point | `MilitaryOptions` |
 | E15 | Town center | the completed drop-off accepting the most resources (the castle), else the first building, else the first unit | census |
+| E16 | Naval need | only while an enemy town is not reachable by land (looked at every 10 s, at once while ships or a landing are in play); the naval executor runs first | naval executor (ADR 0144) |
+| E17 | Harbor | one, on the coast nearest to the town (40 tiles, 8,000 candidates), the land side of its ring walkable | `AiBuildPlacement` |
+| E18 | Ships | 1 transport from 240 s before the first wave (the cheapest that carries), 2 fishing boats when fish is within 24 tiles of the harbor, then 1 warship (the hardest hitter); the first transport and boat are saved for (the run's other executors leave that stock), the rest bought from spare stock | `NavalOptions` |
+| E19 | Landings | a wave whose target is overseas boards the transports, then unloads at the target after everyone is aboard or 60 s; unload told again after 60 s; the military executor waits meanwhile | `NavalOptions` |
+| E20 | Patrol | idle armed ships not kept for a landing attack the nearest enemy ship within 30 tiles, else move-advance off the enemy town | naval executor |
 
 ## Not implemented yet (no placeholder; follow-ups)
 
 Repair, capture (GAME-03/04), tavern conversion and trade (GAME-14), magic and religion
-(GAME-11), ships and naval AI, walls, gates and towers, healing on retreat, diplomacy and resignation (GAME-13), "AI
+(GAME-11), walls, gates and towers, healing on retreat, diplomacy and resignation (GAME-13), "AI
 Only" and "Rescue" kingdoms and the per-unit "No AI" flag (REQ-AI-05, UNK-37), scripts embedded in maps and campaigns
 (M4 converter).
