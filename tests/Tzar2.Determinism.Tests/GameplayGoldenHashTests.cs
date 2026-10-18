@@ -18,10 +18,10 @@ namespace Tzar2.Determinism.Tests;
 public class GameplayGoldenHashTests(ITestOutputHelper output)
 {
     // Changing the rules compiler, the classic YAML, the synthetic tables, a gameplay system, the scenario or the hashed
-    // layout changes these values on purpose: update them in the same commit and say why. History: (M2 part C) first.
-    private const ulong GoldenRulesetHash = 0xCEBD5DC17826D5B2UL;
-    private const ulong GoldenHashStream = 0xF37E338A41A10728UL;
-    private const ulong GoldenFinalFullHash = 0xE4802AE7C0EB883FUL;
+    // layout changes these values on purpose: update them in the same commit and say why. History: (M2 part C) first; (M3 A) every unit, building, technology and upgrade imported.
+    private const ulong GoldenRulesetHash = 0x84BC373609E0B32DUL;
+    private const ulong GoldenHashStream = 0x66969E55A3C7D43BUL;
+    private const ulong GoldenFinalFullHash = 0xA84210BA0BA770A1UL;
 
     private const int Ticks = 1600;
 

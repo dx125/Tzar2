@@ -24,11 +24,16 @@ public class RulesetCompilerTests
     {
         string[] keys = Classic.EntityTypes.Select(t => t.Key).ToArray();
         Assert.Equal(keys.OrderBy(k => k, StringComparer.Ordinal), keys);
+        // M3 imports every unit and building of the tables (ADR 0040), plus the YAML-only tree and meat.
         Assert.Equal(
             [
-                "comm.field", "comm.res_gold", "comm.res_stone", "comm.tree",
-                "euro.archer", "euro.barrack", "euro.castle", "euro.farm", "euro.footman", "euro.house", "euro.knight",
-                "euro.lumber", "euro.maceman", "euro.peon", "euro.storage",
+                "comm.bridge", "comm.catapult", "comm.cow", "comm.field", "comm.fishing_boat", "comm.fishpatch", "comm.galleon",
+                "comm.gate_stone", "comm.gate_wood", "comm.meat", "comm.res_gold", "comm.res_stone", "comm.tower_stone",
+                "comm.tower_stone2", "comm.tower_wood", "comm.tower_wood2", "comm.tree", "comm.wall_stone", "comm.wall_wood",
+                "euro.academy", "euro.archer", "euro.barrack", "euro.blacksmith", "euro.castle", "euro.cathedral", "euro.farm",
+                "euro.footman", "euro.harbor", "euro.house", "euro.knight", "euro.lumber", "euro.maceman", "euro.mage",
+                "euro.magetower", "euro.market", "euro.peon", "euro.pikeman", "euro.stable", "euro.storage", "euro.tavern",
+                "euro.tcguild", "euro.workshop",
             ],
             keys);
         Assert.Equal(["food", "wood", "stone", "gold", "iron"], Classic.ResourceTypes);
@@ -65,7 +70,7 @@ public class RulesetCompilerTests
         Assert.Equal(DamageClass.Sword, t.Armament.DamageClass);
         Assert.Equal(10, t.Harvester!.Capacity);
         Assert.True(t.Harvester.CanGather(Resource("wood")));
-        Assert.False(t.Harvester.CanGather(Resource("iron")));
+        Assert.True(t.Harvester.CanGather(Resource("iron"))); // manual ch. 5: peasants carry iron too
 
         EntityTraits archer = Type(Classic, "euro.archer").Traits;
         Assert.Equal(7 * 2048, archer.Armament!.RangeUnits);
@@ -84,7 +89,15 @@ public class RulesetCompilerTests
     {
         EntityTraits peon = Type(Classic, "euro.peon").Traits;
         string[] builds = peon.Builds.Select(id => Classic.EntityTypes[id].Key).ToArray();
-        Assert.Equal(["comm.field", "euro.barrack", "euro.castle", "euro.farm", "euro.house", "euro.lumber", "euro.storage"], builds);
+        Assert.Contains("comm.field", builds);
+        Assert.Contains("comm.wall_wood", builds);
+        Assert.Contains("comm.gate_wood", builds);
+        Assert.Contains("comm.bridge", builds);
+        Assert.Contains("comm.tower_wood", builds);
+        Assert.Contains("euro.castle", builds);
+        Assert.Contains("euro.academy", builds);
+        Assert.DoesNotContain("comm.tree", builds);
+        Assert.DoesNotContain("comm.res_gold", builds);
 
         EntityTypeDefinition castle = Type(Classic, "euro.castle");
         Assert.Equal(["euro.peon"], castle.Traits.Producer!.Produces.Select(id => Classic.EntityTypes[id].Key));
@@ -96,7 +109,7 @@ public class RulesetCompilerTests
         Assert.Equal(0, Type(Classic, "comm.field").Traits.Resistance); // "*"
         Assert.Equal(100, Classic.Gameplay.ResistanceScale);
 
-        Assert.Equal(["euro.archer", "euro.footman", "euro.knight", "euro.maceman"],
+        Assert.Equal(["euro.archer", "euro.footman", "euro.knight", "euro.maceman", "euro.pikeman"],
             Type(Classic, "euro.barrack").Traits.Producer!.Produces.Select(id => Classic.EntityTypes[id].Key));
         Assert.Equal(1 << Resource("wood"), Type(Classic, "euro.lumber").Traits.DropOffMask);
         Assert.Equal(12, Type(Classic, "euro.house").Traits.PopulationProvided);
@@ -218,7 +231,7 @@ public class RulesetCompilerTests
     [Theory]
     [InlineData("euro.footman: { Tooltip: { name: x } }", "test.yaml:1: euro.footman: unknown trait 'Tooltip'")]
     [InlineData("euro.footman:\n  Health: { maximum: 3 }", "test.yaml:2: euro.footman.Health: unknown field 'maximum'")]
-    [InlineData("euro.footman:\n  Cost: { mana: 3 }", "test.yaml:2: euro.footman.Cost: unknown resource 'mana'")]
+    [InlineData("euro.footman:\n  Cost: { silver: 3 }", "test.yaml:2: euro.footman.Cost: unknown resource 'silver'")]
     [InlineData("^a: { inherits: [^b] }\n^b: { inherits: [^a] }\neuro.x: { new: true, inherits: [^a] }", "inheritance cycle")]
     [InlineData("euro.x: { new: true, inherits: [^missing] }", "inherits unknown template '^missing'")]
     [InlineData("euro.x: { new: true, inherits: [euro.footman] }", "can only inherit templates")]

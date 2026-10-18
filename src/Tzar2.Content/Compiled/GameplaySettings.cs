@@ -70,8 +70,66 @@ public sealed record GameplaySettings
     /// <summary>Share of the cost refunded when a queued unit is cancelled (basis points).</summary>
     public int ProductionRefundBasisPoints { get; init; } = 10_000;
 
+    /// <summary>Share of the cost refunded when a queued research or upgrade is cancelled (basis points).</summary>
+    public int ResearchRefundBasisPoints { get; init; } = 10_000;
+
+    /// <summary>Capture points one capturing peasant adds per second (GAME-04, UNK-19).</summary>
+    public int CapturePointsPerSecond { get; init; } = 10;
+
+    /// <summary>Least capture resistance of a building, whatever the influence around it (UNK-19).</summary>
+    public int MinimumCaptureResistance { get; init; } = 1;
+
+    /// <summary>Capture progress is lost after this long without a capturer at work (UNK-19).</summary>
+    public int CaptureResetMs { get; init; } = 5_000;
+
+    /// <summary>Radius in tiles of the EMIT influence; it fades linearly to 0 there (⚠ HYPOTHESIS UNK-19).</summary>
+    public int InfluenceRadiusTiles { get; init; } = 16;
+
+    /// <summary>A full repair by one peasant takes this share of the build time (basis points; UNK-18).</summary>
+    public int RepairTimeBasisPoints { get; init; } = 10_000;
+
+    /// <summary>A burnable building below this share of its hit points burns (basis points; UNK-42).</summary>
+    public int BurnThresholdBasisPoints { get; init; } = 5_000;
+
+    /// <summary>Hit points a burning building loses per minute (UNK-42).</summary>
+    public int BurnDamagePerMinute { get; init; } = 60;
+
+    /// <summary>Lifetime of a ruin decal (REQ-PATH-08: never blocking).</summary>
+    public int RuinTtlMs { get; init; } = 120_000;
+
+    /// <summary>Radius in tiles in which a builder looks for the next unfinished segment of the wall it built.</summary>
+    public int WallContinueRadiusTiles { get; init; } = 6;
+
+    /// <summary>Most segments one dragged wall may place.</summary>
+    public int MaxWallSegments { get; init; } = 64;
+
+    /// <summary>An automatic gate opens while a unit of its owner is this close to it (world units, edge to edge).</summary>
+    public int GateOpenReachUnits { get; init; } = 2048;
+
     internal void Validate(int resourceTypes)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(ResearchRefundBasisPoints);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(ResearchRefundBasisPoints, 10_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(CapturePointsPerSecond, 0);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(CapturePointsPerSecond, 1_000_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(MinimumCaptureResistance, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(CaptureResetMs, 0);
+        ArgumentOutOfRangeException.ThrowIfNegative(InfluenceRadiusTiles);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(InfluenceRadiusTiles, 128);
+        ArgumentOutOfRangeException.ThrowIfLessThan(RepairTimeBasisPoints, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairTimeBasisPoints, 1_000_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(BurnThresholdBasisPoints);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(BurnThresholdBasisPoints, 10_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(BurnDamagePerMinute);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(BurnDamagePerMinute, 1_000_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(RuinTtlMs);
+        ArgumentOutOfRangeException.ThrowIfNegative(WallContinueRadiusTiles);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(WallContinueRadiusTiles, 64);
+        ArgumentOutOfRangeException.ThrowIfLessThan(MaxWallSegments, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxWallSegments, 256);
+        ArgumentOutOfRangeException.ThrowIfNegative(GateOpenReachUnits);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(GateOpenReachUnits, 8 * 2048);
+
         if (GroupMoveSpeed > GroupMoveSpeed.Own)
         {
             throw new ArgumentOutOfRangeException(nameof(GroupMoveSpeed));

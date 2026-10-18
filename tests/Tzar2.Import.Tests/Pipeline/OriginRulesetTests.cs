@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Rules;
 using Tzar2.Content.Vfs;
+using Tzar2.Formats.Text;
+using Tzar2.Formats.Tsv;
 using Tzar2.Import.Pipeline;
 using Tzar2.Tests.Shared;
 using Xunit;
@@ -116,6 +119,110 @@ public sealed class OriginRulesetTests(ITestOutputHelper output) : IDisposable
 
         // Deterministic: the same package compiles to the same hash.
         Assert.Equal(classic.ContentHash, RulesetCompiler.Compile(vfs, "classic").Ruleset.ContentHash);
+    }
+
+    /// <summary>
+    /// GAME-06 (ADR 0040): every technology and upgrade of the reference build compiles with its cost, time, per-civ
+    /// prerequisites and research sites, and every building of every civilization is in the ruleset.
+    /// </summary>
+    [OriginFact]
+    public void Classic_compiles_every_technology_upgrade_and_building_of_every_civilization()
+    {
+        string origin = OriginPaths.RequireOrigin();
+        Ruleset classic = CompileFromOrigin(origin, out IReadOnlyList<string> diagnostics);
+
+        Assert.Equal(87, classic.Technologies.Count);
+        Assert.Equal(12, classic.Upgrades.Count);
+        Assert.Equal(["arab", "asia", "comm", "euro"], classic.Civilizations);
+
+        // Every building row of every civilization table is a type.
+        foreach (string file in Directory.EnumerateFiles(Path.Combine(origin, "DATA"), "* BUILDINGS.TXT"))
+        {
+            string civ = Path.GetFileName(file).Split(' ')[0].ToLowerInvariant();
+            TsvTable table = TsvTable.Parse(File.ReadAllBytes(file), CodePage.Windows1252);
+            foreach (TsvRow row in table.Rows.Where(r => !r.IsBlank && r[1].Trim().Length > 0))
+            {
+                EntityTypeDefinition type = Get(classic, $"{civ}.{row[1].Trim()}");
+                Assert.True(type.HasFootprint, $"{type.Key} has no footprint");
+            }
+        }
+
+        // Research sites: which building of which civilization researches each technology (the command cards).
+        var researchable = new SortedSet<string>(StringComparer.Ordinal);
+        var upgradable = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (EntityTypeDefinition t in classic.EntityTypes)
+        {
+            if (t.Traits.Producer is { } p)
+            {
+                researchable.UnionWith(p.Researches.Select(id => classic.Technologies[id].Key));
+                upgradable.UnionWith(p.Upgrades.Select(id => classic.Upgrades[id].Key));
+            }
+        }
+
+        string[] notResearchable = [.. classic.Technologies.Select(t => t.Key).Where(k => !researchable.Contains(k))];
+        output.WriteLine($"{researchable.Count} technologies have a research site; none: {string.Join(", ", notResearchable)}");
+        output.WriteLine($"upgrades with a site: {string.Join(", ", upgradable)}");
+        Assert.True(researchable.Count >= 80, $"only {researchable.Count} technologies can be researched");
+        Assert.All(classic.Technologies, t =>
+        {
+            Assert.True(t.TimeMs > 0, t.Key);
+            Assert.True(t.Cost.Sum() > 0, t.Key);
+        });
+
+        // Per-civ prerequisites (TECHTREE): Halberd needs Temper Iron for the Europeans; pikemen need Halberd.
+        TechnologyDefinition halberd = classic.Technologies[classic.TechnologyId("te_halberd")];
+        ushort temper = (ushort)classic.TechnologyId("te_temperiron");
+        Assert.Contains(halberd.Requirements, r => r.Civilization == "euro" && r.Technologies.Contains(temper));
+        Assert.Contains(Get(classic, "euro.pikeman").Traits.Requirements, r => r.Technologies.Contains((ushort)classic.TechnologyId("te_halberd")));
+        Assert.Contains(Get(classic, "comm.cow").Traits.Requirements, r => r.Technologies.Contains((ushort)classic.TechnologyId("te_livestock")));
+        Assert.Contains(Get(classic, "asia.church").Traits.Requirements, r => r.Types.Contains((ushort)classic.EntityTypeId("asia.shaolinn")));
+        Assert.Contains((ushort)classic.TechnologyId("te_halberd"), Get(classic, "euro.blacksmith").Traits.Producer!.Researches);
+
+        // Upgrades convert towers, walls and gates in place; ship cannons are levels bought in order.
+        UpgradeDefinition guard = classic.Upgrades[classic.UpgradeId("to_wtower2")];
+        Assert.Equal(classic.EntityTypeId("comm.tower_wood2"), guard.ConvertedType((ushort)classic.EntityTypeId("comm.tower_wood")));
+        Assert.Equal(classic.EntityTypeId("comm.wall_stone"), classic.Upgrades[classic.UpgradeId("to_wall_stone")].ConvertedType((ushort)classic.EntityTypeId("comm.wall_wood")));
+        Assert.False(classic.Upgrades[classic.UpgradeId("to_ship_level3")].IsConversion);
+        Assert.Contains(classic.OrderGates, g => g.Order == "spell_heal" && g.Civilization == "euro");
+
+        // GAME-04: capture flags and EMIT influence; GAME-01: mana pools and mana costs; GAME-02: cows and fish.
+        Assert.NotNull(Get(classic, "euro.castle").Traits.Capturable);
+        Assert.Equal((400, -200), (Get(classic, "euro.castle").Traits.Influence!.Own, Get(classic, "euro.castle").Traits.Influence!.Other));
+        Assert.Equal(100, Get(classic, "euro.mage").Traits.ManaPool!.Max);
+        Assert.Equal(600, Get(classic, "comm.troll").Traits.ManaCost);
+        Assert.Equal(50, Get(classic, "comm.cow").Traits.ResourceNode!.Amount);
+        Assert.Equal(500, Get(classic, "comm.fishpatch").Traits.ResourceNode!.Amount);
+        Assert.Equal(Locomotor.Ship, Get(classic, "comm.fishing_boat").Locomotor);
+        Assert.Equal(Locomotor.Air, Get(classic, "comm.dragon").Locomotor);
+        Assert.DoesNotContain(diagnostics, d => d.Contains("cannot train", StringComparison.Ordinal));
+    }
+
+    private Ruleset CompileFromOrigin(string origin, out IReadOnlyList<string> diagnostics)
+    {
+        string subset = Path.Combine(_work, "origin2");
+        foreach (string file in Directory.EnumerateFiles(origin, "*", SearchOption.AllDirectories))
+        {
+            string relative = Path.GetRelativePath(origin, file).Replace('\\', '/');
+            string lower = relative.ToLowerInvariant();
+            if ((lower.StartsWith("data/", StringComparison.Ordinal) && (lower.EndsWith(".ini", StringComparison.Ordinal) || lower.EndsWith(".txt", StringComparison.Ordinal)))
+                || (lower.StartsWith("images/", StringComparison.Ordinal) && lower.EndsWith(".dat", StringComparison.Ordinal)))
+            {
+                string target = Path.Combine(subset, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                File.Copy(file, target);
+            }
+        }
+
+        ImportResult import = ImportPipeline.Run(new ImportOptions { OriginPath = subset, OutputDirectory = Path.Combine(_work, "out2"), SkipEditionDetection = true });
+        Assert.True(import.Report.Succeeded, string.Join("\n", import.Report.Errors));
+        using PackageSource package = PackageSource.Open(import.PackagePath);
+        var vfs = new VirtualFileSystem();
+        vfs.Mount(new EngineDefaultsSource());
+        vfs.Mount(package);
+        CompiledRuleset compiled = RulesetCompiler.Compile(vfs, "classic");
+        Assert.Empty(compiled.Warnings);
+        diagnostics = compiled.Diagnostics;
+        return compiled.Ruleset;
     }
 
     private static EntityTypeDefinition Get(Ruleset ruleset, string key)

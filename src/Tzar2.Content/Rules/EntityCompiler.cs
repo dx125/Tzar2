@@ -29,27 +29,47 @@ internal sealed class EntityCompiler
         ["BuildTime"] = ["ms"],
         ["PopulationCost"] = ["amount"],
         ["PopulationProvider"] = ["amount"],
-        ["Building"] = ["width", "height", "mask"],
+        ["Building"] = ["width", "height", "mask", "placement"],
         ["Harvester"] = ["capacity", "gatherMs"],
         ["Builder"] = ["builds", "civilizations"],
         ["Producer"] = ["queue"],
         ["Producible"] = ["by"],
-        ["ResourceNode"] = ["resource", "amount"],
-        ["DropOff"] = ["resources"],
-        ["Requires"] = ["buildings", "technology"],
+        ["Researcher"] = ["technologies", "upgrades"],
+        ["ResourceNode"] = ["resource", "amount", "regenMs", "gatherMs", "keepWhenEmpty"],
+        ["DropOff"] = ["resources", "access", "autoGather"],
+        ["Requires"] = ["buildings", "technology", "technologies"],
+        ["TechTree"] = [],
         ["CorpseOnDeath"] = [],
+        ["Capturable"] = ["instant", "technology"],
+        ["Capturer"] = [],
+        ["InfluenceEmitter"] = ["own", "other"],
+        ["Repairable"] = [],
+        ["Burnable"] = [],
+        ["RuinOnDeath"] = [],
+        ["ManaPool"] = ["max", "regenPerMinute"],
+        ["Wall"] = [],
+        ["Gate"] = ["passage"],
+        ["Bridge"] = [],
+        ["ProtectedDelete"] = [],
+        ["Decay"] = ["afterMs", "healthPerMinute"],
+        ["SpawnOnDeath"] = ["type"],
+        ["Lifetime"] = ["ms"],
     };
 
     private readonly List<ResolvedEntry> _entries;
     private readonly List<string> _resources;
     private readonly GameplayReader _gameplay;
     private readonly string[] _keys;
+    private readonly ResearchIds _research;
+    private readonly List<string> _diagnostics;
 
-    public EntityCompiler(List<ResolvedEntry> sortedEntries, List<string> resources, GameplayReader gameplay)
+    public EntityCompiler(List<ResolvedEntry> sortedEntries, List<string> resources, GameplayReader gameplay, ResearchIds research, List<string> diagnostics)
     {
         _entries = sortedEntries;
         _resources = resources;
         _gameplay = gameplay;
+        _research = research;
+        _diagnostics = diagnostics;
         _keys = new string[sortedEntries.Count];
         for (int i = 0; i < _keys.Length; i++)
         {
@@ -77,6 +97,13 @@ internal sealed class EntityCompiler
                     throw Error(at, $"{_keys[i]}.Producible.by: '{producer}' is not a building");
                 }
 
+                if (drafts[i].SpeedUnitsPerSecond == 0)
+                {
+                    // The tables give some units no SPEED (caravans): they cannot leave a building until a rule gives one.
+                    _diagnostics.Add($"{_keys[i]}: has no speed, so '{producer}' cannot train it");
+                    continue;
+                }
+
                 (produces[p] ??= []).Add((ushort)i);
             }
         }
@@ -86,12 +113,29 @@ internal sealed class EntityCompiler
         {
             Draft d = drafts[i];
             ProducerDefinition? producer = null;
-            if (produces[i] is not null || d.QueueCapacity > 0)
+            if (produces[i] is not null || d.QueueCapacity > 0 || d.Researches.Count > 0 || d.Upgrades.Count > 0)
             {
                 List<ushort> ids = produces[i] ?? [];
                 ids.Sort();
-                producer = new ProducerDefinition([.. ids], d.QueueCapacity > 0 ? d.QueueCapacity : _gameplay.QueueCapacity);
+                producer = new ProducerDefinition([.. ids], d.QueueCapacity > 0 ? d.QueueCapacity : _gameplay.QueueCapacity)
+                {
+                    Researches = [.. d.Researches],
+                    Upgrades = [.. d.Upgrades],
+                };
             }
+
+            var requirements = new List<RequirementSet>();
+            if (d.RequiredTechnologies.Count > 0 || d.Unsatisfiable)
+            {
+                requirements.Add(new RequirementSet(string.Empty, [.. d.RequiredTechnologies], [], d.Unsatisfiable));
+            }
+
+            foreach ((string civ, SortedSet<ushort> techs, List<(string Key, RuleValue At)> buildings, bool unsatisfiable) in d.CivRequirements)
+            {
+                requirements.Add(new RequirementSet(civ, [.. techs], ResolveList(buildings, $"{_keys[i]}.TechTree.{civ}.buildings"), unsatisfiable));
+            }
+
+            int spawnOnDeath = d.SpawnOnDeath is { } spawn ? Resolve(spawn.Key, spawn.At, $"{_keys[i]}.SpawnOnDeath.type") : -1;
 
             var traits = new EntityTraits
             {
@@ -113,6 +157,25 @@ internal sealed class EntityCompiler
                 PopulationProvided = d.PopulationProvided,
                 RequiredTypes = ResolveList(d.RequiredBuildings, $"{_keys[i]}.Requires.buildings"),
                 RequiredTechnology = d.RequiredTechnology,
+                Requirements = [.. requirements],
+                ManaCost = d.ManaCost,
+                ManaPool = d.ManaPool,
+                DropOffAccess = d.DropOffAccess,
+                AutoGather = d.AutoGather,
+                Placement = d.Placement,
+                Capturable = d.Capturable,
+                IsCapturer = d.IsCapturer,
+                Influence = d.Influence,
+                IsRepairable = d.IsRepairable,
+                Burnable = d.Burnable,
+                LeavesRuin = d.LeavesRuin,
+                IsWall = d.IsWall,
+                Gate = d.Gate,
+                IsBridge = d.IsBridge,
+                ProtectedDelete = d.ProtectedDelete,
+                Decay = d.Decay,
+                SpawnOnDeath = spawnOnDeath,
+                LifetimeMs = d.LifetimeMs,
             };
             try
             {
@@ -150,7 +213,7 @@ internal sealed class EntityCompiler
                 throw new RulesException(trait.Source, trait.Line, $"{key}: unknown trait '{trait.Name}'");
             }
 
-            if (trait.Name != "Cost")
+            if (trait.Name is not ("Cost" or "TechTree"))
             {
                 foreach (KeyValuePair<string, RuleValue> f in trait.Fields)
                 {
@@ -203,15 +266,21 @@ internal sealed class EntityCompiler
             foreach (KeyValuePair<string, RuleValue> f in cost.Fields)
             {
                 int r = _resources.IndexOf(f.Key);
+                if (r < 0 && f.Key == "mana")
+                {
+                    continue; // GAME-01: mana is per caster, not a stockpile
+                }
+
                 if (r < 0)
                 {
-                    throw Error(f.Value, $"{key}.Cost: unknown resource '{f.Key}' (known: {string.Join(", ", _resources)})");
+                    throw Error(f.Value, $"{key}.Cost: unknown resource '{f.Key}' (known: {string.Join(", ", _resources)}, mana)");
                 }
 
                 amounts[r] = RulesetCompiler.Int(f.Value.Node, f.Value.Source, Where("Cost", f.Key));
             }
 
             d.Cost = [.. amounts];
+            d.ManaCost = NonNegative("Cost", "mana", 0);
         }
 
         if (entry.Find("Armament") is { } arm && (IntOf("Armament", "attack") ?? 0) > 0)
@@ -248,33 +317,16 @@ internal sealed class EntityCompiler
             d.FootprintHeight = NonNegative("Building", "height", 1);
             if (building.Get("mask") is { } mask)
             {
-                List<string> rows = RulesDocument.StringList(mask.Node, mask.Source, Where("Building", "mask"));
-                if (rows.Count != d.FootprintHeight)
-                {
-                    throw Error(mask, $"{Where("Building", "mask")} needs {d.FootprintHeight} rows");
-                }
-
-                var cells = new byte[d.FootprintWidth * d.FootprintHeight];
-                for (int y = 0; y < rows.Count; y++)
-                {
-                    if (rows[y].Length != d.FootprintWidth)
-                    {
-                        throw Error(mask, $"{Where("Building", "mask")} row {y} needs {d.FootprintWidth} cells of 0/1");
-                    }
-
-                    for (int x = 0; x < d.FootprintWidth; x++)
-                    {
-                        cells[(y * d.FootprintWidth) + x] = rows[y][x] switch
-                        {
-                            '1' => 1,
-                            '0' => 0,
-                            _ => throw Error(mask, $"{Where("Building", "mask")}: use 0 (free) and 1 (blocked)"),
-                        };
-                    }
-                }
-
-                d.Mask = cells;
+                d.Mask = ReadMask(mask, d.FootprintWidth, d.FootprintHeight, Where("Building", "mask"));
             }
+
+            d.Placement = (StrOf("Building", "placement") ?? "land") switch
+            {
+                "land" => PlacementKind.Land,
+                "coast" => PlacementKind.Coast,
+                "bridge" => PlacementKind.Bridge,
+                { } other => throw Error(building.Get("placement")!.Value, $"{Where("Building", "placement")}: '{other}' is not land/coast/bridge"),
+            };
         }
 
         if (entry.Find("Harvester") is { } harvester)
@@ -338,21 +390,45 @@ internal sealed class EntityCompiler
 
             string amountText = StrOf("ResourceNode", "amount") ?? throw new RulesException(node.Source, node.Line, $"{key}.ResourceNode needs an amount");
             int amount = amountText == "unlimited" ? ResourceNodeDefinition.Unlimited : Math.Max(1, NonNegative("ResourceNode", "amount", 1));
-            d.ResourceNode = new ResourceNodeDefinition(r, amount);
-        }
-
-        if (entry.Find("DropOff")?.Get("resources") is { } drop)
-        {
-            foreach (string resource in RulesDocument.StringList(drop.Node, drop.Source, Where("DropOff", "resources")))
+            d.ResourceNode = new ResourceNodeDefinition(r, amount)
             {
-                int r = _resources.IndexOf(resource);
-                d.DropOffMask |= r >= 0 ? 1 << r : throw Error(drop, $"{key}.DropOff: unknown resource '{resource}'");
-            }
+                RegenMs = NonNegative("ResourceNode", "regenMs", 0),
+                GatherMs = NonNegative("ResourceNode", "gatherMs", 0),
+                KeepWhenEmpty = node.Get("keepWhenEmpty") is { } keep && RulesetCompiler.Bool(keep.Node, keep.Source, Where("ResourceNode", "keepWhenEmpty")),
+            };
         }
 
-        if (entry.Find("Requires") is not null)
+        if (entry.Find("DropOff") is { } dropOff)
         {
-            if (entry.Find("Requires")!.Get("buildings") is { } req)
+            if (dropOff.Get("resources") is { } drop)
+            {
+                foreach (string resource in RulesDocument.StringList(drop.Node, drop.Source, Where("DropOff", "resources")))
+                {
+                    int r = _resources.IndexOf(resource);
+                    d.DropOffMask |= r >= 0 ? 1 << r : throw Error(drop, $"{key}.DropOff: unknown resource '{resource}'");
+                }
+            }
+
+            if (dropOff.Get("access") is { } access)
+            {
+                d.DropOffAccess = DropOffAccess.None;
+                foreach (string a in RulesDocument.StringList(access.Node, access.Source, Where("DropOff", "access")))
+                {
+                    d.DropOffAccess |= a switch
+                    {
+                        "land" => DropOffAccess.Land,
+                        "water" => DropOffAccess.Water,
+                        _ => throw Error(access, $"{Where("DropOff", "access")}: '{a}' is not land/water"),
+                    };
+                }
+            }
+
+            d.AutoGather = dropOff.Get("autoGather") is { } auto && RulesetCompiler.Bool(auto.Node, auto.Source, Where("DropOff", "autoGather"));
+        }
+
+        if (entry.Find("Requires") is { } requires)
+        {
+            if (requires.Get("buildings") is { } req)
             {
                 foreach (string b in RulesDocument.StringList(req.Node, req.Source, Where("Requires", "buildings")))
                 {
@@ -361,13 +437,186 @@ internal sealed class EntityCompiler
             }
 
             d.RequiredTechnology = StrOf("Requires", "technology") ?? string.Empty;
+            var techs = new List<(string, RuleValue)>();
+            if (requires.Get("technology") is { } single)
+            {
+                techs.Add((d.RequiredTechnology, single));
+            }
+
+            if (requires.Get("technologies") is { } many)
+            {
+                foreach (string t in RulesDocument.StringList(many.Node, many.Source, Where("Requires", "technologies")))
+                {
+                    techs.Add((t, many));
+                }
+            }
+
+            foreach ((string t, RuleValue at) in techs)
+            {
+                if (_research.Technology(t) is { } id)
+                {
+                    d.RequiredTechnologies.Add(id);
+                }
+                else
+                {
+                    d.Unsatisfiable = true;
+                    _diagnostics.Add($"{key}: requires '{t}', which does not exist; it can never be built or trained ({at.Source})");
+                }
+            }
         }
 
-        d.Category = d.ResourceNode is not null ? EntityCategory.Resource
+        if (entry.Find("TechTree") is { } tree)
+        {
+            foreach (KeyValuePair<string, RuleValue> civ in tree.Fields)
+            {
+                YamlMapping spec = RulesetCompiler.Map(civ.Value.Node, civ.Value.Source, Where("TechTree", civ.Key));
+                var techs = new SortedSet<ushort>();
+                var buildings = new List<(string Key, RuleValue At)>();
+                bool unsatisfiable = false;
+                foreach (KeyValuePair<string, YamlNode> f in spec.Entries)
+                {
+                    List<string> names = RulesDocument.StringList(f.Value, civ.Value.Source, $"{Where("TechTree", civ.Key)}.{f.Key}");
+                    switch (f.Key)
+                    {
+                        case "technologies":
+                            foreach (string t in names)
+                            {
+                                if (_research.Technology(t) is { } id)
+                                {
+                                    techs.Add(id);
+                                }
+                                else
+                                {
+                                    unsatisfiable = true;
+                                    _diagnostics.Add($"{key}: the {civ.Key} technology tree requires '{t}', which does not exist");
+                                }
+                            }
+
+                            break;
+                        case "buildings":
+                            foreach (string b in names)
+                            {
+                                buildings.Add((b, new RuleValue(f.Value, civ.Value.Source)));
+                            }
+
+                            break;
+                        default:
+                            throw new RulesException(civ.Value.Source, f.Value.Line, $"{Where("TechTree", civ.Key)}: unknown field '{f.Key}' (technologies, buildings)");
+                    }
+                }
+
+                d.CivRequirements.Add((civ.Key, techs, buildings, unsatisfiable));
+            }
+        }
+
+        if (entry.Find("Researcher") is { } researcher)
+        {
+            foreach ((string field, List<ushort> into, Func<string, ushort?> lookup) in new (string, List<ushort>, Func<string, ushort?>)[]
+            {
+                ("technologies", d.Researches, _research.Technology),
+                ("upgrades", d.Upgrades, _research.Upgrade),
+            })
+            {
+                if (researcher.Get(field) is not { } list)
+                {
+                    continue;
+                }
+
+                foreach (string name in RulesDocument.StringList(list.Node, list.Source, Where("Researcher", field)))
+                {
+                    ushort id = lookup(name) ?? throw Error(list, $"{Where("Researcher", field)}: unknown '{name}'");
+                    if (!into.Contains(id))
+                    {
+                        into.Add(id);
+                    }
+                }
+            }
+
+            d.Researches.Sort();
+            d.Upgrades.Sort();
+        }
+
+        if (entry.Find("Capturable") is { } capturable)
+        {
+            string? tech = StrOf("Capturable", "technology");
+            int techId = tech is null ? -1 : _research.Technology(tech) ?? throw Error(capturable.Get("technology")!.Value, $"{Where("Capturable", "technology")}: unknown '{tech}'");
+            d.Capturable = new CapturableDefinition(capturable.Get("instant") is { } instant && RulesetCompiler.Bool(instant.Node, instant.Source, Where("Capturable", "instant")), techId);
+        }
+
+        if (entry.Find("InfluenceEmitter") is not null)
+        {
+            d.Influence = new InfluenceDefinition(IntOf("InfluenceEmitter", "own") ?? 0, IntOf("InfluenceEmitter", "other") ?? 0);
+        }
+
+        if (entry.Find("ManaPool") is not null)
+        {
+            d.ManaPool = new ManaPoolDefinition(NonNegative("ManaPool", "max", 0), NonNegative("ManaPool", "regenPerMinute", _gameplay.ManaRegenPerMinute));
+        }
+
+        if (entry.Find("Gate") is { } gate)
+        {
+            d.GateRows = gate.Get("passage");
+        }
+
+        if (entry.Find("Decay") is not null)
+        {
+            d.Decay = new DecayDefinition(NonNegative("Decay", "afterMs", 0), NonNegative("Decay", "healthPerMinute", 0));
+        }
+
+        if (entry.Find("SpawnOnDeath")?.Get("type") is { } spawnType)
+        {
+            d.SpawnOnDeath = (RulesetCompiler.Str(spawnType.Node, spawnType.Source, Where("SpawnOnDeath", "type")), spawnType);
+        }
+
+        d.IsCapturer = entry.Find("Capturer") is not null;
+        d.IsRepairable = entry.Find("Repairable") is not null;
+        d.Burnable = entry.Find("Burnable") is not null;
+        d.LeavesRuin = entry.Find("RuinOnDeath") is not null;
+        d.IsWall = entry.Find("Wall") is not null;
+        d.IsBridge = entry.Find("Bridge") is not null;
+        d.ProtectedDelete = entry.Find("ProtectedDelete") is not null;
+        d.LifetimeMs = NonNegative("Lifetime", "ms", 0);
+        if (d.GateRows is { } passage)
+        {
+            d.Gate = new GateDefinition([.. ReadMask(passage, d.FootprintWidth, d.FootprintHeight, Where("Gate", "passage"))]);
+        }
+
+        d.Category = d.ResourceNode is not null && d.SpeedUnitsPerSecond == 0 ? EntityCategory.Resource
             : d.FootprintWidth > 0 ? EntityCategory.Building
             : d.SpeedUnitsPerSecond > 0 ? EntityCategory.Unit
             : EntityCategory.Other;
         return d;
+    }
+
+    // Rows of 0/1 cells, one row per footprint row (masks and gate passages).
+    private static byte[] ReadMask(RuleValue mask, int width, int height, string what)
+    {
+        List<string> rows = RulesDocument.StringList(mask.Node, mask.Source, what);
+        if (rows.Count != height)
+        {
+            throw Error(mask, $"{what} needs {height} rows");
+        }
+
+        var cells = new byte[width * height];
+        for (int y = 0; y < rows.Count; y++)
+        {
+            if (rows[y].Length != width)
+            {
+                throw Error(mask, $"{what} row {y} needs {width} cells of 0/1");
+            }
+
+            for (int x = 0; x < width; x++)
+            {
+                cells[(y * width) + x] = rows[y][x] switch
+                {
+                    '1' => 1,
+                    '0' => 0,
+                    _ => throw Error(mask, $"{what}: use 0 and 1"),
+                };
+            }
+        }
+
+        return cells;
     }
 
     private ImmutableArray<ushort> ResolveBuilds(int index, Draft[] drafts)
@@ -460,5 +709,29 @@ internal sealed class EntityCompiler
         public int PopulationProvided;
         public List<(string Key, RuleValue At)> RequiredBuildings = [];
         public string RequiredTechnology = string.Empty;
+        public List<ushort> RequiredTechnologies = [];
+        public bool Unsatisfiable;
+        public List<(string Civ, SortedSet<ushort> Techs, List<(string Key, RuleValue At)> Buildings, bool Unsatisfiable)> CivRequirements = [];
+        public List<ushort> Researches = [];
+        public List<ushort> Upgrades = [];
+        public int ManaCost;
+        public ManaPoolDefinition? ManaPool;
+        public DropOffAccess DropOffAccess = DropOffAccess.Land;
+        public bool AutoGather;
+        public PlacementKind Placement;
+        public CapturableDefinition? Capturable;
+        public bool IsCapturer;
+        public InfluenceDefinition? Influence;
+        public bool IsRepairable;
+        public bool Burnable;
+        public bool LeavesRuin;
+        public bool IsWall;
+        public RuleValue? GateRows;
+        public GateDefinition? Gate;
+        public bool IsBridge;
+        public bool ProtectedDelete;
+        public DecayDefinition? Decay;
+        public (string Key, RuleValue At)? SpawnOnDeath;
+        public int LifetimeMs;
     }
 }
