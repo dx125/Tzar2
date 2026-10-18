@@ -64,6 +64,7 @@ public sealed partial class World
         Lifetimes = Components.RegisterHot<Lifetime>("game.lifetime");
         RepairProgresses = Components.RegisterHot<RepairProgress>("game.repair");
         RegisterCombatMagicStores();
+        RegisterNavalStores();
         Stats = new PlayerStats(ruleset, config.PlayerCount);
         Decals = new DecalIndex(ruleset.DecalCap);
         Navigation = new NavigationGrid(Map, ruleset);
@@ -450,6 +451,7 @@ public sealed partial class World
         CaptureStates.Remove(entity);
         RefreshMaxHealth(entity);
         AfterChangeOwnerCombatMagic(entity);
+        AfterChangeNaval(entity);
     }
 
     /// <summary>
@@ -516,6 +518,7 @@ public sealed partial class World
 
         RefreshMaxHealth(entity);
         AfterConvertTypeCombatMagic(entity, next);
+        AfterChangeNaval(entity);
     }
 
     /// <summary>Recomputes a live entity's maximum hit points (owner's technologies); the damage it took stays taken.</summary>
@@ -946,6 +949,7 @@ public sealed partial class World
         ValidateM3Components();
         ValidateKingdomComponents();
         ValidateCombatMagicComponents();
+        ValidateNavalComponents();
 
         static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
     }

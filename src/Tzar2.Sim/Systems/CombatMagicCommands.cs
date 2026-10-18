@@ -40,6 +40,11 @@ internal static class CombatMagicCommands
             applied++;
         }
 
+        if (applied > 0)
+        {
+            NavalCommands.MeetAtShore(world, holder, entities, DockPurpose.Board); // a ship sails to meet them (REQ-PATH-09)
+        }
+
         return applied > 0 ? null : last;
     }
 
@@ -63,9 +68,8 @@ internal static class CombatMagicCommands
     public static CommandRejection? Unload(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         bool toPoint = world.Map.ContainsPoint(command.X, command.Y) && (command.X != 0 || command.Y != 0);
-        int limit = command.Arg0 > 0 ? command.Arg0 : int.MaxValue;
-        int moved = 0;
-        Span<uint> inside = stackalloc uint[HolderDefinition.MaxCapacity];
+        int limit = command.Arg0 > 0 ? command.Arg0 : 0;
+        bool any = false;
         foreach (EntityId holder in entities)
         {
             if (!world.Entities.IsAlive(holder) || world.Identities.Get(holder).Owner != command.Player || world.Holders.IndexOf(holder) is not (>= 0 and var hs)
@@ -74,35 +78,17 @@ internal static class CombatMagicCommands
                 continue;
             }
 
-            int n = 0;
-            for (int i = 0; i < world.Helds.Count && n < inside.Length; i++)
+            if (world.IsShip(holder))
             {
-                if (world.Helds.Components[i].Holder == holder.Value && !world.Items.Has(world.Helds.Entities[i]))
-                {
-                    inside[n++] = world.Helds.Entities[i].Value;
-                }
+                any |= NavalCommands.UnloadShip(world, holder, toPoint, command.X, command.Y, limit); // to the shore first
+                continue;
             }
 
             Position at = world.Positions.Get(holder);
-            int tx = toPoint ? command.X : at.X;
-            int ty = toPoint ? command.Y : at.Y;
-            for (int k = 0; k < n && moved < limit; k++)
-            {
-                EntityId unit = EntityId.FromValue(inside[k]);
-                if (!world.Unload(unit, tx, ty))
-                {
-                    break; // no room around the holder
-                }
-
-                moved++;
-                if (toPoint)
-                {
-                    Interaction.MoveTo(world, unit, command.X, command.Y);
-                }
-            }
+            any |= NavalSystem.UnloadNow(world, holder, toPoint ? command.X : at.X, toPoint ? command.Y : at.Y, limit, toPoint) > 0;
         }
 
-        return moved > 0 ? null : CommandRejection.NoValidEntities;
+        return any ? null : CommandRejection.NoValidEntities;
     }
 
     public static CommandRejection? PickItem(World world, in Command command, ReadOnlySpan<EntityId> entities)

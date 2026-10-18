@@ -41,6 +41,19 @@ public enum AiWavePhase : byte
     Attacking = 1,
 }
 
+/// <summary>What the naval executor does with the current wave (ADR 0144).</summary>
+public enum AiNavalPhase : byte
+{
+    /// <summary>Nothing: the wave walks (or there is none).</summary>
+    None = 0,
+
+    /// <summary>The wave boards the transports.</summary>
+    Embarking = 1,
+
+    /// <summary>The transports sail to the enemy's shore and unload.</summary>
+    Sailing = 2,
+}
+
 /// <summary>
 /// The persistent state of one AI player (REQ-SIM-13: in snapshots via the AI's world extension; ADR 0051): script
 /// flags, forgotten rules, the position of a pass in progress and its goals, the goals of the last complete pass, and
@@ -49,7 +62,8 @@ public enum AiWavePhase : byte
 public sealed class AiPlayerState
 {
     internal const int MaxWaveUnits = 512;
-    private const byte Version = 1;
+    internal const int MaxTransports = 16;
+    private const byte Version = 2;
 
     internal AiPlayerState(AiPlayerSettings settings, int flagCount, int ruleCount)
     {
@@ -113,6 +127,20 @@ public sealed class AiPlayerState
     internal int TargetY { get; set; }
 
     internal List<uint> WaveUnits { get; } = [];
+
+    internal AiNavalPhase NavalPhase { get; set; }
+
+    internal int NavalTick { get; set; }
+
+    internal List<uint> Transports { get; } = [];
+
+    /// <summary>Whether an enemy town was overseas at the last look (<see cref="OverseasTick"/>).</summary>
+    internal bool Overseas { get; set; }
+
+    internal int OverseasTick { get; set; } = int.MinValue / 2;
+
+    /// <summary>Waves carried across the water so far (ADR 0144).</summary>
+    public int Landings { get; internal set; }
 
     /// <summary>Whether flag <paramref name="flag"/> (program flag index) is set.</summary>
     public bool IsFlagSet(int flag) => Get(Flags, flag);
@@ -184,6 +212,17 @@ public sealed class AiPlayerState
         {
             w.WriteUInt32(unit);
         }
+
+        w.WriteByte((byte)NavalPhase);
+        w.WriteVarInt64(NavalTick);
+        w.WriteBoolean(Overseas);
+        w.WriteVarInt64(OverseasTick);
+        w.WriteVarInt64(Landings);
+        w.WriteVarUInt64((ulong)Transports.Count);
+        foreach (uint ship in Transports)
+        {
+            w.WriteUInt32(ship);
+        }
     }
 
     internal void ReadFrom(ref BinaryBufferReader r, int maxGoals)
@@ -231,6 +270,29 @@ public sealed class AiPlayerState
         for (ulong i = 0; i < units; i++)
         {
             WaveUnits.Add(r.ReadUInt32());
+        }
+
+        byte naval = r.ReadByte();
+        if (naval > (byte)AiNavalPhase.Sailing)
+        {
+            throw new InvalidDataException("Invalid AI naval phase.");
+        }
+
+        NavalPhase = (AiNavalPhase)naval;
+        NavalTick = ReadInt(ref r, int.MinValue, int.MaxValue);
+        Overseas = r.ReadBoolean();
+        OverseasTick = ReadInt(ref r, int.MinValue, int.MaxValue);
+        Landings = ReadInt(ref r, 0, int.MaxValue);
+        ulong ships = r.ReadVarUInt64();
+        if (ships > MaxTransports || (NavalPhase == AiNavalPhase.None && ships != 0))
+        {
+            throw new InvalidDataException("Invalid AI transports.");
+        }
+
+        Transports.Clear();
+        for (ulong i = 0; i < ships; i++)
+        {
+            Transports.Add(r.ReadUInt32());
         }
     }
 

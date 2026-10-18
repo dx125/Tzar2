@@ -193,8 +193,9 @@ internal static class Interaction
     /// <paramref name="y"/>) within <paramref name="radiusTiles"/> (edge distance; ties: lower entity index), or
     /// <see cref="EntityId.None"/>. Fields under construction and nodes another kingdom owns do not count.
     /// </summary>
-    public static EntityId NearestNode(World world, byte owner, int resource, int x, int y, int radiusTiles)
+    public static EntityId NearestNode(World world, byte owner, int resource, int x, int y, int radiusTiles, Locomotor locomotor = Locomotor.Foot)
     {
+        bool boat = locomotor == Locomotor.Ship;
         EntityId best = EntityId.None;
         long limit = (long)radiusTiles * MapState.UnitsPerTile;
         long bestDistance = (limit * limit) + 1;
@@ -203,7 +204,7 @@ internal static class Interaction
         for (int i = 0; i < nodes.Length; i++)
         {
             if (stocks[i].Amount == 0 || world.TypeOf(nodes[i]).Traits.ResourceNode!.Resource != resource || world.Constructions.Has(nodes[i])
-                || !MayHarvest(world, owner, nodes[i]))
+                || !MayHarvest(world, owner, nodes[i]) || IsOnWater(world, nodes[i]) != boat)
             {
                 continue;
             }
@@ -218,6 +219,19 @@ internal static class Interaction
 
         return best;
     }
+
+    /// <summary>
+    /// Whether a resource node lies on water (a fish patch): only boats gather there, and boats gather nowhere else
+    /// (GAME-02, ADR 0141).
+    /// </summary>
+    public static bool IsOnWater(World world, EntityId node)
+    {
+        Position p = world.Positions.Get(node);
+        return !world.Footprints.Has(node) && world.Map.IsPassableAt(Locomotor.Ship, p.X, p.Y);
+    }
+
+    /// <summary>Whether a worker of <paramref name="locomotor"/> may gather from <paramref name="node"/> (boats on water only).</summary>
+    public static bool CanReachNode(World world, Locomotor locomotor, EntityId node) => IsOnWater(world, node) == (locomotor == Locomotor.Ship);
 
     /// <summary>The access a worker of <paramref name="type"/> delivers with: boats at water drop-offs, others on land.</summary>
     public static DropOffAccess AccessOf(EntityTypeDefinition type) => type.Locomotor == Locomotor.Ship ? DropOffAccess.Water : DropOffAccess.Land;

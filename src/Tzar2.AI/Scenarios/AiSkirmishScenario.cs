@@ -280,10 +280,26 @@ public sealed class AiSkirmishScenario : IBenchScenario
         var parts = new List<string>();
         for (int p = 0; p < Options.Players; p++)
         {
-            parts.Add(string.Create(CultureInfo.InvariantCulture, $"p{p}: delivered {_delivered[p]}, built {_built[p]}, trained {_trained[p]}, damage {_damage[p]}, kills {_kills[p]}, waves {Ai.Players[p].Waves}"));
+            parts.Add(string.Create(CultureInfo.InvariantCulture, $"p{p}: delivered {_delivered[p]}, built {_built[p]}, trained {_trained[p]}, damage {_damage[p]}, kills {_kills[p]}, waves {Ai.Players[p].Waves}, ships {Ships(p)}, landings {Ai.Players[p].Landings}"));
         }
 
         return string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}; ") + string.Join("; ", parts);
+    }
+
+    /// <summary>Ships <paramref name="player"/> has now (naval maps, ADR 0144).</summary>
+    public int Ships(int player)
+    {
+        World world = Simulation.World;
+        int n = 0;
+        for (int i = 0; i < world.Identities.Count; i++)
+        {
+            if (world.Identities.Components[i].Owner == player && world.IsShip(world.Identities.Entities[i]))
+            {
+                n++;
+            }
+        }
+
+        return n;
     }
 
     /// <inheritdoc />

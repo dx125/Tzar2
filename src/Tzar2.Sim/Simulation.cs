@@ -80,6 +80,7 @@ public sealed class Simulation : IDisposable
     private static void AddCombatMagicSystems(SystemScheduler scheduler)
     {
         scheduler.Add(new ErrandSystem());
+        scheduler.Add(new NavalSystem()); // ships to the shore, explorers (ADRs 0140, 0143)
         scheduler.Add(new MagicSystem());
         scheduler.Add(new ExperienceSystem());
         scheduler.Add(new HolderSystem());

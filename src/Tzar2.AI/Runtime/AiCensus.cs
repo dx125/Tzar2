@@ -50,6 +50,9 @@ public sealed class AiCensusPlayer
     /// <summary>Soldiers (<see cref="AiRulesetModel.IsArmy"/>), ascending ids.</summary>
     public List<EntityId> Army { get; } = [];
 
+    /// <summary>Ships (fishing boats, transports, warships; not in <see cref="Workers"/> or <see cref="Army"/>), ascending ids.</summary>
+    public List<EntityId> Ships { get; } = [];
+
     /// <summary>Completed buildings with a production queue, ascending ids.</summary>
     public List<EntityId> Producers { get; } = [];
 
@@ -60,7 +63,7 @@ public sealed class AiCensusPlayer
     public List<EntityId> Buildings { get; } = [];
 
     /// <summary>Whether the player has anything at all.</summary>
-    public bool Exists => Workers.Count + Army.Count + Buildings.Count + Sites.Count > 0 || Units > 0;
+    public bool Exists => Workers.Count + Army.Count + Ships.Count + Buildings.Count + Sites.Count > 0 || Units > 0;
 
     /// <summary>The town center: the completed drop-off accepting the most resources (the castle), else the first
     /// building, else the first unit; the map center when the player has nothing.</summary>
@@ -80,6 +83,7 @@ public sealed class AiCensusPlayer
         QueuedPopulation = 0;
         Workers.Clear();
         Army.Clear();
+        Ships.Clear();
         Producers.Clear();
         Sites.Clear();
         Buildings.Clear();
@@ -283,7 +287,11 @@ public sealed class AiCensus
                 player.Town = (p.X, p.Y);
             }
 
-            if (world.Workers.Has(e))
+            if (type.IsMobile && type.Locomotor == Locomotor.Ship)
+            {
+                player.Ships.Add(e); // the naval executor's (ADR 0144): boats do not gather on land, ships do not march
+            }
+            else if (world.Workers.Has(e))
             {
                 player.Workers.Add(e);
             }
@@ -305,9 +313,9 @@ public sealed class AiCensus
         Span<ResourceStock> stocks = world.ResourceStocks.Components;
         for (int i = 0; i < nodes.Length; i++)
         {
-            if (stocks[i].Amount == 0 || world.Constructions.Has(nodes[i]))
+            if (stocks[i].Amount == 0 || world.Constructions.Has(nodes[i]) || Tzar2.Sim.Systems.Shore.IsOnWater(world, nodes[i]))
             {
-                continue;
+                continue; // fish patches are for boats (the naval executor), not for the land economy
             }
 
             Identity identity = world.Identities.Get(nodes[i]);

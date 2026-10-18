@@ -165,6 +165,9 @@ public enum CommandKind : ushort
     /// </summary>
     ScenarioReply = 60,
 
+    /// <summary>Explore: the units head for unexplored ground they can reach, ships on water (ADR 0143).</summary>
+    Explore = 34,
+
     /// <summary>Debug: spawn Arg1 (1-64) units of type Arg0 at (X, Y); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugSpawn = 0xF000,
 

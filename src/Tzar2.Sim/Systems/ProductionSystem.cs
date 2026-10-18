@@ -279,7 +279,7 @@ public sealed class ProductionSystem : ISimSystem
                         continue;
                     }
 
-                    EntityId candidate = Interaction.NearestNode(world, owner, r, at.X, at.Y, world.Ruleset.Gameplay.NodeSearchRadiusTiles);
+                    EntityId candidate = Interaction.NearestNode(world, owner, r, at.X, at.Y, world.Ruleset.Gameplay.NodeSearchRadiusTiles, world.TypeOf(worker).Locomotor);
                     if (candidate.IsNone)
                     {
                         continue;

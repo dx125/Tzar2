@@ -1,4 +1,4 @@
-# M3 gameplay placeholders, streams A, E and F: GAME-01 … GAME-19 (UNVERIFIED)
+# M3 gameplay placeholders, streams A, E, F and naval: GAME-01 … GAME-19 (UNVERIFIED)
 
 Status: **open**. Register of every gameplay value and rule of M3 stream A (ADRs 0040-0045) that is neither in an
 original data table nor measured in the running game. Owner decision: no captures from the running original yet; take
@@ -234,3 +234,31 @@ when the building is hit; catapult stones can be stepped away from.
 | Conversion | hit points in proportion; level, items and name carry over; a new order refunds it, death does not (the price is lost) | `CombatMagicCommands`, `World` | — |
 | Bribe | not peasants, crusaders or heroes | `CombatMagicCommands` | — |
 | Not implemented | `item_berserk`, Tournaments, ships entering harbors, spies' impersonation (visibility stream) | — | — |
+
+# Naval: REQ-PATH-09, GAME-02/03/07/09 ships (ADRs 0140-0145)
+
+## Values
+
+| Value | Placeholder | Where | Unknown | How to resolve |
+|---|---|---|---|---|
+| Dock reach | land tile and water tile at most 2 tiles apart (across the shore tile) | code (`Shore.ReachTiles`) | UNK-43 | boarding captures at different shores |
+| Dock search | 48 tiles around the land reference point | code (`Shore.SearchRadiusTiles`) | UNK-43 | captures |
+| Docked | within a quarter tile of the water point, or stopped within 2 tiles 10 ticks after the request; 8 requests at most | code (`NavalSystem`) | UNK-43 | captures |
+| Blocked target point | its land: the walkable tile nearest to it within 6 tiles | code (`Shore.ComponentSearchTiles`) | — | — |
+| Explore | a look every 20 ticks when idle, up to 96 tiles away | code (`NavalSystem`) | UNK-43 | explore captures |
+| Synthetic ships | hulk 430 food 610 wood, holds 12; xebec 260 food 370 wood, holds 6 (invented fixture values; the original's come from the data) | `SyntheticLegacyContent` | — | — |
+
+## Rules in code
+
+| Rule | Placeholder | System | Unknown |
+|---|---|---|---|
+| Boarding a ship | it sails to the dock nearest the boarders' centroid and waits while boarding errands target it | `NavalCommands`, `NavalSystem` | UNK-43 |
+| Repairing a ship | it sails to the dock nearest the first repairer; repairers wait for it | `NavalCommands`, `WorkerSystem` | UNK-43 |
+| Unloading | at once when land of the point's component is next to the ship; else it sails to the dock nearest the point (or itself) first | `NavalCommands` | UNK-43 |
+| Exits from ships | the unit's own navigation layer must stand there | `World.ExitPoint` | UNK-11 |
+| Fishing | boats only nodes on water, land workers only nodes on land | `Interaction` | UNK-17 |
+| Across the shore | auto-acquire only within range now (melee never); automatic fights drop out-of-range targets, explicit attacks chase | `CombatSystem` | UNK-22, UNK-43 |
+| Explore | nearest unexplored tile of the unit's component; ships water, land units land; done when none is left | `NavalSystem` | UNK-43 |
+| Patch notes (§5.1) | ship repair, stand ground and explore for ships, Landing Tactics once, crusaders dying aboard: see ADR 0143 | tests | — |
+| Not implemented | ships entering harbors (`[enter] harbor`) | — | — |
+

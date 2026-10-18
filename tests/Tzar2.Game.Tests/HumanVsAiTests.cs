@@ -97,6 +97,14 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
     /// <summary>Game minutes per map type: long enough for the Hard AI's first wave (after 4 minutes, ADR 0052) to land.</summary>
     private const int MapTypeMinutes = 6;
 
+    /// <summary>
+    /// Game minutes on Archipelagos, where the first wave must also board a transport, cross the sea and land (ADR 0144;
+    /// on this map a little after 9 minutes): a passive human keeps nothing within a ship's range of the water before.
+    /// </summary>
+    private const int SeaMapTypeMinutes = 12;
+
+    private static int MinutesFor(Tzar2.Content.MapGen.RandomMapType type) => type == Tzar2.Content.MapGen.RandomMapType.Archipelagos ? SeaMapTypeMinutes : MapTypeMinutes;
+
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Tzar2.Content.MapGen.RandomMapType, Lazy<(Outcome A, Outcome B, string Map)>> MapTypeRuns = new();
 
     internal static MatchSetup MapTypeSetup(Tzar2.Content.MapGen.RandomMapType type)
@@ -108,7 +116,7 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
         {
             MatchSetup setup = MapTypeSetup(t);
             string map = setup.Map.Create(Rules.Value, setup).Name;
-            return (Play(setup, Rules.Value, MapTypeMinutes), Play(setup, Rules.Value, MapTypeMinutes), map);
+            return (Play(setup, Rules.Value, MinutesFor(t)), Play(setup, Rules.Value, MinutesFor(t)), map);
         })).Value;
 
     [Theory]
@@ -128,22 +136,22 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// The attack check follows reachability, not the map type: wherever the AI's land army can walk to the human's
-    /// castle it must attack. Rows whose castles water separates are skipped (<see cref="LandReachableMapTypeAttribute"/>)
-    /// until the naval stream gives the sim ships; then the attribute must also accept ship-reachable castles.
+    /// The attack check follows reachability, not the map type: wherever the AI can reach the human's castle — on foot,
+    /// or by ship from its coast to the human's (harbors, landings and warships, ADR 0144) — it must attack. Rows whose
+    /// castles neither land nor a shared sea connects are skipped (<see cref="ReachableMapTypeAttribute"/>).
     /// </summary>
     [Theory]
-    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Random)]
-    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Archipelagos)]
-    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Dry)]
-    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Island)]
-    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Continental)]
-    [LandReachableMapType(Tzar2.Content.MapGen.RandomMapType.Lakes)]
-    public void The_hard_ai_attacks_the_human_wherever_its_castle_is_land_reachable(Tzar2.Content.MapGen.RandomMapType type)
+    [ReachableMapType(Tzar2.Content.MapGen.RandomMapType.Random)]
+    [ReachableMapType(Tzar2.Content.MapGen.RandomMapType.Archipelagos)]
+    [ReachableMapType(Tzar2.Content.MapGen.RandomMapType.Dry)]
+    [ReachableMapType(Tzar2.Content.MapGen.RandomMapType.Island)]
+    [ReachableMapType(Tzar2.Content.MapGen.RandomMapType.Continental)]
+    [ReachableMapType(Tzar2.Content.MapGen.RandomMapType.Lakes)]
+    public void The_hard_ai_attacks_the_human_wherever_its_castle_is_reachable(Tzar2.Content.MapGen.RandomMapType type)
     {
         (Outcome a, _, string map) = MapTypeRun(type);
         output.WriteLine($"{type} ({map}): {a.AiHitsOnHuman} AI hits on the human");
-        Assert.True(a.AiHitsOnHuman > 0, $"{map}: the castles are land-connected, but the AI never hit the human kingdom in {MapTypeMinutes} minutes");
+        Assert.True(a.AiHitsOnHuman > 0, $"{map}: the castles are reachable, but the AI never hit the human kingdom in {MinutesFor(type)} minutes");
     }
 
     /// <summary>Whether a foot unit of slot a can walk from next to a's castle to next to b's castle (the peasants' nav layer).</summary>
@@ -167,6 +175,67 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
         }
 
         return layer.AreConnected(from, to);
+    }
+
+    /// <summary>
+    /// Whether slot a can reach b's castle: by land (<see cref="CastlesLandConnected"/>), or by water — one sea touches
+    /// the coasts of both castles' land (a ship-layer tile within the shore reach of a land tile of each component), so a
+    /// harbor on each side can send ships across (ADRs 0140, 0144).
+    /// </summary>
+    internal static bool CastlesReachable(World world, byte a, byte b)
+    {
+        if (CastlesLandConnected(world, a, b))
+        {
+            return true;
+        }
+
+        EntityId peasant = world.Identities.Entities.ToArray().First(e => world.TypeOf(e).Traits.Harvester is not null && !world.IsShip(e));
+        Tzar2.Sim.Navigation.NavLayer land = world.Navigation.ForType(world.Identities.Get(peasant).TypeId)!;
+        Tzar2.Sim.Navigation.NavLayer? sea = null;
+        for (int t = 0; t < world.Ruleset.EntityTypes.Count && sea is null; t++)
+        {
+            if (world.Ruleset.EntityTypes[t] is { IsMobile: true, Locomotor: Tzar2.Content.Compiled.Locomotor.Ship })
+            {
+                sea = world.Navigation.ForType((ushort)t);
+            }
+        }
+
+        if (sea is null)
+        {
+            return false; // the ruleset has no ships
+        }
+
+        HashSet<int> Seas(byte owner)
+        {
+            EntityId castle = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == owner && world.TypeOf(e).Traits.LegacyClass == "castle");
+            Sim.Components.Position p = world.Positions.Get(castle);
+            int component = Tzar2.Sim.Systems.Shore.LandComponentAt(world, world.Identities.Get(peasant).TypeId, p.X, p.Y);
+            var seas = new HashSet<int>();
+            for (int tile = 0; tile < land.Width * land.Height; tile++)
+            {
+                if (land.ComponentOf(tile) != component)
+                {
+                    continue;
+                }
+
+                int lx = land.CenterX(tile), ly = land.CenterY(tile);
+                for (int dy = -Tzar2.Sim.Systems.Shore.ReachTiles; dy <= Tzar2.Sim.Systems.Shore.ReachTiles; dy++)
+                {
+                    for (int dx = -Tzar2.Sim.Systems.Shore.ReachTiles; dx <= Tzar2.Sim.Systems.Shore.ReachTiles; dx++)
+                    {
+                        int sx = sea.TileX(lx) + dx, sy = sea.TileY(ly) + dy;
+                        if (sea.IsWalkable(sx, sy))
+                        {
+                            seas.Add(sea.ComponentOf((sy * sea.Width) + sx));
+                        }
+                    }
+                }
+            }
+
+            return seas;
+        }
+
+        return Seas(a).Overlaps(Seas(b));
     }
 
     [Fact]
@@ -300,21 +369,22 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
 
 /// <summary>
 /// A map-type row of the attack theory, skipped with the reason when the generated map's castles (AI kingdom 2, human
-/// kingdom 1) are not land-connected: decided from the map's navigation layer, not from the map type.
+/// kingdom 1) are reachable neither by land nor by ship across a shared sea: decided from the map's navigation layers,
+/// not from the map type. A castle without a walkable tile near it throws (a broken map).
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-public sealed class LandReachableMapTypeAttribute : Xunit.Sdk.DataAttribute
+public sealed class ReachableMapTypeAttribute : Xunit.Sdk.DataAttribute
 {
     private readonly Tzar2.Content.MapGen.RandomMapType _type;
 
-    public LandReachableMapTypeAttribute(Tzar2.Content.MapGen.RandomMapType type)
+    public ReachableMapTypeAttribute(Tzar2.Content.MapGen.RandomMapType type)
     {
         _type = type;
         MatchSetup setup = HumanVsAiTests.MapTypeSetup(type);
         using var probe = new GameSession(setup with { ComputerAi = false }, HumanVsAiTests.SyntheticRules);
-        if (!HumanVsAiTests.CastlesLandConnected(probe.Simulation.World, 1, 0))
+        if (!HumanVsAiTests.CastlesReachable(probe.Simulation.World, 1, 0))
         {
-            Skip = $"{probe.Map.Name}: water separates the AI's castle from the human's, and the sim has no ships until the naval stream";
+            Skip = $"{probe.Map.Name}: neither land nor a shared sea connects the AI's castle with the human's";
         }
     }
 

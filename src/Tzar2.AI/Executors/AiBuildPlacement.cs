@@ -18,6 +18,9 @@ public enum AiPlacementRole : byte
 
     /// <summary>A field next to a food drop-off.</summary>
     Field = 2,
+
+    /// <summary>A harbor: on the coast nearest to the town (ADR 0144).</summary>
+    Coast = 3,
 }
 
 /// <summary>
@@ -31,6 +34,12 @@ public static class AiBuildPlacement
     /// <summary>Most candidate positions checked by one search.</summary>
     public const int MaxCandidates = 1200;
 
+    /// <summary>Most candidate positions checked by one coast search (most are skipped by a cheap water test).</summary>
+    public const int MaxCoastCandidates = 8000;
+
+    /// <summary>How far from the town a harbor is searched (tiles; UNVERIFIED).</summary>
+    public const int CoastSearchRadiusTiles = 40;
+
     /// <summary>Finds a site for <paramref name="typeId"/> around (<paramref name="anchorX"/>, <paramref name="anchorY"/>) (tiles).</summary>
     /// <returns>Whether a site was found; (<paramref name="tileX"/>, <paramref name="tileY"/>) is the footprint's top-left.</returns>
     public static bool TryFind(World world, ushort typeId, int anchorX, int anchorY, int maxRadius, out int tileX, out int tileY)
@@ -40,6 +49,8 @@ public static class AiBuildPlacement
         int w = type.FootprintWidth;
         int h = type.FootprintHeight;
         int checks = 0;
+        bool coast = type.Traits.Placement == PlacementKind.Coast;
+        int cap = coast ? MaxCoastCandidates : MaxCandidates;
         for (int r = 0; r <= maxRadius; r++)
         {
             int side = r == 0 ? 1 : 8 * r;
@@ -48,13 +59,13 @@ public static class AiBuildPlacement
                 (int dx, int dy) = RingOffset(r, k);
                 int x = anchorX + dx - (w / 2);
                 int y = anchorY + dy - (h / 2);
-                if (++checks > MaxCandidates)
+                if (++checks > cap)
                 {
                     tileX = tileY = 0;
                     return false;
                 }
 
-                if (IsGoodSite(world, typeId, w, h, x, y))
+                if (coast ? IsGoodCoastSite(world, typeId, w, h, x, y) : IsGoodSite(world, typeId, w, h, x, y))
                 {
                     tileX = x;
                     tileY = y;
@@ -124,6 +135,11 @@ public static class AiBuildPlacement
             return (at.X, at.Y, 14);
         }
 
+        if (role == AiPlacementRole.Coast)
+        {
+            return (tx, ty, CoastSearchRadiusTiles);
+        }
+
         return (tx, ty, 24);
     }
 
@@ -131,6 +147,11 @@ public static class AiBuildPlacement
     internal static AiPlacementRole RoleOf(EntityTypeDefinition type)
     {
         EntityTraits t = type.Traits;
+        if (t.Placement == PlacementKind.Coast)
+        {
+            return AiPlacementRole.Coast;
+        }
+
         if (t.ResourceNode is { Amount: ResourceNodeDefinition.Unlimited })
         {
             return AiPlacementRole.Field;
@@ -166,6 +187,41 @@ public static class AiBuildPlacement
 
         return true;
     }
+
+    // A harbor: placeable (land, water within reach), and the land side of its ring walkable for the builders; the
+    // water side cannot be (shore tiles carry neither, ADR 0042). Most candidates fail the cheap water test first.
+    private static bool IsGoodCoastSite(World world, ushort typeId, int w, int h, int x, int y)
+    {
+        MapState map = world.Map;
+        bool water = false;
+        for (int j = y - PlacementQueries.CoastReachTiles; j < y + h + PlacementQueries.CoastReachTiles && !water; j++)
+        {
+            for (int i = x - PlacementQueries.CoastReachTiles; i < x + w + PlacementQueries.CoastReachTiles && !water; i++)
+            {
+                water = map.ContainsTile(i, j) && map.IsPassable(Locomotor.Ship, i, j);
+            }
+        }
+
+        if (!water || !PlacementQueries.CanPlace(world, typeId, x, y))
+        {
+            return false;
+        }
+
+        int free = 0;
+        for (int i = -1; i <= w; i++)
+        {
+            free += (Walkable(map, x + i, y - 1) ? 1 : 0) + (Walkable(map, x + i, y + h) ? 1 : 0);
+        }
+
+        for (int j = 0; j < h; j++)
+        {
+            free += (Walkable(map, x - 1, y + j) ? 1 : 0) + (Walkable(map, x + w, y + j) ? 1 : 0);
+        }
+
+        return free >= w + h;
+    }
+
+    private static bool Walkable(MapState map, int tx, int ty) => map.ContainsTile(tx, ty) && map.IsPassable(Locomotor.Foot, tx, ty);
 
     private static bool Free(MapState map, int tx, int ty) => !map.ContainsTile(tx, ty) || map.IsPassable(Locomotor.Foot, tx, ty);
 

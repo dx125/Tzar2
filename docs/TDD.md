@@ -949,6 +949,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-40 | Cursor hotspots | Data/captures | P2 |
 | UNK-41 | Expression edge cases (division by zero, overflow, unknown variables) | Editor experiment | P2 |
 | UNK-42 | Building fire: health threshold at which buildings burn, fire damage per second, which types burn (GAME-03) | Measurement | P1 |
+| UNK-43 | Ship docking and naval behaviour (where ships stop to take or let out units, reach across the shore, repair at sea, explore pattern, unreachable targets) | Captures of boarding, unloading, repair and explore at different shores | P2 |
 | UNK-50 | Player Win/Lose effects on the other kingdoms | Editor experiment ([m4-placeholders.md](mechanics/m4-placeholders.md)) | P1 |
 | UNK-51 | Rule pass period and phase; event evaluation order | Timer experiments + captures | P1 |
 | UNK-52 | Extent of an area given as an object | Editor experiment | P2 |
