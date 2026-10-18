@@ -150,6 +150,21 @@ public class M3eSnapshotTests
         Assert.Equal(d.Sim.ComputeFullHash(), restored.ComputeFullHash());
     }
 
+    [Fact]
+    public void An_open_ended_cloak_survives_a_snapshot()
+    {
+        // Review of PR #24: a cloak without a duration ("until it attacks") must stay within the restore bounds.
+        Ruleset rules = ClassicWith("spell_cloak: { Spell: { durationMs: 0 } }");
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.mage", 0, 4, 4), Unit("euro.footman", 0, 6, 4)), ruleset: rules);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        d.Order(0, CommandKind.CastSpell, [mage], target: footman, arg0: Spell(rules, "spell_cloak"));
+        d.RunUntil(() => d.World.IsCloaked(footman), 200);
+        Assert.True(d.World.IsCloaked(footman));
+        using Simulation restored = Simulation.Restore(d.Sim.CaptureSnapshot(), rules, d.World.Map.Data);
+        Assert.True(restored.World.IsCloaked(footman));
+    }
+
     public static TheoryData<string> Corruptions() =>
     [
         "pending experience", "hero below the hero level", "held by a dead holder", "held unit still moving", "holder count",

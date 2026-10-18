@@ -613,14 +613,25 @@ public sealed class CombatSystem : ISimSystem
             return;
         }
 
-        int n = world.Holders.Get(hit.Target).Count;
+        // Only the units still alive this tick share it (one killed by an earlier hit of the tick takes no part).
+        ReadOnlySpan<EntityId> held = world.Helds.Entities;
+        int n = 0;
+        for (int i = 0; i < held.Length; i++)
+        {
+            n += IsLiveOccupant(world, i, hit.Target) ? 1 : 0;
+        }
+
+        if (n == 0)
+        {
+            return;
+        }
+
         int each = total / n;
         int rest = total - (each * n);
         int done = 0;
-        ReadOnlySpan<EntityId> held = world.Helds.Entities;
         for (int i = 0; i < held.Length && done < n; i++)
         {
-            if (world.Helds.Components[i].Holder != hit.Target.Value || world.Items.Has(held[i]))
+            if (!IsLiveOccupant(world, i, hit.Target))
             {
                 continue;
             }
@@ -633,11 +644,6 @@ public sealed class CombatSystem : ISimSystem
             }
 
             ref Health health = ref world.Healths.Get(held[i]);
-            if (health.Current <= 0)
-            {
-                continue;
-            }
-
             health.Current = Math.Max(0, health.Current - amount);
             world.Events.Emit(new SimEvent(SimEventKind.Damaged, world.Identities.Get(held[i]).Owner, held[i], hit.Attacker.Index, health.Current, amount));
             if (health.Current == 0)
@@ -647,6 +653,12 @@ public sealed class CombatSystem : ISimSystem
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.DamageShared, world.Identities.Get(hit.Target).Owner, hit.Target, n, 0, total));
+    }
+
+    private static bool IsLiveOccupant(World world, int heldIndex, EntityId holder)
+    {
+        EntityId e = world.Helds.Entities[heldIndex];
+        return world.Helds.Components[heldIndex].Holder == holder.Value && !world.Items.Has(e) && world.Healths.Get(e).Current > 0;
     }
 
     // Experience for damage dealt to another kingdom's (or Nature's) unit or building (not from allies' or own; GAME-08).

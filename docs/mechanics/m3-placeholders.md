@@ -222,6 +222,6 @@ when the building is hit; catapult stones can be stepped away from.
 | Confusion | the unit takes everyone as an enemy and everyone takes it as one | `CombatSystem` | UNK-26 |
 | Cloak | ends when the unit attacks or casts | `CombatSystem`, `MagicSystem` | — |
 | Murder, souls | heroes and `KillImmune` types are immune | `MagicSystem` | UNK-26 |
-| Conversion | hit points in proportion; level, items and name carry over; a new order refunds it | `CombatMagicCommands` | — |
+| Conversion | hit points in proportion; level, items and name carry over; a new order refunds it, death does not (the price is lost) | `CombatMagicCommands`, `World` | — |
 | Bribe | not peasants, crusaders or heroes | `CombatMagicCommands` | — |
 | Not implemented | `item_berserk`, Tournaments, ships entering harbors, spies' impersonation (visibility stream) | — | — |

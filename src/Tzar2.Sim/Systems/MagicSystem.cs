@@ -25,6 +25,7 @@ public sealed class MagicSystem : ISimSystem
 
     private readonly List<Death> _deaths = [];
     private readonly List<EntityId> _done = [];
+    private readonly List<EntityId> _casting = [];
 
     /// <inheritdoc />
     public SimPhase Phase => SimPhase.Spells;
@@ -40,11 +41,21 @@ public sealed class MagicSystem : ISimSystem
         int tick = world.Tick.Value;
         int tickMs = world.Config.TickLengthMilliseconds;
         _deaths.Clear();
+        // The casting ones first: a cast may summon units (new casters shift the store), so each is looked up by entity.
+        _casting.Clear();
         for (int i = 0; i < world.Casters.Count; i++)
         {
             if (world.Casters.At(i).Phase != CastPhase.None)
             {
-                Cast(world, world.Casters.Entities[i], i, tick, tickMs);
+                _casting.Add(world.Casters.Entities[i]);
+            }
+        }
+
+        foreach (EntityId caster in _casting)
+        {
+            if (world.Entities.IsAlive(caster) && world.Casters.IndexOf(caster) is >= 0 and var c && world.Casters.At(c).Phase != CastPhase.None)
+            {
+                Cast(world, caster, c, tick, tickMs);
             }
         }
 
@@ -245,7 +256,7 @@ public sealed class MagicSystem : ISimSystem
 
         if (mana > 0)
         {
-            world.Manas.Get(caster).MilliMana -= mana * 1000;
+            world.Manas.Get(caster).MilliMana = (int)Math.Max(0, world.Manas.Get(caster).MilliMana - ((long)mana * 1000));
         }
 
         if (c.Book != 0)
@@ -407,7 +418,7 @@ public sealed class MagicSystem : ISimSystem
             case SpellEffect.Cloak:
             {
                 ref StatusEffects st = ref StatusOf(world, target);
-                st.CloakUntil = s.DurationMs > 0 ? until : int.MaxValue / 2;
+                st.CloakUntil = s.DurationMs > 0 ? until : tick + (3_600_000 / tickMs); // "until it attacks": an hour at most (fits the restore bound)
                 break;
             }
 
