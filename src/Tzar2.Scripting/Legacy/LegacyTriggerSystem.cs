@@ -109,6 +109,12 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
     public TriggerState State => _state;
 
     /// <summary>
+    /// The editor's trigger debugger (ADR 0153), or null. Called on the sim thread; not state, not hashed, and it cannot
+    /// change what the engine does.
+    /// </summary>
+    public ITriggerTrace? Trace { get; set; }
+
+    /// <summary>
     /// Adds the trigger engine to a simulation before its first tick: a new match (the map objects get their scenario
     /// properties and the Not Appear ones leave the world until they appear), or one just restored with
     /// <see cref="Simulation.Restore"/>, whose trigger state is read from the snapshot (it must have been saved with the
@@ -217,6 +223,7 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
             }
 
             _state.PassRule = 0;
+            Trace?.PassStarted(_world.Tick.Value, _state.Passes);
         }
 
         RunRules();
@@ -262,7 +269,9 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
             RuleDef rule = _scenario.Rules[r];
 
             // An empty or unparsable condition is false (ADR 0120 convention; UNVERIFIED, UNK-59).
-            if (Evaluate(rule.Condition, 0, EntityId.None) == 0)
+            int value = Evaluate(rule.Condition, 0, EntityId.None);
+            Trace?.RuleEvaluated(_world.Tick.Value, r, value);
+            if (value == 0)
             {
                 continue;
             }
@@ -310,6 +319,7 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
                 return;
             }
 
+            Trace?.ActionRun(_world.Tick.Value, r, action);
             Run(action);
         }
     }

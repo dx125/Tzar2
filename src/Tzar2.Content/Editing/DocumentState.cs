@@ -53,6 +53,9 @@ public sealed record DocumentState(
     ImmutableSortedDictionary<string, ImmutableArray<byte>> Assets,
     EditorExtras Extras)
 {
+    /// <summary>Lua scripts (TDD §18.4 <c>scripts/*.lua</c>): file name → source text.</summary>
+    public ImmutableSortedDictionary<string, string> Scripts { get; init; } = ImmutableSortedDictionary.Create<string, string>(System.StringComparer.Ordinal);
+
     /// <summary>The object with id <paramref name="id"/>, or null.</summary>
     public EditorObject? Find(int id)
     {
@@ -88,14 +91,19 @@ public sealed record DocumentState(
         Decorations = original.Decorations;
         Assets = original.Assets;
         Extras = original.Extras;
+        Scripts = original.Scripts;
     }
 
     private System.Collections.Generic.Dictionary<int, int>? _index;
 
-    /// <summary>Value equality over the state's parts (the id index is a cache, not part of the value).</summary>
+    /// <summary>
+    /// Equality over the state's parts (the id index is a cache, not part of the value). The collection parts compare by
+    /// reference (immutable collections shared through <c>with</c>), the fast path of "did this edit change anything";
+    /// two equal lists built separately compare unequal, which at worst records one redundant undo step.
+    /// </summary>
     public bool Equals(DocumentState? other)
         => other is not null && (ReferenceEquals(this, other) || (Name == other.Name && Objects.Equals(other.Objects) && NextObjectId == other.NextObjectId
-            && Scenario.Equals(other.Scenario) && Decorations.Equals(other.Decorations) && Assets.Equals(other.Assets) && Extras.Equals(other.Extras)));
+            && Scenario.Equals(other.Scenario) && Decorations.Equals(other.Decorations) && Assets.Equals(other.Assets) && Extras.Equals(other.Extras) && Scripts.Equals(other.Scripts)));
 
     /// <inheritdoc/>
     public override int GetHashCode() => Objects.Count ^ (NextObjectId << 8);

@@ -124,6 +124,7 @@ public partial class EditorScreen : Control
         _controller.Status += Status;
         _view.CameraMoved += () => _minimap.QueueRedraw();
         Attach(_controller.Document);
+        HookTriggers();
         _view.Rebuild();
         _minimap.Refresh();
         _view.GrabFocus();
@@ -160,10 +161,13 @@ public partial class EditorScreen : Control
     {
         ArgumentNullException.ThrowIfNull(document);
         Detach(Document);
+        CloseTriggers();
         _path = path;
         _controller.SetDocument(document);
         _controller.TerrainValue = document.Rules.DefaultLand;
         Attach(document);
+        document.Changed += _ => RefreshNamedAreas();
+        RefreshNamedAreas();
         _tools.RefreshTerrain();
         _view.Rebuild();
         _minimap.Refresh();
@@ -363,7 +367,7 @@ public partial class EditorScreen : Control
 
     private MenuBar Menus()
     {
-        var bar = new MenuBar();
+        var bar = new MenuBar { PreferGlobalMenu = false };
         PopupMenu file = Menu(bar, "File");
         Item(file, "New map…", () => Dialogs.NewMap(this, _rules, _store.TerrainSets.Count > 0 ? _store.TerrainSets.Select(s => s.Id).ToArray() : ["grass"], doc => Open(doc, null), RulesFor));
         Item(file, "Open…", () => Files.Open(this, ["*.t2map ; Tzar2 map"], paths => OpenFile(paths[0]), many: false));
@@ -401,6 +405,7 @@ public partial class EditorScreen : Control
         Item(map, "User resources…", () => Dialogs.Resources(this, Document, path => Tzar2.Import.Maps.PngEncoder.FromBmp(File.ReadAllBytes(path))));
         Item(map, "Custom sounds and music…", () => Dialogs.Sounds(this, Document, () => _controller.Selection.IsEmpty ? 0 : _controller.Selection[0]));
         MapMenuExtras?.Invoke(map);
+        TriggerMenus(bar);
         ExtraMenus?.Invoke(bar);
         return bar;
     }

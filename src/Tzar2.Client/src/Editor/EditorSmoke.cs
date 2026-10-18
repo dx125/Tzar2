@@ -79,6 +79,7 @@ public static class EditorSmoke
         Require(screen.Document.State.Find(c.Selection[0])!.TileX == 13, "Alt-drag moves");
 
         ValidationResult result = screen.Revalidate();
+        await Shot(host, "1-map");
 
         // Save, reopen, save again: the same bytes.
         string path = Path.Combine(dir, "smoke.t2map");
@@ -95,7 +96,37 @@ public static class EditorSmoke
         screen.Redo();
         Require(screen.Document.State.Scenario.Properties.Title == "Smoke 2", "redo");
 
-        string notes = string.Empty;
+        // Triggers: a rule with a quest, edited through the model, shown in the rule editor, then a debugged playtest.
+        screen.Document.Apply("Smoke rule", s => s.WithScenario(m => m
+            .AddAction(new Content.Compiled.Scenario.AddQuestAction("Smoke quest", "Hold on.", null), out int quest)
+            .AddRule(new Content.Compiled.Scenario.RuleDef("smoke", ScenarioModel.Source("1"), new[] { quest }), out _)));
+        TriggerWindow triggers = screen.OpenTriggers();
+        await Frame(host);
+        await Frame(host);
+        await Shot(host, "2-triggers");
+        triggers.QueueFree();
+        string play = string.Empty;
+        if (host is Game.GameApp app)
+        {
+            Tzar2.Game.Session.GameSession? session = app.StartPlaytest(screen, new Tzar2.Game.Editing.PlaytestOptions(RevealMap: true), debug: true);
+            Require(session is not null, "playtest starts");
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            while (session!.TicksRun < 40 && watch.Elapsed.TotalSeconds < 60 && session.Fault is null)
+            {
+                await Frame(host);
+            }
+
+            Require(session.Fault is null && session.TicksRun >= 40, "playtest runs");
+            await Shot(host, "3-playtest");
+            Require(app.Debugger?.Watch.Rules[0].LastValue == 1, "debugger sees the rule fire");
+            play = $" playtest={session.TicksRun}";
+            app.ShowEditor();
+            await Frame(host);
+            screen = app.EditorScreen ?? throw new InvalidOperationException("no editor after the playtest");
+            Require(screen.Document.State.Scenario.Rules.Length == 1, "the document survives the playtest");
+        }
+
+        string notes = play;
         if (Steps is not null)
         {
             foreach (Func<Node, EditorScreen, string, Task<string>> step in Steps.GetInvocationList().Cast<Func<Node, EditorScreen, string, Task<string>>>())
@@ -105,6 +136,29 @@ public static class EditorSmoke
         }
 
         return $"EDITOR SMOKE OK objects={objects} bytes={first.Length} issues={result.Issues.Length} blocking={result.Count(ValidationSeverity.Blocking)}{notes}";
+    }
+
+    /// <summary>Saves a screenshot to <c>$TZAR2_EDITOR_SHOTS/&lt;name&gt;.png</c> when that variable is set (local visual checks).</summary>
+    public static async Task Shot(Node host, string name)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        string? dir = System.Environment.GetEnvironmentVariable("TZAR2_EDITOR_SHOTS");
+        if (string.IsNullOrEmpty(dir) || DisplayServer.GetName() == "headless")
+        {
+            return;
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            await Frame(host);
+        }
+
+        Directory.CreateDirectory(dir);
+        foreach (Window w in host.GetTree().Root.GetChildren(includeInternal: false).OfType<Window>().Prepend(host.GetTree().Root))
+        {
+            Image? image = w.GetTexture()?.GetImage();
+            image?.SavePng(Path.Combine(dir, name + (w == host.GetTree().Root ? string.Empty : "-" + w.Name) + ".png"));
+        }
     }
 
     /// <summary>Waits one frame.</summary>

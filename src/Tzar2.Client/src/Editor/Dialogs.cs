@@ -353,7 +353,8 @@ public static class Files
         dialog.FilesSelected += paths => chosen(paths);
         dialog.FileSelected += path => chosen([path]);
         host.AddChild(dialog);
-        dialog.PopupCentered(new Vector2I(800, 560));
+        dialog.Size = new Vector2I(800, 560);
+        Forms.ShowCentered(dialog);
     }
 
     /// <summary>Asks for a folder.</summary>
@@ -363,7 +364,8 @@ public static class Files
         var dialog = new FileDialog { Access = FileDialog.AccessEnum.Filesystem, FileMode = FileDialog.FileModeEnum.OpenDir, UseNativeDialog = true };
         dialog.DirSelected += path => chosen(path);
         host.AddChild(dialog);
-        dialog.PopupCentered(new Vector2I(800, 560));
+        dialog.Size = new Vector2I(800, 560);
+        Forms.ShowCentered(dialog);
     }
 
     /// <summary>Asks for a file to write.</summary>
@@ -373,6 +375,7 @@ public static class Files
         var dialog = new FileDialog { Access = FileDialog.AccessEnum.Filesystem, FileMode = FileDialog.FileModeEnum.SaveFile, CurrentFile = suggested, Filters = filters ?? [], UseNativeDialog = true };
         dialog.FileSelected += path => chosen(path);
         host.AddChild(dialog);
-        dialog.PopupCentered(new Vector2I(800, 560));
+        dialog.Size = new Vector2I(800, 560);
+        Forms.ShowCentered(dialog);
     }
 }

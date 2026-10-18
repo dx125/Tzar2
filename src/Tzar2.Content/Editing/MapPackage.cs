@@ -38,7 +38,8 @@ public static class MapPackage
     /// <summary>Whether <paramref name="path"/> (an entry path) is written by the editor rather than kept verbatim.</summary>
     public static bool IsOwned(string path)
         => path is PackageWriter.ManifestPath or "map.bin" or "scenario.json" or "decorations.json" or "editor.json"
-            || path.StartsWith("assets/", StringComparison.Ordinal);
+            || path.StartsWith("assets/", StringComparison.Ordinal)
+            || (path.StartsWith("scripts/", StringComparison.Ordinal) && path.EndsWith(".lua", StringComparison.Ordinal));
 
     /// <summary>Encodes <paramref name="document"/>.</summary>
     /// <exception cref="ArgumentException">The document does not build (a reference the validator reports as an error).</exception>
@@ -87,6 +88,11 @@ public static class MapPackage
         foreach (KeyValuePair<string, ImmutableArray<byte>> asset in s.Assets)
         {
             writer.Add("assets/" + asset.Key, asset.Value.AsSpan().ToArray());
+        }
+
+        foreach (KeyValuePair<string, string> script in s.Scripts)
+        {
+            writer.AddText("scripts/" + script.Key, script.Value);
         }
 
         foreach (KeyValuePair<string, ImmutableArray<byte>> entry in document.Preserved)
@@ -146,9 +152,14 @@ public static class MapPackage
                 doc.Manifest = manifest;
                 var preserved = ImmutableSortedDictionary.CreateBuilder<string, ImmutableArray<byte>>(StringComparer.Ordinal);
                 var assets = ImmutableSortedDictionary.CreateBuilder<string, ImmutableArray<byte>>(StringComparer.Ordinal);
+                var scripts = ImmutableSortedDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
                 foreach (PackageEntry entry in reader.Entries)
                 {
-                    if (entry.Path.StartsWith("assets/", StringComparison.Ordinal))
+                    if (entry.Path.StartsWith("scripts/", StringComparison.Ordinal) && IsOwned(entry.Path))
+                    {
+                        scripts[entry.Path["scripts/".Length..]] = reader.ReadText(entry.Path);
+                    }
+                    else if (entry.Path.StartsWith("assets/", StringComparison.Ordinal))
                     {
                         assets[entry.Path["assets/".Length..]] = ImmutableArray.Create(reader.ReadAllBytes(entry.Path));
                     }
@@ -204,7 +215,7 @@ public static class MapPackage
                         x.TryGetProperty("language", out JsonElement lang) ? lang.GetString() ?? extras.Language : extras.Language);
                 }
 
-                doc.SetState(doc.State with { Decorations = decorations.ToImmutable(), Assets = assets.ToImmutable(), Extras = extras });
+                doc.SetState(doc.State with { Decorations = decorations.ToImmutable(), Assets = assets.ToImmutable(), Extras = extras, Scripts = scripts.ToImmutable() });
                 return doc;
             }
         }
