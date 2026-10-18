@@ -397,6 +397,13 @@ comm.eagle:
   Health: { max: 10 }                           # UNVERIFIED
   Animal: { wanders: true, ambient: true }
 
+# Map decorations that a legacy trigger or conversation refers to (a sign that speaks, ruins that vanish): an inert
+# visual object, so the converter keeps them as objects and the references survive (ADR 0121). No footprint, no
+# health, no behaviour; the trigger engine may still make it appear, disappear or change owner.
+comm.ground_object:
+  new: true
+  Legacy: { class: ground_object, civ: comm }
+
 # ---- technology effects (GAME-06, ADR 0040) ------------------------------------------------------------------------
 # Costs, times, prerequisites and which building researches what come from the tables. The effects are not in any
 # table (the original hard-codes them): the manual (ch. 6) says what each technology does; every magnitude below is

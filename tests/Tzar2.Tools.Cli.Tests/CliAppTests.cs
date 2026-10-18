@@ -16,7 +16,6 @@ public class CliAppTests
     }
 
     [Theory]
-    [InlineData("M4", "convert", "map.wmp")]
     [InlineData("M3", "validate")]
     [InlineData("M1", "pack")]
     [InlineData("M6", "replay", "verify", "a.t2rep")]
