@@ -936,23 +936,41 @@ public static class CampaignAutoplay
             return hidden;
         }
 
-        // The rules whose actions make a named object appear.
+        private Dictionary<int, List<int>>? _appearing;
+
+        // The rules whose actions make a named object appear (indexed once per mission).
         private List<int> Appearing(int index)
         {
-            var rules = new List<int>();
+            _appearing ??= AppearingIndex();
+            return _appearing.TryGetValue(index, out List<int>? rules) ? rules : [];
+        }
+
+        private Dictionary<int, List<int>> AppearingIndex()
+        {
+            var byObject = new Dictionary<int, List<int>>();
             for (int r = 0; r < scenario.Rules.Length; r++)
             {
                 foreach (int a in scenario.Rules[r].ActionIndices)
                 {
-                    if ((uint)a < (uint)scenario.Actions.Length && scenario.Actions[a] is AppearObjectAction { Objects: NamedObjects named } && named.ObjectIndices.Contains(index))
+                    if ((uint)a < (uint)scenario.Actions.Length && scenario.Actions[a] is AppearObjectAction { Objects: NamedObjects named })
                     {
-                        rules.Add(r);
-                        break;
+                        foreach (int index in named.ObjectIndices)
+                        {
+                            if (!byObject.TryGetValue(index, out List<int>? rules))
+                            {
+                                byObject[index] = rules = [];
+                            }
+
+                            if (!rules.Contains(r))
+                            {
+                                rules.Add(r);
+                            }
+                        }
                     }
                 }
             }
 
-            return rules;
+            return byObject;
         }
 
         // Objects of other kingdoms the scenario moves itself (named in an area event of an enabled rule): the solver's
@@ -1253,7 +1271,10 @@ public static class CampaignAutoplay
         }
 
         // Whether the ground around the point, as the unit walks, is a pocket closed within 12 tiles of it.
-        private static bool Pocket(World world, EntityId unit, Position point)
+        private readonly HashSet<int> _seen = [];
+        private readonly Queue<int> _queue = new();
+
+        private bool Pocket(World world, EntityId unit, Position point)
         {
             if (!world.Navigation.IsBuilt || world.Navigation.ForType(world.Identities.Get(unit).TypeId) is not { } nav)
             {
@@ -1283,8 +1304,11 @@ public static class CampaignAutoplay
                 return false;
             }
 
-            var seen = new HashSet<int> { start };
-            var queue = new Queue<int>();
+            HashSet<int> seen = _seen;
+            Queue<int> queue = _queue;
+            seen.Clear();
+            queue.Clear();
+            seen.Add(start);
             queue.Enqueue(start);
             while (queue.Count > 0)
             {
@@ -1633,9 +1657,10 @@ public static class CampaignAutoplay
                 return; // the players' diplomacy rate limit
             }
 
+            _wars.RemoveWhere(owner => !world.HasPlayer(owner) || world.Diplomacy.StanceOf(me, owner) == Sim.Kingdoms.Stance.Ally);
             foreach (int owner in _wars)
             {
-                if (world.HasPlayer(owner) && world.Diplomacy.StanceOf(me, owner) != Sim.Kingdoms.Stance.Ally)
+                if (world.Diplomacy.StanceOf(me, owner) != Sim.Kingdoms.Stance.Ally)
                 {
                     _lastDiplomacy = _tick;
                     _batch.Add(CommandKind.SetDiplomacy, [], owner, 0, default, (int)Sim.Kingdoms.Stance.Ally, (int)world.Diplomacy.OffersOf(me, owner));
