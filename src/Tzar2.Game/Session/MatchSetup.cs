@@ -11,7 +11,7 @@ public enum ControllerKind
     /// <summary>The local player (input → commands).</summary>
     Human = 0,
 
-    /// <summary>A computer player (an <see cref="IPlayerController"/>).</summary>
+    /// <summary>A computer kingdom run by the legacy AI (ADR 0051, 0073).</summary>
     Computer = 1,
 }
 
@@ -88,6 +88,34 @@ public sealed record MatchSetup
 
     /// <summary>Cheats (the <c>hm*</c> codes) allowed: a sandbox or a lobby where every player agreed (GAME-19).</summary>
     public bool CheatsAllowed { get; init; }
+
+    /// <summary>The script of the computer kingdoms (<see cref="SkirmishAi.Resolve"/>; part of the match fingerprint).</summary>
+    public SkirmishAi Ai { get; init; } = SkirmishAi.EngineDefault;
+
+    /// <summary>Whether computer kingdoms run the AI (false: they stay idle — tests that need a passive opponent).</summary>
+    public bool ComputerAi { get; init; } = true;
+
+    /// <summary>The AI program of every computer kingdom, ascending by slot (match fingerprint, replay header).</summary>
+    public System.Collections.Immutable.ImmutableArray<Replay.ReplayAiProgram> AiPrograms
+    {
+        get
+        {
+            var list = System.Collections.Immutable.ImmutableArray.CreateBuilder<Replay.ReplayAiProgram>();
+            if (ComputerAi)
+            {
+                foreach (PlayerSetup p in Players)
+                {
+                    if (p.Controller == ControllerKind.Computer)
+                    {
+                        list.Add(new Replay.ReplayAiProgram(p.Slot, Ai.ContentHash));
+                    }
+                }
+            }
+
+            list.Sort((a, b) => a.Slot.CompareTo(b.Slot));
+            return list.ToImmutable();
+        }
+    }
 
     /// <summary>The slot the local player controls.</summary>
     public byte LocalPlayer

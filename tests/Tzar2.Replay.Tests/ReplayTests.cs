@@ -185,4 +185,19 @@ public class ReplayTests
             Assert.True(ReplayVerifier.Verify(replay, sim).OverflowModeMatches);
         }
     }
+
+    [Fact]
+    public void The_header_keeps_the_ai_programs_and_rejects_bad_ones()
+    {
+        using var sim = new Simulation(SyntheticScenario.CreateRuleset(), SyntheticScenario.CreateMap(64, 1), new SimulationConfig { PlayerCount = 3 });
+        ReplayHeader header = ReplayHeader.For(sim, "0.0.1") with { AiPrograms = [new ReplayAiProgram(1, 0xABCDUL), new ReplayAiProgram(2, 0x1234UL)] };
+        ReplayFile replay = ReplayFile.Parse(new ReplayRecorder(header).Finish());
+        Assert.Equal(header.AiPrograms.ToArray(), replay.Header.AiPrograms.ToArray());
+        Assert.Empty(ReplayFile.Parse(new ReplayRecorder(ReplayHeader.For(sim, "0.0.1")).Finish()).Header.AiPrograms);
+
+        byte[] outOfOrder = new ReplayRecorder(header with { AiPrograms = [new ReplayAiProgram(2, 1), new ReplayAiProgram(1, 2)] }).Finish();
+        Assert.Throws<System.IO.InvalidDataException>(() => ReplayFile.Parse(outOfOrder));
+        byte[] noSuchSlot = new ReplayRecorder(header with { AiPrograms = [new ReplayAiProgram(5, 1)] }).Finish();
+        Assert.Throws<System.IO.InvalidDataException>(() => ReplayFile.Parse(noSuchSlot));
+    }
 }

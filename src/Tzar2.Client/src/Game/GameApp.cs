@@ -27,6 +27,7 @@ public partial class GameApp : Node
     private readonly GameSettings _settings = new();
     private UiAssets? _ui;
     private Ruleset? _rules;
+    private SkirmishAi _ai = SkirmishAi.EngineDefault;
     private PresentationCatalog? _catalog;
     private Node? _current;
     private MidiPlayer? _menuMusic;
@@ -77,6 +78,10 @@ public partial class GameApp : Node
         {
             CompiledRuleset compiled = RulesetLoader.Compile(_store.Source);
             _rules = compiled.Ruleset;
+
+            // Computer kingdoms run the original random.ais from the package, else the engine default (ADR 0073).
+            _ai = SkirmishAi.Resolve(_store.Source);
+            GD.Print(_ai.IsOriginal ? $"AI: the original {_ai.Script} from the package" : "AI: " + _ai.Notice);
             foreach (string warning in compiled.Warnings)
             {
                 GD.Print("Ruleset: " + warning);
@@ -119,7 +124,7 @@ public partial class GameApp : Node
     /// <summary>Shows the main menu.</summary>
     public void ShowMainMenu()
     {
-        var menu = new MainMenuScreen(_ui!, _catalog, Screen);
+        var menu = new MainMenuScreen(_ui!, _catalog, Screen, _ai.Notice);
         menu.SinglePlayer += ShowSetup;
         menu.MultiplayerPressed += () => GD.Print("Multiplayer is M6.");
         menu.Credits += () => GD.Print("Credits: see text/local/credits.txt of your package.");
@@ -131,7 +136,7 @@ public partial class GameApp : Node
     /// <summary>Shows the skirmish setup.</summary>
     public void ShowSetup()
     {
-        var setup = new SkirmishSetupScreen(_ui!, _catalog, Screen, _skirmish, Preview);
+        var setup = new SkirmishSetupScreen(_ui!, _catalog, Screen, _skirmish, Preview, _ai.Notice);
         setup.Play += StartSkirmish;
         setup.Cancel += ShowMainMenu;
         Replace(setup, music: null);
@@ -266,6 +271,7 @@ public partial class GameApp : Node
             Seed = options.Seed,
             StartingResources = options.StartingResources >= 3 ? -1 : options.StartingResources,
             PopulationLimit = SkirmishOptions.PopulationLimits[options.PopulationLimit],
+            Ai = _ai,
         };
     }
 

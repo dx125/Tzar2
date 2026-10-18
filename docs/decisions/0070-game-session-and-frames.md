@@ -1,6 +1,6 @@
 # 0070. Run single-player matches in a Game-layer session with a sim thread and session-built game frames
 
-* **Status:** Accepted; the derived fog and the placeholder victory rule are replaced by the sim ([0101](0101-incremental-per-kingdom-visibility.md), [0106](0106-victory-conditions-and-statistics.md))
+* **Status:** Accepted; decision 3 superseded by [0073](0073-legacy-ai-in-skirmish.md); the derived fog and the placeholder victory rule are replaced by the sim ([0101](0101-incremental-per-kingdom-visibility.md), [0106](0106-victory-conditions-and-statistics.md))
 * **Date:** 2026-10-17
 * **Deciders:** implementation agent (M3 stream D)
 * **Related:** TDD §7.2–§7.4, §8.5, §13.6, §15, §16, §25 M3; REQ-ARCH-03; DEC-02; ADR 0009, 0016–0019, 0039
@@ -25,10 +25,8 @@ corpses, fog and placement legality. There is no visibility system and no victor
 2. **Local scheduler.** The main thread `Submit`s command batches; the sim thread appends them at the next tick stamped
    with the local slot (`CommandList.AppendStamped`, as the relay does in ADR 0009). Input delay is zero; the network
    scheduler (M6) replaces this class without changing callers.
-3. **AI hook.** `IPlayerController.Think(World, slot, CommandList)` runs on the sim thread before each tick for every
-   computer slot, reading the world and emitting commands like a client. `Think` only reads: writing a component or a player state would bypass the command stream that replays and lockstep peers see (`Controllers_only_read_the_world` checks the full-state hash around every call of the bundled controller). A defeated slot's controller is no longer called. `PlaceholderAi` (gather, houses, fields,
-   barracks, training, a move-advance on the nearest enemy building) keeps the skirmish playable until the legacy AI
-   (stream B) implements the interface. It is clearly marked as a placeholder.
+3. **AI.** ~~`IPlayerController` with a `PlaceholderAi`~~ — superseded by ADR 0073: computer kingdoms run the legacy
+   AI (`LegacyAiSystem`) as a sim system inside the tick, the lockstep path of ADR 0051.
 4. **Game frames.** After each tick the session fills a `GameFrame` on the sim thread (`FrameBuilder`): the
    render-snapshot fields plus activity, swing time, load, construction/production progress, rally point, resource
    left, corpses, stockpiles and population, the local player's fog layer and a buildable-tile layer computed with the
@@ -55,11 +53,11 @@ corpses, fog and placement legality. There is no visibility system and no victor
   stream A's gameplay changes; the frame builder is one class to move when the snapshot grows.
 * **Let the client read `World` directly:** violates REQ-ARCH-03 and races the sim thread.
 * **Run the sim on the main thread in `_Process`:** simpler, but couples frame rate and tick rate and is not §7.3.
-* **No placeholder AI:** a skirmish without an opponent is not playable; the hook makes the replacement trivial.
+* **No placeholder AI:** a skirmish without an opponent is not playable (the placeholder lived until ADR 0073).
 
 ## Consequences
 
-* The legacy AI and sim visibility/victory replace `PlaceholderAi`, `FogOfWar` and the victory rule without touching
+* The legacy AI (ADR 0073) and sim visibility/victory replaced the placeholder AI, `FogOfWar` and the victory rule without touching
   the client.
 * Frames copy the fog and buildable layers per tick (O(map tiles), skipped when unchanged for the buildable layer); on
   512² maps that is ~0.5 MB per tick, acceptable on desktop; revisit with dirty rectangles if profiling says so.

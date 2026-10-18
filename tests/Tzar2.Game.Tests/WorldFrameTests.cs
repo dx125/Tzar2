@@ -25,7 +25,7 @@ public sealed class WorldFrameTests
     [Fact]
     public void Frames_show_the_sims_fog_only_visible_units_and_remembered_structures()
     {
-        using var session = new GameSession(SessionTests.Setup() with { CheatsAllowed = true }, Rules.Value, _ => new SessionTests.IdleController());
+        using var session = new GameSession(SessionTests.Setup() with { CheatsAllowed = true, ComputerAi = false }, Rules.Value);
         session.Step(2);
         GameFrame frame = session.AcquireFrame(out _)!;
         World world = session.Simulation.World;
@@ -104,14 +104,14 @@ public sealed class WorldFrameTests
     [Fact]
     public void Cheats_typed_in_a_match_without_the_flag_are_refused_by_the_sim()
     {
-        using var session = new GameSession(SessionTests.Setup(), Rules.Value, _ => new SessionTests.IdleController());
+        using var session = new GameSession(SessionTests.Setup() with { ComputerAi = false }, Rules.Value);
         int gold = Rules.Value.ResourceId("gold");
         int before = session.Simulation.World.Players[0].Resources[gold];
         Assert.True(session.SubmitChat("hmpetleva"));
         session.Step(1);
         Assert.Equal(before, session.Simulation.World.Players[0].Resources[gold]);
 
-        using var sandbox = new GameSession(SessionTests.Setup() with { CheatsAllowed = true }, Rules.Value, _ => new SessionTests.IdleController());
+        using var sandbox = new GameSession(SessionTests.Setup() with { CheatsAllowed = true, ComputerAi = false }, Rules.Value);
         Assert.True(sandbox.SubmitChat("hmpetleva"));
         sandbox.Step(1);
         Assert.Equal(before + Rules.Value.World.CheatLargeResources, sandbox.Simulation.World.Players[0].Resources[gold]);

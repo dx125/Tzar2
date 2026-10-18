@@ -41,7 +41,7 @@ public sealed class ImportedPackageSkirmishTests(ITestOutputHelper output)
                 Map = new RandomMapSource(type, size: Tzar2.Content.MapGen.RandomMapSize.Small),
                 Players = [new PlayerSetup(0, "euro", ControllerKind.Human), new PlayerSetup(1, "arab", ControllerKind.Computer)],
             };
-            using var session = new GameSession(setup, ruleset);
+            using var session = new GameSession(setup with { Ai = SkirmishAi.Resolve(package) }, ruleset);
             session.Step(200);
             output.WriteLine($"{type}: {session.Map.Width}x{session.Map.Height} {session.Map.TerrainSet}, {session.AcquireFrame(out _)!.EntityCount} entities");
         }
@@ -62,7 +62,7 @@ public sealed class ImportedPackageSkirmishTests(ITestOutputHelper output)
                 new PlayerSetup(2, "arab", ControllerKind.Computer, Difficulty.Hard),
             ],
         };
-        using var session = new GameSession(setup, ruleset);
+        using var session = new GameSession(setup with { Ai = SkirmishAi.Resolve(package) }, ruleset);
         var events = new List<SimEvent>();
         int delivered = 0, trained = 0, built = 0, started = 0, rejected = 0;
         for (int i = 0; i < 60; i++)
