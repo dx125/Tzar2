@@ -12,7 +12,9 @@ namespace Tzar2.Tools.Cli.Fidelity.Analysis;
 /// known exactly. Pixels darker than their texel in every channel are shadow candidates (sprites also produce such
 /// pairs, but not consistently). Candidate rules are fitted per channel in the surface's own levels: multiply by
 /// k/32 (floor or round) and subtract d; the rule explaining the most pairs wins. Applying the rule twice tests
-/// whether overlapping shadows darken twice.
+/// whether overlapping shadows darken twice. Pixels at most one level darker in every channel are counted apart: the
+/// first capture (2026-10-18) showed them in large soft patches all over the terrain (not under shadow sprites), and
+/// they outnumbered the shadowed pixels ten to one.
 /// </summary>
 internal static class ShadowBlend
 {
@@ -52,6 +54,7 @@ internal static class ShadowBlend
         var pairs = new Dictionary<(int, int, int, int, int, int), long>();
         int[] bits = [5, 5, 5];
         long comparedPixels = 0;
+        long faint = 0;
         int snapshots = 0;
         foreach (TrialData trial in trials)
         {
@@ -85,6 +88,14 @@ internal static class ShadowBlend
                             (int or, int og, int ob) = image.Levels(native);
                             if (or <= tr && og <= tg && ob <= tb && or + og + ob < tr + tg + tb)
                             {
+                                // At most one level darker in every channel: not a shadow (a large-area effect that
+                                // swamps the fit, see the class remarks); counted apart.
+                                if (tr - or <= 1 && tg - og <= 1 && tb - ob <= 1)
+                                {
+                                    faint++;
+                                    continue;
+                                }
+
                                 var key = (tr, tg, tb, or, og, ob);
                                 pairs[key] = pairs.GetValueOrDefault(key) + 1;
                             }
@@ -97,6 +108,7 @@ internal static class ShadowBlend
         var facts = new YamlWriter();
         facts.Add("snapshots", snapshots);
         facts.Add("terrain_pixels_compared", comparedPixels);
+        facts.Add("faint_pixels", faint, "at most one level darker in every channel; excluded from the fit");
         long candidates = pairs.Values.Sum();
         facts.Add("darker_pixel_pairs", candidates);
         if (candidates == 0)
@@ -116,21 +128,49 @@ internal static class ShadowBlend
         facts.Add("runner_up_pairs", scored.Count > 1 ? scored[1].Single : 0);
         facts.Add("surface_bits", new YamlWriter.Flow(bits.Select(b => (object?)b).ToList()));
         string[] names = ["red", "green", "blue"];
+        int[][] tables = [.. Enumerable.Range(0, 3).Select(c => Table(pairs, best.Model, bits, c))];
         facts.Map("observed", o =>
         {
             o.Add("note", "most frequent shadowed level per texel level, from pairs whose other two channels fit the model");
             for (int c = 0; c < 3; c++)
             {
-                o.Add(names[c], new YamlWriter.Flow(Table(pairs, best.Model, bits, c).Select(v => (object?)v).ToList()));
+                o.Add(names[c], new YamlWriter.Flow(tables[c].Select(v => (object?)v).ToList()));
             }
         });
-        bool conclusive = best.Single >= 500 && best.Single * 10 >= candidates * 3 && (scored.Count < 2 || best.Single > scored[1].Single * 1.2);
+
+        // Neighbouring factors share most pairs (they agree on many levels), so the pair counts alone rarely separate
+        // them; the per-level table does: the right rule reproduces it at (nearly) every level seen.
+        double agreement = TableAgreement(tables, best.Model, bits);
+        double runnerAgreement = scored.Count > 1 ? TableAgreement(tables, scored[1].Model, bits) : 0;
+        facts.Add("table_agreement", Math.Round(agreement, 4), "share of the observed levels (all channels) the model reproduces");
+        facts.Add("runner_up_table_agreement", Math.Round(runnerAgreement, 4));
+        bool conclusive = best.Single >= 500 && best.Single * 10 >= candidates * 3 &&
+                          (scored.Count < 2 || best.Single > scored[1].Single * 1.2 || (agreement >= 0.9 && agreement - runnerAgreement >= 0.2));
         if (!conclusive)
         {
             notes.Add("the best rule explains too few pairs or is not clearly better than the runner-up; more shadow-heavy captures needed");
         }
 
         return new AnalysisOutcome(conclusive ? "ok" : "inconclusive", facts, notes);
+    }
+
+    /// <summary>Share of the observed levels (all channels; -1 = not seen) that <paramref name="model"/> reproduces.</summary>
+    public static double TableAgreement(int[][] tables, Model model, int[] bits)
+    {
+        int seen = 0, fit = 0;
+        for (int c = 0; c < tables.Length; c++)
+        {
+            for (int level = 0; level < tables[c].Length; level++)
+            {
+                if (tables[c][level] >= 0)
+                {
+                    seen++;
+                    fit += model.Apply(level, bits[c]) == tables[c][level] ? 1 : 0;
+                }
+            }
+        }
+
+        return seen == 0 ? 0 : fit / (double)seen;
     }
 
     private static long Score(Dictionary<(int, int, int, int, int, int), long> pairs, Model model, int[] bits, bool twice)

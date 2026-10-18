@@ -10,6 +10,17 @@ Where the value lives: **YAML** = `content/engine/rules/classic.yaml` (marked `U
 like any rule), **code** = a rule of a sim system (named in the ADR; changing it needs a capture fact and an ADR
 update), **import** = how the importer reads the data (a hypothesis about a column or key).
 
+## First capture (2026-10-18, session `capture-20261018-024524`, ADR 0111)
+
+None of the values below was in the session's scope (it measured rendering, speeds and attack timing; see
+[m2-placeholders.md](m2-placeholders.md)), so all stay UNVERIFIED. Two rows gained data:
+
+* **Cheat codes (UNK-30):** the full list of code names from the executable's strings is now in
+  [original-switches-and-cheats.md](original-switches-and-cheats.md). Only `hmreveal` and `hmnofog` were observed
+  working; `hmspawn` and `hmkingdom` did not behave as scripted (see there). The resource amounts of `hmdvaleva` /
+  `hmpetleva` and the semantics of `hmgod`, `hmbuildozer`, `hmnotech`, `hmnext` stay UNVERIFIED.
+* **Day length:** not captured (the session switches day/night off for clean colours); needs its own scenario.
+
 ## From the data (not placeholders)
 
 Costs, times and names of the 87 technologies and 12 upgrades; per-civ prerequisites (`TECHTREE [depend]`,
@@ -118,13 +129,13 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Wild cows | claimed by any kingdom's unit touching them; they wander | YAML `^class.cow` | UNK-17 | observation |
 | Bears | wander 6 tiles, guard 10 tiles from home | YAML `world.wanderRadiusTiles`, `guardRadiusTiles` | — | observation |
 | Birds and eagles | air, SPEED 5/6, 10 HP, never targets | YAML `comm.bird`, `comm.eagle` | — | observation |
-| Day length | 12 min; the match starts at 10:00; night 19:00-06:00 | YAML `world.day*`, `night*` | UNK-32 | clock globe captures |
+| Day length | 12 min; the match starts at 10:00; night 19:00-06:00 | YAML `world.day*`, `night*` | UNK-32 | clock globe captures (not in the first session: day/night was off) |
 | Weather | 3-minute periods, 25% with weather | YAML `world.weather*` | UNK-09 | captures |
 | Score | gathered/10 + killed value/10 + built value/10 + 100 per technology | YAML `world.score*` | UNK-29 | F4 captures |
 | Defeat | Standard: no unit and no building (walls, gates, bridges, fields excluded); Destroy Castles: no castle | code (`VictorySystem`) | — | end-of-game captures |
 | Time limit tie | the team with the lower slot | code (`VictorySystem`) | — | — |
 | Deathmatch | every kingdom starts on the High resources | YAML `world.deathmatchStartingResources` | — | lobby captures |
-| Cheat resources | hmdvaleva 2,000, hmpetleva 5,000 of each | YAML `world.cheat*` | UNK-30 | testing the codes |
+| Cheat resources | hmdvaleva 2,000, hmpetleva 5,000 of each | YAML `world.cheat*` | UNK-30 | testing the codes (names confirmed in the executable, [list](original-switches-and-cheats.md); amounts not measured) |
 | Cheat semantics | hmgod: no damage to own units and buildings; hmbuildozer: instant; hmnotech: no requirements; hmnext: win | code (`KingdomCommands.Cheat`) | UNK-30 | testing the codes |
 
 ## Rules in code

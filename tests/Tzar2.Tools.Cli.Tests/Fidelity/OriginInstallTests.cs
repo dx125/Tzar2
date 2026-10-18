@@ -25,6 +25,7 @@ public class OriginInstallTests
         var ctx = new AnalysisContext(null!, origin, new GameLayout("L", 1024, 768, new ScreenRect(150, 30, 874, 738), new ScreenRect(4, 31, 128, 128), new ScreenPoint(70, 400)));
         Assert.Equal("snow", ctx.Map("MP1")!.TerrainSet);
         Assert.Equal("grass", ctx.Map("MP2")!.TerrainSet);
+        Assert.Same(ctx.Map("MP2"), ctx.Map("MP2.wmp"));   // scenarios pass -map <name>.wmp (the only form the game loads)
         Assert.Equal("summer", ctx.Map("MP4")!.TerrainSet);
         Assert.Equal(256, ctx.Map("MP4")!.Side);
         Assert.NotNull(ctx.Palette);

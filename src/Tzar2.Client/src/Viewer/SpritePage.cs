@@ -74,7 +74,7 @@ public sealed class SpritePage : IViewerPage
         _panel.AddChild(Row("Player", _player));
         _panel.AddChild(Row("Rows", _rows));
         _panel.AddChild(Row("Layout", _layout));
-        _shadows = Check("Shadows (mask pass, 50 % ⚠ UNK-03)", true);
+        _shadows = Check("Shadows (mask pass, 50 %, measured)", true);
         _baked = Check("Baked shadow hints as shadow", true);
         _overlay = Check("Player-colour overlay (_c)", true);
         _shadows.Toggled += v => _renderer!.SetShadowsVisible(v);

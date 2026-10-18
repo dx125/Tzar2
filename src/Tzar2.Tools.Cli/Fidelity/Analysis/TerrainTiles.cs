@@ -37,7 +37,7 @@ internal static class TerrainTiles
                 continue;
             }
 
-            trialFacts.Add(Summarise(trial, set, located));
+            trialFacts.Add(Summarise(trial, set, located, set is null ? null : ctx.Library(set)));
         }
 
         var facts = new YamlWriter();
@@ -192,7 +192,7 @@ internal static class TerrainTiles
         return counts.GroupBy(kv => kv.Key.Word).Sum(g => g.Max(kv => kv.Value));
     }
 
-    private static YamlWriter Summarise(TrialData trial, string? set, List<Located> located)
+    private static YamlWriter Summarise(TrialData trial, string? set, List<Located> located, TerrainLibrary? library)
     {
         var w = new YamlWriter();
         w.Add("trial", trial.Trial);
@@ -256,6 +256,7 @@ internal static class TerrainTiles
             }
         }
 
+        AddPlacementRules(w, aligned, library);
         w.Add("distinct_words", byWord.Count);
         w.Add("words_with_one_tile", byWord.Count(kv => kv.Value.Count == 1));
         w.Add("words_with_several_tiles", byWord.Count(kv => kv.Value.Count > 1), "> 0 means the tile variant is not (only) in the word");
@@ -274,4 +275,73 @@ internal static class TerrainTiles
         w.Add("samples", samples);
         return w;
     }
+    /// <summary>
+    /// Tests the placement rules the renderer assumes (TerrainComposer, UNK-10) on every aligned cell: a base tile is
+    /// atlas cell <c>((x + dx) mod cols, (y + dy) mod rows)</c> for one constant (dx, dy) per atlas, and the variant
+    /// column of a transition tile is reported against the cell's coordinate parities.
+    /// </summary>
+    private static void AddPlacementRules(YamlWriter w, List<Located> aligned, TerrainLibrary? library)
+    {
+        if (library is null)
+        {
+            return;
+        }
+
+        var size = library.Tiles.GroupBy(t => t.File).ToDictionary(g => g.Key, g => (Cols: g.Max(t => t.Col) + 1, Rows: g.Max(t => t.Row) + 1), StringComparer.Ordinal);
+        var offsets = new SortedDictionary<int, Dictionary<(int, int), int>>();
+        var variants = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        var seen = new HashSet<(int, int)>();
+        foreach (Located l in aligned)
+        {
+            foreach (CellMatch cell in l.Match.Cells.Where(c => c.Kind != CellMatchKind.Partial))
+            {
+                int wx = l.WorldX!.Value + cell.Cx, wy = l.WorldY!.Value + cell.Cy;
+                if (!seen.Add((wx, wy)) || !size.TryGetValue(cell.Tile.File, out var dims))
+                {
+                    continue;
+                }
+
+                if (cell.Tile.IsTransition)
+                {
+                    int perVariant = Math.Max(1, dims.Cols / 2);
+                    string key = $"v{cell.Tile.Col / perVariant} x%2={wx & 1} y%2={wy & 1}";
+                    variants[key] = variants.GetValueOrDefault(key) + 1;
+                    continue;
+                }
+
+                int image = cell.Tile.ImageNumber;
+                if (!offsets.TryGetValue(image, out Dictionary<(int, int), int>? byOffset))
+                {
+                    offsets[image] = byOffset = [];
+                }
+
+                // Water (00) stacks its animation frames vertically: compare the row within one frame.
+                int rows = image == 0 ? dims.Cols : dims.Rows;
+                var offset = (Mod(cell.Tile.Col - wx, dims.Cols), Mod(cell.Tile.Row - wy, rows));
+                byOffset[offset] = byOffset.GetValueOrDefault(offset) + 1;
+            }
+        }
+
+        var bases = new List<YamlWriter>();
+        foreach ((int image, Dictionary<(int, int), int> byOffset) in offsets)
+        {
+            var e = new YamlWriter();
+            var top = byOffset.OrderByDescending(kv => kv.Value).First();
+            e.Add("image", image);
+            e.Add("cells", byOffset.Values.Sum());
+            e.Add("top_offset", $"{top.Key.Item1},{top.Key.Item2}", "atlas (col - x, row - y) modulo the atlas size");
+            e.Add("top_share", Math.Round(top.Value / (double)byOffset.Values.Sum(), 4));
+            e.Add("distinct_offsets", byOffset.Count);
+            bases.Add(e);
+        }
+
+        w.Map("base_tile_rule", b =>
+        {
+            b.Add("note", "exact base-tile cells; one offset with share ~1 means the tile is chosen by world position modulo the atlas");
+            b.Add("images", bases);
+        });
+        w.Add("transition_variants", new YamlWriter.Flow(variants.Select(kv => (object?)$"{kv.Key}: {kv.Value}").ToList()), "variant column against the cell's x/y parity");
+    }
+
+    private static int Mod(int a, int m) => ((a % m) + m) % m;
 }

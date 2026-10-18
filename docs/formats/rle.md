@@ -1,7 +1,8 @@
 # `.RLE` sprite sheets
 
 Status: **resolved** for decoding (961/961 files of GOG v1.10 EN decode without error).
-Semantics of player colour resolved from data; shadow encoding identified, blend factor still open (UNK-03).
+Semantics of player colour resolved from data; shadow encoding identified; blend factor measured (UNK-03: each
+5-bit channel halved, capture of 2026-10-18, ADR 0111).
 Resolves **UNK-01**, **UNK-01a** (data side), contributes to **UNK-03**.
 Prototype: [`tools/re/tzrle.py`](../../tools/re/tzrle.py), batch check: [`tools/re/render_all.py`](../../tools/re/render_all.py).
 
@@ -116,7 +117,7 @@ plumes, banners and ship flags of every civ unit, and nothing else.
 ### 5.3 Kind 7 (shadow sheets)
 Separate shadow sprites (`* S.RLE`, `*_S.RLE`, `* SHADOW.RLE`): same geometry as the
 matching colour sheet, payload-free runs mark shadowed pixels. Drawn as a darkening pass;
-factor and overlap rule are UNK-03 (TDD §13.3). 131 files.
+the factor is ½ per 5-bit channel (`c >> 1`, measured); the overlap rule is UNK-03 (TDD §13.3). 131 files.
 
 ### 5.4 Baked unit shadows (kinds 1 and 3)
 Ground units have **no** separate shadow sheet; their shadow is painted into the sprite in a

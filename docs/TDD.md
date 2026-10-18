@@ -141,7 +141,7 @@ File containers identified (details in Appendix B):
 
 ### 3.4 Asset characteristics relevant to the authentic look
 * All art is **RGB555**: 32 levels per channel. The new renderer MUST reproduce exactly these colors (§13.2).
-* **Shadows are separate sprites** (`*_S.RLE`, `* SHADOW.RLE`, `TREES_S.BMP`), drawn as a darkening pass. **⚠ HYPOTHESIS:** fixed-ratio darkening; verify the blend and overlap behaviour (UNK-03).
+* **Shadows are separate sprites** (`*_S.RLE`, `* SHADOW.RLE`, `TREES_S.BMP`), drawn as a darkening pass. **Measured** (capture of 2026-10-18, ADR 0111): a fixed ½ per 5-bit channel (`c >> 1`); overlapping shadows showed no double darkening (to be confirmed by a dedicated capture, UNK-03).
 * Buildings also have `*_c` mask images (`building\mask\… c.bmp` with an offset). **⚠ HYPOTHESIS:** player-color/flag or construction/damage-fire mask (UNK-01b).
 * **Player colors** for units: the mechanism is unknown, probably special run codes in RLE or a key-color range (UNK-01a). The 8 player color ramps must be extracted (`IMAGES/SCREENS/COMMON/COLOR BARS.BMP` is a likely source).
 * Terrain: base textures 1024×1024 or 512×512 per terrain type (32×32 tiles), transitions in 2×14-tile strips, animated water/shore (`WATERFPS` setting, default 7 fps), per-set `LIGHT.BMP` (512×512) used for the day/night light map, trees in a strip atlas plus a shadow strip.
@@ -350,6 +350,7 @@ flowchart TB
 
 ### 8.1 Time
 * **REQ-SIM-01:** The sim advances in fixed ticks. Default tick = **50 ms of game time** (20 Hz) at game speed 1.0. Game-speed settings change the number of ticks per wall-clock second, never the tick length. Provide the original's speed steps (UNK-16) and 0.5×–4×.
+  * **Original's tick settings (ADR 0111, ⚠ open):** `Tzar.exe` reads `SPGAMETICK` and `MPGAMETICK` from `tzar.ini`; the Ready2Play launcher sets 50 and 200 (the executable's own defaults are unknown). If they are tick lengths in ms, single-player agrees with the 50 ms tick above. **Possible conflict:** the original's multiplayer would then step its simulation every 200 ms, four times coarser than ours, whereas REQ-NET-02 runs multiplayer on the same 50 ms tick (one command turn per tick, adaptive input delay of 2–10 ticks = 100–500 ms). Rules expressed in ms keep their rates either way (REQ-SIM-02), but per-tick effects (scan cadences, the order of simultaneous events) could differ in multiplayer. Until a multiplayer capture says otherwise, 200 ms is read as the original's turn length (comparable to our input delay), not as a different sim tick; no change to REQ-NET-02.
 * **REQ-SIM-02:** All durations in rules are **milliseconds**, as in the original data (`time = 20000`, `anim_time`, `delay`). Runtime timers are `long` millisecond accumulators with carry-over, so long-run rates are exact regardless of tick length.
 * **REQ-SIM-03:** Sim-relevant animation moments (e.g. the attack hit frame `actionrow`) are converted to millisecond offsets at rules-compile time (UNK-07). Purely visual animation runs on the client from interpolated sim time.
 
@@ -472,7 +473,7 @@ For every system: **(1)** reproduce the original behaviour in `classic`; **(2)**
 | GAME-16 | Day/night & weather | Day/night cycle with a light map (`LIGHT.BMP` per terrain set); clock globe; weather per terrain set (rain, snow, clouds) with sounds. | `*.TERRAIN.INI`, `tzar.ini` | gameplay effects of night/weather (UNK-09) |
 | GAME-17 | Victory & scoring | Standard, Destroy Castle, Score Limit, Time Limit, Not Specified; game types Standard/Deathmatch; scores (F4); statistics file. | map settings | score formula (UNK-29) |
 | GAME-18 | Random maps | Types Random, Archipelagos, Dry, Island, Continental, Lakes; sizes Medium–Real World (the editor also offers Tiny/Small); four terrain sets; options: resources L/N/H, guarded town, animals, gateways, magic items, cliffs, rivers, towers, patches, rocks, trees. Deterministic from the seed. | `IMAGES/RANDOMMAP`, `[randomterrainset]` | algorithm (redesign allowed; match the “feel”) |
-| GAME-19 | Cheats/debug | `hm*` chat codes (hmnext, hmnotech, hmspawn <unit>, hmdvaleva, hmpetleva, hmgod, hmbuildozer, hmreveal, hmnofog…) become debug console commands. Allowed in MP only with the lobby flag “cheats enabled” (1.06 fix). | community lists | full list (UNK-30) |
+| GAME-19 | Cheats/debug | `hm*` chat codes (hmnext, hmnotech, hmspawn <unit>, hmdvaleva, hmpetleva, hmgod, hmbuildozer, hmreveal, hmnofog…) become debug console commands. Allowed in MP only with the lobby flag “cheats enabled” (1.06 fix). | community lists; code names from the executable ([original-switches-and-cheats.md](mechanics/original-switches-and-cheats.md)) | effects of most codes (UNK-30) |
 | GAME-20 | Campaign | Ordered maps linked by Load Map / Player Win / Player Lose actions; multiple entry missions; persistent units by name; quests (F8); story screens; conversations. | `.wcm` | — |
 
 ---
@@ -907,7 +908,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 |---|---|---|---|
 | UNK-01 | RLE run opcodes; (a) player-color encoding; (b) meaning of `_c` mask images | Static analysis of files + decode experiments vs. in-game captures | P0 |
 | UNK-02 | `.DAT` sprite/building metadata fields (frame boxes, offsets, footprints) | Correlate with `IMAGES.INI` and decoded frames | P0 |
-| UNK-03 | Shadow blend (darkening factor, overlap behaviour) | Captures (shadow over known colors; overlapping shadows) | P0 |
+| UNK-03 | Shadow blend (darkening factor, overlap behaviour) | Captures (shadow over known colors; overlapping shadows). Factor measured: ½ per 5-bit channel (ADR 0111); overlap still to confirm | P0 |
 | UNK-04 | HPFS map/campaign/save layout; map binary schema | Editor experiments (save diffs after single edits) + static analysis | P0 |
 | UNK-05 | DDV codec | Static analysis | P3 |
 | UNK-06 | `.FNT` glyph format | Static analysis | P1 |
@@ -934,7 +935,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-27 | Fog-of-war visual style | Captures | P1 |
 | UNK-28 | Trade profit formula, gambling odds, loan growth | Measurement | P2 |
 | UNK-29 | Score formula | Measurement | P3 |
-| UNK-30 | Full cheat list | Strings + testing | P3 |
+| UNK-30 | Full cheat list | Strings + testing. Names known ([original-switches-and-cheats.md](mechanics/original-switches-and-cheats.md)); effects mostly untested | P3 |
 | UNK-31 | Transparency key in 16-bit BMPs | File analysis | P0 |
 | UNK-32 | Day/night lighting model (light-source stamping) | Captures | P1 |
 | UNK-33 | Sound attenuation/panning and priority eviction | Listening tests + data | P2 |

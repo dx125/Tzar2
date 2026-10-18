@@ -15,6 +15,11 @@ namespace Tzar2.Tools.Cli.Fidelity.Analysis;
 /// player slot. Snapshots tagged <c>slot: N</c> (the camera on that kingdom's castle) are scanned for pixels within
 /// one level of a ramp colour; the ramp with the most such pixels in the inspected region is the slot's colour. The
 /// grey ramp (8) also appears as a static colour in sprites, so it only wins when no other ramp is present.
+/// <para>Swatches: the kingdom colour squares of the setup screen and the diplomacy dialog (F5) are flat UI colours
+/// (<c>IMAGES/SCREENS/COMMON/COLOR BARS.BMP</c>), one per kingdom in kingdom order. A capture tagged
+/// <c>swatches: "x,y,dy,first,count"</c> (or the window capture named <c>diplomacy</c>, whose geometry for the 1024 × 768
+/// layout was measured on the 2026-10-18 capture: the other seven kingdoms of an eight-kingdom game, viewed as kingdom 1)
+/// is sampled at (x, y + i·dy) for kingdoms first … first + count − 1, and each colour is matched to the nearest ramp.</para>
 /// </summary>
 internal static class PlayerColours
 {
@@ -67,6 +72,8 @@ internal static class PlayerColours
             }
         }
 
+        List<YamlWriter> swatches = Swatches(ctx, trials, palette, out int swatchesDecided, out bool swatchIdentity);
+
         var facts = new YamlWriter();
         var entries = new List<YamlWriter>();
         bool identity = true;
@@ -91,13 +98,122 @@ internal static class PlayerColours
         facts.Add("slots", entries);
         facts.Add("decided", decided);
         facts.Add("identity_mapping", decided > 0 ? identity : null, "slot N uses ramp N for every decided slot");
+        facts.Add("swatches", swatches);
+        facts.Add("swatches_decided", swatchesDecided);
+        facts.Add("swatch_identity", swatchesDecided > 0 ? swatchIdentity : null, "kingdom N's swatch is nearest to ramp N for every decided swatch");
         if (slots.Count == 0)
         {
             notes.Add("no snapshot carries a 'slot' tag");
         }
 
-        return new AnalysisOutcome(decided > 0 ? "ok" : "inconclusive", facts, notes);
+        return new AnalysisOutcome(decided > 0 || swatchesDecided > 0 ? "ok" : "inconclusive", facts, notes);
     }
+
+    /// <summary>Default swatch geometry of the diplomacy dialog (1024 × 768): x, y of the first square, row pitch.</summary>
+    public static readonly (int X, int Y, int Dy, int First, int Count) DiplomacySwatches = (309, 254, 32, 2, 7);
+
+    private static List<YamlWriter> Swatches(AnalysisContext ctx, IReadOnlyList<TrialData> trials, GamePalette palette, out int decided, out bool identity)
+    {
+        var result = new List<YamlWriter>();
+        decided = 0;
+        identity = true;
+        foreach (TrialData trial in trials)
+        {
+            foreach (CaptureData capture in trial.Captures.Where(c => c.Kind is "window" or "game"))
+            {
+                (int X, int Y, int Dy, int First, int Count)? geometry = capture.Tags.TryGetValue("swatches", out string? text)
+                    ? ParseSwatches(text)
+                    : capture.Kind == "window" && capture.Name == "diplomacy" && !capture.Tags.ContainsKey("slot") ? DiplomacySwatches : null;
+                if (geometry is not { } g || ctx.TryImage(trial, capture) is not { } image)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < g.Count; i++)
+                {
+                    int x = g.X, y = g.Y + (i * g.Dy);
+                    if (x < 2 || y < 2 || x + 2 >= image.Width || y + 2 >= image.Height)
+                    {
+                        continue;
+                    }
+
+                    (int r, int gr, int b) = SwatchColour(image, x, y);
+                    int ramp = NearestRamp(palette, (r, gr, b), out double margin);
+                    int kingdom = g.First + i;
+                    var e = new YamlWriter();
+                    e.Add("capture", $"{trial.Trial}/{capture.Name}");
+                    e.Add("kingdom", kingdom);
+                    e.Add("colour", $"{r},{gr},{b}");
+                    e.Add("ramp", ramp >= 0 ? ramp + 1 : null);
+                    e.Add("ramp_name", ramp >= 0 ? RampNames[ramp] : null);
+                    e.Add("margin", Math.Round(margin, 3), "distance to the second-nearest ramp / to the nearest");
+                    result.Add(e);
+                    if (ramp >= 0 && margin >= 1.25)
+                    {
+                        decided++;
+                        identity &= ramp == kingdom - 1;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static (int X, int Y, int Dy, int First, int Count)? ParseSwatches(string text)
+    {
+        string[] parts = text.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length != 5)
+        {
+            return null;
+        }
+
+        int[] v = new int[5];
+        for (int i = 0; i < 5; i++)
+        {
+            if (!int.TryParse(parts[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out v[i]))
+            {
+                return null;
+            }
+        }
+
+        return (v[0], v[1], v[2], v[3], v[4]);
+    }
+
+    /// <summary>The most frequent 8-bit colour of the 5 × 5 block around (x, y) (robust against a cursor or an edge).</summary>
+    private static (int R, int G, int B) SwatchColour(CaptureImage image, int x, int y)
+    {
+        var counts = new Dictionary<(int, int, int), int>();
+        for (int dy = -2; dy <= 2; dy++)
+        {
+            for (int dx = -2; dx <= 2; dx++)
+            {
+                (int r, int g, int b) = image.Levels(image.NativeAt(x + dx, y + dy));
+                (int, int, int) c = image.Format.Bits == 16
+                    ? (ColourDepth.Replicate(r, image.Format.RedBits, 8), ColourDepth.Replicate(g, image.Format.GreenBits, 8), ColourDepth.Replicate(b, image.Format.BlueBits, 8))
+                    : (r, g, b);
+                counts[c] = counts.GetValueOrDefault(c) + 1;
+            }
+        }
+
+        return counts.MaxBy(kv => kv.Value).Key;
+    }
+
+    /// <summary>The ramp (0–7) with the entry nearest to <paramref name="colour"/>; margin = second distance / first.</summary>
+    public static int NearestRamp(GamePalette palette, (int R, int G, int B) colour, out double margin)
+    {
+        double[] best = new double[GamePalette.PlayerCount];
+        for (int ramp = 0; ramp < best.Length; ramp++)
+        {
+            best[ramp] = palette.PlayerRamp(ramp).Min(c => Math.Sqrt(Square(c.R - colour.R) + Square(c.G - colour.G) + Square(c.B - colour.B)));
+        }
+
+        int[] order = [.. Enumerable.Range(0, best.Length).OrderBy(r => best[r])];
+        margin = best[order[1]] / Math.Max(1, best[order[0]]);
+        return order[0];
+    }
+
+    private static double Square(int v) => (double)v * v;
 
     private static ScreenRect Region(CaptureData capture, GameLayout layout)
     {

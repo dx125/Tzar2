@@ -9,6 +9,9 @@ Where it lives: **VM** = `Tzar2.AI.Runtime.AiInterpreter` / `AiBinding` (script 
 `AiOptions` (`Tzar2.AI.Runtime`), `EconomyOptions` or `MilitaryOptions` (`Tzar2.AI.Executors`), **executor** = code of
 the named executor.
 
+First capture (2026-10-18, ADR 0111): no AI scenario yet, nothing here changed. Script experiments need a working
+`hmkingdom` (to watch a computer kingdom) and day/night-free long runs; see the smoke scenario of the next session.
+
 ## Script semantics (UNK-35 unless noted)
 
 | # | Behaviour | Placeholder | Where | How to resolve |
