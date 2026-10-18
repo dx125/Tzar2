@@ -58,5 +58,5 @@ update).
 | Mixed loads | a worker carrying another resource delivers it before gathering | `WorkerSystem`/`EconomySystem` | UNK-17 |
 | Giving up | after 5 movement attempts without reaching the target | `WorkerSystem` | — |
 | Enemy in the way | a mover side-steps around it (right first, then left) and stops (`Blocked`) only when neither side is free; once idle it acquires the blocker, a move-advance engages it at once (owner decision) | `MovementSystem`, `CombatSystem` | UNK-11 |
-| Technologies | none can be researched in M2: anything with a `te_*` requirement cannot be built or trained | `GameplayCommands` | — (M3, GAME-06) |
-| Field decay | fields never decay | — | UNK-17 (M3) |
+| Technologies | ~~none can be researched in M2~~ — resolved in M3 stream A (ADR 0040; magnitudes: m3-placeholders.md) | `GameplayCommands` | — |
+| Field decay | ~~fields never decay~~ — M3 stream A: neglect decay (ADR 0042, m3-placeholders.md) | `EconomySystem` | UNK-17 |

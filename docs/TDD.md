@@ -456,7 +456,7 @@ For every system: **(1)** reproduce the original behaviour in `classic`; **(2)**
 |---|---|---|---|---|
 | GAME-01 | Resources | Food, wood, stone, gold; mana per caster. Iron exists in data (`RES.INI`, `te_ironplus`) but not in the HUD. | `RES.INI`, TSV costs (`f/w/s/g/m` suffixes) | UNK-14 |
 | GAME-02 | Gathering | Peasants chop, mine, farm and tend cows (milk & meat); fishing boats; drop-off at castle/storage/lumber mill/farm/harbor; auto-gather after building a storage or lumber mill (1.05); fields need constant care and disappear if neglected; cows after Domestication; cow poaching (Arab). | TSV, techs (`te_woodplus`, `te_stoneplus`, `te_goldplus`, `te_fields`, `te_irrigation`…) | rates, carry capacity, field decay (UNK-17) |
-| GAME-03 | Construction & repair | Peasants build and repair buildings, ships and siege; damaged buildings burn; ruins; walls by drag; gate orientation; bridges need Architecture; tower chain wood → guard → stone → cannon; wall wood → stone. | TSV, `UPGRADES.INI`, object INIs | build-rate scaling with builders (UNK-18), fire thresholds |
+| GAME-03 | Construction & repair | Peasants build and repair buildings, ships and siege; damaged buildings burn; ruins; walls by drag; gate orientation; bridges need Architecture; tower chain wood → guard → stone → cannon; wall wood → stone. | TSV, `UPGRADES.INI`, object INIs | build-rate scaling with builders (UNK-18), fire thresholds (UNK-42) |
 | GAME-04 | Capture | Peasants capture enemy buildings (“digging with shovels”). Resistance per building. Buildings far from towns resist less. Fanaticism/Buddhism raise resistance. Castle and guilds deletable only with Shift+Del. | TSV `RESISTANCE`, `EMIT (own/other)` | ⚠ HYPOTHESIS: EMIT is an influence field that adds to own and subtracts from others' building resistance by distance (UNK-19) |
 | GAME-05 | Production & population | Training queues, rally points, houses raise the cap, Supply Storage/Seafood techs, 1 pop per unit in classic, castle `pop_count = 20`, population limit per map/lobby. | TSV, object INIs, lobby settings | queue length, pop per house (UNK-20) |
 | GAME-06 | Technologies & upgrades | 87 techs, 12 upgrades, per-civ trees and dependencies. | `TECHNOLOGIES.INI`, `UPGRADES.INI`, `TECHTREE *.INI` | effect magnitudes (UNK-21) |
@@ -946,6 +946,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-39 | RGB555 → RGB888 expansion on period hardware | Captures | P1 |
 | UNK-40 | Cursor hotspots | Data/captures | P2 |
 | UNK-41 | Expression edge cases (division by zero, overflow, unknown variables) | Editor experiment | P2 |
+| UNK-42 | Building fire: health threshold at which buildings burn, fire damage per second, which types burn (GAME-03) | Measurement | P1 |
 
 ---
 
