@@ -82,6 +82,7 @@ internal sealed class HttpApi : IDisposable
     {
         HttpListenerResponse response = context.Response;
         response.Headers["Cache-Control"] = "no-store";
+        response.Headers["Access-Control-Allow-Origin"] = "*"; // public, read-only data for community pages
         if (context.Request.HttpMethod != "GET")
         {
             Send(response, 405, "text/plain", "method not allowed\n");
