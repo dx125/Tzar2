@@ -135,3 +135,13 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Defeated kingdoms | their commands are refused, their entities stay | `CommandSystem`, `VictorySystem` | — |
 | Explicit attacks | follow the stance like automatic ones (allies never; neutrals' military only) | `GameplayCommands.Attack` | — |
 | Gateways and wild cows | never combat targets while Nature owns them | `World.MayAttack` | — |
+
+## Backlog (owner decisions on PR #23)
+
+* **King of the Hill, Capture the Flag** (lobby strings `g_type_1`, `g_type_2`): out of M3 scope; TDD GAME-17 names
+  Standard and Deathmatch only. No code.
+* **Tavern mercenaries and heroes:** a follow-up once streams E and F have both landed; whichever rebases second wires
+  the hire orders to the `Tavern` trait (ADR 0103).
+* **Per-kingdom gate routing** (REQ-PATH-01 per-player portals): backlog; the movement bar of ADR 0102 is enough for M3.
+* **Confirmed defaults:** lobby teams start with shared victory; the 10 s stance-change interval stays (engine bound,
+  UNVERIFIED).
