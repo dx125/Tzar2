@@ -969,6 +969,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-66 | Rescue and Nature owner codes in triggers | Converted maps + play | P2 |
 | UNK-67 | Scenario item properties (scroll, potion, spell book) at runtime | Converted maps + play | P2 |
 | UNK-68 | Campaign transitions without a next-map name, losses, which units carry over | Play the original campaign | P1 |
+| UNK-69 | Scenario diplomacy "Command Units": one-sided or mutual | Play the original campaign | P2 |
 | UNK-70 | Decoration placement: pixel offsets of ground objects/patches relative to their tile ([wmp.md §4.4](formats/wmp.md)) | Captures | P2 |
 | UNK-71 | Map header bytes 0x012/0x04C/0x11A/0x138–0x13A (game type, victory condition, fog, explore); kingdom resource order, AI flags, player type, shared-victory bit ([wmp.md §2–3](formats/wmp.md)) | Editor experiment | P1 |
 | UNK-72 | `defeat.messages` map member | Editor experiment | P3 |

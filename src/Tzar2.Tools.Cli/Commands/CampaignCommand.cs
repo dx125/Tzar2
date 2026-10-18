@@ -12,7 +12,8 @@ namespace Tzar2.Tools.Cli.Commands;
 /// <summary>
 /// <c>t2 campaign run</c>: plays campaigns headless to their end with the scripted solver (ADR 0133; TDD §22 item 5
 /// campaign completion bots) and reports which missions complete. Sources: the built-in demo campaign
-/// (<c>--demo</c>); legacy <c>.wcm</c> campaigns converted on the fly join with the converter (M4-A).
+/// (<c>--demo</c>), and the user's legacy <c>.wcm</c> campaigns and <c>.wmp</c> maps converted on the fly against the
+/// imported base package (<c>--package</c> or <c>TZAR2_PACKAGE</c>; the M4 exit criterion's harness).
 /// </summary>
 internal static class CampaignCommand
 {
@@ -27,6 +28,7 @@ internal static class CampaignCommand
         var options = new AutoplayOptions();
         string? input = null;
         string? report = null;
+        string? package = Environment.GetEnvironmentVariable("TZAR2_PACKAGE") is { Length: > 0 } envPackage ? envPackage : null;
         bool demo = false;
         for (int i = 1; i < args.Length; i++)
         {
@@ -39,6 +41,18 @@ internal static class CampaignCommand
                     options = options with { MaxTicksPerMission = ticks };
                     i++;
                     break;
+                case "--from" when i + 1 < args.Length:
+                    options = options with { StartMap = args[++i] };
+                    break;
+                case "--only" when i + 1 < args.Length:
+                    options = options with { StartMap = args[++i], SingleMission = true };
+                    break;
+                case "--survey":
+                    options = options with { ContinueAfterFailure = true };
+                    break;
+                case "--god":
+                    options = options with { ProtectFromStart = true };
+                    break;
                 case "--no-ai":
                     options = options with { ComputerAi = false };
                     break;
@@ -47,6 +61,9 @@ internal static class CampaignCommand
                     break;
                 case "--report" when i + 1 < args.Length:
                     report = args[++i];
+                    break;
+                case "--package" when i + 1 < args.Length:
+                    package = args[++i];
                     break;
                 case { } option when option.StartsWith('-'):
                     stderr.WriteLine($"t2 campaign run: unknown or incomplete option '{option}'.");
@@ -57,7 +74,20 @@ internal static class CampaignCommand
             }
         }
 
-        Ruleset ruleset = SyntheticLegacyContent.CompileRuleset();
+        Ruleset ruleset;
+        if (package is not null && input is not null)
+        {
+            // The imported base package: the classic ruleset the converter resolves the legacy classes against, and
+            // the original AI scripts for the computer kingdoms.
+            using Content.Vfs.PackageSource source = Content.Vfs.PackageSource.Open(package);
+            ruleset = Game.Session.RulesetLoader.Compile(source).Ruleset;
+            options = options with { Ai = Game.Session.SkirmishAi.Resolve(source) };
+        }
+        else
+        {
+            ruleset = SyntheticLegacyContent.CompileRuleset();
+        }
+
         var sources = new List<ICampaignSource>();
         if (demo)
         {
@@ -66,8 +96,24 @@ internal static class CampaignCommand
 
         if (input is not null)
         {
-            stderr.WriteLine($"t2 campaign run: cannot read campaigns from '{input}' yet (legacy .wcm conversion comes with the converter, M4-A).");
-            return ExitCodes.NotImplemented;
+            if (package is null)
+            {
+                stderr.WriteLine("t2 campaign run: legacy campaigns need the imported base package (--package <base.t2pkg> or TZAR2_PACKAGE).");
+                return ExitCodes.UsageError;
+            }
+
+            var problems = new List<string>();
+            sources.AddRange(LegacyCampaigns.Load(input, ruleset, problems));
+            foreach (string problem in problems)
+            {
+                stderr.WriteLine("t2 campaign run: " + problem);
+            }
+
+            if (sources.Count == 0)
+            {
+                stderr.WriteLine($"t2 campaign run: no campaign or map in '{input}'.");
+                return ExitCodes.UsageError;
+            }
         }
 
         if (sources.Count == 0)
@@ -91,6 +137,7 @@ internal static class CampaignCommand
             reports.Add(r);
             all &= r.Completed;
             stdout.WriteLine($"  => {(r.Completed ? "COMPLETED" : "NOT COMPLETED")}{(r.Error is { } e ? " (" + e + ")" : string.Empty)}");
+            stdout.WriteLine($"  maps completed: {r.MapsCompleted} of {source.Campaign.Maps.Length}; by pure play: {r.MapsByPurePlay}");
         }
 
         if (reportPath is not null)
@@ -139,7 +186,7 @@ internal static class CampaignCommand
 
     private static void PrintUsage(TextWriter output)
     {
-        output.WriteLine("Usage: t2 campaign run (--demo | <campaign.wcm|folder>) [--max-ticks <n>] [--no-ai] [--no-cheats] [--report <file.json>]");
+        output.WriteLine("Usage: t2 campaign run (--demo | <campaign.wcm|map.wmp|folder> [--package <base.t2pkg>]) [--from <map> | --only <map>] [--max-ticks <n>] [--god] [--survey] [--no-ai] [--no-cheats] [--report <file.json>]");
         output.WriteLine();
         output.WriteLine("Plays campaigns headless with the scripted solver and reports which missions complete.");
         output.WriteLine("Exit codes: 0 = every campaign completed, 1 = some did not, 2 = usage error.");

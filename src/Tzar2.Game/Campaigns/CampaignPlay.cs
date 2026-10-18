@@ -92,6 +92,34 @@ public static class ScenarioMatch
         }
 
         players = Math.Min(players, ruleset.MaxPlayers);
+
+        // The legacy Rescue pseudo-kingdom (objects flagged Rescue, owned by Nature in the IR) becomes one more,
+        // passive kingdom: Nature may not own working buildings in the sim. Rescuing itself (its units joining whoever
+        // reaches them) is not implemented yet (UNVERIFIED, UNK-66).
+        MapData map = mission.Map;
+        int rescue = -1;
+        for (int i = 0; i < map.Objects.Length && rescue < 0; i++)
+        {
+            if (Passive(s, ruleset, map.Objects, i))
+            {
+                // A free slot, else an inactive kingdom that owns nothing.
+                rescue = players < ruleset.MaxPlayers ? players++ : FreeInactive(s, map, players);
+                break;
+            }
+        }
+
+        if (rescue >= 0)
+        {
+            var objects = new MapObject[map.Objects.Length];
+            for (int i = 0; i < objects.Length; i++)
+            {
+                MapObject o = map.Objects[i];
+                objects[i] = Passive(s, ruleset, map.Objects, i) ? o with { Owner = (byte)rescue } : o;
+            }
+
+            map = new MapData(map.Name, map.Width, map.Height, map.TerrainCorners, map.HeightCorners, map.CliffTiles, objects, map.TerrainSet, map.SetTerrainCorners);
+        }
+
         int human = -1;
         foreach (KingdomDef k in s.Kingdoms)
         {
@@ -117,14 +145,14 @@ public static class ScenarioMatch
                 civ = "euro";
             }
 
-            list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : ControllerKind.Computer, Difficulty.Normal);
+            list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue ? ControllerKind.Passive : ControllerKind.Computer, Difficulty.Normal);
         }
 
         var hasher = new StateHasher();
-        hasher.Add(mission.Map.ContentHash).Add(s.ContentHash);
+        hasher.Add(map.ContentHash).Add(s.ContentHash);
         return new MatchSetup
         {
-            Map = new FixedMapSource(s.Properties.Title.Length > 0 ? s.Properties.Title : mission.Map.Name, mission.Map),
+            Map = new FixedMapSource(s.Properties.Title.Length > 0 ? s.Properties.Title : map.Name, map),
             Players = list,
             Seed = hasher.GetCurrentHash(),
             Victory = s.Properties.Victory switch
@@ -141,8 +169,49 @@ public static class ScenarioMatch
             Scenario = s,
             ComputerAi = computerAi,
             CheatsAllowed = cheats,
-            Preparation = new Preparation(s, carry, (byte)human),
+            Preparation = new Preparation(s, carry, (byte)human, rescue),
         };
+    }
+
+    private static int FreeInactive(ScenarioData s, MapData map, int players)
+    {
+        for (int p = players - 1; p >= 0; p--)
+        {
+            if (Kingdom(s, p + 1) is { Active: false })
+            {
+                bool owns = false;
+                foreach (MapObject o in map.Objects)
+                {
+                    owns |= o.Owner == p;
+                }
+
+                if (!owns)
+                {
+                    return p;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    // Objects of the passive kingdom: those of the Rescue pseudo-kingdom, and owner-less buildings and units that work
+    // for a kingdom (the sim gives Nature no workers, producers or drop-offs; legacy owner 0 "none").
+    private static bool Passive(ScenarioData s, Ruleset ruleset, System.Collections.Immutable.ImmutableArray<MapObject> objects, int i)
+    {
+        if (i < s.ObjectCount && (s.ObjectAt(i).Flags & ObjectFlags.Rescue) != 0)
+        {
+            return true;
+        }
+
+        MapObject o = objects[i];
+        if (o.Owner != MapObject.Nature || ruleset.EntityTypeId(o.TypeKey) is not (>= 0 and var type))
+        {
+            return false;
+        }
+
+        EntityTraits t = ruleset.EntityTypes[type].Traits;
+        return t.Harvester is not null || t.IsBuilder || t.IsCapturer || (t.Producer is { Produces.IsEmpty: false } && t.World.Claim is null) || t.DropOffMask != 0;
     }
 
     private static KingdomDef? Kingdom(ScenarioData s, int number)
@@ -159,7 +228,7 @@ public static class ScenarioMatch
     }
 
     /// <summary>Match start: stockpiles and diplomacy of the scenario's kingdoms, then the campaign carry-over.</summary>
-    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human) : IMatchPreparation
+    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue) : IMatchPreparation
     {
         public void Prepare(Simulation simulation, LegacyTriggerSystem? triggers)
         {
@@ -197,6 +266,32 @@ public static class ScenarioMatch
                     : (d.SharedVision ? Sharing.Vision : 0) | (d.SharedResources ? Sharing.Resources : 0) | (d.CommandUnits ? Sharing.UnitControl : 0)
                         | (Kingdom(scenario, d.From)?.SharedVictory == true ? Sharing.Victory : 0);
                 ScenarioOperations.SetDiplomacy(world, a, b, stance, sharing);
+            }
+
+            // Runs after the loop above has set every pair's stance. A kingdom that lets an ally command its units (the legacy "Command Units" flag of the pair) is enough for
+            // the sim's consented sharing, which needs both offers: the other side's offer is added (UNVERIFIED, UNK-69).
+            foreach (DiplomacyDef d in scenario.Diplomacy)
+            {
+                int a = d.From - 1;
+                int b = d.To - 1;
+                if (d.CommandUnits && d.Stance == ScenarioStance.Ally && world.HasPlayer(a) && world.HasPlayer(b) && a != b
+                    && world.Diplomacy.StanceOf(b, a) == SimStance.Ally)
+                {
+                    ScenarioOperations.SetDiplomacy(world, b, a, SimStance.Ally, world.Diplomacy.OffersOf(b, a) | Sharing.UnitControl);
+                }
+            }
+
+            // The rescue kingdom is neutral to everyone (UNVERIFIED, UNK-66).
+            if (world.HasPlayer(rescue))
+            {
+                for (int p = 0; p < world.Players.Length; p++)
+                {
+                    if (p != rescue)
+                    {
+                        ScenarioOperations.SetDiplomacy(world, rescue, p, SimStance.Neutral, Sharing.None);
+                        ScenarioOperations.SetDiplomacy(world, p, rescue, SimStance.Neutral, Sharing.None);
+                    }
+                }
             }
 
             if (carry is not null && triggers is not null)
