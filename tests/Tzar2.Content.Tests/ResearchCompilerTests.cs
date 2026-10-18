@@ -38,13 +38,13 @@ public class ResearchCompilerTests
     [Fact]
     public void Prerequisites_come_from_the_tables_and_the_civilization_trees()
     {
-        // TSV DEPENDS ON: pikemen need Halberd (any civ); the euro tree: Halberd needs Temper Iron, knights a stable.
+        // TSV DEPENDS ON: pikemen need Halberd (any civ); the synthetic euro tree: Halberd needs Scale Armor, knights a stable.
         EntityTraits pikeman = Type("euro.pikeman").Traits;
         Assert.Contains(pikeman.Requirements, r => r.Civilization == string.Empty && r.Technologies.SequenceEqual([Tech("te_halberd")]));
         TechnologyDefinition halberd = Classic.Technologies[Tech("te_halberd")];
         RequirementSet euro = Assert.Single(halberd.Requirements);
         Assert.Equal("euro", euro.Civilization);
-        Assert.Equal(new[] { Tech("te_temperiron") }, euro.Technologies.ToArray());
+        Assert.Equal(new[] { Tech("te_scalearmor") }, euro.Technologies.ToArray());
         Assert.Contains(Type("euro.knight").Traits.Requirements, r => r.Civilization == "euro" && r.Types.Contains(Type("euro.stable").Id));
 
         // The table names an unknown technology for cows; the tree's te_livestock replaces it.

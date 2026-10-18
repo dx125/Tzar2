@@ -157,12 +157,13 @@ internal static class GameplayCommands
             return CommandRejection.EntityLimit;
         }
 
-        if (!ResearchRules.TryPayFor(world, command.Player, type))
+        if (!ResearchRules.TryPayFor(world, command.Player, type, out PaidModifier paid))
         {
             return CommandRejection.NotAffordable;
         }
 
         site = world.PlaceStructure(typeId, command.Player, tileX, tileY, underConstruction: true, rotated: rotated);
+        world.Constructions.Get(site).Paid = paid;
         Position p = world.Positions.Get(site);
         world.Events.Emit(new SimEvent(SimEventKind.ConstructionStarted, command.Player, site, p.X, p.Y, typeId));
         Assign(world, command.Player, site, typeId, entities, WorkerTask.Build);
@@ -230,13 +231,14 @@ internal static class GameplayCommands
                     break;
                 }
 
-                if (!ResearchRules.TryPayFor(world, command.Player, type))
+                if (!ResearchRules.TryPayFor(world, command.Player, type, out PaidModifier paid))
                 {
                     reason = CommandRejection.NotAffordable;
                     break;
                 }
 
                 EntityId segment = world.PlaceStructure(typeId, command.Player, x0, y0, underConstruction: true);
+                world.Constructions.Get(segment).Paid = paid;
                 Position p = world.Positions.Get(segment);
                 world.Events.Emit(new SimEvent(SimEventKind.ConstructionStarted, command.Player, segment, p.X, p.Y, typeId));
                 first = first.IsNone ? segment : first;
@@ -305,12 +307,13 @@ internal static class GameplayCommands
                     break;
                 }
 
-                if (!ResearchRules.TryPayFor(world, command.Player, type))
+                if (!ResearchRules.TryPayFor(world, command.Player, type, out PaidModifier paid))
                 {
                     reason = queued > 0 ? null : CommandRejection.NotAffordable;
                     break;
                 }
 
+                production.Paid[production.Count] = paid;
                 production.Queue[production.Count++] = typeId;
                 queued++;
             }
@@ -441,7 +444,7 @@ internal static class GameplayCommands
             if (world.Constructions.Has(entity))
             {
                 ushort typeId = world.Identities.Get(entity).TypeId;
-                ResearchRules.RefundFor(world, command.Player, world.Ruleset.EntityTypes[typeId], world.Ruleset.Gameplay.ConstructionRefundBasisPoints);
+                ResearchRules.RefundFor(world, command.Player, world.Ruleset.EntityTypes[typeId], world.Constructions.Get(entity).Paid, world.Ruleset.Gameplay.ConstructionRefundBasisPoints);
                 world.Events.Emit(new SimEvent(SimEventKind.ConstructionCancelled, command.Player, entity, 0, 0, typeId));
                 world.Destroy(entity);
                 cancelled++;
@@ -462,13 +465,16 @@ internal static class GameplayCommands
             }
 
             ushort item = production.Queue[slot];
+            PaidModifier itemPaid = production.Paid[slot];
             for (int k = slot + 1; k < production.Count; k++)
             {
                 production.Queue[k - 1] = production.Queue[k];
+                production.Paid[k - 1] = production.Paid[k];
             }
 
             production.Count--;
             production.Queue[production.Count] = 0;
+            production.Paid[production.Count] = default;
             if (slot == 0)
             {
                 production.ProgressMs = 0;
@@ -486,7 +492,7 @@ internal static class GameplayCommands
             }
             else
             {
-                ResearchRules.RefundFor(world, command.Player, world.Ruleset.EntityTypes[item], g.ProductionRefundBasisPoints);
+                ResearchRules.RefundFor(world, command.Player, world.Ruleset.EntityTypes[item], itemPaid, g.ProductionRefundBasisPoints);
             }
 
             cancelled++;
@@ -627,7 +633,12 @@ internal static class GameplayCommands
         return applied > 0 ? null : CommandRejection.NoValidEntities;
     }
 
-    /// <summary>Gates (GAME-03): Arg0 0 = close, 1 = open (manual control), 2 = automatic.</summary>
+    /// <summary>
+    /// Gates (GAME-03; ADR 0043): Arg0 0 = close, 1 = open (manual control), 2 = automatic. An open/close order on a gate
+    /// that changed less than <c>gateChangeIntervalMs</c> ago is rejected for that gate (<see cref="CommandRejection.GateBusy"/>
+    /// when no listed gate takes it); step 10 carries the order out within the per-tick change budget, and never closes a
+    /// gate on a unit standing in it.
+    /// </summary>
     public static CommandRejection? SetGate(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         if (command.Arg0 is < 0 or > 2)
@@ -635,7 +646,9 @@ internal static class GameplayCommands
             return CommandRejection.InvalidArgument;
         }
 
+        int interval = GateIntervalTicks(world);
         int applied = 0;
+        bool busy = false;
         foreach (EntityId entity in entities)
         {
             if (!IsOwned(world, entity, command.Player) || world.Gates.IndexOf(entity) is not (>= 0 and var g))
@@ -643,24 +656,31 @@ internal static class GameplayCommands
                 continue;
             }
 
+            ref GateState gate = ref world.Gates.At(g);
             if (command.Arg0 == 2)
             {
-                world.Gates.At(g).Mode = GateMode.Automatic;
-            }
-            else
-            {
-                world.Gates.At(g).Mode = GateMode.Manual;
-                if (command.Arg0 == 1 || !StructureSystem.PassageOccupied(world, entity))
-                {
-                    world.SetGateOpen(entity, command.Arg0 == 1); // a gate never closes on a unit standing in it
-                }
+                gate.Mode = GateMode.Automatic;
+                applied++;
+                continue;
             }
 
+            if ((long)world.Tick.Value - gate.LastChangeTick < interval)
+            {
+                busy = true;
+                continue;
+            }
+
+            gate.Mode = GateMode.Manual;
+            gate.Desired = command.Arg0 == 1 ? (byte)1 : (byte)0;
             applied++;
         }
 
-        return applied > 0 ? null : CommandRejection.NoValidEntities;
+        return applied > 0 ? null : busy ? CommandRejection.GateBusy : CommandRejection.NoValidEntities;
     }
+
+    /// <summary>The least ticks between two state changes of one gate.</summary>
+    internal static int GateIntervalTicks(World world)
+        => (world.Ruleset.Gameplay.GateChangeIntervalMs + world.Config.TickLengthMilliseconds - 1) / world.Config.TickLengthMilliseconds;
 
     /// <summary>
     /// Whether the type's footprint (turned by 90° when <paramref name="rotated"/>) fits at (tileX, tileY) under its

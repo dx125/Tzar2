@@ -51,6 +51,8 @@ public sealed class Ruleset
     private readonly UpgradeDefinition[] _upgrades;
     private readonly string[] _civilizations;
     private readonly OrderGate[] _orderGates;
+    private readonly string[] _orderGateKeys;
+    private readonly int[] _orderGateIndex;
 
     /// <summary>Creates a ruleset; ids must equal list positions.</summary>
     /// <param name="name">Ruleset name.</param>
@@ -174,6 +176,15 @@ public sealed class Ruleset
         }
 
         _orderGates = [.. orderGates ?? []];
+        _orderGateKeys = new string[_orderGates.Length];
+        _orderGateIndex = new int[_orderGates.Length];
+        for (int i = 0; i < _orderGates.Length; i++)
+        {
+            _orderGateKeys[i] = (_orderGates[i].Order ?? string.Empty) + "\n" + (_orderGates[i].Civilization ?? string.Empty);
+            _orderGateIndex[i] = i;
+        }
+
+        Array.Sort(_orderGateKeys, _orderGateIndex, StringComparer.Ordinal);
         HudResourceMask = hudResourceMask & (int)((1u << _resourceTypes.Length) - 1);
         foreach (EntityTypeDefinition e in _entityTypes)
         {
@@ -292,6 +303,16 @@ public sealed class Ruleset
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// The technology <paramref name="civilization"/> needs for <paramref name="order"/> (<c>TECHTREE [orders]</c>: a spell,
+    /// loan, bribe...), or -1 when the order is not gated for it (binary search; for the systems of GAME-11/14).
+    /// </summary>
+    public int OrderTechnology(string order, string civilization)
+    {
+        int i = Array.BinarySearch(_orderGateKeys, order + "\n" + civilization, StringComparer.Ordinal);
+        return i >= 0 ? _orderGates[_orderGateIndex[i]].Technology : -1;
     }
 
     /// <summary>The id of upgrade <paramref name="key"/>, or -1.</summary>
@@ -526,6 +547,17 @@ public sealed class Ruleset
                 {
                     throw new ArgumentException($"{where}: '{a.Key}' and '{b.Key}' must have the same footprint to convert in place.");
                 }
+
+                // The traits whose sim state lives in its own store must agree, so a converted entity's stores stay valid.
+                EntityTraits ta = a.Traits;
+                EntityTraits tb = b.Traits;
+                if ((ta.Gate is null) != (tb.Gate is null) || ta.Burnable != tb.Burnable || (ta.Capturable is null) != (tb.Capturable is null)
+                    || (ta.Decay is null) != (tb.Decay is null) || (ta.ManaPool is null) != (tb.ManaPool is null) || (ta.LifetimeMs > 0) != (tb.LifetimeMs > 0)
+                    || ta.IsBridge != tb.IsBridge || (ta.ResourceNode is null) != (tb.ResourceNode is null) || ta.IsRepairable != tb.IsRepairable
+                    || (ta.Harvester is null) != (tb.Harvester is null) || ta.IsBuilder != tb.IsBuilder || ta.IsCapturer != tb.IsCapturer)
+                {
+                    throw new ArgumentException($"{where}: '{a.Key}' and '{b.Key}' must agree on gate, fire, capture, decay, mana, lifetime, bridge, resource, repair and worker traits to convert in place.");
+                }
             }
         }
 
@@ -634,7 +666,8 @@ public sealed class Ruleset
             .Add(g.ConstructionRefundBasisPoints).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints).Add(g.CapturePointsPerSecond)
             .Add(g.MinimumCaptureResistance).Add(g.CaptureResetMs).Add(g.InfluenceRadiusTiles).Add(g.RepairTimeBasisPoints)
             .Add(g.BurnThresholdBasisPoints).Add(g.BurnDamagePerMinute).Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
-            .Add(g.GateOpenReachUnits).Add(g.StartingResources.Length);
+            .Add(g.GateOpenReachUnits).Add(g.GateCloseReachUnits).Add(g.GateChangeIntervalMs).Add(g.MaxGateChangesPerTick)
+            .Add(g.RepairCostBasisPoints).Add(g.RepairerFalloffBasisPoints).Add(g.StartingResources.Length);
         foreach (StartingResources level in g.StartingResources)
         {
             hasher.Add(Encoding.UTF8.GetBytes(level.Key)).AddSpan<int>(level.Amounts.AsSpan());

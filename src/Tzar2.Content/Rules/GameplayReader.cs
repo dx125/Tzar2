@@ -15,7 +15,8 @@ internal sealed class GameplayReader
         "productionRefundPercent", "queueCapacity", "speedPixelsPerSecondPerPoint", "attackCycleMs", "hitDelayPercent",
         "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
         "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "wallContinueRadiusTiles", "maxWallSegments",
-        "gateOpenReachPx", "manaRegenPerMinute",
+        "gateOpenReachPx", "manaRegenPerMinute", "gateCloseReachPx", "gateChangeIntervalMs", "maxGateChangesPerTick",
+        "repairCostPercent", "repairerFalloffPercent",
     ];
 
     private readonly RulesetCompiler.SectionSet _settings;
@@ -88,6 +89,11 @@ internal sealed class GameplayReader
             WallContinueRadiusTiles = Range("wallContinueRadiusTiles", d.WallContinueRadiusTiles, 0, 64),
             MaxWallSegments = Range("maxWallSegments", d.MaxWallSegments, 1, 256),
             GateOpenReachUnits = Range("gateOpenReachPx", d.GateOpenReachUnits / 64, 0, 256) * 64,
+            GateCloseReachUnits = Range("gateCloseReachPx", d.GateCloseReachUnits / 64, 0, 512) * 64,
+            GateChangeIntervalMs = Range("gateChangeIntervalMs", d.GateChangeIntervalMs, 0, 600_000),
+            MaxGateChangesPerTick = Range("maxGateChangesPerTick", d.MaxGateChangesPerTick, 1, 4096),
+            RepairCostBasisPoints = Range("repairCostPercent", d.RepairCostBasisPoints / 100, 0, 1000) * 100,
+            RepairerFalloffBasisPoints = Range("repairerFalloffPercent", d.RepairerFalloffBasisPoints / 100, 0, 100) * 100,
         };
     }
 

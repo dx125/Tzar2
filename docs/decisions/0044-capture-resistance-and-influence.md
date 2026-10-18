@@ -27,6 +27,8 @@ capture` marks the capturable classes. How EMIT works is unknown (UNK-19).
   `(own if same owner else other) × (R − d) / R`, at least `minimumCaptureResistance`. ⚠ HYPOTHESIS (UNK-19): own
   buildings' EMIT raises it, other kingdoms' lowers it, fading linearly — it makes a building near its town harder and
   one near the enemy easier to take, as the manual says.
+* **Cost bound** (review): the EMIT buildings (completed, player-owned, a few dozen) are collected once per tick when
+  a capture state gained points, and only those states are checked against their resistance.
 * **Instant capture** (`Capturable.instant`): cows under Cow Poaching (`Capturable.technology: te_cowpoaching`, which
   only the Arabian tree researches) change owner when a capturer reaches them.
 * **Protected delete:** `ProtectedDelete` types (castle, guilds) are deleted only by a Delete with the Shift flag

@@ -103,6 +103,24 @@ public sealed record GameplaySettings
     /// <summary>An automatic gate opens while a unit of its owner is this close to it (world units, edge to edge).</summary>
     public int GateOpenReachUnits { get; init; } = 2048;
 
+    /// <summary>An automatic gate closes when no unit of its owner is this close (more than the open reach: hysteresis).</summary>
+    public int GateCloseReachUnits { get; init; } = 4096;
+
+    /// <summary>Least time between two state changes of one gate (orders earlier are rejected).</summary>
+    public int GateChangeIntervalMs { get; init; } = 1000;
+
+    /// <summary>Most gate state changes applied per tick (the rest wait: bounded navigation work).</summary>
+    public int MaxGateChangesPerTick { get; init; } = 16;
+
+    /// <summary>A full repair (0 → max) costs this share of the effective construction cost, charged pro rata (bp; UNK-18).</summary>
+    public int RepairCostBasisPoints { get; init; } = 5_000;
+
+    /// <summary>
+    /// Each further repairer on one entity adds this many basis points less than the one before (UNK-18): with 2,500 the
+    /// first four add 100%, 75%, 50%, 25% and more add nothing.
+    /// </summary>
+    public int RepairerFalloffBasisPoints { get; init; } = 2_500;
+
     internal void Validate(int resourceTypes)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(ResearchRefundBasisPoints);
@@ -125,6 +143,16 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxWallSegments, 256);
         ArgumentOutOfRangeException.ThrowIfNegative(GateOpenReachUnits);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(GateOpenReachUnits, 8 * 2048);
+        ArgumentOutOfRangeException.ThrowIfLessThan(GateCloseReachUnits, GateOpenReachUnits);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(GateCloseReachUnits, 16 * 2048);
+        ArgumentOutOfRangeException.ThrowIfNegative(GateChangeIntervalMs);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(GateChangeIntervalMs, 600_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(MaxGateChangesPerTick, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxGateChangesPerTick, 4096);
+        ArgumentOutOfRangeException.ThrowIfNegative(RepairCostBasisPoints);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairCostBasisPoints, 100_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(RepairerFalloffBasisPoints);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairerFalloffBasisPoints, 10_000);
 
         if (GroupMoveSpeed > GroupMoveSpeed.Own)
         {

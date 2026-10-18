@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
+using Tzar2.Core.Numerics;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
 using Tzar2.Sim.Map;
@@ -69,8 +70,12 @@ public sealed class StructureSystem : ISimSystem
         return false;
     }
 
-    // Automatic gates (gate_subai_on, the default): open for the owner's units within gateOpenReachPx of the footprint.
-    // Every kingdom's units pass an open gate (per-player portals are a pathfinding follow-up, ADR 0043).
+    // Gates (ADR 0043). Automatic gates (gate_subai_on, the default) want to be open while one of the owner's units is
+    // within gateOpenReachPx of the footprint and closed once none is within gateCloseReachPx (hysteresis); the units are
+    // found through a coarse grid rebuilt this tick, so the work is bounded by the units near gates. Then every gate whose
+    // wanted state differs is changed, at most maxGateChangesPerTick per tick (ascending entity order, the rest wait),
+    // never sooner than gateChangeIntervalMs after its last change, and never closed on a unit standing in it. Every
+    // kingdom's units pass an open gate (per-player portals are a pathfinding follow-up).
     private void UpdateGates(World world)
     {
         if (world.Gates.Count == 0)
@@ -78,37 +83,49 @@ public sealed class StructureSystem : ISimSystem
             return;
         }
 
-        _gateChanges.Clear();
-        long reach = world.Ruleset.Gameplay.GateOpenReachUnits;
+        GameplaySettings g = world.Ruleset.Gameplay;
         ReadOnlySpan<EntityId> gates = world.Gates.Entities;
         Span<GateState> states = world.Gates.Components;
-        ReadOnlySpan<EntityId> movers = world.Motions.Entities;
-        for (int i = 0; i < gates.Length; i++)
+        bool anyAutomatic = false;
+        foreach (GateState s in states)
         {
-            if (states[i].Mode != GateMode.Automatic)
-            {
-                continue;
-            }
+            anyAutomatic |= s.Mode == GateMode.Automatic;
+        }
 
-            byte owner = world.Identities.Get(gates[i]).Owner;
-            (int X0, int Y0, int X1, int Y1) rect = Interaction.Rect(world, gates[i]);
-            bool near = false;
-            for (int m = 0; m < movers.Length && !near; m++)
+        if (anyAutomatic)
+        {
+            BuildMoverGrid(world);
+            for (int i = 0; i < gates.Length; i++)
             {
-                if (world.Identities.Get(movers[m]).Owner != owner)
+                ref GateState state = ref states[i];
+                if (state.Mode != GateMode.Automatic)
                 {
                     continue;
                 }
 
-                Position p = world.Positions.Get(movers[m]);
-                long r = reach + world.Motions.Components[m].Radius;
-                near = Interaction.DistanceSquaredToRect(p.X, p.Y, rect) <= r * r;
+                byte owner = world.Identities.Get(gates[i]).Owner;
+                (int X0, int Y0, int X1, int Y1) rect = Interaction.Rect(world, gates[i]);
+                long nearest = NearestOwnMover(world, owner, rect, g.GateCloseReachUnits);
+                if (state.Open == 0 && nearest <= g.GateOpenReachUnits)
+                {
+                    state.Desired = 1;
+                }
+                else if (state.Open != 0 && nearest > g.GateCloseReachUnits)
+                {
+                    state.Desired = 0;
+                }
             }
+        }
 
-            bool open = states[i].Open != 0;
-            if (near != open && (near || !PassageOccupied(world, gates[i])))
+        _gateChanges.Clear();
+        int interval = GameplayCommands.GateIntervalTicks(world);
+        for (int i = 0; i < gates.Length && _gateChanges.Count < g.MaxGateChangesPerTick; i++)
+        {
+            GateState state = states[i];
+            if (state.Desired != state.Open && (long)world.Tick.Value - state.LastChangeTick >= interval
+                && (state.Desired != 0 || !PassageOccupied(world, gates[i])))
             {
-                _gateChanges.Add((gates[i], near));
+                _gateChanges.Add((gates[i], state.Desired != 0));
             }
         }
 
@@ -117,6 +134,88 @@ public sealed class StructureSystem : ISimSystem
             world.SetGateOpen(gate, open);
         }
     }
+
+    // Player-owned movers bucketed by 8-tile cells (stable counting sort, ascending entity order per cell).
+    private void BuildMoverGrid(World world)
+    {
+        _gridW = (world.Map.WorldWidth + GridCell - 1) / GridCell;
+        _gridH = (world.Map.WorldHeight + GridCell - 1) / GridCell;
+        int cells = _gridW * _gridH;
+        if (_cellStart.Length < cells + 1)
+        {
+            _cellStart = new int[cells + 1];
+            _cursor = new int[cells];
+        }
+
+        Array.Clear(_cellStart, 0, cells + 1);
+        ReadOnlySpan<EntityId> movers = world.Motions.Entities;
+        if (_cellOf.Length < movers.Length)
+        {
+            _cellOf = new int[Math.Max(movers.Length, _cellOf.Length * 2)];
+            _items = new int[_cellOf.Length];
+        }
+
+        for (int m = 0; m < movers.Length; m++)
+        {
+            Position p = world.Positions.Get(movers[m]);
+            int cell = (Math.Clamp(p.Y / GridCell, 0, _gridH - 1) * _gridW) + Math.Clamp(p.X / GridCell, 0, _gridW - 1);
+            _cellOf[m] = cell;
+            _cellStart[cell + 1]++;
+        }
+
+        for (int c = 0; c < cells; c++)
+        {
+            _cellStart[c + 1] += _cellStart[c];
+        }
+
+        Array.Copy(_cellStart, _cursor, cells);
+        for (int m = 0; m < movers.Length; m++)
+        {
+            _items[_cursor[_cellOf[m]]++] = m;
+        }
+    }
+
+    // The edge distance from a gate's footprint to the nearest own mover within `limit` (beyond it: long.MaxValue).
+    private long NearestOwnMover(World world, byte owner, (int X0, int Y0, int X1, int Y1) rect, long limit)
+    {
+        long reach = limit + EntityTypeDefinition.MaxRadius;
+        int cx0 = (int)Math.Max(0, (rect.X0 - reach) / GridCell);
+        int cy0 = (int)Math.Max(0, (rect.Y0 - reach) / GridCell);
+        int cx1 = (int)Math.Min(_gridW - 1, (rect.X1 + reach) / GridCell);
+        int cy1 = (int)Math.Min(_gridH - 1, (rect.Y1 + reach) / GridCell);
+        long best = long.MaxValue;
+        ReadOnlySpan<EntityId> movers = world.Motions.Entities;
+        Span<Motion> motions = world.Motions.Components;
+        for (int cy = cy0; cy <= cy1; cy++)
+        {
+            for (int cx = cx0; cx <= cx1; cx++)
+            {
+                int cell = (cy * _gridW) + cx;
+                for (int k = _cellStart[cell]; k < _cellStart[cell + 1]; k++)
+                {
+                    int m = _items[k];
+                    if (world.Identities.Get(movers[m]).Owner != owner)
+                    {
+                        continue;
+                    }
+
+                    Position p = world.Positions.Get(movers[m]);
+                    long d = IntMath.ISqrt(Interaction.DistanceSquaredToRect(p.X, p.Y, rect)) - motions[m].Radius;
+                    best = Math.Min(best, Math.Max(0, d));
+                }
+            }
+        }
+
+        return best;
+    }
+
+    private const int GridCell = 8 * MapState.UnitsPerTile;
+    private int[] _cellStart = [];
+    private int[] _cursor = [];
+    private int[] _cellOf = [];
+    private int[] _items = [];
+    private int _gridW;
+    private int _gridH;
 
     // GAME-03 fire (UNK-42): a completed burnable building below burnThresholdPercent of its hit points burns and loses
     // burnDamagePerMinute; repaired above the threshold, the fire goes out; at 0 it burns down (a ruin stays).
@@ -148,6 +247,7 @@ public sealed class StructureSystem : ISimSystem
                 if (b >= 0)
                 {
                     world.Burnings.Remove(building);
+                    world.Events.Emit(new SimEvent(SimEventKind.FireExtinguished, world.Identities.Get(building).Owner, building, 0, 0, type.Id));
                 }
 
                 continue;
@@ -178,7 +278,7 @@ public sealed class StructureSystem : ISimSystem
         foreach (EntityId building in _burnedDown)
         {
             Identity identity = world.Identities.Get(building);
-            world.Events.Emit(new SimEvent(SimEventKind.Decayed, identity.Owner, building, 0, 0, identity.TypeId));
+            world.Events.Emit(new SimEvent(SimEventKind.BurnedDown, identity.Owner, building, 0, 0, identity.TypeId));
             world.Kill(building);
         }
     }

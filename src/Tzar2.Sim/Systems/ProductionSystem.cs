@@ -17,6 +17,7 @@ public sealed class ProductionSystem : ISimSystem
 {
     private readonly List<EntityId> _completed = [];
     private readonly List<(EntityId Entity, ushort Item)> _finished = [];
+    private readonly List<(EntityId Target, int Repairers)> _repairs = [];
 
     /// <inheritdoc />
     public SimPhase Phase => SimPhase.Production;
@@ -87,7 +88,7 @@ public sealed class ProductionSystem : ISimSystem
             ref Worker w = ref states[i];
             if (w.Task == WorkerTask.Repair && w.Phase == WorkerPhase.Repairing)
             {
-                Repair(world, workers[i], ref w, tickMs);
+                CountRepairer(world, workers[i], EntityId.FromValue(w.Target));
                 continue;
             }
 
@@ -114,6 +115,12 @@ public sealed class ProductionSystem : ISimSystem
             health.Current = Math.Min(health.Max, health.Current + HealthAt(health.Max, construction.ProgressMs, construction.TotalMs) - HealthAt(health.Max, before, construction.TotalMs));
         }
 
+        foreach ((EntityId target, int repairers) in _repairs)
+        {
+            Repair(world, target, repairers, tickMs);
+        }
+
+        _repairs.Clear();
         _completed.Clear();
         ReadOnlySpan<EntityId> sites = world.Constructions.Entities;
         Span<Construction> constructions = world.Constructions.Components;
@@ -134,34 +141,100 @@ public sealed class ProductionSystem : ISimSystem
         }
     }
 
-    private static void Repair(World world, EntityId worker, ref Worker w, int tickMs)
+    // A repairer counts for its target when it is in reach of its own, damaged, completed target (the owner is checked
+    // every tick: a building captured in step 12 is not healed by its old owner's peasants).
+    private void CountRepairer(World world, EntityId worker, EntityId target)
     {
-        EntityId target = EntityId.FromValue(w.Target);
         if (!world.Entities.IsAlive(target) || world.Healths.IndexOf(target) is not (>= 0 and var h)
-            || !Interaction.WorkerReaches(world, worker, target))
+            || world.Identities.Get(target).Owner != world.Identities.Get(worker).Owner || world.Constructions.Has(target)
+            || world.Healths.At(h).Current >= world.Healths.At(h).Max || !Interaction.WorkerReaches(world, worker, target))
         {
             return; // the worker system re-approaches or gives up
         }
 
-        ref Health health = ref world.Healths.At(h);
-        if (health.Current >= health.Max)
+        for (int k = 0; k < _repairs.Count; k++)
         {
-            return;
+            if (_repairs[k].Target == target)
+            {
+                _repairs[k] = (target, _repairs[k].Repairers + 1);
+                return;
+            }
         }
 
+        _repairs.Add((target, 1));
+    }
+
+    // Repair (GAME-03, owner decisions; UNVERIFIED UNK-18): one repairer restores max x tick / (build time x
+    // repairTimePercent); further repairers add less each (repairerFalloffPercent: 100%, 75%, 50%, 25%, then nothing).
+    // The hit points cost repairCostPercent of the effective construction cost for a full 0 -> max repair, charged pro
+    // rata as they are restored; if the owner cannot pay, the repair pauses.
+    private static void Repair(World world, EntityId target, int repairers, int tickMs)
+    {
+        ref Health health = ref world.Healths.Get(target);
         Identity identity = world.Identities.Get(target);
         EntityTypeDefinition type = world.Ruleset.EntityTypes[identity.TypeId];
+        GameplaySettings g = world.Ruleset.Gameplay;
+        if (!world.RepairProgresses.Has(target))
+        {
+            world.RepairProgresses.Set(target, default);
+        }
+
+        ref RepairProgress progress = ref world.RepairProgresses.Get(target);
+        long crew = 0;
+        for (int k = 0; k < repairers; k++)
+        {
+            crew += Math.Max(0, 10_000 - ((long)g.RepairerFalloffBasisPoints * k));
+        }
+
         (_, int bp) = world.Stats.Modifier(identity.Owner, ModifierStat.BuildRate, identity.TypeId);
-        long denominator = Math.Max(1L, (long)Math.Max(type.Traits.BuildTimeMs, 1000) * world.Ruleset.Gameplay.RepairTimeBasisPoints / 10_000);
-        long numerator = ((long)health.Max * tickMs * (10_000 + Math.Max(bp, -9_999)) / 10_000) + w.TimerMs;
+        long denominator = Math.Max(1L, (long)Math.Max(type.Traits.BuildTimeMs, 1000) * g.RepairTimeBasisPoints / 10_000);
+        long numerator = ((long)health.Max * tickMs * (10_000 + Math.Max(bp, -9_999)) / 10_000 * crew / 10_000) + progress.Carry;
         int gain = (int)Math.Min(numerator / denominator, health.Max - health.Current);
-        w.TimerMs = (int)(numerator % denominator);
+        long carry = numerator % denominator;
+        if (gain > 0 && !PayForRepair(world, identity.Owner, type, health.Max, progress.HealedHp, gain))
+        {
+            return; // the owner cannot pay: the repair pauses (the carry is kept)
+        }
+
+        progress.Carry = (int)Math.Min(carry, int.MaxValue);
+        progress.HealedHp = (int)Math.Min((long)progress.HealedHp + gain, int.MaxValue / 2);
         health.Current += gain;
         if (health.Current >= health.Max)
         {
-            w.TimerMs = 0;
+            progress.Carry = 0;
             world.Events.Emit(new SimEvent(SimEventKind.Repaired, identity.Owner, target, 0, 0, identity.TypeId));
         }
+    }
+
+    // Charges what restoring hit points healed..healed+gain costs: due(h) = ceil(cost x repairCost x h / max) per
+    // resource, so the total charged never depends on how the hit points were split over ticks and no hit point is free.
+    private static bool PayForRepair(World world, byte owner, EntityTypeDefinition type, int max, int healed, int gain)
+    {
+        if (!world.HasPlayer(owner) || type.Traits.Cost.IsEmpty || world.Ruleset.Gameplay.RepairCostBasisPoints == 0)
+        {
+            return true;
+        }
+
+        ref PlayerState state = ref world.Players[owner];
+        int resources = type.Traits.Cost.Length;
+        Span<int> charge = stackalloc int[Ruleset.MaxResourceTypes];
+        for (int r = 0; r < resources; r++)
+        {
+            long full = (long)ResearchRules.CostOf(world, owner, type, r) * world.Ruleset.Gameplay.RepairCostBasisPoints;
+            long divisor = 10_000L * Math.Max(1, max);
+            charge[r] = (int)(Due(full, healed + (long)gain, divisor) - Due(full, healed, divisor));
+            if (state.Resources[r] < charge[r])
+            {
+                return false;
+            }
+        }
+
+        for (int r = 0; r < resources; r++)
+        {
+            state.Resources[r] -= charge[r];
+        }
+
+        return true;
     }
 
     // 1.05: the builders of a completed storage or lumber mill start gathering what it accepts nearby; the builder of a
@@ -226,6 +299,8 @@ public sealed class ProductionSystem : ISimSystem
             }
         }
     }
+
+    private static long Due(long full, long healed, long divisor) => ((full * healed) + divisor - 1) / divisor;
 
     private static int HealthAt(int max, int progress, int total) => total <= 0 ? max : 1 + (int)((long)(max - 1) * progress / total);
 
@@ -306,10 +381,12 @@ public sealed class ProductionSystem : ISimSystem
         for (int k = 1; k < q.Count; k++)
         {
             q.Queue[k - 1] = q.Queue[k];
+            q.Paid[k - 1] = q.Paid[k];
         }
 
         q.Count--;
         q.Queue[q.Count] = 0;
+        q.Paid[q.Count] = default;
     }
 
     // Spawning a unit adds to other stores only (units never produce), so references into the production store stay valid.

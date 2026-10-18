@@ -58,7 +58,12 @@ gameplay:
   burnDamagePerMinute: 60             # UNVERIFIED (UNK-42): hit points a burning building loses per minute
   wallContinueRadiusTiles: 6          # UNVERIFIED: builders move on to the next segment of a dragged wall within this
   maxWallSegments: 64                 # UNVERIFIED: most segments one dragged wall places
+  repairCostPercent: 50               # UNVERIFIED (UNK-18): a full repair costs this share of the construction cost, pro rata (owner decision)
+  repairerFalloffPercent: 25          # UNVERIFIED (UNK-18): repairers on one building add 100%, 75%, 50%, 25%, then nothing (owner decision)
   gateOpenReachPx: 32                 # UNVERIFIED: an automatic gate opens for its owner's units this close
+  gateCloseReachPx: 64                # UNVERIFIED: ... and closes when none is this close (hysteresis)
+  gateChangeIntervalMs: 1000          # UNVERIFIED: least time between two changes of one gate (owner decision)
+  maxGateChangesPerTick: 16           # engine bound: gate changes applied per tick (the rest wait)
   # GAME-04: capture (ADR 0044; ⚠ HYPOTHESIS UNK-19 for the EMIT influence).
   capturePointsPerSecond: 10          # UNVERIFIED (UNK-19): capture points per capturing peasant per second
   minimumCaptureResistance: 1         # UNVERIFIED (UNK-19)

@@ -12,8 +12,11 @@ namespace Tzar2.Content.Rules;
 /// Synthetic stand-ins for the imported original tables (REQ-LEGAL-03: public CI never sees original data): the same
 /// shape the importer writes (<c>tables/data/*.json</c>, the sprite index, DAT footprints) for one civilization
 /// (<c>euro</c>) and the common objects. Every number is invented and differs from the original in every column (a
-/// test checks this against a local install when <c>TZAR2_ORIGIN</c> is set); the technology trees, command cards and
-/// unit groups are invented too. The keys are the original's stable identifiers (REQ-DATA-06; TDD Appendix E lists the
+/// test checks this against a local install when <c>TZAR2_ORIGIN</c> is set). The technology tree, command cards and
+/// unit groups are a reduced mix: some relations are the ones the manual describes in its own words (Architecture
+/// unlocks stone walls, gates and bridges; Domestication cows), others are deliberately permuted (Halberd after Scale
+/// Armor, galleons after Usury) so the fixture is not a copy of the original tree; the guard test covers numbers only.
+/// The keys and display-name conventions are the original's stable identifiers (REQ-DATA-06; TDD Appendix E lists the
 /// 87 technologies and 12 upgrades). The <c>classic</c> ruleset compiles from it exactly as from a real install, so
 /// tests, benchmarks and the determinism CI run the real compiler and rules (ADRs 0032, 0040).
 /// </summary>
@@ -205,7 +208,7 @@ public static class SyntheticLegacyContent
         return source;
     }
 
-    // TECHNOLOGIES.INI, UPGRADES.INI (invented times and costs), an invented euro technology tree, and the command cards
+    // TECHNOLOGIES.INI, UPGRADES.INI (invented times and costs), a reduced, partly permuted euro tree, and the command cards
     // (MENU.INI, ORDERS.INI) that say which building researches what.
     private static void AddTechnologyTables(MemorySource source)
     {
@@ -230,11 +233,11 @@ public static class SyntheticLegacyContent
         [
             ("depend",
             [
-                ("cow", "te_livestock"), ("galleon", "te_mapmaking"), ("bridge", "te_architecture"), ("wall_stone", "te_architecture"),
+                ("cow", "te_livestock"), ("galleon", "te_usury"), ("bridge", "te_architecture"), ("wall_stone", "te_architecture"),
                 ("gate_stone", "te_architecture"), ("to_wall_stone", "te_architecture"), ("to_gate_stone", "te_architecture"),
                 ("to_stower", "te_architecture"), ("to_stower2_1", "te_cannontower"), ("to_stower2_2", "te_cannontower"),
-                ("academy", "te_learning"), ("te_halberd", "te_temperiron"), ("te_chainmail", "te_scalearmor"), ("te_tactics", "te_warfare"),
-                ("te_irrigation", "te_fields"),
+                ("academy", "te_learning"), ("te_halberd", "te_scalearmor"), ("te_chainmail", "te_platearmor"), ("te_tactics", "te_bodybuilding"),
+                ("te_irrigation", "te_livestock"),
             ]),
             ("required", [("knight", "stable"), ("workshop", "blacksmith"), ("market", "tcguild")]),
             ("orders", [("spell_heal", "te_healing"), ("loan", "te_usury")]),

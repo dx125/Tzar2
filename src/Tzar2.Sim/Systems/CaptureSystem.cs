@@ -85,13 +85,27 @@ public sealed class CaptureSystem : ISimSystem
         _reset.Clear();
         ReadOnlySpan<EntityId> targets = world.CaptureStates.Entities;
         states = world.CaptureStates.Components;
+        bool emittersCollected = false;
         for (int i = 0; i < targets.Length; i++)
         {
             if (states[i].IdleMs >= world.Ruleset.Gameplay.CaptureResetMs && states[i].IdleMs > 0)
             {
                 _reset.Add(targets[i]);
+                continue;
             }
-            else if (states[i].MilliPoints >= (long)CaptureResistance(world, targets[i]) * 1000)
+
+            if (states[i].IdleMs != 0)
+            {
+                continue; // no points this tick: it cannot have reached the resistance now
+            }
+
+            if (!emittersCollected)
+            {
+                CollectEmitters(world, _emitters);
+                emittersCollected = true;
+            }
+
+            if (states[i].MilliPoints >= (long)Resistance(world, targets[i], _emitters) * 1000)
             {
                 _done.Add(targets[i]);
             }
@@ -119,6 +133,29 @@ public sealed class CaptureSystem : ISimSystem
     public static int CaptureResistance(World world, EntityId building)
     {
         ArgumentNullException.ThrowIfNull(world);
+        var emitters = new List<Emitter>();
+        CollectEmitters(world, emitters);
+        return Resistance(world, building, emitters);
+    }
+
+    // The completed, player-owned buildings with an EMIT (a few dozen), collected once per tick when needed (ADR 0044).
+    private static void CollectEmitters(World world, List<Emitter> emitters)
+    {
+        emitters.Clear();
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            Identity o = world.Identities.Get(structures[i]);
+            if (world.Ruleset.EntityTypes[o.TypeId].Traits.Influence is { } influence && world.HasPlayer(o.Owner) && !world.Constructions.Has(structures[i]))
+            {
+                Position p = world.Positions.Get(structures[i]);
+                emitters.Add(new Emitter(structures[i], p.X, p.Y, o.Owner, influence.Own, influence.Other));
+            }
+        }
+    }
+
+    private static int Resistance(World world, EntityId building, List<Emitter> emitters)
+    {
         Identity identity = world.Identities.Get(building);
         EntityTypeDefinition type = world.Ruleset.EntityTypes[identity.TypeId];
         long resistance = world.Stats.Apply(identity.Owner, ModifierStat.Resistance, type.Id, type.Traits.Resistance);
@@ -126,26 +163,25 @@ public sealed class CaptureSystem : ISimSystem
         if (radius > 0)
         {
             Position at = world.Positions.Get(building);
-            ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
-            for (int i = 0; i < structures.Length; i++)
+            foreach (Emitter e in emitters)
             {
-                EntityId other = structures[i];
-                Identity o = world.Identities.Get(other);
-                if (other == building || world.Ruleset.EntityTypes[o.TypeId].Traits.Influence is not { } influence || world.Constructions.Has(other)
-                    || !world.HasPlayer(o.Owner))
+                if (e.Entity == building)
                 {
                     continue;
                 }
 
-                Position p = world.Positions.Get(other);
-                long d = IntMath.ISqrt(IntMath.DistanceSquared(at.X, at.Y, p.X, p.Y));
+                long d = IntMath.ISqrt(IntMath.DistanceSquared(at.X, at.Y, e.X, e.Y));
                 if (d < radius)
                 {
-                    resistance += (o.Owner == identity.Owner ? influence.Own : influence.Other) * (radius - d) / radius;
+                    resistance += (e.Owner == identity.Owner ? e.Own : e.Other) * (radius - d) / radius;
                 }
             }
         }
 
         return (int)Math.Clamp(resistance, world.Ruleset.Gameplay.MinimumCaptureResistance, int.MaxValue / 2000);
     }
+
+    private readonly record struct Emitter(EntityId Entity, int X, int Y, byte Owner, int Own, int Other);
+
+    private readonly List<Emitter> _emitters = [];
 }

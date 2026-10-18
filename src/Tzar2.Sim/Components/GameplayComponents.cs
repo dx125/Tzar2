@@ -175,6 +175,9 @@ public struct Construction : IComponent
 
     /// <summary>Remainder of sped-up progress in 1/10,000 ms (Architecture's build rate, ADR 0040), 0..9,999.</summary>
     public int CarryBasisPoints;
+
+    /// <summary>The cost modifier the site was paid with (a cancel refunds what was paid).</summary>
+    public PaidModifier Paid;
 }
 
 /// <summary>Queued items of a producer: unit type ids, or research/upgrade ids tagged by <see cref="QueueItems"/>.</summary>
@@ -256,6 +259,9 @@ public struct Production : IComponent
 
     /// <summary>The queued items (<see cref="QueueItems"/>), first = in progress.</summary>
     public ProductionQueue Queue;
+
+    /// <summary>Per slot, the cost modifier a unit item was paid with (research and upgrades have fixed costs).</summary>
+    public PaidModifiers Paid;
 }
 
 /// <summary>Level upgrades an entity has bought (bit = upgrade id; ship cannon levels; GAME-06).</summary>
@@ -299,7 +305,10 @@ public enum GateMode : byte
     Automatic = 1,
 }
 
-/// <summary>Whether a gate is open (its passage tiles are free) and how it is controlled.</summary>
+/// <summary>
+/// Whether a gate is open (its passage tiles are free), what it should become, and how it is controlled. A gate changes
+/// state at most once per <c>gateChangeIntervalMs</c> (ADR 0043: bounded navigation work per tick).
+/// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct GateState : IComponent
 {
@@ -309,11 +318,46 @@ public struct GateState : IComponent
     /// <summary>Control mode.</summary>
     public GateMode Mode;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved0;
+    /// <summary>1 = should be open (manual orders and the automatic rule set it; step 10 applies it).</summary>
+    public byte Desired;
 
     /// <summary>Padding, always 0.</summary>
-    public byte Reserved1;
+    public byte Reserved;
+
+    /// <summary>Tick of the last change of <see cref="Open"/> (or the order that set <see cref="Desired"/>).</summary>
+    public int LastChangeTick;
+}
+
+/// <summary>
+/// Repair bookkeeping of an entity being repaired (GAME-03; ADR 0043): hit points restored so far (the pro-rata repair
+/// cost is charged from it without a per-resource remainder) and the hit-point remainder of the repair rate.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct RepairProgress : IComponent
+{
+    /// <summary>Hit points restored by repairs so far.</summary>
+    public int HealedHp;
+
+    /// <summary>Remainder of the repair rate (numerator units, below the denominator of the rate).</summary>
+    public int Carry;
+}
+
+/// <summary>The cost modifier a player paid with (flat add and basis points of <c>ModifierStat.Cost</c>).</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct PaidModifier
+{
+    /// <summary>Flat add to every cost component.</summary>
+    public int Add;
+
+    /// <summary>Basis points on every cost component.</summary>
+    public int BasisPoints;
+}
+
+/// <summary>Per queue slot, the cost modifier the item was paid with (refunds return what was paid).</summary>
+[InlineArray(ProducerDefinition.MaxQueueCapacity)]
+public struct PaidModifiers
+{
+    private PaidModifier _item;
 }
 
 /// <summary>A building on fire (GAME-03): fire damage accumulates per tick (UNK-42).</summary>

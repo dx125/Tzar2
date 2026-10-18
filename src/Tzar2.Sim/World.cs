@@ -62,6 +62,7 @@ public sealed class World
         Neglects = Components.RegisterHot<Neglect>("game.neglect");
         Manas = Components.RegisterHot<ManaState>("game.mana");
         Lifetimes = Components.RegisterHot<Lifetime>("game.lifetime");
+        RepairProgresses = Components.RegisterHot<RepairProgress>("game.repair");
         Stats = new PlayerStats(ruleset, config.PlayerCount);
         Decals = new DecalIndex(ruleset.DecalCap);
         Navigation = new NavigationGrid(Map, ruleset);
@@ -151,6 +152,9 @@ public sealed class World
 
     /// <summary>Entities that expire (meat; hot).</summary>
     public ComponentStore<Lifetime> Lifetimes { get; }
+
+    /// <summary>Repair bookkeeping of entities being repaired (hot; GAME-03).</summary>
+    public ComponentStore<RepairProgress> RepairProgresses { get; }
 
     /// <summary>Technology effects per player and type (derived from <see cref="PlayerState.Technologies"/>; not state).</summary>
     public PlayerStats Stats { get; }
@@ -462,6 +466,23 @@ public sealed class World
         if (next.Traits.Producer is null)
         {
             Productions.Remove(entity);
+            UpgradeLevels.Remove(entity);
+        }
+        else if (!Productions.Has(entity) && !Constructions.Has(entity) && HasPlayer(identity.Owner))
+        {
+            Productions.Set(entity, default);
+        }
+
+        if (UpgradeLevels.IndexOf(entity) is >= 0 and var levels)
+        {
+            // Keep only the levels the new type can still hold.
+            uint keep = 0;
+            for (int u = 0; u < Ruleset.Upgrades.Count; u++)
+            {
+                keep |= next.Traits.Producer!.CanUpgrade((ushort)u) && !Ruleset.Upgrades[u].IsConversion ? 1u << u : 0;
+            }
+
+            UpgradeLevels.At(levels).Mask &= keep;
         }
 
         if (Motions.IndexOf(entity) is >= 0 and var m)
@@ -502,9 +523,35 @@ public sealed class World
             return;
         }
 
-        ApplyStructure(gate, add: false);
         state.Open = open ? (byte)1 : (byte)0;
-        ApplyStructure(gate, add: true);
+        state.Desired = state.Open;
+        state.LastChangeTick = Tick.Value;
+
+        // Only the passage tiles change (the posts stay blocked): the least navigation work per change.
+        Footprint f = Footprints.Get(gate);
+        EntityTypeDefinition type = TypeOf(gate);
+        int w = f.Width(type.FootprintWidth, type.FootprintHeight);
+        int h = f.Height(type.FootprintWidth, type.FootprintHeight);
+        for (int dy = 0; dy < h; dy++)
+        {
+            for (int dx = 0; dx < w; dx++)
+            {
+                int k = f.MaskIndex(dx, dy, type.FootprintWidth);
+                if (type.Footprint[k] == 0 || type.Traits.Gate!.Passage[k] == 0)
+                {
+                    continue;
+                }
+
+                if (open)
+                {
+                    Map.RemoveBlocker(f.TileX + dx, f.TileY + dy);
+                }
+                else
+                {
+                    Map.AddBlocker(f.TileX + dx, f.TileY + dy);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -525,7 +572,7 @@ public sealed class World
         Constructions.Remove(entity);
         if (type.Traits.Gate is not null && !Gates.Has(entity))
         {
-            Gates.Set(entity, new GateState { Mode = GateMode.Automatic });
+            Gates.Set(entity, new GateState { Mode = GateMode.Automatic, LastChangeTick = int.MinValue / 2 });
         }
 
         if (reshape)
@@ -952,7 +999,7 @@ public sealed class World
         {
             Construction c = sites[i];
             if (!Footprints.Has(ids[i]) || c.TotalMs != TypeOf(ids[i]).Traits.BuildTimeMs || c.ProgressMs < 0 || c.ProgressMs > c.TotalMs
-                || c.CarryBasisPoints is < 0 or >= 10_000)
+                || c.CarryBasisPoints is < 0 or >= 10_000 || !ValidPaid(c.Paid))
             {
                 throw Invalid("invalid construction site");
             }
@@ -966,14 +1013,18 @@ public sealed class World
             ProducerDefinition? producer = TypeOf(ids[i]).Traits.Producer;
             if (producer is null || Constructions.Has(ids[i]) || q.Count > producer.QueueCapacity || q.ProgressMs < 0 || q.HasRally > 1
                 || q.Stall > (byte)ProductionStall.EntityLimit || q.RallyMode > RallyMode.MoveAdvance
-                || (q.HasRally == 1 && !Map.ContainsPoint(q.RallyX, q.RallyY)) || (q.HasRally == 0 && (q.RallyTarget != 0 || q.RallyMode != 0)))
+                || (q.HasRally == 1 && !Map.ContainsPoint(q.RallyX, q.RallyY)) || (q.HasRally == 0 && (q.RallyTarget != 0 || q.RallyMode != 0))
+                || (q.RallyTarget != 0 && q.RallyMode != RallyMode.DefaultAction))
             {
                 throw Invalid("invalid production queue");
             }
 
             for (int k = 0; k < ProducerDefinition.MaxQueueCapacity; k++)
             {
-                if (k < q.Count ? !Systems.ResearchRules.IsValidQueueItem(this, producer, q.Queue[k]) : q.Queue[k] != 0)
+                PaidModifier paid = q.Paid[k];
+                bool unitItem = k < q.Count && !QueueItems.IsResearch(q.Queue[k]) && !QueueItems.IsUpgrade(q.Queue[k]);
+                if ((k < q.Count ? !Systems.ResearchRules.IsValidQueueItem(this, producer, q.Queue[k]) : q.Queue[k] != 0)
+                    || (!unitItem && (paid.Add != 0 || paid.BasisPoints != 0)) || !ValidPaid(paid))
                 {
                     throw Invalid("invalid production queue item");
                 }
@@ -993,14 +1044,25 @@ public sealed class World
         RequireCore(Neglects.Entities, mobile: false, structure: true);
         RequireCore(Manas.Entities, mobile: false, structure: false);
         RequireCore(Lifetimes.Entities, mobile: false, structure: false);
+        RequireCore(RepairProgresses.Entities, mobile: false, structure: false);
         int upgrades = Ruleset.Upgrades.Count;
         uint knownUpgrades = upgrades >= 32 ? uint.MaxValue : (1u << upgrades) - 1;
         ReadOnlySpan<EntityId> ids = UpgradeLevels.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
-            if ((UpgradeLevels.Components[i].Mask & ~knownUpgrades) != 0 || TypeOf(ids[i]).Traits.Producer is null)
+            uint mask = UpgradeLevels.Components[i].Mask;
+            ProducerDefinition? producer = TypeOf(ids[i]).Traits.Producer;
+            if ((mask & ~knownUpgrades) != 0 || producer is null)
             {
                 throw Invalid("invalid upgrade levels");
+            }
+
+            for (int u = 0; u < upgrades; u++)
+            {
+                if ((mask & (1u << u)) != 0 && (!producer.CanUpgrade((ushort)u) || Ruleset.Upgrades[u].IsConversion))
+                {
+                    throw Invalid("a level upgrade the type cannot buy");
+                }
             }
         }
 
@@ -1009,7 +1071,7 @@ public sealed class World
         {
             CaptureState c = CaptureStates.Components[i];
             if (TypeOf(ids[i]).Traits.Capturable is null || !HasPlayer(c.Player) || c.Player == Identities.Get(ids[i]).Owner || c.MilliPoints < 0
-                || c.IdleMs < 0 || c.Reserved0 != 0 || c.Reserved1 != 0 || c.Reserved2 != 0)
+                || c.IdleMs < 0 || c.Reserved0 != 0 || c.Reserved1 != 0 || c.Reserved2 != 0 || Constructions.Has(ids[i]))
             {
                 throw Invalid("invalid capture state");
             }
@@ -1019,7 +1081,7 @@ public sealed class World
         for (int i = 0; i < ids.Length; i++)
         {
             GateState g = Gates.Components[i];
-            if (TypeOf(ids[i]).Traits.Gate is null || Constructions.Has(ids[i]) || g.Open > 1 || g.Mode > GateMode.Automatic || g.Reserved0 != 0 || g.Reserved1 != 0)
+            if (TypeOf(ids[i]).Traits.Gate is null || Constructions.Has(ids[i]) || g.Open > 1 || g.Mode > GateMode.Automatic || g.Desired > 1 || g.Reserved != 0 || g.LastChangeTick > Tick.Value)
             {
                 throw Invalid("invalid gate state");
             }
@@ -1046,7 +1108,9 @@ public sealed class World
         ids = Manas.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
-            if (TypeOf(ids[i]).Traits.ManaPool is null || Manas.Components[i].MilliMana < 0)
+            Identity identity = Identities.Get(ids[i]);
+            if (TypeOf(ids[i]).Traits.ManaPool is not { } pool || Manas.Components[i].MilliMana < 0
+                || Manas.Components[i].MilliMana > (long)Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max) * 1000)
             {
                 throw Invalid("invalid mana");
             }
@@ -1055,11 +1119,24 @@ public sealed class World
         ids = Lifetimes.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
-            if (TypeOf(ids[i]).Traits.LifetimeMs <= 0 || Lifetimes.Components[i].ExpiresTick < Tick.Value)
+            int lifetime = TypeOf(ids[i]).Traits.LifetimeMs;
+            long latest = (long)Tick.Value + ((lifetime + Config.TickLengthMilliseconds - 1) / Config.TickLengthMilliseconds);
+            if (lifetime <= 0 || Lifetimes.Components[i].ExpiresTick < Tick.Value || Lifetimes.Components[i].ExpiresTick > latest)
             {
                 throw Invalid("invalid lifetime");
             }
         }
+
+        ids = RepairProgresses.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (!TypeOf(ids[i]).Traits.IsRepairable || RepairProgresses.Components[i].HealedHp < 0 || RepairProgresses.Components[i].Carry < 0)
+            {
+                throw Invalid("invalid repair state");
+            }
+        }
+
+        ValidateObstacleLayers();
 
         foreach (Footprint f in Footprints.Components)
         {
@@ -1070,6 +1147,67 @@ public sealed class World
         }
 
         static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
+    }
+
+    private static bool ValidPaid(PaidModifier paid) => paid.Add is >= -1_000_000 and <= 1_000_000 && paid.BasisPoints is >= -10_000 and <= int.MaxValue / 2;
+
+    // The blocker and bridge layers follow from the structures (ADR 0043): recompute them from the footprints, rotations,
+    // sites and gate states; the snapshot must hold at least the structures' blockers, exactly their decks and exactly
+    // their gate passages, so a restored world can never hold a phantom deck, a missing blocker or an open flag on a
+    // blocked gate passage (each would fail later, mid-tick).
+    private void ValidateObstacleLayers()
+    {
+        int w = Map.Width;
+        var blockers = new int[w * Map.Height];
+        var bridges = new int[blockers.Length];
+        var passage = new bool[blockers.Length];
+        ReadOnlySpan<EntityId> ids = Footprints.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Footprint f = Footprints.Components[i];
+            EntityTypeDefinition type = TypeOf(ids[i]);
+            int fw = f.Width(type.FootprintWidth, type.FootprintHeight);
+            int fh = f.Height(type.FootprintWidth, type.FootprintHeight);
+            if (!Map.ContainsTile(f.TileX, f.TileY) || !Map.ContainsTile(f.TileX + fw - 1, f.TileY + fh - 1))
+            {
+                throw new System.IO.InvalidDataException("Snapshot violates a world invariant: a footprint leaves the map.");
+            }
+
+            bool site = Constructions.Has(ids[i]);
+            bool open = !site && Gates.IndexOf(ids[i]) is >= 0 and var g && Gates.At(g).Open != 0;
+            for (int dy = 0; dy < fh; dy++)
+            {
+                for (int dx = 0; dx < fw; dx++)
+                {
+                    int tile = ((f.TileY + dy) * w) + f.TileX + dx;
+                    int k = f.MaskIndex(dx, dy, type.FootprintWidth);
+                    if (type.Traits.IsBridge)
+                    {
+                        bridges[tile] += site ? 0 : 1;
+                    }
+                    else if (type.Traits.Gate is { } gate && gate.Passage[k] != 0)
+                    {
+                        passage[tile] = true;
+                    }
+
+                    if (!type.Traits.IsBridge && type.Footprint[k] != 0 && !(open && type.Traits.Gate!.Passage[k] != 0))
+                    {
+                        blockers[tile]++;
+                    }
+                }
+            }
+        }
+
+        ReadOnlySpan<ushort> actualBlockers = Map.Blockers;
+        ReadOnlySpan<byte> actualBridges = Map.Bridges;
+        for (int t = 0; t < blockers.Length; t++)
+        {
+            // Structures' blockers must be there (plain map obstacles may add more); decks and gate passages exactly.
+            if (actualBlockers[t] < blockers[t] || bridges[t] != actualBridges[t] || (passage[t] && blockers[t] != actualBlockers[t]))
+            {
+                throw new System.IO.InvalidDataException($"Snapshot violates a world invariant: the obstacle layers at tile ({t % w}, {t / w}) do not match the structures.");
+            }
+        }
     }
 
     // Workers, sites and queues spend or earn a player's stockpile: their owner must be a player slot (never Nature).
@@ -1125,7 +1263,7 @@ public sealed class World
 
         if (t.Gate is not null)
         {
-            Gates.Set(entity, new GateState { Mode = GateMode.Automatic });
+            Gates.Set(entity, new GateState { Mode = GateMode.Automatic, LastChangeTick = int.MinValue / 2 });
         }
 
         if (t.Decay is not null)

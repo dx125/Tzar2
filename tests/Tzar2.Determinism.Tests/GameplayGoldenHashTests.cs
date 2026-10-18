@@ -18,10 +18,10 @@ namespace Tzar2.Determinism.Tests;
 public class GameplayGoldenHashTests(ITestOutputHelper output)
 {
     // Changing the rules compiler, the classic YAML, the synthetic tables, a gameplay system, the scenario or the hashed
-    // layout changes these values on purpose: update them in the same commit and say why. History: (M2 part C) first; (M3 A, ADRs 0040-0044) every unit, building, technology and upgrade imported; research, upgrades, capture, repair, fire, gates, bridges and the new stores; the bot researches castle technologies; then resistanceScale 100 -> 1000 (owner decision, UNK-08): only the ruleset hash changed, no hit on a building happens in these 1,600 ticks.
-    private const ulong GoldenRulesetHash = 0x9892A5C9AA3B592EUL;
-    private const ulong GoldenHashStream = 0x1585F386DAC3B94BUL;
-    private const ulong GoldenFinalFullHash = 0x93F6F2D1928AFD4AUL;
+    // layout changes these values on purpose: update them in the same commit and say why. History: (M2 part C) first; (M3 A, ADRs 0040-0044) every unit, building, technology and upgrade imported; research, upgrades, capture, repair, fire, gates, bridges and the new stores; the bot researches castle technologies; then resistanceScale 100 -> 1000 (owner decision, UNK-08): only the ruleset hash changed, no hit on a building happens in these 1,600 ticks; then (review of PR #21) paid, crew-limited repair, rate-limited gates, paid refunds, and a bot that attacks and captures houses, repairs, builds a gate, drags a wall and bridges a river (the map gains a river per base).
+    private const ulong GoldenRulesetHash = 0xBF28E77D177AB6ABUL;
+    private const ulong GoldenHashStream = 0xC872CDC357B5AEEAUL;
+    private const ulong GoldenFinalFullHash = 0x2D2D3341E01243F0UL;
 
     private const int Ticks = 1600;
 
@@ -52,6 +52,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
         ulong final = scenario.Simulation.ComputeFullHash();
         output.WriteLine($"workers={workers} runtime={Environment.Version} ruleset={ruleset.ContentHash:X16} stream={stream.GetCurrentHash():X16} final={final:X16} {scenario.Describe()}");
         Assert.True(scenario.Delivered > 0 && scenario.Kills > 0 && scenario.Trained > 0 && scenario.Built > 0 && scenario.Researched > 0, scenario.Describe());
+        Assert.True(scenario.M3Events is { Captured: > 0, Fires: > 0, Repaired: > 0 } && scenario.Simulation.World.Gates.Count > 0, scenario.Describe());
         Assert.Equal(GoldenRulesetHash, ruleset.ContentHash);
         Assert.Equal(GoldenHashStream, stream.GetCurrentHash());
         Assert.Equal(GoldenFinalFullHash, final);

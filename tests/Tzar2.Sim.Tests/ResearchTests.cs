@@ -72,14 +72,14 @@ public class ResearchTests
         EntityId smith = OfType(d.World, "euro.blacksmith").First();
         EntityId barracks = OfType(d.World, "euro.barrack").Single();
 
-        // Halberd needs Temper Iron (euro tree); pikemen need Halberd (table).
+        // Halberd needs Scale Armor (synthetic euro tree); pikemen need Halberd (table).
         d.Order(0, CommandKind.Research, [smith], arg0: Tech("te_halberd"));
         d.Order(0, CommandKind.Train, [barracks], arg0: Id("euro.pikeman"), arg1: 1);
         d.Step();
         Assert.Equal([CommandRejection.RequirementNotMet, CommandRejection.RequirementNotMet], d.Rejections());
 
-        d.Order(0, CommandKind.Research, [smith], arg0: Tech("te_temperiron"));
-        d.RunUntil(() => d.World.Players[0].HasTechnology(Tech("te_temperiron")), 3000);
+        d.Order(0, CommandKind.Research, [smith], arg0: Tech("te_scalearmor"));
+        d.RunUntil(() => d.World.Players[0].HasTechnology(Tech("te_scalearmor")), 3000);
         d.Order(0, CommandKind.Research, [smith], arg0: Tech("te_halberd"));
         d.RunUntil(() => d.World.Players[0].HasTechnology(Tech("te_halberd")), 3000);
         d.Order(0, CommandKind.Train, [barracks], arg0: Id("euro.pikeman"), arg1: 1);

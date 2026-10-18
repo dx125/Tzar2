@@ -45,7 +45,8 @@ decision: values from the tables; anything only measurable in the running game i
   `World.SetCivilization` for the lobby). `PlayerStats` (derived, not hashed) holds per player × stat × type the summed
   adds and basis points, rebuilt when a research completes and after every restore. Systems read effective values:
   combat (attack, defence, resistance, range, sight), gathering (rate per node type, capacity), construction and repair
-  (build rate), costs (training, construction; refunds use the current price), population (houses), maximum hit points
+  (build rate), costs (training, construction; the cost modifier paid is stored with the queue slot or the site, so a refund returns
+  what was paid), population (houses), maximum hit points
   (existing entities keep the damage they took), mana.
 * **Requirements per civilization.** A requirement set applies when its civilization is the *actor's*: the builder,
   the producer or the researching building — its type's civilization, or its owner's for common types (towers, walls,
@@ -56,10 +57,11 @@ decision: values from the tables; anything only measurable in the running game i
   and never queued twice anywhere (the 1.10 lagged-MP fix). `Upgrade` (13) queues per listed entity; one conversion at a
   time, levels in order (`after`). Both are paid when queued; `Cancel` refunds `researchRefundPercent` (UNVERIFIED
   100%). Completion: the technology bit, the modifier tables and the hit points; a conversion changes the type in place
-  (same footprint size, checked by the ruleset; blocked tiles, armament and queue follow; queued items the new type
-  cannot hold are refunded); a level sets a bit in `UpgradeLevels`, whose effects apply to that entity only.
-* **Order gates** (`TECHTREE [orders]`: spells, loans, bribes...) compile into `Ruleset.OrderGates` for the systems of
-  GAME-11/14 to check.
+  (the ruleset requires the same footprint size and the same stateful traits — gate, fire, capture, decay, mana,
+  lifetime, bridge, resource, repair, workers — so every store stays valid; blocked tiles, armament, queue and levels
+  follow; queued items the new type cannot hold are refunded what was paid); a level sets a bit in `UpgradeLevels`, whose effects apply to that entity only.
+* **Order gates** (`TECHTREE [orders]`: spells, loans, bribes...) compile into `Ruleset.OrderGates`;
+  `Ruleset.OrderTechnology(order, civ)` looks one up by binary search for the systems of GAME-11/14.
 
 ## Alternatives considered
 

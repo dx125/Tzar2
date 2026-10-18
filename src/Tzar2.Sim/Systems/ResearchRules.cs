@@ -61,14 +61,19 @@ internal static class ResearchRules
     public static int CostOf(World world, byte player, EntityTypeDefinition type, int resource)
         => world.Stats.Apply(player, ModifierStat.Cost, type.Id, type.Traits.Cost[resource]);
 
-    /// <summary>Pays the effective cost of <paramref name="type"/>; false (nothing paid) if the player cannot afford it.</summary>
-    public static bool TryPayFor(World world, byte player, EntityTypeDefinition type)
+    /// <summary>
+    /// Pays the effective cost of <paramref name="type"/>; false (nothing paid) if the player cannot afford it.
+    /// <paramref name="paid"/> is the cost modifier used, so a refund returns what was paid (ADR 0040).
+    /// </summary>
+    public static bool TryPayFor(World world, byte player, EntityTypeDefinition type, out PaidModifier paid)
     {
+        (int add, int bp) = world.Stats.Modifier(player, ModifierStat.Cost, type.Id);
+        paid = new PaidModifier { Add = add, BasisPoints = bp };
         ref PlayerState state = ref world.Players[player];
         ImmutableArray<int> cost = type.Traits.Cost;
         for (int r = 0; r < cost.Length; r++)
         {
-            if (state.Resources[r] < CostOf(world, player, type, r))
+            if (state.Resources[r] < PlayerStats.Combine(cost[r], add, bp))
             {
                 return false;
             }
@@ -76,19 +81,20 @@ internal static class ResearchRules
 
         for (int r = 0; r < cost.Length; r++)
         {
-            state.Resources[r] -= CostOf(world, player, type, r);
+            state.Resources[r] -= PlayerStats.Combine(cost[r], add, bp);
         }
 
         return true;
     }
 
-    /// <summary>Refunds a share of the effective cost of <paramref name="type"/>.</summary>
-    public static void RefundFor(World world, byte player, EntityTypeDefinition type, int basisPoints)
+    /// <summary>Refunds a share of what was paid for <paramref name="type"/> with <paramref name="paid"/>.</summary>
+    public static void RefundFor(World world, byte player, EntityTypeDefinition type, PaidModifier paid, int basisPoints)
     {
         ref PlayerState state = ref world.Players[player];
         for (int r = 0; r < type.Traits.Cost.Length; r++)
         {
-            state.Resources[r] = (int)Math.Min(state.Resources[r] + ((long)CostOf(world, player, type, r) * basisPoints / 10_000), int.MaxValue);
+            long amount = PlayerStats.Combine(type.Traits.Cost[r], paid.Add, paid.BasisPoints);
+            state.Resources[r] = (int)Math.Min(state.Resources[r] + (amount * basisPoints / 10_000), int.MaxValue);
         }
     }
 
@@ -307,19 +313,27 @@ internal static class ResearchRules
             ushort item = q.Queue[k];
             if (IsValidQueueItem(world, producer, item))
             {
+                q.Paid[write] = q.Paid[k];
                 q.Queue[write++] = item;
                 continue;
             }
 
-            ImmutableArray<int> cost = QueueItems.IsResearch(item) ? world.Ruleset.Technologies[QueueItems.Id(item)].Cost
-                : QueueItems.IsUpgrade(item) ? world.Ruleset.Upgrades[QueueItems.Id(item)].Cost
-                : world.Ruleset.EntityTypes[item].Traits.Cost;
-            Refund(world, owner, cost, 10_000);
+            GameplaySettings g = world.Ruleset.Gameplay;
+            if (QueueItems.IsResearch(item) || QueueItems.IsUpgrade(item))
+            {
+                ImmutableArray<int> cost = QueueItems.IsResearch(item) ? world.Ruleset.Technologies[QueueItems.Id(item)].Cost : world.Ruleset.Upgrades[QueueItems.Id(item)].Cost;
+                Refund(world, owner, cost, g.ResearchRefundBasisPoints);
+            }
+            else
+            {
+                RefundFor(world, owner, world.Ruleset.EntityTypes[item], q.Paid[k], g.ProductionRefundBasisPoints);
+            }
         }
 
         for (int k = write; k < q.Count; k++)
         {
             q.Queue[k] = 0;
+            q.Paid[k] = default;
         }
 
         if (write == 0 || q.Count != write)

@@ -125,6 +125,11 @@ public class ConstructionM3Tests
         d.Order(0, CommandKind.SetGate, [gate], arg0: 1);
         d.Step();
         Assert.Equal((1, GateMode.Manual), (d.World.Gates.Get(gate).Open, d.World.Gates.Get(gate).Mode));
+        d.Order(0, CommandKind.SetGate, [gate], arg0: 0); // within 1 s of the last change: rejected (owner decision)
+        d.Step();
+        Assert.Equal(CommandRejection.GateBusy, d.Rejections().Last());
+        Assert.Equal(1, d.World.Gates.Get(gate).Open);
+        d.RunUntil(() => false, 20);
         d.Order(0, CommandKind.SetGate, [gate], arg0: 0);
         d.Step();
         Assert.Equal(0, d.World.Gates.Get(gate).Open);

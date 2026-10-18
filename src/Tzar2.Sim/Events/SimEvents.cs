@@ -70,11 +70,17 @@ public enum SimEventKind : ushort
     /// <summary>A repair brought an entity back to full health (Entity, Arg = type id).</summary>
     Repaired = 19,
 
-    /// <summary>A neglected field decayed away, or a building burned down (Entity, Arg = type id).</summary>
+    /// <summary>A neglected field decayed away (Entity, Arg = type id).</summary>
     Decayed = 20,
 
     /// <summary>A building caught fire (Entity, Arg = type id).</summary>
     FireStarted = 21,
+
+    /// <summary>A building burned down (Entity, Arg = type id; the ruin follows).</summary>
+    BurnedDown = 22,
+
+    /// <summary>A burning building's fire went out (repaired above the threshold; Entity, Arg = type id).</summary>
+    FireExtinguished = 23,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>
@@ -118,6 +124,9 @@ public enum CommandRejection
 
     /// <summary>The castle and guilds are deleted only with Shift + Delete (GAME-04).</summary>
     ShiftDeleteRequired = 13,
+
+    /// <summary>Every listed gate changed less than <c>gateChangeIntervalMs</c> ago (GAME-03).</summary>
+    GateBusy = 14,
 }
 
 /// <summary>One simulation event. Output only: events are not part of the state, hashes or snapshots.</summary>

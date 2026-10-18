@@ -15,13 +15,14 @@ carry and validate (ADR 0019).
 
 * **Commands** (wire values appended): `Research` 12, `Upgrade` 13, `Repair` 14, `Capture` 15, `BuildWall` 16,
   `SetGate` 17; `Build` Arg1 = rotation; `SetRally` Arg1 = `RallyMode` (0 move, 1 default action on Target, 2
-  move-advance); `Delete` honours Shift for protected types. Rejections `AlreadyResearched` 12, `ShiftDeleteRequired` 13.
-  Events `ResearchCompleted` 16, `UpgradeCompleted` 17, `Captured` 18, `Repaired` 19, `Decayed` 20, `FireStarted` 21.
+  move-advance); `Delete` honours Shift for protected types. Rejections `AlreadyResearched` 12, `ShiftDeleteRequired` 13, `GateBusy` 14.
+  Events `ResearchCompleted` 16, `UpgradeCompleted` 17, `Captured` 18, `Repaired` 19, `Decayed` 20 (fields),
+  `FireStarted` 21, `BurnedDown` 22, `FireExtinguished` 23.
 * **Rally:** a unit leaving with mode 1 harvests the rally target if it is a node it can gather, helps build it if it
   is an own site, attacks it if it is an enemy, else moves; mode 2 moves with move-advance.
 * **State** (stores appended in this order): `game.upgrades`, `game.capture`, `game.gate`, `game.burning`,
-  `game.neglect`, `game.mana`, `game.lifetime`; `ResourceStock.RegenMs`, `Construction.CarryBasisPoints`,
-  `Production.RallyTarget/RallyMode`, `Footprint.Rotated`; `PlayerState.Civilization/Technologies`; the map's bridge
+  `game.neglect`, `game.mana`, `game.lifetime`, `game.repair`; `ResourceStock.RegenMs`, `Construction.CarryBasisPoints/Paid`,
+  `Production.RallyTarget/RallyMode/Paid`, `GateState.Desired/LastChangeTick`, `Footprint.Rotated`; `PlayerState.Civilization/Technologies`; the map's bridge
   layer. Every value is range-checked on restore and each store requires the matching trait; the modifier tables are
   rebuilt. Snapshot format 5, hashed layout 4, ruleset hash version 4.
 * **Systems:** step 10 `StructureSystem` (gates, fire, mana), step 12 `CaptureSystem`; step 17 removes expired
@@ -32,10 +33,13 @@ carry and validate (ADR 0019).
   client's autoplay). Still UNVERIFIED until the damage grid capture. Capture difficulty does not use the scale: it
   uses RESISTANCE itself (after Fanaticism/Buddhism) plus the EMIT influence (ADR 0044). A scenario test has ten
   footmen destroy an enemy barracks in bounded time.
-* **Goldens and benchmark.** The gameplay bot now also researches its castle's technologies one after another.
-  Golden values re-pinned (reasons in the tests): gameplay ruleset `9892A5C9AA3B592E` (after the resistance-scale change below), stream `1585F386DAC3B94B`, final
-  `93F6F2D1928AFD4A`; CI gameplay bench `E7B122B9022986E5`; synthetic movement `B435A37AFB3A1448` /
-  `5A3E1509E520C33D` (layout only, behaviour unchanged).
+* **Goldens and benchmark.** The gameplay bot now also researches its castle's technologies one after another and
+  (after the review) attacks enemy houses with soldiers (fire, ruins), captures houses, repairs damaged buildings, builds
+  a turned gate, drags a wall and bridges a river beside its base, so the cross-OS golden and hash-stream CI cover
+  those systems.
+  Golden values re-pinned (reasons in the tests): gameplay ruleset `BF28E77D177AB6AB`, stream `C872CDC357B5AEEA`,
+  final `2D2D3341E01243F0`; CI gameplay bench `760986D3F5B6E96C`; synthetic movement `CCD85F529731EEC1` /
+  `618722F6DFB2231D` (layout only, behaviour unchanged).
 
 Measured (Apple M5, macOS arm64, Release, .NET 10, shared machine with other agents running, ±30%):
 

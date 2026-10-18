@@ -81,6 +81,7 @@ public class M3SnapshotTests
     [
         "unknown technology bit", "civilization", "gate open 2", "capture by the owner", "fire on a field", "upgrade bit", "turned 2",
         "lifetime expired", "research item at the wrong building", "regrowth timer", "construction carry",
+        "repair state on a cow", "mana above the pool", "phantom bridge deck", "paid modifier on an empty slot",
     ];
 
     [Theory]
@@ -112,6 +113,10 @@ public class M3SnapshotTests
                 world.Productions.Get(castle).Queue[0] = QueueItems.Research(Classic.TechnologyId("te_temperiron"));
                 break;
             case "regrowth timer": world.ResourceStocks.Get(cow).RegenMs = 999_999; break;
+            case "repair state on a cow": world.RepairProgresses.Set(cow, default); break;
+            case "mana above the pool": world.Manas.Get(OfType(world, "euro.mage").Single()).MilliMana = 1_000_000; break;
+            case "phantom bridge deck": world.Map.AddBridge(3, 11); break;
+            case "paid modifier on an empty slot": world.Productions.Get(castle).Paid[5] = new PaidModifier { Add = 3 }; break;
             case "construction carry":
                 EntityId site = world.PlaceStructure(Id("euro.house"), 0, 26, 9, underConstruction: true);
                 world.Constructions.Get(site).CarryBasisPoints = 10_000;

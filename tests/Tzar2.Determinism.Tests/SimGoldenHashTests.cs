@@ -28,9 +28,10 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // a resource array and population (the hashed layout); and movers held by an enemy now side-step around it (owner
     // decision, ADR 0025 amendment), which changes this four-player scenario's movement. Its units have no gameplay
     // traits otherwise -> (M3 A, ADRs 0040-0045) B435A37AFB3A1448 / 5A3E1509E520C33D: the M3 stores, the bridge layer,
-    // PlayerState technologies and civilization join the hashed layout; behaviour unchanged.
-    private const ulong GoldenFinalFullHash = 0x5A3E1509E520C33DUL;
-    private const ulong GoldenHashStream = 0xB435A37AFB3A1448UL;
+    // PlayerState technologies and civilization join the hashed layout; behaviour unchanged -> (PR #21 review)
+    // CCD85F529731EEC1 / 618722F6DFB2231D: GateState, Production and Construction grew (paid costs), a repair store.
+    private const ulong GoldenFinalFullHash = 0x618722F6DFB2231DUL;
+    private const ulong GoldenHashStream = 0xCCD85F529731EEC1UL;
 
     private const int Ticks = 300;
 

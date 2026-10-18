@@ -42,14 +42,16 @@ Shift + Delete; what each technology does (not how much).
 | Field builder farms it | after completing a field | YAML `^class.field.DropOff.autoGather` | — | observation |
 | Peasants gather iron | 1 s per unit, like other resources | YAML `^class.peon.Harvester.gatherMs.iron` | UNK-14/17 | — |
 | Repair speed | a full repair by one peasant takes the build time | YAML `gameplay.repairTimePercent` | UNK-18 | repair captures |
-| Repair cost | free | code (`ProductionSystem`) | UNK-18 | stockpile during a repair |
+| Repair crews | each further repairer adds 25 points less (100%, 75%, 50%, 25%, then 0; owner decision) | YAML `gameplay.repairerFalloffPercent` | UNK-18 | repair captures with 1-8 peasants |
+| Repair cost | a full repair costs 50% of the construction cost, pro rata; pauses when unpaid (owner decision; the strategy guide only says repairing under attack works and repairers get hurt) | YAML `gameplay.repairCostPercent` | UNK-18 | stockpile during a repair |
 | Fire threshold | below 50% of the hit points | YAML `gameplay.burnThresholdPercent` | UNK-42 | damage a building step by step |
 | Fire damage | 60 HP per minute | YAML `gameplay.burnDamagePerMinute` | UNK-42 | time a burning building |
 | Burning types | every building but fields, walls, gates and bridges | YAML (`Burnable`) | UNK-42 | observation |
 | Ruin lifetime | the corpse decal lifetime (120 s) | code (`World.Kill`) | — | observation |
 | Wall drag | at most 64 segments; builders move on within 6 tiles | YAML `gameplay.maxWallSegments`, `wallContinueRadiusTiles` | — | editor/game captures |
 | Gate footprint | 3 × 1 with the middle tile as the passage | YAML `^class.gate_*` | UNK-02 | editor placement |
-| Gate opening | automatic by default; opens for the owner's units within 32 px | YAML `gameplay.gateOpenReachPx` | — | observation |
+| Gate opening | automatic by default; opens for the owner's units within 32 px, closes when none is within 64 px | YAML `gameplay.gateOpenReachPx`, `gateCloseReachPx` | — | observation |
+| Gate change rate | at most one change per gate per second; at most 16 changes per tick (owner decision: bounded work) | YAML `gameplay.gateChangeIntervalMs`, `maxGateChangesPerTick` | — | observation |
 | Bridge footprint | the sprite box (`bridge_horz`), ends on land | import + code | UNK-02 | editor placement |
 | Harbor water | within 2 tiles of the footprint | code (`GameplayCommands.CoastReachTiles`) | UNK-02 | editor placement |
 | Shore reach | +1 tile for boats at buildings and peasants at ships | code (`Interaction.WorkerReaches`) | UNK-11 | captures (and the terrain-set conversion) |
@@ -71,7 +73,7 @@ Shift + Delete; what each technology does (not how much).
 | A player's civilization | the first own object's at match start, else the first non-common one (until the lobby sets it) | `World.AssignCivilizations` | — |
 | Research once | a technology is never queued twice for a player (1.10 fix) | `GameplayCommands.Research` | — |
 | Research site | the first listed building that can research it now | `GameplayCommands.Research` | — |
-| Costs after a technology | refunds use the current price | `ResearchRules` | — |
+| Costs after a technology | refunds return what was paid (the cost modifier is stored per queue slot and site) | `ResearchRules` | — |
 | Conversion keeps damage | the new type's maximum minus the damage taken | `World.ConvertType` | — |
 | One conversion at a time | per entity | `GameplayCommands.Upgrade` | — |
 | Butchering | an explicit attack on an own cow | `CombatSystem`, `GameplayCommands.Attack` | — |
