@@ -845,7 +845,19 @@ public sealed class CombatSystem : ISimSystem
                 {
                     int dense = _cellItems[k];
                     EntityId candidate = ids[dense];
-                    if ((identities[dense].Owner == owner && !confused && !world.IsConfused(candidate)) || candidate == scanner)
+                    if (candidate == scanner)
+                    {
+                        continue;
+                    }
+
+                    // Nearest first: the lookups below only for a candidate that would become the best (same choice).
+                    long d = Interaction.EdgeDistance(world, position, radius, candidate);
+                    if (d > sight || d < minRange || d > bestDistance || (d == bestDistance && candidate.Index > best.Index))
+                    {
+                        continue;
+                    }
+
+                    if (identities[dense].Owner == owner && !confused && !world.IsConfused(candidate))
                     {
                         continue;
                     }
@@ -862,12 +874,8 @@ public sealed class CombatSystem : ISimSystem
                         continue;
                     }
 
-                    long d = Interaction.EdgeDistance(world, position, radius, candidate);
-                    if (d <= sight && d >= minRange && (d < bestDistance || (d == bestDistance && candidate.Index < best.Index)))
-                    {
-                        bestDistance = d;
-                        best = candidate;
-                    }
+                    bestDistance = d;
+                    best = candidate;
                 }
             }
         }
