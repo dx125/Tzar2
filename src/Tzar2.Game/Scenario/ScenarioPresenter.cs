@@ -211,13 +211,41 @@ public sealed class ScenarioPresenter
         return info.Title.Length > 0 ? info.Title : info.Name;
     }
 
+    private bool SameQuests(TriggerState s)
+    {
+        if (_questIds.Length != s.Quests.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < _questIds.Length; i++)
+        {
+            if (_questIds[i] != s.Quests[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private int[] _questIds = [];
+
     // Rebuilt only when the quests or the offered phrases change (the view is immutable and shared with the frames).
     private ScenarioView Build()
     {
         TriggerState s = _triggers.State;
-        int questKey = s.Quests.Count == 0 ? 0 : HashCode.Combine(s.Quests.Count, s.Quests[0], s.Quests[^1]);
+        // Every entry counts (review of #32): a removal and an addition in one pass keep the count.
+        var key = new HashCode();
+        key.Add(s.Quests.Count);
+        foreach (int q in s.Quests)
+        {
+            key.Add(q);
+        }
+
+        int questKey = key.ToHashCode();
         bool rebuilt = false;
-        if (questKey != _questVersion || _quests.Length != s.Quests.Count)
+        if (questKey != _questVersion || !SameQuests(s))
         {
             var quests = ImmutableArray.CreateBuilder<QuestEntry>(s.Quests.Count);
             foreach (int q in s.Quests)
@@ -229,6 +257,7 @@ public sealed class ScenarioPresenter
             }
 
             _quests = quests.ToImmutable();
+            _questIds = [.. s.Quests];
             _questVersion = questKey;
             rebuilt = true;
         }

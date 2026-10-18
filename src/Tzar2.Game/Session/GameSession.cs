@@ -188,6 +188,10 @@ public sealed class GameSession : IDisposable
     /// Single player pauses while a conversation waits for the player's choice (Appendix C.8; ADR 0131): the sim thread
     /// holds the clock until a reply is submitted, then runs the tick that carries it.
     /// </summary>
+    /// <remarks>
+    /// Two volatile flags read without a common lock: the worst case of a stale read is one more 5 ms sleep of the sim
+    /// thread before the reply's tick (review of #32; accepted).
+    /// </remarks>
     public bool HoldsForScenario => _holdForScenario && !_replyQueued;
 
     private volatile bool _holdForScenario;
