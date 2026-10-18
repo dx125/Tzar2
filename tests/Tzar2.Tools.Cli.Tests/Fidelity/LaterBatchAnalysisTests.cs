@@ -12,7 +12,12 @@ namespace Tzar2.Tools.Cli.Tests.Fidelity;
 /// <summary>Synthetic truths for the analyses and suite checks of batches E-I (ADR 0113).</summary>
 public class LaterBatchAnalysisTests
 {
-    private static readonly EngineModel Engine = EngineModel.Load(OriginPaths.RepositoryRoot);
+    private static readonly Lazy<EngineModel> LazyEngine = new(() => EngineModel.Load(OriginPaths.RepositoryRoot), System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private static EngineModel Engine => LazyEngine.Value;
+
+    /// <summary>A complete <c>sources</c> entry for a hand-read value (ADR 0113).</summary>
+    private static string Src(string frame) => "{session: capture-test, trial: experience/main, frame: " + frame + ", read_by: test, read_utc: 2026-10-18}";
 
     [Fact]
     public void Counter_phases_report_steps_and_rates()
@@ -110,6 +115,10 @@ public class LaterBatchAnalysisTests
                   xp_after_kills: [0, {I(perKill)}, {I(2 * perKill)}, {I(3 * perKill)}]
                   attack_per_level: {Engine.Ruleset.Combat.AttackPerLevel}
                   defence_per_level: {I(0.5 * Engine.Ruleset.Combat.DefenceHalvesPerLevel)}
+                  sources:
+                    xp_after_kills: {Src("window/panel-0.bmp … window/panel-3.bmp")}
+                    attack_per_level: {Src("window/panel-2.bmp")}
+                    defence_per_level: {Src("window/panel-2.bmp")}
               score:
                 status: ok
                 facts:
@@ -118,6 +127,12 @@ public class LaterBatchAnalysisTests
                   built_value: 150
                   technologies: 0
                   total: 15
+                  sources:
+                    gathered: {Src("window/end-1.bmp")}
+                    killed_value: {Src("window/end-1.bmp")}
+                    built_value: {Src("window/end-1.bmp")}
+                    technologies: {Src("window/end-1.bmp")}
+                    total: {Src("window/end-1.bmp")}
             """);
 
         var results = FidelitySuite.Evaluate(new FactsIndex(dir.Path), Engine).ToDictionary(r => r.Check.Id, r => r.Result);
@@ -166,6 +181,26 @@ public class LaterBatchAnalysisTests
 
         Assert.Equal(CheckStatus.Pass, Evaluate(spacing));
         Assert.Equal(CheckStatus.Fail, Evaluate(spacing * 2));
+    }
+
+    [Fact]
+    public void Hand_read_values_without_full_provenance_are_ignored()
+    {
+        using var dir = new TempDir();
+        File.WriteAllText(Path.Combine(dir.Path, "manual.yaml"), $"""
+            schema: tzar2-fidelity-facts/1
+            scenario: manual
+            analyses:
+              setup-screen:
+                status: ok
+                facts:
+                  population_limit_default: 200
+                  sources:
+                    population_limit_default: {"{"}session: capture-test, trial: smoke/plain, frame: window/setup.bmp, read_utc: 2026-10-18{"}"}
+            """);
+        var facts = new FactsIndex(dir.Path);
+        Assert.Equal(["population_limit_default: no read_by"], ManualProvenance.Missing(facts.Ok("manual", "setup-screen")!));
+        Assert.Equal(CheckStatus.Pending, FidelitySuite.Evaluate(facts, Engine).Single(r => r.Check.Id == "m2.population-limit").Result.Status);
     }
 
     [Fact]

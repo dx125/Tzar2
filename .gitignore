@@ -41,3 +41,9 @@ __pycache__/
 capture-*.zip
 /tests/fidelity/local-captures/
 /Tzar2Capture/
+# Random maps the operator generates in the original's editor (ADR 0113) are original output: keep them local.
+# No .wmp/.wcm file is tracked anywhere (synthetic map fixtures are built in memory by the tests); the REQ-LEGAL-01
+# guard (tools/ci/check-no-original-files.sh) rejects these extensions as well.
+/tests/fidelity/local-maps/
+*.wmp
+*.wcm

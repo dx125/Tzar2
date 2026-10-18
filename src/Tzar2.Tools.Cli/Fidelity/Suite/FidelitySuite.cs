@@ -489,7 +489,7 @@ internal static class FidelitySuite
 
     private static CheckResult PopulationLimit(FactsIndex f, EngineModel e)
     {
-        if (f.Ok("manual", "setup-screen") is not { } facts || FactsIndex.Number(facts.Get("population_limit_default")) is not { } measured)
+        if (Manual(f, "setup-screen") is not { } facts || FactsIndex.Number(facts.Get("population_limit_default")) is not { } measured)
         {
             return Pending("no setup-screen reading");
         }
@@ -724,7 +724,9 @@ internal static class FidelitySuite
         return Verdict(Within(measured, expected, 0.15), $"{measured:0} HP/min by one peasant, engine {expected:0} HP/min (lumber mill, 800 HP, 30 s)");
     }
 
-    private static YamlMapping? Manual(FactsIndex f, string analysis) => f.Ok("manual", analysis);
+    /// <summary>A hand-read block of <c>manual.yaml</c>, only when every value in it has full provenance.</summary>
+    private static YamlMapping? Manual(FactsIndex f, string analysis) =>
+        f.Ok("manual", analysis) is { } facts && ManualProvenance.Missing(facts).Count == 0 ? facts : null;
 
     private static CheckResult XpGain(FactsIndex f, EngineModel e)
     {

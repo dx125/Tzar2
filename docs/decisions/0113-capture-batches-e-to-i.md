@@ -40,7 +40,10 @@ E–I files are sent only after batch A has come back and they have been adjuste
 3. **Manual reading.** Experience, level effects and the score have no known memory address and no capturable number
    other than the panel or the end screen. The scenarios capture those screens. The values are read by hand into
    `tests/fidelity/facts/manual.yaml` (`experience`: `xp_after_kills`, `attack_per_level`, `defence_per_level`; `score`:
-   `gathered`, `killed_value`, `built_value`, `technologies`, `total`), with provenance.
+   `gathered`, `killed_value`, `built_value`, `technologies`, `total`). **Every value needs provenance** under the
+   block's `sources`: session id, trial, frame file (a list value names its frames in order, e.g. `window/panel-0.bmp`
+   … `window/panel-12.bmp`), who read it and the UTC date. A value without all five is ignored by the suite and fails
+   `ManualFactsProvenanceTests`.
 4. **Engine side** of the 19 new checks: engine rules-file values. These are `gameplay.*` and `world.*`, plus
    `^class.castle` Holder, `^class.field` Decay, `spell_lightning`, `te_feudalism`, read by path. The compiled
    synthetic ruleset (combat settings, the peasant's Harvester) is also used. Combat outcomes use the engine's
@@ -48,6 +51,8 @@ E–I files are sent only after batch A has come back and they have been adjuste
    within one tick is a draw. Mapgen statistics are compared with three maps of our own generator per type.
 5. **AI script semantics stays pending** by owner decision (it counts as not passing). Measuring it would take 26 test
    scripts run by the original's AI. It is not moved out of §22.3.
+6. **Original-made maps stay local:** `tests/fidelity/local-maps/` and every `*.wmp` / `*.wcm` are git-ignored, and the
+   REQ-LEGAL-01 guard rejects these extensions in commits.
 
 ## Consequences
 

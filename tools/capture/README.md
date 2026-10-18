@@ -104,7 +104,8 @@ The random-map statistics (TDD RE-10) come from maps the original itself generat
 6. Put the 20 `.wmp` files in one folder, zip it and send it with a note of the check boxes that were on.
    The maps are made by the original and stay private like the capture zips.
 
-We then run `t2 fidelity maps <folder>`, which writes only numbers (castle spacing, gold, stone and trees per kingdom)
+We keep them in the git-ignored `tests/fidelity/local-maps/` (`*.wmp` is ignored everywhere, and the REQ-LEGAL-01
+guard rejects the extension) and run `t2 fidelity maps tests/fidelity/local-maps`, which writes only numbers (castle spacing, gold, stone and trees per kingdom)
 into `tests/fidelity/facts/random-maps.yaml`.
 
 ## Windows 11 notes (first session, 2026-10-18, Windows 11 25H2, GOG v1.10)
