@@ -62,14 +62,10 @@ public sealed partial class LegacyTriggerSystem
             case ObjectExistEvent e:
                 return Holds(e.Objects, static _ => true);
             case ObjectsEnterHolderEvent e:
-            {
-                EntityId holder = MapEntity(e.HolderIndex);
-                return holder != EntityId.None && Holds(e.Objects, x => _world.Helds.Has(x) && _world.Helds.Get(x).Holder == holder.Value);
-            }
+                return Holds(e.Objects, x => _world.Helds.Has(x) && IsHolder(e.HolderIndex, e.Holders, EntityId.FromValue(_world.Helds.Get(x).Holder)));
 
             case ObjectLeaveHolderEvent { Objects: NamedObjects named } e:
             {
-                EntityId holder = MapEntity(e.HolderIndex);
                 bool all = named.Quantifier == Quantifier.All;
                 if (named.ObjectIndices.Length == 0)
                 {
@@ -79,7 +75,8 @@ public sealed partial class LegacyTriggerSystem
                 for (int k = 0; k < named.ObjectIndices.Length; k++)
                 {
                     EntityId unit = MapEntity(named.ObjectIndices[k]);
-                    bool left = memory[k] != 0 && unit != EntityId.None && !(holder != EntityId.None && _world.Helds.Has(unit) && _world.Helds.Get(unit).Holder == holder.Value);
+                    bool inside = unit != EntityId.None && _world.Helds.Has(unit) && IsHolder(e.HolderIndex, e.Holders, EntityId.FromValue(_world.Helds.Get(unit).Holder));
+                    bool left = memory[k] != 0 && unit != EntityId.None && !inside;
                     if (all != left)
                     {
                         return left;
@@ -101,6 +98,51 @@ public sealed partial class LegacyTriggerSystem
                 return e.Expression.Root is not null && Holds(e.Objects, x => Evaluate(e.Expression, 0, x) != 0);
             default:
                 return false; // UnknownEvent
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="holder"/> is the event's holder: the placed object <paramref name="holderIndex"/>, or any
+    /// holder matching <paramref name="holders"/> (the legacy "typed" holder, ADR 0120).
+    /// </summary>
+    private bool IsHolder(int holderIndex, ObjectSpec? holders, EntityId holder)
+    {
+        if (!_world.Entities.IsAlive(holder))
+        {
+            return false;
+        }
+
+        if (holders is null)
+        {
+            return MapEntity(holderIndex) == holder;
+        }
+
+        switch (holders)
+        {
+            case NamedObjects named:
+                foreach (int i in named.ObjectIndices)
+                {
+                    if (MapEntity(i) == holder)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            case TypedObjects typed:
+            {
+                Sim.Components.Identity id = _world.Identities.Get(holder);
+                return id.TypeId == TypeOf(typed) && InMask(typed.Players, id.Owner);
+            }
+
+            case CategoryObjects category:
+            {
+                Sim.Components.Identity id = _world.Identities.Get(holder);
+                return InMask(category.Players, id.Owner) && InCategory(category.Category, _world.Ruleset.EntityTypes[id.TypeId]);
+            }
+
+            default:
+                return false;
         }
     }
 
@@ -164,8 +206,7 @@ public sealed partial class LegacyTriggerSystem
                         break;
                     case ObjectLeaveHolderEvent leave when ev.Kind == SimEventKind.Unloaded:
                     {
-                        EntityId holder = MapEntity(leave.HolderIndex);
-                        if (holder == EntityId.None || ev.X != holder.Index)
+                        if ((uint)ev.X >= (uint)_world.Entities.HighWater || !IsHolder(leave.HolderIndex, leave.Holders, _world.Entities.AtIndex(ev.X)))
                         {
                             break;
                         }

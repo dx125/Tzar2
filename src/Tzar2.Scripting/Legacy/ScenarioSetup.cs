@@ -66,6 +66,22 @@ public static class ScenarioSetup
             }
         }
 
+        // Item properties (Appendix C.2 "Items"): the magnitude (weapon attack, armor defence, resource amount) and a
+        // spell book's charges. Scroll texts, potions' other deltas and spell-book cooldowns are not applied yet (UNK-67).
+        if (info.Item is { } item && world.Items.Has(entity))
+        {
+            ref ItemState state = ref world.Items.Get(entity);
+            if ((item.Amount ?? item.Value) is { } power)
+            {
+                state.Power = Math.Clamp(power, 0, 1_000_000);
+            }
+
+            if (item.Charges is { } charges)
+            {
+                state.Charges = Math.Clamp(charges, 0, 1_000_000);
+            }
+        }
+
         if (info.Mana is { } mana && world.Manas.Has(entity))
         {
             int maxMana = world.TypeOf(entity).Traits.ManaPool?.Max ?? 0;

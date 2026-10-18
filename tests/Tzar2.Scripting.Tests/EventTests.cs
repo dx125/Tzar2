@@ -138,6 +138,22 @@ public class EventTests
     }
 
     [Fact]
+    public void A_typed_holder_matches_any_holder_of_the_type()
+    {
+        var b = new ScenarioBuilder();
+        b.Structure("euro.castle", 0, 12, 5);
+        int f1 = b.Unit("euro.footman", 0, 6, 5);
+        b.Event(new ObjectsEnterHolderEvent("e", All(f1), -1, Typed("euro.castle", 1, CountComparison.AtLeast, 1)));
+        Watch(b);
+        using TriggerDriver d = b.Start();
+        d.Step();
+        Assert.Equal(0, d.Variable("v"));
+        d.Order(0, CommandKind.Board, [d.Object(f1)], target: d.Object(0));
+        d.Seconds(12);
+        Assert.Equal(1, d.Variable("v"));
+    }
+
+    [Fact]
     public void Player_defeated_and_player_won()
     {
         var b = new ScenarioBuilder();
