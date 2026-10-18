@@ -61,12 +61,17 @@ public sealed class Simulation : IDisposable
         _scheduler.Add(new CommandSystem());
         _scheduler.Add(new ProductionSystem());
         _scheduler.Add(new EconomySystem());
+        _scheduler.Add(new TradeSystem());
         _scheduler.Add(new WorkerSystem());
+        _scheduler.Add(new NatureSystem());
         _scheduler.Add(new PathRequestSystem());
         _scheduler.Add(new MovementSystem());
         _scheduler.Add(new CombatSystem());
         _scheduler.Add(new StructureSystem());
         _scheduler.Add(new CaptureSystem());
+        _scheduler.Add(new VisibilitySystem());
+        _scheduler.Add(new ClockSystem());
+        _scheduler.Add(new VictorySystem());
         _scheduler.Add(new CleanupSystem());
     }
 
@@ -76,6 +81,7 @@ public sealed class Simulation : IDisposable
         var world = new World(ruleset, map, config);
         world.LoadMap();
         ProductionSystem.UpdatePopulation(world);
+        world.StartKingdoms();
         return world;
     }
 

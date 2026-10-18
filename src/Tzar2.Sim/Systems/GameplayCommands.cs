@@ -25,6 +25,7 @@ internal static class GameplayCommands
     /// <summary>Clears what a unit was doing for its own reasons before a new order (worker task, fight).</summary>
     public static void ClearTasks(World world, EntityId unit, CombatMode newMode = CombatMode.None)
     {
+        TradeSystem.Cancel(world, unit); // GAME-14: another order ends a trade route
         int w = world.Workers.IndexOf(unit);
         if (w >= 0)
         {
@@ -553,10 +554,17 @@ internal static class GameplayCommands
             return CommandRejection.InvalidArgument;
         }
 
+        if (!butcher && !world.MayAttack(command.Player, target))
+        {
+            return CommandRejection.NotAllied; // allies (and neutrals' non-military units) cannot be attacked (GAME-13)
+        }
+
         int applied = 0;
         foreach (EntityId entity in entities)
         {
-            if (!IsOwned(world, entity, command.Player) || world.Combats.IndexOf(entity) < 0 || entity == target)
+            // Shared unit control (GAME-13) covers fighting; economic orders stay with the owner (their costs and refunds).
+            if (!world.MayCommand(command.Player, entity) || world.Combats.IndexOf(entity) < 0 || entity == target
+                || (world.Identities.Get(entity).Owner != command.Player && !world.MayAttack(world.Identities.Get(entity).Owner, target)))
             {
                 continue;
             }
@@ -606,6 +614,11 @@ internal static class GameplayCommands
         if (capturable is null || owner == command.Player || !world.HasPlayer(owner) || world.Constructions.Has(target))
         {
             return CommandRejection.InvalidArgument;
+        }
+
+        if (world.Diplomacy.StanceOf(command.Player, owner) != Kingdoms.Stance.Enemy)
+        {
+            return CommandRejection.NotAllied; // only enemies' buildings are captured (GAME-13)
         }
 
         if (capturable.RequiredTechnology >= 0 && !world.Players[command.Player].HasTechnology(capturable.RequiredTechnology))

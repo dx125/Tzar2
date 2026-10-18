@@ -194,7 +194,7 @@ public sealed class StructureSystem : ISimSystem
                 for (int k = _cellStart[cell]; k < _cellStart[cell + 1]; k++)
                 {
                     int m = _items[k];
-                    if (world.Identities.Get(movers[m]).Owner != owner)
+                    if (!world.Diplomacy.OpensGateFor(owner, world.Identities.Get(movers[m]).Owner))
                     {
                         continue;
                     }

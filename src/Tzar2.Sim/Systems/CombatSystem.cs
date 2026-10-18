@@ -94,7 +94,8 @@ public sealed class CombatSystem : ISimSystem
             }
 
             Identity identity = world.Identities.Get(victim);
-            world.Events.Emit(new SimEvent(SimEventKind.Killed, identity.Owner, victim, killer.Index, 0, identity.TypeId));
+            int killerOwner = world.Identities.IndexOf(killer) is >= 0 and var ko ? world.Identities.At(ko).Owner : MapObject.Nature;
+            world.Events.Emit(new SimEvent(SimEventKind.Killed, identity.Owner, victim, killer.Index, killerOwner, identity.TypeId));
             world.Kill(victim);
         }
     }
@@ -267,9 +268,9 @@ public sealed class CombatSystem : ISimSystem
     private void Hit(World world, EntityId attacker, EntityId target)
     {
         ref Health health = ref world.Healths.Get(target);
-        if (health.Current <= 0)
+        if (health.Current <= 0 || world.IsInvulnerable(world.Identities.Get(target).Owner))
         {
-            return; // already killed by an earlier hit of this tick
+            return; // already killed by an earlier hit of this tick, or hmgod (GAME-19)
         }
 
         EntityTypeDefinition type = world.TypeOf(attacker);
@@ -349,7 +350,8 @@ public sealed class CombatSystem : ISimSystem
         }
 
         Identity identity = world.Identities.At(i);
-        return identity.Owner != owner && IsCombatant(world, identity) && world.Healths.Get(target).Current > 0;
+        return identity.Owner != owner && IsCombatant(world, identity) && world.Healths.Get(target).Current > 0
+            && world.MayAttack(owner, target); // GAME-13 stances, GAME-15 unclaimed gateways and ambient life
     }
 
     private static bool IsCombatant(World world, Identity identity)
@@ -400,7 +402,14 @@ public sealed class CombatSystem : ISimSystem
                     }
 
                     EntityId candidate = ids[dense];
-                    if (world.Healths.Get(candidate).Current <= 0)
+                    if (world.Healths.Get(candidate).Current <= 0 || !world.MayAttack(owner, candidate))
+                    {
+                        continue;
+                    }
+
+                    // GAME-12: cloaked units are not acquired unless a detector of the kingdom is near.
+                    if (owner < world.Players.Length && world.IsConcealed(candidate)
+                        && world.Visibility.IsConcealedFrom(world, owner, candidate, world.Positions.Get(candidate)))
                     {
                         continue;
                     }

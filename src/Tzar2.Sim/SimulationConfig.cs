@@ -42,6 +42,45 @@ public sealed record SimulationConfig
     /// <summary>Population limit of the match (lobby POPULATION LIMIT), or -1 for the ruleset's default.</summary>
     public int PopulationLimit { get; init; } = -1;
 
+    /// <summary>No Fog (lobby, GAME-12): explored areas show enemy units too, as if always in sight.</summary>
+    public bool NoFog { get; init; }
+
+    /// <summary>Explore (lobby, GAME-12): the whole map is explored from the start.</summary>
+    public bool Explored { get; init; }
+
+    /// <summary>
+    /// Victory condition (lobby, GAME-17). The default is <see cref="VictoryCondition.NotSpecified"/> (a sandbox: no automatic
+    /// defeat or victory); the skirmish lobby sets <see cref="VictoryCondition.Standard"/>.
+    /// </summary>
+    public VictoryCondition Victory { get; init; } = VictoryCondition.NotSpecified;
+
+    /// <summary>Game type (lobby, GAME-17).</summary>
+    public GameType GameType { get; init; } = GameType.Standard;
+
+    /// <summary>Score limit of <see cref="VictoryCondition.ScoreLimit"/>.</summary>
+    public int ScoreLimit { get; init; } = 10_000;
+
+    /// <summary>Time limit in minutes of <see cref="VictoryCondition.TimeLimit"/>.</summary>
+    public int TimeLimitMinutes { get; init; } = 60;
+
+    /// <summary>Day/night cycle (lobby DAY-NIGHT, GAME-16); off = always day.</summary>
+    public bool DayNight { get; init; } = true;
+
+    /// <summary>Weather (lobby WEATHER EFFECTS, GAME-16); off = always clear.</summary>
+    public bool Weather { get; init; } = true;
+
+    /// <summary>
+    /// Teams at match start, 4 bits per player slot (slot 0 in the low bits): kingdoms with the same non-zero team are
+    /// mutual allies with shared vision and shared victory (GAME-13); 0 = no team (enemy of everyone).
+    /// </summary>
+    public ulong Teams { get; init; }
+
+    /// <summary>A ranked match: cheats are never allowed (GAME-19).</summary>
+    public bool Ranked { get; init; }
+
+    /// <summary>The team of a slot (0 = none).</summary>
+    public int TeamOf(int player) => (uint)player < 16 ? (int)((Teams >> (player * 4)) & 0xF) : 0;
+
     /// <summary>Checks the ranges.</summary>
     /// <exception cref="ArgumentOutOfRangeException">A value is out of range.</exception>
     public void Validate(int maxPlayers)
@@ -56,7 +95,54 @@ public sealed record SimulationConfig
         ArgumentOutOfRangeException.ThrowIfGreaterThan(StartingResources, 15);
         ArgumentOutOfRangeException.ThrowIfLessThan(PopulationLimit, -1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(PopulationLimit, 100_000);
+        if (Victory > VictoryCondition.NotSpecified || GameType > GameType.Deathmatch)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Victory));
+        }
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(ScoreLimit, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(ScoreLimit, 100_000_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(TimeLimitMinutes, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(TimeLimitMinutes, 10_000);
+        if (PlayerCount < 16 && (Teams >> (PlayerCount * 4)) != 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Teams), "Teams name slots that are not in the match.");
+        }
+
+        if (Ranked && CheatsAllowed)
+        {
+            throw new ArgumentException("A ranked match never allows cheats (GAME-19).", nameof(CheatsAllowed));
+        }
     }
+}
+
+/// <summary>Victory conditions (lobby VICTORY CONDITION; editor manual §8.3).</summary>
+public enum VictoryCondition : byte
+{
+    /// <summary>The last kingdom (or allied team) standing wins.</summary>
+    Standard = 0,
+
+    /// <summary>A kingdom without a castle is defeated.</summary>
+    DestroyCastles = 1,
+
+    /// <summary>At the time limit the highest score wins.</summary>
+    TimeLimit = 2,
+
+    /// <summary>The first to reach the score limit wins.</summary>
+    ScoreLimit = 3,
+
+    /// <summary>No automatic victory (scenario triggers decide).</summary>
+    NotSpecified = 4,
+}
+
+/// <summary>Game types (lobby GAME TYPE: Standard or Deathmatch, manual ch. 3).</summary>
+public enum GameType : byte
+{
+    /// <summary>Standard.</summary>
+    Standard = 0,
+
+    /// <summary>Deathmatch: every kingdom starts rich (world.deathmatchStartingResources).</summary>
+    Deathmatch = 1,
 }
 
 /// <summary>Flags of <see cref="PlayerState"/>.</summary>
@@ -71,6 +157,12 @@ public enum PlayerFlags
 
     /// <summary>The kingdom has been defeated or resigned.</summary>
     Defeated = 2,
+
+    /// <summary>The kingdom has won (GAME-17).</summary>
+    Victorious = 4,
+
+    /// <summary>The kingdom resigned (GAME-13: also set with <see cref="Defeated"/>).</summary>
+    Resigned = 8,
 }
 
 /// <summary>A stockpile: one amount per resource type id of the ruleset (GAME-01; at most <see cref="Ruleset.MaxResourceTypes"/>).</summary>

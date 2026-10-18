@@ -72,6 +72,11 @@ public sealed class GameplayScenario : IBenchScenario
     private long _captured;
     private long _fires;
     private long _repaired;
+    private long _claimed;
+    private long _sales;
+    private long _tributes;
+    private long _diplomacy;
+    private readonly int _market;
 
     /// <summary>Creates the scenario and its simulation at tick 0.</summary>
     /// <param name="ruleset">The compiled classic ruleset (needs the <c>euro.*</c> and <c>comm.*</c> types).</param>
@@ -93,12 +98,21 @@ public sealed class GameplayScenario : IBenchScenario
         _gate = ruleset.EntityTypeId("comm.gate_wood");
         _wall = ruleset.EntityTypeId("comm.wall_wood");
         _bridge = ruleset.EntityTypeId("comm.bridge");
+        _market = ruleset.EntityTypeId("euro.market");
         _bridged = new bool[options.Players];
         Map = CreateMap(ruleset, options);
         Simulation = new Simulation(
             ruleset,
             Map,
-            new SimulationConfig { MatchSeed = options.Seed, PlayerCount = options.Players, StartingResources = 2, PopulationLimit = 1000 },
+            new SimulationConfig
+            {
+                MatchSeed = options.Seed,
+                PlayerCount = options.Players,
+                StartingResources = 2,
+                PopulationLimit = 1000,
+                Victory = VictoryCondition.Standard, // GAME-17: the victory evaluation runs (nobody is wiped out in a bench run)
+                CheatsAllowed = true, // GAME-19: hmnotech lets kingdoms 0 and 1 trade without researching Trade Routes
+            },
             workerCount);
         _bot = Xoshiro256StarStar.FromSeed(options.Seed ^ 0xB07UL);
     }
@@ -129,6 +143,9 @@ public sealed class GameplayScenario : IBenchScenario
 
     /// <summary>Buildings captured, fires started and repairs completed so far (GAME-03/04).</summary>
     public (long Captured, long Fires, long Repaired) M3Events => (_captured, _fires, _repaired);
+
+    /// <summary>World-system events (M3 stream F, ADR 0107): gateways claimed, trade sales, tributes, diplomacy changes.</summary>
+    public (long Claimed, long Sales, long Tributes, long Diplomacy) WorldEvents => (_claimed, _sales, _tributes, _diplomacy);
 
     private int BridgeTiles()
     {
@@ -172,6 +189,13 @@ public sealed class GameplayScenario : IBenchScenario
             Place(objects, used, size, ruleset, "euro.storage", p, bx + 4, by + 7);
             Place(objects, used, size, ruleset, "euro.farm", p, bx + 8, by + 5);
             Place(objects, used, size, ruleset, "comm.res_gold", MapObject.Nature, bx + 12, by + 8);
+
+            // M3 stream F (ADR 0107): two markets 14 tiles apart and a caravan per kingdom (kingdoms 0 and 1 trade).
+            if (ruleset.EntityTypeId("euro.market") >= 0 && ruleset.EntityTypeId("euro.trader") >= 0
+                && Place(objects, used, size, ruleset, "euro.market", p, bx + 4, by - 4) && Place(objects, used, size, ruleset, "euro.market", p, bx - 10, by - 4))
+            {
+                objects.Add(new MapObject("euro.trader", (byte)p, Center(bx + 5, size), Center(by - 5, size)));
+            }
 
             // Keep the bot's gate, wall and bridge spots free of trees.
             Reserve(used, size, bx - 3, by + 1, 1, 3);
@@ -223,6 +247,26 @@ public sealed class GameplayScenario : IBenchScenario
                 int x = Math.Clamp((sx * MapState.UnitsPerTile) + ((s % columns) * 1200), 1024, (size * MapState.UnitsPerTile) - 1024);
                 int y = Math.Clamp((sy * MapState.UnitsPerTile) + ((s / columns) * 1200), 1024, (size * MapState.UnitsPerTile) - 1024);
                 objects.Add(new MapObject(soldierTypes[s % soldierTypes.Length], (byte)p, x, y));
+            }
+        }
+
+        // Nature in the middle (GAME-15): a magic gateway the armies meet at, bears and wild cows around it.
+        if (ruleset.EntityTypeId("comm.magicgateway") >= 0)
+        {
+            Place(objects, used, size, ruleset, "comm.magicgateway", MapObject.Nature, center - 1, center - 1);
+        }
+
+        for (int a = 0; a < 4; a++)
+        {
+            (int ox, int oy) = Directions[a];
+            if (ruleset.EntityTypeId("comm.bear") >= 0 && a < 2)
+            {
+                objects.Add(new MapObject("comm.bear", MapObject.Nature, Center(center + (ox * 6 / 100), size), Center(center + (oy * 6 / 100), size)));
+            }
+
+            if (ruleset.EntityTypeId("comm.cow") >= 0)
+            {
+                objects.Add(new MapObject("comm.cow", MapObject.Nature, Center(center + (oy * 9 / 100), size), Center(center - (ox * 9 / 100), size)));
             }
         }
 
@@ -279,13 +323,17 @@ public sealed class GameplayScenario : IBenchScenario
                 case SimEventKind.Captured: _captured++; break;
                 case SimEventKind.FireStarted: _fires++; break;
                 case SimEventKind.Repaired: _repaired++; break;
+                case SimEventKind.Claimed: _claimed++; break;
+                case SimEventKind.TradeDelivered: _sales++; break;
+                case SimEventKind.TributeSent: _tributes++; break;
+                case SimEventKind.DiplomacyChanged: _diplomacy++; break;
             }
         }
     }
 
     /// <inheritdoc />
     public string Describe()
-        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, researched {_researched}, captured {_captured}, fires {_fires}, repaired {_repaired}, gates {Simulation.World.Gates.Count}, bridge tiles {BridgeTiles()}, corpses {Simulation.World.Decals.Count}");
+        => string.Create(CultureInfo.InvariantCulture, $"entities {Simulation.World.Entities.AliveCount}, delivered {_delivered}, kills {_kills}, trained {_trained}, built {_built}, researched {_researched}, captured {_captured}, fires {_fires}, repaired {_repaired}, claimed {_claimed}, sales {_sales}, tributes {_tributes}, diplomacy {_diplomacy}, gates {Simulation.World.Gates.Count}, bridge tiles {BridgeTiles()}, corpses {Simulation.World.Decals.Count}");
 
     /// <inheritdoc />
     public void Dispose() => Simulation.Dispose();
@@ -335,6 +383,8 @@ public sealed class GameplayScenario : IBenchScenario
                 }
             }
         }
+
+        WorldOrders(world, player, tick);
 
         // M3 (ADR 0045): the bot also captures, repairs, attacks houses (fire), builds a gate, drags a wall and bridges
         // its river, so the cross-OS golden and hash streams cover those systems.
@@ -400,6 +450,69 @@ public sealed class GameplayScenario : IBenchScenario
                 _batch.Add(CommandKind.Move, Span(_idleSoldiers).Slice(start, n), c + _bot.NextInt(-spread, spread), c + _bot.NextInt(-spread, spread), flags: CommandFlags.Ctrl);
             }
         }
+    }
+
+    // M3 stream F (ADR 0107): kingdoms 0 and 1 ally (shared vision, resources, victory) and their caravans trade between
+    // their two markets; everyone sends a small tribute now and then; kingdom 2 turns neutral towards 3 later on.
+    private void WorldOrders(World world, byte player, int tick)
+    {
+        int window = _options.BotIntervalTicks;
+        int players = _options.Players;
+        if (player < 2 && players >= 2)
+        {
+            byte other = (byte)(1 - player);
+            if (tick < window)
+            {
+                _batch.Add(CommandKind.Cheat, arg0: (int)Systems.CheatCode.NoTech);
+            }
+
+            if (tick >= 40 && tick < 40 + window)
+            {
+                _batch.Add(CommandKind.SetDiplomacy, x: other, arg0: (int)Kingdoms.Stance.Ally,
+                    arg1: (int)(Kingdoms.Sharing.Vision | Kingdoms.Sharing.Resources | Kingdoms.Sharing.Victory));
+            }
+
+            if (tick >= 120 && tick < 120 + window && _market >= 0 && Market(world, player, 0) is { IsNone: false } own && Market(world, player, 1) is { IsNone: false } theirs)
+            {
+                _selection.Clear();
+                ReadOnlySpan<EntityId> traders = world.Motions.Entities;
+                foreach (EntityId t in traders)
+                {
+                    if (world.Identities.Get(t).Owner == player && world.TypeOf(t).Traits.World.Trader is not null)
+                    {
+                        _selection.Add(t);
+                    }
+                }
+
+                Position b = world.Positions.Get(theirs);
+                _batch.Add(CommandKind.Trade, Span(_selection), b.X, b.Y, target: own, arg0: 1 | (3 << 8), arg1: 50);
+            }
+        }
+
+        if (tick % 400 < window && players >= 2)
+        {
+            _batch.Add(CommandKind.Tribute, x: (player + 1) % players, arg0: 0, arg1: 10);
+        }
+
+        if (player == 2 && players >= 4 && tick >= 800 && tick < 800 + window)
+        {
+            _batch.Add(CommandKind.SetDiplomacy, x: 3, arg0: (int)Kingdoms.Stance.Neutral);
+        }
+    }
+
+    private EntityId Market(World world, byte owner, int nth)
+    {
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            Identity identity = world.Identities.Get(structures[i]);
+            if (identity.TypeId == _market && identity.Owner == owner && !world.Constructions.Has(structures[i]) && nth-- == 0)
+            {
+                return structures[i];
+            }
+        }
+
+        return EntityId.None;
     }
 
     private const int RiverLeft = 2;

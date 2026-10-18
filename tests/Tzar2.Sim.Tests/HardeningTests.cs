@@ -258,7 +258,7 @@ public class HardeningTests
         sim.World.Spawn(0, 0, 1000, 1000);
         sim.World.Map.AddBlocker(3, 4);
         byte[] snapshot = sim.CaptureSnapshot();
-        Assert.True(snapshot.Length < 1024, $"{snapshot.Length} bytes for a 1024² map with one unit");
+        Assert.True(snapshot.Length < 1536, $"{snapshot.Length} bytes for a 1024² map with one unit"); // + per-kingdom world state (ADR 0101)
         using Simulation restored = Simulation.Restore(snapshot, TestWorlds.Ruleset, TestWorlds.Flat(1024));
         Assert.Equal(sim.ComputeFullHash(), restored.ComputeFullHash());
         Assert.Equal(1, restored.World.Map.Blockers[(4 * 1024) + 3]);

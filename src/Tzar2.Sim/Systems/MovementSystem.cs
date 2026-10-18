@@ -94,6 +94,7 @@ public sealed class MovementSystem : ISimSystem
         World world = context.World;
         NavigationGrid nav = world.Navigation;
         nav.EnsureUpToDate();
+        world.RefreshGateBars();
         PrePass(world, nav);
         _frame.Capture(world);
         int jobs = (_frame.Count + ChunkSize - 1) / ChunkSize;
@@ -604,6 +605,12 @@ public sealed class MovementSystem : ISimSystem
             EntityId entity = f.Entity[i];
             int nx = f.Fx[i];
             int ny = f.Fy[i];
+            if ((nx != f.Px[i] || ny != f.Py[i]) && world.GateBars(f.Owner[i], f.Px[i], f.Py[i], nx, ny))
+            {
+                // An open gate lets only its owner and the kingdoms it treats as allies through (ADR 0102).
+                nx = f.Px[i];
+                ny = f.Py[i];
+            }
             if (nx != f.Px[i] || ny != f.Py[i])
             {
                 ref Position position = ref world.Positions.Get(entity);

@@ -43,7 +43,7 @@ public sealed class CommandSystem : ISimSystem
     private static CommandRejection? Apply(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         if (!world.HasPlayer(command.Player) || (world.Players[command.Player].Flags & PlayerFlags.Active) == 0
-            || (world.Players[command.Player].Flags & PlayerFlags.Defeated) != 0)
+            || (world.Players[command.Player].Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious)) != 0)
         {
             return CommandRejection.InvalidPlayer;
         }
@@ -138,7 +138,7 @@ public sealed class CommandSystem : ISimSystem
 
             case CommandKind.DebugKill:
             {
-                if (!world.Config.CheatsAllowed)
+                if (!world.Config.CheatsAllowed || world.Config.Ranked)
                 {
                     return CommandRejection.CheatsDisabled;
                 }
@@ -183,7 +183,7 @@ public sealed class CommandSystem : ISimSystem
             }
 
             case CommandKind.DebugSpawn:
-                if (!world.Config.CheatsAllowed)
+                if (!world.Config.CheatsAllowed || world.Config.Ranked)
                 {
                     return CommandRejection.CheatsDisabled;
                 }
@@ -247,15 +247,40 @@ public sealed class CommandSystem : ISimSystem
             case CommandKind.SetGate:
                 return GameplayCommands.SetGate(world, command, entities);
 
+            case CommandKind.SetDiplomacy:
+                return KingdomCommands.SetDiplomacy(world, command);
+
+            case CommandKind.Tribute:
+                return KingdomCommands.Tribute(world, command);
+
+            case CommandKind.Resign:
+                return KingdomCommands.Resign(world, command);
+
+            case CommandKind.Trade:
+                return KingdomCommands.Trade(world, command, entities);
+
+            case CommandKind.Convert:
+                return KingdomCommands.Convert(world, command, entities);
+
+            case CommandKind.Gamble:
+                return KingdomCommands.Gamble(world, command, entities);
+
+            case CommandKind.Loan:
+                return KingdomCommands.Loan(world, command, entities);
+
+            case CommandKind.Cheat:
+                return KingdomCommands.Cheat(world, command);
+
             default:
                 return CommandRejection.UnknownKind;
         }
     }
 
-    // Dense position in the motion store of an owned, mobile, live unit, or -1.
+    // Dense position in the motion store of a mobile, live unit the player commands (own, or shared unit control:
+    // movement orders only, GAME-13), or -1.
     private static int OwnedMover(World world, EntityId entity, byte player)
     {
-        if (!IsOwned(world, entity, player))
+        if (!world.MayCommand(player, entity))
         {
             return -1;
         }

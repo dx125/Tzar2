@@ -23,6 +23,11 @@ internal static class ResearchRules
             return false;
         }
 
+        if (world.IgnoresRequirements(player))
+        {
+            return true; // hmnotech (GAME-19)
+        }
+
         ref PlayerState state = ref world.Players[player];
         foreach (RequirementSet set in sets)
         {
@@ -69,22 +74,14 @@ internal static class ResearchRules
     {
         (int add, int bp) = world.Stats.Modifier(player, ModifierStat.Cost, type.Id);
         paid = new PaidModifier { Add = add, BasisPoints = bp };
-        ref PlayerState state = ref world.Players[player];
         ImmutableArray<int> cost = type.Traits.Cost;
+        Span<int> amounts = stackalloc int[Ruleset.MaxResourceTypes];
         for (int r = 0; r < cost.Length; r++)
         {
-            if (state.Resources[r] < PlayerStats.Combine(cost[r], add, bp))
-            {
-                return false;
-            }
+            amounts[r] = PlayerStats.Combine(cost[r], add, bp);
         }
 
-        for (int r = 0; r < cost.Length; r++)
-        {
-            state.Resources[r] -= PlayerStats.Combine(cost[r], add, bp);
-        }
-
-        return true;
+        return Kingdoms.SharedStockpile.TryDeduct(world, player, amounts[..cost.Length]);
     }
 
     /// <summary>Refunds a share of what was paid for <paramref name="type"/> with <paramref name="paid"/>.</summary>
@@ -99,24 +96,7 @@ internal static class ResearchRules
     }
 
     /// <summary>Pays a plain cost (technologies, upgrades); false (nothing paid) if the player cannot afford it.</summary>
-    public static bool TryPay(World world, byte player, ImmutableArray<int> cost)
-    {
-        ref PlayerState state = ref world.Players[player];
-        for (int r = 0; r < cost.Length; r++)
-        {
-            if (state.Resources[r] < cost[r])
-            {
-                return false;
-            }
-        }
-
-        for (int r = 0; r < cost.Length; r++)
-        {
-            state.Resources[r] -= cost[r];
-        }
-
-        return true;
-    }
+    public static bool TryPay(World world, byte player, ImmutableArray<int> cost) => Kingdoms.SharedStockpile.TryDeduct(world, player, cost.AsSpan());
 
     /// <summary>Refunds a share of a plain cost.</summary>
     public static void Refund(World world, byte player, ImmutableArray<int> cost, int basisPoints)

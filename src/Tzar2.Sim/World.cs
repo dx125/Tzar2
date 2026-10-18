@@ -14,7 +14,7 @@ namespace Tzar2.Sim;
 /// The complete simulation state of one match (TDD §8): entities, components, map layers, players, RNG streams and
 /// the tick counter. Everything here is in snapshots (REQ-SIM-13) except <see cref="Events"/>, which is output.
 /// </summary>
-public sealed class World
+public sealed partial class World
 {
     private readonly PlayerState[] _players;
     private readonly int[] _entityTypeSpeedPerTick;
@@ -67,6 +67,7 @@ public sealed class World
         Decals = new DecalIndex(ruleset.DecalCap);
         Navigation = new NavigationGrid(Map, ruleset);
         CorpseTtlTicks = (ruleset.CorpseTtlMilliseconds + config.TickLengthMilliseconds - 1) / config.TickLengthMilliseconds;
+        InitializeKingdoms();
     }
 
     /// <summary>The compiled ruleset.</summary>
@@ -619,7 +620,7 @@ public sealed class World
             }
 
             EntityTraits traits = Ruleset.EntityTypes[typeId].Traits;
-            if (o.Owner == MapObject.Nature && (traits.Harvester is not null || traits.IsBuilder || traits.IsCapturer || traits.Producer is { Produces.IsEmpty: false } || traits.DropOffMask != 0))
+            if (o.Owner == MapObject.Nature && (traits.Harvester is not null || traits.IsBuilder || traits.IsCapturer || (traits.Producer is { Produces.IsEmpty: false } && traits.World.Claim is null) || traits.DropOffMask != 0))
             {
                 throw new ArgumentException($"Map object '{o.TypeKey}' works for a kingdom (worker, producer or drop-off) and cannot belong to Nature.", nameof(data));
             }
@@ -797,7 +798,8 @@ public sealed class World
     {
         foreach (PlayerState player in _players)
         {
-            if ((player.Flags & ~(PlayerFlags.Active | PlayerFlags.Defeated)) != 0)
+            if ((player.Flags & ~(PlayerFlags.Active | PlayerFlags.Defeated | PlayerFlags.Victorious | PlayerFlags.Resigned)) != 0
+                || (player.Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious)) == (PlayerFlags.Defeated | PlayerFlags.Victorious))
             {
                 throw Invalid($"invalid player flags {player.Flags}");
             }
@@ -921,6 +923,7 @@ public sealed class World
         Map.RebuildOccupancy(cells);
         ValidateGameplayComponents();
         ValidateM3Components();
+        ValidateKingdomComponents();
 
         static System.IO.InvalidDataException Invalid(string what) => new($"Snapshot violates a world invariant: {what}.");
     }
