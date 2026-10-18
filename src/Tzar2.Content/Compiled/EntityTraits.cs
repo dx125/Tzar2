@@ -306,6 +306,9 @@ public sealed record EntityTraits
     /// <summary>Lifetime of the entity (meat rots), 0 = unlimited.</summary>
     public int LifetimeMs { get; init; }
 
+    /// <summary>World traits (trade, tavern, claims, animals, detection; ADRs 0101-0104).</summary>
+    public WorldTraits World { get; init; } = WorldTraits.None;
+
     /// <summary>Whether the type is a builder.</summary>
     public bool IsBuilder => !Builds.IsDefaultOrEmpty;
 

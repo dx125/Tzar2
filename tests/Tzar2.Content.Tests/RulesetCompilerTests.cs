@@ -24,16 +24,17 @@ public class RulesetCompilerTests
     {
         string[] keys = Classic.EntityTypes.Select(t => t.Key).ToArray();
         Assert.Equal(keys.OrderBy(k => k, StringComparer.Ordinal), keys);
-        // M3 imports every unit and building of the tables (ADR 0040), plus the YAML-only tree and meat.
+        // M3 imports every unit and building of the tables (ADR 0040), plus the YAML-only tree, meat and birds (ADR 0104).
         Assert.Equal(
             [
-                "comm.bridge", "comm.catapult", "comm.cow", "comm.field", "comm.fishing_boat", "comm.fishpatch", "comm.galleon",
-                "comm.gate_stone", "comm.gate_wood", "comm.meat", "comm.res_gold", "comm.res_stone", "comm.tower_stone",
+                "comm.bear", "comm.bird", "comm.bridge", "comm.catapult", "comm.cow", "comm.dwarf", "comm.eagle", "comm.field",
+                "comm.fishing_boat", "comm.fishpatch", "comm.galleon", "comm.gate_stone", "comm.gate_wood", "comm.ghost",
+                "comm.magicgateway", "comm.meat", "comm.ork", "comm.res_gold", "comm.res_stone", "comm.skeleton", "comm.tower_stone",
                 "comm.tower_stone2", "comm.tower_wood", "comm.tower_wood2", "comm.tree", "comm.wall_stone", "comm.wall_wood",
                 "euro.academy", "euro.archer", "euro.barrack", "euro.blacksmith", "euro.castle", "euro.cathedral", "euro.farm",
                 "euro.footman", "euro.harbor", "euro.house", "euro.knight", "euro.lumber", "euro.maceman", "euro.mage",
                 "euro.magetower", "euro.market", "euro.peon", "euro.pikeman", "euro.stable", "euro.storage", "euro.tavern",
-                "euro.tcguild", "euro.workshop",
+                "euro.tcguild", "euro.trader", "euro.workshop",
             ],
             keys);
         Assert.Equal(["food", "wood", "stone", "gold", "iron"], Classic.ResourceTypes);

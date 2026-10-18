@@ -70,6 +70,56 @@ gameplay:
   captureResetMs: 5000                # UNVERIFIED (UNK-19): progress is lost after this long without a capturer
   influenceRadiusTiles: 16            # UNVERIFIED (UNK-19): EMIT fades linearly to 0 at this distance
 
+# World systems (M3 stream F, ADRs 0100-0106; docs/mechanics/m3-world-placeholders.md). Nothing here is in an original
+# table except where noted; every value is UNVERIFIED until captured.
+world:
+  # GAME-12 fog and visibility (ADR 0101).
+  defaultSightTiles: 2                # UNVERIFIED: sight of a kingdom's unit or building whose table row has none
+  nightSightPercent: 100              # UNVERIFIED (UNK-09): sight at night (100 = night does not change sight)
+  memoryRefreshTicks: 4               # engine: a seen structure's last-seen state is refreshed every 4 ticks (staggered)
+  # GAME-13 diplomacy (ADR 0102).
+  diplomacyChangeIntervalMs: 10000    # engine bound (anti flip-flop): least time between two changes towards one kingdom
+  tributeIntervalMs: 1000             # engine bound: least time between two tributes of one kingdom
+  maxTributeAmount: 100000            # engine bound: most of one resource in one tribute
+  stockpileCap: 1000000000            # engine bound: overflow guard of every stockpile
+  # GAME-14 trade and tavern (ADR 0103; UNK-28).
+  tradeProfitPerTileBasisPoints: 100  # UNVERIFIED (UNK-28): profit per tile between the docks (1% of the load per tile)
+  tradeMinDistanceTiles: 8            # UNVERIFIED: closer docks give no profit (anti trade loop)
+  tradeMaxProfitPercent: 300          # UNVERIFIED: most profit of one delivery
+  tradeDockMs: 2000                   # UNVERIFIED: time to unload and load at a dock
+  convertRatio: 10                    # manual ch. 5 §7: "you give ten times more than you receive"
+  gambleOdds: [2, 3, 5, 10]           # UNVERIFIED (UNK-28): the proportions a player may choose
+  gambleHouseEdgePercent: 10          # UNVERIFIED (UNK-28): win chance = (1 - edge) / odds
+  maxGambleStake: 10000               # engine bound
+  loanStartAmount: 1000               # manual ch. 5 §10: the first loan is 1,000
+  loanStepAmount: 200                 # manual ch. 5 §10: then 1,200
+  loanGrowDelayMs: 120000             # UNVERIFIED (UNK-28): "after some time"
+  loanInterestPercent: 0              # UNVERIFIED (UNK-28): the manual names no interest
+  # GAME-15 gateways and nature (ADR 0104).
+  claimReachPx: 16                    # UNVERIFIED: a touch claims a gateway or a wild cow from this close
+  claimIntervalMs: 500                # engine: claim scan cadence
+  guardRadiusTiles: 10                # UNVERIFIED: guarding Nature units return home beyond this
+  wanderRadiusTiles: 6                # UNVERIFIED: animals wander this far from home
+  wanderIntervalMs: 8000              # UNVERIFIED: mean time between two wander moves
+  # GAME-16 day/night and weather (ADR 0105; UNK-09, UNK-32).
+  dayLengthMs: 720000                 # UNVERIFIED (UNK-32): one day-night cycle
+  dayStartMinute: 600                 # UNVERIFIED: a match starts at 10:00
+  nightStartMinute: 1140              # UNVERIFIED: night from 19:00
+  nightEndMinute: 360                 # UNVERIFIED: to 06:00
+  weatherPeriodMs: 180000             # UNVERIFIED (UNK-09): weather comes and goes in 3-minute periods
+  weatherChancePercent: 25            # UNVERIFIED: share of periods with weather
+  weather: { grass: rain, summer: rain, snow: snow, desert: clear }   # the rain/snow flags of <SET>.TERRAIN.INI (structural facts)
+  # GAME-17 victory and scoring (ADR 0106; UNK-29).
+  scoreGatherDivisor: 10              # UNVERIFIED (UNK-29): 1 point per 10 resources gathered
+  scoreKillDivisor: 10                # UNVERIFIED (UNK-29): 1 point per 10 resources of value killed or destroyed
+  scoreBuildDivisor: 10               # UNVERIFIED (UNK-29): 1 point per 10 resources of value built or trained
+  scorePerTechnology: 100             # UNVERIFIED (UNK-29)
+  victoryIntervalTicks: 20            # engine: victory is evaluated once per second
+  deathmatchStartingResources: high   # UNVERIFIED: a Deathmatch starts every kingdom on the High level
+  # GAME-19 cheats (UNK-30).
+  cheatSmallResources: 2000           # UNVERIFIED (UNK-30): hmdvaleva
+  cheatLargeResources: 5000           # UNVERIFIED (UNK-30): hmpetleva
+
 # Terrain types of the M2 test maps (the terrain-set conversion of §9.1 replaces this list with the original sets).
 terrain:
   - { key: grass, passable: [foot, mounted, large, air] }
@@ -85,7 +135,7 @@ legacy:
   # Cost suffixes (GAME-01; "m" = mana is paid by the caster, not from the stockpile).
   costSuffixes: { f: food, w: wood, s: stone, g: gold, i: iron, m: mana }
   # Producer column of the unit tables -> building class (common units are trained in every civilization's building).
-  producers: { Castle: castle, Barracks: barrack, Workshop: workshop, Harbor: harbor, "Mage Tower": magetower, Cathedral: cathedral, Mosque: mosque, Market: market, Farm: farm, Monastey: shaolinn, "War Guild": academy }
+  producers: { Gate: magicgateway, Castle: castle, Barracks: barrack, Workshop: workshop, Harbor: harbor, "Mage Tower": magetower, Cathedral: cathedral, Mosque: mosque, Market: market, Farm: farm, Monastey: shaolinn, "War Guild": academy }
   # Resource nodes: amount from RES.INI [Others]. Fish patches sit on water and have no footprint (ADR 0042).
   resourceNodes:
     res_gold: { resource: gold, amount: golden rocks }
@@ -102,7 +152,7 @@ legacy:
   # Hash of what the compiler reads from the tables of the clean reference build; another value means a modified
   # installation (a warning in the import and ruleset reports, not an error). Changes with the lists above.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "1088530FE84250E1"
+  referenceDataHash: "581E8478C927F4CD"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
@@ -150,16 +200,19 @@ legacy:
   Harvester:
     capacity: 20                      # UNVERIFIED (UNK-17)
     gatherMs: { food: 1000 }          # UNVERIFIED (UNK-17)
-^class.galleon: { inherits: [^Ship] }
-^class.hulk: { inherits: [^Ship] }
-^class.xebec: { inherits: [^Ship] }
+# Galleons, hulks and xebecs "begin trade" between harbors (manual ch. 5 §4.4.4, §7; GAME-14).
+^class.galleon: { inherits: [^Ship], Trader: { capacity: 200, access: water, technology: te_traderoutes } }   # UNVERIFIED (UNK-28): load
+^class.hulk: { inherits: [^Ship], Trader: { capacity: 150, access: water, technology: te_traderoutes } }      # UNVERIFIED (UNK-28)
+^class.xebec: { inherits: [^Ship], Trader: { capacity: 100, access: water, technology: te_traderoutes } }     # UNVERIFIED (UNK-28)
 ^class.catapult: { inherits: [^Siege] }
 ^class.hcatapult: { inherits: [^Siege] }
 ^class.ballista: { inherits: [^Siege] }
 
 # The tables give armored chariots and caravans no SPEED.
 ^class.chariot: { Mobile: { speed: 4 } }   # UNVERIFIED (UNK-12)
-^class.trader: { Mobile: { speed: 4 } }    # UNVERIFIED (UNK-12): caravans (trade itself is GAME-14)
+^class.trader:                             # caravans: cycle between two markets (GAME-14, ADR 0103)
+  Mobile: { speed: 4 }                     # UNVERIFIED (UNK-12)
+  Trader: { capacity: 100, access: land, technology: te_traderoutes }   # UNVERIFIED (UNK-28): load per trip
 
 ^class.knight: { inherits: [^Cavalry] }
 ^class.heavy_cavalry: { inherits: [^Cavalry] }
@@ -174,6 +227,24 @@ legacy:
     keepWhenEmpty: true
   SpawnOnDeath: { type: comm.meat }
   Capturable: { instant: true, technology: te_cowpoaching }
+  ClaimOnTouch: { by: any }           # UNVERIFIED: a wild (Nature) cow joins the first kingdom whose unit touches it (GAME-15)
+  Animal: { wanders: true }           # UNVERIFIED: wild cows wander around their spot
+^class.bear:
+  Animal: { wanders: true, guards: true }   # UNVERIFIED: bears roam their area and return when lured away
+# Magic gateways (manual ch. 5 §4.4.2): neutral until a military unit touches them; they summon dwarves, orcs, ghosts and
+# skeletons (producer column "Gate"; ghosts and skeletons by the gateway's command card, MENU.INI [magic_gateway]).
+^class.magicgateway:
+  ClaimOnTouch: { by: military }
+  -Burnable:
+  -RuinOnDeath:
+^class.ghost: { Producible: { by: [comm.magicgateway] } }
+^class.skeleton: { Producible: { by: [comm.magicgateway] } }
+# Trade docks and the tavern (GAME-14, ADR 0103).
+^class.market: { TradeDock: { access: land } }
+^class.tavern: { Tavern: {} }
+# Spies and ninjas see cloaked units near them (GAME-12; radius UNVERIFIED).
+^class.spy: { Detector: { radius: 5 } }
+^class.ninja: { Detector: { radius: 5 } }
 
 # Drop-offs (GAME-02; manual §5.4.1.2 and ch. 6: castle stores all resources, farm food, lumbermill wood; storage per
 # civilization; the harbor stores fish). Lumber mills and storages send their builders gathering (1.05).
@@ -195,6 +266,7 @@ legacy:
 ^class.harbor:
   DropOff: { resources: [food], access: [water] }   # UNVERIFIED: only boats deliver here
   Building: { placement: coast }
+  TradeDock: { access: water }        # GAME-14: ships trade between harbors
 
 # Guilds are deletable only with Shift + Del (GAME-04).
 ^class.cathedral: { ProtectedDelete: {} }
@@ -252,6 +324,20 @@ comm.meat:
   Legacy: { class: meat, civ: comm }
   ResourceNode: { resource: food, amount: 100 }   # UNVERIFIED (UNK-17)
   Lifetime: { ms: 120000 }                        # UNVERIFIED (UNK-17)
+
+# Ambient birds (OBJECTS BIRD.INI / EAGLE.INI, teren = 0; not in the tables): they fly around, nobody fights them.
+comm.bird:
+  new: true
+  Legacy: { class: bird, civ: comm }
+  Mobile: { locomotor: air, speed: 5 }          # UNVERIFIED
+  Health: { max: 10 }                           # UNVERIFIED
+  Animal: { wanders: true, ambient: true }
+comm.eagle:
+  new: true
+  Legacy: { class: eagle, civ: comm }
+  Mobile: { locomotor: air, speed: 6 }          # UNVERIFIED
+  Health: { max: 10 }                           # UNVERIFIED
+  Animal: { wanders: true, ambient: true }
 
 # ---- technology effects (GAME-06, ADR 0040) ------------------------------------------------------------------------
 # Costs, times, prerequisites and which building researches what come from the tables. The effects are not in any

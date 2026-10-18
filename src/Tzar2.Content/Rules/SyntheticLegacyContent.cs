@@ -76,6 +76,7 @@ public static class SyntheticLegacyContent
             ["Knight", "knight", "130f, 60g", "21", "6", "", "130", "13", "5", "7", "3", "Barracks", "te_platearmor"],
             ["Pikeman", "pikeman", "95f, 35g", "17", "6", "", "73", "9", "3", "3", "3", "Barracks", "te_halberd"],
             ["Mage", "mage", "140g", "29", "14", "9", "58", "4", "1", "5", "2", "Mage Tower", "*"],
+            ["Trader", "trader", "390f, 210w", "49", "8", "", "340", "", "", "", "", "Market", "te_traderoutes"],
         ]));
         source.Add("tables/data/euro buildings.txt.json", Tsv("DATA/EURO BUILDINGS.TXT", buildingHeader,
         [
@@ -111,6 +112,8 @@ public static class SyntheticLegacyContent
             ["Guard tower", "tower_wood2", "320w", "16", "14", "140", "", "*", "*"],
             ["Keep tower", "tower_stone", "330w", "21", "16", "310", "", "*", "*"],
             ["Cannon tower", "tower_stone2", "340w", "26", "16", "290", "", "*", "te_cannontower"],
+            [],
+            ["Magic Gateway", "magicgateway", "290w", "11", "9", "*", "1950", "*", "*"],
         ]));
         source.Add("tables/data/comm units.txt.json", Tsv("DATA/COMM UNITS.TXT", unitHeader,
         [
@@ -125,6 +128,12 @@ public static class SyntheticLegacyContent
             ["Cannon tower", "tower_stone2", "330w", "44", "17", "9", "2400", "39", "1", "", "4", "", "te_cannontower"],
             [],
             ["Cow", "cow", "290f", "21", "4", "", "75", "", "", "2", "", "Farm", "te_cattle"],
+            [],
+            ["Bear", "bear", "", "", "4", "", "66", "9", "1", "5", "3", "", "*"],
+            ["Ork", "ork", "64g", "13", "6", "", "72", "17", "3", "5", "3", "Gate", "*"],
+            ["Dwarf", "dwarf", "84g", "14", "4", "", "115", "8", "6", "5", "3", "Gate", "*"],
+            ["Skeleton", "skeleton", "34f", "7", "6", "", "42", "5", "1", "5", "3", "Spawn", "*"],
+            ["Ghost", "ghost", "44g", "16", "6", "", "58", "9", "1", "5", "3", "Spawn", "*"],
         ]));
         source.Add("tables/data/res.ini.json", Ini("DATA/RES.INI",
         [
@@ -171,6 +180,7 @@ public static class SyntheticLegacyContent
             ("tower_wood2", @"building\tower wood 2.bmp", "object", "0,0,64,64"),
             ("tower_stone", @"building\tower stone.bmp", "object", "0,0,64,64"),
             ("tower_stone2", @"building\tower stone 2.bmp", "object", "0,0,64,64"),
+            ("magic_gateway", @"building\magic gateway.bmp", "object", "0,0,96,96"),
             ("res_gold", @"scenery\res gold.bmp", "object", "0,0,64,64"),
             ("res_stone", @"scenery\res stone.bmp", "object", "0,0,64,64"),
             ("e_peon", @"unit\euro peasant.bmp", "object", "10,10,30,30"),
@@ -317,6 +327,13 @@ public static class SyntheticLegacyContent
         AddObject(source, "galleon", "unit", "comm", "galleon", teren: "2", extra: [("menu", "e_galleon")]);
         AddObject(source, "fishing_boat", "unit", "comm", "boat", teren: "2");
         AddObject(source, "cow", "unit, animal", "comm", "cow", teren: "1", extra: [("max_manna", "40")]);
+        AddObject(source, "trader", "unit, mounted", "euro", "caravan");
+        AddObject(source, "bear", "unit, animal", "comm", "bear", teren: "1");
+        AddObject(source, "ork", "unit", "comm", "ork");
+        AddObject(source, "dwarf", "unit", "comm", "dwarf");
+        AddObject(source, "skeleton", "unit", "comm", "skeleton");
+        AddObject(source, "ghost", "unit", "comm", "e_ghost");
+        AddObject(source, "magicgateway", "building", "comm", "magic_gateway");
         AddObject(source, "fishpatch", null, "comm", "FISH_1", teren: "2");
         AddObject(source, "res_gold", null, "comm", "res_gold", file: "res gold");
         AddObject(source, "res_stone", null, "comm", "res_stone", file: "res stone");
