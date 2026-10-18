@@ -159,6 +159,12 @@ public enum CommandKind : ushort
     /// <summary>The listed Magic Workshop crafts item type Arg0 for Arg1 gold (more gold, better item; GAME-10).</summary>
     CraftItem = 33,
 
+    /// <summary>
+    /// Scenario reply (ADR 0131): in conversation session Arg0 (its serial) say candidate phrase Arg1 (0-based, in the
+    /// offered order). Refused unless a conversation waits for this player's choice.
+    /// </summary>
+    ScenarioReply = 60,
+
     /// <summary>Debug: spawn Arg1 (1-64) units of type Arg0 at (X, Y); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugSpawn = 0xF000,
 

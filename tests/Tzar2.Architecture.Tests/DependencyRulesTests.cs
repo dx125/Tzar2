@@ -48,6 +48,14 @@ public class DependencyRulesTests
     public static readonly Dictionary<string, (string Assembly, string Namespace)[]> CompiledContract = new(StringComparer.Ordinal)
     {
         ["Tzar2.AI"] = [("Tzar2.Content", "Tzar2.Content.Compiled")],
+
+        // The trigger engine consumes the scenario IR (ADR 0120, ADR 0130) next to the compiled ruleset and map.
+        ["Tzar2.Scripting"] =
+        [
+            ("Tzar2.Content", "Tzar2.Content.Compiled"),
+            ("Tzar2.Content", "Tzar2.Content.Compiled.Scenario"),
+            ("Tzar2.Content", "Tzar2.Content.Compiled.Scenario.Expressions"),
+        ],
     };
 
     /// <summary>
@@ -291,13 +299,11 @@ public class DependencyRulesTests
             foreach (TypeReferenceHandle handle in metadata.TypeReferences)
             {
                 (string scope, string ns, string type) = Resolve(metadata, metadata.GetTypeReference(handle));
-                foreach ((string target, string allowedNamespace) in contracts)
+                string[] allowed = contracts.Where(c => c.Assembly == scope).Select(c => c.Namespace).ToArray();
+                if (allowed.Length > 0)
                 {
-                    if (scope == target)
-                    {
-                        checkedTypes++;
-                        Assert.True(ns == allowedNamespace, $"{project} uses {ns}.{type} of {target}; only {allowedNamespace} is allowed (ADR 0050).");
-                    }
+                    checkedTypes++;
+                    Assert.True(allowed.Contains(ns, StringComparer.Ordinal), $"{project} uses {ns}.{type} of {scope}; only {string.Join(", ", allowed)} is allowed (ADR 0050, ADR 0130).");
                 }
             }
 

@@ -185,6 +185,21 @@ public sealed partial class World
     /// <summary>Corpse lifetime in ticks.</summary>
     public int CorpseTtlTicks { get; }
 
+    /// <summary>
+    /// The scenario controller (the legacy trigger engine, ADR 0130), or null. Not state: the controller keeps its state
+    /// in <see cref="Extensions"/> and sets this hook again when it attaches to a restored match.
+    /// </summary>
+    public Systems.IScenarioController? Scenario { get; set; }
+
+    /// <summary>
+    /// The entity created for each of <see cref="MapData.Objects"/> at match start, by object index (ADR 0130: scenario
+    /// triggers name map objects by index). Filled by the match setup only; empty in a restored world, whose scenario
+    /// controller keeps its own copy in its snapshot state. Entries may since have died (check <see cref="Entities"/>).
+    /// </summary>
+    public ReadOnlySpan<EntityId> MapObjectEntities => _mapObjectEntities;
+
+    private EntityId[] _mapObjectEntities = [];
+
     /// <summary>Speed of an entity type in world units per tick.</summary>
     public int SpeedPerTick(ushort typeId) => _entityTypeSpeedPerTick[typeId];
 
@@ -619,6 +634,8 @@ public sealed partial class World
         RequireUnlocked();
         MapData data = Map.Data;
         data.Validate(Ruleset);
+        _mapObjectEntities = new EntityId[data.Objects.Length];
+        int objectIndex = 0;
         foreach (MapObject o in data.Objects)
         {
             ushort typeId = (ushort)Ruleset.EntityTypeId(o.TypeKey);
@@ -633,14 +650,9 @@ public sealed partial class World
                 throw new ArgumentException($"Map object '{o.TypeKey}' works for a kingdom (worker, producer or drop-off) and cannot belong to Nature.", nameof(data));
             }
 
-            if (Ruleset.EntityTypes[typeId].HasFootprint)
-            {
-                PlaceStructure(typeId, o.Owner, o.X / MapState.UnitsPerTile, o.Y / MapState.UnitsPerTile);
-            }
-            else
-            {
-                Spawn(typeId, o.Owner, o.X, o.Y);
-            }
+            _mapObjectEntities[objectIndex++] = Ruleset.EntityTypes[typeId].HasFootprint
+                ? PlaceStructure(typeId, o.Owner, o.X / MapState.UnitsPerTile, o.Y / MapState.UnitsPerTile)
+                : Spawn(typeId, o.Owner, o.X, o.Y);
         }
 
         AssignCivilizations();
