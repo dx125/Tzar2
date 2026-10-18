@@ -22,6 +22,23 @@ public class DeterminismTests
     }
 
     [Fact]
+    public void Worker_count_never_affects_long_routes_and_staggered_orders()
+    {
+        // A map large enough for route plans (the parallel route pre-pass, ADR 0080), with AI-like staggered orders.
+        SyntheticScenarioOptions options = TestWorlds.SmallScenario with
+        {
+            MapSize = 256,
+            EntityCount = 1200,
+            OrdersPerPlayerPerTick = 16,
+            ChurnPerPlayerPerTick = 1,
+            OrderIntervalTicks = 3,
+        };
+        List<ulong> reference = Run(options, workers: 1, Ticks);
+        Assert.Equal(reference, Run(options, workers: 4, Ticks));
+        Assert.NotEqual(reference, Run(options with { OrderIntervalTicks = 1 }, workers: 1, Ticks));
+    }
+
+    [Fact]
     public void Runs_are_repeatable_and_the_seed_matters()
     {
         Assert.Equal(Run(TestWorlds.SmallScenario, 1, 40), Run(TestWorlds.SmallScenario, 1, 40));

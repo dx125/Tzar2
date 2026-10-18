@@ -110,11 +110,15 @@ jobs:
           path: s2-out
 
   benchmarks:
-    # BenchmarkDotNet suites (sim tick, pathfinding, B3 maze planning, B4 mass death). Relative thresholds (regressions
-    # > 10% fail, TDD §21) need a stable runner baseline first; until then the t2 bench steps gate the absolute budgets:
-    # p99 <= 12 ms at 4,000 units on 512²; B3: 500 move orders planned within 3 ticks; B4: no stuck units, corpses
-    # never change passability, p99 <= 12 ms (ADR 0026); gameplay: resources delivered, fights happen, p99 <= 12 ms
-    # (ADR 0039); ai: every AI gathers, builds, trains and fights, p99 <= 12 ms (ADR 0052).
+    # TDD §21 nightly gates (ADR 0080), each through tools/ci/check-bench.sh: an absolute budget on the tick p99 (<= 12 ms;
+    # the 4-vCPU runner is weaker than the 6-core reference CPU of §4.3) and a relative one: the tick p50 must stay within
+    # 10% of tools/ci/bench-baseline.tsv for the runner's CPU model (runners come with different CPUs; an unknown model
+    # is compared calibration-normalized with a looser bound). Gating: s2 (the §4.3 S2 proxy: 4,000 units on 512²,
+    # 8 players, AI-like order rate), B3 (500 move orders planned within 3 ticks), B4 (no stuck units, corpses never
+    # change passability; ADR 0026), gameplay (resources delivered, fights happen; ADR 0039) and ai (every AI gathers,
+    # builds, trains and fights; ADR 0052; absolute budget only, no baseline rows yet). The synthetic stress
+    # scenario (16 move orders per player every tick, churn 2) is informational with its own budget (p99 <= 12 ms on the
+    # runner, within 10% of its baseline): warnings, never failures.
     name: Benchmarks
     runs-on: ubuntu-latest
     steps:
@@ -123,38 +127,62 @@ jobs:
         with:
           global-json-file: global.json
           dotnet-version: 8.0.x
-      - name: Sim tick budget (t2 bench, 4,000 units on 512²)
+      - run: dotnet build -c Release src/Tzar2.Tools.Cli
+      # Every scenario runs twice; check-bench.sh checks the faster run (noise on a shared runner only adds time).
+      - name: S2 proxy tick budget (t2 bench s2, 4,000 units on 512², 8 players)
         run: |
           set -euo pipefail
-          dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --ticks 2000 --warmup 200 --churn 2 --workers 4 | tee bench.txt
-          p99="$(grep '^tick ms' bench.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
-          awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::sim tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
+          for run in 1 2; do
+            dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario s2 --workers 4 | tee "bench-s2-$run.txt"
+          done
+          tools/ci/check-bench.sh s2 12 bench-s2-1.txt bench-s2-2.txt
       - name: B3 maze mass move (t2 bench, 500 orders on a 512² maze)
         run: |
           set -euo pipefail
           for scenario in b3 b3-groups; do
-            dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --scenario "$scenario" --ticks 600 --workers 4 | tee "bench-$scenario.txt"
-            p99="$(grep '^tick ms' "bench-$scenario.txt" | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
-            awk -v p="$p99" -v s="$scenario" 'BEGIN { if (p > 12.0) { print "::error::" s " tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
+            dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario "$scenario" --ticks 600 --workers 4 | tee "bench-$scenario.txt"
+            tools/ci/check-bench.sh "$scenario" 12 "bench-$scenario.txt"
           done
       - name: Gameplay economy and combat at scale (t2 bench, 8 kingdoms, 2,400 soldiers, 480 peasants)
         run: |
           set -euo pipefail
-          dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --scenario gameplay --players 8 --workers 4 | tee bench-gameplay.txt
-          p99="$(grep '^tick ms' bench-gameplay.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
-          awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::gameplay tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
+          for run in 1 2; do
+            dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario gameplay --players 8 --workers 4 | tee "bench-gameplay-$run.txt"
+          done
+          tools/ci/check-bench.sh gameplay 12 bench-gameplay-1.txt bench-gameplay-2.txt
       - name: AI against AI (t2 bench, 8 legacy AIs on 256², 20 minutes of game time; ADR 0051/0052)
         run: |
           set -euo pipefail
-          dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --scenario ai --players 8 --ticks 24000 --workers 4 | tee bench-ai.txt
-          p99="$(grep '^tick ms' bench-ai.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
-          awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::ai tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
+          dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario ai --players 8 --ticks 24000 --workers 4 | tee bench-ai.txt
+          tools/ci/check-bench.sh ai 12 bench-ai.txt
       - name: B4 mass death then traffic (t2 bench)
         run: |
           set -euo pipefail
-          dotnet run -c Release --project src/Tzar2.Tools.Cli -- bench --scenario b4 --workers 4 | tee bench-b4.txt
-          p99="$(grep '^tick ms' bench-b4.txt | sed -E 's/.*p99 ([0-9.]+).*/\1/')"
-          awk -v p="$p99" 'BEGIN { if (p > 12.0) { print "::error::B4 tick p99 " p " ms exceeds the 12 ms budget"; exit 1 } }'
+          for run in 1 2; do
+            dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario b4 --workers 4 | tee "bench-b4-$run.txt"
+          done
+          tools/ci/check-bench.sh b4 12 bench-b4-1.txt bench-b4-2.txt
+      - name: Synthetic stress, informational (t2 bench, 16 orders/player/tick, churn 2)
+        run: |
+          set -euo pipefail
+          for run in 1 2; do
+            dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --ticks 2000 --warmup 200 --churn 2 --workers 4 | tee "bench-stress-$run.txt"
+          done
+          tools/ci/check-bench.sh stress 12 --informational bench-stress-1.txt bench-stress-2.txt
+      - name: Benchmark summary
+        if: always()
+        run: |
+          {
+            echo '### t2 bench (ADR 0080)'
+            echo '```'
+            for f in bench-*.txt; do echo "== $f"; grep -E '^(scenario|cpu|tick ms|calibration|normalized|section ms)' "$f" || true; done
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: t2-bench
+          path: bench-*.txt
       - run: dotnet run -c Release --project tests/Tzar2.Benchmarks -- --filter "*" --exporters json markdown --artifacts BenchmarkDotNet.Artifacts
       - uses: actions/upload-artifact@v4
         with:

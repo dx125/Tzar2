@@ -1,0 +1,21 @@
+# Nightly t2 bench baselines (ADR 0080), recorded on GitHub ubuntu-24.04 runners (4 vCPUs, 4 sim workers): tick p50 per
+# scenario and runner CPU model (the median over the recording runs; the slowest run for models seen fewer than three
+# times), and the calibration-normalized p50. tools/ci/check-bench.sh prints the row of every run.
+# B3 has no row: its p50 is dominated by idle ticks (30% spread on one CPU model); B3 is gated by its planning check.
+# name	cpu	p50 ms	normalized p50 ms
+b4	AMD EPYC 7763 64-Core Processor	0.655	0.648
+b4	AMD EPYC 9V45 96-Core Processor	0.347	0.433
+b4	AMD EPYC 9V74 80-Core Processor	0.530	0.569
+b4	INTEL(R) XEON(R) PLATINUM 8573C	0.621	0.477
+gameplay	AMD EPYC 7763 64-Core Processor	2.594	2.548
+gameplay	AMD EPYC 9V45 96-Core Processor	1.595	1.824
+gameplay	AMD EPYC 9V74 80-Core Processor	2.026	2.179
+gameplay	INTEL(R) XEON(R) PLATINUM 8573C	2.405	1.892
+s2	AMD EPYC 7763 64-Core Processor	3.319	3.224
+s2	AMD EPYC 9V45 96-Core Processor	2.604	2.397
+s2	AMD EPYC 9V74 80-Core Processor	2.662	2.881
+s2	INTEL(R) XEON(R) PLATINUM 8573C	3.472	2.718
+stress	AMD EPYC 7763 64-Core Processor	6.274	6.165
+stress	AMD EPYC 9V45 96-Core Processor	4.776	4.537
+stress	AMD EPYC 9V74 80-Core Processor	5.062	5.456
+stress	INTEL(R) XEON(R) PLATINUM 8573C	6.636	5.168
