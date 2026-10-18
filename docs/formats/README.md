@@ -31,18 +31,18 @@ community description, needs a PL/PT GOG sample), `.DDV` (RE-11, M8), `.wdm` (DE
 | UNK | Topic | Status | Where |
 |---|---|---|---|
 | UNK-01 | RLE run opcodes | **resolved** | [rle.md §2–4](rle.md) |
-| UNK-01a | player-colour encoding | **resolved (data)**: indices 240–255 → `GAME.PAL` ramp `112 + 16·p`; slot→ramp mapping in-game still to capture (scenario `player-colours`, ADR 0030) | [rle.md §5.2](rle.md), [pal.md](pal.md) |
+| UNK-01a | player-colour encoding | **resolved (data)**: indices 240–255 → `GAME.PAL` ramp `112 + 16·p`. **Slot → ramp VERIFIED** (capture capture-20261018-024524, ADR 0111): kingdom N uses ramp N (diplomacy and setup swatches for kingdoms 1–8, sprite ramp for kingdom 1); sprite ramps of kingdoms 2–8 to be confirmed by the next session | [rle.md §5.2](rle.md), [pal.md](pal.md) |
 | UNK-01b | meaning of `_c` mask images | **resolved**: player-colour overlay patches, same ramp, offset/animation from `IMAGES.INI` | [bmp.md §2](bmp.md#building-masks) |
 | UNK-02 | `.DAT` fields | **resolved** (frame boxes, footprint rect); footprint grid values 0/2 hypothesis, 1 unknown | [dat.md](dat.md) |
-| UNK-03 | shadow blend | **partial**: encoding known (kind-7 sheets; baked near-black-green pixels in unit sheets, heuristic); darkening factor and overlap need captures (scenario `shadow-blend` ready, ADR 0030) | [rle.md §5.3–5.4](rle.md) |
+| UNK-03 | shadow blend | **factor VERIFIED** (capture capture-20261018-024524, ADR 0111): each 5-bit channel of the shadowed terrain is halved, `c >> 1` (93 of 93 observed levels in the shadow-blend trials, 80 of 87 in the terrain-tiles trials, the 7 misses in sparse dark and middle levels; ADR 0111); overlap: no double darkening seen (542 doubly darkened pairs against 10,458), a dedicated overlap capture is still to come. Encoding: kind-7 sheets; baked near-black-green pixels in unit sheets (heuristic) | [rle.md §5.3–5.4](rle.md) |
 | UNK-04 | HPFS / map schema | **partial**: container resolved; member list known; `tiles` = side² uint16; rest open | [hpfs.md](hpfs.md) |
 | UNK-06 | `.FNT` glyph format | **resolved** | [fnt.md](fnt.md) |
-| UNK-10 | terrain storage / transitions | **partial**: transition tile shape order and keys known; per-tile vs per-corner storage and variant choice open (needs map `tiles`; scenario `terrain-tiles` correlates screen tiles with map words, ADR 0030) | [bmp.md §3](bmp.md#3-terrain-sets) |
+| UNK-10 | terrain storage / transitions | **partial**: transition tile shape order and keys known. Capture capture-20261018-024524 (ADR 0111): 34 of 39 snapshots of five maps aligned with the map words; most words show several tiles (the variant is not in the word alone); the transition variant column is not a coordinate parity (variant 0 ≈ 3/4 of the cells); no single base-tile offset per atlas. Rule still open | [bmp.md §3](bmp.md#3-terrain-sets) |
 | UNK-31 | BMP transparency key | **resolved**: `0x03E0` green; terrain transitions also `0x7C1F` magenta | [bmp.md §1.2](bmp.md) |
-| UNK-39 | RGB555 → RGB888 | open (bit replication used); capture scenario `colour-depth` ready ([ADR 0030](../decisions/0030-capture-harness.md)) | [rle.md §5.1](rle.md) |
+| UNK-39 | RGB555 → RGB888 | **resolved for the rebuild** (capture capture-20261018-024524, ADR 0111): the game draws to an RGB555 surface (masks 7C00/03E0/001F) whatever the wrapper offers; the screen expansion is the display path's, and the modern path shows bit replication for red and blue, which we keep. Period hardware cannot be measured | [rle.md §5.1](rle.md) |
 | UNK-40 | cursor hotspots | **mostly resolved**: `IMAGES.INI` `hotspot` for cursor entries | [ini-tsv.md §4](ini-tsv.md#imagesini) |
-| UNK-07 | `actionrow` semantics | data side clarified (frame index, may repeat); timing open | [ini-tsv.md §4](ini-tsv.md#imagesini) |
-| UNK-12 | `SPEED`/`move_len` | open (`move_len` documented as data only) | [ini-tsv.md §4](ini-tsv.md#imagesini) |
+| UNK-07 | `actionrow` semantics | data side clarified (frame index, may repeat); timing open (first capture: no fight took place, re-capture needed) | [ini-tsv.md §4](ini-tsv.md#imagesini) |
+| UNK-12 | `SPEED`/`move_len` | open (`move_len` documented as data only; first capture: the spawned units never moved, re-capture needed) | [ini-tsv.md §4](ini-tsv.md#imagesini) |
 
 ## Other findings worth knowing
 

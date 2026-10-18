@@ -32,7 +32,7 @@ gameplay:
   # Owner decision for M2: a group move travels at its slowest member's speed in both rulesets until UNK-12 is captured
   # (ADR 0024 question).
   groupMoveSpeed: slowest             # UNVERIFIED (UNK-12)
-  populationLimit: 200                # UNVERIFIED: default of the lobby's POPULATION LIMIT setting (UNK-20)
+  populationLimit: 200                # VERIFIED (capture-20261018-024524, smoke/plain setup screen): the setup screen's default
   startingResources: legacy           # RES.INI [Low]/[Medium]/[High] (lobby STARTING RESOURCES)
   defaultStartingResources: medium    # UNVERIFIED: the lobby's default level
   # Compile-time conversions of table columns.

@@ -177,6 +177,31 @@ public class AnalysisMathTests
     }
 
     [Fact]
+    public void Shadow_rule_is_told_apart_from_its_neighbours_by_the_level_table()
+    {
+        // The first capture's tables: every level halved (c >> 1). floor(c*17/32) shares most pairs but not the table.
+        int[][] halved = [.. Enumerable.Range(0, 3).Select(_ => Enumerable.Range(0, 32).Select(c => c >> 1).ToArray())];
+        ShadowBlend.Model half = ShadowBlend.Models.Single(m => m.Name == "floor(c*16/32)");
+        ShadowBlend.Model near = ShadowBlend.Models.Single(m => m.Name == "floor(c*17/32)");
+        Assert.Equal(1.0, ShadowBlend.TableAgreement(halved, half, [5, 5, 5]));
+        Assert.InRange(ShadowBlend.TableAgreement(halved, near, [5, 5, 5]), 0.5, 0.8);
+        halved[0][7] = -1;   // a level not seen does not count
+        Assert.Equal(1.0, ShadowBlend.TableAgreement(halved, half, [5, 5, 5]));
+    }
+
+    [Fact]
+    public void Swatch_colours_are_matched_to_the_nearest_ramp()
+    {
+        GamePalette palette = GamePalette.Parse(SyntheticFormats.Pal());
+        for (int ramp = 0; ramp < GamePalette.PlayerCount; ramp++)
+        {
+            Rgb24 c = palette.PlayerRamp(ramp)[15];
+            Assert.Equal(ramp, PlayerColours.NearestRamp(palette, (c.R, c.G, c.B), out double margin));
+            Assert.True(margin > 1);
+        }
+    }
+
+    [Fact]
     public void Burst_regions_are_cropped()
     {
         var image = new CaptureImage(4, 3, PixelFormat.Rgb888, Enumerable.Range(0, 12).Select(i => (uint)i).ToArray());

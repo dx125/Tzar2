@@ -109,9 +109,15 @@ internal sealed class AnalysisContext(CaptureSession session, string? install, G
         }
     }
 
-    /// <summary>The install's <c>Maps/&lt;name&gt;.wmp</c>, or null.</summary>
+    /// <summary>The install's <c>Maps/&lt;name&gt;.wmp</c>, or null. <paramref name="name"/> may carry the extension
+    /// (scenarios pass <c>-map MP2.wmp</c>, the only form the game accepts).</summary>
     public MapInfo? Map(string name)
     {
+        if (name.EndsWith(".wmp", StringComparison.OrdinalIgnoreCase))
+        {
+            name = name[..^4];
+        }
+
         if (InjectedMaps.TryGetValue(name, out MapInfo? injected))
         {
             return injected;

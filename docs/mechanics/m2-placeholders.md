@@ -9,13 +9,25 @@ Where the value lives: **YAML** = `content/engine/rules/classic.yaml` (marked `U
 like any rule), **code** = a rule of a sim system (named in the ADR; changing it needs a capture fact and an ADR
 update).
 
+## First capture (2026-10-18, session `capture-20261018-024524`, ADR 0111)
+
+What the session could and could not settle for this register (facts: `tests/fidelity/facts/`):
+
+* **VERIFIED:** population limit default (the single-player setup screen shows 200 for a preset map).
+* **Not resolved, re-capture needed:** SPEED → px/s (UNK-12; `unit-speed`: the spawned units stayed unplaced and never
+  moved), time between hits, hit frame, minimum damage (UNK-07/08; `attack-timing`: no fight took place). Both scenarios
+  are rewritten for the next session (ADR 0110).
+* **Not captured:** everything else here (no scenario yet).
+* Starting resources: the setup screen of a preset map shows "Default" (the map's own amounts: 1,000 of each on MP2,
+  400 on MP3, 2,000 on MP6), which says nothing about the random-map default; still UNVERIFIED.
+
 ## Values
 
 | Value | Placeholder | Where | Unknown | How to resolve |
 |---|---|---|---|---|
-| SPEED point → px/s | 12 px/s per point (SPEED 4 = 48 px/s) | YAML `gameplay.speedPixelsPerSecondPerPoint` | UNK-12 | capture scenario `50-unit-speed` |
+| SPEED point → px/s | 12 px/s per point (SPEED 4 = 48 px/s) | YAML `gameplay.speedPixelsPerSecondPerPoint` | UNK-12 | capture scenario `50-unit-speed` (first session: units never moved, re-capture) |
 | Group move speed | `slowest` in both rulesets (owner decision) | YAML `gameplay.groupMoveSpeed` | UNK-12 | same captures with mixed groups |
-| Time between hits | 6,000 ms / RATE | YAML `gameplay.attackCycleMs` | UNK-07 | attack-timing captures |
+| Time between hits | 6,000 ms / RATE | YAML `gameplay.attackCycleMs` | UNK-07 | attack-timing captures (first session: no fight, re-capture) |
 | Hit frame | 50% of the cycle | YAML `gameplay.hitDelayPercent` | UNK-07 | `actionrow` vs. captures |
 | Minimum damage | 1 | YAML `gameplay.minimumDamage` | UNK-08 | damage grid |
 | Melee reach | 8 px edge to edge (buildings: the interaction reach) | YAML `gameplay.meleeReachPx` | UNK-07, UNK-11 | captures of melee contact |
@@ -25,7 +37,7 @@ update).
 | Wood per tree | 100 | YAML `comm.tree.ResourceNode.amount` | UNK-17 | tree depletion capture |
 | Node search radius | 12 tiles | YAML `gameplay.nodeSearchRadiusTiles` | UNK-17 | observe auto-continue after depletion |
 | Queue length | 10 | YAML `gameplay.queueCapacity` | UNK-20 | UI capture |
-| Population limit default | 200 | YAML `gameplay.populationLimit` | UNK-20 | lobby default |
+| Population limit default | 200 — **VERIFIED** (capture-20261018-024524, `smoke/plain` window capture `setup`: the setup screen's default) | YAML `gameplay.populationLimit` | UNK-20 | done |
 | Starting resources default | `medium` | YAML `gameplay.defaultStartingResources` | — | lobby default |
 | Refund on cancel | 100% (sites at any progress, and queue items) | YAML `gameplay.*RefundPercent` | — | cancel captures |
 | Destroyed producer | its queue is lost without a refund | code (`World.Destroy`) | — | observation |

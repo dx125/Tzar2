@@ -13,3 +13,7 @@ t2 fidelity analyze capture-....zip --extract tests/fidelity/local-captures/<ses
   `tests/fidelity/local-captures/` and `capture-*.zip` are git-ignored (REQ-LEGAL-01).
 * A fact becomes a test once the corresponding feature exists: the future `Tzar2.Fidelity.Tests` compare our
   simulation and renderer with these values within the S4/S5 tolerances.
+
+Committed so far: session `capture-20261018-024524` (first operator run, ADR 0111). `FidelityFactsTests` (Tzar2.Tools.Cli.Tests)
+checks the engine against the verified facts (shadow factor, player-colour order, RGB555 surface); the overall
+status is in [docs/mechanics/fidelity-summary.md](../../docs/mechanics/fidelity-summary.md).

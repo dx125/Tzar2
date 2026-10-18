@@ -11,6 +11,9 @@ Where the value lives (all in `src/Tzar2.Content/MapGen/`): **Options** = `MapGe
 `MapGenCatalog.cs`, **Profile** = `TerrainProfile.cs`, **Builder** = `MapGenerator.cs` / `MapBuilder.Objects.cs`,
 **Validator** = `MapGenValidator.cs`.
 
+First capture (2026-10-18, ADR 0111): no random map was generated in the original, so nothing here changed; the
+terrain-tile facts it produced concern the renderer (UNK-10), not the generator. Needs random-map captures (RE-10).
+
 ## What is known from the original data
 
 * Types, sizes, terrain sets and option names: `LOCAL/STRINGS.INI` (`m_type_0…5`, `m_size_0…6`, `t_gslocations`

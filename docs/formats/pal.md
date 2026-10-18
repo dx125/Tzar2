@@ -39,7 +39,10 @@ grey), whose flat colours are presumably the minimap/UI colours of the same play
 Every full indexed sprite palette carries copies of entries 224–255 at the same indices,
 which is why sprites render plausibly even without recolouring.
 
-Open: the mapping from in-game player slot (kingdom 1…8 in the editor) to ramp index, and
-the colours used for the "Rescue"/"Nature" pseudo-players, need a capture (RE-09).
+Slot → ramp: **VERIFIED as the identity** by capture capture-20261018-024524 (ADR 0111). The kingdom colour squares of the
+setup screen (kingdoms 1, 2) and of the diplomacy dialog (kingdoms 2–8) are the flat `COLOR BARS` colours, each
+nearest to ramp N for kingdom N (margin ≥ 1.39 over the next ramp); kingdom 1's castle carries ramp 1 (582 blue
+ramp pixels against 33 of any other). The sprite ramps of kingdoms 2–8 are confirmed by the next session's
+scenario `player-colours`. Still open: the colours of the "Rescue"/"Nature" pseudo-players (RE-09).
 For REQ-GFX-04 the shader takes the ramp index and these 8 × 16 colours (RGB555-expanded
 values of the original ramps are exact; the ramps are already 8-bit in the file).
