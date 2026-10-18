@@ -755,6 +755,7 @@ A utility/behaviour-tree layer above the same executors, scriptable in Lua and e
 ### 18.4 File formats
 * **`.t2map`** = zip package (`kind: map`): `package.yaml`; `map.yaml` (properties, kingdoms, settings, diplomacy, tech restrictions); `terrain.bin` (versioned binary: corner grid, cliffs, decoration layers) + `preview.png`; `objects.yaml` (entities with stable IDs, names, properties); `triggers.yaml` (legacy model); `conversations.yaml`; `scripts/*.lua`; `strings/*.po`; `assets/…` (user resources). Text parts are diff-friendly for version control.
 * **`.t2camp`** = zip package (`kind: campaign`): `campaign.yaml` (graph, entry maps, descriptions, persistence rules), `maps/*.t2map`, shared assets and strings.
+* *As built in M4* ([ADR 0120](decisions/0120-scenario-ir-for-triggers-conversations-and-campaigns.md), [ADR 0121](decisions/0121-legacy-map-and-campaign-converter.md)): the terrain and objects are `map.bin`, the triggers, conversations, kingdoms and settings `scenario.json`, the campaign graph `campaign.json`; plus `decorations.json`, `legacy.json`, `provenance.json` and `conversion-report.json`.
 * **REQ-EDT-03 Conversion:** `.wmp`/`.wcm` → `.t2map`/`.t2camp` must be lossless for all features listed in §18.2. Anything unsupported is reported by name and location.
 
 ### 18.5 Legacy map & campaign converter (part of the editor)
@@ -909,7 +910,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-01 | RLE run opcodes; (a) player-color encoding; (b) meaning of `_c` mask images | Static analysis of files + decode experiments vs. in-game captures | P0 |
 | UNK-02 | `.DAT` sprite/building metadata fields (frame boxes, offsets, footprints) | Correlate with `IMAGES.INI` and decoded frames | P0 |
 | UNK-03 | Shadow blend (darkening factor, overlap behaviour) | Captures (shadow over known colors; overlapping shadows). Factor measured: ½ per 5-bit channel (ADR 0111); overlap still to confirm | P0 |
-| UNK-04 | HPFS map/campaign/save layout; map binary schema | Editor experiments (save diffs after single edits) + static analysis | P0 |
+| UNK-04 | HPFS map/campaign/save layout; map binary schema | Editor experiments (save diffs after single edits) + static analysis. **Mostly resolved** (M4, [wmp.md](formats/wmp.md)): every member and trigger payload of the reference build decodes; leftovers are UNK-70…80 | P0 |
 | UNK-05 | DDV codec | Static analysis | P3 |
 | UNK-06 | `.FNT` glyph format | Static analysis | P1 |
 | UNK-07 | Semantics of `actionrow` (hit frame) and attack timing vs. `RATE` | Measurement | P1 |
@@ -948,6 +949,17 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-40 | Cursor hotspots | Data/captures | P2 |
 | UNK-41 | Expression edge cases (division by zero, overflow, unknown variables) | Editor experiment | P2 |
 | UNK-42 | Building fire: health threshold at which buildings burn, fire damage per second, which types burn (GAME-03) | Measurement | P1 |
+| UNK-70 | Decoration placement: pixel offsets of ground objects/patches relative to their tile ([wmp.md §4.4](formats/wmp.md)) | Captures | P2 |
+| UNK-71 | Map header bytes 0x012/0x04C/0x11A/0x138–0x13A (game type, victory condition, fog, explore); kingdom resource order, AI flags, player type, shared-victory bit ([wmp.md §2–3](formats/wmp.md)) | Editor experiment | P1 |
+| UNK-72 | `defeat.messages` map member | Editor experiment | P3 |
+| UNK-73 | Semantics of the expression language beyond Appendix C.6 (further reserved variables and `@functions` of the game's name table); `$x`/`$y` | Script experiments + static analysis | P1 |
+| UNK-74 | `#name` variables: campaign scope? | Campaign experiment | P1 |
+| UNK-75 | Quantifier byte (All/Any) of trigger object specifications | Editor experiment | P2 |
+| UNK-76 | The undocumented Delay action (code 27) | Script experiment | P2 |
+| UNK-77 | Custom sound objects (`sound_object` record layout; no sample in the reference build) | Editor experiment | P2 |
+| UNK-78 | Which "use default" object flag covers level/resistance; whether recorded values override the ruleset | Editor experiment | P2 |
+| UNK-79 | Second part of Player Win/Lose's `next map|?` text | Editor experiment | P3 |
+| UNK-80 | Trigger area rectangles: inclusive or exclusive right/bottom; rectangles past the map edge | Editor experiment | P2 |
 
 ---
 
