@@ -26,6 +26,7 @@ internal static class GameplayCommands
     public static void ClearTasks(World world, EntityId unit, CombatMode newMode = CombatMode.None)
     {
         TradeSystem.Cancel(world, unit); // GAME-14: another order ends a trade route
+        world.CancelErrandAndCast(unit); // GAME-09…11: errands and spells in progress end too (ADR 0096)
         int w = world.Workers.IndexOf(unit);
         if (w >= 0)
         {
@@ -549,12 +550,14 @@ internal static class GameplayCommands
         // Nature's units are hostile to everyone and can be attacked; resources cannot (combat targets, ADR 0038). Own
         // animals that leave meat (cows) may be butchered (GAME-02, ADR 0042).
         bool butcher = identity.Owner == command.Player && traits.SpawnOnDeath >= 0 && traits.Category == EntityCategory.Unit;
-        if ((identity.Owner == command.Player && !butcher) || traits.Category is not (EntityCategory.Unit or EntityCategory.Building))
+        bool training = CombatSystem.IsTrainingTarget(world, command.Player, target); // own dummies (GAME-08)
+        if ((identity.Owner == command.Player && !butcher && !training) || traits.Category is not (EntityCategory.Unit or EntityCategory.Building)
+            || world.IsHeld(target))
         {
             return CommandRejection.InvalidArgument;
         }
 
-        if (!butcher && !world.MayAttack(command.Player, target))
+        if (!butcher && !training && !world.MayAttack(command.Player, target))
         {
             return CommandRejection.NotAllied; // allies (and neutrals' non-military units) cannot be attacked (GAME-13)
         }

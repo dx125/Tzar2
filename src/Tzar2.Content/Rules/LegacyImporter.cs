@@ -13,7 +13,7 @@ namespace Tzar2.Content.Rules;
 /// <c>legacy:</c> section says which classes to import and how to map columns; YAML layers then patch the generated
 /// entries. Column semantics follow docs/formats/ini-tsv.md §3 (columns by position) and TDD Appendix E.
 /// </summary>
-internal sealed class LegacyImporter
+internal sealed partial class LegacyImporter
 {
     // Unit table columns (by position, docs/formats/ini-tsv.md §3).
     private const int ColName = 0;
@@ -157,6 +157,7 @@ internal sealed class LegacyImporter
 
         AddResourceNodes(document);
         AddResearch(document);
+        AddCombatEntries(document);
     }
 
     private void AddUnit(RulesDocument document, string civ, string cls, IReadOnlyList<string> row, string table, SortedSet<string> imported, YamlMapping suffixes, YamlMapping producers)
@@ -264,9 +265,15 @@ internal sealed class LegacyImporter
     {
         int attack = Int(row, ColAttack, source, key, 0);
         int rate = Int(row, ColRate, source, key, 0);
-        if (attack > 0 && rate > 0)
+        if (attack > 0)
         {
-            var fields = new List<(string, string)> { ("attack", Num(attack)), ("rate", Num(rate)) };
+            // Some rows have an ATTACK but no RATE (priests, Jihad warriors): the rules must give one (ADR 0091).
+            var fields = new List<(string, string)> { ("attack", Num(attack)) };
+            if (rate > 0)
+            {
+                fields.Add(("rate", Num(rate)));
+            }
+
             if (Cell(row, ColRange).Length > 0)
             {
                 fields.Add(("range", Num(Int(row, ColRange, source, key, 0))));
@@ -335,6 +342,8 @@ internal sealed class LegacyImporter
         {
             body.Trait("Researcher", ("technologies", "[" + string.Join(", ", techs) + "]"), ("upgrades", "[" + string.Join(", ", upgrades) + "]"));
         }
+
+        AddCombatObjectTraits(body, ini, section, source, key, building);
     }
 
     // Walks a command card and its submenus (bounded: menus are untrusted data) for research and upgrade orders.

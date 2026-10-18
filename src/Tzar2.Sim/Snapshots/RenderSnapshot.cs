@@ -130,9 +130,9 @@ public sealed class RenderSnapshot
         for (int i = 0; i < ids.Length; i++)
         {
             int p = world.Positions.IndexOf(ids[i]);
-            if (p < 0)
+            if (p < 0 || world.IsHeld(ids[i]))
             {
-                continue;
+                continue; // units inside holders and items in inventories are not on the map (GAME-09/10)
             }
 
             if (Viewer >= 0 && !world.Visibility.CanSee(world, Viewer, ids[i]))

@@ -208,6 +208,11 @@ public sealed class Visibility
             return true;
         }
 
+        if (world.IsHeld(entity))
+        {
+            return false; // inside another kingdom's holder (or inventory): not on the map (GAME-09/10)
+        }
+
         Position at = world.Positions.At(p);
         if (world.Footprints.Has(entity))
         {

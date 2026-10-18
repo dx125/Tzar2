@@ -1,4 +1,4 @@
-# M3 gameplay placeholders, stream A: GAME-01 … GAME-06 (UNVERIFIED)
+# M3 gameplay placeholders, streams A, E and F: GAME-01 … GAME-19 (UNVERIFIED)
 
 Status: **open**. Register of every gameplay value and rule of M3 stream A (ADRs 0040-0045) that is neither in an
 original data table nor measured in the running game. Owner decision: no captures from the running original yet; take
@@ -156,3 +156,72 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 * **Per-kingdom gate routing** (REQ-PATH-01 per-player portals): backlog; the movement bar of ADR 0102 is enough for M3.
 * **Confirmed defaults:** lobby teams start with shared victory; the 10 s stance-change interval stays (engine bound,
   UNVERIFIED).
+# Stream E: GAME-07 … GAME-11 (combat, experience, holders, items, magic; ADRs 0090-0096)
+
+From the data (not placeholders): holder capacities, `[accept]` and `[damage]` shares (`max_obj_in_holder`: castle,
+outpost 50; galleon 24, hulk 16, xebec 8; carpet, caravan 8 — the data wins over the manual's "eight units" per ship);
+inventory sizes (soldiers 8); `min_attack_range` (catapults 4, cannon tower 2, rocket tower 3); `max_damage` (towers);
+item classes and who carries them (`[enter]`); the spells on each caster's command card; the technology of each spell
+per civilization (`TECHTREE [orders]`); summons' mana and resource costs (`m` suffix); the crusade anchor's cost and
+the revealers' `fog_range`; hero names (`HEROES.INI`). From the manual: weapons add attack, armor defence; +1 attack and
++½ defence per experience level; Learning, Heroism, Leadership, Honor, Body Building, Philosophy, Mastery, Medicine,
+Inquisition do what their texts say (not how much); fire rain hits own units; whirlpools destroy ships. From the
+strategy guide: no experience before Learning; each level costs more; garrisons heal "quickly" and take a little damage
+when the building is hit; catapult stones can be stepped away from.
+
+## Values
+
+| Value | Placeholder | Where | Unknown | How to resolve |
+|---|---|---|---|---|
+| Damage classes | ranged arrow, melee sword; cannon: catapults, heavy catapults, cannon and rocket towers, galleons, hulks | YAML `Armament.damage` | UNK-22 | holder damage captures |
+| Projectile per shooter | arrow (archers, longbows, horse archers, wood/guard/keep towers, xebecs, fishing boats), bolt (ballista), stone (catapults), cannon (cannon tower, galleon, hulk), rocket arrow, magic (mage, priest), flame ball (dragon) | YAML `^class.*.Armament.projectile` | UNK-22 | captures |
+| Projectile speeds | arrow 400, bolt 480, stone 200, cannon 320, rocket 360, magic/bolts 320, flame ball 280 px/s | YAML `combat.projectiles` | UNK-22 | frame-by-frame captures |
+| Homing | arrows, bolts, rockets, magic home; stones and cannon balls land where the target stood | YAML | UNK-22 | dodge captures |
+| Hit radius of ground shots | stone 24 px, cannon 20 px, others 16 px | YAML | UNK-22 | captures |
+| Splash | stone 32 px 50%, cannon 24 px 50%, rocket arrow and flame ball 16 px 50%; no friendly fire | YAML | UNK-22 | splash captures |
+| Damage roll | a hit rolls in [attack, `max_damage`] (⚠ HYPOTHESIS: what `max_damage` means) | code (`CombatSystem`) | UNK-08 | tower damage grid |
+| Missing RATE | priests (euro, arab) 2, Jihad warriors 3, armored chariots 3 | YAML | UNK-07 | attack timing captures |
+| Carpet speed / radius | SPEED 5, 12 px (no SPEED in the table) | YAML `^class.carpet` | UNK-12, UNK-11 | captures |
+| Experience per damage | 100% (1 point per point of damage dealt to an enemy) | YAML `combat.experiencePerDamagePercent` | UNK-23 | XP captures |
+| Experience per kill | 0 | YAML `combat.experiencePerKill` | UNK-23 | same |
+| Level curve | level n at 100 × n × (n + 1) / 2 | YAML `combat.levelBaseXp` | UNK-23 | same |
+| Level cap | 0 without Learning; Learning +4, Heroism +1,000 (stream A values) | YAML `combat.baseLevelCap`, `te_*` | UNK-23 | same |
+| Defence per level | ½, truncated (1 per 2 levels) | YAML `combat.defenceHalvesPerLevel` | UNK-08 | same |
+| Hero level | 12 (TDD) | YAML `combat.heroLevel` | — | — |
+| Leadership | 50% of a hero's gain to own units within 4 tiles | YAML `combat.leadership*` | UNK-23 | captures |
+| Honor | +25% attack of heroes against heroes | YAML `combat.honorAttackPercent` | UNK-23 | captures |
+| Dummies | teach up to level 3; take no damage | YAML `combat.dummyMaxLevel` | UNK-23 | captures |
+| Hero names when the list is used up | "<first name> 2", "… 3" | code (`ExperienceSystem`) | — | observation |
+| Holder healing | castle, outpost 120 HP per minute per unit | YAML `^class.castle/outpost.Holder.healPerMinute` | UNK-24 | garrison captures |
+| Exit radius | 3 tiles | YAML `combat.exitRadiusTiles` | — | observation |
+| Item defaults | weapon +3, armor +2, potion 100 HP, plusplus +1 level (⚠ HYPOTHESIS), fire-rain book 3 charges / 10 s, soul (murder, once), gold item 100 | YAML `comm.item*` | UNK-25 | editor defaults, captures |
+| Crafting | 50 gold per power point, 2 s per point, at most 20 | YAML `combat.craft*` | UNK-25 | workshop captures |
+| Spell magnitudes | per spell (amount, mana, range, cooldown, cast time, duration, radius, pulse) | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
+| Spell damage | no defence, no bonus | code (`MagicSystem`) | UNK-26 | captures |
+| Summon mana above the pool | costs at most the caster's whole pool (golem 600m, dragon 800m vs `max_manna` 100; ⚠ HYPOTHESIS) | code (`MagicSystem.ManaCost`) | UNK-26 | summon captures |
+| Medicine | +4 tiles of spell range for priests | YAML `te_medicine` | UNK-26 | captures |
+| Inquisition | +50% attack of priests (exorcism) | YAML `te_inquisition` | UNK-26 | captures |
+| Crusade | 5 crusaders per crusade, 60 s cooldown after the last died (⚠ HYPOTHESIS: how crusaders are raised) | YAML `combat.crusade*` | UNK-26 | crusade captures |
+| Bribe price | 200% of the unit's cost, in gold | YAML `combat.bribeCostPercent` | UNK-26 | bribe captures |
+| Magic vision | the revealer lasts 30 s | YAML `comm.fog_revealer.Lifetime` | UNK-26 | captures |
+
+## Rules in code
+
+| Rule | Placeholder | System | Unknown |
+|---|---|---|---|
+| Minimum range | no swing inside it; explicit targets wait (no backing off) | `CombatSystem` | UNK-22 |
+| Attack ground | full hit within the hit radius of the point, splash share beyond | `CombatSystem` | UNK-22 |
+| Stand ground / hold fire | no chasing / no fight started and no retaliation | `CombatSystem` | — |
+| Line of sight, height, formations | none | — | — |
+| Holder share split | evenly; the first units by index take the remainder | `CombatSystem` | UNK-24 |
+| Holder destroyed | units take free tiles; none free (at sea): they die | `World` | — |
+| Holder captured | the previous owner's units leave | `World` | — |
+| Boarding | room and acceptance re-checked on arrival; the late ones give up | `ErrandSystem` | — |
+| Pick-up race | the first unit to arrive (errand order) gets the item | `ErrandSystem` | — |
+| Casting | pay on effect; one cooldown per caster; an interrupted cast is free | `MagicSystem` | UNK-26 |
+| Confusion | the unit takes everyone as an enemy and everyone takes it as one | `CombatSystem` | UNK-26 |
+| Cloak | ends when the unit attacks or casts | `CombatSystem`, `MagicSystem` | — |
+| Murder, souls | heroes and `KillImmune` types are immune | `MagicSystem` | UNK-26 |
+| Conversion | hit points in proportion; level, items and name carry over; a new order refunds it, death does not (the price is lost) | `CombatMagicCommands`, `World` | — |
+| Bribe | not peasants, crusaders or heroes | `CombatMagicCommands` | — |
+| Not implemented | `item_berserk`, Tournaments, ships entering harbors, spies' impersonation (visibility stream) | — | — |

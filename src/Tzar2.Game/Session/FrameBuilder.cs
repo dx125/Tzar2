@@ -43,9 +43,9 @@ public static class FrameBuilder
         {
             EntityId id = ids[i];
             int p = world.Positions.IndexOf(id);
-            if (p < 0)
+            if (p < 0 || world.IsHeld(id))
             {
-                continue;
+                continue; // inside a holder or an inventory: not on the map (GAME-09/10)
             }
 
             Identity identity = identities[i];

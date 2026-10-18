@@ -24,7 +24,7 @@ internal sealed partial class EntityCompiler
         ["Health"] = ["max"],
         ["Armor"] = ["defence", "resistance"],
         ["RevealsShroud"] = ["sight"],
-        ["Armament"] = ["attack", "range", "rate", "cooldownMs", "hitDelayMs", "damage", "autoAcquire"],
+        ["Armament"] = ["attack", "range", "rate", "cooldownMs", "hitDelayMs", "damage", "autoAcquire", "minRange", "maxAttack", "projectile"],
         ["Cost"] = [],
         ["BuildTime"] = ["ms"],
         ["PopulationCost"] = ["amount"],
@@ -187,6 +187,7 @@ internal sealed partial class EntityCompiler
                     IsMilitary = d.Category == EntityCategory.Unit && d.Armament is not null && d.Harvester is null && !d.IsBuilder && d.World.Trader is null,
                 },
             };
+            traits = WithCombatTraits(i, traits, d);
             try
             {
                 types.Add(new EntityTypeDefinition(
@@ -218,7 +219,7 @@ internal sealed partial class EntityCompiler
         string key = entry.Key;
         foreach (ResolvedTrait trait in entry.Traits)
         {
-            if (!Catalogue.TryGetValue(trait.Name, out string[]? fields))
+            if (!Catalogue.TryGetValue(trait.Name, out string[]? fields) && !CombatCatalogue.TryGetValue(trait.Name, out fields))
             {
                 throw new RulesException(trait.Source, trait.Line, $"{key}: unknown trait '{trait.Name}'");
             }
@@ -293,15 +294,15 @@ internal sealed partial class EntityCompiler
             d.ManaCost = NonNegative("Cost", "mana", 0);
         }
 
-        if (entry.Find("Armament") is { } arm && (IntOf("Armament", "attack") ?? 0) > 0)
+        if (entry.Find("Armament") is { } unrated && (IntOf("Armament", "attack") ?? 0) > 0 && (IntOf("Armament", "rate") ?? 0) <= 0 && IntOf("Armament", "cooldownMs") is null)
+        {
+            // A table row with an ATTACK but no RATE (priests, Jihad warriors) cannot attack until a rule gives a rate.
+            _diagnostics.Add($"{key}: Armament has no rate or cooldownMs; the type cannot attack ({unrated.Source})");
+        }
+        else if (entry.Find("Armament") is { } arm && (IntOf("Armament", "attack") ?? 0) > 0)
         {
             int rate = IntOf("Armament", "rate") ?? 0;
             int? explicitCooldown = IntOf("Armament", "cooldownMs");
-            if (explicitCooldown is null && rate <= 0)
-            {
-                throw new RulesException(arm.Source, arm.Line, $"{key}.Armament needs a positive rate or cooldownMs");
-            }
-
             int cooldown = explicitCooldown ?? Math.Max(1, _gameplay.AttackCycleMs / rate);
             int hit = IntOf("Armament", "hitDelayMs") ?? (int)((long)cooldown * _gameplay.HitDelayPercent / 100);
             DamageClass damage = (StrOf("Armament", "damage") ?? (IntOf("Armament", "range") > 0 ? "arrow" : "sword")) switch
@@ -596,6 +597,7 @@ internal sealed partial class EntityCompiler
             : d.FootprintWidth > 0 ? EntityCategory.Building
             : d.SpeedUnitsPerSecond > 0 ? EntityCategory.Unit
             : EntityCategory.Other;
+        ReadCombatTraits(entry, d);
         return d;
     }
 
@@ -688,7 +690,7 @@ internal sealed partial class EntityCompiler
 
     private static RulesException Error(RuleValue at, string message) => new(at.Source, at.Node.Line, message);
 
-    private sealed class Draft
+    private sealed partial class Draft
     {
         public EntityCategory Category;
         public string LegacyClass = string.Empty;

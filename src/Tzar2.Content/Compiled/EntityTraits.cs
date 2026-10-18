@@ -41,8 +41,22 @@ public enum DamageClass : byte
 /// <param name="AutoAcquire">Whether an idle entity picks targets in sight by itself (workers do not).</param>
 public sealed record ArmamentDefinition(int Attack, int RangeUnits, int CooldownMs, int HitDelayMs, DamageClass DamageClass, bool AutoAcquire)
 {
+    /// <summary>Least reach (edge to edge, world units): closer targets cannot be hit (OBJECTS <c>min_attack_range</c>; ADR 0091).</summary>
+    public int MinRangeUnits { get; init; }
+
+    /// <summary>Most damage of a hit before defence (OBJECTS <c>max_damage</c>, towers; ⚠ HYPOTHESIS: a hit rolls in [attack, max]); 0 = fixed.</summary>
+    public int MaxAttack { get; init; }
+
+    /// <summary>The projectile of a ranged attack (<see cref="Ruleset.Projectiles"/>), or -1 (the hit lands at the hit frame).</summary>
+    public int Projectile { get; init; } = -1;
+
     internal void Validate()
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(MinRangeUnits);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MinRangeUnits, Math.Max(RangeUnits, 0));
+        ArgumentOutOfRangeException.ThrowIfNegative(MaxAttack);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxAttack, 1_000_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(Projectile, -1);
         ArgumentOutOfRangeException.ThrowIfNegative(Attack);
         ArgumentOutOfRangeException.ThrowIfNegative(RangeUnits);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RangeUnits, 64 * 2048);
@@ -184,7 +198,7 @@ public sealed record DecayDefinition(int AfterMs, int HealthPerMinute);
 /// owning <see cref="Ruleset"/> (resource type ids, entity type ids). <see cref="None"/> = a type without gameplay
 /// (scenery, the M2 movement test types).
 /// </summary>
-public sealed record EntityTraits
+public sealed partial record EntityTraits
 {
     /// <summary>No traits.</summary>
     public static EntityTraits None { get; } = new();

@@ -24,17 +24,22 @@ public class RulesetCompilerTests
     {
         string[] keys = Classic.EntityTypes.Select(t => t.Key).ToArray();
         Assert.Equal(keys.OrderBy(k => k, StringComparer.Ordinal), keys);
-        // M3 imports every unit and building of the tables (ADR 0040), plus the YAML-only tree, meat and birds (ADR 0104).
+        // M3 imports every unit and building of the tables (ADR 0040), plus the YAML-only tree, meat and birds (ADR 0104);
+        // stream E adds the item classes, the crusade anchor and the fog revealer (ADRs 0094, 0095) and the armor item.
         Assert.Equal(
             [
-                "comm.bear", "comm.bird", "comm.bridge", "comm.catapult", "comm.cow", "comm.dwarf", "comm.eagle", "comm.field",
-                "comm.fishing_boat", "comm.fishpatch", "comm.galleon", "comm.gate_stone", "comm.gate_wood", "comm.ghost",
-                "comm.magicgateway", "comm.meat", "comm.ork", "comm.res_gold", "comm.res_stone", "comm.skeleton", "comm.tower_stone",
-                "comm.tower_stone2", "comm.tower_wood", "comm.tower_wood2", "comm.tree", "comm.wall_stone", "comm.wall_wood",
-                "euro.academy", "euro.archer", "euro.barrack", "euro.blacksmith", "euro.castle", "euro.cathedral", "euro.farm",
-                "euro.footman", "euro.harbor", "euro.house", "euro.knight", "euro.lumber", "euro.maceman", "euro.mage",
-                "euro.magetower", "euro.market", "euro.peon", "euro.pikeman", "euro.stable", "euro.storage", "euro.tavern",
-                "euro.tcguild", "euro.trader", "euro.workshop",
+                "arab.jihad_warrior", "arab.magicworkshop", "arab.peon", "comm.bat", "comm.bear", "comm.bird",
+                "comm.bridge", "comm.carpet", "comm.catapult", "comm.cow", "comm.dragon", "comm.dummy", "comm.dwarf",
+                "comm.eagle", "comm.field", "comm.fishing_boat", "comm.fishpatch", "comm.fog_revealer", "comm.galleon",
+                "comm.gate_stone", "comm.gate_wood", "comm.ghost", "comm.item", "comm.item_armor", "comm.item_flag",
+                "comm.item_health", "comm.item_magic", "comm.item_plusplus", "comm.item_scroll", "comm.item_soul",
+                "comm.jinn", "comm.magicgateway", "comm.meat", "comm.ork", "comm.res_gold", "comm.res_stone",
+                "comm.resitem", "comm.skeleton", "comm.tower_stone", "comm.tower_stone2", "comm.tower_wood",
+                "comm.tower_wood2", "comm.tree", "comm.troll", "comm.wall_stone", "comm.wall_wood", "euro.academy",
+                "euro.archer", "euro.barrack", "euro.blacksmith", "euro.castle", "euro.cathedral", "euro.crusadeanchor",
+                "euro.crusader", "euro.farm", "euro.footman", "euro.harbor", "euro.house", "euro.knight", "euro.lumber",
+                "euro.maceman", "euro.mage", "euro.magetower", "euro.market", "euro.outpost", "euro.peon", "euro.pikeman",
+                "euro.priest", "euro.stable", "euro.storage", "euro.tavern", "euro.tcguild", "euro.trader", "euro.workshop",
             ],
             keys);
         Assert.Equal(["food", "wood", "stone", "gold", "iron"], Classic.ResourceTypes);

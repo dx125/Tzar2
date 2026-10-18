@@ -32,7 +32,7 @@ public sealed partial class CommandSystem : ISimSystem
         for (int i = 0; i < commands.Count; i++)
         {
             ref readonly Command command = ref commands[i];
-            CommandRejection? rejection = Apply(world, command, commands.EntitiesOf(command));
+            CommandRejection? rejection = Apply(world, command, Actors(world, command.Kind, commands.EntitiesOf(command)));
             if (rejection is { } reason)
             {
                 world.Events.Emit(new SimEvent(SimEventKind.CommandRejected, command.Player, EntityId.None, i, (int)command.Kind, (int)reason));
@@ -270,10 +270,84 @@ public sealed partial class CommandSystem : ISimSystem
 
             case CommandKind.Cheat:
                 return KingdomCommands.Cheat(world, command);
+            case CommandKind.Board:
+                return CombatMagicCommands.Board(world, command, entities);
+
+            case CommandKind.Unload:
+                return CombatMagicCommands.Unload(world, command, entities);
+
+            case CommandKind.PickItem:
+                return CombatMagicCommands.PickItem(world, command, entities);
+
+            case CommandKind.DropItem:
+                return CombatMagicCommands.DropItem(world, command, entities);
+
+            case CommandKind.UseItem:
+                return CombatMagicCommands.UseItem(world, command, entities);
+
+            case CommandKind.GiveItem:
+                return CombatMagicCommands.GiveItem(world, command, entities);
+
+            case CommandKind.SetDefaultItem:
+                return CombatMagicCommands.SetDefaultItem(world, command, entities);
+
+            case CommandKind.CastSpell:
+                return CombatMagicCommands.CastSpell(world, command, entities);
+
+            case CommandKind.SetStance:
+                return CombatMagicCommands.SetStance(world, command, entities);
+
+            case CommandKind.AttackGround:
+                return CombatMagicCommands.AttackGround(world, command, entities);
+
+            case CommandKind.ConvertUnit:
+                return CombatMagicCommands.Convert(world, command, entities);
+
+            case CommandKind.Bribe:
+                return CombatMagicCommands.Bribe(world, command, entities);
+
+            case CommandKind.PreachCrusade:
+                return CombatMagicCommands.PreachCrusade(world, command, entities);
+
+            case CommandKind.CraftItem:
+                return CombatMagicCommands.CraftItem(world, command, entities);
 
             default:
                 return CommandRejection.UnknownKind;
         }
+    }
+
+    private EntityId[] _actors = new EntityId[64];
+
+    // Units inside holders, and frozen or stone units, take no orders (GAME-09/11; ADR 0096) except deletion; debug
+    // commands and orders to holders themselves are not filtered.
+    private ReadOnlySpan<EntityId> Actors(World world, CommandKind kind, ReadOnlySpan<EntityId> entities)
+    {
+        if (kind is CommandKind.DebugKill or CommandKind.DebugSpawn or CommandKind.Unload || (world.Helds.Count == 0 && world.Statuses.Count == 0))
+        {
+            return entities;
+        }
+
+        bool delete = kind == CommandKind.Delete;
+        int n = 0;
+        bool filtered = false;
+        if (_actors.Length < entities.Length)
+        {
+            _actors = new EntityId[Math.Max(entities.Length, _actors.Length * 2)];
+        }
+
+        foreach (EntityId e in entities)
+        {
+            if (world.Entities.IsAlive(e) && !delete && (world.IsHeld(e) || !world.CanAct(e)))
+            {
+                filtered = true;
+                continue;
+            }
+
+            _actors[n++] = e;
+        }
+
+        return filtered ? _actors.AsSpan(0, n) : entities;
     }
 
     // Dense position in the motion store of a mobile, live unit the player commands (own, or shared unit control:

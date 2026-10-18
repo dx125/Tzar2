@@ -14,7 +14,7 @@ namespace Tzar2.Content.Compiled;
 public sealed partial class Ruleset
 {
     /// <summary>Format version of <see cref="ContentHash"/>'s encoding; bump when fields are added.</summary>
-    public const int HashVersion = 5;
+    public const int HashVersion = 6;
 
     /// <summary>Most resource types a ruleset may define (players store one amount per type).</summary>
     public const int MaxResourceTypes = 8;
@@ -71,6 +71,7 @@ public sealed partial class Ruleset
     /// <param name="orderGates">Orders that need a technology per civilization (<c>TECHTREE [orders]</c>).</param>
     /// <param name="world">World-system constants (null = <see cref="WorldSettings.Default"/>; ADR 0100).</param>
     /// <param name="hudResourceMask">Resource types the HUD shows (bit = id; -1 = all; GAME-01: iron is hidden).</param>
+    /// <param name="combat">Combat, experience, holder, item and magic content (GAME-07…11; null = none).</param>
     /// <exception cref="ArgumentException">The lists are empty, ids do not match positions, keys repeat, or a trait refers to an unknown id.</exception>
     public Ruleset(
         string name,
@@ -88,7 +89,8 @@ public sealed partial class Ruleset
         IReadOnlyList<string>? civilizations = null,
         IReadOnlyList<OrderGate>? orderGates = null,
         int hudResourceMask = -1,
-        WorldSettings? world = null)
+        WorldSettings? world = null,
+        CombatRules? combat = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentNullException.ThrowIfNull(terrainTypes);
@@ -190,6 +192,7 @@ public sealed partial class Ruleset
 
         Array.Sort(_orderGateKeys, _orderGateIndex, StringComparer.Ordinal);
         HudResourceMask = hudResourceMask & (int)((1u << _resourceTypes.Length) - 1);
+        InitCombat(combat);
         foreach (EntityTypeDefinition e in _entityTypes)
         {
             ValidateTraits(e);
@@ -719,6 +722,7 @@ public sealed partial class Ruleset
         }
 
         AddWorld(hasher);
+        AddCombat(hasher);
         return hasher.GetCurrentHash();
     }
 
@@ -804,6 +808,7 @@ public sealed partial class Ruleset
         }
 
         AddWorldTraits(hasher, t.World);
+        AddCombatTraits(hasher, t);
     }
 }
 

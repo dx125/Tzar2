@@ -355,7 +355,7 @@ internal sealed class ResearchCompiler
         return [.. list];
     }
 
-    private ImmutableArray<ushort> Filter(string key, YamlMapping m, string source)
+    internal ImmutableArray<ushort> Filter(string key, YamlMapping m, string source)
     {
         var selected = new SortedSet<ushort>();
         bool anySelector = false;
