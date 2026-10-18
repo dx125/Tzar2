@@ -13,6 +13,9 @@ public enum ControllerKind
 
     /// <summary>A computer kingdom run by the legacy AI (ADR 0051, 0073).</summary>
     Computer = 1,
+
+    /// <summary>A kingdom nobody commands: only the scenario moves it (the legacy Rescue pseudo-kingdom; ADR 0133).</summary>
+    Passive = 2,
 }
 
 /// <summary>Computer difficulty (lobby DIFFICULTY LEVEL: Easy / Normal / Hard).</summary>
