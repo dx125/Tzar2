@@ -1,0 +1,77 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: unit-speed-more
+title: Unit movement speed vs. SPEED stat, second half (UNK-12, RE-06)
+resolves: [UNK-12]
+priority: 2
+minutes: 15.5
+default: false                      # batch C
+experimental: true
+description: |
+  Spawns one unit in an open grass band in the middle of MP2 (debug command "spawn <class>"; in the first session
+  the unit appeared at the cursor as an all-green figure and never moved, so it is now placed with a click at the
+  same spot), selects everything in the view with a drag, orders a move 300 px west and later 300 px east, and
+  records window captures every 100 ms. The analysis tracks the moving unit and fits pixels per second. SPEED
+  values are the reference build's (DATA/<CIV> UNITS.TXT: the European value where the class exists).
+  Every land class of the tables (air and ships excluded), in two halves: unit-speed and unit-speed-more. Game speed: the default.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: heavy-cavalry
+    vars: {unit: heavy_cavalry, speed_stat: "6"}
+  - name: jihad-warrior
+    vars: {unit: jihad_warrior, speed_stat: "4"}
+  - name: enichar
+    vars: {unit: enichar, speed_stat: "4"}
+  - name: catapult
+    vars: {unit: catapult, speed_stat: "2"}
+  - name: hcatapult
+    vars: {unit: hcatapult, speed_stat: "2"}
+  - name: ballista
+    vars: {unit: ballista, speed_stat: "2"}
+  - name: cow
+    vars: {unit: cow, speed_stat: "1"}
+  - name: bear
+    vars: {unit: bear, speed_stat: "4"}
+  - name: troll
+    vars: {unit: troll, speed_stat: "2"}
+  - name: ork
+    vars: {unit: ork, speed_stat: "4"}
+  - name: dwarf
+    vars: {unit: dwarf, speed_stat: "4"}
+  - name: skeleton
+    vars: {unit: skeleton, speed_stat: "4"}
+  - name: ghost
+    vars: {unit: ghost, speed_stat: "4"}
+  # No SPEED in the tables (m3-placeholders: our placeholder is SPEED 4); measured for the register, not the fit.
+  - name: chariot
+    vars: {unit: chariot, speed_stat: none}
+  - name: trader
+    vars: {unit: trader, speed_stat: none}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - minimap: [0.5, 0.5]
+  - wait: 1
+  - move: [600, 340]
+  - chat: "${cheat}spawn ${unit}"
+  - click: [600, 340]               # place the spawned unit (harmless if it is already placed: selects it)
+  - wait: 1
+  - snapshot: spawned
+  - drag: {from: [160, 40], to: [1015, 760]}
+  - wait: 0.5
+  - click: {at: [300, 340], button: right}
+  - move: [70, 400]
+  # A 120-px band around the path keeps the zip small (the unit walks along y = 340, clear of the rocks below it).
+  - burst: {name: west, count: 100, interval_ms: 100, region: [150, 280, 874, 120]}
+  - click: {at: [900, 340], button: right}
+  - move: [70, 400]
+  - burst: {name: east, count: 140, interval_ms: 100, region: [150, 280, 874, 120]}
+analysis: [unit-speed]

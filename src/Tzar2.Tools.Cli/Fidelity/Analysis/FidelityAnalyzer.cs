@@ -28,6 +28,9 @@ internal static class FidelityAnalyzer
         "player-colours" => PlayerColours.Run(ctx, trials),
         "unit-speed" => UnitSpeed.Run(ctx, trials),
         "attack-timing" => AttackTiming.Run(ctx, trials),
+        "gather-rates" => GatherRates.Run(ctx, trials),
+        "region-timing" => RegionTiming.Run(ctx, trials),
+        "day-clock" => DayClock.Run(ctx, trials),
         _ => AnalysisOutcome.Skipped($"unknown analysis '{kind}'"),
     };
 

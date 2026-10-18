@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Tzar2.Tools.Cli.Tests" />
+    <InternalsVisibleTo Include="Tzar2.Fidelity.Tests" />
   </ItemGroup>
 
   <ItemGroup>

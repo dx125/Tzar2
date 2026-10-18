@@ -27,22 +27,24 @@ measurement replaced it.
 Overall, 3 of the 6 rendering items above are verified (50 %). For the four placeholder registers it is 1 of 201
 (0.5 %): this session targeted rendering, and its gameplay trials failed.
 
+## The fidelity suite (ADR 0112)
+
+`t2 fidelity report` compares every committed fact with the engine; `Tzar2.Fidelity.Tests` fails on a measured
+check that disagrees. Today: 14 checks, 4 measured, 4 passing (pass rate 100 %, coverage 29 %). Mapgen and ai have
+no capturable checks yet.
+
 ## What still needs a capture run
 
-The next run uses the ADR 0110 scenarios: `smoke`, `player-colours`, `unit-speed`, `attack-timing`. It covers:
+The second session runs four batches (`run-capture.ps1 -Batch A|B|C|D`, ADR 0112):
 
-* `hmspawn` / `hmkingdom` semantics (smoke). Everything below depends on these.
-* sprite ramps of kingdoms 2–8 (player-colours);
-* SPEED → px/s for peon, knight, pikeman, maceman (unit-speed);
-* attack period and damage for knight vs footman and archer vs maceman (attack-timing).
+| Batch | Time | Suite checks it can settle | Placeholder rows it addresses |
+|---|---|---|---|
+| A | ~21 min | player-colour sprites, shadow overlap, attack cycle, damage, production time, construction time | m2: time between hits, minimum damage / damage rule (pairs without bonus), construction rate (one builder); m3: cheat semantics of `hmspawn` / `hmkingdom` (smoke); UNK-01a, UNK-03 |
+| B | ~23 min | speed per point (15 classes), load per trip | m2: SPEED → px/s, carry capacity, gather time (as trip time, walk included); m3: cow milk / milking time (cow trial) |
+| C | ~16 min | speed per point (15 more classes) | m2: SPEED → px/s; m3: armored chariot and caravan speed |
+| D | ~15 min | day length, night share | m3: day length, night hours |
 
-Later runs need scenarios that do not exist yet:
-
-* overlapping shadows (UNK-03);
-* day length and the day/night light (UNK-32), with day/night switched on;
-* gathering, building and repair rates (UNK-17/18);
-* random-map generation (RE-10);
-* AI script experiments (RE-07);
-* the "one level darker" patches over the terrain, which look like a static light map (UNK-32).
+Still without a scenario: XP gain, trade profit, technology magnitudes, repair, fire, capture, random maps (RE-10),
+AI experiments (RE-07), and the "one level darker" terrain patches (UNK-32).
 
 The operator should also send the `SPGAMETICK` / `MPGAMETICK` values of GOG's own `tzar.ini`, if it has them (REQ-SIM-01 note).

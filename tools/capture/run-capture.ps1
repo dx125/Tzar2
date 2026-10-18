@@ -19,6 +19,9 @@
 
 .EXAMPLE
   pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Scenarios smoke,terrain-tiles
+
+.EXAMPLE
+  pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch B
 #>
 [CmdletBinding()]
 param(
@@ -26,6 +29,9 @@ param(
     [Parameter(Mandatory = $true)][string]$TzarPath,
     # Scenario ids (see: t2 fidelity scenarios). Default: the default set. "all" runs every scenario.
     [string[]]$Scenarios = @(),
+    # A prepared batch of at most 30 minutes (ADR 0112): A = cheats, colours, combat, shadows, production;
+    # B = unit speeds (first half) and gathering; C = unit speeds (second half); D = the day clock. Overrides -Scenarios.
+    [ValidateSet("A", "B", "C", "D")][string]$Batch = "",
     # Where the session folder and the zip go.
     [string]$Out = (Join-Path ([Environment]::GetFolderPath("UserProfile")) "Tzar2Capture"),
     # cnc-ddraw (default: a pinned, verified DirectDraw wrapper that runs the game in a window),
@@ -38,6 +44,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$batches = @{
+    "A" = @("smoke", "player-colours", "attack-timing", "shadow-overlap", "train-time", "build-time")
+    "B" = @("unit-speed", "gather-wood", "gather-rock-a", "gather-rock-b", "gather-cow")
+    "C" = @("unit-speed-more")
+    "D" = @("day-clock")
+}
+if ($Batch) { $Scenarios = $batches[$Batch] }
 $repo = Resolve-Path (Join-Path $PSScriptRoot "../..")
 $started = Get-Date
 

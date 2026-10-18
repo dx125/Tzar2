@@ -1,0 +1,33 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: train-time
+title: Production time of a peasant (UNK-20, TIME column)
+resolves: [UNK-20]
+priority: 3
+minutes: 1.5
+description: |
+  No cheats needed: the castle (Ctrl+C) queues three peasants (P, the command-card letter of MENU.INI) and the
+  population box of the HUD is captured every 250 ms. Each finished peasant changes the box; the interval between the
+  changes is the production time (the first change also contains the order's latency).
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: peon
+    vars: {measure: train, subject: peon, expected_s: "8", count: "3"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - key: {key: C, ctrl: true}
+  - key: P
+  - key: P
+  - key: P
+  - move: [70, 400]
+  - burst: {name: population, count: 160, interval_ms: 250, region: [712, 2, 84, 22]}
+analysis: [region-timing]

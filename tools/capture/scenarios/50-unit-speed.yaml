@@ -5,24 +5,48 @@ id: unit-speed
 title: Unit movement speed vs. SPEED stat (UNK-12, RE-06)
 resolves: [UNK-12]
 priority: 2
-minutes: 5
+minutes: 15.5
+default: false                      # batch B
 experimental: true
 description: |
   Spawns one unit in an open grass band in the middle of MP2 (debug command "spawn <class>"; in the first session
   the unit appeared at the cursor as an all-green figure and never moved, so it is now placed with a click at the
   same spot), selects everything in the view with a drag, orders a move 300 px west and later 300 px east, and
   records window captures every 100 ms. The analysis tracks the moving unit and fits pixels per second. SPEED
-  values are the reference build's (DATA/EURO UNITS.TXT). Game speed: the default.
+  values are the reference build's (DATA/<CIV> UNITS.TXT: the European value where the class exists).
+  Every land class of the tables (air and ships excluded), in two halves: unit-speed and unit-speed-more. Game speed: the default.
 launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: peon
     vars: {unit: peon, speed_stat: "4"}
-  - name: knight
-    vars: {unit: knight, speed_stat: "6"}
-  - name: pikeman
-    vars: {unit: pikeman, speed_stat: "2"}
+  - name: footman
+    vars: {unit: footman, speed_stat: "4"}
+  - name: archer
+    vars: {unit: archer, speed_stat: "4"}
   - name: maceman
     vars: {unit: maceman, speed_stat: "3"}
+  - name: pikeman
+    vars: {unit: pikeman, speed_stat: "2"}
+  - name: longbowman
+    vars: {unit: longbowman, speed_stat: "3"}
+  - name: knight
+    vars: {unit: knight, speed_stat: "6"}
+  - name: crusader
+    vars: {unit: crusader, speed_stat: "5"}
+  - name: priest
+    vars: {unit: priest, speed_stat: "4"}
+  - name: spy
+    vars: {unit: spy, speed_stat: "4"}
+  - name: mage
+    vars: {unit: mage, speed_stat: "4"}
+  - name: horse-archer
+    vars: {unit: horse_archer, speed_stat: "6"}
+  - name: horse-samurai
+    vars: {unit: horse_samurai, speed_stat: "6"}
+  - name: ninja
+    vars: {unit: ninja, speed_stat: "6"}
+  - name: monk
+    vars: {unit: monk, speed_stat: "4"}
 steps:
   # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
   # the map. -explore / -nofog reveal nothing, the cheats do.

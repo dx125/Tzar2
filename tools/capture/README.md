@@ -22,6 +22,16 @@ Close the game if it is open. In a terminal at the repository root:
 pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar"
 ```
 
+Without `-Batch` this runs batch A. The second session is split into four batches of at most 30 minutes (ADR 0112);
+run them one after another, each gives its own zip:
+
+```powershell
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch A   # ~21 min: cheats, colours, combat, shadows, production
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch B   # ~23 min: unit speeds (half), gathering
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch C   # ~16 min: unit speeds (other half)
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch D   # ~15 min: day/night clock (no input at all)
+```
+
 Use your own game folder (the one containing `Tzar.exe`). If PowerShell refuses to run scripts:
 
 ```powershell
@@ -36,7 +46,7 @@ What you will see:
 | 2. Build | ~1 min the first time | builds the `t2` tool |
 | 3. Game files | ~10 s | compares your game with the GOG v1.10 English reference (2,916 files) |
 | 4. Self-test | ~5 s | a small four-colour window flashes: tests screen capture, mouse/keyboard input, memory reading |
-| 5. Capture | **~25 min** | the game starts and closes about 15 times, in a 1024×768 window; the mouse moves by itself, chat commands are typed, the camera jumps around the map |
+| 5. Capture | **15–25 min** per batch | the game starts and closes about 15 times, in a 1024×768 window; the mouse moves by itself, chat commands are typed, the camera jumps around the map |
 | 6. Done | | prints the zip path and opens Explorer on it |
 
 **During step 5 please do not touch the mouse or keyboard**, and keep the PC from locking (the tool asks Windows to

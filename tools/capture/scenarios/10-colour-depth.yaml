@@ -6,6 +6,7 @@ title: Game surface format and RGB555 -> 8-bit expansion (UNK-39)
 resolves: [UNK-39]
 priority: 1
 minutes: 2.5
+default: false                      # measured by the first session (2026-10-18); rerun on request
 description: |
   Pairs of the game's own F11 snapshot (its 16-bit surface, lossless) and a capture of the window (what Windows
   shows) at the same moment, once with cnc-ddraw's default RGB565 surface and once with RGB555 (rgb555=true).

@@ -47,6 +47,7 @@ internal static class FidelityCommand
                 "check" => Check(rest, stdout, stderr),
                 "scenarios" => Scenarios(rest, stdout, stderr),
                 "selftest" => SelfTestCommand(rest, stdout, stderr),
+                "report" => Report(rest, stdout),
                 _ => Unknown(args[0], stderr),
             };
         }
@@ -64,7 +65,7 @@ internal static class FidelityCommand
 
     private static int Unknown(string sub, TextWriter stderr)
     {
-        stderr.WriteLine($"t2 fidelity: unknown subcommand '{sub}' (capture, analyze, check, scenarios, selftest).");
+        stderr.WriteLine($"t2 fidelity: unknown subcommand '{sub}' (capture, analyze, check, scenarios, selftest, report).");
         return ExitCodes.UsageError;
     }
 
@@ -80,6 +81,7 @@ internal static class FidelityCommand
         o.WriteLine("  check <session.zip|dir>         usability summary (blank captures, formats, failed trials)");
         o.WriteLine("  scenarios [--capture-dir <dir>] validate and list the scenarios with their durations");
         o.WriteLine("  selftest [--allow-no-input]     Windows only: capture, input and memory checks without the game");
+        o.WriteLine("  report [--facts <dir>]          the fidelity suite (ADR 0112): pass % per area against the engine");
         o.WriteLine();
         o.WriteLine("<capture-dir> holds session.yaml and scenarios/*.yaml (default: tools/capture in the repository).");
     }
@@ -147,6 +149,22 @@ internal static class FidelityCommand
         MemSampleStep m => [m.Name],
         _ => [],
     };
+
+    // ---- report ----------------------------------------------------------------------------------------------------
+
+    private static int Report(string[] args, TextWriter stdout)
+    {
+        var o = Options.Parse(args, ["--facts"], []);
+        string? root = RepositoryRoot();
+        string factsDir = o.Get("--facts") ?? Path.Combine(root ?? throw new OptionException("--facts is required outside the repository"), "tests", "fidelity", "facts");
+        var facts = new Fidelity.Suite.FactsIndex(factsDir);
+        stdout.WriteLine($"Fidelity suite (ADR 0112): {Fidelity.Suite.FidelitySuite.Checks.Count} checks, facts from {facts.Files} file(s) in {factsDir}");
+        var results = Fidelity.Suite.FidelitySuite.Evaluate(facts, Fidelity.Suite.EngineModel.Load(root));
+        double? rate = Fidelity.Suite.FidelitySuite.WriteReport(results, stdout);
+        stdout.WriteLine();
+        stdout.WriteLine(rate is { } r ? $"Suite pass rate: {r * 100:0.#} % of the measured checks (M3 exit: >= 80 %)." : "No measured checks yet.");
+        return results.Any(x => x.Result.Status == Fidelity.Suite.CheckStatus.Fail) ? ExitCodes.Mismatch : ExitCodes.Success;
+    }
 
     // ---- analyze / check -------------------------------------------------------------------------------------------
 

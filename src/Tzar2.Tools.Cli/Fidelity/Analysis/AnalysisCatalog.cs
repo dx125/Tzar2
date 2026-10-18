@@ -15,5 +15,8 @@ internal static class AnalysisCatalog
         "player-colours",
         "unit-speed",
         "attack-timing",
+        "gather-rates",
+        "region-timing",
+        "day-clock",
     };
 }
