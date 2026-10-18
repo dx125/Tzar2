@@ -34,7 +34,9 @@ steps:
   - memscan: {name: res-all, value: "1000", width: 4}
   - wait: 1
   - memscan: {name: res-stable, from: res-all, mode: unchanged}
-  - click: [747, 480]               # a starting peasant
+  # Select the peasant with a box (units only; the castle starts right of x = 790) so a camera off by up to ~35 px
+  # still finds it. Expected view: smoke/castle of session 1; if the camera lands elsewhere, move the box and targets.
+  - drag: {from: [705, 440], to: [785, 525]}
   - click: {at: [750, 395], button: right}
   - memsample: {name: res-stable-series, scan: res-stable, max_addresses: 4096, interval_ms: 100, duration_s: 70}
   - wait: 30

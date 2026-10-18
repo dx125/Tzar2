@@ -111,9 +111,50 @@ public class SecondSessionAnalysisTests
         Assert.Equal(CheckStatus.Fail, results["m2.damage"]);
         Assert.Equal(CheckStatus.Pending, results["m3.day-length"]);
 
+        // The M3 gate counts every §22.3 check, pending ones as not passing; pass / measured is only secondary.
         var report = new StringWriter();
-        double? rate = FidelitySuite.WriteReport(FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine), report);
-        Assert.Equal(1 / 3.0, rate!.Value, 6);
-        Assert.Contains("m2-gameplay", report.ToString(), StringComparison.Ordinal);
+        FidelitySuite.Gate gate = FidelitySuite.WriteReport(FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine), report);
+        int total = FidelitySuite.Checks.Count(c => c.Section == FidelitySuite.GameplaySection);
+        Assert.Equal((total, 3, 1), (gate.Total, gate.Measured, gate.Passing));
+        Assert.Equal(1.0 / total, gate.PassRate, 6);
+        Assert.Equal(1 / 3.0, gate.MeasuredPassRate!.Value, 6);
+        Assert.Contains("M3 GATE", report.ToString(), StringComparison.Ordinal);
+        Assert.Contains("secondary, not the gate", report.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain(FidelitySuite.Checks, c => c.Section == FidelitySuite.GameplaySection && c.Area == "rendering");
+    }
+
+    [Fact]
+    public void Construction_time_removes_the_measured_walk()
+    {
+        using var dir = new TempDir();
+        File.WriteAllText(Path.Combine(dir.Path, "unit-speed.yaml"), """
+            schema: tzar2-fidelity-facts/1
+            scenario: unit-speed
+            analyses:
+              unit-speed:
+                status: ok
+                facts:
+                  measurements:
+                    - {unit: peon, speed_stat: "4", px_per_s: 40, r2: 0.99}
+            """);
+        // 100 px from the builder to the site's centre, 20 px half footprint: 80 px at 40 px/s = 2 s of walking.
+        File.WriteAllText(Path.Combine(dir.Path, "build-time.yaml"), """
+            schema: tzar2-fidelity-facts/1
+            scenario: build-time
+            analyses:
+              region-timing:
+                status: ok
+                facts:
+                  measurements:
+                    - {measure: build, subject: lumber, expected_s: "30", last_event_s: 32.4, builder_from: "100,100", site: "160,180", site_half_px: "20"}
+            """);
+        var engine = EngineModel.Load(OriginPaths.RepositoryRoot);
+        var build = FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine).Single(r => r.Check.Id == "m2.build-time").Result;
+        Assert.Equal(CheckStatus.Pass, build.Status);
+        Assert.Contains("2 s walk", build.Detail, StringComparison.Ordinal);
+
+        // Without the peasant's measured speed the walk cannot be removed: pending, not a guess.
+        File.Delete(Path.Combine(dir.Path, "unit-speed.yaml"));
+        Assert.Equal(CheckStatus.Pending, FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine).Single(r => r.Check.Id == "m2.build-time").Result.Status);
     }
 }

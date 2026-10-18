@@ -16,9 +16,13 @@ internal static class FactsLocation
 
     public static bool Present => System.IO.Directory.Exists(Directory) && System.IO.Directory.EnumerateFiles(Directory, "*.yaml").Any();
 
-    public static FactsIndex Facts { get; } = new(Directory);
+    private static readonly Lazy<FactsIndex> LazyFacts = new(() => new FactsIndex(Directory), System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
+    private static readonly Lazy<EngineModel> LazyEngine = new(() => EngineModel.Load(OriginPaths.RepositoryRoot), System.Threading.LazyThreadSafetyMode.ExecutionAndPublication);
 
-    public static EngineModel Engine { get; } = EngineModel.Load(OriginPaths.RepositoryRoot);
+    /// <summary>Loaded once, thread-safely, for every test of the process.</summary>
+    public static FactsIndex Facts => LazyFacts.Value;
+
+    public static EngineModel Engine => LazyEngine.Value;
 }
 
 /// <summary>Runs only when capture facts exist (like the package-gated skirmish tests: local inputs, no original data).</summary>
@@ -99,7 +103,8 @@ public sealed class FidelitySuiteTests(ITestOutputHelper output)
         var results = FidelitySuite.Evaluate(FactsLocation.Facts, FactsLocation.Engine);
         FidelitySuite.WriteReport(results, writer);
         output.WriteLine(writer.ToString());
-        Assert.All(FidelitySuite.Areas, a => Assert.Contains(a, writer.ToString(), StringComparison.Ordinal));
+        Assert.All(FidelitySuite.Areas.Concat(FidelitySuite.VisualAreas), a => Assert.Contains(a, writer.ToString(), StringComparison.Ordinal));
+        Assert.Contains("M3 GATE", writer.ToString(), StringComparison.Ordinal);
         Assert.Equal(FidelitySuite.Checks.Count, FidelitySuite.Checks.Select(c => c.Id).Distinct().Count());
         Assert.NotNull(FactsLocation.Engine.ShadowStrength);
         Assert.NotNull(FactsLocation.Engine.PeasantLoad);

@@ -30,8 +30,11 @@ Overall, 3 of the 6 rendering items above are verified (50 %). For the four plac
 ## The fidelity suite (ADR 0112)
 
 `t2 fidelity report` compares every committed fact with the engine; `Tzar2.Fidelity.Tests` fails on a measured
-check that disagrees. Today: 14 checks, 4 measured, 4 passing (pass rate 100 %, coverage 29 %). Mapgen and ai have
-no capturable checks yet.
+check that disagrees. The catalogue is the whole TDD §22.3 scope (30 checks); the **M3 gate is passing / all 30**,
+pending counting as not passing. Today: **1 of 30 = 3.3 %** (secondary: 1 of 1 measured passes). The 5 rendering
+checks are §22.4 / S5 and reported apart: 3 of 5 pass. Batches A–D can measure at most 9 of the 30 (gate ≤ 30 %);
+the other 21 need scenarios that do not exist yet (combat outcomes over 100 trials, research, XP, capture, trade,
+loans, spells and the rest, each listed in the report with what would measure it).
 
 ## What still needs a capture run
 

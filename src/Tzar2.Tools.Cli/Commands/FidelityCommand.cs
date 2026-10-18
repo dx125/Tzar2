@@ -160,9 +160,9 @@ internal static class FidelityCommand
         var facts = new Fidelity.Suite.FactsIndex(factsDir);
         stdout.WriteLine($"Fidelity suite (ADR 0112): {Fidelity.Suite.FidelitySuite.Checks.Count} checks, facts from {facts.Files} file(s) in {factsDir}");
         var results = Fidelity.Suite.FidelitySuite.Evaluate(facts, Fidelity.Suite.EngineModel.Load(root));
-        double? rate = Fidelity.Suite.FidelitySuite.WriteReport(results, stdout);
+        Fidelity.Suite.FidelitySuite.WriteReport(results, stdout);
         stdout.WriteLine();
-        stdout.WriteLine(rate is { } r ? $"Suite pass rate: {r * 100:0.#} % of the measured checks (M3 exit: >= 80 %)." : "No measured checks yet.");
+        stdout.WriteLine("The M3 exit criterion uses the M3 GATE line (passing / all §22.3 checks), not the secondary figure.");
         return results.Any(x => x.Result.Status == Fidelity.Suite.CheckStatus.Fail) ? ExitCodes.Mismatch : ExitCodes.Success;
     }
 

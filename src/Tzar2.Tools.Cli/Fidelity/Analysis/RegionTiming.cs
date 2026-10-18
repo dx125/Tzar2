@@ -49,6 +49,13 @@ internal static class RegionTiming
                 e.Add("subject", trial.Var("subject"));
                 e.Add("expected_s", trial.Var("expected_s"), "the reference build's TIME column");
                 e.Add("count", trial.Var("count"));
+                if (trial.Var("site") is { } site)
+                {
+                    e.Add("builder_from", trial.Var("builder_from"), "screen x,y of the builder when ordered");
+                    e.Add("site", site, "screen x,y of the site's centre");
+                    e.Add("site_half_px", trial.Var("site_half_px"), "half the footprint: the builder stops at the edge");
+                }
+
                 e.Add("frames", frames.Count);
                 e.Add("events_s", new YamlWriter.Flow(events.Select(v => (object?)Math.Round(v, 3)).ToList()), "seconds after the first frame");
                 if (events.Length >= 2)

@@ -10,11 +10,12 @@ experimental: true
 description: |
   No cheats needed: a starting peasant next to the castle of MP2 builds a lumber mill (B, L: the command-card letters
   of MENU.INI) two tiles away; the site is selected and the selection panel captured every 500 ms. The panel turns into
-  the mill's card when it is finished: the last change of the panel is the completion (minus a walk of about 2 s).
+  the mill's card when it is finished: the last change of the panel is the completion. The builder's walk (from
+  builder_from to the edge of the site) is subtracted using the peasant's speed measured by unit-speed (batch B).
 launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: lumber-mill
-    vars: {measure: build, subject: lumber, expected_s: "30", count: "1"}
+    vars: {measure: build, subject: lumber, expected_s: "30", count: "1", builder_from: "747,480", site: "660,560", site_half_px: "48"}
 steps:
   # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
   # the map. -explore / -nofog reveal nothing, the cheats do.
@@ -30,7 +31,9 @@ steps:
   - key: {key: C, ctrl: true}
   - key: Space
   - wait: 1
-  - click: [747, 480]               # a starting peasant
+  # Select the peasant with a box (units only; the castle starts right of x = 790) so a camera off by up to ~35 px
+  # still finds it. Expected view: smoke/castle of session 1; if the camera lands elsewhere, move the box and targets.
+  - drag: {from: [705, 440], to: [785, 525]}
   - key: B
   - key: L
   - click: [660, 560]               # place the mill on open grass next to the castle
