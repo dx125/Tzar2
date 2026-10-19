@@ -57,6 +57,8 @@ steps:
   - wait: 1
   - chat: "${cheat}nofog"
   - wait: 1
+  - chat: "${cheat}nopop"             # LOCAL: lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
   - minimap: [0.5, 0.5]
   - wait: 1
   - move: [600, 340]

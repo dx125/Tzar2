@@ -225,7 +225,16 @@ internal static unsafe partial class NativeMethods
     public static partial uint MapVirtualKeyW(uint code, uint mapType);
 
     [LibraryImport("user32.dll")]
-    public static partial short VkKeyScanW(ushort c);
+    public static partial short VkKeyScanExW(ushort c, nint layout);
+
+    public const uint KlfNoTellShell = 0x80;
+    public const uint WmInputLangChangeRequest = 0x0050;
+
+    [LibraryImport("user32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    public static partial nint LoadKeyboardLayoutW(string id, uint flags);
+
+    [LibraryImport("user32.dll")]
+    public static partial nint GetKeyboardLayout(uint threadId);
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -356,7 +365,9 @@ internal static unsafe partial class NativeMethods
     [LibraryImport("dsound.dll", EntryPoint = "DirectSoundEnumerateW")]
     public static partial int DirectSoundEnumerateW(delegate* unmanaged<Guid*, char*, char*, nint, int> callback, nint context);
 
-    // The ANSI entry point: the wide-character DirectDraw enumerations are not implemented on every Windows version.
-    [LibraryImport("ddraw.dll", EntryPoint = "DirectDrawEnumerateExA")]
-    public static partial int DirectDrawEnumerateExA(delegate* unmanaged<Guid*, byte*, byte*, nint, nint, int> callback, nint context, uint flags);
+    // The plain ANSI enumeration, the one Tzar.exe imports: the wide-character variants are not implemented on every
+    // Windows version, and the Ex variant with DDENUM_ATTACHEDSECONDARYDEVICES lists every display device (3 on a PC
+    // where the game sees 1, operator run 2026-10-18).
+    [LibraryImport("ddraw.dll", EntryPoint = "DirectDrawEnumerateA")]
+    public static partial int DirectDrawEnumerateA(delegate* unmanaged<Guid*, byte*, byte*, nint, int> callback, nint context);
 }
