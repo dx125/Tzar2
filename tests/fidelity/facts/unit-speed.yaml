@@ -8,11 +8,11 @@ provenance:
   edition: GOG v1.10 English (reference build)
   install_matches_reference: true
   exe_md5: d178304615a9058739ebafe3393fafb3
-  session: capture-20261019-020223
-  captured_utc: 2026-10-19T05:02:23Z
-  analyzed_utc: 2026-10-19T05:32:34Z
-  harness: 0.0.1+ae9af2fd77925b3a8c5c41eb9e070b92a6f6ce9f
-  harness_commit: ae9af2f
+  session: capture-20261019-163231
+  captured_utc: 2026-10-19T19:32:31Z
+  analyzed_utc: 2026-10-19T21:57:01Z
+  harness: 0.0.1+a4ca0c9c37f472f66a6d50073b7229153e1580e7
+  harness_commit: a4ca0c9
   renderer: cnc-ddraw 7.1.0.0 (pinned, SHA-256 verified), windowed, GDI renderer, no scaling
   os: Microsoft Windows 10.0.26200
   trials: 15
@@ -25,13 +25,13 @@ analyses:
       trials: 15
       trials_ok: 15
       game_captures:
-        count: 15
+        count: 30
         blank: 0
         unreadable: 0
         formats: [rgb555]
         sizes: [1024x768]
       window_captures:
-        count: 15
+        count: 30
         blank: 0
         unreadable: 0
         formats: [rgb888 (32-bit)]
@@ -41,7 +41,7 @@ analyses:
       memory_scans: 0
   unit-speed:
     status: ok
-    notes: ["crusader/west: rejected, too short (2.0 s, 79 px; needs 3 s and 100 px)", "crusader/east: rejected, too short (2.5 s, 166 px; needs 3 s and 100 px)", "footman/west: rejected, too short (2.3 s, 68 px; needs 3 s and 100 px)", "footman/east: no usable motion", "horse-archer/west: no usable motion", "horse-archer/east: no usable motion", "horse-samurai/west: no usable motion", "horse-samurai/east: no usable motion", "knight/west: rejected, too short (1.0 s, 2 px; needs 3 s and 100 px)", "knight/east: rejected, moves west in a burst ordered east", "longbowman/west: no usable motion", "longbowman/east: no usable motion", "maceman/west: rejected, too short (1.6 s, 65 px; needs 3 s and 100 px)", "maceman/east: rejected, too short (1.7 s, 68 px; needs 3 s and 100 px)", "monk/west: no usable motion", "monk/east: no usable motion", "ninja/west: no usable motion", "ninja/east: no usable motion", "pikeman/west: rejected, too short (1.7 s, 70 px; needs 3 s and 100 px)", "pikeman/east: no usable motion"]
+    notes: ["horse-archer/west: no usable motion", "horse-archer/east: no usable motion", "horse-samurai/west: no usable motion", "horse-samurai/east: no usable motion", "monk/west: no usable motion", "monk/east: no usable motion", "ninja/west: no usable motion", "ninja/east: no usable motion"]
     facts:
       note: wall-clock speeds at the game's default speed setting; window capture timestamps (QueryPerformanceCounter)
       measurements:
@@ -50,296 +50,315 @@ analyses:
           unit: archer
           speed_stat: "4"
           frames: 100
-          px_per_s: 39.898
-          tiles_per_s: 1.2468
-          velocity_px_per_s: [-39.848, 1.993]
-          r2: 0.9625
-          moving_frames: 80
-          moving_s: 7.909
-          distance_px: 306.8
+          px_per_s: 39.977
+          tiles_per_s: 1.2493
+          velocity_px_per_s: [-39.977, 0.06]
+          r2: 0.9985
+          moving_frames: 93
+          moving_s: 9.205
+          distance_px: 367.2
         - trial: archer
           burst: east
           unit: archer
           speed_stat: "4"
           frames: 140
+          px_per_s: 39.986
+          tiles_per_s: 1.2496
+          velocity_px_per_s: [39.986, 0.16]
+          r2: 0.9963
+          moving_frames: 118
+          moving_s: 11.702
+          distance_px: 464.9
+        - trial: crusader
+          burst: west
+          unit: crusader
+          speed_stat: "5"
+          frames: 100
+          px_per_s: 71.646
+          tiles_per_s: 2.239
+          velocity_px_per_s: [-71.646, -0.311]
+          r2: 0.9953
+          moving_frames: 49
+          moving_s: 4.811
+          distance_px: 341.8
+        - trial: crusader
+          burst: east
+          unit: crusader
+          speed_stat: "5"
+          frames: 140
+          px_per_s: 71.873
+          tiles_per_s: 2.246
+          velocity_px_per_s: [71.873, 0.138]
+          r2: 0.9977
+          moving_frames: 62
+          moving_s: 6.115
+          distance_px: 430.8
+        - trial: footman
+          burst: west
+          unit: footman
+          speed_stat: "4"
+          frames: 100
+          px_per_s: 40.006
+          tiles_per_s: 1.2502
+          velocity_px_per_s: [-40.005, 0.04]
+          r2: 0.999
+          moving_frames: 93
+          moving_s: 9.201
+          distance_px: 368.5
+        - trial: footman
+          burst: east
+          unit: footman
+          speed_stat: "4"
+          frames: 140
+          px_per_s: 39.97
+          tiles_per_s: 1.2491
+          velocity_px_per_s: [39.97, 0.161]
+          r2: 0.9963
+          moving_frames: 118
+          moving_s: 11.713
+          distance_px: 467.3
+        - trial: horse-archer
+          burst: west
+          unit: horse_archer
+          speed_stat: "6"
+          frames: 100
+          result: no single moving object found
+        - trial: horse-archer
+          burst: east
+          unit: horse_archer
+          speed_stat: "6"
+          frames: 140
+          result: no single moving object found
+        - trial: horse-samurai
+          burst: west
+          unit: horse_samurai
+          speed_stat: "6"
+          frames: 100
+          result: no single moving object found
+        - trial: horse-samurai
+          burst: east
+          unit: horse_samurai
+          speed_stat: "6"
+          frames: 140
+          result: no single moving object found
+        - trial: knight
+          burst: west
+          unit: knight
+          speed_stat: "6"
+          frames: 100
+          px_per_s: 71.749
+          tiles_per_s: 2.2422
+          velocity_px_per_s: [-71.749, -0.008]
+          r2: 0.9994
+          moving_frames: 49
+          moving_s: 4.804
+          distance_px: 338.3
+        - trial: knight
+          burst: east
+          unit: knight
+          speed_stat: "6"
+          frames: 140
+          px_per_s: 72.028
+          tiles_per_s: 2.2509
+          velocity_px_per_s: [72.028, 0.239]
+          r2: 0.9966
+          moving_frames: 63
+          moving_s: 6.21
+          distance_px: 440.5
+        - trial: longbowman
+          burst: west
+          unit: longbowman
+          speed_stat: "3"
+          frames: 100
+          px_per_s: 40.083
+          tiles_per_s: 1.2526
+          velocity_px_per_s: [-39.995, 2.655]
+          r2: 0.963
+          moving_frames: 89
+          moving_s: 8.805
+          distance_px: 352.5
+        - trial: longbowman
+          burst: east
+          unit: longbowman
+          speed_stat: "3"
+          frames: 140
+          px_per_s: 40.002
+          tiles_per_s: 1.2501
+          velocity_px_per_s: [40.002, 0.147]
+          r2: 0.9966
+          moving_frames: 117
+          moving_s: 11.609
+          distance_px: 465.1
+        - trial: maceman
+          burst: west
+          unit: maceman
+          speed_stat: "3"
+          frames: 100
+          px_per_s: 39.996
+          tiles_per_s: 1.2499
+          velocity_px_per_s: [-39.996, 0.038]
+          r2: 0.999
+          moving_frames: 93
+          moving_s: 9.204
+          distance_px: 368.6
+        - trial: maceman
+          burst: east
+          unit: maceman
+          speed_stat: "3"
+          frames: 140
+          px_per_s: 39.981
+          tiles_per_s: 1.2494
+          velocity_px_per_s: [39.981, 0.148]
+          r2: 0.9966
+          moving_frames: 118
+          moving_s: 11.713
+          distance_px: 465.7
+        - trial: mage
+          burst: west
+          unit: mage
+          speed_stat: "4"
+          frames: 100
+          px_per_s: 40.002
+          tiles_per_s: 1.2501
+          velocity_px_per_s: [-40.002, 0.042]
+          r2: 0.9989
+          moving_frames: 93
+          moving_s: 9.213
+          distance_px: 368.9
+        - trial: mage
+          burst: east
+          unit: mage
+          speed_stat: "4"
+          frames: 140
+          px_per_s: 39.986
+          tiles_per_s: 1.2496
+          velocity_px_per_s: [39.986, 0.163]
+          r2: 0.9963
+          moving_frames: 118
+          moving_s: 11.7
+          distance_px: 464.8
+        - trial: monk
+          burst: west
+          unit: monk
+          speed_stat: "4"
+          frames: 100
+          result: no single moving object found
+        - trial: monk
+          burst: east
+          unit: monk
+          speed_stat: "4"
+          frames: 140
+          result: no single moving object found
+        - trial: ninja
+          burst: west
+          unit: ninja
+          speed_stat: "6"
+          frames: 100
+          result: no single moving object found
+        - trial: ninja
+          burst: east
+          unit: ninja
+          speed_stat: "6"
+          frames: 140
+          result: no single moving object found
+        - trial: peon
+          burst: west
+          unit: peon
+          speed_stat: "4"
+          frames: 100
+          px_per_s: 39.982
+          tiles_per_s: 1.2494
+          velocity_px_per_s: [-39.982, 0.056]
+          r2: 0.9986
+          moving_frames: 93
+          moving_s: 9.206
+          distance_px: 367.1
+        - trial: peon
+          burst: east
+          unit: peon
+          speed_stat: "4"
+          frames: 140
+          px_per_s: 39.982
+          tiles_per_s: 1.2494
+          velocity_px_per_s: [39.981, 0.148]
+          r2: 0.9966
+          moving_frames: 118
+          moving_s: 11.713
+          distance_px: 466.5
+        - trial: pikeman
+          burst: west
+          unit: pikeman
+          speed_stat: "2"
+          frames: 100
           px_per_s: 39.971
           tiles_per_s: 1.2491
-          velocity_px_per_s: [39.965, 0.718]
-          r2: 0.9844
-          moving_frames: 140
-          moving_s: 13.905
-          distance_px: 558.6
-        - trial: crusader
-          burst: west
-          unit: crusader
-          speed_stat: "5"
-          frames: 100
-          px_per_s: 41.783
-          tiles_per_s: 1.3057
-          velocity_px_per_s: [-41.774, 0.892]
-          r2: 0.9089
-          moving_frames: 21
-          moving_s: 2.004
-          distance_px: 79
-          rejected: too short (2.0 s, 79 px; needs 3 s and 100 px)
-        - trial: crusader
+          velocity_px_per_s: [-39.971, 0.058]
+          r2: 0.9985
+          moving_frames: 94
+          moving_s: 9.306
+          distance_px: 368.4
+        - trial: pikeman
           burst: east
-          unit: crusader
-          speed_stat: "5"
+          unit: pikeman
+          speed_stat: "2"
           frames: 140
-          px_per_s: 69.112
-          tiles_per_s: 2.1598
-          velocity_px_per_s: [-69.107, 0.828]
-          r2: 0.9866
-          moving_frames: 26
-          moving_s: 2.506
-          distance_px: 166.2
-          rejected: too short (2.5 s, 166 px; needs 3 s and 100 px)
-        - trial: footman
+          px_per_s: 39.931
+          tiles_per_s: 1.2478
+          velocity_px_per_s: [39.931, 0.14]
+          r2: 0.9967
+          moving_frames: 118
+          moving_s: 11.705
+          distance_px: 464.6
+        - trial: priest
           burst: west
-          unit: footman
+          unit: priest
           speed_stat: "4"
           frames: 100
-          px_per_s: 32.839
-          tiles_per_s: 1.0262
-          velocity_px_per_s: [32.052, 7.15]
-          r2: 0.9007
-          moving_frames: 20
-          moving_s: 2.309
-          distance_px: 67.5
-          rejected: too short (2.3 s, 68 px; needs 3 s and 100 px)
-        - trial: footman
+          px_per_s: 39.978
+          tiles_per_s: 1.2493
+          velocity_px_per_s: [-39.978, 0.04]
+          r2: 0.999
+          moving_frames: 93
+          moving_s: 9.213
+          distance_px: 368.3
+        - trial: priest
           burst: east
-          unit: footman
+          unit: priest
           speed_stat: "4"
           frames: 140
-          result: no single moving object found
-        - trial: horse-archer
-          burst: west
-          unit: horse_archer
-          speed_stat: "6"
-          frames: 100
-          result: no single moving object found
-        - trial: horse-archer
-          burst: east
-          unit: horse_archer
-          speed_stat: "6"
-          frames: 140
-          result: no single moving object found
-        - trial: horse-samurai
-          burst: west
-          unit: horse_samurai
-          speed_stat: "6"
-          frames: 100
-          result: no single moving object found
-        - trial: horse-samurai
-          burst: east
-          unit: horse_samurai
-          speed_stat: "6"
-          frames: 140
-          result: no single moving object found
-        - trial: knight
-          burst: west
-          unit: knight
-          speed_stat: "6"
-          frames: 100
-          px_per_s: 9.843
-          tiles_per_s: 0.3076
-          velocity_px_per_s: [9.277, 3.289]
-          r2: 0.4393
-          moving_frames: 7
-          moving_s: 1.006
-          distance_px: 2.3
-          rejected: too short (1.0 s, 2 px; needs 3 s and 100 px)
-        - trial: knight
-          burst: east
-          unit: knight
-          speed_stat: "6"
-          frames: 140
-          px_per_s: 15.892
-          tiles_per_s: 0.4966
-          velocity_px_per_s: [-15.887, -0.393]
-          r2: 0.8326
-          moving_frames: 29
-          moving_s: 13.204
-          distance_px: 214.3
-          rejected: moves west in a burst ordered east
-        - trial: longbowman
-          burst: west
-          unit: longbowman
-          speed_stat: "3"
-          frames: 100
-          result: no single moving object found
-        - trial: longbowman
-          burst: east
-          unit: longbowman
-          speed_stat: "3"
-          frames: 140
-          result: no single moving object found
-        - trial: maceman
-          burst: west
-          unit: maceman
-          speed_stat: "3"
-          frames: 100
-          px_per_s: 40.984
-          tiles_per_s: 1.2808
-          velocity_px_per_s: [40.125, 8.35]
-          r2: 0.9498
-          moving_frames: 17
-          moving_s: 1.604
-          distance_px: 65.3
-          rejected: too short (1.6 s, 65 px; needs 3 s and 100 px)
-        - trial: maceman
-          burst: east
-          unit: maceman
-          speed_stat: "3"
-          frames: 140
-          px_per_s: 23.974
-          tiles_per_s: 0.7492
-          velocity_px_per_s: [-23.143, -6.255]
-          r2: 0.7215
-          moving_frames: 18
-          moving_s: 1.69
-          distance_px: 67.6
-          rejected: too short (1.7 s, 68 px; needs 3 s and 100 px)
-        - trial: mage
-          burst: west
-          unit: mage
-          speed_stat: "4"
-          frames: 100
-          px_per_s: 39.933
-          tiles_per_s: 1.2479
-          velocity_px_per_s: [-39.845, 2.645]
-          r2: 0.9572
-          moving_frames: 76
-          moving_s: 7.506
-          distance_px: 300.2
-        - trial: mage
-          burst: east
-          unit: mage
-          speed_stat: "4"
-          frames: 140
-          px_per_s: 40.032
-          tiles_per_s: 1.251
-          velocity_px_per_s: [40.026, 0.656]
-          r2: 0.9856
-          moving_frames: 140
-          moving_s: 13.906
-          distance_px: 555.2
-        - trial: monk
-          burst: west
-          unit: monk
-          speed_stat: "4"
-          frames: 100
-          result: no single moving object found
-        - trial: monk
-          burst: east
-          unit: monk
-          speed_stat: "4"
-          frames: 140
-          result: no single moving object found
-        - trial: ninja
-          burst: west
-          unit: ninja
-          speed_stat: "6"
-          frames: 100
-          result: no single moving object found
-        - trial: ninja
-          burst: east
-          unit: ninja
-          speed_stat: "6"
-          frames: 140
-          result: no single moving object found
-        - trial: peon
-          burst: west
-          unit: peon
-          speed_stat: "4"
-          frames: 100
           px_per_s: 39.984
           tiles_per_s: 1.2495
-          velocity_px_per_s: [-39.919, 2.285]
-          r2: 0.9608
-          moving_frames: 78
-          moving_s: 7.711
-          distance_px: 303.7
-        - trial: peon
-          burst: east
-          unit: peon
-          speed_stat: "4"
-          frames: 140
-          px_per_s: 40.004
-          tiles_per_s: 1.2501
-          velocity_px_per_s: [39.998, 0.668]
-          r2: 0.9853
-          moving_frames: 139
-          moving_s: 13.908
-          distance_px: 557.6
-        - trial: pikeman
-          burst: west
-          unit: pikeman
-          speed_stat: "2"
-          frames: 100
-          px_per_s: 39.867
-          tiles_per_s: 1.2459
-          velocity_px_per_s: [38.567, 10.1]
-          r2: 0.9574
-          moving_frames: 18
-          moving_s: 1.705
-          distance_px: 70.3
-          rejected: too short (1.7 s, 70 px; needs 3 s and 100 px)
-        - trial: pikeman
-          burst: east
-          unit: pikeman
-          speed_stat: "2"
-          frames: 140
-          result: no single moving object found
-        - trial: priest
-          burst: west
-          unit: priest
-          speed_stat: "4"
-          frames: 100
-          px_per_s: 40.094
-          tiles_per_s: 1.253
-          velocity_px_per_s: [-40.037, 2.144]
-          r2: 0.9618
-          moving_frames: 78
-          moving_s: 7.705
-          distance_px: 306.8
-        - trial: priest
-          burst: east
-          unit: priest
-          speed_stat: "4"
-          frames: 140
-          px_per_s: 40.013
-          tiles_per_s: 1.2504
-          velocity_px_per_s: [40.009, 0.557]
-          r2: 0.9874
-          moving_frames: 140
-          moving_s: 13.906
-          distance_px: 559.8
+          velocity_px_per_s: [39.983, 0.16]
+          r2: 0.9963
+          moving_frames: 118
+          moving_s: 11.705
+          distance_px: 465.9
         - trial: spy
           burst: west
           unit: spy
           speed_stat: "4"
           frames: 100
-          px_per_s: 40.925
-          tiles_per_s: 1.2789
-          velocity_px_per_s: [40.323, 6.997]
-          r2: 0.9586
-          moving_frames: 17
-          moving_s: 1.608
-          distance_px: 65.3
-          rejected: too short (1.6 s, 65 px; needs 3 s and 100 px)
+          px_per_s: 39.994
+          tiles_per_s: 1.2498
+          velocity_px_per_s: [-39.994, 0.046]
+          r2: 0.9988
+          moving_frames: 93
+          moving_s: 9.213
+          distance_px: 367.9
         - trial: spy
           burst: east
           unit: spy
           speed_stat: "4"
           frames: 140
-          px_per_s: 61.083
-          tiles_per_s: 1.9088
-          velocity_px_per_s: [-61.08, 0.654]
-          r2: 0.9188
-          moving_frames: 30
-          moving_s: 2.914
-          distance_px: 153.1
-          rejected: too short (2.9 s, 153 px; needs 3 s and 100 px)
+          px_per_s: 39.92
+          tiles_per_s: 1.2475
+          velocity_px_per_s: [39.92, 0.153]
+          r2: 0.9965
+          moving_frames: 118
+          moving_s: 11.713
+          distance_px: 464.2
+      speed_stat_relation:
+        px_per_s_per_speed: 9.293
+        intercept_px_per_s: 9.4468
+        r2: 0.5679
+        points: 22

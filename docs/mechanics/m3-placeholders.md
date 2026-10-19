@@ -72,7 +72,7 @@ Shift + Delete; what each technology does (not how much).
 | Capture reset | progress lost after 5 s without diggers | YAML `gameplay.captureResetMs` | UNK-19 | same |
 | EMIT influence | own buildings' EMIT adds, others' subtracts, linearly to 0 at 16 tiles (⚠ HYPOTHESIS) | YAML `gameplay.influenceRadiusTiles` + code (`CaptureSystem`) | UNK-19 | capture times near and far from towns |
 | Minimum capture resistance | 1 | YAML `gameplay.minimumCaptureResistance` | UNK-19 | — |
-| Armored chariot, caravan speed | SPEED 4 (the tables have none) | YAML `^class.chariot`, `^class.trader` | UNK-12 | speed captures |
+| Armored chariot, caravan speed | SPEED 4 (the tables have none), i.e. 40 px/s; strides 85 and 75 suggest faster (ADR 0172) | YAML `^class.chariot`, `^class.trader` | UNK-12 | speed captures: neither spawned in batch C (chariots are Asian; the caravan did not appear) |
 | Ship / siege collision radius | 16 / 12 px | YAML `^Ship`, `^Siege` | UNK-11 | captures |
 | Siege locomotor | large | YAML `^Siege` | UNK-11 | — |
 

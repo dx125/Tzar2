@@ -24,9 +24,10 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // these values on purpose: update them in the same commit and say why. History: (M3 part B) first; PR #20 review (duplicate goals once per run, bounded site searches); rebase onto M3-A (#21: economy, construction and research rules change the match); research state and executor (the AI state now records the research view, players get their civilization set); M3-F (#23: fog, diplomacy, victory change the match; the AI respects stances); M4-A (ADR 0121: the inert entity comm.ground_object shifts entity type ids, so command and state hashes change); naval (ADRs 0140-0144: synthetic hulk and xebec shift type ids, ships leave the census army and workers, the naval executor runs first and does nothing on this land map); crowded landings (ADR 0146): a unit whose goal is taken by a standing unit settles next to it sooner.
     // (ADR 0169) the legacy TIME column is 1.25 s per unit (operator capture, batch A): every training and construction takes 25 % longer.
     // (ADR 0171) SPEED 4 is 40 px/s (operator capture, unit-speed): speedPixelsPerSecondPerPoint 12 -> 10, every unit walks a sixth slower.
-    private const ulong GoldenCommandStream = 0xCC4A8D2A0688B0CFUL;
-    private const ulong GoldenHashStream = 0xE71662F942374E67UL;
-    private const ulong GoldenFinalFullHash = 0x4C83E59613B2DAB3UL;
+    // (ADR 0172) the original ignores SPEED: measured classes walk at their own speed (foot 40 px/s, mounted 72, ...).
+    private const ulong GoldenCommandStream = 0x4C0A86174FD1DDB4UL;
+    private const ulong GoldenHashStream = 0xF122B75E635164E2UL;
+    private const ulong GoldenFinalFullHash = 0xC76F6F702A93D873UL;
 
     private const int Ticks = 9600;
 

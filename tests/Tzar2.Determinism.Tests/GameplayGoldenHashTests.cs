@@ -22,9 +22,12 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0169) the legacy TIME column is 1.25 s per unit (operator capture, batch A): every training and construction takes 25 % longer.
     // (ADR 0170) a cow node carries its own load (ResourceNode.carry, hashed into the ruleset): only the ruleset hash moves.
     // (ADR 0171) SPEED 4 is 40 px/s (operator capture, unit-speed): speedPixelsPerSecondPerPoint 12 -> 10, every unit walks a sixth slower; the bot repairs with the nearest busy peasant and picks items up within 24 tiles, so a repair and a pickup still happen in 1,600 ticks.
-    private const ulong GoldenRulesetHash = 0xFDFAE79B2F773F63UL;
-    private const ulong GoldenHashStream = 0x0836EEA649472422UL;
-    private const ulong GoldenFinalFullHash = 0x3D1F0F86D76D7477UL;
+    // (ADR 0172) the original ignores SPEED: measured classes walk at their own speed (foot 40 px/s, mounted 72, troll 47,
+    // ghost 67, cow and bear 26); the bot repairs in its base with a crew of three, and each kingdom's first house starts at
+    // three quarters of its hit points, so a repair completes whatever the battle does.
+    private const ulong GoldenRulesetHash = 0x45393F5F166CC3BAUL;
+    private const ulong GoldenHashStream = 0x369995D30ADB3778UL;
+    private const ulong GoldenFinalFullHash = 0x0D3ECF1A871E345CUL;
 
     private const int Ticks = 1600;
 

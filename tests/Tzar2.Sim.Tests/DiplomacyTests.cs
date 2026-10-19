@@ -32,7 +32,7 @@ public class DiplomacyTests
         EntityId soldier = OfType(d.World, "euro.footman", 1).Single();
         Stance(d, 0, 1, stance);
         Stance(d, 1, 0, Kingdoms.Stance.Ally); // player 1 never strikes first
-        for (int t = 0; t < 200; t++)
+        for (int t = 0; t < 300; t++) // 15 s: footmen walk 40 px/s (ADR 0172)
         {
             d.Step();
         }

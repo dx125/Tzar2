@@ -1,4 +1,14 @@
-# Fidelity summary (after the unit-speed re-capture)
+# Fidelity summary (after batch C)
+
+## Walking speeds (sessions `capture-20261019-163231`, `-190321`, ADR 0172)
+
+Both runs at the new place by our base, 30/30 trials, every walk clean (r² ≥ 0.99). **The original ignores SPEED**:
+every foot class walks 40 px/s (pikeman SPEED 2 as fast as peasant SPEED 4), knights and crusaders 72, trolls 47,
+ghosts 66.6, cows and bears 25.7. The speed follows the walk sheet's stride (`move_len`), by a rule not yet known. The
+engine now gives the 18 measured classes their own speeds and the speed check passes: **7 of 30 = 23.3 %**.
+
+Not measured: Arabian and Asian classes (MP2's own kingdom is European and can spawn only its own civilisation),
+catapults, ballistas and caravans (spawning failed), ships and flyers.
 
 ## Unit speeds (session `capture-20261019-020223`, ADR 0171)
 

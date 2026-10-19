@@ -63,7 +63,8 @@ public class RulesetCompilerTests
         Assert.Equal(44, peon.MaxHealth);
         Assert.Equal(1, t.Defence);
         Assert.Equal(Locomotor.Foot, peon.Locomotor);
-        Assert.Equal(5 * 10 * 64, peon.SpeedUnitsPerSecond); // SPEED 5 x 10 px/s (SPEED 4 = 40 px/s measured, ADR 0171)
+        Assert.Equal(40 * 64, peon.SpeedUnitsPerSecond); // measured 40 px/s whatever its SPEED (ADR 0172)
+        Assert.Equal(5 * 10 * 64, Type(Classic, "arab.jihad_warrior").SpeedUnitsPerSecond); // not measured: SPEED 5 x 10 px/s (UNVERIFIED)
         Assert.Equal(7 * 64, peon.Radius);
         Assert.True(peon.LeavesCorpse);
         Assert.Equal(1, t.PopulationCost);
@@ -250,7 +251,7 @@ public class RulesetCompilerTests
     [InlineData("euro.footman: { new: true }", "'new: true' but the entry already exists")]
     [InlineData("euro.footman: { RevealsShroud: { sight: 2000000 } }", "euro.footman.RevealsShroud.sight: 2000000 is too large")]
     [InlineData("euro.footman: { Armament: { range: 2000000 } }", "euro.footman.Armament.range: 2000000 is too large")]
-    [InlineData("euro.footman: { Mobile: { speed: 100000000 } }", "euro.footman.Mobile.pixelsPerSecond: 1000000000 is too large")]
+    [InlineData("arab.jihad_warrior: { Mobile: { speed: 100000000 } }", "arab.jihad_warrior.Mobile.pixelsPerSecond: 1000000000 is too large")]
     [InlineData("euro.footman: { Collision: { radius: 100000000 } }", "euro.footman.Collision.radius: 100000000 is too large")]
     [InlineData("euro.footman: { Health: { max: 99999999999 } }", "is not an integer")]
     [InlineData("euro.footman: { inherits-=: [^Unit] }", "euro.footman.inherits-=: a trait must be a mapping")]

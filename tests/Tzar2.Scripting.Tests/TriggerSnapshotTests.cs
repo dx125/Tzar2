@@ -105,8 +105,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             Run(d, hero, castle, MissionTicks);
             // Naval (ADRs 0140-0145): synthetic hulk and xebec shift type ids, two naval stores join the hashed layout; then
             // (ADR 0146) a unit whose goal is taken by a standing unit settles next to it sooner; then (ADR 0171) units walk
-            // at SPEED x 10 px/s instead of 12.
-            Assert.Equal("3A9075BAF8B0D2C9", d.Hashes[^1].ToString("X16"));
+            // at SPEED x 10 px/s instead of 12; then (ADR 0172) measured classes walk at their own speed, whatever SPEED.
+            Assert.Equal("1DD575F58CD1A1AD", d.Hashes[^1].ToString("X16"));
         }
     }
 

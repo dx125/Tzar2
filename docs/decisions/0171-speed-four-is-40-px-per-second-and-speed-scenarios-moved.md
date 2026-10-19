@@ -1,7 +1,7 @@
 # 0171. SPEED 4 walks 40 px/s (10 px/s per point); speed scenarios move away from Nature's cows
 
-* **Status:** Accepted. The scale is measured at SPEED 4 only; proportionality is provisional until another SPEED
-  value is measured (re-capture of `unit-speed`, then batch C). Amended 2026-10-19: the minimap click of decision 4.
+* **Status:** Accepted; decisions 1 and 3 (speed = SPEED × 10 px/s, the two-SPEED-value check) superseded by ADR 0172,
+  which measured that the original ignores SPEED. Amended 2026-10-19: the minimap click of decision 4.
 * **Date:** 2026-10-19
 * **Deciders:** maintainer (Claude), product owner
 * **Related:** ADR 0104 (Nature), ADR 0112 (fidelity suite), ADR 0170, TDD §22.3, REQ-PATH-11, UNK-12;

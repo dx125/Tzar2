@@ -142,7 +142,17 @@ internal sealed class EngineModel
     /// <summary>Legacy TIME column → milliseconds, the importer's own constant (<see cref="Tzar2.Content.Rules.LegacyTime"/>).</summary>
     public const int MsPerTimeUnit = Tzar2.Content.Rules.LegacyTime.MsPerTimeUnit;
 
-    public double PixelsPerSecondPerSpeedPoint => FactsIndex.Number(Gameplay.Get("speedPixelsPerSecondPerPoint")) ?? 12;
+    /// <summary>
+    /// The engine's walking speed (px/s) of a legacy class as the captures measure it, on the European unit where the class
+    /// has one: the compiled type's speed, else the class template's <c>Mobile.pixelsPerSecond</c> in classic.yaml (classes
+    /// the synthetic tables lack, e.g. longbowman), else null (ADR 0172).
+    /// </summary>
+    public double? PixelsPerSecondOf(string unit)
+    {
+        EntityTypeDefinition? type = Ruleset.EntityTypes.FirstOrDefault(t => t.Traits.LegacyClass == unit && t.Traits.Civilization == "euro")
+            ?? Ruleset.EntityTypes.FirstOrDefault(t => t.Traits.LegacyClass == unit);
+        return type is { SpeedUnitsPerSecond: > 0 } ? type.SpeedUnitsPerSecond / 64.0 : Rule("^class." + unit, "Mobile", "pixelsPerSecond");
+    }
 
     public double AttackCycleMs => FactsIndex.Number(Gameplay.Get("attackCycleMs")) ?? 6000;
 
@@ -207,7 +217,7 @@ internal static class FidelitySuite
     public static IReadOnlyList<FidelityCheck> Checks { get; } =
     [
         // §22.3: measurable with the scenarios of ADR 0112.
-        new("m2.speed-per-point", "22.3", "m2-gameplay", "UNK-12", "Unit speed = SPEED x speedPixelsPerSecondPerPoint (all measured units)", SpeedPerPoint),
+        new("m2.speed-per-point", "22.3", "m2-gameplay", "UNK-12", "Unit speed of every measured class matches the engine's (the original ignores SPEED, ADR 0172)", SpeedPerPoint),
         new("m2.attack-cycle", "22.3", "m2-gameplay", "UNK-07", "Time between hits = attackCycleMs / RATE (all measured pairs)", AttackCycle),
         new("m2.damage", "22.3", "m2-gameplay", "UNK-08", "Damage per hit = max(minimum, ATTACK - DEFENCE) (all measured pairs)", DamagePerHit),
         new("m2.carry-capacity", "22.3", "m2-gameplay", "UNK-17", "Load per trip = the peasant's Harvester capacity (every resource)", CarryCapacity),
@@ -412,25 +422,28 @@ internal static class FidelitySuite
         return Verdict(rgb555 && EngineModel.ExpandsByReplication, $"{trials.Count} trials, surface rgb555: {rgb555}; engine expands by replication");
     }
 
+    // The id keeps its first name; the check no longer assumes speed = SPEED x a factor, which the original refuted: every
+    // foot class walks 40 px/s whatever its SPEED (2-4) and the mounted ones 72 (ADR 0172). Each measured class is compared
+    // with the engine's speed for that class.
     private static CheckResult SpeedPerPoint(FactsIndex f, EngineModel e)
     {
-        var measured = CleanSpeeds(f)
-            .Where(m => FactsIndex.Number(m.Get("speed_stat")) is > 0 && FactsIndex.Number(m.Get("px_per_s")) is not null)
+        var classes = CleanSpeeds(f)
+            .Where(m => FactsIndex.Text(m.Get("unit")) is { } u && u != "group" && FactsIndex.Number(m.Get("px_per_s")) is not null)
+            .GroupBy(m => FactsIndex.Text(m.Get("unit"))!)
+            .Select(g => (Unit: g.Key, Measured: AttackTiming.Median([.. g.Select(m => FactsIndex.Number(m.Get("px_per_s"))!.Value)])))
+            .OrderBy(c => c.Unit, StringComparer.Ordinal)
             .ToList();
-        int units = measured.Select(m => FactsIndex.Text(m.Get("unit"))).Distinct().Count();
-        var stats = measured.Select(m => FactsIndex.Number(m.Get("speed_stat"))!.Value).Distinct().Order().ToList();
-        if (units < 3 || stats.Count < 2)
+        if (classes.Count < 3)
         {
-            // One SPEED value fixes a scale but not the proportionality the check is about (ADR 0171).
-            return Pending($"{measured.Count} clean speed measurements of {units} units at SPEED {string.Join(", ", stats)} (needs 3 units and 2 SPEED values)");
+            return Pending($"{classes.Count} classes with a clean speed measurement (needs 3)");
         }
 
-        var off = measured.Where(m => !Within(FactsIndex.Number(m.Get("px_per_s"))!.Value, FactsIndex.Number(m.Get("speed_stat"))!.Value * e.PixelsPerSecondPerSpeedPoint, SpeedTolerance))
-            .Select(m => $"{FactsIndex.Text(m.Get("unit"))} {FactsIndex.Number(m.Get("px_per_s")):0.#} px/s")
-            .Distinct().ToList();
+        var off = classes.Where(c => e.PixelsPerSecondOf(c.Unit) is not { } engine || !Within(c.Measured, engine, SpeedTolerance))
+            .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Unit} {c.Measured:0.#} px/s (engine {e.PixelsPerSecondOf(c.Unit)?.ToString("0.#", CultureInfo.InvariantCulture) ?? "none"})"))
+            .ToList();
         return Verdict(off.Count == 0, off.Count == 0
-            ? $"{measured.Count} measurements within {SpeedTolerance:P0} of SPEED x {e.PixelsPerSecondPerSpeedPoint}"
-            : $"engine SPEED x {e.PixelsPerSecondPerSpeedPoint} px/s misses: {string.Join(", ", off.Take(6))}");
+            ? $"{classes.Count} classes within {SpeedTolerance:P0} of the engine's speed"
+            : $"misses: {string.Join(", ", off.Take(6))}");
     }
 
     private static IEnumerable<YamlMapping> HitSeries(FactsIndex f) =>
