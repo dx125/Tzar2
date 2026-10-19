@@ -34,6 +34,56 @@ public class SecondSessionAnalysisTests
     }
 
     [Fact]
+    public void Construction_rate_comes_from_the_health_bar_before_helpers_join()
+    {
+        // A 60 px health bar on row 5 that one builder fills in 40 s (1.5 px/s); a second builder joins at 20 s and the
+        // rate doubles (batch A: the lumber mill's rate doubled after 22 s). Sampled every 500 ms.
+        const uint Green = 0x00C000, Red = 0xC00000, Grey = 0x404040;
+        var frames = new List<(double T, CaptureImage Image)>();
+        for (int i = 0; i < 80; i++)
+        {
+            double s = i * 0.5;
+            int fill = (int)Math.Min(60, s <= 20 ? 1.5 * s : 30 + (3.0 * (s - 20)));
+            uint[] px = Enumerable.Repeat(Grey, 80 * 10).ToArray();
+            for (int x = 0; x < 60; x++)
+            {
+                px[(5 * 80) + 10 + x] = x < fill ? Green : Red;
+            }
+
+            frames.Add((5000 + (s * 1000), new CaptureImage(80, 10, PixelFormat.Rgb888, px)));
+        }
+
+        var bar = RegionTiming.BarRate(frames);
+        Assert.NotNull(bar);
+        Assert.Equal(5, bar!.Value.Row);
+        Assert.Equal(60, bar.Value.Length);
+        Assert.InRange(bar.Value.Length / bar.Value.PxPerSecond, 39, 41.5);   // the one-builder rate, not the doubled one
+        Assert.InRange(bar.Value.ToS, 18, 22);
+        Assert.Null(RegionTiming.BarRate([.. frames.Select(f => (f.T, Flat(80, 10, Grey)))]));   // no bar at all
+    }
+
+    [Fact]
+    public void Construction_time_uses_the_health_bar_rate_and_the_time_unit()
+    {
+        using var dir = new TempDir();
+        // Batch A: one builder fills the lumber mill's bar (TIME 30) in 36.85 s; the engine builds it in 30 x 1.25 s.
+        File.WriteAllText(Path.Combine(dir.Path, "build-time.yaml"), """
+            schema: tzar2-fidelity-facts/1
+            scenario: build-time
+            analyses:
+              region-timing:
+                status: ok
+                facts:
+                  measurements:
+                    - {measure: build, subject: lumber, expected_s: "30", one_builder_full_s: 36.85, bar_px: 54}
+            """);
+        var engine = EngineModel.Load(OriginPaths.RepositoryRoot);
+        var build = FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine).Single(r => r.Check.Id == "m2.build-time").Result;
+        Assert.Equal(CheckStatus.Pass, build.Status);   // no peasant speed needed: the bar rate has no walk in it
+        Assert.Contains("37.5 s", build.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Day_clock_measures_the_cycle_and_the_night_share()
     {
         // A 600 s day, dark from 200 s to 440 s (night share 0.4), sampled every 2 s for 1,000 s.
@@ -146,7 +196,7 @@ public class SecondSessionAnalysisTests
                 status: ok
                 facts:
                   measurements:
-                    - {measure: build, subject: lumber, expected_s: "30", last_event_s: 32.4, builder_from: "100,100", site: "160,180", site_half_px: "20"}
+                    - {measure: build, subject: lumber, expected_s: "30", last_event_s: 39.4, builder_from: "100,100", site: "160,180", site_half_px: "20"}
             """);
         var engine = EngineModel.Load(OriginPaths.RepositoryRoot);
         var build = FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine).Single(r => r.Check.Id == "m2.build-time").Result;

@@ -21,13 +21,26 @@ What the session could and could not settle for this register (facts: `tests/fid
 * Starting resources: the setup screen of a preset map shows "Default" (the map's own amounts: 1,000 of each on MP2,
   400 on MP3, 2,000 on MP6), which says nothing about the random-map default; still UNVERIFIED.
 
+## Batch A of the second session (2026-10-18, session `capture-20261018-155421`, ADR 0169)
+
+Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn` of the first session), so units fought:
+
+* **VERIFIED:** time between hits = 6,000 ms / RATE (two fights, `m2.attack-cycle`); damage = the flat rule for two
+  pairs (`m2.damage`).
+* **VERIFIED, and changed:** the unit and building tables' **TIME column is 1.25 s per unit**, not 1 s: a peasant
+  (TIME 8) is trained every 9.99 s, and one builder raises a lumber mill (TIME 30) at a rate that completes it in
+  36.85 s. `LegacyTime.MsPerTimeUnit` = 1,250 (ADR 0169). Research times (`time` in ms) stay unscaled until measured.
+* **Consistent with the rules below:** a site's health grows linearly from 1 to the maximum, and the rate doubled when
+  a second peasant joined the builder (construction rate linear in builders, not yet measured with more than two).
+
 ## Values
 
 | Value | Placeholder | Where | Unknown | How to resolve |
 |---|---|---|---|---|
+| TIME column (units, buildings) | ~~1 s per unit~~ — **VERIFIED: 1.25 s per unit** (capture-20261018-155421: `train-time` 9.99 s for TIME 8, `build-time` 36.85 s for TIME 30; ADR 0169) | importer `LegacyTime.MsPerTimeUnit` | UNK-20, UNK-18 | done (research times: UNK-21, batch E) |
 | SPEED point → px/s | 12 px/s per point (SPEED 4 = 48 px/s) | YAML `gameplay.speedPixelsPerSecondPerPoint` | UNK-12 | capture scenario `50-unit-speed` (first session: units never moved, re-capture) |
 | Group move speed | `slowest` in both rulesets (owner decision) | YAML `gameplay.groupMoveSpeed` | UNK-12 | same captures with mixed groups |
-| Time between hits | 6,000 ms / RATE | YAML `gameplay.attackCycleMs` | UNK-07 | attack-timing captures (first session: no fight, re-capture) |
+| Time between hits | 6,000 ms / RATE — **VERIFIED** (capture-20261018-155421, `attack-timing`: two series within tolerance) | YAML `gameplay.attackCycleMs` | UNK-07 | done |
 | Hit frame | 50% of the cycle | YAML `gameplay.hitDelayPercent` | UNK-07 | `actionrow` vs. captures |
 | Minimum damage | 1 | YAML `gameplay.minimumDamage` | UNK-08 | damage grid |
 | Melee reach | 8 px edge to edge (buildings: the interaction reach) | YAML `gameplay.meleeReachPx` | UNK-07, UNK-11 | captures of melee contact |

@@ -58,7 +58,7 @@ public class RulesetCompilerTests
         Assert.Equal("euro", t.Civilization);
         Assert.Equal(45, t.Cost[Resource("food")]);
         Assert.Equal(0, t.Cost[Resource("wood")]);
-        Assert.Equal(9_000, t.BuildTimeMs);
+        Assert.Equal(9 * LegacyTime.MsPerTimeUnit, t.BuildTimeMs);
         Assert.Equal(7 * 2048, t.SightUnits);
         Assert.Equal(44, peon.MaxHealth);
         Assert.Equal(1, t.Defence);
@@ -152,7 +152,7 @@ public class RulesetCompilerTests
         Assert.Equal(new ResourceNodeDefinition(Resource("wood"), 100), Type(Classic, "comm.tree").Traits.ResourceNode);
         EntityTraits field = Type(Classic, "comm.field").Traits;
         Assert.Equal(ResourceNodeDefinition.Unlimited, field.ResourceNode!.Amount);
-        Assert.Equal(17_000, field.BuildTimeMs);
+        Assert.Equal(17 * LegacyTime.MsPerTimeUnit, field.BuildTimeMs);
         Assert.False(Type(Classic, "comm.tree").LeavesCorpse);
     }
 

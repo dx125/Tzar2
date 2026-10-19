@@ -8,11 +8,11 @@ provenance:
   edition: GOG v1.10 English (reference build)
   install_matches_reference: true
   exe_md5: d178304615a9058739ebafe3393fafb3
-  session: capture-20261018-024524
-  captured_utc: 2026-10-18T05:45:24Z
-  analyzed_utc: 2026-10-18T06:34:24Z
-  harness: 0.0.1+45a07e6bed3106cc50dd3abb6d9e8773893e0434
-  harness_commit: 45a07e6
+  session: capture-20261018-155421
+  captured_utc: 2026-10-18T18:54:21Z
+  analyzed_utc: 2026-10-19T00:54:25Z
+  harness: 0.0.1+8060f0037da49f959950f4df3135d7e0fdb5d3d8
+  harness_commit: 8060f00
   renderer: cnc-ddraw 7.1.0.0 (pinned, SHA-256 verified), windowed, GDI renderer, no scaling
   os: Microsoft Windows 10.0.26200
   trials: 1
@@ -31,7 +31,7 @@ analyses:
         formats: [rgb555]
         sizes: [1024x768]
       window_captures:
-        count: 9
+        count: 11
         blank: 0
         unreadable: 0
         formats: [rgb888 (32-bit)]
@@ -50,43 +50,55 @@ analyses:
           confidence: 0  # top / second ramp pixel count
           pixels: [0, 0, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
         - slot: 2
-          ramp: null  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
-          colour: null
-          confidence: 0  # top / second ramp pixel count
-          pixels: [0, 0, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
+          ramp: 2  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
+          colour: red
+          confidence: 167  # top / second ramp pixel count
+          pixels: [0, 167, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
         - slot: 3
-          ramp: null  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
-          colour: null
-          confidence: 0  # top / second ramp pixel count
-          pixels: [0, 0, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
+          ramp: 3  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
+          colour: green
+          confidence: 161  # top / second ramp pixel count
+          pixels: [0, 0, 161, 0, 0, 0, 0, 0]  # per ramp 1..8
         - slot: 4
-          ramp: null  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
-          colour: null
-          confidence: 0  # top / second ramp pixel count
-          pixels: [0, 0, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
+          ramp: 4  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
+          colour: purple
+          confidence: 167  # top / second ramp pixel count
+          pixels: [0, 0, 0, 167, 0, 0, 0, 0]  # per ramp 1..8
         - slot: 5
           ramp: null  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
           colour: null
           confidence: 0  # top / second ramp pixel count
           pixels: [0, 0, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
         - slot: 6
-          ramp: null  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
-          colour: null
-          confidence: 0  # top / second ramp pixel count
-          pixels: [0, 0, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
+          ramp: 6  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
+          colour: cyan
+          confidence: 167  # top / second ramp pixel count
+          pixels: [0, 0, 0, 0, 0, 167, 0, 0]  # per ramp 1..8
         - slot: 7
-          ramp: null  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
-          colour: null
-          confidence: 0  # top / second ramp pixel count
-          pixels: [0, 0, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
+          ramp: 7  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
+          colour: orange
+          confidence: 70  # top / second ramp pixel count
+          pixels: [0, 0, 0, 0, 0, 0, 70, 0]  # per ramp 1..8
         - slot: 8
           ramp: null  # 1-based GAME.PAL ramp (entries 112 + 16 * (ramp - 1) ...)
           colour: null
           confidence: 0  # top / second ramp pixel count
           pixels: [0, 0, 0, 0, 0, 0, 0, 0]  # per ramp 1..8
-      decided: 0
-      identity_mapping: null  # slot N uses ramp N for every decided slot
+      decided: 5
+      identity_mapping: true  # slot N uses ramp N for every decided slot
       swatches:
+        - capture: main/setup
+          kingdom: 1
+          colour: 0,0,189
+          ramp: 1
+          ramp_name: blue
+          margin: 1.758  # distance to the second-nearest ramp / to the nearest
+        - capture: main/setup
+          kingdom: 2
+          colour: 206,24,24
+          ramp: 2
+          ramp_name: red
+          margin: 2.709  # distance to the second-nearest ramp / to the nearest
         - capture: main/diplomacy
           kingdom: 2
           colour: 206,24,24
@@ -129,5 +141,5 @@ analyses:
           ramp: 8
           ramp_name: grey
           margin: 40.317  # distance to the second-nearest ramp / to the nearest
-      swatches_decided: 7
+      swatches_decided: 9
       swatch_identity: true  # kingdom N's swatch is nearest to ramp N for every decided swatch

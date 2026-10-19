@@ -232,7 +232,7 @@ public class MagicTests
         d.RunUntil(() => d.Count(SimEventKind.UnitConverted) == 1, 400);
         Assert.False(d.World.Entities.IsAlive(peon));
         Assert.Single(OfType(d.World, "arab.jihad_warrior", 0));
-        Assert.InRange(TimedOf(d, SimEventKind.UnitConverted).Single().Tick, 180, 182); // 9 s (synthetic TIME)
+        Assert.InRange(TimedOf(d, SimEventKind.UnitConverted).Single().Tick, 225, 227); // TIME 9 x 1.25 s (synthetic)
     }
 
     [Fact]

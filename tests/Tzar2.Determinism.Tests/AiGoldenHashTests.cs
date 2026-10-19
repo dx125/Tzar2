@@ -22,9 +22,10 @@ public class AiGoldenHashTests(ITestOutputHelper output)
 {
     // Changing the AI (interpreter, executors, default script), a gameplay system, the scenario or the hashed layout changes
     // these values on purpose: update them in the same commit and say why. History: (M3 part B) first; PR #20 review (duplicate goals once per run, bounded site searches); rebase onto M3-A (#21: economy, construction and research rules change the match); research state and executor (the AI state now records the research view, players get their civilization set); M3-F (#23: fog, diplomacy, victory change the match; the AI respects stances); M4-A (ADR 0121: the inert entity comm.ground_object shifts entity type ids, so command and state hashes change); naval (ADRs 0140-0144: synthetic hulk and xebec shift type ids, ships leave the census army and workers, the naval executor runs first and does nothing on this land map).
-    private const ulong GoldenCommandStream = 0xA6F029D3B6F26DF9UL;
-    private const ulong GoldenHashStream = 0x1971F7112D98FC82UL;
-    private const ulong GoldenFinalFullHash = 0x8C7EB8E46CC81337UL;
+    // (ADR 0169) the legacy TIME column is 1.25 s per unit (operator capture, batch A): every training and construction takes 25 % longer.
+    private const ulong GoldenCommandStream = 0x6BEEC496EB26888BUL;
+    private const ulong GoldenHashStream = 0x74897FA4CAC85338UL;
+    private const ulong GoldenFinalFullHash = 0xD809DB4A25006BCAUL;
 
     private const int Ticks = 9600;
 

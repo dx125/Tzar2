@@ -8,76 +8,195 @@ provenance:
   edition: GOG v1.10 English (reference build)
   install_matches_reference: true
   exe_md5: d178304615a9058739ebafe3393fafb3
-  session: capture-20261018-024524
-  captured_utc: 2026-10-18T05:45:24Z
-  analyzed_utc: 2026-10-18T06:34:22Z
-  harness: 0.0.1+45a07e6bed3106cc50dd3abb6d9e8773893e0434
-  harness_commit: 45a07e6
+  session: capture-20261018-155421
+  captured_utc: 2026-10-18T18:54:21Z
+  analyzed_utc: 2026-10-19T00:54:25Z
+  harness: 0.0.1+8060f0037da49f959950f4df3135d7e0fdb5d3d8
+  harness_commit: 8060f00
   renderer: cnc-ddraw 7.1.0.0 (pinned, SHA-256 verified), windowed, GDI renderer, no scaling
   os: Microsoft Windows 10.0.26200
-  trials: 2
-  trials_ok: 2
+  trials: 6
+  trials_ok: 6
 analyses:
   capture-quality:
     status: ok
     notes: []
     facts:
-      trials: 2
-      trials_ok: 2
+      trials: 6
+      trials_ok: 6
       game_captures:
-        count: 2
+        count: 12
         blank: 0
         unreadable: 0
         formats: [rgb555]
         sizes: [1024x768]
       window_captures:
-        count: 2
+        count: 12
         blank: 0
         unreadable: 0
         formats: [rgb888 (32-bit)]
         sizes: [1024x768]
-      bursts: 2
-      burst_frames: 40
-      memory_scans: 12
+      bursts: 6
+      burst_frames: 120
+      memory_scans: 36
   attack-timing:
-    status: inconclusive
-    notes: ["archer-vs-maceman/hp-stable-series: no hit series found", "knight-vs-footman/hp-stable-series: no hit series found", "knight-vs-footman/hp-series: no hit series found", "knight-vs-footman/hp-series16: no hit series found"]
+    status: ok
+    notes: ["archer-vs-archer/hp-stable-series: no hit series found", "archer-vs-peon/hp-stable-series: no hit series found", "footman-vs-footman/hp-stable-series: no hit series found", "footman-vs-footman/hp-series: no hit series found", "footman-vs-footman/hp-series16: no hit series found", "knight-vs-footman/hp-stable-series: no hit series found", "knight-vs-footman/hp-series: no hit series found", "knight-vs-footman/hp-series16: no hit series found", "maceman-vs-pikeman/hp-stable-series: no hit series found", "peon-vs-peon/hp-stable-series: no hit series found", "peon-vs-peon/hp-series16: no hit series found"]
     facts:
       note: hit times are memory sample timestamps (wall clock); resolution = sample interval
       measurements:
-        - trial: archer-vs-maceman
+        - trial: archer-vs-archer
           sample: hp-stable-series
           attacker: archer
-          defender: maceman
+          defender: archer
           rate_stat: "4"
-          addresses: 86
-          samples: 798
-          sample_interval_ms: 31.332
+          attack_stat: "5"
+          defence_stat: "0"
+          addresses: 308
+          samples: 797
+          sample_interval_ms: 31.404
+          result: no address with repeated hits
+        - trial: archer-vs-archer
+          sample: hp-series16
+          attacker: archer
+          defender: archer
+          rate_stat: "4"
+          attack_stat: "5"
+          defence_stat: "0"
+          addresses: 6
+          samples: 1274
+          sample_interval_ms: 15.701
+          hits: 7
+          hp_start: 35
+          hp_end: 0
+          period_ms_median: 1498.58
+          period_ms_min: 1490.3
+          period_ms_max: 1510.98
+          damage_values: [5x7]
+        - trial: archer-vs-peon
+          sample: hp-stable-series
+          attacker: archer
+          defender: peon
+          rate_stat: "4"
+          attack_stat: "5"
+          defence_stat: "0"
+          addresses: 301
+          samples: 797
+          sample_interval_ms: 31.383
+          result: no address with repeated hits
+        - trial: archer-vs-peon
+          sample: hp-series16
+          attacker: archer
+          defender: peon
+          rate_stat: "4"
+          attack_stat: "5"
+          defence_stat: "0"
+          addresses: 9
+          samples: 1275
+          sample_interval_ms: 15.697
+          hits: 8
+          hp_start: 40
+          hp_end: 0
+          period_ms_median: 1505.15
+          period_ms_min: 1317.72
+          period_ms_max: 1962.04
+          damage_values: [5x8]
+        - trial: footman-vs-footman
+          sample: hp-stable-series
+          attacker: footman
+          defender: footman
+          rate_stat: "5"
+          attack_stat: "6"
+          defence_stat: "3"
+          addresses: 4024
+          samples: 797
+          sample_interval_ms: 31.406
+          result: no address with repeated hits
+        - trial: footman-vs-footman
+          sample: hp-series
+          attacker: footman
+          defender: footman
+          rate_stat: "5"
+          attack_stat: "6"
+          defence_stat: "3"
+          addresses: 19
+          samples: 1275
+          sample_interval_ms: 15.689
+          result: no address with repeated hits
+        - trial: footman-vs-footman
+          sample: hp-series16
+          attacker: footman
+          defender: footman
+          rate_stat: "5"
+          attack_stat: "6"
+          defence_stat: "3"
+          addresses: 23
+          samples: 1275
+          sample_interval_ms: 15.69
           result: no address with repeated hits
         - trial: knight-vs-footman
           sample: hp-stable-series
           attacker: knight
           defender: footman
           rate_stat: "4"
-          addresses: 4067
-          samples: 800
-          sample_interval_ms: 31.278
+          attack_stat: "12"
+          defence_stat: "3"
+          addresses: 4015
+          samples: 797
+          sample_interval_ms: 31.381
           result: no address with repeated hits
         - trial: knight-vs-footman
           sample: hp-series
           attacker: knight
           defender: footman
           rate_stat: "4"
-          addresses: 28
-          samples: 1280
-          sample_interval_ms: 15.635
+          attack_stat: "12"
+          defence_stat: "3"
+          addresses: 30
+          samples: 1275
+          sample_interval_ms: 15.693
           result: no address with repeated hits
         - trial: knight-vs-footman
           sample: hp-series16
           attacker: knight
           defender: footman
           rate_stat: "4"
+          attack_stat: "12"
+          defence_stat: "3"
           addresses: 36
-          samples: 1280
-          sample_interval_ms: 15.635
+          samples: 1275
+          sample_interval_ms: 15.695
+          result: no address with repeated hits
+        - trial: maceman-vs-pikeman
+          sample: hp-stable-series
+          attacker: maceman
+          defender: pikeman
+          rate_stat: "3"
+          attack_stat: "8"
+          defence_stat: "4"
+          addresses: 82
+          samples: 797
+          sample_interval_ms: 31.397
+          result: no address with repeated hits
+        - trial: peon-vs-peon
+          sample: hp-stable-series
+          attacker: peon
+          defender: peon
+          rate_stat: "3"
+          attack_stat: "5"
+          defence_stat: "0"
+          addresses: 301
+          samples: 797
+          sample_interval_ms: 31.398
+          result: no address with repeated hits
+        - trial: peon-vs-peon
+          sample: hp-series16
+          attacker: peon
+          defender: peon
+          rate_stat: "3"
+          attack_stat: "5"
+          defence_stat: "0"
+          addresses: 4
+          samples: 1274
+          sample_interval_ms: 15.704
           result: no address with repeated hits

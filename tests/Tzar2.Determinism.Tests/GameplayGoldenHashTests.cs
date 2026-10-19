@@ -19,9 +19,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
 {
     // Changing the rules compiler, the classic YAML, the synthetic tables, a gameplay system, the scenario or the hashed
     // layout changes these values on purpose: update them in the same commit and say why. History: (M2 part C) first; (M3 A, ADRs 0040-0044) every unit, building, technology and upgrade imported; research, upgrades, capture, repair, fire, gates, bridges and the new stores; the bot researches castle technologies; then resistanceScale 100 -> 1000 (owner decision, UNK-08): only the ruleset hash changed, no hit on a building happens in these 1,600 ticks; then (review of PR #21) paid, crew-limited repair, rate-limited gates, paid refunds, and a bot that attacks and captures houses, repairs, builds a gate, drags a wall and bridges a river (the map gains a river per base); then maxGateChangesPerTick 16 -> 4 (review): ruleset hash only; then (M3 F, ADRs 0100-0107) the world systems: visibility, diplomacy (kingdoms 0 and 1 ally, 2 turns neutral to 3), tributes, two markets and a caravan per kingdom (0 and 1 trade under hmnotech), a magic gateway, bears and wild cows in the middle, Standard victory evaluation; new synthetic rows (trader, gateway, bear, orc, dwarf, ghost, skeleton); then (M3 stream E, ADRs 0090-0096) combat, experience, holders, items and magic: projectiles, splash, the new stores, spells, stances; the map gains a mage, a priest and a catapult per base and items at the center; the bot researches Learning first, garrisons and unloads soldiers, casts, bombards the center and picks items up; then (M3 F tavern, ADR 0108; Taverns option) a tavern for kingdoms 0 and 1, who hire a mercenary group and a hero, and the tavern settings in the ruleset; then (M4-A, ADR 0121) the inert entity comm.ground_object: entity type ids after it shift, which every hash sees; then (naval, ADRs 0140-0143) synthetic hulk and xebec rows, two naval stores, boats fish only water nodes, no auto-chasing across the shore.
-    private const ulong GoldenRulesetHash = 0x1DE6BC4227889CF1UL;
-    private const ulong GoldenHashStream = 0x74ED1D430751FF49UL;
-    private const ulong GoldenFinalFullHash = 0x5E8C5AC619881129UL;
+    // (ADR 0169) the legacy TIME column is 1.25 s per unit (operator capture, batch A): every training and construction takes 25 % longer.
+    private const ulong GoldenRulesetHash = 0xDD8247AABEAF2C97UL;
+    private const ulong GoldenHashStream = 0x14E5027CAA2A5419UL;
+    private const ulong GoldenFinalFullHash = 0x4F503BB1CAAA1805UL;
 
     private const int Ticks = 1600;
 

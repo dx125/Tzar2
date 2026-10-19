@@ -56,6 +56,12 @@ public sealed class SessionTests
         Assert.NotNull(first);
         Assert.True(fresh);
         Assert.Equal(0, first!.Tick.Value);
+        Tzar2.Sim.World world = session.Simulation.World;
+        var startAt = new Dictionary<EntityId, Tzar2.Sim.Components.Position>();
+        foreach (EntityId e in world.Motions.Entities)
+        {
+            startAt[e] = world.Positions.Get(e);
+        }
 
         session.Step(300);
         GameFrame frame = session.AcquireFrame(out fresh)!;
@@ -71,11 +77,12 @@ public sealed class SessionTests
         Assert.Contains(frame.Visibility, v => v == 0);
         Assert.Equal(MatchOutcome.None, frame.Outcome);
 
-        // The Hard legacy AI sends its peasants to work.
+        // The Hard legacy AI sends its peasants to work: some of them have moved (they may be standing at their work by
+        // tick 300, so this does not ask for one that is moving right now).
         var events = new List<SimEvent>();
         session.DrainEvents(events);
         Assert.NotEmpty(events);
-        Assert.Contains(session.Simulation.World.Motions.Components.ToArray(), m => m.State == Tzar2.Sim.Components.MotionState.Moving);
+        Assert.Contains(startAt, s => world.Entities.IsAlive(s.Key) && world.Positions.Has(s.Key) && (world.Positions.Get(s.Key).X != s.Value.X || world.Positions.Get(s.Key).Y != s.Value.Y));
         events.Clear();
         session.DrainEvents(events);
         Assert.Empty(events);

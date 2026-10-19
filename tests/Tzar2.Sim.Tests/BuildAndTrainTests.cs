@@ -40,9 +40,9 @@ public class BuildAndTrainTests
         d.Step();
         Assert.Equal(CommandRejection.NoValidEntities, d.Rejections().Last());
 
-        // 42 s of building for one builder (plus the walk).
-        int ticks = d.RunUntil(() => d.Count(SimEventKind.ConstructionCompleted) == 1, 1200);
-        Assert.InRange(ticks, 840, 1140);
+        // TIME 42 x 1.25 s = 52.5 s of building for one builder (plus the walk).
+        int ticks = d.RunUntil(() => d.Count(SimEventKind.ConstructionCompleted) == 1, 1500);
+        Assert.InRange(ticks, 1050, 1350);
         Assert.False(d.World.Constructions.Has(barracks));
         Assert.Equal(1250, d.World.Healths.Get(barracks).Current);
         Assert.True(d.World.Productions.Has(barracks));
@@ -57,9 +57,9 @@ public class BuildAndTrainTests
         Assert.Equal(294, d.World.Players[0].Resources[Food]); // 66 food, paid when queued
         Assert.Equal(1, d.World.Productions.Get(barracks).Count);
 
-        // 11 s of training, then the footman leaves toward the rally point and walks there.
+        // TIME 11 x 1.25 s = 13.75 s of training, then the footman leaves toward the rally point and walks there.
         ticks = d.RunUntil(() => d.Count(SimEventKind.UnitTrained) == 1, 400);
-        Assert.InRange(ticks, 218, 221);
+        Assert.InRange(ticks, 273, 276);
         EntityId footman = OfType(d.World, "euro.footman").Single();
         Assert.Equal(0, d.World.Productions.Get(barracks).Count);
         d.RunUntil(() => !d.IsMoving(footman), 600);

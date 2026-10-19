@@ -139,8 +139,8 @@ internal sealed class EngineModel
     /// <summary>The client's shadow mask strength (<c>shadow_composite.gdshader</c>), or null outside the repository.</summary>
     public double? ShadowStrength { get; }
 
-    /// <summary>Legacy TIME column → milliseconds (LegacyImporter: TIME is seconds).</summary>
-    public const int MsPerTimeUnit = 1000;
+    /// <summary>Legacy TIME column → milliseconds, the importer's own constant (<see cref="Tzar2.Content.Rules.LegacyTime"/>).</summary>
+    public const int MsPerTimeUnit = Tzar2.Content.Rules.LegacyTime.MsPerTimeUnit;
 
     public double PixelsPerSecondPerSpeedPoint => FactsIndex.Number(Gameplay.Get("speedPixelsPerSecondPerPoint")) ?? 12;
 
@@ -516,6 +516,17 @@ internal static class FidelitySuite
 
     private static CheckResult BuildTime(FactsIndex f, EngineModel e)
     {
+        // Preferred: the health bar's initial (one builder) rate, which needs no walk and is not disturbed by peasants
+        // joining later (batch A: the rate doubled after 22 s).
+        var bar = Timings(f, "build").FirstOrDefault(x => FactsIndex.Number(x.Get("one_builder_full_s")) is not null && FactsIndex.Number(x.Get("expected_s")) is not null);
+        if (bar is not null)
+        {
+            double full = FactsIndex.Number(bar.Get("expected_s"))!.Value * EngineModel.MsPerTimeUnit / 1000.0;
+            double rate = FactsIndex.Number(bar.Get("one_builder_full_s"))!.Value;
+            return Verdict(Within(rate, full, TimeTolerance),
+                $"{FactsIndex.Text(bar.Get("subject"))}: one builder fills the health bar in {rate:0.##} s, engine {full:0.##} s");
+        }
+
         var m = Timings(f, "build").FirstOrDefault(x => FactsIndex.Number(x.Get("last_event_s")) is not null && FactsIndex.Number(x.Get("expected_s")) is not null);
         if (m is null)
         {
