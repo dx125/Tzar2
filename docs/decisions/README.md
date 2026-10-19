@@ -112,3 +112,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0168](0168-multiplayer-ui-and-replay-viewer.md) | Multiplayer menu, lobby, in-game overlay and replay viewer in the client, on Game-layer models only | Accepted | 2026-10-18 |
 | [0169](0169-legacy-time-unit-and-batch-a-facts.md) | The legacy TIME column is 1.25 s per unit; batch A's facts and the construction rate from the health bar | Accepted | 2026-10-19 |
 | [0170](0170-node-carry-load-and-batch-b-facts.md) | A resource node may set the load carried from it (cows: 50); batch B's facts; unit speeds re-captured | Accepted | 2026-10-19 |
+| [0171](0171-speed-four-is-40-px-per-second-and-speed-scenarios-moved.md) | SPEED 4 walks 40 px/s (10 px/s per point); speed scenarios move away from Nature's cows | Accepted (with notes) | 2026-10-19 |

@@ -152,6 +152,30 @@ public class SecondSessionAnalysisTests
     }
 
     [Fact]
+    public void Speed_check_waits_for_a_second_speed_value()
+    {
+        // Batch B (ADR 0171): four units at SPEED 4 fix a scale, not the proportionality the check is about.
+        using var dir = new TempDir();
+        File.WriteAllText(Path.Combine(dir.Path, "unit-speed.yaml"), """
+            schema: tzar2-fidelity-facts/1
+            scenario: unit-speed
+            analyses:
+              unit-speed:
+                status: ok
+                facts:
+                  measurements:
+                    - {unit: peon, speed_stat: "4", px_per_s: 40.0, r2: 0.99}
+                    - {unit: archer, speed_stat: "4", px_per_s: 39.9, r2: 0.98}
+                    - {unit: priest, speed_stat: "4", px_per_s: 40.1, r2: 0.99}
+                    - {unit: crusader, speed_stat: "5", px_per_s: 69.1, r2: 0.99, rejected: too short}
+            """);
+        var engine = EngineModel.Load(OriginPaths.RepositoryRoot);
+        var check = FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine).Single(r => r.Check.Id == "m2.speed-per-point");
+        Assert.Equal(CheckStatus.Pending, check.Result.Status);
+        Assert.Contains("SPEED 4 (needs 3 units and 2 SPEED values)", check.Result.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Suite_turns_facts_into_pass_fail_and_pending()
     {
         using var dir = new TempDir();
@@ -163,9 +187,10 @@ public class SecondSessionAnalysisTests
                 status: ok
                 facts:
                   measurements:
-                    - {unit: peon, speed_stat: "4", px_per_s: 48.5, r2: 0.99}
-                    - {unit: knight, speed_stat: "6", px_per_s: 71, r2: 0.99}
-                    - {unit: pikeman, speed_stat: "2", px_per_s: 24.2, r2: 0.98}
+                    - {unit: peon, speed_stat: "4", px_per_s: 40.4, r2: 0.99}
+                    - {unit: knight, speed_stat: "6", px_per_s: 59, r2: 0.99}
+                    - {unit: pikeman, speed_stat: "2", px_per_s: 20.2, r2: 0.98}
+                    - {unit: maceman, speed_stat: "3", px_per_s: 41, r2: 0.99, rejected: moves east in a burst ordered west}
             """);
         File.WriteAllText(Path.Combine(dir.Path, "attack-timing.yaml"), """
             schema: tzar2-fidelity-facts/1
@@ -180,7 +205,7 @@ public class SecondSessionAnalysisTests
         var engine = EngineModel.Load(OriginPaths.RepositoryRoot);
         var results = FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine).ToDictionary(r => r.Check.Id, r => r.Result.Status);
 
-        // Speeds: 12 px/s per point in the engine -> 48, 72, 24 within 10 %.
+        // Speeds: 10 px/s per point in the engine -> 40, 60, 20 within 10 %; the rejected maceman fit does not count.
         Assert.Equal(CheckStatus.Pass, results["m2.speed-per-point"]);
         // 2,000 ms measured against 6,000 / 4 = 1,500 ms; 4 damage against max(1, 5 - 0) = 5.
         Assert.Equal(CheckStatus.Fail, results["m2.attack-cycle"]);

@@ -9,10 +9,13 @@ minutes: 15.5
 default: false                      # batch C
 experimental: true
 description: |
-  Spawns one unit in an open grass band in the middle of MP2 (debug command "spawn <class>"; in the first session
-  the unit appeared at the cursor as an all-green figure and never moved, so it is now placed with a click at the
-  same spot) and selected with another click there (not with a box: one dragged to the window edge scrolls the view), orders a move 300 px west and later 300 px east, and
-  records window captures every 100 ms. The analysis tracks the moving unit and fits pixels per second. SPEED
+  Spawns one unit on the open rows 51-53 of MP2 next to our own base (the view clamped to the map's bottom-left
+  corner: tile (x, y) at screen (150 + 32x, 32y - 1280)), places it with a click, selects it with a second click
+  there (not with a box: one dragged to the window edge scrolls the view), orders a move 400 px west and later 480 px
+  east, and records window captures every 100 ms. The analysis tracks the moving unit and fits pixels per second.
+  Until 2026-10-19 it ran in the middle of the map, beside Nature's wild cows (rows 33-34): idle military units went for
+  them before they were selected and most trials measured the fight (ADR 0171). Here the nearest Nature cow is 18
+  rows away; the only animals near the path are our own cows (row 52, columns 0-6 and 27, outside the band). SPEED
   values are the reference build's (DATA/<CIV> UNITS.TXT: the European value where the class exists).
   Every land class of the tables (air and ships excluded), in two halves: unit-speed and unit-speed-more. Game speed: the default.
 launch: [-nomovies, -map, MP2.wmp]
@@ -60,20 +63,22 @@ steps:
   - wait: 1
   - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
   - wait: 1
-  - minimap: [0.5, 0.5]
+  - minimap: [0.1, 0.95]            # clamps the view to the bottom-left corner (tiles 0-27 x 41-63)
   - wait: 1
-  - move: [600, 340]
+  - snapshot: view
+  - move: [880, 400]                # tile (22.8, 52.5)
   - chat: "${cheat}spawn ${unit}"
-  - click: [600, 340]               # place the spawned unit (harmless if it is already placed: selects it)
-  - wait: 1
-  - snapshot: spawned
-  - click: [600, 340]               # select it (batch B: a box dragged to (1015, 760) reached the window edge and scrolled the camera away)
+  - click: [880, 400]               # place the spawned unit (harmless if it is already placed: selects it)
+  - wait: 0.5                       # longer than the double-click time: a double click selects every peasant in view
+  - click: [880, 400]               # select it (batch B: a box dragged to (1015, 760) reached the window edge and scrolled the camera away)
   - wait: 0.5
-  - click: {at: [300, 340], button: right}
+  - click: {at: [480, 400], button: right}   # tile 10.3
   - move: [70, 400]
-  # A 120-px band around the path keeps the zip small (the unit walks along y = 340, clear of the rocks below it).
-  - burst: {name: west, count: 100, interval_ms: 100, region: [150, 280, 874, 120]}
-  - click: {at: [900, 340], button: right}
+  # The band (x 440-990, rows 51-55) leaves out our cows (columns 0-6 and 27) and the peasants of row 55; the trees of
+  # row 50 at its top stand still.
+  - burst: {name: west, count: 100, interval_ms: 100, region: [440, 330, 550, 140]}
+  - click: {at: [960, 400], button: right}   # tile 25.3
   - move: [70, 400]
-  - burst: {name: east, count: 140, interval_ms: 100, region: [150, 280, 874, 120]}
+  - burst: {name: east, count: 140, interval_ms: 100, region: [440, 330, 550, 140]}
+  - snapshot: end
 analysis: [unit-speed]

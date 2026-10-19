@@ -205,7 +205,7 @@ public class ActionTests
         int mine = b.Unit("euro.footman", 0, 3, 3);
         int theirs = b.Unit("euro.footman", 1, 3, 8);
         using TriggerDriver d = Once(b, new LockUnitsAction("freeze", All(mine), true), new ObjectOrderAction("march", Any(mine, theirs), Rect(30, 5, 32, 7), "move"));
-        d.Seconds(15);
+        d.Seconds(20); // 27 tiles at SPEED 5 x 10 px/s (ADR 0171)
         Assert.InRange(d.World.Positions.Get(d.Object(mine)).X / Tile, 28, 34);
         Assert.InRange(d.World.Positions.Get(d.Object(theirs)).X / Tile, 28, 34);
     }

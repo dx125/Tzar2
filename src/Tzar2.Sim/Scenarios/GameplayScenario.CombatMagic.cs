@@ -147,12 +147,12 @@ public sealed partial class GameplayScenario
             }
         }
 
-        // The idle soldier nearest to an item on the ground (within 16 tiles) goes to pick it up.
+        // The idle soldier nearest to an item on the ground (within 24 tiles) goes to pick it up.
         if (tick % 200 < window && _idleSoldiers.Count > 0 && world.Items.Count > 0)
         {
             int bestSoldier = -1;
             EntityId best = EntityId.None;
-            long bestDistance = (long)(16 * MapState.UnitsPerTile) * (16 * MapState.UnitsPerTile);
+            long bestDistance = (long)(24 * MapState.UnitsPerTile) * (24 * MapState.UnitsPerTile);
             ReadOnlySpan<EntityId> items = world.Items.Entities;
             for (int s = 0; s < _idleSoldiers.Count; s++)
             {

@@ -414,12 +414,15 @@ internal static class FidelitySuite
 
     private static CheckResult SpeedPerPoint(FactsIndex f, EngineModel e)
     {
-        var measured = f.AllOk("unit-speed").SelectMany(x => FactsIndex.Items(x.Facts, "measurements"))
-            .Where(m => FactsIndex.Number(m.Get("r2")) >= 0.95 && FactsIndex.Number(m.Get("speed_stat")) is > 0 && FactsIndex.Number(m.Get("px_per_s")) is not null)
+        var measured = CleanSpeeds(f)
+            .Where(m => FactsIndex.Number(m.Get("speed_stat")) is > 0 && FactsIndex.Number(m.Get("px_per_s")) is not null)
             .ToList();
-        if (measured.Select(m => FactsIndex.Text(m.Get("unit"))).Distinct().Count() < 3)
+        int units = measured.Select(m => FactsIndex.Text(m.Get("unit"))).Distinct().Count();
+        var stats = measured.Select(m => FactsIndex.Number(m.Get("speed_stat"))!.Value).Distinct().Order().ToList();
+        if (units < 3 || stats.Count < 2)
         {
-            return Pending($"{measured.Count} clean speed measurements (needs 3 units)");
+            // One SPEED value fixes a scale but not the proportionality the check is about (ADR 0171).
+            return Pending($"{measured.Count} clean speed measurements of {units} units at SPEED {string.Join(", ", stats)} (needs 3 units and 2 SPEED values)");
         }
 
         var off = measured.Where(m => !Within(FactsIndex.Number(m.Get("px_per_s"))!.Value, FactsIndex.Number(m.Get("speed_stat"))!.Value * e.PixelsPerSecondPerSpeedPoint, SpeedTolerance))
@@ -575,11 +578,15 @@ internal static class FidelitySuite
     /// <summary>Median measured speed (px/s) of a unit class over clean unit-speed fits, or null.</summary>
     private static double? MeasuredSpeed(FactsIndex f, string unit)
     {
-        double[] v = [.. f.AllOk("unit-speed").SelectMany(x => FactsIndex.Items(x.Facts, "measurements"))
-            .Where(m => FactsIndex.Text(m.Get("unit")) == unit && FactsIndex.Number(m.Get("r2")) >= 0.95)
+        double[] v = [.. CleanSpeeds(f)
+            .Where(m => FactsIndex.Text(m.Get("unit")) == unit)
             .Select(m => FactsIndex.Number(m.Get("px_per_s"))).OfType<double>()];
         return v.Length == 0 ? null : Tzar2.Tools.Cli.Fidelity.Analysis.AttackTiming.Median(v);
     }
+
+    /// <summary>Unit-speed fits with r² ≥ 0.95 that the analysis did not reject (too short, or against the order).</summary>
+    private static IEnumerable<YamlMapping> CleanSpeeds(FactsIndex f) =>
+        Measurements(f, "unit-speed").Where(m => FactsIndex.Number(m.Get("r2")) >= 0.95 && m.Get("rejected") is null);
 
     private static IEnumerable<YamlMapping> Measurements(FactsIndex f, string analysis) =>
         f.AllOk(analysis).SelectMany(x => FactsIndex.Items(x.Facts, "measurements"));
@@ -672,7 +679,7 @@ internal static class FidelitySuite
 
     private static CheckResult GroupMoveSpeed(FactsIndex f, EngineModel e)
     {
-        var group = Measurements(f, "unit-speed").Where(m => FactsIndex.Text(m.Get("unit")) == "group" && Num(m, "r2") >= 0.9).ToList();
+        var group = Measurements(f, "unit-speed").Where(m => FactsIndex.Text(m.Get("unit")) == "group" && Num(m, "r2") >= 0.9 && m.Get("rejected") is null).ToList();
         if (group.Count == 0)
         {
             return Pending("no clean group-speed fit yet (group-speed, batch E)");

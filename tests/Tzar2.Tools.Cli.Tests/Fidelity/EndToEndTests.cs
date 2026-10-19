@@ -174,7 +174,7 @@ public class EndToEndTests
                 vars: {unit: peon, speed_stat: "4"}
             steps:
               - note: "${unit}"
-              - burst: {name: move, count: 25, interval_ms: 40, region: [150, 30, 874, 738]}
+              - burst: {name: move, count: 80, interval_ms: 40, region: [150, 360, 874, 60]}   # 3.2 s: a clean fit needs 3 s (ADR 0171)
             analysis: [unit-speed]
             """, "unit-speed", d =>
         {

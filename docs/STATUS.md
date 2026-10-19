@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-19 (batch B)
+* **Last updated:** 2026-10-19 (unit-speed re-capture)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -40,10 +40,10 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | Batch | Measures | State |
 |---|---|---|
 | A | cheats, player colours, combat pairs, shadow overlap, training and construction time | **Done**: analysed and merged (PR #61, ADR 0169). Passing: attack cycle, damage, population limit, training time, construction time. |
-| B | 15 unit speeds; gathering wood, stone, cows | **Gathering done** (ADR 0170): carry capacity passes (10 wood/stone/gold, 50 from a cow). **Unit speeds failed** (the selection box scrolled the camera away; scenario fixed): re-capture `unit-speed`. |
-| C | 15 more unit speeds (chariot, caravan) | to capture (scenario fixed like `unit-speed`) |
+| B | 15 unit speeds; gathering wood, stone, cows | **Gathering done** (ADR 0170): carry capacity passes (10 wood/stone/gold, 50 from a cow). **Unit speeds partly done** (ADR 0171): SPEED 4 = 40 px/s from 4 classes, engine changed to 10 px/s per point; the 11 soldiers attacked Nature's cows in MP2's middle, so the scenario moved next to our base: re-capture `unit-speed`. |
+| C | 15 more unit speeds (chariot, caravan) | to capture (scenario moved like `unit-speed`, ADR 0171) |
 | D | day length, night share (no input) | to capture |
-| E–I | group speed, research, damage bonuses, capture; fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | to capture (ADR 0113) |
+| E–I | group speed, research, damage bonuses, capture; fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | to capture (ADR 0113); `group-speed` already moved (ADR 0171), the other scenarios with idle soldiers in MP2's middle need the same review first |
 
 Facts live in `tests/fidelity/facts/` (numbers only; captures stay on the operator's PC). A measured fact that disagrees
 with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that makes it pass go in the same PR.
@@ -52,9 +52,13 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-1. **Operator:** re-capture unit speeds (`-Scenarios unit-speed`, ~5 min), then batches C and D (D needs no input).
-2. **Maintainer:** analyse them; unit speeds settle SPEED → px/s (UNK-12) and let batch E separate gather times from walking.
-3. **Operator:** batches E–I; **Maintainer:** analyse each.
+1. **Operator:** re-capture unit speeds at the new place (`-Scenarios unit-speed`, ~16 min), then batches C and D (D
+   needs no input).
+2. **Maintainer:** analyse them; a second SPEED value settles whether speed is proportional to SPEED (UNK-12), and the
+   speeds let batch E separate gather times from walking.
+3. **Maintainer:** before batches E–I, move or guard the scenarios that leave soldiers idle in MP2's middle next to
+   Nature's cows (combat outcomes, experience, damage bonuses, capture; ADR 0171). **Operator:** batches E–I;
+   **Maintainer:** analyse each.
 4. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
 5. **Maintainer:** decode UNK-70…80, compare random maps with our generator, fix the passability case; run the
@@ -66,13 +70,21 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 8. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 Open question for the product owner: the previous agent asked whether "the 144 class names in the converter" are
-acceptable; the question's text was lost in the handover and has to be found again (converter type mapping, ADR 0154).
+acceptable. They are `LegacyClasses` (`src/Tzar2.Formats/Maps/LegacyClasses.cs`, PR #33, [wmp.md §4.1](formats/wmp.md)):
+the original's built-in class table, recovered from the editor DLL, which map files index into. The names equal the
+`class =` values of `DATA/OBJECTS/*.INI`; the order is what the converter cannot do without. The maintainer's reading:
+a format fact (identifiers for interoperability, no code or assets), so it may stay; the owner decides.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — Unit speeds: SPEED 4 = 40 px/s; engine 10 px/s per point (ADR 0171).** Peasant, archer, priest and
+  mage walked 39.9–40.1 px/s both ways. The soldiers attacked Nature's cows in MP2's middle instead of walking; the
+  speed scenarios moved next to our base and the analysis rejects short or wrong-way fits. The gameplay benchmark bot
+  repairs with the nearest busy peasant so the golden stream still covers repair; hashes re-pinned. The capture ran on
+  a Russian keyboard layout: the harness's switch to US (PR #60) works.
 * **2026-10-19 — Batch B: a node sets its own load; cows carry 50 (ADR 0170).** Wood, stone and gold verified at 10 per
   trip. Unit speeds failed because the scenario dragged a box into the edge-scroll zone; fixed, to be re-captured; a test
   now keeps scenario mouse positions 16 px from the edges.

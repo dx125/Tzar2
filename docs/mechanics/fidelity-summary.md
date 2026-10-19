@@ -1,4 +1,15 @@
-# Fidelity summary (after batch B of the second session)
+# Fidelity summary (after the unit-speed re-capture)
+
+## Unit speeds (session `capture-20261019-020223`, ADR 0171)
+
+Windows 11 25H2, clean GOG v1.10 EN, 15/15 trials, run on a Russian keyboard layout (the harness switched the game to
+US itself). **SPEED 4 walks 40.0 px/s (1.25 tiles/s)**: peasant, archer, priest and mage, both directions, 39.9–40.1
+px/s. The engine now uses 10 px/s per SPEED point (was 12); that speed is proportional to SPEED is not measured yet,
+so the suite's speed check stays pending (it needs two SPEED values). Still **6 of 30 = 20 %**.
+
+The eleven other classes, all military, walked off to attack Nature's wild cows two tiles below the path in MP2's
+middle before they were selected (the engine does the same, ADR 0104). The speed scenarios now run on the open rows
+51–53 next to our own base, and the analysis rejects fits that are too short or run against the ordered direction.
 
 ## Batch B (session `capture-20261018-222649`, ADR 0170)
 
@@ -58,7 +69,7 @@ Overall, 3 of the 6 rendering items above are verified (50 %). For the four plac
 
 `t2 fidelity report` compares every committed fact with the engine; `Tzar2.Fidelity.Tests` fails on a measured
 check that disagrees. The catalogue is the whole TDD §22.3 scope (30 checks); the **M3 gate is passing / all 30**,
-pending counting as not passing. Today: **1 of 30 = 3.3 %** (secondary: 1 of 1 measured passes). The 5 rendering
+pending counting as not passing. Today: **6 of 30 = 20 %** (secondary: 6 of 6 measured pass). The 5 rendering
 checks are §22.4 / S5 and reported apart: 3 of 5 pass. Batches A–D can measure at most 9 of the 30 (gate ≤ 30 %);
 the other 21 need scenarios that do not exist yet (combat outcomes over 100 trials, research, XP, capture, trade,
 loans, spells and the rest, each listed in the report with what would measure it).

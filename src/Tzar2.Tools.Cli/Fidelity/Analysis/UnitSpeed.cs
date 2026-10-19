@@ -12,10 +12,19 @@ namespace Tzar2.Tools.Cli.Fidelity.Analysis;
 /// the per-pixel median of the burst (the majority value, as the unit covers each pixel only briefly); pixels that
 /// change in most frames (water, animated scenery) are ignored. The centroid of the remaining changed pixels is the
 /// unit's position; a straight-line fit over the longest moving stretch gives pixels per second. Trials carry the
-/// unit's <c>SPEED</c> value (<c>speed_stat</c>), so several trials give the SPEED → px/s relation.
+/// unit's <c>SPEED</c> value (<c>speed_stat</c>), so several trials give the SPEED → px/s relation. A fit that is too
+/// short, or that runs against the direction a burst named <c>west</c> or <c>east</c> was ordered in, is kept with a
+/// <c>rejected</c> reason and left out of the relation: in batch B military units broke off to attack Nature's cows
+/// and the tracker followed the fight (ADR 0171).
 /// </summary>
 internal static class UnitSpeed
 {
+    /// <summary>A clean fit spans at least this long (three seconds of a 100 ms burst).</summary>
+    public const double MinimumSeconds = 3.0;
+
+    /// <summary>A clean fit covers at least this distance (about three tiles).</summary>
+    public const double MinimumPixels = 100;
+
     public sealed record Track(IReadOnlyList<(double T, double X, double Y, int Pixels)> Points);
 
     public sealed record Fit(double PixelsPerSecond, double VelocityX, double VelocityY, double R2, int Frames, double DurationSeconds, double DistancePixels);
@@ -64,7 +73,12 @@ internal static class UnitSpeed
                     e.Add("moving_frames", fit.Frames);
                     e.Add("moving_s", Math.Round(fit.DurationSeconds, 3));
                     e.Add("distance_px", Math.Round(fit.DistancePixels, 1));
-                    if (double.TryParse(trial.Var("speed_stat"), NumberStyles.Float, CultureInfo.InvariantCulture, out double stat) && fit.R2 > 0.95)
+                    if (Rejection(burst.Name, fit) is { } reason)
+                    {
+                        e.Add("rejected", reason);
+                        notes.Add($"{trial.Trial}/{burst.Name}: rejected, {reason}");
+                    }
+                    else if (double.TryParse(trial.Var("speed_stat"), NumberStyles.Float, CultureInfo.InvariantCulture, out double stat) && fit.R2 > 0.95)
                     {
                         relation.Add((stat, fit.PixelsPerSecond));
                     }
@@ -91,6 +105,20 @@ internal static class UnitSpeed
 
         bool ok = entries.Count > 0 && relation.Count > 0;
         return new AnalysisOutcome(ok ? "ok" : "inconclusive", facts, notes);
+    }
+
+    /// <summary>Why a fit cannot be the ordered walk, or null when it can.</summary>
+    public static string? Rejection(string burst, Fit fit)
+    {
+        if (fit.DurationSeconds < MinimumSeconds || fit.DistancePixels < MinimumPixels)
+        {
+            return $"too short ({fit.DurationSeconds:0.0} s, {fit.DistancePixels:0} px; needs {MinimumSeconds:0} s and {MinimumPixels:0} px)";
+        }
+
+        int ordered = burst switch { "west" => -1, "east" => 1, _ => 0 };
+        return ordered != 0 && Math.Sign(fit.VelocityX) != ordered
+            ? $"moves {(fit.VelocityX < 0 ? "west" : "east")} in a burst ordered {burst}"
+            : null;
     }
 
     public static Track? TrackMotion(IReadOnlyList<(double T, CaptureImage Image)> frames)

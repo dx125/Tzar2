@@ -593,10 +593,13 @@ public sealed partial class GameplayScenario : IBenchScenario
             _batch.Add(CommandKind.Capture, Span(_selection), target: house);
         }
 
-        if (tick % 300 < window && _idleWorkers.Count > used && DamagedOwn(world, player) is { IsNone: false } damaged)
+        // The busy worker nearest to the damaged building repairs it: idle workers became rare once units walked at
+        // SPEED x 10 px/s, and the one sent from far away arrived too late to finish (ADR 0171).
+        if (tick % 300 < window && DamagedOwn(world, player) is { IsNone: false } damaged
+            && NearestBusyWorker(world, world.Positions.Get(damaged)) is { IsNone: false } repairer)
         {
             _selection.Clear();
-            _selection.Add(Take());
+            _selection.Add(repairer);
             _batch.Add(CommandKind.Repair, Span(_selection), target: damaged);
         }
 
@@ -671,20 +674,52 @@ public sealed partial class GameplayScenario : IBenchScenario
         return best;
     }
 
+    /// <summary>The working (not idle) worker nearest to a point, leaving out the three that build the gate, wall and bridge.</summary>
+    private EntityId NearestBusyWorker(World world, Position to)
+    {
+        EntityId best = EntityId.None;
+        long bestDistance = long.MaxValue;
+        for (int i = 0; i < _allWorkers.Count - 3; i++)
+        {
+            EntityId w = _allWorkers[i];
+            if (_idleWorkers.Contains(w))
+            {
+                continue;
+            }
+
+            Position at = world.Positions.Get(w);
+            long d = Core.Numerics.IntMath.DistanceSquared(at.X, at.Y, to.X, to.Y);
+            if (d < bestDistance)
+            {
+                (best, bestDistance) = (w, d);
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// The own building that is not on fire with the fewest hit points missing. The first damaged one in the list was
+    /// usually a burning house that lost hit points faster than one repairer restores them, so no repair completed once
+    /// units walked at SPEED x 10 px/s (ADR 0171).
+    /// </summary>
     private static EntityId DamagedOwn(World world, byte player)
     {
+        EntityId best = EntityId.None;
+        int bestMissing = int.MaxValue;
         ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
         for (int i = 0; i < structures.Length; i++)
         {
             EntityId s = structures[i];
+            int missing = world.Healths.Get(s).Max - world.Healths.Get(s).Current;
             if (world.Identities.Get(s).Owner == player && !world.Constructions.Has(s) && world.TypeOf(s).Traits.IsRepairable
-                && world.Healths.Get(s).Current < world.Healths.Get(s).Max)
+                && !world.Burnings.Has(s) && missing > 0 && missing < bestMissing)
             {
-                return s;
+                (best, bestMissing) = (s, missing);
             }
         }
 
-        return EntityId.None;
+        return best;
     }
 
     private static EntityId NearestNode(World world, Position from)

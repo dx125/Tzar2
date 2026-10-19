@@ -45,7 +45,7 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 | Value | Placeholder | Where | Unknown | How to resolve |
 |---|---|---|---|---|
 | TIME column (units, buildings) | ~~1 s per unit~~ — **VERIFIED: 1.25 s per unit** (capture-20261018-155421: `train-time` 9.99 s for TIME 8, `build-time` 36.85 s for TIME 30; ADR 0169) | importer `LegacyTime.MsPerTimeUnit` | UNK-20, UNK-18 | done (research times: UNK-21, batch E) |
-| SPEED point → px/s | 12 px/s per point (SPEED 4 = 48 px/s) | YAML `gameplay.speedPixelsPerSecondPerPoint` | UNK-12 | capture scenario `50-unit-speed` (first session: units never moved, re-capture) |
+| SPEED point → px/s | ~~12 px/s per point~~ — 10 px/s per point; **SPEED 4 = 40 px/s VERIFIED** (capture-20261019-020223, `unit-speed`: peasant, archer, priest, mage, 39.9–40.1 px/s both ways; ADR 0171); proportional to SPEED: UNVERIFIED | YAML `gameplay.speedPixelsPerSecondPerPoint` | UNK-12 | re-capture `unit-speed` (moved next to our base: in MP2's middle soldiers attacked Nature's cows), then `unit-speed-more` (batch C) |
 | Group move speed | `slowest` in both rulesets (owner decision) | YAML `gameplay.groupMoveSpeed` | UNK-12 | same captures with mixed groups |
 | Time between hits | 6,000 ms / RATE — **VERIFIED** (capture-20261018-155421, `attack-timing`: two series within tolerance) | YAML `gameplay.attackCycleMs` | UNK-07 | done |
 | Hit frame | 50% of the cycle | YAML `gameplay.hitDelayPercent` | UNK-07 | `actionrow` vs. captures |
