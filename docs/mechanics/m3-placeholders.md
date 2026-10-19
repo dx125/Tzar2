@@ -130,7 +130,7 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Wild cows | claimed by any kingdom's unit touching them; they wander | YAML `^class.cow` | UNK-17 | observation |
 | Bears | wander 6 tiles, guard 10 tiles from home | YAML `world.wanderRadiusTiles`, `guardRadiusTiles` | — | observation |
 | Birds and eagles | air, SPEED 5/6, 10 HP, never targets | YAML `comm.bird`, `comm.eagle` | — | observation |
-| Day length | 12 min; the match starts at 10:00; night 19:00-06:00 | YAML `world.day*`, `night*` | UNK-32 | clock globe captures (not in the first session: day/night was off) |
+| Day length | ~~12 min~~ — **37.5 min VERIFIED** (24 globe hours of 93.75 s; the night's hours assumed as long) and **the match starts at 10:00 VERIFIED** (capture-20261019-195053, `day-clock`; ADR 0173); night 19:00-06:00 UNVERIFIED | YAML `world.day*`, `night*` | UNK-32 | night share: a 35-min capture of a night that the AI does not end |
 | Weather | 3-minute periods, 25% with weather | YAML `world.weather*` | UNK-09 | captures |
 | Score | gathered/10 + killed value/10 + built value/10 + 100 per technology | YAML `world.score*` | UNK-29 | F4 captures |
 | Defeat | Standard: no unit and no building (walls, gates, bridges, fields excluded); Destroy Castles: no castle | code (`VictorySystem`) | — | end-of-game captures |

@@ -121,7 +121,49 @@ public class SecondSessionAnalysisTests
         DayClock.Cycle c = DayClock.Analyse(series);
         Assert.InRange(c.DayLength!.Value, 598, 602);
         Assert.InRange(c.NightShare!.Value, 0.39, 0.41);
+        Assert.True(c.Clean);
         Assert.Null(DayClock.Analyse(series.Select(s => (s.t, 100.0)).ToList()).DayLength);
+
+        // Batch D (ADR 0173): units walking through the view cross the mid level seconds apart; no figure from that.
+        var noisy = series.Select(s => (s.t, s.t is > 400 and < 420 && (int)s.t % 4 == 0 ? 40.0 : 160.0)).ToList();
+        DayClock.Cycle n = DayClock.Analyse(noisy);
+        Assert.False(n.Clean);
+        Assert.Null(n.DayLength);
+        Assert.Null(n.NightShare);
+    }
+
+    [Fact]
+    public void Day_clock_reads_the_hour_from_the_globe_steps()
+    {
+        // The globe's disc changes every 94 s; a unit walks through the view (right of the globe) every frame.
+        var frames = Enumerable.Range(0, 300).Select(i =>
+        {
+            double t = i * 2.0;
+            uint[] pixels = new uint[212 * 120];
+            uint globe = (uint)(0x1000 + ((int)(t / 94) * 0x0C63));   // +3 per 5-bit channel each hour
+            for (int y = 0; y < 36; y++)
+            {
+                for (int x = 4; x < 40; x++)
+                {
+                    pixels[(y * 212) + x] = globe;
+                }
+            }
+
+            for (int y = 50; y < 70; y++)
+            {
+                for (int x = 0; x < 10; x++)
+                {
+                    pixels[(y * 212) + 50 + ((i * 3) % 150) + x] = 0x7C00;
+                }
+            }
+
+            return (t, new CaptureImage(212, 120, PixelFormat.Rgb555, pixels));
+        }).ToList();
+        double[] steps = DayClock.GlobeSteps(frames);
+        Assert.Equal(6, steps.Length);
+        Assert.InRange(DayClock.HourLength(steps)!.Value, 93, 95);
+        Assert.Null(DayClock.HourLength([10, 100]));
+        Assert.Null(DayClock.HourLength([10, 100, 300]));   // irregular: not one step per hour
     }
 
     [Fact]

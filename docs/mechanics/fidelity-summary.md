@@ -1,4 +1,12 @@
-# Fidelity summary (after batch C)
+# Fidelity summary (after batch D)
+
+## Day length (session `capture-20261019-195053`, ADR 0173)
+
+The clock globe is a 24-hour clock (24 frames in `DAYNIGHT.BMP`) and stepped every 93.7 s, from 10:00 at the start to
+18:00 when the game ended after 12 minutes (the Hard AI most likely beat the passive kingdom). **A day lasts 37.5
+minutes** (the engine had 12) and a match starts at 10:00 (the engine's placeholder, now verified). The view's
+brightness was spoiled by enemy units and a house built in it, so the night's share is still open. Suite: **8 of 30 =
+26.7 %**.
 
 ## Walking speeds (sessions `capture-20261019-163231`, `-190321`, ADR 0172)
 

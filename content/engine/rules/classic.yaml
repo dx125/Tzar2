@@ -103,8 +103,10 @@ world:
   wanderRadiusTiles: 6                # UNVERIFIED: animals wander this far from home
   wanderIntervalMs: 8000              # UNVERIFIED: mean time between two wander moves
   # GAME-16 day/night and weather (ADR 0105; UNK-09, UNK-32).
-  dayLengthMs: 720000                 # UNVERIFIED (UNK-32): one day-night cycle
-  dayStartMinute: 600                 # UNVERIFIED: a match starts at 10:00
+  # The clock globe is a 24-hour clock (24 frames) that steps once per game hour, every 93.7 s (capture-20261019-195053,
+  # day-clock: 8 steps from 10:00 to 18:00; ADR 0173). The night's hours were not seen; they are assumed as long.
+  dayLengthMs: 2250000                # VERIFIED (UNK-32): 24 hours of 93.75 s
+  dayStartMinute: 600                 # VERIFIED (same capture): the globe shows 10:00 when a match starts
   nightStartMinute: 1140              # UNVERIFIED: night from 19:00
   nightEndMinute: 360                 # UNVERIFIED: to 06:00
   weatherPeriodMs: 180000             # UNVERIFIED (UNK-09): weather comes and goes in 3-minute periods

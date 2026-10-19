@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-19 (walking speeds, batch C)
+* **Last updated:** 2026-10-19 (batch D)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -23,7 +23,7 @@ and it has not been re-run since the handover.
 | M0 Foundations | **Done** | One ADR per spike: S2 (0007), S4 (0008), S3 (0009), S1 (0010), S6 (0013; S5 mobile export is PX); S1 renderer met on Windows (ADR 0010); CI green; no original files tracked (CI job `legal`). |
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
-| M3 Classic gameplay & skirmish | **In progress** — blocked on fidelity | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). **Fidelity suite ≥ 80 %: 7 of 30 (23.3 %)**, see below. |
+| M3 Classic gameplay & skirmish | **In progress** — blocked on fidelity | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). **Fidelity suite ≥ 80 %: 8 of 30 (26.7 %)**, see below. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign 14–15 of 19 missions, tutorial 7 of 7 (reported 2026-10-18, scripted solver, ADR 0134). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
@@ -42,7 +42,7 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | A | cheats, player colours, combat pairs, shadow overlap, training and construction time | **Done**: analysed and merged (PR #61, ADR 0169). Passing: attack cycle, damage, population limit, training time, construction time. |
 | B | 15 unit speeds; gathering wood, stone, cows | **Gathering done** (ADR 0170): carry capacity passes (10 wood/stone/gold, 50 from a cow). **Unit speeds done** (ADRs 0171, 0172): after two failed places, 11 classes measured by our base; the original ignores SPEED (foot 40 px/s, mounted 72). Horse archer, horse samurai, ninja and monk did not spawn (not European). |
 | C | 15 more unit speeds (chariot, caravan) | **Done** (ADR 0172): troll 47, ghost 67, cow and bear 26, dwarf, ork, skeleton 40; speed check passes (18 classes). Heavy cavalry, jihad warrior, janissary, chariot (not European), catapults, ballista and caravan did not spawn. |
-| D | day length, night share (no input) | to capture |
+| D | day length, night share (no input) | **Day length done** (ADR 0173): 37.5 min, read from the clock globe; a match starts at 10:00. The game ended after 12 min (the Hard AI), before the night: **night share open**, needs a 35-min run the AI does not end. |
 | E–I | group speed, research, damage bonuses, capture; fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | to capture (ADR 0113); `group-speed` already moved (ADR 0171), the other scenarios with idle soldiers in MP2's middle need the same review first |
 
 Facts live in `tests/fidelity/facts/` (numbers only; captures stay on the operator's PC). A measured fact that disagrees
@@ -52,7 +52,8 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-1. **Operator:** batch D (`-Batch D`, ~15 min, no input). **Maintainer:** analyse it.
+1. **Maintainer:** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a view no unit walks
+   through, in a match the Hard AI does not end (find a setup without an attacking AI). Then **Operator:** run it.
 2. **Maintainer:** a speed scenario for the classes not measured yet (UNK-12, ADR 0172): Arabian and Asian units need
    a kingdom of that civilisation (MP4 has one of each; spawning only works for the own civilisation), and find out why
    catapults, ballistas and caravans did not spawn.
@@ -74,6 +75,10 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — A day lasts 37.5 minutes; a match starts at 10:00 (ADR 0173).** Batch D: the clock globe (24 frames,
+  one per hour) stepped every 93.7 s; the day-clock analysis now reads the globe and ignores brightness that units
+  spoil. The Hard AI ended the passive game after 12 minutes, before the night: the night's share needs a longer run.
+  Suite **8 of 30**.
 * **2026-10-19 — Walking speed is per class, not from SPEED (ADR 0172).** Batch C and the third `unit-speed` run, both
   clean: every foot class walks 40 px/s whatever its SPEED, mounted 72, troll 47, ghost 67, cows and bears 26; speed
   follows the walk sheet's stride. Measured classes get their own speed; the speed check passes: **7 of 30**. The
