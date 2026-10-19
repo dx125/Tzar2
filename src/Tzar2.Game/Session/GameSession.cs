@@ -69,10 +69,18 @@ public sealed class GameSession : IDisposable
     public static GameSession ForReplay(MatchSetup setup, Ruleset ruleset) => new(setup, ruleset, fog: false, peers: null, snapshot: null, driver: null, record: false);
 
     /// <summary>A match whose ticks come from a lockstep driver (multiplayer, ADR 0162); restored from <paramref name="snapshot"/> if given.</summary>
-    internal GameSession(MatchSetup setup, Ruleset ruleset, ILockstepDriver driver, byte[]? snapshot, bool fog = true)
-        : this(setup, ruleset, fog, peers: null, snapshot, driver, record: snapshot is null)
+    internal GameSession(MatchSetup setup, Ruleset ruleset, ILockstepDriver driver, byte[]? snapshot, bool fog = true, bool record = true)
+        : this(setup, ruleset, fog, peers: null, snapshot, driver, record: record && snapshot is null)
     {
     }
+
+    private volatile int _view = -1; // -1: the local player's fog (when fog is on); 255: everything; else that kingdom's fog
+
+    /// <summary>
+    /// Shows the frames from kingdom <paramref name="player"/>'s view (its fog), or everything with null (replay viewer,
+    /// observers). The commands still belong to <see cref="LocalPlayer"/>.
+    /// </summary>
+    public void View(byte? player) => _view = player ?? 255;
 
     private GameSession(MatchSetup setup, Ruleset ruleset, bool fog, IReadOnlyList<MatchFingerprint>? peers, byte[]? snapshot, ILockstepDriver? driver, bool record)
     {
@@ -797,7 +805,9 @@ public sealed class GameSession : IDisposable
     private void Publish()
     {
         GameFrame frame = _frames.Back;
-        FrameBuilder.Fill(frame, Simulation.World, _fog ? LocalPlayer : null, Outcome());
+        int view = _view;
+        byte? fog = view == 255 ? null : view >= 0 ? (byte)view : _fog ? LocalPlayer : null;
+        FrameBuilder.Fill(frame, Simulation.World, fog, Outcome());
         frame.SpeedPercent = SpeedPercent;
         frame.Paused = Paused;
         frame.Scenario = Scenario?.View;

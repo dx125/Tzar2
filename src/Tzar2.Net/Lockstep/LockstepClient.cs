@@ -436,9 +436,23 @@ public sealed class LockstepClient : IDisposable
 
             _w.Clear();
             write(_w);
+
+            // LiteNetLib drops sends on a connection that is not established yet: keep them until the welcome.
+            if (Welcome is null)
+            {
+                if (_early.Count < 64)
+                {
+                    _early.Add((_w.ToArray(), channel));
+                }
+
+                return;
+            }
+
             _relay.Send(_w.WrittenSpan, channel, DeliveryMethod.ReliableOrdered);
         }
     }
+
+    private readonly List<(byte[] Bytes, byte Channel)> _early = [];
 
     private void Raise(ClientEvent e)
     {
@@ -552,6 +566,12 @@ public sealed class LockstepClient : IDisposable
             case MessageType.Welcome:
                 Welcome = Wire.ReadWelcome(ref r);
                 Phase = ClientPhase.Lobby;
+                foreach ((byte[] bytes, byte channel) in _early)
+                {
+                    _relay?.Send(bytes, channel, DeliveryMethod.ReliableOrdered);
+                }
+
+                _early.Clear();
                 Raise(new WelcomeEvent(Welcome));
                 break;
             case MessageType.LobbyState:

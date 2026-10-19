@@ -404,7 +404,7 @@ public static class Limits
     public const int MaxLobbyNameBytes = 48;
 
     /// <summary>Longest game version string.</summary>
-    public const int MaxVersionBytes = 32;
+    public const int MaxVersionBytes = 64;
 
     /// <summary>Lobby codes are 6 characters; at most this many are accepted.</summary>
     public const int MaxCodeBytes = 8;

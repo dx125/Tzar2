@@ -195,21 +195,42 @@ public sealed partial class RelayServer
 
         if (!lobby.Slots.Any(s => s.State == SlotState.Human && s.Peer is not null))
         {
+            // Nobody to play for: the clock stops (no ticks, no takeovers) until a player returns or the timeout ends it.
             lobby.NoHumanSinceUs = lobby.NoHumanSinceUs == 0 ? now : lobby.NoHumanSinceUs;
+            lobby.PausedTotalUs += lobby.LastUpdateUs == 0 ? 0 : now - lobby.LastUpdateUs;
+            foreach (Slot s in lobby.Slots)
+            {
+                s.DroppedAtUs += lobby.LastUpdateUs == 0 ? 0 : now - lobby.LastUpdateUs;
+            }
+
+            lobby.LastUpdateUs = now;
             if (now - lobby.NoHumanSinceUs > _options.EmptyMatchTimeoutMs * 1000L)
             {
                 EndLobby(lobby, EndReason.Closed, 255, "Every player left.");
-                return;
             }
+
+            return;
         }
-        else
-        {
-            lobby.NoHumanSinceUs = 0;
-        }
+
+        lobby.NoHumanSinceUs = 0;
+        lobby.LastUpdateUs = now;
 
         if (lobby.Paused && now - lobby.PausedAtUs > _options.MaxPauseMs * 1000L)
         {
             SetPaused(lobby, false, lobby.PausedBy, now);
+        }
+
+        // While no tick closes (paused), lost closures would never be repeated: keep sending unacknowledged tails.
+        if (lobby.Paused && now >= lobby.NextTailResendUs)
+        {
+            lobby.NextTailResendUs = now + p.TickMicroseconds;
+            foreach (Slot s in lobby.Slots)
+            {
+                if (s.Peer is not null && !s.Resuming && s.AckTick < lobby.LastClosed)
+                {
+                    SendRedundant(lobby, s);
+                }
+            }
         }
 
         foreach (Slot s in lobby.Slots)
@@ -906,6 +927,8 @@ public sealed partial class RelayServer
         public long NextStatusUs { get; set; }
 
         public long NextTailResendUs { get; set; }
+
+        public long LastUpdateUs { get; set; }
 
         public LobbyState State() => new(
             Code, Name, HostSlot, Phase, SettingsRevision, Settings,
