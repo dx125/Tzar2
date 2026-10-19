@@ -9,8 +9,9 @@ minutes: 14.5
 default: false                      # batch D
 description: |
   The only scenario with day/night on. For 14 minutes a region holding the clock globe and a piece of the world view
-  is captured every 2 s; the view's brightness falls at dusk and rises at dawn, two equal crossings give the day
-  length. No input during the burst.
+  is captured every 2 s. The globe steps once per game hour (24 frames), which gives the day length; the view's
+  brightness falls at dusk and rises at dawn and would give the night's share, but in batch D the Hard AI walked into
+  the view and ended the passive game after 12 minutes, before the night (ADR 0173). No input during the burst.
 launch: [-nomovies, -map, MP2.wmp]
 ini:
   DEFAULTS.DAYNIGHT: 1

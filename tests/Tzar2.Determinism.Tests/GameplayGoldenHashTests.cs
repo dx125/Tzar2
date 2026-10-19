@@ -25,7 +25,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0172) the original ignores SPEED: measured classes walk at their own speed (foot 40 px/s, mounted 72, troll 47,
     // ghost 67, cow and bear 26); the bot repairs in its base with a crew of three, and each kingdom's first house starts at
     // three quarters of its hit points, so a repair completes whatever the battle does.
-    private const ulong GoldenRulesetHash = 0x45393F5F166CC3BAUL;
+    // (ADR 0173) the day is 37.5 minutes (dayLengthMs 2,250,000, measured on the clock globe): only the ruleset hash moves.
+    private const ulong GoldenRulesetHash = 0x7C98754695F2F4E3UL;
     private const ulong GoldenHashStream = 0x369995D30ADB3778UL;
     private const ulong GoldenFinalFullHash = 0x0D3ECF1A871E345CUL;
 
