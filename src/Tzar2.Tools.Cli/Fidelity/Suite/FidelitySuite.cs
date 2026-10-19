@@ -152,6 +152,14 @@ internal sealed class EngineModel
     /// <summary>The European peasant's load (<c>^class.peon.Harvester.capacity</c>).</summary>
     public int? PeasantLoad => Ruleset.EntityTypes.FirstOrDefault(t => t.Key == "euro.peon")?.Traits.Harvester?.Capacity;
 
+    /// <summary>
+    /// The peasant's load from a node of legacy class <paramref name="nodeClass"/> (a gather scenario's target, e.g.
+    /// <c>cow</c>): the node's own load where it has one (ADR 0170), else <see cref="PeasantLoad"/>.
+    /// </summary>
+    public int? PeasantLoadFrom(string? nodeClass) =>
+        Ruleset.EntityTypes.FirstOrDefault(t => nodeClass is not null && t.Traits.LegacyClass == nodeClass && t.Traits.ResourceNode is { CarryLoad: > 0 })
+            ?.Traits.ResourceNode!.CarryLoad ?? PeasantLoad;
+
     /// <summary>Kingdom slot (1-based) → GAME.PAL ramp (1-based): the client recolours owner n with ramp n.</summary>
     public static int RampOfSlot(int slot) => slot;
 
@@ -482,9 +490,11 @@ internal static class FidelitySuite
             return new CheckResult(CheckStatus.Fail, "the engine's peasant has no Harvester");
         }
 
-        var off = loads.Where(m => (int)FactsIndex.Number(m.Get("load"))! != engine)
-            .Select(m => $"{FactsIndex.Text(m.Get("resource")) ?? FactsIndex.Text(m.Get("target"))} {FactsIndex.Number(m.Get("load"))}").ToList();
-        return Verdict(off.Count == 0, off.Count == 0 ? $"{loads.Count} resources carry {engine}" : $"engine {engine}; measured {string.Join(", ", off)}");
+        // Each load against the engine's load from that kind of node (cows carry their own, ADR 0170).
+        var off = loads.Where(m => (int)FactsIndex.Number(m.Get("load"))! != (e.PeasantLoadFrom(FactsIndex.Text(m.Get("target"))) ?? engine))
+            .Select(m => $"{FactsIndex.Text(m.Get("resource")) ?? FactsIndex.Text(m.Get("target"))} {FactsIndex.Number(m.Get("load"))} (engine {e.PeasantLoadFrom(FactsIndex.Text(m.Get("target"))) ?? engine})").ToList();
+        string carried = string.Join(", ", loads.Select(m => $"{FactsIndex.Text(m.Get("resource")) ?? FactsIndex.Text(m.Get("target"))} {FactsIndex.Number(m.Get("load"))}"));
+        return Verdict(off.Count == 0, off.Count == 0 ? $"{loads.Count} loads match the engine: {carried}" : $"measured {string.Join(", ", off)}");
     }
 
     private static CheckResult PopulationLimit(FactsIndex f, EngineModel e)

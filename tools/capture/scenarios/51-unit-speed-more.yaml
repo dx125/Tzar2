@@ -11,7 +11,7 @@ experimental: true
 description: |
   Spawns one unit in an open grass band in the middle of MP2 (debug command "spawn <class>"; in the first session
   the unit appeared at the cursor as an all-green figure and never moved, so it is now placed with a click at the
-  same spot), selects everything in the view with a drag, orders a move 300 px west and later 300 px east, and
+  same spot) and selected with another click there (not with a box: one dragged to the window edge scrolls the view), orders a move 300 px west and later 300 px east, and
   records window captures every 100 ms. The analysis tracks the moving unit and fits pixels per second. SPEED
   values are the reference build's (DATA/<CIV> UNITS.TXT: the European value where the class exists).
   Every land class of the tables (air and ships excluded), in two halves: unit-speed and unit-speed-more. Game speed: the default.
@@ -58,7 +58,7 @@ steps:
   - wait: 1
   - chat: "${cheat}nofog"
   - wait: 1
-  - chat: "${cheat}nopop"             # LOCAL: lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
   - wait: 1
   - minimap: [0.5, 0.5]
   - wait: 1
@@ -67,7 +67,7 @@ steps:
   - click: [600, 340]               # place the spawned unit (harmless if it is already placed: selects it)
   - wait: 1
   - snapshot: spawned
-  - drag: {from: [160, 40], to: [1015, 760]}
+  - click: [600, 340]               # select it (batch B: a box dragged to (1015, 760) reached the window edge and scrolled the camera away)
   - wait: 0.5
   - click: {at: [300, 340], button: right}
   - move: [70, 400]

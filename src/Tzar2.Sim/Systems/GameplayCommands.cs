@@ -99,11 +99,28 @@ internal static class GameplayCommands
         return true;
     }
 
-    /// <summary>The carry capacity of a harvester after its owner's technology effects.</summary>
+    /// <summary>
+    /// The carry capacity of a harvester for the node it works (its <see cref="Worker.Target"/>), after its owner's
+    /// technology effects: the node's own load where it has one (cows, ADR 0170), else the harvester's capacity.
+    /// </summary>
     public static int CarryCapacity(World world, EntityId worker)
     {
+        ResourceNodeDefinition? node = null;
+        if (world.Workers.Has(worker) && world.Workers.Get(worker).Target is var target and not 0
+            && world.Entities.IsAlive(EntityId.FromValue(target)))
+        {
+            node = world.TypeOf(EntityId.FromValue(target)).Traits.ResourceNode;
+        }
+
+        return CarryCapacity(world, worker, node);
+    }
+
+    /// <summary>The carry capacity of a harvester gathering from <paramref name="node"/> (null: its own capacity).</summary>
+    public static int CarryCapacity(World world, EntityId worker, ResourceNodeDefinition? node)
+    {
         EntityTypeDefinition type = world.TypeOf(worker);
-        return Math.Max(1, world.Stats.Apply(world.Identities.Get(worker).Owner, ModifierStat.CarryCapacity, type.Id, type.Traits.Harvester?.Capacity ?? 0));
+        int load = node is { CarryLoad: > 0 } ? node.CarryLoad : type.Traits.Harvester?.Capacity ?? 0;
+        return Math.Max(1, world.Stats.Apply(world.Identities.Get(worker).Owner, ModifierStat.CarryCapacity, type.Id, load));
     }
 
     public static CommandRejection? Build(World world, in Command command, ReadOnlySpan<EntityId> entities)

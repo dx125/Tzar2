@@ -1007,11 +1007,16 @@ public sealed partial class World
         ids = Workers.Entities;
         Span<Worker> workers = Workers.Components;
         int resources = Ruleset.ResourceTypes.Count;
+        int nodeLoad = 0; // the largest per-node load (cows, ADR 0170): a worker may hold it whatever its own capacity
+        foreach (EntityTypeDefinition nodeType in Ruleset.EntityTypes)
+        {
+            nodeLoad = Math.Max(nodeLoad, nodeType.Traits.ResourceNode?.CarryLoad ?? 0);
+        }
         for (int i = 0; i < ids.Length; i++)
         {
             Worker w = workers[i];
             EntityTraits t = TypeOf(ids[i]).Traits;
-            int capacity = t.Harvester?.Capacity ?? 0;
+            int capacity = t.Harvester is null ? 0 : Math.Max(t.Harvester.Capacity, nodeLoad);
             if ((t.Harvester is null && !t.IsBuilder && !t.IsCapturer) || w.Task > WorkerTask.Capture
                 || (w.Task == WorkerTask.Harvest && t.Harvester is null) || (w.Task is WorkerTask.Build or WorkerTask.Repair && !t.IsBuilder)
                 || (w.Task == WorkerTask.Capture && !t.IsCapturer)

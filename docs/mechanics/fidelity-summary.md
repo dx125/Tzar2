@@ -1,4 +1,15 @@
-# Fidelity summary (after batch A of the second session)
+# Fidelity summary (after batch B of the second session)
+
+## Batch B (session `capture-20261018-222649`, ADR 0170)
+
+Windows 11 25H2, clean GOG v1.10 EN, 19/19 trials. The suite passes **6 of 30 = 20 %** (6 of 6 measured): carry
+capacity is new. A peasant carries 10 wood, stone or gold per trip and **50 food from a cow**; the engine now lets a
+node set its own load. The trips (walk included: wood 6.9 s, stone 9.8 s, gold 5.4 s, cow 10.6 s) bound the gather
+times but do not separate them from the walk; that needs unit speeds and `gather-wood-far` (batch E).
+
+Unit speeds failed: the scenario's selection box reached the window's edge-scroll zone and the camera moved away from
+the unit. The scenarios are fixed (select by a click; a test rejects mouse positions near the edge) and `unit-speed`
+is to be re-captured; batch B's speed facts are not committed.
 
 ## Batch A (session `capture-20261018-155421`, ADR 0169)
 

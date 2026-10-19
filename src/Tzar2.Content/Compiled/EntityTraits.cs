@@ -134,6 +134,12 @@ public sealed record ResourceNodeDefinition(int Resource, int Amount)
     /// <summary>Gather time per unit from this node, overriding the harvester's time for the resource; 0 = the harvester's.</summary>
     public int GatherMs { get; init; }
 
+    /// <summary>
+    /// Units a harvester carries per trip from this node, overriding the harvester's capacity (before technology
+    /// effects); 0 = the harvester's. Cows: 50 (ADR 0170).
+    /// </summary>
+    public int CarryLoad { get; init; }
+
     /// <summary>Whether the node stays when empty (cows wait for their milk to regrow) instead of being removed.</summary>
     public bool KeepWhenEmpty { get; init; }
 }

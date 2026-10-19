@@ -154,6 +154,10 @@ public class RulesetCompilerTests
         Assert.Equal(ResourceNodeDefinition.Unlimited, field.ResourceNode!.Amount);
         Assert.Equal(17 * LegacyTime.MsPerTimeUnit, field.BuildTimeMs);
         Assert.False(Type(Classic, "comm.tree").LeavesCorpse);
+
+        // Nodes may carry their own load (ADR 0170): a peasant brings 50 food from a cow, the harvester's 10 elsewhere.
+        Assert.Equal(50, Type(Classic, "comm.cow").Traits.ResourceNode!.CarryLoad);
+        Assert.Equal(0, gold.ResourceNode!.CarryLoad);
     }
 
     [Fact]

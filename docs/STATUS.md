@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-19
+* **Last updated:** 2026-10-19 (batch B)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -23,7 +23,7 @@ and it has not been re-run since the handover.
 | M0 Foundations | **Done** | One ADR per spike: S2 (0007), S4 (0008), S3 (0009), S1 (0010), S6 (0013; S5 mobile export is PX); S1 renderer met on Windows (ADR 0010); CI green; no original files tracked (CI job `legal`). |
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
-| M3 Classic gameplay & skirmish | **In progress** — blocked on fidelity | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). **Fidelity suite ≥ 80 %: 5 of 30 (16.7 %)**, see below. |
+| M3 Classic gameplay & skirmish | **In progress** — blocked on fidelity | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). **Fidelity suite ≥ 80 %: 6 of 30 (20 %)**, see below. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign 14–15 of 19 missions, tutorial 7 of 7 (reported 2026-10-18, scripted solver, ADR 0134). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
@@ -40,8 +40,8 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | Batch | Measures | State |
 |---|---|---|
 | A | cheats, player colours, combat pairs, shadow overlap, training and construction time | **Done**: analysed and merged (PR #61, ADR 0169). Passing: attack cycle, damage, population limit, training time, construction time. |
-| B | 15 unit speeds; gathering wood, stone, cows | **Captured 2026-10-18** (`capture-20261018-222649`, 19/19 trials), analysis next |
-| C | 15 more unit speeds (chariot, caravan) | to capture |
+| B | 15 unit speeds; gathering wood, stone, cows | **Gathering done** (ADR 0170): carry capacity passes (10 wood/stone/gold, 50 from a cow). **Unit speeds failed** (the selection box scrolled the camera away; scenario fixed): re-capture `unit-speed`. |
+| C | 15 more unit speeds (chariot, caravan) | to capture (scenario fixed like `unit-speed`) |
 | D | day length, night share (no input) | to capture |
 | E–I | group speed, research, damage bonuses, capture; fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | to capture (ADR 0113) |
 
@@ -52,8 +52,8 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-1. **Maintainer:** analyse batch B; fix the engine where it disagrees; PR with facts + fixes.
-2. **Operator:** batches C and D (D needs no input).
+1. **Operator:** re-capture unit speeds (`-Scenarios unit-speed`, ~5 min), then batches C and D (D needs no input).
+2. **Maintainer:** analyse them; unit speeds settle SPEED → px/s (UNK-12) and let batch E separate gather times from walking.
 3. **Operator:** batches E–I; **Maintainer:** analyse each.
 4. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
@@ -72,6 +72,12 @@ acceptable; the question's text was lost in the handover and has to be found aga
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-19 — Batch B: a node sets its own load; cows carry 50 (ADR 0170).** Wood, stone and gold verified at 10 per
+  trip. Unit speeds failed because the scenario dragged a box into the edge-scroll zone; fixed, to be re-captured; a test
+  now keeps scenario mouse positions 16 px from the edges.
+* **2026-10-19 — Project docs (PR #64).** This file, [DEVELOPMENT.md](DEVELOPMENT.md), the ADR index and `AGENTS.md`,
+  so that another agent or developer can continue the work.
 
 * **2026-10-19 — Batch A merged; TIME is 1.25 s per unit (ADR 0169).** Training (peasant 9.99 s for TIME 8) and
   construction (lumber mill 36.85 s for TIME 30) both measured 1.25 s per unit; research times (ms in

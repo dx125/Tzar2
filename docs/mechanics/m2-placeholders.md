@@ -33,6 +33,13 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 * **Consistent with the rules below:** a site's health grows linearly from 1 to the maximum, and the rate doubled when
   a second peasant joined the builder (construction rate linear in builders, not yet measured with more than two).
 
+## Batch B of the second session (2026-10-18, session `capture-20261018-222649`, ADR 0170)
+
+* **VERIFIED:** a peasant carries 10 wood, stone or gold per trip, and **50 food from a cow** (a node may now set its own
+  load, `ResourceNode.carry`). Suite: 6 of 30.
+* **Not resolved:** unit speeds (SPEED → px/s, UNK-12): the scenario's selection box reached the window edge and scrolled the
+  camera away; the scenario is fixed and `unit-speed` is re-captured. Gather times: trips include the walk (batch E).
+
 ## Values
 
 | Value | Placeholder | Where | Unknown | How to resolve |
@@ -45,8 +52,8 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 | Minimum damage | 1 | YAML `gameplay.minimumDamage` | UNK-08 | damage grid |
 | Melee reach | 8 px edge to edge (buildings: the interaction reach) | YAML `gameplay.meleeReachPx` | UNK-07, UNK-11 | captures of melee contact |
 | Worker reach | 32 px from the footprint | YAML `gameplay.interactionReachPx` | UNK-17, UNK-18 | captures of gathering/building positions |
-| Carry capacity | 10 units, every resource | YAML `^class.peon.Harvester.capacity` | UNK-17 | gather/carry captures |
-| Gather time | 1,000 ms per unit, every resource | YAML `^class.peon.Harvester.gatherMs` | UNK-17 | gather/carry captures |
+| Carry capacity | 10 units — **VERIFIED for wood, stone and gold** (capture-20261018-222649, `gather-*`: every delivery 10); a node may set its own load, cows 50 (m3 register, ADR 0170) | YAML `^class.peon.Harvester.capacity`, `ResourceNode.carry` | UNK-17 | done (fields: not measured) |
+| Gather time | 1,000 ms per unit, every resource (batch B trips, walk included: wood 6.9 s, stone 9.8 s, gold 5.4 s per 10 units, so probably shorter; not tuned until the walk is separated) | YAML `^class.peon.Harvester.gatherMs` | UNK-17 | `gather-wood-far` (batch E) with the measured peasant speed |
 | Wood per tree | 100 | YAML `comm.tree.ResourceNode.amount` | UNK-17 | tree depletion capture |
 | Node search radius | 12 tiles | YAML `gameplay.nodeSearchRadiusTiles` | UNK-17 | observe auto-continue after depletion |
 | Queue length | 10 | YAML `gameplay.queueCapacity` | UNK-20 | UI capture |

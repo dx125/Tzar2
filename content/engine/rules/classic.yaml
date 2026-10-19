@@ -245,7 +245,8 @@ legacy:
 ^class.cow:
   ResourceNode:
     regenMs: 4000                     # UNVERIFIED (UNK-17): milk regrows one unit per 4 s
-    gatherMs: 1500                    # UNVERIFIED (UNK-17): milking time per unit
+    gatherMs: 200                     # UNVERIFIED (UNK-17): milking time per unit; batch B bounds it (a 50-unit trip, walk included, took 10.6 s; ADR 0170)
+    carry: 50                         # VERIFIED (batch B, capture-20261018-222649): a peasant brings 50 food per trip from a cow (ADR 0170)
     keepWhenEmpty: true
   SpawnOnDeath: { type: comm.meat }
   Capturable: { instant: true, technology: te_cowpoaching }
