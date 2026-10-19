@@ -94,7 +94,12 @@ public partial class GameApp : Node
             GD.PrintErr("The classic ruleset does not compile from this package: " + e.Message);
         }
 
-        if (_args.GameSmoke || _args.AutoplayDir is not null || _args.Skirmish)
+        if (_args.MultiplayerSmoke)
+        {
+            ShowMainMenu();
+            _ = MultiplayerSmokeAsync();
+        }
+        else if (_args.GameSmoke || _args.AutoplayDir is not null || _args.Skirmish)
         {
             StartSkirmish(_skirmish);
             if (_args.GameSmoke)
@@ -146,7 +151,7 @@ public partial class GameApp : Node
         var menu = new MainMenuScreen(_ui!, _catalog, Screen, _ai.Notice);
         menu.SinglePlayer += ShowSetup;
         menu.Campaign += ShowCampaigns;
-        menu.MultiplayerPressed += () => GD.Print("Multiplayer is M6.");
+        menu.MultiplayerPressed += ShowMultiplayer;
         menu.Credits += () => GD.Print("Credits: see text/local/credits.txt of your package.");
         menu.Viewer += () => ViewerRequested?.Invoke();
         menu.Editor += () => ShowEditor();
@@ -248,8 +253,16 @@ public partial class GameApp : Node
         }
 
         var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null };
-        screen.Finished += (outcome, stats) => ShowResults(outcome, stats);
-        screen.QuitRequested += ShowMainMenu;
+        screen.Finished += (outcome, stats) =>
+        {
+            SaveReplay(session, "skirmish");
+            ShowResults(outcome, stats);
+        };
+        screen.QuitRequested += () =>
+        {
+            SaveReplay(session, "skirmish");
+            ShowMainMenu();
+        };
         screen.RestartRequested += () => StartSkirmish(options);
         Replace(screen, music: null);
     }

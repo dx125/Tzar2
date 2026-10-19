@@ -230,6 +230,21 @@ public sealed class GodotSmokeTests : IDisposable
         Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);
     }
 
+    [GodotFact]
+    public void A_lan_match_against_a_computer_and_its_replay_run_headless()
+    {
+        // ADR 0168: the multiplayer menu, a LAN host (embedded relay), the lobby, the lockstep match against a Hard
+        // computer with the overlay, then the replay viewer at 16x with a backward seek, all on the dummy renderer.
+        string package = Path.Combine(_dir, "mp.t2pkg");
+        GamePackage().WriteTo(package);
+        (int exit, string output) = GodotRunner.RunClient("--config", Path.Combine(_dir, "mp.cfg"), "--package", package, "--mp-smoke", "--ticks", "300");
+        _output.WriteLine(output);
+        Assert.Equal(0, exit);
+        string line = output.Split('\n').Single(l => l.StartsWith("MP SMOKE OK", StringComparison.Ordinal));
+        Assert.Contains("generation=1", line, StringComparison.Ordinal);
+        Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);
+    }
+
     // The synthetic art plus the synthetic legacy tables, so the classic ruleset compiles.
     private static PackageWriter GamePackage()
     {
