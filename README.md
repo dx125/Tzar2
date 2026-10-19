@@ -5,7 +5,9 @@ deterministic, engine-independent C# simulation core and a Godot 4.7 .NET client
 is not decided. Release 1.0 targets Windows x64; other platforms follow later (DEC-14).
 
 The binding specification is the [Technical Design Document](docs/TDD.md). Decisions made while implementing it are in
-[`docs/decisions/`](docs/decisions/).
+[`docs/decisions/`](docs/decisions/) ([index](docs/decisions/README.md)). Where the project stands and what comes next:
+[`docs/STATUS.md`](docs/STATUS.md); how to work on it: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (agents: start at
+[`AGENTS.md`](AGENTS.md)).
 
 ## Legal
 
