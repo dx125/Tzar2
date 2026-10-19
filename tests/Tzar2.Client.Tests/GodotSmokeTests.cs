@@ -214,11 +214,19 @@ public sealed class GodotSmokeTests : IDisposable
         // locations, rubber band and Alt-drag through the real screen, then save → reopen → byte-identical.
         string package = Path.Combine(_dir, "editor.t2pkg");
         GamePackage().WriteTo(package);
-        (int exit, string output) = GodotRunner.RunClient("--config", Path.Combine(_dir, "editor.cfg"), "--package", package, "--editor-smoke");
+
+        // An invented legacy map the smoke run imports through the converter UI (§18.5).
+        var legacy = new Tzar2.Tests.Shared.SyntheticMap { Name = "Smoke", Side = 12, Title = "Smoke import" };
+        legacy.Objects.Add(new Tzar2.Tests.Shared.SyntheticObject { ClassName = "peon", X = 3, Y = 3, Owner = 1, Race = 1, Id = 1 });
+        string wmp = Path.Combine(_dir, "smoke.wmp");
+        File.WriteAllBytes(wmp, legacy.Build());
+        (int exit, string output) = GodotRunner.RunClient("--config", Path.Combine(_dir, "editor.cfg"), "--package", package, "--editor-smoke", "--editor-import", wmp);
         _output.WriteLine(output);
         Assert.Equal(0, exit);
         string line = output.Split('\n').Single(l => l.StartsWith("EDITOR SMOKE OK", StringComparison.Ordinal));
         Assert.Contains("blocking=0", line, StringComparison.Ordinal);
+        Assert.Contains("playtest=", line, StringComparison.Ordinal);
+        Assert.Contains("import=smoke.t2map", line, StringComparison.Ordinal);
         Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);
     }
 

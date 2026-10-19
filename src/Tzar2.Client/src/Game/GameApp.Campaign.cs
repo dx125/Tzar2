@@ -45,8 +45,8 @@ public partial class GameApp
         }
     }
 
-    // The campaigns offered: the built-in demo; converted campaigns join with the converter (M4-A).
-    private static List<ICampaignSource> Campaigns() => [DemoCampaign()];
+    // The campaigns offered: the built-in demo, and a campaign converted or edited in the editor this session (M5).
+    private List<ICampaignSource> Campaigns() => _converted is null ? [DemoCampaign()] : [DemoCampaign(), _converted];
 
     private static ICampaignSource DemoCampaign() => Tzar2.Game.Campaigns.DemoCampaign.Create();
 

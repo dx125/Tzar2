@@ -125,6 +125,7 @@ public partial class EditorScreen : Control
         _view.CameraMoved += () => _minimap.QueueRedraw();
         Attach(_controller.Document);
         HookTriggers();
+        HookImport();
         _view.Rebuild();
         _minimap.Refresh();
         _view.GrabFocus();
@@ -374,6 +375,7 @@ public partial class EditorScreen : Control
         Item(file, "Save (Ctrl+S)", () => Save(saveAs: false));
         Item(file, "Save as… (Ctrl+Shift+S)", () => Save(saveAs: true));
         file.AddSeparator();
+        ImportMenu(file);
         FileMenuExtras?.Invoke(file);
         file.AddSeparator();
         Item(file, "Close editor", () => Closed?.Invoke());
