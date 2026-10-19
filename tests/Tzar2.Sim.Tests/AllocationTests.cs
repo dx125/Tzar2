@@ -73,15 +73,25 @@ public class AllocationTests
     {
         using var scenario = new GameplayScenario(GameplayFixtures.Classic, new GameplayScenarioOptions { MapSize = 96, Players = 2, SoldiersPerPlayer = 150, WorkersPerPlayer = 30, TreesPerPlayer = 120, BotIntervalTicks = 4 }, workers);
 
-        // Into the fight (soldiers meet in the middle after ~30 s), and until the flow-field cache holds its 64 field
-        // objects: group orders to new goals allocate a field object until then (bounded pool growth, not per tick).
+        // Into the fight (soldiers meet in the middle after ~30 s), and until the flow-field cache stops growing: group
+        // orders to new goals allocate a field object until then (bounded pool growth, not per tick). It stops either at
+        // its 64-field capacity or below it, when no more goals are live at once: since units settle next to a taken goal
+        // (ADR 0146) this scenario levels off at about half the capacity.
+        const int Quiet = 2_000;
         World world = scenario.Simulation.World;
-        for (int t = 0; t < 700 || (world.FlowFields.FieldsAllocated < Tzar2.Sim.Navigation.FlowFieldCache.Capacity && t < 20_000); t++)
+        int fields = -1;
+        int sinceGrowth = 0;
+        int t = 0;
+        for (; t < 700 || (world.FlowFields.FieldsAllocated < Tzar2.Sim.Navigation.FlowFieldCache.Capacity && sinceGrowth < Quiet && t < 20_000); t++)
         {
             scenario.RunTick();
+            sinceGrowth = world.FlowFields.FieldsAllocated == fields ? sinceGrowth + 1 : 0;
+            fields = world.FlowFields.FieldsAllocated;
         }
 
-        Assert.Equal(Tzar2.Sim.Navigation.FlowFieldCache.Capacity, world.FlowFields.FieldsAllocated);
+        Assert.True(
+            world.FlowFields.FieldsAllocated == Tzar2.Sim.Navigation.FlowFieldCache.Capacity || sinceGrowth >= Quiet,
+            $"the flow-field cache still grew after {t} ticks ({world.FlowFields.FieldsAllocated} fields)");
         AssertSteadyStateDoesNotAllocate(scenario, workers);
     }
 

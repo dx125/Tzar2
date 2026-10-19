@@ -723,7 +723,7 @@ public sealed class NavalExecutor : IAiExecutor
             EntityId e = EntityId.FromValue(candidates[k]);
             Position p = world.Positions.Get(e);
             int component = Shore.LandComponentAt(world, landType, p.X, p.Y);
-            if (Shore.FindDock(world, type.Id, at, landType, component, p.X, p.Y, out _, out Position water)
+            if (Shore.FindDock(world, ship, type.Id, at, landType, component, p.X, p.Y, out _, out Position water)
                 && Shore.EdgeDistance(world, water, e) <= range)
             {
                 target = e;
@@ -788,6 +788,6 @@ public sealed class NavalExecutor : IAiExecutor
         }
 
         (int tx, int ty) = context.Census.Player(target).Town;
-        return Shore.FindDock(world, world.Identities.Get(ship).TypeId, at, landType, Shore.LandComponentAt(world, landType, tx, ty), tx, ty, out _, out water);
+        return Shore.FindDock(world, ship, world.Identities.Get(ship).TypeId, at, landType, Shore.LandComponentAt(world, landType, tx, ty), tx, ty, out _, out water);
     }
 }
