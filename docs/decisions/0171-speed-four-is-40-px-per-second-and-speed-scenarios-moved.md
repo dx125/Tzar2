@@ -1,7 +1,7 @@
 # 0171. SPEED 4 walks 40 px/s (10 px/s per point); speed scenarios move away from Nature's cows
 
 * **Status:** Accepted. The scale is measured at SPEED 4 only; proportionality is provisional until another SPEED
-  value is measured (re-capture of `unit-speed`, then batch C).
+  value is measured (re-capture of `unit-speed`, then batch C). Amended 2026-10-19: the minimap click of decision 4.
 * **Date:** 2026-10-19
 * **Deciders:** maintainer (Claude), product owner
 * **Related:** ADR 0104 (Nature), ADR 0112 (fidelity suite), ADR 0170, TDD §22.3, REQ-PATH-11, UNK-12;
@@ -52,6 +52,14 @@ pikeman (SPEED 2) at 40 px/s for 1.7 s, which polluted the SPEED → px/s relati
 5. **The gameplay benchmark bot** (`GameplayScenario`) adapts so that the golden hash stream still covers repair and
    item pickup in 1,600 ticks at the new speed: it repairs the own building that is not on fire with the fewest hit
    points missing, using the busy peasant nearest to it, and soldiers pick items up within 24 tiles instead of 16.
+
+**Amendment (2026-10-19, run `capture-20261019-150630`).** The minimap click (0.1, 0.95) of decision 4 did nothing:
+MP2's 64 × 64 tiles are drawn 1 px per tile in the middle of the 128-px minimap box (x 36–99, y 63–126), and the game
+ignores a click outside the map. The view stayed on the start view (tiles x 13.5–41, y 40–63, centred on our middle
+castle), the vertical clamp was as computed (our cows of row 52 at y ≈ 400), but the path ran through our own cows and
+every fit was biased (SPEED 4 units at 22–30 px/s); the run's facts are not committed. The scenarios now click map tile
+(6, 60), minimap (0.297, 0.719), which clamps the view to the bottom-left corner as intended; the scenario test rejects a
+minimap click outside MP2's map for scenarios that launch MP2.
 
 ## Alternatives considered
 

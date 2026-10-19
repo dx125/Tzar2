@@ -68,14 +68,21 @@ public class ScenarioLoaderTests
                     ClickStep c => [c.At],
                     MoveStep m => [m.At],
                     DragStep d => [d.From, d.To],
-                    // A corner of the minimap is near the window's corner (ADR 0171 clamps the view with [0.1, 0.95]).
-                    MinimapStep m => [new ScreenPoint(minimap.X + (int)System.Math.Round(m.U * minimap.Width), minimap.Y + (int)System.Math.Round(m.V * minimap.Height))],
+                    MinimapStep m => [MinimapPoint(minimap, m)],
                     _ => [],
                 };
                 foreach (ScreenPoint p in points)
                 {
                     Assert.True(p.X >= Edge && p.X < session.Layout.Width - Edge && p.Y >= Edge && p.Y < session.Layout.Height - Edge,
                         $"{s.Id}: line {step.Line} puts the mouse at ({p.X}, {p.Y}), in the edge-scroll zone");
+                }
+
+                // MP2 (64 x 64 tiles) fills only the middle of the minimap box, x 36-99, y 63-126; the game ignores a click
+                // outside it and the view stays where it was (2026-10-19 unit-speed run, ADR 0171).
+                if (step is MinimapStep onMap && s.Launch.Contains("MP2.wmp"))
+                {
+                    ScreenPoint p = MinimapPoint(minimap, onMap);
+                    Assert.True(p.X is >= 36 and <= 99 && p.Y is >= 63 and <= 126, $"{s.Id}: line {step.Line} clicks the minimap at ({p.X}, {p.Y}), outside MP2's map");
                 }
             }
             for (int i = 0; i < s.Steps.Count; i++)
@@ -88,6 +95,10 @@ public class ScenarioLoaderTests
             }
         }
     }
+
+    /// <summary>Where the runner clicks for a minimap step (CaptureRunner: the box scaled by U and V).</summary>
+    private static ScreenPoint MinimapPoint(ScreenRect m, MinimapStep step) =>
+        new(m.X + (int)System.Math.Round(step.U * m.Width), m.Y + (int)System.Math.Round(step.V * m.Height));
 
     [Fact]
     public void Parses_every_step_kind()
