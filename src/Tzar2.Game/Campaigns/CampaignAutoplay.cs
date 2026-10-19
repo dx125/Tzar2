@@ -1116,10 +1116,14 @@ public static class CampaignAutoplay
                     Goal = $"{line.Name}: {moved.Count} of {units.Count} units over the line";
                     if (stranded.Count > 0)
                     {
-                        // Over the line only by water: a ferry to the line at the units' row (or column).
-                        Position at = Pos(world, stranded[0]);
-                        int edge = Math.Clamp(bound.Limit + (bound.Below ? -1 : 1), 0, (bound.Vertical ? world.Map.Height : world.Map.Width) - 1);
-                        var beyond = bound.Vertical ? new Position(at.X, (edge * Tile) + (Tile / 2)) : new Position((edge * Tile) + (Tile / 2), at.Y);
+                        // Over the line only by water: a ferry to ground beyond the line (the nearest walkable tile on
+                        // the far side, nearest the units' row or column).
+                        if (Beyond(world, stranded[0], bound.Vertical, bound.Limit, bound.Below) is not { } beyond)
+                        {
+                            Goal = $"{line.Name}: no ground beyond the line";
+                            return moved.Count > 0;
+                        }
+
                         return Ferry(world, me, line.Name, stranded, beyond) || moved.Count > 0;
                     }
 
@@ -1475,6 +1479,14 @@ public static class CampaignAutoplay
                 {
                     if (stranded.Any(o => !world.IsHeld(o)) && _ferried.TryGetValue(ship.Value, out int boarded) && _tick - boarded < 1200)
                     {
+                        // The ones whose boarding gave up (no errand) are sent again, to the same ship.
+                        EntityId[] again = Unboarding(world, stranded);
+                        if (again.Length > 0 && _tick - _reboarded >= 200)
+                        {
+                            _reboarded = _tick;
+                            _batch.Add(CommandKind.Board, again, 0, 0, ship);
+                        }
+
                         Goal = $"{name}: waiting for {stranded.Count(o => !world.IsHeld(o))} more to board";
                         return true;
                     }
@@ -1521,8 +1533,11 @@ public static class CampaignAutoplay
                 return false;
             }
 
-            if (Due(boat))
+            EntityId[] idle = Unboarding(world, stranded);
+            if (Due(boat) || (idle.Length > 0 && _tick - _reboarded >= 200))
             {
+                // Everyone on the first order; afterwards only those whose boarding gave up (no errand any more).
+                _reboarded = _tick;
                 _batch.Add(CommandKind.Board, stranded.Where(u => !world.IsHeld(u)).ToArray(), 0, 0, boat);
                 Note($"ferry boards {stranded.Count} for {name}");
             }
@@ -1530,6 +1545,12 @@ public static class CampaignAutoplay
             Goal = $"{name}: {stranded.Count} units board a ship at ({Pos(world, boat).X / Tile},{Pos(world, boat).Y / Tile})";
             return true;
         }
+
+        private int _reboarded = int.MinValue / 2;
+
+        // Units of a ferry that are neither aboard nor walking to board.
+        private static EntityId[] Unboarding(World world, List<EntityId> units)
+            => units.Where(u => !world.IsHeld(u) && !world.Errands.Has(u)).ToArray();
 
         // Whether an order to this ship may be given again (at most every 30 seconds).
         private bool Due(EntityId ship)
@@ -1573,8 +1594,9 @@ public static class CampaignAutoplay
 
                 taken.UnionWith(free);
                 any = true;
-                if (Due(holder))
+                if (Due(holder) || (Unboarding(world, free).Length > 0 && _tick - _reboarded >= 200))
                 {
+                    _reboarded = _tick;
                     _batch.Add(CommandKind.Board, free.ToArray(), 0, 0, holder);
                 }
             }
@@ -1797,6 +1819,49 @@ public static class CampaignAutoplay
                         or Content.Compiled.Scenario.Expressions.BinaryOp.Greater or Content.Compiled.Scenario.Expressions.BinaryOp.GreaterOrEqual)
                     {
                         return (v == Content.Compiled.Scenario.Expressions.ReservedVariable.Y, limit, below);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        // Walkable ground for the unit's layer on the far side of the line (any component), nearest the unit's row (or
+        // column), within 32 tiles of the line.
+        private static Position? Beyond(World world, EntityId unit, bool vertical, int limit, bool below)
+        {
+            if (!world.Navigation.IsBuilt || world.Navigation.ForType(world.Identities.Get(unit).TypeId) is not { } nav)
+            {
+                return null;
+            }
+
+            Position at = Pos(world, unit);
+            int size = vertical ? nav.Height : nav.Width;
+            int other = vertical ? at.X / Tile : at.Y / Tile;
+            int otherSize = vertical ? nav.Width : nav.Height;
+            for (int d = 0; d < otherSize; d++)
+            {
+                foreach (int o in new[] { other - d, other + d })
+                {
+                    if (o < 0 || o >= otherSize)
+                    {
+                        continue;
+                    }
+
+                    for (int step = 0; step < 32; step++)
+                    {
+                        int line = below ? limit - step : limit + step;
+                        if (line < 0 || line >= size)
+                        {
+                            break;
+                        }
+
+                        int x = vertical ? o : line;
+                        int y = vertical ? line : o;
+                        if (nav.IsWalkable(x, y))
+                        {
+                            return new Position(nav.CenterX((y * nav.Width) + x), nav.CenterY((y * nav.Width) + x));
+                        }
                     }
                 }
             }
