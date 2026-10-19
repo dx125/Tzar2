@@ -17,13 +17,12 @@ namespace Tzar2.Tools.Cli.Fidelity.Capture.Windows;
 internal static unsafe class DeviceProbe
 {
     private const string CustomShimsKey = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Custom\";
-    private const uint DdEnumAttachedSecondaryDevices = 0x1;
 
     public static MachineDevices Detect() => new(
         Try(() =>
         {
             int count = 0;
-            return DirectDrawEnumerateExA(&CountDirectDraw, (nint)(&count), DdEnumAttachedSecondaryDevices) == 0 ? count : (int?)null;
+            return DirectDrawEnumerateA(&CountDirectDraw, (nint)(&count)) == 0 ? count : (int?)null;
         }),
         Try(() => (int)WaveOutGetNumDevs()),
         Try(() =>
@@ -76,7 +75,7 @@ internal static unsafe class DeviceProbe
     }
 
     [UnmanagedCallersOnly]
-    private static int CountDirectDraw(Guid* guid, byte* description, byte* name, nint context, nint monitor)
+    private static int CountDirectDraw(Guid* guid, byte* description, byte* name, nint context)
     {
         (*(int*)context)++;
         return 1;

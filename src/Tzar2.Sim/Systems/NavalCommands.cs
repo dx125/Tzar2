@@ -71,7 +71,7 @@ internal static class NavalCommands
         ushort landType = world.Identities.Get(first).TypeId;
         Position from = world.Positions.Get(first);
         int component = Shore.LandComponentAt(world, landType, from.X, from.Y);
-        if (Shore.FindDock(world, world.Identities.Get(ship).TypeId, world.Positions.Get(ship), landType, component, (int)(sx / n), (int)(sy / n), out _, out Position water))
+        if (Shore.FindDock(world, ship, world.Identities.Get(ship).TypeId, world.Positions.Get(ship), landType, component, (int)(sx / n), (int)(sy / n), out _, out Position water))
         {
             NavalSystem.StartDock(world, ship, purpose, water, 0, 0, 0);
         }
@@ -94,14 +94,18 @@ internal static class NavalCommands
         int tx = toPoint ? x : at.X;
         int ty = toPoint ? y : at.Y;
         ushort landType = world.Identities.Get(first).TypeId;
-        int component = toPoint ? Shore.LandComponentAt(world, landType, x, y) : -1;
-        if (world.ExitPoint(ship, landType, tx, ty, out int ex, out int ey) && (component < 0 || Shore.LandComponentAt(world, landType, ex, ey) == component))
+        // The land the point belongs to (looked for further around a point inside a town or on water); without any, the
+        // units come out here only when this is near the point (ADR 0146: never back on the shore they left).
+        int component = toPoint ? Shore.LandComponentAt(world, landType, x, y, Shore.UnloadSearchTiles) : -1;
+        long near = (long)Shore.ComponentSearchTiles * Map.MapState.UnitsPerTile;
+        if (world.ExitPoint(ship, landType, tx, ty, out int ex, out int ey)
+            && (!toPoint || (component >= 0 ? Shore.LandComponentAt(world, landType, ex, ey) == component : Core.Numerics.IntMath.DistanceSquared(ex, ey, x, y) <= near * near)))
         {
             world.Dockings.Remove(ship);
             return NavalSystem.UnloadNow(world, ship, tx, ty, limit, toPoint) > 0;
         }
 
-        if (!Shore.FindDock(world, world.Identities.Get(ship).TypeId, at, landType, component, tx, ty, out Position land, out Position water))
+        if (!Shore.FindDock(world, ship, world.Identities.Get(ship).TypeId, at, landType, component, tx, ty, out Position land, out Position water))
         {
             return false;
         }
@@ -109,6 +113,32 @@ internal static class NavalCommands
         GameplayCommands.ClearTasks(world, ship);
         NavalSystem.StartDock(world, ship, toPoint ? DockPurpose.UnloadTo : DockPurpose.Unload, water, toPoint ? x : land.X, toPoint ? y : land.Y, limit);
         return true;
+    }
+
+    /// <summary>
+    /// A ship that could not let all its units out at its dock looks for another one near the same point, keeping clear
+    /// of the dock it is at; the retries carry over, so this ends.
+    /// </summary>
+    public static void Redock(World world, EntityId ship, Docking failed, int moved)
+    {
+        EntityId first = FirstInside(world, ship);
+        if (first.IsNone)
+        {
+            return;
+        }
+
+        ushort landType = world.Identities.Get(first).TypeId;
+        Position at = world.Positions.Get(ship);
+        int component = failed.Purpose == DockPurpose.UnloadTo ? Shore.LandComponentAt(world, landType, failed.TowardX, failed.TowardY, Shore.UnloadSearchTiles) : -1;
+        if (!Shore.FindDock(world, ship, world.Identities.Get(ship).TypeId, at, landType, component, failed.TowardX, failed.TowardY, at, out _, out Position water))
+        {
+            return;
+        }
+
+        int limit = failed.Limit == 0 ? 0 : Math.Max(1, failed.Limit - moved);
+        NavalSystem.StartDock(world, ship, failed.Purpose, water, failed.TowardX, failed.TowardY, limit);
+        ref Docking next = ref world.Dockings.Get(ship);
+        next.Retries = failed.Retries + 1;
     }
 
     private static EntityId FirstInside(World world, EntityId holder)

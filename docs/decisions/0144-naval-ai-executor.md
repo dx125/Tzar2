@@ -41,11 +41,11 @@ attacked there; the test only skipped the assertion.
   shared sea (its row attribute now accepts ship-reachable castles); Archipelagos plays 12 minutes there, since a passive
   human keeps nothing in a ship's range and the first landing comes a little after 9.
 * `AiRandomMapTests` asserts damage on all six map types again and no ships on land-connected ones; `AiNavalTests`
-  asserts landings, fishing and soldiers standing on the other island within 12 minutes on Archipelagos, a snapshot
+  asserts landings, fishing and soldiers standing on the other island within 15 minutes on Archipelagos, a snapshot
   in the middle of a landing, and rejection of corrupt naval state.
 
 ## Consequences
 
-* On Archipelagos the AIs fight at sea within 8 minutes and land their waves within 12; the first transport costs
+* On Archipelagos the AIs fight at sea within 8 minutes and land their waves within 15 (a transport sunk while loading makes them try again); the first transport costs
   them some early growth (UNVERIFIED tuning).
 * UNVERIFIED (RE-07, UNK-35): all naval tuning, the reservation, the patrol, and when the original builds ships.

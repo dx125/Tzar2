@@ -46,7 +46,8 @@ public class ScenarioLoaderTests
 
         // What the first session (2026-10-18) established: only "-map <name>.wmp" loads a map, and it opens the setup
         // screen, so every scenario clicks PLAY; -explore / -nofog do nothing (the cheats reveal); a spawned unit is
-        // placed with a click at the cursor.
+        // placed with a click at the cursor, and only after hmnopop: spawning obeys the house limit ("Not enough houses"
+        // on every start position of the original maps, operator run of batch A).
         foreach (ScenarioSpec s in scenarios)
         {
             int map = s.Launch.ToList().IndexOf("-map");
@@ -60,6 +61,7 @@ public class ScenarioLoaderTests
                 if (s.Steps[i] is ChatStep chat && chat.Text.Contains("spawn", System.StringComparison.Ordinal))
                 {
                     Assert.True(s.Steps.Skip(i + 1).OfType<ClickStep>().FirstOrDefault() is { Button: MouseButton.Left }, $"{s.Id}: line {chat.Line} spawns without a placing click");
+                    Assert.True(s.Steps.Take(i).OfType<ChatStep>().Any(c => c.Text.EndsWith("nopop", System.StringComparison.Ordinal)), $"{s.Id}: line {chat.Line} spawns before hmnopop");
                 }
             }
         }

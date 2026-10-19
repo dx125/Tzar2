@@ -260,5 +260,8 @@ when the building is hit; catapult stones can be stepped away from.
 | Across the shore | auto-acquire only within range now (melee never); automatic fights drop out-of-range targets, explicit attacks chase | `CombatSystem` | UNK-22, UNK-43 |
 | Explore | nearest unexplored tile of the unit's component; ships water, land units land; done when none is left | `NavalSystem` | UNK-43 |
 | Patch notes (§5.1) | ship repair, stand ground and explore for ships, Landing Tactics once, crusaders dying aboard: see ADR 0143 | tests | — |
+| Crowded docks (ADR 0146) | water within 2 tiles of another ship or its dock is taken while a free dock exists; land and water at most 2 tiles apart (straight line); an unload without room tries another dock | `Shore`, `NavalSystem` | UNK-43 |
+| Boarders (ADR 0146) | wait while their ship docks; walk to the land next to the ship; ask an idle ship once to come | `ErrandSystem` | UNK-43 |
+| Taken goal (ADR 0146) | final leg, 20 ticks without progress, standing units in contact, within a tile of the settle radius: arrived | `MovementSystem` | UNK-11 |
 | Not implemented | ships entering harbors (`[enter] harbor`) | — | — |
 

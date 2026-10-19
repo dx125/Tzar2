@@ -165,7 +165,12 @@ public sealed class NavalSystem : ISimSystem
             Interaction.Halt(world, ship);
             if (d.Purpose is DockPurpose.Unload or DockPurpose.UnloadTo)
             {
-                UnloadNow(world, ship, d.TowardX, d.TowardY, d.Limit, d.Purpose == DockPurpose.UnloadTo);
+                int moved = UnloadNow(world, ship, d.TowardX, d.TowardY, d.Limit, d.Purpose == DockPurpose.UnloadTo);
+                if ((d.Limit == 0 || moved < d.Limit) && world.Holders.Get(ship).Count > 0 && d.Retries < MaxRetries)
+                {
+                    // No room here (other ships, a crowd ashore): another dock along the shore (ADR 0146).
+                    NavalCommands.Redock(world, ship, d, moved);
+                }
             }
         }
     }

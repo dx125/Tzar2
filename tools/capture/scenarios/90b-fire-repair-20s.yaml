@@ -27,6 +27,8 @@ steps:
   - wait: 1
   - chat: "${cheat}nofog"
   - wait: 1
+  - chat: "${cheat}nopop"             # LOCAL: lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
   # The castle view of MP2 (session 1, smoke/castle): castle lower right, peasants around (747, 480), trees, rocks.
   - key: {key: C, ctrl: true}
   - key: Space
