@@ -30,7 +30,7 @@ layout:
   name: LAYOUT1024L
   size: [1024, 768]
   view: [150, 30, 874, 738]       # the world view
-  minimap: [4, 31, 128, 128]
+  minimap: [4, 31, 128, 128]      # MP2 (64 x 64 tiles) is drawn 1 px per tile in its middle, x 36-99, y 63-126 (other sizes unmeasured)
   park: [70, 400]                 # mouse rest position on the HUD panel (no edge scrolling, not over the world)
 
 timing:

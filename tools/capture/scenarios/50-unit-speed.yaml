@@ -62,7 +62,10 @@ steps:
   - wait: 1
   - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
   - wait: 1
-  - minimap: [0.1, 0.95]            # clamps the view to the bottom-left corner (tiles 0-27 x 41-63)
+  # Map tile (6, 60) on the minimap clamps the view to the bottom-left corner (tiles 0-27 x 41-63). MP2's 64 x 64
+  # tiles are drawn 1 px each in the middle of the 128-px box (x 36-99, y 63-126); a click outside is ignored, and
+  # [0.1, 0.95] left the start view in place (2026-10-19 run: the path crossed our cows).
+  - minimap: [0.297, 0.719]
   - wait: 1
   - snapshot: view
   - move: [880, 400]                # tile (22.8, 52.5)

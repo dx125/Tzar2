@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-19 (unit-speed re-capture)
+* **Last updated:** 2026-10-19 (second unit-speed re-capture)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -40,7 +40,7 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | Batch | Measures | State |
 |---|---|---|
 | A | cheats, player colours, combat pairs, shadow overlap, training and construction time | **Done**: analysed and merged (PR #61, ADR 0169). Passing: attack cycle, damage, population limit, training time, construction time. |
-| B | 15 unit speeds; gathering wood, stone, cows | **Gathering done** (ADR 0170): carry capacity passes (10 wood/stone/gold, 50 from a cow). **Unit speeds partly done** (ADR 0171): SPEED 4 = 40 px/s from 4 classes, engine changed to 10 px/s per point; the 11 soldiers attacked Nature's cows in MP2's middle, so the scenario moved next to our base: re-capture `unit-speed`. |
+| B | 15 unit speeds; gathering wood, stone, cows | **Gathering done** (ADR 0170): carry capacity passes (10 wood/stone/gold, 50 from a cow). **Unit speeds partly done** (ADR 0171): SPEED 4 = 40 px/s from 4 classes, engine changed to 10 px/s per point; the 11 soldiers attacked Nature's cows in MP2's middle, so the scenario moved next to our base. The run there missed the place (the minimap click fell outside MP2's map; fixed): re-capture `unit-speed`. |
 | C | 15 more unit speeds (chariot, caravan) | to capture (scenario moved like `unit-speed`, ADR 0171) |
 | D | day length, night share (no input) | to capture |
 | E–I | group speed, research, damage bonuses, capture; fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | to capture (ADR 0113); `group-speed` already moved (ADR 0171), the other scenarios with idle soldiers in MP2's middle need the same review first |
@@ -69,17 +69,18 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 7. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
 8. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
-Open question for the product owner: the previous agent asked whether "the 144 class names in the converter" are
-acceptable. They are `LegacyClasses` (`src/Tzar2.Formats/Maps/LegacyClasses.cs`, PR #33, [wmp.md §4.1](formats/wmp.md)):
-the original's built-in class table, recovered from the editor DLL, which map files index into. The names equal the
-`class =` values of `DATA/OBJECTS/*.INI`; the order is what the converter cannot do without. The maintainer's reading:
-a format fact (identifiers for interoperability, no code or assets), so it may stay; the owner decides.
-
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — The 144-entry class table stays (product owner).** The previous agent's open question about "the 144
+  class names in the converter" is `LegacyClasses` (PR #33): the original's built-in object class order, which map
+  files index into. Owner decision: it is a format fact and stays; recorded in
+  [original-build/README.md](original-build/README.md#1-repository-policy).
+* **2026-10-19 — Unit-speed run at the new place missed it (ADR 0171 amendment).** The minimap click (0.1, 0.95) fell
+  outside MP2's map, which the minimap draws in its middle 64 px; the view stayed at the start and the path crossed our
+  own cows. Facts not committed; the scenarios click map tile (6, 60) and a test guards MP2 minimap clicks.
 * **2026-10-19 — Unit speeds: SPEED 4 = 40 px/s; engine 10 px/s per point (ADR 0171).** Peasant, archer, priest and
   mage walked 39.9–40.1 px/s both ways. The soldiers attacked Nature's cows in MP2's middle instead of walking; the
   speed scenarios moved next to our base and the analysis rejects short or wrong-way fits. The gameplay benchmark bot

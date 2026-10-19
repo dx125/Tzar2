@@ -9,6 +9,7 @@
 | Spanish FX expansion campaigns (local Russian-translated copies) | **No** | Copyrighted commercial content, modified copies, over GitHub's file-size limit. Kept locally; hashes only (§5). |
 | File manifests: paths, sizes, MD5 hashes (`manifests/*.tsv`) | **Yes** | Metadata only, taken from GOG's public content-system manifests. Used to verify a local copy and to fingerprint editions (TDD REQ-IMP-01, RE-13). |
 | Our own specs and notes derived from studying the original (`docs/formats`, `docs/mechanics`) | **Yes** | Written in our own words (TDD REQ-LEGAL-02). |
+| Identifiers a format needs to be read: the 144-entry object class table in its built-in order (`src/Tzar2.Formats/Maps/LegacyClasses.cs`, recovered from the editor DLL; the names are the `class =` values of `DATA/OBJECTS/*.INI`) | **Yes** (product owner, 2026-10-19) | A fact of the map format, not code or assets: map files store classes as indices into this table, so without the order no map can be converted. |
 
 `.gitignore` at the repository root excludes `Origin/`.
 
