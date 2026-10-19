@@ -15,9 +15,11 @@ internal sealed record MachineDevices(int? DirectDrawDevices, int? WaveOutDevice
 /// starts its configuration program and exits. GOG ships its packaging PC's values, so they must be detected on the
 /// operator's PC (they also change when, say, Bluetooth headphones connect) and are never committed.
 /// <para>The rule below reproduces what the game's own <c>Setup.exe</c> wrote on the operator's PC (2 waveOut, 3
-/// DirectSound including the primary driver, 1 midiOut → 3 / 3 / 2; DirectDraw 2 with one monitor) and is consistent
-/// with GOG's shipped 2 / 5 / 5 / 2: waveOut and midiOut count their mapper as an extra device, DirectSound and
-/// DirectDraw count every entry of their enumeration (primary driver included).</para>
+/// DirectSound including the primary driver, 1 midiOut → 3 / 3 / 2; <c>DirectDrawEnumerateA</c> 1 → DirectDraw 2) and is
+/// consistent with GOG's shipped 2 / 5 / 5 / 2 and the operator's own 2025 configuration (DirectDraw 2): waveOut,
+/// midiOut and DirectDraw count one entry more than their enumeration (the mapper; for DirectDraw presumably the GDI
+/// choice, <c>DIRECTXDEVICE=-1</c>), DirectSound counts every entry (primary driver included). An Ex enumeration with
+/// secondary devices gave 3 on that PC and made the game refuse to start (operator run, 2026-10-18).</para>
 /// </summary>
 internal static class MachineSettings
 {
@@ -39,7 +41,7 @@ internal static class MachineSettings
             }
         }
 
-        Put(DirectDrawKey, devices.DirectDrawDevices);
+        Put(DirectDrawKey, devices.DirectDrawDevices + 1);
         Put(WaveKey, devices.WaveOutDevices + 1);
         Put(DirectSoundKey, devices.DirectSoundDevices);
         Put(MidiKey, devices.MidiOutDevices + 1);

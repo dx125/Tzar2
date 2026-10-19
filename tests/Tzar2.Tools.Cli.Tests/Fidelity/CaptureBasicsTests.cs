@@ -54,9 +54,9 @@ public class MachineSettingsTests
     [Fact]
     public void Device_counts_reproduce_the_values_the_games_setup_wrote()
     {
-        // Operator PC, 2026-10-18: 2 waveOut, 3 DirectSound entries (primary driver included), 1 midiOut, one monitor;
-        // the game's Setup.exe wrote 2 / 3 / 3 / 2.
-        IReadOnlyDictionary<string, string> ini = MachineSettings.IniFor(new MachineDevices(2, 2, 3, 1, 4624));
+        // Operator PC, 2026-10-18: 1 DirectDrawEnumerateA entry, 2 waveOut, 3 DirectSound entries (primary driver
+        // included), 1 midiOut; the game's Setup.exe wrote 2 / 3 / 3 / 2.
+        IReadOnlyDictionary<string, string> ini = MachineSettings.IniFor(new MachineDevices(1, 2, 3, 1, 4624));
         Assert.Equal("2", ini[MachineSettings.DirectDrawKey]);
         Assert.Equal("3", ini[MachineSettings.WaveKey]);
         Assert.Equal("3", ini[MachineSettings.DirectSoundKey]);
@@ -64,7 +64,7 @@ public class MachineSettingsTests
         Assert.Equal("4624", ini[MachineSettings.CpuKey]);
 
         // GOG's shipped values (2 / 5 / 5 / 2) fit the same rule with four sound devices.
-        IReadOnlyDictionary<string, string> gog = MachineSettings.IniFor(new MachineDevices(2, 4, 5, 1, null));
+        IReadOnlyDictionary<string, string> gog = MachineSettings.IniFor(new MachineDevices(1, 4, 5, 1, null));
         Assert.Equal(["2", "5", "5", "2"], new[] { MachineSettings.DirectDrawKey, MachineSettings.WaveKey, MachineSettings.DirectSoundKey, MachineSettings.MidiKey }.Select(k => gog[k]));
         Assert.False(gog.ContainsKey(MachineSettings.CpuKey));
         Assert.Empty(MachineSettings.IniFor(new MachineDevices(null, null, null, null, null)));

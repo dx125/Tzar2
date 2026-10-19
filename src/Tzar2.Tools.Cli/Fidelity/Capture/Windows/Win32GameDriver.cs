@@ -150,12 +150,13 @@ internal sealed unsafe class Win32GameDriver : IGameDriver
     public void Type(string text)
     {
         EnsureForeground();
+        nint layout = UseUsLayout();
         foreach (char c in text)
         {
-            short scan = VkKeyScanW(c);
+            short scan = VkKeyScanExW(c, layout);
             if (scan == -1)
             {
-                throw new ArgumentException($"character '{c}' cannot be typed on this keyboard layout");
+                throw new ArgumentException($"character '{c}' cannot be typed on the US keyboard layout");
             }
 
             ushort vk = (ushort)(scan & 0xFF);
@@ -176,6 +177,40 @@ internal sealed unsafe class Win32GameDriver : IGameDriver
             Thread.Sleep(25);
         }
     }
+
+    /// <summary>
+    /// Switches the window's thread to the US layout and returns it. The game turns the virtual keys it receives into
+    /// characters with its own thread's layout, and the operator's may not be Latin at all: on a Russian layout the
+    /// chat cheats arrived as Cyrillic and VkKeyScanW could not even map 'a' (operator run, 2026-10-18). With Windows'
+    /// default per-user layout switching this also switches the desktop's layout for the rest of the session.
+    /// </summary>
+    private nint UseUsLayout()
+    {
+        nint us = LoadKeyboardLayoutW("00000409", KlfNoTellShell);
+        if (us == 0)
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError(), "the US keyboard layout (00000409) could not be loaded");
+        }
+
+        uint thread = GetWindowThreadProcessId(_hwnd, out _);
+        if (IsUs(GetKeyboardLayout(thread)))
+        {
+            return us;
+        }
+
+        PostMessageW(_hwnd, WmInputLangChangeRequest, 0, us);
+        for (int i = 0; i < 20 && !IsUs(GetKeyboardLayout(thread)); i++)
+        {
+            Thread.Sleep(25);
+        }
+
+        return IsUs(GetKeyboardLayout(thread))
+            ? us
+            : throw new InvalidOperationException(
+                "the game window did not switch to the English (US) keyboard layout; switch the layout to ENG and rerun");
+    }
+
+    private static bool IsUs(nint layout) => (layout & 0xFFFF) == 0x0409;
 
     public void MouseMove(ScreenPoint point)
     {
