@@ -124,6 +124,35 @@ public sealed partial class GameplayScenario : IBenchScenario
             },
             workerCount);
         _bot = Xoshiro256StarStar.FromSeed(options.Seed ^ 0xB07UL);
+        DamageFirstHouses(Simulation.World, options.Players);
+    }
+
+    /// <summary>
+    /// Every kingdom's first house starts at three quarters of its hit points (above the burn threshold), so the bot has
+    /// a repair to finish in its base whatever the battle does: with the measured walking speeds (ADR 0172) no house in
+    /// a base got damaged early enough for a repair to complete in the golden run.
+    /// </summary>
+    private void DamageFirstHouses(World world, int players)
+    {
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int p = 0; p < players; p++)
+        {
+            EntityId first = EntityId.None;
+            for (int i = 0; i < structures.Length; i++)
+            {
+                EntityId s = structures[i];
+                if (world.Identities.Get(s).Owner == p && world.Identities.Get(s).TypeId == _house && (first.IsNone || s.CompareTo(first) < 0))
+                {
+                    first = s;
+                }
+            }
+
+            if (!first.IsNone)
+            {
+                ref Health health = ref world.Healths.Get(first);
+                health.Current = health.Max * 3 / 4;
+            }
+        }
     }
 
     /// <summary>The ruleset.</summary>
@@ -593,14 +622,22 @@ public sealed partial class GameplayScenario : IBenchScenario
             _batch.Add(CommandKind.Capture, Span(_selection), target: house);
         }
 
-        // The busy worker nearest to the damaged building repairs it: idle workers became rare once units walked at
-        // SPEED x 10 px/s, and the one sent from far away arrived too late to finish (ADR 0171).
-        if (tick % 300 < window && DamagedOwn(world, player) is { IsNone: false } damaged
-            && NearestBusyWorker(world, world.Positions.Get(damaged)) is { IsNone: false } repairer)
+        // The busy workers nearest to a damaged building in the base repair it together: idle workers became rare once
+        // units walked at their measured speeds, and one repairer sent from far away arrived too late or lost to the
+        // attackers (ADRs 0171, 0172).
+        if (tick % 300 < window && DamagedOwn(world, player, world.Positions.Get(castle)) is { IsNone: false } damaged)
         {
             _selection.Clear();
-            _selection.Add(repairer);
-            _batch.Add(CommandKind.Repair, Span(_selection), target: damaged);
+            Position site = world.Positions.Get(damaged);
+            for (int k = 0; k < RepairCrew && NearestBusyWorker(world, site) is { IsNone: false } repairer; k++)
+            {
+                _selection.Add(repairer);
+            }
+
+            if (_selection.Count > 0)
+            {
+                _batch.Add(CommandKind.Repair, Span(_selection), target: damaged);
+            }
         }
 
         // Three busy workers (from the end of the list, so the idle passes above keep theirs) get the gate, the wall and
@@ -674,7 +711,13 @@ public sealed partial class GameplayScenario : IBenchScenario
         return best;
     }
 
-    /// <summary>The working (not idle) worker nearest to a point, leaving out the three that build the gate, wall and bridge.</summary>
+    /// <summary>Workers the bot sends to one repair.</summary>
+    private const int RepairCrew = 3;
+
+    /// <summary>
+    /// The working (not idle) worker nearest to a point that is not already selected, leaving out the three that build the
+    /// gate, wall and bridge.
+    /// </summary>
     private EntityId NearestBusyWorker(World world, Position to)
     {
         EntityId best = EntityId.None;
@@ -682,7 +725,7 @@ public sealed partial class GameplayScenario : IBenchScenario
         for (int i = 0; i < _allWorkers.Count - 3; i++)
         {
             EntityId w = _allWorkers[i];
-            if (_idleWorkers.Contains(w))
+            if (_idleWorkers.Contains(w) || _selection.Contains(w))
             {
                 continue;
             }
@@ -698,12 +741,16 @@ public sealed partial class GameplayScenario : IBenchScenario
         return best;
     }
 
+    /// <summary>Repairs stay within this distance of the bot's castle (its own base).</summary>
+    private const long RepairRadiusUnits = 20L * MapState.UnitsPerTile;
+
     /// <summary>
-    /// The own building that is not on fire with the fewest hit points missing. The first damaged one in the list was
-    /// usually a burning house that lost hit points faster than one repairer restores them, so no repair completed once
-    /// units walked at SPEED x 10 px/s (ADR 0171).
+    /// The own building in the base (within <see cref="RepairRadiusUnits"/> of the castle) that is not on fire with the
+    /// fewest hit points missing. The first damaged one in the list was usually a burning house that lost hit points faster
+    /// than one repairer restores them, or a captured house or the gateway across the map, so no repair completed in the
+    /// golden run once units walked at their measured speeds (ADRs 0171, 0172).
     /// </summary>
-    private static EntityId DamagedOwn(World world, byte player)
+    private static EntityId DamagedOwn(World world, byte player, Position castle)
     {
         EntityId best = EntityId.None;
         int bestMissing = int.MaxValue;
@@ -712,8 +759,10 @@ public sealed partial class GameplayScenario : IBenchScenario
         {
             EntityId s = structures[i];
             int missing = world.Healths.Get(s).Max - world.Healths.Get(s).Current;
+            Position at = world.Positions.Get(s);
             if (world.Identities.Get(s).Owner == player && !world.Constructions.Has(s) && world.TypeOf(s).Traits.IsRepairable
-                && !world.Burnings.Has(s) && missing > 0 && missing < bestMissing)
+                && !world.Burnings.Has(s) && missing > 0 && missing < bestMissing
+                && Core.Numerics.IntMath.DistanceSquared(at.X, at.Y, castle.X, castle.Y) <= RepairRadiusUnits * RepairRadiusUnits)
             {
                 (best, bestMissing) = (s, missing);
             }

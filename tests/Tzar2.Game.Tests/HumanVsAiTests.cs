@@ -99,9 +99,10 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
 
     /// <summary>
     /// Game minutes on Archipelagos, where the first wave must also board a transport, cross the sea and land (ADR 0144;
-    /// on this map a little after 9 minutes): a passive human keeps nothing within a ship's range of the water before.
+    /// on this map a little after 9 minutes, between 12 and 14 since the measured walking speeds of ADR 0172): a passive
+    /// human keeps nothing within a ship's range of the water before.
     /// </summary>
-    private const int SeaMapTypeMinutes = 12;
+    private const int SeaMapTypeMinutes = 14;
 
     private static int MinutesFor(Tzar2.Content.MapGen.RandomMapType type) => type == Tzar2.Content.MapGen.RandomMapType.Archipelagos ? SeaMapTypeMinutes : MapTypeMinutes;
 

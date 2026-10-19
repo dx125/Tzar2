@@ -36,9 +36,8 @@ gameplay:
   startingResources: legacy           # RES.INI [Low]/[Medium]/[High] (lobby STARTING RESOURCES)
   defaultStartingResources: medium    # UNVERIFIED: the lobby's default level
   # Compile-time conversions of table columns.
-  # SPEED 4 = 40.0 px/s VERIFIED (capture-20261019-020223, unit-speed: peasant, archer, priest, mage, both directions,
-  # 39.9-40.1 px/s); that SPEED scales it proportionally is UNVERIFIED until another SPEED value is measured (ADR 0171).
-  speedPixelsPerSecondPerPoint: 10    # px/s per SPEED point
+  # Only for classes without a measured Mobile.pixelsPerSecond: the original does not scale walking speed by SPEED (ADR 0172).
+  speedPixelsPerSecondPerPoint: 10    # UNVERIFIED (UNK-12): px/s per SPEED point
   attackCycleMs: 6000                 # UNVERIFIED (UNK-07): time between hits = attackCycleMs / RATE
   hitDelayPercent: 50                 # UNVERIFIED (UNK-07): hit frame at this share of the cycle
   manaRegenPerMinute: 60              # UNVERIFIED (UNK-26): mana a caster regains per minute
@@ -208,8 +207,21 @@ legacy:
   Repairable: {}                      # GAME-03: peasants repair siege weapons (manual ch. 5)
   -CorpseOnDeath:
 
+# Walking speeds (UNK-12, ADR 0172). The original ignores the SPEED column for walking: measured in both directions
+# (capture-20261019-163231 and -190321, r² ≥ 0.99), every foot class walks 40 px/s whatever its SPEED (2-4), knights and
+# crusaders 72, trolls 47, ghosts 67 (66.6), cows and bears 26 (25.7); the speed follows the stride of the walk sheet
+# (IMAGES.INI move_len 50, 85, 56, 80, 32), by a rule not yet known. Measured classes set Mobile.pixelsPerSecond
+# (VERIFIED); the others keep SPEED x gameplay.speedPixelsPerSecondPerPoint (UNVERIFIED).
+^class.footman: { Mobile: { pixelsPerSecond: 40 } }    # VERIFIED (ADR 0172)
+^class.maceman: { Mobile: { pixelsPerSecond: 40 } }    # VERIFIED (ADR 0172)
+^class.pikeman: { Mobile: { pixelsPerSecond: 40 } }    # VERIFIED (ADR 0172)
+^class.dwarf: { Mobile: { pixelsPerSecond: 40 } }      # VERIFIED (ADR 0172)
+^class.ork: { Mobile: { pixelsPerSecond: 40 } }        # VERIFIED (ADR 0172)
+^class.troll: { Mobile: { pixelsPerSecond: 47 } }      # VERIFIED (ADR 0172)
+
 # Peasants (manual §5.4: build, repair, capture, harvest...).
 ^class.peon:
+  Mobile: { pixelsPerSecond: 40 }    # VERIFIED (ADR 0172)
   Armament: { autoAcquire: false }    # UNVERIFIED: idle peasants do not start fights
   Builder: { civilizations: [own, comm] }
   Capturer: {}                        # GAME-04
@@ -238,13 +250,14 @@ legacy:
   Mobile: { speed: 4 }                     # UNVERIFIED (UNK-12)
   Trader: { capacity: 100, access: land, technology: te_traderoutes }   # UNVERIFIED (UNK-28): load per trip
 
-^class.knight: { inherits: [^Cavalry] }
+^class.knight: { inherits: [^Cavalry], Mobile: { pixelsPerSecond: 72 } }    # VERIFIED (ADR 0172)
 ^class.heavy_cavalry: { inherits: [^Cavalry] }
 ^class.horse_samurai: { inherits: [^Cavalry] }
 
 # Cows (GAME-02): peasants milk them (the food they hold regrows) and butcher them for meat; Arab peasants steal enemy
 # cows after Cow Poaching (manual ch. 6).
 ^class.cow:
+  Mobile: { pixelsPerSecond: 26 }    # VERIFIED (ADR 0172)
   ResourceNode:
     regenMs: 4000                     # UNVERIFIED (UNK-17): milk regrows one unit per 4 s
     gatherMs: 200                     # UNVERIFIED (UNK-17): milking time per unit; batch B bounds it (a 50-unit trip, walk included, took 10.6 s; ADR 0170)
@@ -255,6 +268,7 @@ legacy:
   ClaimOnTouch: { by: any }           # UNVERIFIED: a wild (Nature) cow joins the first kingdom whose unit touches it (GAME-15)
   Animal: { wanders: true }           # UNVERIFIED: wild cows wander around their spot
 ^class.bear:
+  Mobile: { pixelsPerSecond: 26 }    # VERIFIED (ADR 0172)
   Animal: { wanders: true, guards: true }   # UNVERIFIED: bears roam their area and return when lured away
 # Magic gateways (manual ch. 5 §4.4.2): neutral until a military unit touches them; they summon dwarves, orcs, ghosts and
 # skeletons (producer column "Gate"; ghosts and skeletons by the gateway's command card, MENU.INI [magic_gateway]).
@@ -262,13 +276,13 @@ legacy:
   ClaimOnTouch: { by: military }
   -Burnable:
   -RuinOnDeath:
-^class.ghost: { Producible: { by: [comm.magicgateway] } }
-^class.skeleton: { Producible: { by: [comm.magicgateway] } }
+^class.ghost: { Producible: { by: [comm.magicgateway] }, Mobile: { pixelsPerSecond: 67 } }    # speed VERIFIED (ADR 0172)
+^class.skeleton: { Producible: { by: [comm.magicgateway] }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
 # Trade docks and the tavern (GAME-14, ADR 0103).
 ^class.market: { TradeDock: { access: land } }
 ^class.tavern: { Tavern: {} }
 # Spies and ninjas see cloaked units near them (GAME-12; radius UNVERIFIED).
-^class.spy: { Detector: { radius: 5 } }
+^class.spy: { Detector: { radius: 5 }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
 ^class.ninja: { Detector: { radius: 5 } }
 
 # Drop-offs (GAME-02; manual §5.4.1.2 and ch. 6: castle stores all resources, farm food, lumbermill wood; storage per
@@ -336,18 +350,18 @@ legacy:
 # ---- GAME-07...11: combat, experience, holders, items, magic (ADRs 0090-0095) ----------------------------------------
 # Projectiles per shooter (TDD §10 GAME-07: arrow, bolt, cannon, rocket arrow, stone). Which unit fires which is not in
 # a table: the BONUS.INI group arrow_attack names the arrow shooters; the rest follows the manual's descriptions.
-^class.archer: { Armament: { projectile: arrow } }
-^class.longbowman: { Armament: { projectile: arrow } }
+^class.archer: { Armament: { projectile: arrow }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
+^class.longbowman: { Armament: { projectile: arrow }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
 ^class.horse_archer: { Armament: { projectile: arrow } }
 ^class.tower_wood: { Armament: { projectile: arrow } }
 ^class.tower_wood2: { Armament: { projectile: arrow } }
 ^class.tower_stone: { Armament: { projectile: arrow } }
 ^class.tower_stone2: { Armament: { damage: cannon, projectile: cannon } }        # cannon tower
 ^class.tower_rocket: { Armament: { damage: cannon, projectile: rocket_arrow } }  # UNVERIFIED (UNK-22)
-^class.mage: { Armament: { projectile: magic } }                                 # UNVERIFIED: the mage's bolt (OBJECTS MAGIC)
-^class.priest: { Armament: { projectile: magic } }                               # exorcism (order exorcism = attack)
+^class.mage: { Armament: { projectile: magic }, Mobile: { pixelsPerSecond: 40 } }    # UNVERIFIED: the mage's bolt (OBJECTS MAGIC); speed VERIFIED (ADR 0172)
+^class.priest: { Armament: { projectile: magic }, Mobile: { pixelsPerSecond: 40 } }    # exorcism (order exorcism = attack); speed VERIFIED (ADR 0172)
 ^class.dragon: { Armament: { projectile: flame_ball } }                          # UNVERIFIED (OBJECTS FLAME_BALL)
-^class.crusader: { BribeImmune: {} }                                             # TDD GAME-11: crusaders cannot be bribed
+^class.crusader: { BribeImmune: {}, Mobile: { pixelsPerSecond: 72 } }    # TDD GAME-11: crusaders cannot be bribed; speed VERIFIED (ADR 0172)
 ^class.dummy:
   TrainingDummy: {}                   # GAME-08: training against dummies (Tactics); they take no damage
   -Burnable:
