@@ -19,6 +19,8 @@ public partial class GameApp
 {
     private MapDocument? _editorDocument;
     private ICampaignSource? _converted;
+    private CampaignDocument? _editorCampaign;
+    private DebuggerWindow? _debuggerWindow;
     private string? _editorPath;
 
     /// <summary>The editor screen, or null.</summary>
@@ -34,11 +36,20 @@ public partial class GameApp
             return;
         }
 
+        if (_debuggerWindow is not null)
+        {
+            _debuggerWindow.QueueFree();
+            _debuggerWindow = null;
+        }
+
+        Debugger?.Dispose();
+        Debugger = null;
         var screen = new EditorScreen(_store, _rules, _catalog, _editorDocument, _editorPath);
         screen.Closed += () =>
         {
             _editorDocument = null;
             _editorPath = null;
+            _editorCampaign = null;
             ShowMainMenu();
         };
         screen.PlaytestRequested += (options, debug) => StartPlaytest(screen, options, debug);
@@ -48,6 +59,17 @@ public partial class GameApp
             _converted = source;
             StartMission(source, null);
         };
+        screen.CampaignPlaytestRequested += (source, map) =>
+        {
+            RememberEditor(screen);
+            _editorCampaign = screen.OpenCampaignEditor().Campaign;
+            _converted = source;
+            StartMission(source, map);
+        };
+        if (_editorCampaign is { } campaign)
+        {
+            screen.Ready += () => screen.OpenCampaignEditor(campaign);
+        }
         EditorOpened?.Invoke(screen);
         Replace(screen, music: null);
         if (file is not null)
@@ -88,22 +110,15 @@ public partial class GameApp
         }
 
         var game = new GameScreen(_store, _ui!, session, editor.Document.TerrainSet ?? "grass", _args.SoundFont, _settings) { KeepSpeed = true };
-        DebuggerWindow? window = null;
         if (debug && session.Scenario is not null)
         {
             Debugger = new TriggerDebugger(session);
-            window = new DebuggerWindow(Debugger, session);
-            AddChild(window);
-            window.Show();
+            _debuggerWindow = new DebuggerWindow(Debugger, session);
+            AddChild(_debuggerWindow);
+            _debuggerWindow.Show();
         }
 
-        void Back()
-        {
-            window?.QueueFree();
-            Debugger?.Dispose();
-            Debugger = null;
-            ShowEditor();
-        }
+        void Back() => ShowEditor();
 
         game.QuitRequested += Back;
         game.Finished += (_, _) => Back();

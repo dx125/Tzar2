@@ -25,9 +25,9 @@ Status:
 <!-- summary:start -->
 | | Items | Done | Blocked | Planned |
 |---|---|---|---|---|
-| All | 104 | 89 | 1 | 14 |
+| All | 104 | 97 | 1 | 6 |
 
-Parity: **85 %** done.
+Parity: **93 %** done.
 <!-- summary:end -->
 
 ## §18.2 New map
@@ -146,12 +146,12 @@ Parity: **85 %** done.
 
 | Id | Feature | Status | Evidence | Notes |
 |---|---|---|---|---|
-| camp-maps | Import/export/delete maps | planned |  |  |
-| camp-details | Map description and details | planned |  |  |
-| camp-entry | Entry (starting) maps | planned |  |  |
-| camp-description | Campaign description | planned |  |  |
-| camp-files | Save, open, new | planned |  |  |
-| camp-legacy | Import of legacy `.wmp`/`.wcm` through the converter | planned |  |  |
+| camp-maps | Import/export/delete maps | done | CampaignEditorTests.Map_import_export_delete_and_order | import .t2map, add the open map, new empty map, export (with shared resources), delete, reorder |
+| camp-details | Map description and details | done | CampaignEditorTests.Maps_entries_descriptions_and_the_graph_from_the_maps_actions | campaign-screen description per map; details = the map's own description |
+| camp-entry | Entry (starting) maps | done | CampaignEditorTests.Maps_entries_descriptions_and_the_graph_from_the_maps_actions, CampaignEditorTests.A_campaign_needs_an_entry_map_and_unique_map_names | no entry map blocks play (Appendix C.9) |
+| camp-description | Campaign description | done | CampaignEditorTests.Maps_entries_descriptions_and_the_graph_from_the_maps_actions |  |
+| camp-files | Save, open, new | done | CampaignEditorTests.Save_open_new_round_trip_byte_identical_with_shared_resources_stored_once, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless |  |
+| camp-legacy | Import of legacy `.wmp`/`.wcm` through the converter | done | CampaignEditorTests.A_legacy_map_can_be_added_from_a_file, CampaignEditorTests.A_converted_campaign_opens_and_saves_back_to_the_converters_exact_bytes | "Add map from legacy file"; converted campaigns open from the import window |
 
 ## §18.3 Modern additions
 
@@ -161,7 +161,7 @@ Parity: **85 %** done.
 | m-validation | Live validation panel: errors/warnings, click to locate, play blocked only for blocking errors | done | ValidationTests.Unknown_types_and_bad_owners_block_play_but_the_map_stays_editable, ValidationTests.Expression_names_and_trigger_references_are_checked, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | panel re-validates 0.5 s after every change; click locates; only Blocking findings block play |
 | m-playtest | Playtest as any player, time controls, reveal map | done | TriggerEditorTests.Playtest_as_any_kingdom_with_the_map_revealed, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | Play menu: as any kingdom, reveal map; the game's speed keys and pause are the time controls |
 | m-debugger | Trigger debugger: last results, variable watch, breakpoints, step, event log | done | TriggerEditorTests.The_debugger_watches_variables_tracks_results_and_breaks_on_rules_and_actions, TriggerEditorTests.A_debugged_playtest_plays_exactly_like_an_undebugged_one | breaks after the tick in which the rule fires or the action runs (ADR 0153) |
-| m-campaign-graph | Visual campaign graph: entries, persistence mapping, carried variables | planned |  |  |
+| m-campaign-graph | Visual campaign graph: entries, persistence mapping, carried variables | done | CampaignEditorTests.The_graph_flags_unreachable_maps_dangling_names_and_shows_persistence_and_carried_variables, CampaignEditorTests.An_edited_campaign_plays_through_the_campaign_flow_with_carry_over | GraphEdit view: entries green, unreachable red, dangling names on their node, draggable nodes saved in editor.json |
 | m-areas-groups | Named areas and object groups reusable across triggers | done | TriggerEditorTests.Named_areas_and_object_groups_follow_their_edits, PackageTests.Ids_areas_and_groups_survive_in_editor_json | reused by value: editing one updates every equal trigger area / object set |
 | m-search-replace | Search and replace of object references | done | DocumentTests.Search_and_replace_of_object_references |  |
 | m-copy-paste | Copy/paste and prefabs across maps | done | ToolTests.Copy_paste_across_maps_and_prefabs, ControllerTests.Copy_paste_through_text_and_locked_layers_are_not_selectable | system clipboard; prefabs are the same JSON as files |
@@ -180,7 +180,7 @@ Parity: **85 %** done.
 |---|---|---|---|---|
 | fmt-t2map | `.t2map` saved and loaded through the package writers | done | PackageTests.The_package_has_the_section_18_4_parts_and_no_editor_json_when_nothing_needs_it |  |
 | fmt-roundtrip | Deterministic save; load/save round trip byte-identical (editor and converter packages) | done | PackageTests.Saving_is_deterministic_and_a_load_save_round_trip_is_byte_identical, PackageTests.A_converted_legacy_map_loads_and_saves_back_to_the_converters_exact_bytes |  |
-| fmt-t2camp | `.t2camp` saved and loaded | planned |  |  |
+| fmt-t2camp | `.t2camp` saved and loaded | done | CampaignEditorTests.Save_open_new_round_trip_byte_identical_with_shared_resources_stored_once, CampaignEditorTests.A_converted_campaign_opens_and_saves_back_to_the_converters_exact_bytes |  |
 | fmt-scenario | The document builds into the compiled contract without loss | done | DocumentTests.A_scenario_opened_from_compiled_data_builds_back_unchanged |  |
 
 ## §18.5 Converter in the editor
