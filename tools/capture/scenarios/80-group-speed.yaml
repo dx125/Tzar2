@@ -9,9 +9,10 @@ minutes: 1.3
 default: false                      # batch E (ADR 0113)
 experimental: true
 description: |
-  A knight (SPEED 6) and a pikeman (SPEED 2) are spawned side by side, selected together and ordered 300 px west and
+  A knight (SPEED 6) and a pikeman (SPEED 2) are spawned side by side, selected together and ordered 400 px west and
   back. The analysis tracks the moving pixels; the suite compares the group's speed with the members' speeds measured
-  by unit-speed (the engine moves a group at its slowest member's speed).
+  by unit-speed (the engine moves a group at its slowest member's speed). Same place as unit-speed: the open rows
+  51-53 by our base, away from Nature's cows in the middle of the map, which idle military units attack (ADR 0171).
 launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: knight-pikeman
@@ -28,20 +29,23 @@ steps:
   - wait: 1
   - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
   - wait: 1
-  - minimap: [0.5, 0.5]
+  - minimap: [0.1, 0.95]            # clamps the view to the bottom-left corner: tile (x, y) at (150 + 32x, 32y - 1280)
   - wait: 1
-  - move: [600, 320]
+  - snapshot: view
+  - move: [880, 380]                # tile (22.8, 51.9)
   - chat: "${cheat}spawn knight"
-  - click: [600, 320]               # place
-  - move: [600, 370]
+  - click: [880, 380]               # place
+  - move: [880, 430]                # tile (22.8, 53.4)
   - chat: "${cheat}spawn pikeman"
-  - click: [600, 370]               # place
-  - drag: {from: [560, 285], to: [640, 400]}
+  - click: [880, 430]               # place
+  - drag: {from: [840, 345], to: [925, 470]}
   - wait: 0.5
-  - click: {at: [300, 345], button: right}
+  - click: {at: [480, 405], button: right}
   - move: [70, 400]
-  - burst: {name: west, count: 120, interval_ms: 100, region: [150, 270, 874, 140]}
-  - click: {at: [900, 345], button: right}
+  # x 440-990 leaves out our cows (columns 0-6 and 27) and the peasants of row 55.
+  - burst: {name: west, count: 120, interval_ms: 100, region: [440, 320, 550, 160]}
+  - click: {at: [960, 405], button: right}
   - move: [70, 400]
-  - burst: {name: east, count: 140, interval_ms: 100, region: [150, 270, 874, 140]}
+  - burst: {name: east, count: 140, interval_ms: 100, region: [440, 320, 550, 160]}
+  - snapshot: end
 analysis: [unit-speed]

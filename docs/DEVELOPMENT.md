@@ -131,6 +131,9 @@ GOG v1.10 (ADRs 0110, 0111, 0169), in case it recurs:
 * cnc-ddraw runs with `devmode=true` (otherwise the first click is swallowed); `-map <name>.wmp` opens the setup screen
   and scenarios click PLAY; `hmreveal`/`hmnofog` reveal the map (the command-line flags do not); `hmnopop` before
   `hmspawn`; `hmkingdom N` changes the owner of the selected unit.
+* MP2's middle has a row of Nature's wild cows (map rows 33–34) that idle soldiers attack within seconds; scenarios
+  that need a soldier to stay put or walk where it is told run elsewhere (ADR 0171: the view clamped to the
+  bottom-left corner, rows 51–53 by our base).
 * The operator must not touch mouse or keyboard during a batch; stop with Ctrl+C in the terminal (the zip keeps what
   was captured). Do not install third-party launchers into the GOG folder: they patch `Tzar.exe` (the run then fails
   the reference check).

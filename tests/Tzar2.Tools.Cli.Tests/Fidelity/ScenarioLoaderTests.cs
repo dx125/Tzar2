@@ -60,6 +60,7 @@ public class ScenarioLoaderTests
             // Keep the mouse out of the edge-scroll zone: batch B's box to (1015, 760) scrolled the camera away from the
             // unit it was to measure.
             const int Edge = 16;
+            ScreenRect minimap = session.Layout.Minimap;
             foreach (StepSpec step in s.Steps)
             {
                 ScreenPoint[] points = step switch
@@ -67,6 +68,8 @@ public class ScenarioLoaderTests
                     ClickStep c => [c.At],
                     MoveStep m => [m.At],
                     DragStep d => [d.From, d.To],
+                    // A corner of the minimap is near the window's corner (ADR 0171 clamps the view with [0.1, 0.95]).
+                    MinimapStep m => [new ScreenPoint(minimap.X + (int)System.Math.Round(m.U * minimap.Width), minimap.Y + (int)System.Math.Round(m.V * minimap.Height))],
                     _ => [],
                 };
                 foreach (ScreenPoint p in points)

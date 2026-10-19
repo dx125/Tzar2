@@ -155,6 +155,21 @@ public class AnalysisMathTests
     }
 
     [Fact]
+    public void Unit_speed_rejects_short_fits_and_fits_against_the_order()
+    {
+        // Batch B (ADR 0171): the peasant's clean walk, a maceman heading east for a cow in the "west" burst, and a
+        // crusader's two-second dash.
+        var walk = new UnitSpeed.Fit(39.98, -39.92, 2.29, 0.96, 78, 7.71, 303.7);
+        var against = new UnitSpeed.Fit(40.98, 40.13, 8.35, 0.95, 40, 4.0, 160);
+        var dash = new UnitSpeed.Fit(41.78, -41.77, 0.89, 0.91, 21, 2.0, 79);
+        Assert.Null(UnitSpeed.Rejection("west", walk));
+        Assert.Contains("east in a burst ordered west", UnitSpeed.Rejection("west", against), StringComparison.Ordinal);
+        Assert.Null(UnitSpeed.Rejection("east", against));
+        Assert.Null(UnitSpeed.Rejection("north", against));
+        Assert.StartsWith("too short", UnitSpeed.Rejection("west", dash), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Attack_timing_picks_the_series_that_steps_down()
     {
         long[] times = Enumerable.Range(0, 100).Select(i => (long)i * 10_000).ToArray();

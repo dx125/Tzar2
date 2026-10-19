@@ -36,7 +36,9 @@ gameplay:
   startingResources: legacy           # RES.INI [Low]/[Medium]/[High] (lobby STARTING RESOURCES)
   defaultStartingResources: medium    # UNVERIFIED: the lobby's default level
   # Compile-time conversions of table columns.
-  speedPixelsPerSecondPerPoint: 12    # UNVERIFIED (UNK-12): px/s per SPEED point (SPEED 4 = 48 px/s)
+  # SPEED 4 = 40.0 px/s VERIFIED (capture-20261019-020223, unit-speed: peasant, archer, priest, mage, both directions,
+  # 39.9-40.1 px/s); that SPEED scales it proportionally is UNVERIFIED until another SPEED value is measured (ADR 0171).
+  speedPixelsPerSecondPerPoint: 10    # px/s per SPEED point
   attackCycleMs: 6000                 # UNVERIFIED (UNK-07): time between hits = attackCycleMs / RATE
   hitDelayPercent: 50                 # UNVERIFIED (UNK-07): hit frame at this share of the cycle
   manaRegenPerMinute: 60              # UNVERIFIED (UNK-26): mana a caster regains per minute
