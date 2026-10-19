@@ -9,8 +9,8 @@ namespace Tzar2.Tools.Cli.Fidelity.Analysis;
 
 /// <summary>
 /// <c>region-timing</c>: when does a small screen region change? Used for times the HUD shows (TDD §22.3):
-/// the population box steps once per trained unit (production time, a queue of several gives the interval), the
-/// selection panel of a construction site turns into the building's card when it is finished (construction time).
+/// the population box steps once per trained unit (production time, a queue of several gives the interval); for a
+/// construction site the selection panel's health bar rises at the build rate (<see cref="BarRate"/>).
 /// A frame is a change when at least 2 % of the region's pixels differ from the previous frame by more than 16 levels
 /// in some channel; consecutive changed frames count as one event, timed at its first frame.
 /// </summary>
@@ -69,9 +69,25 @@ internal static class RegionTiming
                     found++;
                     e.Add("last_event_s", Math.Round(events[^1], 3));
                 }
-                else
+                else if (trial.Var("measure") != "build")
                 {
                     notes.Add($"{trial.Trial}/{burst.Name}: the region never changed");
+                }
+
+                if (trial.Var("measure") == "build")
+                {
+                    if (BarRate(frames) is { } bar)
+                    {
+                        found++;
+                        e.Add("bar_row", bar.Row, "row of the health bar in the region");
+                        e.Add("bar_px", bar.Length);
+                        e.Add("bar_fit", new YamlWriter.Flow([bar.Points, Math.Round(bar.FromS, 3), Math.Round(bar.ToS, 3)]), "points, first and last s of the one-builder fit");
+                        e.Add("one_builder_full_s", Math.Round(bar.Length / bar.PxPerSecond, 3), "the full bar at the initial (one builder) rate");
+                    }
+                    else
+                    {
+                        notes.Add($"{trial.Trial}/{burst.Name}: no rising health bar in the region");
+                    }
                 }
 
                 entries.Add(e);
@@ -82,6 +98,103 @@ internal static class RegionTiming
         facts.Add("note", "times are window-capture timestamps (QueryPerformanceCounter) at the default game speed");
         facts.Add("measurements", entries);
         return new AnalysisOutcome(found > 0 ? "ok" : "inconclusive", facts, notes);
+    }
+
+    /// <summary>
+    /// The construction rate read from the selection panel's health bar. The original shows the site with its hit points
+    /// rising from 1 to HEALTH, it never turns into a different card (batch A, 2026-10-18), and other peasants may join
+    /// the builder later (the rate then doubles), so only the initial straight run counts: the longest prefix of rising
+    /// frames that stays within <see cref="FitTolerancePx"/> of its own least-squares line.
+    /// </summary>
+    public static (int Row, int Length, double PxPerSecond, int Points, double FromS, double ToS)? BarRate(IReadOnlyList<(double T, CaptureImage Image)> frames)
+    {
+        if (frames.Count < 4)
+        {
+            return null;
+        }
+
+        CaptureImage last = frames[^1].Image;
+        int row = -1, length = 0;
+        for (int y = 0; y < last.Height; y++)
+        {
+            int n = BarPixels(last, y);
+            if (n > length)
+            {
+                (row, length) = (y, n);
+            }
+        }
+
+        if (length < MinBarPx)
+        {
+            return null;
+        }
+
+        var points = new List<(double S, int Fill)>();
+        foreach ((double t, CaptureImage image) in frames)
+        {
+            int fill = row < image.Height ? BarPixels(image, row) : 0;
+            if (fill > 0 && fill < length)
+            {
+                points.Add(((t - frames[0].T) / 1000.0, fill));
+            }
+        }
+
+        int used = 0;
+        double slope = 0;
+        for (int n = MinFitPoints; n <= points.Count; n++)
+        {
+            (double a, double b) = Fit(points, n);
+            bool straight = true;
+            for (int i = 0; i < n && straight; i++)
+            {
+                straight = Math.Abs(points[i].Fill - (a + (b * points[i].S))) <= FitTolerancePx;
+            }
+
+            if (!straight)
+            {
+                break;
+            }
+
+            (used, slope) = (n, b);
+        }
+
+        return used >= MinFitPoints && slope > 0 ? (row, length, slope, used, points[0].S, points[used - 1].S) : null;
+    }
+
+    private const int MinBarPx = 10;
+    private const int MinFitPoints = 8;
+    private const double FitTolerancePx = 2.5;
+
+    // Health-bar green: the filled part of the bar (the rest is red).
+    private static int BarPixels(CaptureImage image, int y)
+    {
+        int n = 0;
+        for (int x = 0; x < image.Width; x++)
+        {
+            (int r, int g, int b) = Rgb8(image, image.NativeAt(x, y));
+            if (g > 120 && r < 100 && b < 100)
+            {
+                n++;
+            }
+        }
+
+        return n;
+    }
+
+    private static (double A, double B) Fit(List<(double S, int Fill)> points, int n)
+    {
+        double sx = 0, sy = 0, sxx = 0, sxy = 0;
+        for (int i = 0; i < n; i++)
+        {
+            sx += points[i].S;
+            sy += points[i].Fill;
+            sxx += points[i].S * points[i].S;
+            sxy += points[i].S * points[i].Fill;
+        }
+
+        double d = (n * sxx) - (sx * sx);
+        double b = d == 0 ? 0 : ((n * sxy) - (sx * sy)) / d;
+        return ((sy - (b * sx)) / n, b);
     }
 
     /// <summary>Event times (seconds after the first frame) of changes between consecutive frames.</summary>

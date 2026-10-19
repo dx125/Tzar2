@@ -204,6 +204,6 @@ public class ConstructionM3Tests
 
         int normal = Build(false);
         int fast = Build(true);
-        Assert.InRange(normal - fast, 150, 170); // 16 s → 8 s
+        Assert.InRange(normal - fast, 190, 210); // TIME 16: 20 s → 10 s with Architecture
     }
 }

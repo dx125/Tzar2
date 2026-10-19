@@ -729,8 +729,8 @@ internal sealed partial class LegacyImporter
 
         if (Cell(row, ColTime).Length > 0)
         {
-            long ms = (long)Int(row, ColTime, source, key, 0) * 1000;
-            body.Trait("BuildTime", ("ms", ms is >= 0 and <= int.MaxValue ? Num((int)ms) : throw new RulesException(source, 0, $"{key}: TIME {ms / 1000} is out of range")));
+            long ms = (long)Int(row, ColTime, source, key, 0) * LegacyTime.MsPerTimeUnit;
+            body.Trait("BuildTime", ("ms", ms is >= 0 and <= int.MaxValue ? Num((int)ms) : throw new RulesException(source, 0, $"{key}: TIME {ms / LegacyTime.MsPerTimeUnit} is out of range")));
         }
     }
 

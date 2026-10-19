@@ -1,4 +1,20 @@
-# Fidelity summary (after the first capture session)
+# Fidelity summary (after batch A of the second session)
+
+## Batch A (session `capture-20261018-155421`, ADR 0169)
+
+Windows 11 25H2, clean GOG v1.10 EN, 12/12 trials, 82/82 usable images. The suite now passes **5 of 30 = 16.7 %**
+(secondary: 5 of 5 measured): attack cycle, damage (two pairs), population limit, production time and construction
+time. The last two needed an engine change: the TIME column is **1.25 s per unit** (peasant TIME 8: 9.99 s; lumber
+mill TIME 30: 36.85 s for one builder, read from the selection panel's health bar). Rendering: player colours of all
+eight kingdoms on the UI ramp (9 of 9 swatches); shadow overlap and the sprite ramps are still inconclusive.
+
+What it took on the operator's PC, beyond the harness fixes of ADR 0110: `hmnopop` before every `hmspawn` (spawning
+obeys the house limit), the DirectDraw device count as `DirectDrawEnumerateA` + 1, and typing on the US layout
+whatever the operator's layout is (capture harness PR #60). `hmkingdom N` changes the owner of the selected unit; new
+spawns stay with kingdom 1. GOG's own `tzar.ini` has no `SPGAMETICK` / `MPGAMETICK` (the GOG file is byte-identical to
+the reference); `Tzar.exe` reads both keys, defaults unknown.
+
+## First session
 
 Session `capture-20261018-024524`: Windows 11 25H2, clean GOG v1.10 EN, 16/16 trials, 112/112 usable images.
 Facts are in `tests/fidelity/facts/` and decisions in ADR 0111. A placeholder counts as VERIFIED only when a
@@ -54,4 +70,5 @@ stays pending by owner decision. Expected gate if every trial works: E 50 %, F 7
 Still without a scenario before ADR 0113: XP gain, trade profit, technology magnitudes, repair, fire, capture, random maps (RE-10),
 AI experiments (RE-07), and the "one level darker" terrain patches (UNK-32).
 
-The operator should also send the `SPGAMETICK` / `MPGAMETICK` values of GOG's own `tzar.ini`, if it has them (REQ-SIM-01 note).
+~~The operator should also send the `SPGAMETICK` / `MPGAMETICK` values of GOG's own `tzar.ini`, if it has them
+(REQ-SIM-01 note).~~ It has neither (batch A section above).
