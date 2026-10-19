@@ -411,6 +411,7 @@ public partial class EditorScreen : Control
         Item(map, "Kingdoms and diplomacy…", () => Dialogs.Kingdoms(this, Document, _rules));
         Item(map, "User resources…", () => Dialogs.Resources(this, Document, path => Tzar2.Import.Maps.PngEncoder.FromBmp(File.ReadAllBytes(path))));
         Item(map, "Custom sounds and music…", () => Dialogs.Sounds(this, Document, () => _controller.Selection.IsEmpty ? 0 : _controller.Selection[0]));
+        StudioMenu(map);
         MapMenuExtras?.Invoke(map);
         TriggerMenus(bar);
         CampaignMenu(bar);
