@@ -27,7 +27,7 @@ steps:
   - wait: 1
   - chat: "${cheat}nofog"
   - wait: 1
-  - chat: "${cheat}nopop"             # LOCAL: lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
   - wait: 1
   - key: F5                         # diplomacy: kingdoms 2-8 with their colours
   - wait: 1

@@ -56,6 +56,25 @@ public class ScenarioLoaderTests
             Assert.DoesNotContain("-explore", s.Launch);
             Assert.DoesNotContain("-nofog", s.Launch);
             Assert.Contains(s.Steps, step => step is ClickStep c && c.At == new ScreenPoint(772, 596));
+
+            // Keep the mouse out of the edge-scroll zone: batch B's box to (1015, 760) scrolled the camera away from the
+            // unit it was to measure.
+            const int Edge = 16;
+            foreach (StepSpec step in s.Steps)
+            {
+                ScreenPoint[] points = step switch
+                {
+                    ClickStep c => [c.At],
+                    MoveStep m => [m.At],
+                    DragStep d => [d.From, d.To],
+                    _ => [],
+                };
+                foreach (ScreenPoint p in points)
+                {
+                    Assert.True(p.X >= Edge && p.X < session.Layout.Width - Edge && p.Y >= Edge && p.Y < session.Layout.Height - Edge,
+                        $"{s.Id}: line {step.Line} puts the mouse at ({p.X}, {p.Y}), in the edge-scroll zone");
+                }
+            }
             for (int i = 0; i < s.Steps.Count; i++)
             {
                 if (s.Steps[i] is ChatStep chat && chat.Text.Contains("spawn", System.StringComparison.Ordinal))

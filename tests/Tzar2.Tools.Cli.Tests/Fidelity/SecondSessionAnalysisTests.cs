@@ -84,6 +84,32 @@ public class SecondSessionAnalysisTests
     }
 
     [Fact]
+    public void Carry_capacity_compares_each_load_with_the_load_from_that_node()
+    {
+        // Batch B: wood, stone and gold come 10 per trip, a cow's milk 50 (ADR 0170).
+        using var dir = new TempDir();
+        void Gather(string name, string target, string resource, int load) => File.WriteAllText(Path.Combine(dir.Path, $"{name}.yaml"), $"""
+            schema: tzar2-fidelity-facts/1
+            scenario: {name}
+            analyses:
+              gather-rates:
+                status: ok
+                facts:
+                  measurements:
+                    - {"{"}trial: {target}, target: {target}, resource: {resource}, deliveries: 5, load: {load}{"}"}
+            """);
+        Gather("gather-wood", "wood", "wood", 10);
+        Gather("gather-cow", "cow", "food", 50);
+        var engine = EngineModel.Load(OriginPaths.RepositoryRoot);
+        CheckResult Carry() => FidelitySuite.Evaluate(new FactsIndex(dir.Path), engine).Single(r => r.Check.Id == "m2.carry-capacity").Result;
+        Assert.Equal(CheckStatus.Pass, Carry().Status);
+
+        Gather("gather-cow", "cow", "food", 10);   // a cow that gave only 10 would disagree with the engine's 50
+        Assert.Equal(CheckStatus.Fail, Carry().Status);
+        Assert.Contains("food 10 (engine 50)", Carry().Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Day_clock_measures_the_cycle_and_the_night_share()
     {
         // A 600 s day, dark from 200 s to 440 s (night share 0.4), sampled every 2 s for 1,000 s.

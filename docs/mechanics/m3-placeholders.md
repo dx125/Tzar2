@@ -45,7 +45,8 @@ Shift + Delete; what each technology does (not how much).
 | Concentration | +50% mana regeneration | YAML | UNK-26 | same |
 | Cow milk | the cow's `max_manna` is the food it holds (⚠ HYPOTHESIS) | import `legacy.milkClasses` | UNK-17 | milk a cow dry, count the food |
 | Milk regrowth | 1 unit per 4 s, kept when empty | YAML `^class.cow.ResourceNode` | UNK-17 | captures of a cow over time |
-| Milking time | 1.5 s per unit | YAML `^class.cow.ResourceNode.gatherMs` | UNK-17 | gather captures |
+| Load from a cow | **50 — VERIFIED** (capture-20261018-222649, `gather-cow`: four deliveries of 50, one of 10) | YAML `^class.cow.ResourceNode.carry` | UNK-17 | done |
+| Milking time | ~~1.5 s~~ 200 ms per unit, bounded by batch B (a 50-unit trip, walk included, took 10.6 s; ADR 0170) | YAML `^class.cow.ResourceNode.gatherMs` | UNK-17 | the cow trip minus the walk (unit speeds, batch E) |
 | Meat | 100 food, rots after 120 s, a Nature node | YAML `comm.meat` | UNK-17 | butcher captures |
 | Fishing boat | carries 20, 1 s per unit | YAML `^class.fishing_boat.Harvester` | UNK-17 | fishing captures |
 | Harbor drop-off | food from boats only | YAML `^class.harbor.DropOff.access` | — | observe peasants with food near a harbor |

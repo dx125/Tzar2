@@ -86,7 +86,8 @@ public class EconomyM3Tests
         Assert.Equal(40, d.World.ResourceStocks.Get(cow).Amount); // max_manna 40 (synthetic) is the milk
         d.Order(0, CommandKind.Harvest, [peon], target: cow);
         d.RunUntil(() => d.Count(SimEventKind.ResourceDelivered) >= 1, 2000);
-        Assert.Equal(10, d.Events.First(e => e.Event.Kind == SimEventKind.ResourceDelivered).Event.Arg);
+        // A cow's load is 50 (ADR 0170): the peasant milks this cow dry, 40 plus the 2 that regrew while it was milking.
+        Assert.Equal(42, d.Events.First(e => e.Event.Kind == SimEventKind.ResourceDelivered).Event.Arg);
         Assert.True(d.World.Entities.IsAlive(cow));
 
         // Milk regrows (4 s per unit, UNVERIFIED) up to the full 40.

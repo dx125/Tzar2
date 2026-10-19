@@ -437,7 +437,7 @@ public sealed partial class Ruleset
 
         if (t.ResourceNode is { } node
             && ((uint)node.Resource >= (uint)resources || (node.Amount < 1 && node.Amount != ResourceNodeDefinition.Unlimited)
-                || node.RegenMs < 0 || node.GatherMs < 0 || (node.RegenMs > 0 && node.Amount < 1)))
+                || node.RegenMs < 0 || node.GatherMs < 0 || node.CarryLoad < 0 || (node.RegenMs > 0 && node.Amount < 1)))
         {
             throw new ArgumentException($"{where}: invalid resource node.");
         }
@@ -804,7 +804,7 @@ public sealed partial class Ruleset
         hasher.Add(t.ResourceNode is not null);
         if (t.ResourceNode is { } n)
         {
-            hasher.Add(n.Resource).Add(n.Amount).Add(n.RegenMs).Add(n.GatherMs).Add(n.KeepWhenEmpty);
+            hasher.Add(n.Resource).Add(n.Amount).Add(n.RegenMs).Add(n.GatherMs).Add(n.KeepWhenEmpty).Add(n.CarryLoad);
         }
 
         AddWorldTraits(hasher, t.World);
