@@ -178,7 +178,9 @@ public partial class GameApp
 
             string dir = UserPath("replays");
             Directory.CreateDirectory(dir);
-            File.WriteAllBytes(Path.Combine(dir, string.Create(CultureInfo.InvariantCulture, $"{kind}-{DateTime.Now:yyyyMMdd-HHmmss}.t2rep")), replay);
+            string path = Path.Combine(dir, string.Create(CultureInfo.InvariantCulture, $"{kind}-{DateTime.Now:yyyyMMdd-HHmmss}.t2rep"));
+            File.WriteAllBytes(path, replay);
+            ClientLog.Info("replay saved: " + path);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
         {

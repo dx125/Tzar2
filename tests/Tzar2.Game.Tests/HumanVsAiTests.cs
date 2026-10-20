@@ -351,7 +351,7 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
         return SkirmishAi.Resolve(new MemorySource("other").Add(SkirmishAi.PackageFolder + "random.ais", Encoding.UTF8.GetBytes(text)));
     }
 
-    private static void HumanHarvest(GameSession session)
+    internal static void HumanHarvest(GameSession session)
     {
         World w = session.Simulation.World;
         ushort tree = (ushort)w.Ruleset.EntityTypeId("comm.tree");

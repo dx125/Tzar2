@@ -12,6 +12,7 @@ using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Events;
 using Tzar2.Game.Scenario;
+using Tzar2.Core.Diagnostics;
 using Tzar2.Replay;
 using Tzar2.Scripting.Legacy;
 
@@ -482,6 +483,7 @@ public sealed class GameSession : IDisposable
             if (_driver is null)
             {
                 _speedIndex = Math.Clamp(value, 0, SpeedSteps.Length - 1);
+                TraceSession(LogLevel.Info, $"speed {SpeedSteps[_speedIndex]} %");
             }
         }
     }
@@ -503,6 +505,23 @@ public sealed class GameSession : IDisposable
             {
                 _paused = value;
             }
+
+            TraceSession(LogLevel.Info, value ? "paused" : "resumed");
+        }
+    }
+
+    /// <summary>The commands of the latest tick; read it on the sim thread in <see cref="AfterTick"/> only (ADR 0176).</summary>
+    public CommandList LastTickCommands => _tickSet;
+
+    /// <summary>The result (tick and hashes) of the latest tick; read it on the sim thread in <see cref="AfterTick"/>.</summary>
+    public TickResult LastTickResult { get; private set; }
+
+    private void TraceSession(LogLevel level, string message)
+    {
+        ITraceSink trace = Simulation.World.Trace;
+        if (trace.IsEnabled(TraceArea.Session, level))
+        {
+            trace.Write(TraceArea.Session, level, Simulation.World.Tick.Value, message);
         }
     }
 
@@ -706,6 +725,7 @@ public sealed class GameSession : IDisposable
 
         bool replied = _replyQueued;
         TickResult result = Simulation.Tick(_tickSet);
+        LastTickResult = result;
         _recorder?.RecordTick(_tickSet, result);
         Interlocked.Increment(ref _ticksRun);
         if (_recorder is not null)

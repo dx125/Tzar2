@@ -107,6 +107,7 @@ public partial class GameApp
         screen.Finished += (_, _) => EndMission(null, transition: false);
         screen.QuitRequested += () =>
         {
+            SaveReplay(session, "campaign");
             Profiles.Save(Profile);
             ShowCampaigns();
         };
@@ -126,6 +127,7 @@ public partial class GameApp
         _missionEnding = true;
         CampaignProgress progress = Profile.Progress(_campaign.Campaign.Id) ?? CampaignFlow.Begin(_campaign.Campaign);
         MissionEnd end = CampaignFlow.Finish(_campaign.Campaign, progress, _missionMap, _mission, requested, transition);
+        SaveReplay(_mission, "campaign"); // after Finish, which reads the session (ADR 0176: every match keeps its replay)
         _profile = Profile.With(end.Progress);
         Profiles.Save(_profile);
         GD.Print($"Mission {_missionMap}: {end.Result}, next {end.NextMapId ?? (end.Progress.Completed ? "(campaign completed)" : "(retry)")}");

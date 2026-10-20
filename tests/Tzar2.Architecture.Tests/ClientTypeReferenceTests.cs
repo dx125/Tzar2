@@ -26,8 +26,9 @@ public sealed class ClientAssemblyFactAttribute : FactAttribute
 /// TDD §7.2 at type level for the Godot client (ADR 0073): project references are not enough, because Game exposes its
 /// own references transitively. Of the Tzar2 assemblies the client may use Game, Content and Import, and, as the
 /// presentation contract that Game hands out (REQ-ARCH-03), only the namespaces <c>Tzar2.Core.Ids</c>,
-/// <c>Tzar2.Sim.Commands</c> and <c>Tzar2.Sim.Events</c>: never the sim's world, simulation, components or kingdom state,
-/// nor AI, Net, Replay, Scripting, Formats, Server or the CLI.
+/// <c>Tzar2.Sim.Commands</c> and <c>Tzar2.Sim.Events</c>, plus <c>Tzar2.Core.Diagnostics</c> (the trace interface and
+/// levels the client logs through, ADR 0176): never the sim's world, simulation, components or kingdom state, nor AI,
+/// Net, Replay, Scripting, Formats, Server or the CLI.
 /// </summary>
 public class ClientTypeReferenceTests
 {
@@ -36,7 +37,7 @@ public class ClientTypeReferenceTests
 
     private static readonly string[] AllowedAssemblies = ["Tzar2.Game", "Tzar2.Content", "Tzar2.Import"];
 
-    private static readonly string[] ContractNamespaces = ["Tzar2.Core.Ids", "Tzar2.Sim.Commands", "Tzar2.Sim.Events"];
+    private static readonly string[] ContractNamespaces = ["Tzar2.Core.Ids", "Tzar2.Core.Diagnostics", "Tzar2.Sim.Commands", "Tzar2.Sim.Events"];
 
     /// <summary>Whether the client may use a type of namespace <paramref name="ns"/>.</summary>
     public static bool IsAllowed(string ns)
@@ -50,6 +51,7 @@ public class ClientTypeReferenceTests
         Assert.True(IsAllowed("Tzar2.Sim.Commands"));
         Assert.True(IsAllowed("Tzar2.Sim.Events"));
         Assert.True(IsAllowed("Tzar2.Core.Ids"));
+        Assert.True(IsAllowed("Tzar2.Core.Diagnostics"));
         Assert.True(IsAllowed("Tzar2.Game.Session"));
         Assert.True(IsAllowed("Godot"));
         Assert.False(IsAllowed("Tzar2.Sim"));

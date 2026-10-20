@@ -1,5 +1,6 @@
 using System;
 using Tzar2.Content.Compiled;
+using Tzar2.Core.Diagnostics;
 using Tzar2.Core.Ids;
 using Tzar2.Core.Rng;
 using Tzar2.Sim.Components;
@@ -98,6 +99,12 @@ public sealed partial class World
 
     /// <summary>Events of the current tick (output, not state).</summary>
     public SimEventStream Events { get; } = new();
+
+    /// <summary>
+    /// Diagnostics (output, not state; ADR 0176): systems and the AI write here and never read back, so a match is the same
+    /// with or without a sink. The host attaches one; the default keeps nothing.
+    /// </summary>
+    public ITraceSink Trace { get; set; } = NullTraceSink.Instance;
 
     /// <summary>Positions (hot).</summary>
     public ComponentStore<Position> Positions { get; }

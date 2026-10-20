@@ -24,6 +24,7 @@ public partial class Main : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
+        ClientLog.Open(ProjectSettings.GlobalizePath("user://"), OS.GetCmdlineUserArgs());
         GD.Print($"{GameInfo.Codename} {GameInfo.Version}");
         _args = ViewerArgs.Parse(OS.GetCmdlineUserArgs());
         if (_args.Help || _args.Errors.Count > 0)
@@ -63,7 +64,11 @@ public partial class Main : Node
     }
 
     /// <inheritdoc/>
-    public override void _ExitTree() => _store?.Dispose();
+    public override void _ExitTree()
+    {
+        _store?.Dispose();
+        ClientLog.Close();
+    }
 
     private void Open(string path, bool remember)
     {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Tzar2.Content.Compiled.Scenario;
+using Tzar2.Core.Diagnostics;
 using Tzar2.Core.Hashing;
 using Tzar2.Core.Ids;
 using Tzar2.Core.Serialization;
@@ -271,6 +272,11 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
             // An empty or unparsable condition is false (ADR 0120 convention; UNVERIFIED, UNK-59).
             int value = Evaluate(rule.Condition, 0, EntityId.None);
             Trace?.RuleEvaluated(_world.Tick.Value, r, value);
+            if (value != 0 && _world.Trace.IsEnabled(TraceArea.Triggers, LogLevel.Debug))
+            {
+                _world.Trace.Write(TraceArea.Triggers, LogLevel.Debug, _world.Tick.Value, $"rule {r} '{rule.Name}' fired (pass {_state.Passes})");
+            }
+
             if (value == 0)
             {
                 continue;
@@ -320,6 +326,12 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
             }
 
             Trace?.ActionRun(_world.Tick.Value, r, action);
+            if (_world.Trace.IsEnabled(TraceArea.Triggers, LogLevel.Debug))
+            {
+                ActionDef def = _scenario.Actions[action];
+                _world.Trace.Write(TraceArea.Triggers, LogLevel.Debug, _world.Tick.Value, $"rule {r} action {action} {def.GetType().Name} '{def.Name}'");
+            }
+
             Run(action);
         }
     }

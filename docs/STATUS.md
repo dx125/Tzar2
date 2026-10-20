@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-19 (gathering time)
+* **Last updated:** 2026-10-20 (diagnostics for the play-tests)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -53,8 +53,8 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-1. **Maintainer:** tracing for diagnosis (sim events, commands, AI decisions, client errors) before the first play-test;
-   then a playable Windows build from the owner's GOG copy. **Operator:** play a skirmish and a campaign mission.
+1. **Maintainer:** a playable Windows build from the owner's GOG copy (tracing is in, ADR 0176). **Operator:** play a
+   skirmish and a campaign mission; the run's log folder and the match replays go back to the maintainer.
 2. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 3. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
@@ -76,6 +76,11 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — Diagnostics for the play-tests (ADR 0176).** A log folder per run of the client (`game.log`: match
+  setup, every command, gameplay events, AI goals and orders, triggers, kingdom summaries every 20 s, Godot's output and
+  errors), crash reports with the running match's replay, and a replay of every match including campaign missions.
+  Default level: debug everywhere. A traced match at verbose has the same hash as an untraced one. The first trace
+  shows the Hard AI ordering two buildings onto one site in a tick.
 * **2026-10-19 — Gathering: 900 ms per unit (ADR 0175).** One load of 10 wood took ~9.0 s in the `gather-rate` burst;
   applied to every resource. Batches B and E had timed groups of peasants, so "two or three times faster" was wrong.
 * **2026-10-19 — The fidelity gate moves to M8 (ADR 0174, owner decision).** Next: the gathering rate (one

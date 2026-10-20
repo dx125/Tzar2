@@ -52,6 +52,8 @@ public partial class GameScreen : Node
     private readonly ContentStore _store;
     private readonly UiAssets _ui;
     private readonly GameSession _session;
+    private Tzar2.Game.Diagnostics.MatchTracer? _tracer;
+    private double _slowFrameLogged = double.MinValue;
     private readonly Ruleset _rules;
     private readonly PresentationCatalog _catalog;
     private readonly HotkeyTable _hotkeys = new();
@@ -268,6 +270,13 @@ public partial class GameScreen : Node
 
         Message(_catalog.Text("sp_setupmap", "vcond_0", "Standard") + ": destroy every enemy unit and building.");
         GD.Print($"Skirmish: {_session.Map.Name}, {_session.Setup.Players.Count} kingdoms, terrain {set.Id}, {_bank.SheetCount} sheets, {_world.Terrain.Issues} terrain tiles without a rule (UNK-10)");
+        // Diagnostics (ADR 0176): the match's commands, events and summaries go to the run's log; a crash saves its replay.
+        if (ClientLog.Sink is { } sink)
+        {
+            _tracer = Tzar2.Game.Diagnostics.MatchTracer.Attach(_session, sink, _session.IsMultiplayer ? "multiplayer match" : "match");
+        }
+
+        ClientLog.TrackSession(_session);
         if (!_session.IsRunning)
         {
             _session.Start();
@@ -279,6 +288,9 @@ public partial class GameScreen : Node
     /// <inheritdoc/>
     public override void _ExitTree()
     {
+        _session.Stop(); // the sim thread first: the tracer's last summary reads the world
+        _tracer?.Dispose();
+        ClientLog.TrackSession(null);
         _session.Dispose();
         _world?.Dispose();
         _bank?.Dispose();
@@ -291,6 +303,12 @@ public partial class GameScreen : Node
     /// <inheritdoc/>
     public override void _Process(double delta)
     {
+        if (delta > 0.25 && _now - _slowFrameLogged > 5)
+        {
+            _slowFrameLogged = _now;
+            ClientLog.Warn(string.Create(CultureInfo.InvariantCulture, $"slow frame: {delta * 1000:0} ms (at most one report per 5 s)"));
+        }
+
         _now += delta;
         GameFrame? frame = _session.AcquireFrame(out bool fresh);
         if (frame is null || _world is null || _hud is null)

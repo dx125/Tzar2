@@ -140,6 +140,19 @@ GOG v1.10 (ADRs 0110, 0111, 0169), in case it recurs:
   was captured). Do not install third-party launchers into the GOG folder: they patch `Tzar.exe` (the run then fails
   the reference check).
 
+## Diagnostics: logs, traces, crash reports, replays
+
+Every run of the client writes a log folder (ADR 0176): `%APPDATA%\Godotpp_userdata\Tzar2\logs\yyyyMMdd-HHmmss\`
+on Windows (`user://logs/`), with `game.log`, `crash-*.txt` and `crash-replay.t2rep` after a crash. Every match's replay
+is in `user://replays/` (the log says which file). Godot keeps its own `user://logs/godot.log` too.
+
+* **Levels** per area (session, commands, events, sim, ai, triggers, net, client, content): set `TZAR2_TRACE`, or write
+  `user://trace.txt`, e.g. `*=info` or `*=debug, ai=verbose, events=info`. The default is debug everywhere.
+* **Reading a log:** `HH:mm:ss.fff tick LEVEL area: message`. Kingdom summaries every 20 s of game time (`summary at`),
+  every command (`commands`), AI decisions (`ai: p1 economy: ...`), rejected commands (`WARN ... rejected`).
+* **In code:** deterministic code writes through `world.Trace` and checks `IsEnabled` first; the host attaches the sink
+  (`MatchTracer.Attach`). Never read anything back from a trace.
+
 ## Where to record what
 
 | What | Where |
