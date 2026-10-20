@@ -60,7 +60,7 @@ public sealed class PresentationCatalogTests
         IReadOnlyList<CardButton> card = catalog.Card("E_PEON");
         Assert.Equal(["move", "e_build", "harvest", "bribe"], card.Select(b => b.Order));
         Assert.Equal(['M', 'B', 'H', 'I'], card.Select(b => b.Hotkey));
-        Assert.Equal([CardAction.Move, CardAction.Submenu, CardAction.Harvest, CardAction.Unsupported], card.Select(b => b.Action));
+        Assert.Equal([CardAction.Move, CardAction.Submenu, CardAction.Harvest, CardAction.Bribe], card.Select(b => b.Action));
         Assert.Equal("e_build", card[1].Argument);
         Assert.Equal(7, card[0].ImageIndex);
         Assert.Equal("Move", card[0].Tooltip);
@@ -83,7 +83,20 @@ public sealed class PresentationCatalogTests
     [InlineData("become_priest", null, CardAction.Become, "priest")]
     [InlineData("next_idle_peon", null, CardAction.NextIdle, "")]
     [InlineData("TECHNOLOGY", null, CardAction.Unsupported, "TECHNOLOGY")]
-    [InlineData("spell spell_heal", null, CardAction.Unsupported, "spell spell_heal")]
+    [InlineData("spell spell_heal", null, CardAction.Spell, "spell_heal")]
+    [InlineData("raisedead", null, CardAction.Spell, "raisedead")]
+    [InlineData("murder", null, CardAction.Spell, "murder")]
+    [InlineData("chop", null, CardAction.Harvest, "")]
+    [InlineData("fishing", null, CardAction.Harvest, "")]
+    [InlineData("loan gold", null, CardAction.Loan, "gold")]
+    [InlineData("loan_return", null, CardAction.Loan, "return")]
+    [InlineData("bribe", null, CardAction.Bribe, "")]
+    [InlineData("select_crusaders", null, CardAction.Crusade, "")]
+    [InlineData("pick_item", null, CardAction.PickItem, "")]
+    [InlineData("item_use", null, CardAction.UseItem, "")]
+    [InlineData("item_use_instant", null, CardAction.UseItem, "self")]
+    [InlineData("item_drop", null, CardAction.DropItem, "")]
+    [InlineData("impersonate", null, CardAction.Unsupported, "impersonate")]
     public void Card_orders_map_onto_the_sims_commands(string action, string? className, CardAction expected, string argument)
         => Assert.Equal((expected, argument), PresentationCatalog.Classify(action, null, className));
 

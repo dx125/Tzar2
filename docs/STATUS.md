@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (play-test fixes: single player and the original maps)
+* **Last updated:** 2026-10-20 (play-test fixes: spells, items and the other card orders)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -55,8 +55,10 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 
 Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
 
-1. **Maintainer:** the rest of the command card: spells, items, spies, trade, the tavern (loans, gambling) and holders
-   (board, the units inside), still greyed out as "not in this build yet".
+1. **Maintainer:** the rest of the command card: the market's and the caravans' trade, the tavern's gambling and hiring,
+   the Magic Workshop's crafting (dialogs `D_TRADE`, `D_TRADE1`, `D_GAMBLE` in the card's place), the holders' list of
+   units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and AI-mode orders need the sim
+   first.
 2. **Operator:** a second play-test (`tools/play/play.ps1`): the fixes merged so far, and the remaining items as they land.
 3. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
@@ -79,6 +81,11 @@ Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — Spells, items and the other card orders the sim already had.** The 21 spell orders, raise dead and
+  the ninjas' cloak and murder cast at once on the caster (self spells) or on the clicked unit or ground with the
+  original's spell cursor; loans and their repayment in the tavern; bribery; the cathedral's crusade; picking up, using
+  and dropping items; mine, dig, chop and fishing harvest. The frame carries casters' mana (the selection panel shows
+  it beside the original's mana icon). The tooltip of a spell shows its mana cost.
 * **2026-10-20 — Single player as in the original, with its maps.** SINGLE PLAYER opens the original's menu
   (`S_SINGLEPLAYER`: CAMPAIGN, CUSTOM MAP, RANDOM MAP, LOAD GAME, BACK). CUSTOM MAP lists the package's original maps
   (`legacy/maps/*.wmp`, converted with ADR 0120's converter behind the loading screen the first time) with a picture

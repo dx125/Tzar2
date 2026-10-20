@@ -139,6 +139,28 @@ public enum CardAction
 
     /// <summary>The next page of a card with more orders than slots (Tzar2's; <see cref="CardButton.Argument"/> = "2/3").</summary>
     Page,
+
+    /// <summary>Cast spell <see cref="CardButton.Argument"/> (its key; the ninjas' cloak and murder and the necromancers'
+    /// raise dead are spells named by their order): at once on themselves, else on the clicked unit or ground.</summary>
+    Spell,
+
+    /// <summary>A loan of resource <see cref="CardButton.Argument"/> in the selected tavern, or "return" to repay it.</summary>
+    Loan,
+
+    /// <summary>Peasants bribe the clicked enemy unit.</summary>
+    Bribe,
+
+    /// <summary>The selected cathedral preaches a crusade at the clicked point.</summary>
+    Crusade,
+
+    /// <summary>The selected units pick up the clicked item.</summary>
+    PickItem,
+
+    /// <summary>Use the default item: on the clicked target, or "self" at once.</summary>
+    UseItem,
+
+    /// <summary>Drop the first item where the unit stands.</summary>
+    DropItem,
 }
 
 /// <summary>A button of a command card (MENU.INI entry + ORDERS.INI order).</summary>
@@ -376,6 +398,17 @@ public sealed class PresentationCatalog
             "attack_ground" => (CardAction.AttackGround, string.Empty),
             "next_idle_peon" => (CardAction.NextIdle, string.Empty),
             "view_quests" => (CardAction.Quests, string.Empty),
+            "spell" when argument.Length > 0 => (CardAction.Spell, argument.ToLowerInvariant()),
+            "raisedead" or "cloak" or "murder" => (CardAction.Spell, verb),
+            "mine" or "dig" or "chop" or "fishing" => (CardAction.Harvest, string.Empty),
+            "loan" when argument.Length > 0 => (CardAction.Loan, argument.ToLowerInvariant()),
+            "loan_return" => (CardAction.Loan, "return"),
+            "bribe" => (CardAction.Bribe, string.Empty),
+            "select_crusaders" => (CardAction.Crusade, string.Empty),
+            "pick_item" => (CardAction.PickItem, string.Empty),
+            "item_use" => (CardAction.UseItem, string.Empty),
+            "item_use_instant" => (CardAction.UseItem, "self"),
+            "item_drop" => (CardAction.DropItem, string.Empty),
             _ => (CardAction.Unsupported, action),
         };
     }

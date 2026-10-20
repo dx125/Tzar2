@@ -185,6 +185,25 @@ public sealed class SessionTests
         Assert.True(frame.Players[session.LocalPlayer].HasTechnology(tech));
     }
 
+    [Fact]
+    public void The_frame_carries_the_mana_of_casters()
+    {
+        var b = new Tzar2.Tests.Scenario.ScenarioBuilder();
+        b.Structure("euro.castle", 0, 4, 4);
+        b.Unit("euro.mage", 0, 12, 12);
+        b.Unit("euro.footman", 0, 14, 12);
+        b.Structure("euro.castle", 1, 34, 20);
+        var mission = new Campaigns.MissionContent(b.Map(), b.Scenario());
+        using var session = new GameSession(Campaigns.ScenarioMatch.Setup(mission, Rules.Value, computerAi: false), Rules.Value, fog: false);
+        session.Step(1);
+        FrameEntity[] entities = session.AcquireFrame(out _)!.Entities.ToArray();
+        FrameEntity mage = entities.Single(e => Rules.Value.EntityTypes[e.TypeId].Key == "euro.mage");
+        FrameEntity footman = entities.Single(e => Rules.Value.EntityTypes[e.TypeId].Key == "euro.footman");
+        Assert.Equal(Rules.Value.EntityTypes[mage.TypeId].Traits.ManaPool!.Max, mage.MaxMana);
+        Assert.InRange(mage.Mana, 0, mage.MaxMana);
+        Assert.Equal((0, 0), (footman.Mana, footman.MaxMana));
+    }
+
     [Theory]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Continental)]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Lakes)]

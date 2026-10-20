@@ -80,6 +80,12 @@ public static class FrameBuilder
                 e.MaxHealth = health.Max;
             }
 
+            if (world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool is { } pool)
+            {
+                e.MaxMana = world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max);
+                e.Mana = world.Manas.IndexOf(id) is >= 0 and var mana ? Math.Min(world.Manas.At(mana).MilliMana / 1000, e.MaxMana) : 0;
+            }
+
             int m = world.Motions.IndexOf(id);
             bool moving = m >= 0 && (world.Motions.At(m).VelocityX != 0 || world.Motions.At(m).VelocityY != 0);
             e.Activity = moving ? UnitActivity.Walk : UnitActivity.Idle;
