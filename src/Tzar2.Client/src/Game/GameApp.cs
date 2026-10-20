@@ -29,6 +29,7 @@ public partial class GameApp : Node
     private Ruleset? _rules;
     private SkirmishAi _ai = SkirmishAi.EngineDefault;
     private PresentationCatalog? _catalog;
+    private int _loadings;
     private Node? _current;
     private MidiPlayer? _menuMusic;
 
@@ -218,10 +219,16 @@ public partial class GameApp : Node
         return image;
     }
 
-    /// <summary>Starts a skirmish.</summary>
+    /// <summary>Starts a skirmish: the loading screen at once, the match a frame later.</summary>
     public void StartSkirmish(SkirmishOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ShowLoading(options.TestMapSize > 0 ? "the test map" : Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapSizes[options.MapSize]) + " map");
+        _ = AfterFrames(2, () => BuildSkirmish(options));
+    }
+
+    private void BuildSkirmish(SkirmishOptions options)
+    {
         if (_rules is null)
         {
             ShowMainMenu();
@@ -265,6 +272,20 @@ public partial class GameApp : Node
         };
         screen.RestartRequested += () => StartSkirmish(options);
         Replace(screen, music: null);
+    }
+
+    /// <summary>The loading screen (a match is being built).</summary>
+    public void ShowLoading(string what) => Replace(new LoadingScreen(_ui!, _catalog, Screen, _loadings++, what), music: null);
+
+    // Runs `then` once `frames` frames have been drawn: the loading screen is on screen before the heavy work starts.
+    private async System.Threading.Tasks.Task AfterFrames(int frames, Action then)
+    {
+        for (int i = 0; i < frames; i++)
+        {
+            await ToSignal(RenderingServer.Singleton, RenderingServerInstance.SignalName.FramePostDraw);
+        }
+
+        then();
     }
 
     /// <summary>Shows the results screen (test driver).</summary>
@@ -406,8 +427,14 @@ public partial class GameApp : Node
         int exit = 1;
         try
         {
-            GameScreen game = Game ?? throw new InvalidOperationException("No game screen.");
             var watch = System.Diagnostics.Stopwatch.StartNew();
+            while (Game is null && watch.Elapsed.TotalSeconds < 60)
+            {
+                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame); // the loading screen comes first
+            }
+
+            GameScreen game = Game ?? throw new InvalidOperationException("No game screen.");
+            watch.Restart();
             while (game.Session.TicksRun < _args.Ticks && watch.Elapsed.TotalSeconds < 120 && game.Session.Fault is null)
             {
                 await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);

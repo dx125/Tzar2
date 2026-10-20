@@ -190,6 +190,7 @@ public partial class GameScreen : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
         HudLayout layout = HudLayout.Load(_store.Vfs.Exists("tables/data/layout.ini.json") ? IniTable.Parse(_store.Read("tables/data/layout.ini.json")) : IniTable.Empty);
         string setId = _session.Map.TerrainSet ?? _terrainSetId;
         TerrainSet set = _store.TerrainSets.FirstOrDefault(s => s.Id == setId) ?? _store.TerrainSets.FirstOrDefault()
@@ -218,11 +219,18 @@ public partial class GameScreen : Node
         }
 
         _bank.AddTrees(set);
+        long decoded = watch.ElapsedMilliseconds;
+        _bank.Pack();
+        long packed = watch.ElapsedMilliseconds;
         _bank.Upload();
+        long uploaded = watch.ElapsedMilliseconds;
 
         TerrainGrid grid = TerrainPresentation.Build(_session.Map, _rules, set);
+        ClientLog.Info($"match load: sprites decoded {decoded} ms ({_bank.SheetCount} sheets), packed {packed - decoded} ms, uploaded {uploaded - packed} ms, terrain {watch.ElapsedMilliseconds - uploaded} ms");
         Image? light = set.Light is { } l ? _ui.Image(l) : null;
+        long before = watch.ElapsedMilliseconds;
         _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, grid, _store.LoadImage, light);
+        ClientLog.Info($"match load: world renderer {watch.ElapsedMilliseconds - before} ms (terrain composed {_world.Terrain.ComposeMs} ms, {_world.Terrain.FrameTotal} chunk frames, uploaded {_world.Terrain.UploadMs} ms)");
         _boxItem = RenderingServer.CanvasItemCreate();
         RenderingServer.CanvasItemSetParent(_boxItem, GetViewport().FindWorld2D().Canvas);
         RenderingServer.CanvasItemSetZIndex(_boxItem, 100);

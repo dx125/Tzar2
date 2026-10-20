@@ -114,6 +114,7 @@ public sealed class TerrainComposer
     private readonly TerrainSet _set;
     private readonly Func<string, ImageAsset?> _load;
     private readonly Dictionary<string, ImageAsset?> _images = new(StringComparer.Ordinal);
+    private readonly Dictionary<int, BaseSource?> _bases = [];
 
     /// <summary>Creates a composer that reads bitmaps through <paramref name="load"/> (package path → image, null when missing).</summary>
     public TerrainComposer(TerrainSet set, Func<string, ImageAsset?> load)
@@ -204,16 +205,22 @@ public sealed class TerrainComposer
     /// <summary>
     /// Composes animation frame <paramref name="frame"/> of <paramref name="grid"/>, a window of a larger map whose
     /// top-left tile is (<paramref name="originX"/>, <paramref name="originY"/>): base tiles and variants follow the map
-    /// coordinates, so chunks composed separately join without seams.
+    /// coordinates, so chunks composed separately join without seams. With <paramref name="still"/> (frame 0 of the same
+    /// window), only the tiles that animate are drawn again and the rest is copied: the same pixels, much less work.
     /// </summary>
-    public TerrainImage Compose(TerrainGrid grid, int frame, int originX, int originY)
+    public TerrainImage Compose(TerrainGrid grid, int frame, int originX, int originY, TerrainImage? still = null)
     {
         ArgumentNullException.ThrowIfNull(grid);
         ArgumentOutOfRangeException.ThrowIfNegative(frame);
         ArgumentOutOfRangeException.ThrowIfNegative(originX);
         ArgumentOutOfRangeException.ThrowIfNegative(originY);
         int width = grid.Width * TileSize, height = grid.Height * TileSize;
-        byte[] pixels = new byte[width * height * 2];
+        if (still is not null && (still.Width != width || still.Height != height))
+        {
+            throw new ArgumentException("The still frame is of another window.", nameof(still));
+        }
+
+        byte[] pixels = still is not null ? (byte[])still.Pixels.Clone() : new byte[width * height * 2];
         var issues = new List<string>();
         Func<int, int, bool> usable = HasUsableTransition;
         for (int ty = 0; ty < grid.Height; ty++)
@@ -242,7 +249,16 @@ public sealed class TerrainComposer
                     frames = Math.Max(1, size.Frames);
                 }
 
+                if (still is not null && frames == 1 && BaseFrames(lo) == 1 && (lo == hi || BaseFrames(hi) == 1))
+                {
+                    continue; // nothing on this tile moves: frame 0's pixels stand
+                }
+
                 int column = (VariantOf(originX + tx, originY + ty, variants) * frames) + (frame % frames);
+
+                // The base bitmaps of both terrains are looked up once per tile, not per pixel (a 96 x 96 map with water
+                // composes tens of millions of pixels when a match starts).
+                BaseSource? low = SourceOf(lo), high = SourceOf(hi);
                 for (int py = 0; py < TileSize; py++)
                 {
                     for (int px = 0; px < TileSize; px++)
@@ -250,7 +266,7 @@ public sealed class TerrainComposer
                         int word;
                         if (lo == hi)
                         {
-                            word = BasePixel(lo, originX + tx, originY + ty, px, py, frame);
+                            word = BasePixel(low, originX + tx, originY + ty, px, py, frame);
                         }
                         else
                         {
@@ -264,7 +280,7 @@ public sealed class TerrainComposer
                             }
                             else
                             {
-                                word = BasePixel((t & 0x7FFF) == KeyMagenta ? lo : hi, originX + tx, originY + ty, px, py, frame);
+                                word = BasePixel((t & 0x7FFF) == KeyMagenta ? low : high, originX + tx, originY + ty, px, py, frame);
                             }
                         }
 
@@ -280,25 +296,41 @@ public sealed class TerrainComposer
         return new TerrainImage(width, height, pixels, issues);
     }
 
-    private int BasePixel(int terrain, int tx, int ty, int px, int py, int frame)
+    private static int BasePixel(BaseSource? source, int tx, int ty, int px, int py, int frame)
     {
-        TerrainFile? file = _set.BaseOf(terrain);
-        if (file?.Size is not { } size || Image(file.Asset) is not { } image)
+        if (source is not { } b)
         {
             return 0;
         }
 
-        int frames = BaseFrames(terrain);
-        int x = ((tx % size.Columns) * TileSize) + px;
-        int y = ((frame % frames) * size.Rows * TileSize) + ((ty % size.Rows) * TileSize) + py;
-        if (x >= image.Width || y >= image.Height)
+        int x = ((tx % b.Columns) * TileSize) + px;
+        int y = ((frame % b.Frames) * b.Rows * TileSize) + ((ty % b.Rows) * TileSize) + py;
+        if (x >= b.Image.Width || y >= b.Image.Height)
         {
             return 0;
         }
 
-        int o = 2 * ((y * image.Width) + x);
-        return (image.Pixels[o] | (image.Pixels[o + 1] << 8)) & 0x7FFF;
+        int o = 2 * ((y * b.Image.Width) + x);
+        return (b.Image.Pixels[o] | (b.Image.Pixels[o + 1] << 8)) & 0x7FFF;
     }
+
+    // The base bitmap of a terrain with its layout and animation frames, or null when the set has none (drawn black).
+    private BaseSource? SourceOf(int terrain)
+    {
+        if (_bases.TryGetValue(terrain, out BaseSource? known))
+        {
+            return known;
+        }
+
+        TerrainFile? file = _set.BaseOf(terrain);
+        BaseSource? source = file?.Size is { } size && Image(file.Asset) is { } image
+            ? new BaseSource(image, size.Columns, size.Rows, BaseFrames(terrain))
+            : null;
+        _bases[terrain] = source;
+        return source;
+    }
+
+    private readonly record struct BaseSource(ImageAsset Image, int Columns, int Rows, int Frames);
 
     private ImageAsset? Image(string? asset)
     {
