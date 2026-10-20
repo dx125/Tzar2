@@ -1,4 +1,13 @@
-# Fidelity summary (after batch D)
+# Fidelity summary (after batch E)
+
+## Batch E (session `capture-20261019-221300`)
+
+11/11 trials ran. **A mixed group walks at its slowest member's speed**: a knight (72 px/s alone) and a pikeman (40)
+selected together walked 40.2 and 39.9 px/s; the engine's `slowest` rule passes (suite **9 of 30 = 30 %**). Nothing
+else gave a usable measurement: a unit handed to kingdom 2 with `hmkingdom` is taken over by that kingdom's AI, which
+sends it to attack our base, so the duels and the attack on the mill never happened; Feudalism (key D) did not start;
+Ctrl+C selected another of our three castles, so the gathered tree was not the far one; the capture analysis found no
+colour change. By the owner's decision of 2026-10-19 these are not repeated (STATUS).
 
 ## Day length (session `capture-20261019-195053`, ADR 0173)
 

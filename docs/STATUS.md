@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-19 (batch D)
+* **Last updated:** 2026-10-19 (batch E; owner decision on measurements)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -23,7 +23,7 @@ and it has not been re-run since the handover.
 | M0 Foundations | **Done** | One ADR per spike: S2 (0007), S4 (0008), S3 (0009), S1 (0010), S6 (0013; S5 mobile export is PX); S1 renderer met on Windows (ADR 0010); CI green; no original files tracked (CI job `legal`). |
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
-| M3 Classic gameplay & skirmish | **In progress** — blocked on fidelity | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). **Fidelity suite ≥ 80 %: 8 of 30 (26.7 %)**, see below. |
+| M3 Classic gameplay & skirmish | **In progress** — blocked on fidelity | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). **Fidelity suite ≥ 80 %: 9 of 30 (30 %)**, see below. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign 14–15 of 19 missions, tutorial 7 of 7 (reported 2026-10-18, scripted solver, ADR 0134). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
@@ -43,7 +43,8 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | B | 15 unit speeds; gathering wood, stone, cows | **Gathering done** (ADR 0170): carry capacity passes (10 wood/stone/gold, 50 from a cow). **Unit speeds done** (ADRs 0171, 0172): after two failed places, 11 classes measured by our base; the original ignores SPEED (foot 40 px/s, mounted 72). Horse archer, horse samurai, ninja and monk did not spawn (not European). |
 | C | 15 more unit speeds (chariot, caravan) | **Done** (ADR 0172): troll 47, ghost 67, cow and bear 26, dwarf, ork, skeleton 40; speed check passes (18 classes). Heavy cavalry, jihad warrior, janissary, chariot (not European), catapults, ballista and caravan did not spawn. |
 | D | day length, night share (no input) | **Day length done** (ADR 0173): 37.5 min, read from the clock globe; a match starts at 10:00. The game ended after 12 min (the Hard AI), before the night: **night share open**, needs a 35-min run the AI does not end. |
-| E–I | group speed, research, damage bonuses, capture; fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | to capture (ADR 0113); `group-speed` already moved (ADR 0171), the other scenarios with idle soldiers in MP2's middle need the same review first |
+| E | group speed, research, damage bonuses, capture, far gathering | **Done, one result** (2026-10-19): a mixed group walks at its slowest member's speed (passes). The rest failed: units given to kingdom 2 are taken over by its AI and leave the duel; Feudalism never started; Ctrl+C picked another castle, so the far tree was not the one gathered; the capture analysis saw no colour change. Not repeated: owner decision below. |
+| F–I | fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | deferred (owner decision below) |
 
 Facts live in `tests/fidelity/facts/` (numbers only; captures stay on the operator's PC). A measured fact that disagrees
 with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that makes it pass go in the same PR.
@@ -67,7 +68,7 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
    measured figure and push it to 19/19.
 7. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
-8. **Maintainer:** issue #62 (flaky `RelayTests`), issue #68 (allocation gate); M6 soak to 500 matches.
+8. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
 9. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 ## Decision and event log
@@ -75,6 +76,14 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — Owner decision: stop measuring unit by unit.** Measuring each unit's speed, attack and so on is not
+  worth it at this stage. Where the original's tables have a value and a conversion has been measured (TIME 1.25 s per
+  unit, carry loads, walking speed by stride, the day), apply the conversion to every entity; where a value is missing
+  (e.g. a rate), measure it once on one object and apply the result to all. The fidelity tests are left for the final
+  stages. The maintainer reviews what the project really lacks before choosing the next work.
+* **2026-10-19 — Batch E: groups walk at their slowest member's speed.** Group speed verified (suite 9 of 30). The other
+  scenarios failed for reasons now known (kingdom 2's AI takes over units given to it; Feudalism did not start; Ctrl+C
+  chose another castle; the capture analysis missed the colour change); not repeated, by the decision above.
 * **2026-10-19 — Batch E prepared.** Batch A's melee duels gave no hits because the enemy defender, idle while memory
   was scanned, walked off to Nature's cows in MP2's middle and the attack click hit empty ground. `damage-bonuses` now
   fights by our base (row 53, ADR 0171's view); the other batch E scenarios use peasants, buildings or our base already.

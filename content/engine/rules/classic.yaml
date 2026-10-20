@@ -31,7 +31,7 @@ resources: [food, wood, stone, gold, iron]
 gameplay:
   # Owner decision for M2: a group move travels at its slowest member's speed in both rulesets until UNK-12 is captured
   # (ADR 0024 question).
-  groupMoveSpeed: slowest             # UNVERIFIED (UNK-12)
+  groupMoveSpeed: slowest             # VERIFIED (capture-20261019-221300, group-speed: knight 72 + pikeman 40 px/s walked 40 together)
   populationLimit: 200                # VERIFIED (capture-20261018-024524, smoke/plain setup screen): the setup screen's default
   startingResources: legacy           # RES.INI [Low]/[Medium]/[High] (lobby STARTING RESOURCES)
   defaultStartingResources: medium    # UNVERIFIED: the lobby's default level
