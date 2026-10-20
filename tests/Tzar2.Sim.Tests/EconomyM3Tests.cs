@@ -5,6 +5,7 @@ using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
+using Tzar2.Sim.Systems;
 using Xunit;
 using static Tzar2.Sim.Tests.GameplayFixtures;
 
@@ -86,9 +87,12 @@ public class EconomyM3Tests
         Assert.Equal(40, d.World.ResourceStocks.Get(cow).Amount); // max_manna 40 (synthetic) is the milk
         d.Order(0, CommandKind.Harvest, [peon], target: cow);
         d.RunUntil(() => d.Count(SimEventKind.ResourceDelivered) >= 1, 2000);
-        // A cow's load is 50 (ADR 0170): the peasant milks this cow dry, 40 plus the 2 that regrew while it was milking.
-        Assert.Equal(42, d.Events.First(e => e.Event.Kind == SimEventKind.ResourceDelivered).Event.Arg);
+        // A cow's load is 50 (ADR 0170): the peasant milks this cow dry and waits by it for the milk to regrow until the
+        // pail is full (play-test 2026-10-20), instead of carrying home a unit or two at a time.
+        Assert.Equal(50, d.Events.First(e => e.Event.Kind == SimEventKind.ResourceDelivered).Event.Arg);
         Assert.True(d.World.Entities.IsAlive(cow));
+        d.RunUntil(() => d.Count(SimEventKind.ResourceDelivered) >= 2, 4000);
+        Assert.Equal(50, d.Events.Where(e => e.Event.Kind == SimEventKind.ResourceDelivered).ElementAt(1).Event.Arg);
 
         // Milk regrows (4 s per unit, UNVERIFIED) up to the full 40.
         d.Order(0, CommandKind.Stop, [peon]);
@@ -144,6 +148,46 @@ public class EconomyM3Tests
         Assert.InRange(ticks, 4500, 5300); // 130 HP at 30 per minute ~ 260 s
         Assert.Contains(d.Events, e => e.Event.Kind == SimEventKind.Decayed && e.Event.Entity == fields[1]);
         Assert.True(d.World.Entities.IsAlive(fields[0]));
+    }
+
+    [Fact]
+    public void Fields_are_walked_over_and_farmed_from_inside_but_nothing_is_built_on_them()
+    {
+        // A field (3 x 3 tiles at 12, 2) between a footman and his goal, and a peasant sent to farm it.
+        using var d = new SimDriver(
+            TestMap(40, 16, Structure("euro.castle", 0, 30, 10), Structure("comm.field", 0, 12, 2), Unit("euro.footman", 0, 9, 3), Unit("euro.peon", 0, 13, 8)),
+            ruleset: Classic);
+        World w = d.World;
+        EntityId field = OfType(w, "comm.field").Single();
+        EntityId footman = OfType(w, "euro.footman").Single();
+        EntityId peon = OfType(w, "euro.peon").Single();
+        Assert.True(w.IsUnderWalkableFootprint(13, 3));
+        Assert.True(w.Map.IsPassable(Locomotor.Foot, 13, 3)); // no blocker
+        Assert.False(PlacementQueries.CanPlace(w, (ushort)Id("euro.house"), 12, 2)); // nothing is built on it
+        Assert.False(PlacementQueries.IsBuildableTile(w, 13, 3));
+
+        // The footman walks straight across the field.
+        d.Order(0, CommandKind.Move, [footman], (17 * Tile) + (Tile / 2), (3 * Tile) + (Tile / 2));
+        bool crossed = false;
+        for (int t = 0; t < 400 && !crossed; t++)
+        {
+            d.Step();
+            Position p = d.PositionOf(footman);
+            crossed |= w.IsUnderWalkableFootprint(p.X / Tile, p.Y / Tile);
+        }
+
+        Assert.True(crossed);
+
+        // The farmer works on the field, not beside it.
+        d.Order(0, CommandKind.Harvest, [peon], target: field);
+        d.RunUntil(() => w.Workers.Get(peon).Phase == WorkerPhase.Gathering, 600);
+        Position at = d.PositionOf(peon);
+        Assert.True(w.IsUnderWalkableFootprint(at.X / Tile, at.Y / Tile), $"farmer at {at.X / (double)Tile:0.0},{at.Y / (double)Tile:0.0}");
+
+        // The cover survives a snapshot round trip.
+        using Simulation restored = Simulation.Restore(d.Sim.CaptureSnapshot(), Classic, w.Map.Data);
+        Assert.True(restored.World.IsUnderWalkableFootprint(13, 3));
+        Assert.Equal(d.Sim.ComputeFullHash(), restored.ComputeFullHash());
     }
 
     [Fact]

@@ -31,6 +31,27 @@ public enum UnitAnim
 
     /// <summary>Building.</summary>
     Build,
+
+    /// <summary>Milking a cow (<c>image_milk</c>).</summary>
+    Milk,
+
+    /// <summary>Walking with logs (the base image + <c>_tree</c>).</summary>
+    CarryWood,
+
+    /// <summary>Walking with gold (<c>_gold</c>).</summary>
+    CarryGold,
+
+    /// <summary>Walking with stone (<c>_stone</c>).</summary>
+    CarryStone,
+
+    /// <summary>Walking with food from a field (<c>_food</c>).</summary>
+    CarryFood,
+
+    /// <summary>Walking with a pail of milk (<c>image_carrymilk</c>).</summary>
+    CarryMilk,
+
+    /// <summary>Walking with meat (<c>image_carrymeat</c>).</summary>
+    CarryMeat,
 }
 
 /// <summary>How an entity type looks and sounds, from the user's imported object INIs (never shipped).</summary>
@@ -143,6 +164,13 @@ public sealed class PresentationCatalog
     [
         (UnitAnim.Base, "image"), (UnitAnim.Idle, "image_idle"), (UnitAnim.Attack, "image_attack"), (UnitAnim.Die, "image_die"),
         (UnitAnim.Chop, "image_chop"), (UnitAnim.Mine, "image_mine"), (UnitAnim.Farm, "image_dig"), (UnitAnim.Build, "image_build"),
+        (UnitAnim.Milk, "image_milk"), (UnitAnim.CarryMilk, "image_carrymilk"), (UnitAnim.CarryMeat, "image_carrymeat"),
+    ];
+
+    // Carrying sprites the object INIs do not list: IMAGES.INI names them after the walk image (e_peon_tree, e_peon_gold...).
+    private static readonly (UnitAnim Anim, string Suffix)[] CarrySuffixes =
+    [
+        (UnitAnim.CarryWood, "_tree"), (UnitAnim.CarryGold, "_gold"), (UnitAnim.CarryStone, "_stone"), (UnitAnim.CarryFood, "_food"),
     ];
 
     private readonly TypeVisual[] _types;
@@ -404,6 +432,14 @@ public sealed class PresentationCatalog
                     if (section.Get(key) is { Length: > 0 } image)
                     {
                         images[anim] = image;
+                    }
+                }
+
+                if (images.ContainsKey(UnitAnim.Chop) && images.TryGetValue(UnitAnim.Base, out string? walk))
+                {
+                    foreach ((UnitAnim carry, string ending) in CarrySuffixes)
+                    {
+                        images[carry] = walk + ending; // a missing entry draws the walk image instead
                     }
                 }
 

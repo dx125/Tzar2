@@ -974,6 +974,7 @@ public sealed partial class World
         }
 
         Map.RebuildOccupancy(cells);
+        RebuildWalkableCover();
         ValidateGameplayComponents();
         ValidateM3Components();
         ValidateKingdomComponents();
@@ -1253,7 +1254,7 @@ public sealed partial class World
                         passage[tile] = true;
                     }
 
-                    if (!type.Traits.IsBridge && type.Footprint[k] != 0 && !(open && type.Traits.Gate!.Passage[k] != 0))
+                    if (!type.Traits.IsBridge && !type.Traits.WalkableFootprint && type.Footprint[k] != 0 && !(open && type.Traits.Gate!.Passage[k] != 0))
                     {
                         blockers[tile]++;
                     }
@@ -1388,11 +1389,18 @@ public sealed partial class World
     }
 
     // Adds or removes what a structure puts on the map: blockers on its mask tiles (an open gate's passage excepted), or a
-    // completed bridge's deck on every tile (a bridge site puts nothing, ADR 0043). Rotation applies.
+    // completed bridge's deck on every tile (a bridge site puts nothing, ADR 0043). Rotation applies. A walkable footprint
+    // (fields) puts nothing: placement keeps other structures off it (GameplayCommands.CanPlace).
     private void ApplyStructure(EntityId entity, bool add)
     {
         Footprint f = Footprints.Get(entity);
         EntityTypeDefinition type = TypeOf(entity);
+        if (type.Traits.WalkableFootprint)
+        {
+            ApplyWalkable(entity, add);
+            return;
+        }
+
         int w = f.Width(type.FootprintWidth, type.FootprintHeight);
         int h = f.Height(type.FootprintWidth, type.FootprintHeight);
         bool site = Constructions.Has(entity);

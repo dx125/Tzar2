@@ -317,6 +317,12 @@ public sealed partial record EntityTraits
     /// <summary>Whether deleting it needs Shift + Delete (castle and guilds, GAME-04).</summary>
     public bool ProtectedDelete { get; init; }
 
+    /// <summary>
+    /// Whether units walk over the footprint (fields: their farmer works on them). Nothing can be built on it, and it
+    /// blocks nobody's way.
+    /// </summary>
+    public bool WalkableFootprint { get; init; }
+
     /// <summary>Neglect decay (fields), or null.</summary>
     public DecayDefinition? Decay { get; init; }
 

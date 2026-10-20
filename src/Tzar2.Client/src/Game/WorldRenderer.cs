@@ -329,7 +329,18 @@ public sealed class WorldRenderer : IDisposable
 
         UnitAnim anim = e.Activity switch
         {
+            UnitActivity.Walk when e.CarryAmount > 0 => e.Carry switch
+            {
+                FrameCarry.Wood => UnitAnim.CarryWood,
+                FrameCarry.Gold => UnitAnim.CarryGold,
+                FrameCarry.Stone => UnitAnim.CarryStone,
+                FrameCarry.Food => UnitAnim.CarryFood,
+                FrameCarry.Milk => UnitAnim.CarryMilk,
+                FrameCarry.Meat => UnitAnim.CarryMeat,
+                _ => UnitAnim.Base,
+            },
             UnitActivity.Walk => UnitAnim.Base,
+            UnitActivity.Milk => UnitAnim.Milk,
             UnitActivity.Attack => UnitAnim.Attack,
             UnitActivity.Chop => UnitAnim.Chop,
             UnitActivity.Mine => UnitAnim.Mine,

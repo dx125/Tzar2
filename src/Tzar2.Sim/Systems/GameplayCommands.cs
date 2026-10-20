@@ -752,7 +752,8 @@ internal static class GameplayCommands
             {
                 // Free mask cells (cut corners) may hold anything; blocked ones need walkable land without a structure.
                 if (mask[f.MaskIndex(dx, dy, type.FootprintWidth)] != 0
-                    && (!map.IsPassable(Locomotor.Foot, tileX + dx, tileY + dy) || map.Bridges[((tileY + dy) * map.Width) + tileX + dx] != 0))
+                    && (!map.IsPassable(Locomotor.Foot, tileX + dx, tileY + dy) || map.Bridges[((tileY + dy) * map.Width) + tileX + dx] != 0
+                        || world.IsUnderWalkableFootprint(tileX + dx, tileY + dy)))
                 {
                     return false;
                 }

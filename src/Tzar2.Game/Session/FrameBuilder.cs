@@ -90,9 +90,17 @@ public static class FrameBuilder
                 Worker worker = world.Workers.At(w);
                 e.CarryResource = worker.CarryResource;
                 e.CarryAmount = worker.CarryAmount;
+                EntityTypeDefinition? node = worker.Target != 0 && world.Identities.IndexOf(EntityId.FromValue(worker.Target)) is >= 0 and var ni
+                    ? world.Ruleset.EntityTypes[world.Identities.At(ni).TypeId]
+                    : null;
+                if (worker.CarryAmount > 0)
+                {
+                    e.Carry = CarryOf(world.Ruleset, worker.CarryResource, node);
+                }
+
                 if (!moving && worker.Phase == WorkerPhase.Gathering)
                 {
-                    e.Activity = GatherActivity(world.Ruleset, worker.NodeResource);
+                    e.Activity = node is { Traits.Category: EntityCategory.Unit } ? UnitActivity.Milk : GatherActivity(world.Ruleset, worker.NodeResource);
                 }
                 else if (!moving && worker.Phase == WorkerPhase.Building)
                 {
@@ -295,12 +303,13 @@ public static class FrameBuilder
             frame.BuildableVersion = -1;
         }
 
-        if (frame.BuildableVersion == world.Map.PassabilityVersion)
+        if (frame.BuildableVersion == world.Map.PassabilityVersion && frame.BuildableFieldsVersion == world.WalkableFootprintsVersion)
         {
             return;
         }
 
         frame.BuildableVersion = world.Map.PassabilityVersion;
+        frame.BuildableFieldsVersion = world.WalkableFootprintsVersion;
 
         byte[] buildable = frame.Buildable;
         int width = world.Map.Width;
@@ -351,6 +360,23 @@ public static class FrameBuilder
         {
             frame.Researchable[t] = PlacementQueries.ResearchRequirementsMet(world, who, t) ? (byte)1 : (byte)0;
         }
+    }
+
+    /// <summary>The look of a load of <paramref name="resource"/> taken from a node of type <paramref name="node"/> (null when gone).</summary>
+    public static FrameCarry CarryOf(Ruleset ruleset, int resource, EntityTypeDefinition? node)
+    {
+        ArgumentNullException.ThrowIfNull(ruleset);
+        string key = resource < ruleset.ResourceTypes.Count ? ruleset.ResourceTypes[resource] : string.Empty;
+        return key switch
+        {
+            "wood" => FrameCarry.Wood,
+            "gold" => FrameCarry.Gold,
+            "stone" or "iron" => FrameCarry.Stone,
+            "food" when node is { Traits.Category: EntityCategory.Unit } => FrameCarry.Milk,
+            "food" when node is { Traits.LegacyClass: "meat" } => FrameCarry.Meat,
+            "food" => FrameCarry.Food,
+            _ => FrameCarry.None,
+        };
     }
 
     /// <summary>The gathering animation for a resource type id: wood → chop, food → farm, others → mine.</summary>

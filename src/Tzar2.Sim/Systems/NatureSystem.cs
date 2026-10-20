@@ -91,6 +91,7 @@ public sealed class NatureSystem : ISimSystem
         {
             world.NatureHomes.Remove(target);
             GameplayCommands.ClearTasks(world, target);
+            Interaction.Halt(world, target); // a claimed cow stops wandering and stays by the peasant who milks it
             world.ChangeOwner(target, owner);
             world.Events.Emit(new SimEvent(SimEventKind.Claimed, owner, target, 0, 0, world.Identities.Get(target).TypeId));
         }

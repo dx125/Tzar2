@@ -26,9 +26,11 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0171) SPEED 4 is 40 px/s (operator capture, unit-speed): speedPixelsPerSecondPerPoint 12 -> 10, every unit walks a sixth slower.
     // (ADR 0172) the original ignores SPEED: measured classes walk at their own speed (foot 40 px/s, mounted 72, ...).
     // (ADR 0175) peasants gather 900 ms per unit, not 1,000.
-    private const ulong GoldenCommandStream = 0x92309C8B6B1276AFUL;
-    private const ulong GoldenHashStream = 0x9672AA0779DFBC0FUL;
-    private const ulong GoldenFinalFullHash = 0xE937ED15C895BAC6UL;
+    // (play-test 2026-10-20) fields are walkable and their farmers work on them; a claimed cow stops; a milker waits for
+    // the milk to regrow until the pail is full.
+    private const ulong GoldenCommandStream = 0xA4B6469B53563387UL;
+    private const ulong GoldenHashStream = 0xD40C4C839A8FA55AUL;
+    private const ulong GoldenFinalFullHash = 0xDC59A0E27BA61A41UL;
 
     private const int Ticks = 9600;
 

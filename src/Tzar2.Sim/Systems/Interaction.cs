@@ -76,6 +76,22 @@ internal static class Interaction
     /// </summary>
     public static bool WorkerReaches(World world, EntityId worker, EntityId target)
     {
+        if (world.Footprints.Has(target) && world.TypeOf(target).Traits.WalkableFootprint && !world.Constructions.Has(target)
+            && world.TypeOf(worker).Locomotor != Locomotor.Ship)
+        {
+            // A farmer works on the field, not beside it: at its own tile of the field, or wherever it stopped on it when
+            // that tile is taken.
+            Position at = world.Positions.Get(worker);
+            if (DistanceSquaredTo(world, at.X, at.Y, target) != 0)
+            {
+                return false;
+            }
+
+            (int wx, int wy) = WorkPoint(world, target, at, world.TypeOf(worker).Locomotor, worker);
+            const long near = MapState.UnitsPerTile / 3;
+            return IntMath.DistanceSquared(at.X, at.Y, wx, wy) <= near * near || !IsMoving(world, worker);
+        }
+
         EntityTypeDefinition type = world.TypeOf(worker);
         EntityTypeDefinition other = world.TypeOf(target);
         bool shipWorker = type.Locomotor == Locomotor.Ship;
@@ -236,11 +252,15 @@ internal static class Interaction
     /// <summary>The access a worker of <paramref name="type"/> delivers with: boats at water drop-offs, others on land.</summary>
     public static DropOffAccess AccessOf(EntityTypeDefinition type) => type.Locomotor == Locomotor.Ship ? DropOffAccess.Water : DropOffAccess.Land;
 
-    /// <summary>Whether <paramref name="node"/> can be gathered now: alive, not empty, not a site, of the resource, allowed.</summary>
-    public static bool IsHarvestable(World world, EntityId node, int resource, byte owner)
+    /// <summary>
+    /// Whether <paramref name="node"/> can be gathered now: alive, not empty, not a site, of the resource, allowed. With
+    /// <paramref name="waitForRegrowth"/>, an empty node that regrows (a cow milked dry) counts too: its own milker waits.
+    /// </summary>
+    public static bool IsHarvestable(World world, EntityId node, int resource, byte owner, bool waitForRegrowth = false)
     {
         int s = world.ResourceStocks.IndexOf(node);
-        return s >= 0 && world.Entities.IsAlive(node) && world.ResourceStocks.At(s).Amount != 0 && !world.Constructions.Has(node)
+        return s >= 0 && world.Entities.IsAlive(node) && !world.Constructions.Has(node)
+            && (world.ResourceStocks.At(s).Amount != 0 || (waitForRegrowth && world.TypeOf(node).Traits.ResourceNode is { RegenMs: > 0 }))
             && world.TypeOf(node).Traits.ResourceNode!.Resource == resource && MayHarvest(world, owner, node);
     }
 
@@ -248,8 +268,16 @@ internal static class Interaction
     /// Where a worker goes to work on <paramref name="target"/>: the walkable tile next to a structure nearest to the
     /// worker, or the position of a footprint-less target (a cow, a fish patch, meat).
     /// </summary>
-    public static (int X, int Y) WorkPoint(World world, EntityId target, Position from, Locomotor locomotor)
+    public static (int X, int Y) WorkPoint(World world, EntityId target, Position from, Locomotor locomotor, EntityId worker = default)
     {
+        if (world.Footprints.Has(target) && world.TypeOf(target).Traits.WalkableFootprint && locomotor != Locomotor.Ship)
+        {
+            // On a field: one of its tiles, picked by the worker so that several farmers spread out.
+            (int tx, int ty, int w, int h) = world.FootprintRect(target);
+            int cell = (int)((uint)worker.Index % (uint)Math.Max(1, w * h));
+            return (((tx + (cell % w)) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2), ((ty + (cell / w)) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2));
+        }
+
         if (world.Footprints.Has(target))
         {
             if (ApproachPoint(world, target, from.X, from.Y, locomotor, out int x, out int y))
