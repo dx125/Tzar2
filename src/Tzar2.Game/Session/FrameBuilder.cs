@@ -140,10 +140,51 @@ public static class FrameBuilder
                 if (production.Count > 0)
                 {
                     ushort head = production.Queue[0];
-                    e.QueueHead = head;
-                    int total = head < world.Ruleset.EntityTypes.Count ? world.Ruleset.EntityTypes[head].Traits.BuildTimeMs : 0;
+                    int item = QueueItems.Id(head);
+                    int total;
+                    if (QueueItems.IsResearch(head))
+                    {
+                        e.QueueKind = FrameQueueKind.Research;
+                        total = item < world.Ruleset.Technologies.Count ? world.Ruleset.Technologies[item].TimeMs : 0;
+                    }
+                    else if (QueueItems.IsUpgrade(head))
+                    {
+                        e.QueueKind = FrameQueueKind.Upgrade;
+                        total = item < world.Ruleset.Upgrades.Count ? world.Ruleset.Upgrades[item].TimeMs : 0;
+                    }
+                    else
+                    {
+                        e.QueueKind = FrameQueueKind.Unit;
+                        total = item < world.Ruleset.EntityTypes.Count ? world.Ruleset.EntityTypes[item].Traits.BuildTimeMs : 0;
+                    }
+
+                    e.QueueHead = (ushort)item;
                     e.QueuePermille = total > 0 ? (int)Math.Clamp(production.ProgressMs * 1000L / total, 0, 1000) : 0;
                 }
+
+                for (int item = 0; item < production.Count; item++)
+                {
+                    if (QueueItems.IsUpgrade(production.Queue[item]))
+                    {
+                        e.Upgrades |= 1u << QueueItems.Id(production.Queue[item]);
+                    }
+                }
+            }
+
+            if (world.UpgradeLevels.IndexOf(id) is >= 0 and var ul)
+            {
+                e.Upgrades |= world.UpgradeLevels.At(ul).Mask;
+            }
+
+            if (world.Stances.IndexOf(id) is >= 0 and var st)
+            {
+                e.Stance = (byte)world.Stances.At(st).Value;
+            }
+
+            if (world.Gates.IndexOf(id) is >= 0 and var g)
+            {
+                GateState gate = world.Gates.At(g);
+                e.Gate = FrameGate.Present | (gate.Open != 0 ? FrameGate.Open : FrameGate.None) | (gate.Mode == GateMode.Automatic ? FrameGate.Automatic : FrameGate.None);
             }
 
             int s = world.ResourceStocks.IndexOf(id);
@@ -207,6 +248,27 @@ public static class FrameBuilder
             for (int w = 0; w < TechnologyRow.Capacity / 64; w++)
             {
                 fp.Technologies[w] = state.Technologies[w];
+                fp.Researching[w] = 0;
+            }
+        }
+
+        // Research queued anywhere (the card does not offer it twice).
+        ReadOnlySpan<EntityId> producers = world.Productions.Entities;
+        for (int i = 0; i < producers.Length; i++)
+        {
+            ref Production production = ref world.Productions.At(i);
+            byte owner = world.Identities.IndexOf(producers[i]) is >= 0 and var o ? world.Identities.At(o).Owner : (byte)0xFF;
+            if (owner >= players)
+            {
+                continue;
+            }
+
+            for (int k = 0; k < production.Count; k++)
+            {
+                if (QueueItems.IsResearch(production.Queue[k]) && QueueItems.Id(production.Queue[k]) is var t && t < TechnologyRow.Capacity)
+                {
+                    frame.Players[owner].Researching[t >> 6] |= 1UL << (t & 63);
+                }
             }
         }
 
@@ -259,6 +321,7 @@ public static class FrameBuilder
             if (frame.Makeable.Length != 0)
             {
                 frame.Makeable = [];
+                frame.Researchable = [];
             }
 
             return;
@@ -276,6 +339,17 @@ public static class FrameBuilder
             EntityTypeDefinition type = world.Ruleset.EntityTypes[t];
             bool made = type.Traits.Category is EntityCategory.Unit or EntityCategory.Building;
             makeable[t] = made && PlacementQueries.RequirementsMet(world, who, (ushort)t) ? (byte)1 : (byte)0;
+        }
+
+        int techs = world.Ruleset.Technologies.Count;
+        if (frame.Researchable.Length != techs)
+        {
+            frame.Researchable = new byte[techs];
+        }
+
+        for (int t = 0; t < techs; t++)
+        {
+            frame.Researchable[t] = PlacementQueries.ResearchRequirementsMet(world, who, t) ? (byte)1 : (byte)0;
         }
     }
 

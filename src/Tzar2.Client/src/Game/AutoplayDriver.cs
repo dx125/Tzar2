@@ -80,6 +80,7 @@ public sealed class AutoplayDriver
             await Frames(3);
             game.Click(Screen(game, Own(game, "peon")), MouseButton.Left);
             await Frames(2);
+            Log(game, "peasant card: " + CardText(game));
             game.Press(Key.B);
             await Frames(2);
             OpenHouse(game);
@@ -104,7 +105,7 @@ public sealed class AutoplayDriver
             game.Press(Key.P);
             await Seconds(game, 3);
             await Shot("castle-training");
-            Log(game, "castle card: " + string.Join(" ", game.Card.Select(c => c is { } s ? $"{s.Button.Hotkey}:{s.Button.Order}{(s.Enabled ? string.Empty : "(off)")}" : "-")));
+            Log(game, "castle card: " + CardText(game));
 
             // 5. Drag-box the footmen, Ctrl+1, move-advance toward the map centre.
             // Random maps start with peasants only: then the peasants that are not chopping play the army.
@@ -231,6 +232,9 @@ public sealed class AutoplayDriver
             game.PressCard(sub);
         }
     }
+
+    private static string CardText(GameScreen game)
+        => string.Join(" ", game.Card.Select(c => c is { } s ? $"{s.Button.Hotkey}:{s.Button.Order}{(s.Enabled ? string.Empty : "(off)")}" : "-"));
 
     private static FrameEntity? VisibleEnemyUnit(GameScreen game)
     {

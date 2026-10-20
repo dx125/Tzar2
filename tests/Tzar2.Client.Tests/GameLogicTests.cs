@@ -71,6 +71,22 @@ public sealed class PresentationCatalogTests
         Assert.Equal((CardAction.Stop, string.Empty), PresentationCatalog.Classify("STOP", null));
     }
 
+    [Theory]
+    [InlineData("TECHNOLOGY", "te_feudalism", CardAction.Research, "te_feudalism")]
+    [InlineData("UPGRADE gate_stone", "to_gate_stone", CardAction.Upgrade, "to_gate_stone")]
+    [InlineData("capture", null, CardAction.Capture, "")]
+    [InlineData("move_advance", null, CardAction.MoveAdvance, "")]
+    [InlineData("stand_ground", null, CardAction.Stance, "1")]
+    [InlineData("gate_subai_on", null, CardAction.Gate, "auto")]
+    [InlineData("die", null, CardAction.Delete, "")]
+    [InlineData("emerge", null, CardAction.Unload, "")]
+    [InlineData("become_priest", null, CardAction.Become, "priest")]
+    [InlineData("next_idle_peon", null, CardAction.NextIdle, "")]
+    [InlineData("TECHNOLOGY", null, CardAction.Unsupported, "TECHNOLOGY")]
+    [InlineData("spell spell_heal", null, CardAction.Unsupported, "spell spell_heal")]
+    public void Card_orders_map_onto_the_sims_commands(string action, string? className, CardAction expected, string argument)
+        => Assert.Equal((expected, argument), PresentationCatalog.Classify(action, null, className));
+
     [Fact]
     public void Sound_sets_and_key_classes_resolve_to_package_paths()
     {

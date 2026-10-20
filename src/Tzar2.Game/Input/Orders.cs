@@ -35,6 +35,18 @@ public enum OrderMode
 
     /// <summary>Place a building (the placement ghost).</summary>
     Place,
+
+    /// <summary>Capture the clicked enemy building (peasants; GAME-04).</summary>
+    Capture,
+
+    /// <summary>Siege weapons attack the clicked ground (GAME-07).</summary>
+    AttackGround,
+
+    /// <summary>Move-advance to the clicked point (a move with Ctrl: fight what comes into sight).</summary>
+    MoveAdvance,
+
+    /// <summary>Move-sneak to the clicked point (a move with Alt).</summary>
+    MoveSneak,
 }
 
 /// <summary>One command to send: the kind, its parameters and the subset of the selection it applies to.</summary>
@@ -197,6 +209,11 @@ public static class OrderResolver
             OrderMode.Rally => [new PlannedCommand(CommandKind.SetRally, CommandFlags.None, EntityId.None, x, y, 0, 0, own)],
             OrderMode.Repair when target is { } r && r.Owner == player && NeedsRepair(r) && Builders(selection, player) is { Count: > 0 } builders
                 => [new PlannedCommand(CommandKind.Repair, queue, r.Id, x, y, 0, 0, builders)],
+            OrderMode.Capture when target is { Category: EntityCategory.Building } c && c.Owner != player && !c.UnderConstruction
+                => [new PlannedCommand(CommandKind.Capture, queue, c.Id, x, y, 0, 0, own)],
+            OrderMode.AttackGround => [new PlannedCommand(CommandKind.AttackGround, queue, EntityId.None, x, y, 0, 0, own)],
+            OrderMode.MoveAdvance => [new PlannedCommand(CommandKind.Move, CommandFlags.Ctrl | queue, EntityId.None, x, y, 0, 0, own)],
+            OrderMode.MoveSneak => [new PlannedCommand(CommandKind.Move, CommandFlags.Alt | queue, EntityId.None, x, y, 0, 0, own)],
             _ => [],
         };
     }

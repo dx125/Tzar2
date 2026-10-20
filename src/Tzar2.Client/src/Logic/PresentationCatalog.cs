@@ -73,6 +73,51 @@ public enum CardAction
 #pragma warning disable CS1591 // Named after ORDERS.INI actions.
     Move, Attack, Harvest, Patrol, Guard, Repair, Stop, Train, Build, Submenu, Back, Cancel,
 #pragma warning restore CS1591
+
+    /// <summary>Research technology <see cref="CardButton.Argument"/> (its key) in the selected building.</summary>
+    Research,
+
+    /// <summary>Buy upgrade <see cref="CardButton.Argument"/> (its key) for the selected towers, walls, gates or ships.</summary>
+    Upgrade,
+
+    /// <summary>Peasants capture the clicked enemy building.</summary>
+    Capture,
+
+    /// <summary>Move to the clicked point fighting what comes into sight (Ctrl + right click).</summary>
+    MoveAdvance,
+
+    /// <summary>Move to the clicked point without stopping to fight (Alt + right click).</summary>
+    MoveSneak,
+
+    /// <summary>Combat stance <see cref="CardButton.Argument"/>: 0 aggressive, 1 stand ground, 2 hold fire.</summary>
+    Stance,
+
+    /// <summary>Gate control <see cref="CardButton.Argument"/>: open, close, auto, manual.</summary>
+    Gate,
+
+    /// <summary>Explore unexplored ground.</summary>
+    Explore,
+
+    /// <summary>Destroy the selected own units or buildings (Delete).</summary>
+    Delete,
+
+    /// <summary>Let the units out of a castle, outpost or ship.</summary>
+    Unload,
+
+    /// <summary>Turn the selected units into class <see cref="CardButton.Argument"/> (become priest, become Jihad warrior).</summary>
+    Become,
+
+    /// <summary>Siege weapons attack the clicked ground.</summary>
+    AttackGround,
+
+    /// <summary>Select the next idle peasant.</summary>
+    NextIdle,
+
+    /// <summary>Show the quest log.</summary>
+    Quests,
+
+    /// <summary>The next page of a card with more orders than slots (Tzar2's; <see cref="CardButton.Argument"/> = "2/3").</summary>
+    Page,
 }
 
 /// <summary>A button of a command card (MENU.INI entry + ORDERS.INI order).</summary>
@@ -103,6 +148,7 @@ public sealed class PresentationCatalog
     private readonly TypeVisual[] _types;
     private readonly IniTable _menus;
     private readonly IniTable _orders;
+    private Dictionary<string, int>? _imageByClass;
     private readonly IniTable _sounds;
     private readonly IniTable _strings;
     private readonly IniTable _icons;
@@ -244,15 +290,24 @@ public sealed class PresentationCatalog
             string? submenu = o?.Get("SUBMENU");
             int image = o?.Get("IMG") is { } img && int.TryParse(img, NumberStyles.Integer, CultureInfo.InvariantCulture, out int ix) ? ix : -1;
             string tooltip = _strings.Get("orders_names", order) ?? order;
-            (CardAction kind, string argument) = Classify(action, submenu);
+            (CardAction kind, string argument) = Classify(action, submenu, o?.Get("CLASSNAME"));
+            if (kind == CardAction.Stance && argument == "toggle")
+            {
+                // holdfire and fireatwill share the action; the order says which way it goes.
+                argument = string.Equals(order, "fireatwill", StringComparison.OrdinalIgnoreCase) ? "0" : "2";
+            }
+
             buttons.Add(new CardButton(order, hotkey, kind, argument, image, tooltip));
         }
 
         return buttons;
     }
 
-    /// <summary>Maps an ORDERS.INI <c>ACTION</c> onto what this build can do.</summary>
-    public static (CardAction Action, string Argument) Classify(string action, string? submenu)
+    /// <summary>
+    /// Maps an ORDERS.INI <c>ACTION</c> (with the order's <c>CLASSNAME</c>: the technology or upgrade key) onto what
+    /// this build can do.
+    /// </summary>
+    public static (CardAction Action, string Argument) Classify(string action, string? submenu, string? className = null)
     {
         ArgumentNullException.ThrowIfNull(action);
         if (!string.IsNullOrEmpty(submenu))
@@ -274,8 +329,49 @@ public sealed class PresentationCatalog
             "stop" => (CardAction.Stop, string.Empty),
             "create" => (CardAction.Train, argument),
             "build" => (CardAction.Build, argument),
+            "technology" when !string.IsNullOrEmpty(className) => (CardAction.Research, className),
+            "upgrade" when !string.IsNullOrEmpty(className) => (CardAction.Upgrade, className),
+            "capture" => (CardAction.Capture, string.Empty),
+            "move_advance" or "default_adv" => (CardAction.MoveAdvance, string.Empty),
+            "move_sneak" or "default_sneak" => (CardAction.MoveSneak, string.Empty),
+            "stand_ground" or "hold_steady" => (CardAction.Stance, "1"),
+            "holdfire" => (CardAction.Stance, "toggle"),
+            "gateopen" => (CardAction.Gate, "open"),
+            "gateclose" => (CardAction.Gate, "close"),
+            "gate_subai_on" => (CardAction.Gate, "auto"),
+            "gate_subai_off" => (CardAction.Gate, "manual"),
+            "explore" => (CardAction.Explore, string.Empty),
+            "die" => (CardAction.Delete, string.Empty),
+            "emerge" or "unload" => (CardAction.Unload, string.Empty),
+            "become_priest" => (CardAction.Become, "priest"),
+            "become_jihad_warrior" => (CardAction.Become, "jihad_warrior"),
+            "attack_ground" => (CardAction.AttackGround, string.Empty),
+            "next_idle_peon" => (CardAction.NextIdle, string.Empty),
+            "view_quests" => (CardAction.Quests, string.Empty),
             _ => (CardAction.Unsupported, action),
         };
+    }
+
+    /// <summary>
+    /// The <c>orders/buttons.bmp</c> cell of the ORDERS.INI order whose <c>CLASSNAME</c> is <paramref name="className"/>
+    /// (a technology or upgrade key: <c>te_feudalism</c>, <c>to_gate_stone</c>), or −1.
+    /// </summary>
+    public int ButtonImage(string className)
+    {
+        if (_imageByClass is null)
+        {
+            _imageByClass = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (IniSection o in _orders.Sections)
+            {
+                if (o.Get("CLASSNAME") is { Length: > 0 } cls && o.Get("IMG") is { } img
+                    && int.TryParse(img, NumberStyles.Integer, CultureInfo.InvariantCulture, out int ix))
+                {
+                    _imageByClass.TryAdd(cls, ix);
+                }
+            }
+        }
+
+        return _imageByClass.TryGetValue(className, out int image) ? image : -1;
     }
 
     /// <summary>The ruleset type a card button trains or builds for <paramref name="civilization"/>, or −1.</summary>
