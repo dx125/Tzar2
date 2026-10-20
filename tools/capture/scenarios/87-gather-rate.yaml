@@ -15,6 +15,8 @@ description: |
   gathers that tree, so a trip is almost only gathering: the wood stockpile (900 after the mill) is followed in memory
   and steps by the load at every delivery. The trial's tree and mill edges let the suite remove the short walk. A burst
   of the tree and the mill shows where the peasant stands and walks.
+  First run (2026-10-19, ADR 0175): the mill was not built: the site the click gave overlapped the trees (the
+  operator built one by hand later); the burst still gave one load of 10 in ~9.0 s. Move the site a row or two lower for M8.
 launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: wood

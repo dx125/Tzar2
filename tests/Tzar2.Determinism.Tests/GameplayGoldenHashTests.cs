@@ -26,9 +26,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // ghost 67, cow and bear 26); the bot repairs in its base with a crew of three, and each kingdom's first house starts at
     // three quarters of its hit points, so a repair completes whatever the battle does.
     // (ADR 0173) the day is 37.5 minutes (dayLengthMs 2,250,000, measured on the clock globe): only the ruleset hash moves.
-    private const ulong GoldenRulesetHash = 0x7C98754695F2F4E3UL;
-    private const ulong GoldenHashStream = 0x369995D30ADB3778UL;
-    private const ulong GoldenFinalFullHash = 0x0D3ECF1A871E345CUL;
+    // (ADR 0175) peasants gather 900 ms per unit (measured once on wood, applied to every resource), not 1,000.
+    private const ulong GoldenRulesetHash = 0x7C42717F60EEAE57UL;
+    private const ulong GoldenHashStream = 0x0D08559C7D70C34DUL;
+    private const ulong GoldenFinalFullHash = 0x4588781B9D935998UL;
 
     private const int Ticks = 1600;
 

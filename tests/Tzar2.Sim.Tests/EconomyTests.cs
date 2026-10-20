@@ -54,7 +54,7 @@ public class EconomyTests
     [Fact]
     public void Gathering_takes_the_gather_time_per_unit()
     {
-        // The peasant stands next to the tree: 10 units at 1,000 ms each take exactly 200 ticks of gathering.
+        // The peasant stands next to the tree: 10 units at 900 ms each (measured once, ADR 0175) take exactly 180 ticks.
         using var d = new SimDriver(TestMap(24, 16, Structure("euro.castle", 0, 2, 2), Tree(12, 4), Unit("euro.peon", 0, 11, 4)), ruleset: Classic);
         EntityId peon = OfType(d.World, "euro.peon").Single();
         d.Order(0, CommandKind.Harvest, [peon], target: OfType(d.World, "comm.tree").Single());
@@ -67,7 +67,7 @@ public class EconomyTests
         }, 1000);
         Assert.True(ticks < 1000);
         Assert.Equal(10, d.World.Workers.Get(peon).CarryAmount);
-        Assert.Equal(200, gathering); // 10 x 1,000 ms at 50 ms per tick
+        Assert.Equal(180, gathering); // 10 x 900 ms at 50 ms per tick
     }
 
     [Fact]
