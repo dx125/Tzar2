@@ -273,6 +273,14 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
             .Add(e.WorkersPerLargeNode).Add(e.WorkersPerField).Add(e.SmallNodeAmount).Add(e.MaxNodeDistanceTiles);
         NavalOptions n = o.Naval;
         h.Add(n.FishingBoats).Add(n.Transports).Add(n.Warships).Add(n.FishRadiusTiles).Add(n.EmbarkTimeoutMs).Add(n.SailRetryMs).Add(n.TransportLeadMs).Add(n.OverseasCheckMs);
+        TacticsOptions t = o.Tactics;
+        foreach (TacticsLevel level in new[] { t.Easy, t.Normal, t.Hard })
+        {
+            h.Add(level.DefendBuildings ? 1 : 0).Add(level.DefendPercent).Add(level.LaunchPercent).Add(level.RetreatPercent)
+                .Add(level.FocusTargets ? 1 : 0).Add(level.WeakestTarget ? 1 : 0).Add(level.AvoidTowers ? 1 : 0);
+        }
+
+        h.Add(t.ThreatRadiusTiles);
         AddText(h, o.Technologies.GetType().FullName ?? string.Empty);
         h.Add(o.ExtraExecutors.Count);
         foreach (IAiExecutor x in o.ExtraExecutors)

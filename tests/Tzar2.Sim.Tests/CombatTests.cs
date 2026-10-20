@@ -124,6 +124,22 @@ public class CombatTests
     }
 
     [Fact]
+    public void A_move_advance_answers_a_tower_that_outranges_its_sight_and_a_plain_move_does_not()
+    {
+        // A stone tower (range 13 tiles) shoots footmen (sight 6) passing 10 tiles away.
+        foreach (bool advance in new[] { true, false })
+        {
+            using var d = new SimDriver(TestMap(40, 16, Structure("comm.tower_stone", 1, 20, 1), Unit("euro.footman", 0, 3, 12)), ruleset: Classic);
+            EntityId footman = OfType(d.World, "euro.footman").Single();
+            EntityId tower = OfType(d.World, "comm.tower_stone").Single();
+            d.Order(0, CommandKind.Move, [footman], (37 * Tile) + (Tile / 2), (12 * Tile) + (Tile / 2), flags: advance ? CommandFlags.Ctrl : CommandFlags.None);
+            d.RunUntil(() => !d.World.Entities.IsAlive(footman) || (!d.IsMoving(footman) && d.World.Combats.Get(footman).Target == 0), 3000);
+            Assert.True(d.Count(SimEventKind.Damaged) > 0, "the tower never fired");
+            Assert.Equal(advance, d.Events.Any(e => e.Event.Kind == SimEventKind.Damaged && e.Event.Entity == tower));
+        }
+    }
+
+    [Fact]
     public void A_unit_with_no_way_past_an_enemy_stops_and_fights_it()
     {
         // A one-tile corridor through a cliff wall, held by an enemy: no alternative, so the soldier stops (Blocked)

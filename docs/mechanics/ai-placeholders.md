@@ -58,7 +58,7 @@ First capture (2026-10-18, ADR 0111): no AI scenario yet, nothing here changed. 
 | E8a | Research | `have te_*` goals queued in the own building with the shortest queue that may research it, at most 2 per run; for unit/building goals the tree blocks, the first missing technology is researched and the first missing required building is built (a stable for knights) | research, construction executors |
 | E9 | Placement | rings around the town (radius 24), the nearest node for drop-offs (≤ 30 tiles, radius 10), the farm for fields (radius 14); 1-tile walkable ring around every building | `AiBuildPlacement` |
 | E10 | Gather point | 7 tiles from the town center toward the map center; producers of soldiers rally there | `MilitaryOptions` |
-| E11 | Defence | soldiers of any kingdom the AI may fight (enemy or neutral stance, never allies) within 8 tiles of the town's bounding box; soldiers at home move-advance to the nearest | `MilitaryOptions` |
+| E11 | Defence | soldiers of any kingdom the AI may fight (enemy or neutral stance, never allies) within 8 tiles of the town's bounding box; soldiers at home move-advance to the nearest (how many: T2; towers and buildings: T1) | `MilitaryOptions` |
 | E12 | Waves | first after 4 min; 10 soldiers at home, +4 per wave, max 40; 60 s apart; target: nearest building of the enemy (Enemy stance only) with the nearest town | `MilitaryOptions` |
 | E13 | Targeting | idle wave soldiers attack the enemy object nearest to the wave (outright within 12 tiles, else move-advance) | military executor |
 | E14 | Retreat | a wave below 25 % of its launch size goes back to the gather point | `MilitaryOptions` |
@@ -68,6 +68,22 @@ First capture (2026-10-18, ADR 0111): no AI scenario yet, nothing here changed. 
 | E18 | Ships | 1 transport from 240 s before the first wave (the cheapest that carries), 2 fishing boats when fish is within 24 tiles of the harbor, then 1 warship (the hardest hitter); the first transport and boat are saved for (the run's other executors leave that stock), the rest bought from spare stock | `NavalOptions` |
 | E19 | Landings | a wave whose target is overseas boards the transports, then unloads at the target after everyone is aboard or 60 s; unload told again after 60 s; the military executor waits meanwhile | `NavalOptions` |
 | E20 | Patrol | idle armed ships not kept for a landing attack the nearest enemy ship within 30 tiles, else the nearest enemy building or unit (of the 8 nearest) in range of their sea, else move-advance off the enemy town | naval executor |
+
+## Tactics (ADR 0178; Tzar2's own, not placeholders: tune them for play)
+
+The owner chose to keep the original scripts for strategy and give the AI new tactics scaled by difficulty
+(2026-10-20). Power = √(health × average attack per second), summed over a group (`AiThreats`); "around" = 12 tiles
+(`TacticsOptions.ThreatRadiusTiles`).
+
+| # | Behaviour | Easy | Normal | Hard | Where |
+|---|---|---|---|---|---|
+| T1 | Defence also answers enemy towers reaching into the town box (+8 tiles), else enemy buildings and sites in it (explicit attack) | yes | yes | yes | `TacticsLevel.DefendBuildings` |
+| T2 | Power sent against a threat at home, % of the enemy power within 6 tiles; against soldiers all go if too few, against a building they wait | 0 (all) | 100 | 150 | `TacticsLevel.DefendPercent` |
+| T3 | A wave starts only with this % of the power around its target; at `MaxWaveSize` it starts anyway | 0 (no check) | 100 | 150 | `TacticsLevel.LaunchPercent` |
+| T4 | A wave goes home below this % of the enemy power around it (besides E14) | off | 50 | 70 | `TacticsLevel.RetreatPercent` |
+| T5 | Idle wave soldiers attack by danger: enemy soldiers, towers reaching the wave, other towers, workers (within 12 tiles); then E13 | no | yes | yes | `TacticsLevel.FocusTargets` |
+| T6 | A wave aims at the enemy building with the least power around it | no | no | yes | `TacticsLevel.WeakestTarget` |
+| T7 | Gatherers leave and avoid nodes a hostile tower reaches (+1 tile): a safe node of the same resource, else home | no | yes | yes | `TacticsLevel.AvoidTowers` |
 
 ## Not implemented yet (no placeholder; follow-ups)
 

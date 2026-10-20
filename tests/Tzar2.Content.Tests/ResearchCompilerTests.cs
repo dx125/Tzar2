@@ -58,6 +58,32 @@ public class ResearchCompilerTests
     }
 
     [Fact]
+    public void Order_gates_are_found_without_allocating_and_near_misses_are_not()
+    {
+        Assert.NotEmpty(Classic.OrderGates);
+        foreach (OrderGate g in Classic.OrderGates)
+        {
+            Assert.Equal(g.Technology, Classic.OrderTechnology(g.Order, g.Civilization));
+            Assert.Equal(-1, Classic.OrderTechnology(g.Order + "x", g.Civilization));
+            Assert.Equal(-1, Classic.OrderTechnology(g.Order, g.Civilization + "x"));
+            Assert.Equal(-1, Classic.OrderTechnology(g.Order[..^1], g.Civilization));
+            Assert.Equal(-1, Classic.OrderTechnology(g.Order + "\n" + g.Civilization, string.Empty));
+        }
+
+        Assert.Equal(-1, Classic.OrderTechnology(string.Empty, string.Empty));
+        OrderGate first = Classic.OrderGates[0];
+        Classic.OrderTechnology(first.Order, first.Civilization);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 100; i++)
+        {
+            Classic.OrderTechnology(first.Order, first.Civilization);
+            Classic.OrderTechnology("spell_nothing", "euro");
+        }
+
+        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+    }
+
+    [Fact]
     public void Research_sites_come_from_the_command_cards()
     {
         ProducerDefinition blacksmith = Type("euro.blacksmith").Traits.Producer!;

@@ -11,21 +11,26 @@ using Tzar2.Sim.Map;
 namespace Tzar2.AI.Executors;
 
 /// <summary>
-/// Defence, attack waves and targeting (REQ-AI-02 military manager; ADR 0052). The scripts only say what to train; the
-/// original's war AI is hard-coded, so this is the most plausible behaviour (UNVERIFIED, docs/mechanics/ai-placeholders.md):
+/// Defence, attack waves and targeting (REQ-AI-02 military manager; ADR 0052, tactics ADR 0178). The scripts only say
+/// what to train; the original's war AI is hard-coded, so this is Tzar2's own, scaled by difficulty
+/// (<see cref="TacticsLevel"/>; docs/mechanics/ai-placeholders.md):
 /// <list type="bullet">
-/// <item><b>Defence:</b> enemy soldiers near the own buildings are attacked by the soldiers at home (move-advance).</item>
+/// <item><b>Defence:</b> enemy soldiers near the own buildings are attacked by the soldiers at home (move-advance); so are
+/// enemy towers, buildings and sites there, once the soldiers at home are strong enough.</item>
 /// <item><b>Gathering:</b> producers rally new soldiers at a gather point in front of the town.</item>
-/// <item><b>Waves:</b> after <see cref="MilitaryOptions.FirstWaveMs"/>, when enough soldiers are at home, they all
-/// move-advance to the nearest building of the nearest enemy; the threshold grows with every wave.</item>
-/// <item><b>Targeting:</b> wave soldiers that stand idle attack the enemy object nearest to the wave (move-advance when
-/// it is far); a wave reduced below <see cref="MilitaryOptions.RetreatPercent"/> % of its launch size goes home.</item>
+/// <item><b>Waves:</b> after <see cref="MilitaryOptions.FirstWaveMs"/>, when enough soldiers are at home and strong enough
+/// for the defence of the target, they all move-advance to the nearest (Hard: the least defended) building of the
+/// nearest enemy; the threshold grows with every wave.</item>
+/// <item><b>Targeting:</b> wave soldiers that stand idle attack what is dangerous around them, else the enemy object
+/// nearest to the wave (move-advance when it is far); a wave reduced below <see cref="MilitaryOptions.RetreatPercent"/> %
+/// of its launch size, or outmatched where it stands, goes home.</item>
 /// </list>
 /// </summary>
 public sealed class MilitaryExecutor : IAiExecutor
 {
     private readonly List<EntityId> _home = [];
     private readonly List<EntityId> _orders = [];
+    private readonly List<(long Distance, EntityId Unit)> _candidates = [];
     private readonly HashSet<uint> _inWave = [];
 
     /// <inheritdoc />
@@ -244,35 +249,145 @@ public sealed class MilitaryExecutor : IAiExecutor
             }
         }
 
-        if (!found)
+        TacticsLevel tactics = context.Tactics;
+        EntityId building = EntityId.None;
+        if (!found && (!tactics.DefendBuildings || !BuildingThreat(context, bx0, by0, bx1, by1, out building, out threatAt)))
         {
             return false;
         }
 
-        // Soldiers at home that are not fighting and not already heading there.
-        _orders.Clear();
+        // The enemy power there (towers in reach, soldiers around, the building itself), and what is already on its way.
+        long need = 0;
+        if (tactics.DefendPercent > 0)
+        {
+            need = context.Threats.PowerNear(threatAt.X, threatAt.Y, RadiusOf(context) / 2) * tactics.DefendPercent / 100;
+        }
+
+        long committed = 0;
         long near = 6L * MapState.UnitsPerTile;
+        _candidates.Clear();
         foreach (EntityId unit in _home)
         {
             int c = world.Combats.IndexOf(unit);
             int m = world.Motions.IndexOf(unit);
-            if (c < 0 || m < 0 || world.Combats.At(c).Target != 0)
+            if (c < 0 || m < 0)
             {
                 continue;
             }
 
+            uint target = world.Combats.At(c).Target;
             Motion motion = world.Motions.At(m);
-            if (motion.State == MotionState.Moving && AiExecutorContext.Distance(motion.OrderX, motion.OrderY, threatAt.X, threatAt.Y) <= near)
+            if ((!building.IsNone && target == building.Value)
+                || (target == 0 && motion.State == MotionState.Moving && AiExecutorContext.Distance(motion.OrderX, motion.OrderY, threatAt.X, threatAt.Y) <= near))
             {
+                committed += AiThreats.PowerOf(world, unit);
                 continue;
+            }
+
+            if (target != 0)
+            {
+                continue; // fighting something else
+            }
+
+            Position p = world.Positions.Get(unit);
+            _candidates.Add((AiExecutorContext.Distance(p.X, p.Y, threatAt.X, threatAt.Y), unit));
+        }
+
+        // The nearest free soldiers until their power is enough (all of them when nothing is weighed).
+        _candidates.Sort(static (a, b) => a.Distance != b.Distance ? a.Distance.CompareTo(b.Distance) : a.Unit.Index.CompareTo(b.Unit.Index));
+        _orders.Clear();
+        long sent = committed;
+        foreach ((long _, EntityId unit) in _candidates)
+        {
+            if (need > 0 && sent >= need)
+            {
+                break;
             }
 
             _orders.Add(unit);
+            sent += AiThreats.PowerOf(world, unit);
         }
 
-        IssueGroups(context, _orders, CommandKind.Move, EntityId.None, threatAt.X, threatAt.Y, CommandFlags.Ctrl);
+        if (!building.IsNone && sent < need)
+        {
+            return true; // too strong for now: the army stays home and grows
+        }
+
+        if (building.IsNone)
+        {
+            IssueGroups(context, _orders, CommandKind.Move, EntityId.None, threatAt.X, threatAt.Y, CommandFlags.Ctrl);
+        }
+        else
+        {
+            IssueGroups(context, _orders, CommandKind.Attack, building, threatAt.X, threatAt.Y, CommandFlags.None);
+        }
+
         return true;
     }
+
+    // An enemy tower whose reach comes into the box (the one nearest to the town), else the enemy building or site in the
+    // box nearest to the town.
+    private static bool BuildingThreat(AiExecutorContext context, long bx0, long by0, long bx1, long by1, out EntityId building, out Position at)
+    {
+        World world = context.World;
+        (int tx, int ty) = context.Player.Town;
+        building = EntityId.None;
+        at = default;
+        long best = long.MaxValue;
+        foreach (AiThreat t in context.Threats.Towers)
+        {
+            long dx = Math.Max(Math.Max(bx0 - t.X, t.X - (bx1 - 1)), 0);
+            long dy = Math.Max(Math.Max(by0 - t.Y, t.Y - (by1 - 1)), 0);
+            long d = AiExecutorContext.Distance(tx, ty, t.X, t.Y);
+            if (AiCensus.IsEnemy(world, context.Slot, t.Owner) && (dx * dx) + (dy * dy) <= (long)t.Reach * t.Reach && d < best)
+            {
+                best = d;
+                building = t.Id;
+                at = new Position(t.X, t.Y);
+            }
+        }
+
+        if (!building.IsNone)
+        {
+            return true;
+        }
+
+        for (int q = 0; q < context.Census.PlayerCount; q++)
+        {
+            if (!AiCensus.IsEnemy(world, context.Slot, q))
+            {
+                continue;
+            }
+
+            AiCensusPlayer enemy = context.Census.Player(q);
+            Inside(world, enemy.Buildings, tx, ty, (bx0, by0, bx1, by1), ref best, ref building, ref at);
+            Inside(world, enemy.Sites, tx, ty, (bx0, by0, bx1, by1), ref best, ref building, ref at);
+        }
+
+        return !building.IsNone;
+
+        static void Inside(World world, List<EntityId> list, int tx, int ty, (long X0, long Y0, long X1, long Y1) box, ref long best, ref EntityId building, ref Position at)
+        {
+            foreach (EntityId b in list)
+            {
+                Position p = world.Positions.Get(b);
+                if (p.X < box.X0 || p.X >= box.X1 || p.Y < box.Y0 || p.Y >= box.Y1)
+                {
+                    continue;
+                }
+
+                long d = AiExecutorContext.Distance(tx, ty, p.X, p.Y);
+                if (d < best)
+                {
+                    best = d;
+                    building = b;
+                    at = p;
+                }
+            }
+        }
+    }
+
+    private static int RadiusOf(AiExecutorContext context) => context.Options.Tactics.ThreatRadiusTiles * MapState.UnitsPerTile;
 
     private void Launch(AiExecutorContext context)
     {
@@ -290,6 +405,27 @@ public sealed class MilitaryExecutor : IAiExecutor
         if (!NearestEnemyTarget(context, context.Player.Town.X, context.Player.Town.Y, preferBuildings: true, out int target, out _, out int x, out int y))
         {
             return;
+        }
+
+        // Tactics: the least defended building of that enemy (Hard), and only with enough power for its defence.
+        TacticsLevel tactics = context.Tactics;
+        if (tactics.WeakestTarget)
+        {
+            (x, y) = WeakestBuilding(context, target, x, y);
+        }
+
+        if (tactics.LaunchPercent > 0 && _home.Count < options.MaxWaveSize)
+        {
+            long power = 0;
+            for (int i = 0; i < _home.Count && i < AiPlayerState.MaxWaveUnits; i++)
+            {
+                power += AiThreats.PowerOf(world, _home[i]);
+            }
+
+            if (power * 100 < context.Threats.PowerNear(x, y, RadiusOf(context)) * tactics.LaunchPercent)
+            {
+                return; // wait for more soldiers
+            }
         }
 
         state.WaveUnits.Clear();
@@ -323,9 +459,10 @@ public sealed class MilitaryExecutor : IAiExecutor
             return;
         }
 
-        // The wave's centroid; idle members get the enemy object nearest to it.
+        // The wave's centroid and power; idle members get a target near it.
         long sx = 0;
         long sy = 0;
+        long power = 0;
         _orders.Clear();
         foreach (uint v in state.WaveUnits)
         {
@@ -333,10 +470,20 @@ public sealed class MilitaryExecutor : IAiExecutor
             Position p = world.Positions.Get(e);
             sx += p.X;
             sy += p.Y;
+            power += AiThreats.PowerOf(world, e);
             if (!context.IsClaimed(e) && IsIdleSoldier(world, e))
             {
                 _orders.Add(e);
             }
+        }
+
+        int cx = (int)(sx / state.WaveUnits.Count);
+        int cy = (int)(sy / state.WaveUnits.Count);
+        TacticsLevel tactics = context.Tactics;
+        if (tactics.RetreatPercent > 0 && power * 100 < context.Threats.PowerNear(cx, cy, RadiusOf(context)) * tactics.RetreatPercent)
+        {
+            Recall(context, gx, gy); // outmatched where it stands
+            return;
         }
 
         if (_orders.Count == 0)
@@ -344,8 +491,15 @@ public sealed class MilitaryExecutor : IAiExecutor
             return;
         }
 
-        int cx = (int)(sx / state.WaveUnits.Count);
-        int cy = (int)(sy / state.WaveUnits.Count);
+        if (tactics.FocusTargets && DangerNear(context, cx, cy, out int owner, out EntityId danger, out int dx, out int dy))
+        {
+            state.TargetPlayer = owner;
+            state.TargetX = dx;
+            state.TargetY = dy;
+            IssueGroups(context, _orders, CommandKind.Attack, danger, dx, dy, CommandFlags.None);
+            return;
+        }
+
         if (!NearestEnemyTarget(context, cx, cy, preferBuildings: false, out int target, out EntityId entity, out int x, out int y))
         {
             Recall(context, gx, gy); // nothing left to fight
@@ -359,6 +513,86 @@ public sealed class MilitaryExecutor : IAiExecutor
         // Close by: attack it outright (a building is not always in an idle soldier's sight); else move-advance to it.
         bool close = AiExecutorContext.Distance(cx, cy, x, y) <= 12L * MapState.UnitsPerTile;
         IssueGroups(context, _orders, close ? CommandKind.Attack : CommandKind.Move, close ? entity : EntityId.None, x, y, close ? CommandFlags.None : CommandFlags.Ctrl);
+    }
+
+    // What idle wave soldiers attack first (tactics FocusTargets), within the threat radius of the wave: the nearest
+    // enemy soldier, else the nearest tower that reaches the wave, else the nearest other tower, else the nearest worker.
+    private static bool DangerNear(AiExecutorContext context, int cx, int cy, out int owner, out EntityId entity, out int x, out int y)
+    {
+        World world = context.World;
+        long radius = RadiusOf(context);
+        owner = -1;
+        entity = EntityId.None;
+        x = y = 0;
+        long best = long.MaxValue;
+        foreach (AiThreat s in context.Threats.Soldiers)
+        {
+            long d = AiExecutorContext.Distance(cx, cy, s.X, s.Y);
+            if (d <= radius && d < best && AiCensus.IsEnemy(world, context.Slot, s.Owner))
+            {
+                (best, owner, entity, x, y) = (d, s.Owner, s.Id, s.X, s.Y);
+            }
+        }
+
+        for (int pass = 0; pass < 2 && entity.IsNone; pass++)
+        {
+            foreach (AiThreat t in context.Threats.Towers)
+            {
+                long d = AiExecutorContext.Distance(cx, cy, t.X, t.Y);
+                if (d <= (pass == 0 ? t.Reach : radius) && d < best && AiCensus.IsEnemy(world, context.Slot, t.Owner))
+                {
+                    (best, owner, entity, x, y) = (d, t.Owner, t.Id, t.X, t.Y);
+                }
+            }
+        }
+
+        for (int q = 0; q < context.Census.PlayerCount && entity.IsNone; q++)
+        {
+            if (!AiCensus.IsEnemy(world, context.Slot, q))
+            {
+                continue;
+            }
+
+            foreach (EntityId w in context.Census.Player(q).Workers)
+            {
+                if (!MayTarget(world, context.Slot, w))
+                {
+                    continue;
+                }
+
+                Position p = world.Positions.Get(w);
+                long d = AiExecutorContext.Distance(cx, cy, p.X, p.Y);
+                if (d <= radius && d < best)
+                {
+                    (best, owner, entity, x, y) = (d, q, w, p.X, p.Y);
+                }
+            }
+        }
+
+        return !entity.IsNone;
+    }
+
+    // The building of player q with the least enemy power around it (ties: the nearest to the own town).
+    private static (int X, int Y) WeakestBuilding(AiExecutorContext context, int q, int x, int y)
+    {
+        World world = context.World;
+        AiThreats threats = context.Threats;
+        int radius = RadiusOf(context);
+        (int tx, int ty) = context.Player.Town;
+        long bestDefence = threats.PowerNear(x, y, radius);
+        long bestDistance = AiExecutorContext.Distance(tx, ty, x, y);
+        foreach (EntityId b in context.Census.Player(q).Buildings)
+        {
+            Position p = world.Positions.Get(b);
+            long defence = threats.PowerNear(p.X, p.Y, radius);
+            long d = AiExecutorContext.Distance(tx, ty, p.X, p.Y);
+            if (defence < bestDefence || (defence == bestDefence && d < bestDistance))
+            {
+                (bestDefence, bestDistance, x, y) = (defence, d, p.X, p.Y);
+            }
+        }
+
+        return (x, y);
     }
 
     private void Recall(AiExecutorContext context, int gx, int gy)

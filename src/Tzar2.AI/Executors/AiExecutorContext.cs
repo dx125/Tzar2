@@ -125,6 +125,83 @@ public sealed record MilitaryOptions
 }
 
 /// <summary>
+/// The AI's tactics at one difficulty (ADR 0178). Tzar2's own design, not a placeholder of the original: the scripts keep
+/// the strategy, these rules decide how the army and the gatherers react to danger (docs/mechanics/ai-placeholders.md T1-T7).
+/// </summary>
+public sealed record TacticsLevel
+{
+    /// <summary>Defence also answers towers, buildings and sites of an enemy near the town, not only soldiers.</summary>
+    public bool DefendBuildings { get; init; } = true;
+
+    /// <summary>Soldiers sent against a threat at home need this % of the enemy power there; 0 = every free soldier at home
+    /// goes. Against soldiers they go anyway; against a building they wait until they are enough.</summary>
+    public int DefendPercent { get; init; }
+
+    /// <summary>A wave starts only with this % of the power that defends its target; 0 = no check. A wave of the largest
+    /// size starts anyway.</summary>
+    public int LaunchPercent { get; init; }
+
+    /// <summary>A wave whose power falls below this % of the enemy power around it goes home; 0 = only the size rule.</summary>
+    public int RetreatPercent { get; init; }
+
+    /// <summary>Idle wave soldiers attack by danger (soldiers, then towers shooting at them, other towers, workers) before
+    /// the nearest object.</summary>
+    public bool FocusTargets { get; init; }
+
+    /// <summary>A wave aims at the enemy building with the least defence instead of the nearest one.</summary>
+    public bool WeakestTarget { get; init; }
+
+    /// <summary>Gatherers leave and avoid resource nodes in reach of a hostile tower.</summary>
+    public bool AvoidTowers { get; init; }
+
+    internal void Validate()
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(DefendPercent);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(DefendPercent, 1000);
+        ArgumentOutOfRangeException.ThrowIfNegative(LaunchPercent);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(LaunchPercent, 1000);
+        ArgumentOutOfRangeException.ThrowIfNegative(RetreatPercent);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(RetreatPercent, 1000);
+    }
+}
+
+/// <summary>The tactics per difficulty (ADR 0178; the owner's decision: original scripts, new tactics scaled by difficulty).</summary>
+public sealed record TacticsOptions
+{
+    /// <summary>Easy: the army answers threats at home without weighing them and attacks the nearest object.</summary>
+    public TacticsLevel Easy { get; init; } = new();
+
+    /// <summary>Normal: fair fights only, focus on what is dangerous, retreat from lost fights, gatherers avoid towers.</summary>
+    public TacticsLevel Normal { get; init; } = new() { DefendPercent = 100, LaunchPercent = 100, RetreatPercent = 50, FocusTargets = true, AvoidTowers = true };
+
+    /// <summary>Hard: like Normal with a margin, and waves aim at the weakest spot of the enemy town.</summary>
+    public TacticsLevel Hard { get; init; } = new() { DefendPercent = 150, LaunchPercent = 150, RetreatPercent = 70, FocusTargets = true, WeakestTarget = true, AvoidTowers = true };
+
+    /// <summary>What is "around" a point when powers are compared (tiles).</summary>
+    public int ThreatRadiusTiles { get; init; } = 12;
+
+    /// <summary>The level for <paramref name="difficulty"/>.</summary>
+    public TacticsLevel For(AiDifficulty difficulty) => difficulty switch
+    {
+        AiDifficulty.Easy => Easy,
+        AiDifficulty.Hard => Hard,
+        _ => Normal,
+    };
+
+    internal void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Easy);
+        ArgumentNullException.ThrowIfNull(Normal);
+        ArgumentNullException.ThrowIfNull(Hard);
+        Easy.Validate();
+        Normal.Validate();
+        Hard.Validate();
+        ArgumentOutOfRangeException.ThrowIfLessThan(ThreatRadiusTiles, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(ThreatRadiusTiles, 64);
+    }
+}
+
+/// <summary>
 /// What an executor sees during one run for one AI player: the world (read-only), the census, the bound script and
 /// its goals, a resource budget that commands of the run have already spent from, and the command output.
 /// </summary>
@@ -135,6 +212,8 @@ public sealed class AiExecutorContext
     private int[] _claims = [];
     private int[] _inProgressDelta = [];
     private int[] _attempted = [];
+    private readonly AiThreats _threats = new();
+    private int _threatsRun;
     private int _run;
 
     internal AiExecutorContext(AiCensus census, CommandList output)
@@ -172,6 +251,24 @@ public sealed class AiExecutorContext
 
     /// <summary>The goals of the last complete script pass, in priority order.</summary>
     public ReadOnlySpan<AiGoal> Goals => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(State.Current);
+
+    /// <summary>The tactics of the player's difficulty (ADR 0178).</summary>
+    public TacticsLevel Tactics => Options.Tactics.For(Settings.Difficulty);
+
+    /// <summary>The armed forces around the player (built on first use in a run).</summary>
+    public AiThreats Threats
+    {
+        get
+        {
+            if (_threatsRun != _run)
+            {
+                _threats.Build(this);
+                _threatsRun = _run;
+            }
+
+            return _threats;
+        }
+    }
 
     /// <summary>Commands this run may still issue.</summary>
     public int CommandsLeft { get; private set; }
@@ -213,6 +310,7 @@ public sealed class AiExecutorContext
         if (_run >= (int.MaxValue / 4) - 1)
         {
             _run = 0;
+            _threatsRun = 0;
             Array.Clear(_claims);
             Array.Clear(_attempted);
         }
