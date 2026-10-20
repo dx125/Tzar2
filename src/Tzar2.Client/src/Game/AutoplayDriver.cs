@@ -42,6 +42,24 @@ public sealed class AutoplayDriver
             game.Scripted = true;
             await Shot("start");
 
+            // 0. Real mouse events through the viewport (not the driver's shortcuts): a click on a peasant's head selects
+            //    it (the hit box covers the drawn figure), a right-button drag moves the map and gives no order.
+            FrameEntity first = Own(game, "peon");
+            game.CenterOn(first.X, first.Y);
+            await Frames(3);
+            game.Scripted = false;
+            await RealButton(game.ToScreen(first.X, first.Y - 1500), game.ToScreen(first.X, first.Y - 1500), MouseButton.Left);
+            int picked = game.Selection.Selected.Count;
+            Vector2I panBefore = game.Pan;
+            await RealButton(game.ToScreen(first.X + 12000, first.Y + 6000), game.ToScreen(first.X + 12000, first.Y + 6000) + new Vector2(-120, -60), MouseButton.Right);
+            Vector2I panAfter = game.Pan;
+            game.Scripted = true;
+            Log(game, $"real click on a peasant's head: {picked} selected; right drag moved the view by {panAfter - panBefore}");
+            if (picked != 1 || panAfter - panBefore != new Vector2I(120, 60))
+            {
+                throw new InvalidOperationException("Real mouse input failed: a click on a unit's figure must select it and a right drag must move the map.");
+            }
+
             // 1. Double-click a peasant: every peasant on screen is selected.
             FrameEntity peon = Own(game, "peon");
             game.Click(Screen(game, peon), MouseButton.Left, doubleClick: true);
@@ -90,7 +108,8 @@ public sealed class AutoplayDriver
 
             // 5. Drag-box the footmen, Ctrl+1, move-advance toward the map centre.
             // Random maps start with peasants only: then the peasants that are not chopping play the army.
-            FrameEntity foot = game.Frame!.Entities.ToArray().Any(e => e.Owner == game.Session.LocalPlayer && game.Catalog.Type(e.TypeId).Class == "footman") ? Own(game, "footman") : Own(game, "peon");
+            bool soldiers = game.Frame!.Entities.ToArray().Any(e => e.Owner == game.Session.LocalPlayer && game.Catalog.Type(e.TypeId).Class == "footman");
+            FrameEntity foot = soldiers ? Own(game, "footman") : Own(game, "peon");
             game.CenterOn(foot.X, foot.Y);
             await Frames(3);
             Vector2 f = Screen(game, foot);
@@ -110,7 +129,8 @@ public sealed class AutoplayDriver
             await Seconds(game, 120);
             Log(game, "after fast forward");
             await Shot("economy");
-            FrameEntity enemy = game.Frame!.Entities.ToArray().First(e => e.Owner != game.Session.LocalPlayer && e.Owner < 8 && game.Catalog.Type(e.TypeId).Class == "castle");
+            // The enemy castle is in the fog (not in the frame): its start position comes from the map, as a player knows it.
+            Tzar2.Content.Compiled.MapObject enemy = game.Session.Map.Objects.First(o => o.Owner != game.Session.LocalPlayer && o.Owner < 8 && o.TypeKey.EndsWith(".castle", StringComparison.Ordinal));
             game.CenterOn(enemy.X, enemy.Y);
             await Frames(3);
             await Shot("fog-enemy-base");
@@ -145,7 +165,7 @@ public sealed class AutoplayDriver
             await Frames(3);
             await Shot("battle");
             Log(game, $"battle: kills {game.Stats.Kills}, losses {game.Stats.Losses}, sounds {game.Mixer?.Played}");
-            if (game.Stats.Kills == 0)
+            if (game.Stats.Kills == 0 && soldiers)
             {
                 throw new InvalidOperationException("The battle ended without a single kill.");
             }
@@ -298,6 +318,28 @@ public sealed class AutoplayDriver
         GameFrame frame = game.Frame!;
         FramePlayer p = frame.Players[game.Session.LocalPlayer];
         GD.Print($"AUTOPLAY t={frame.Tick.Value} {what}; pop {p.Population}/{p.PopulationCap}; res {string.Join(",", Enumerable.Range(0, 5).Select(r => p.Resources[r]))}; stats trained {game.Stats.Trained} built {game.Stats.Built} gathered {game.Stats.Gathered}; sprites {game.World?.DrawnSprites}");
+    }
+
+    // A press at `from`, the pointer moved in steps to `to`, a release there, as window events through Input (the
+    // viewport turns them into the game's logical coordinates).
+    private async Task RealButton(Vector2 from, Vector2 to, MouseButton button)
+    {
+        Transform2D stretch = _app.GetViewport().GetFinalTransform();
+        Vector2 a = stretch * from, b = stretch * to;
+        MouseButtonMask mask = button == MouseButton.Left ? MouseButtonMask.Left : button == MouseButton.Right ? MouseButtonMask.Right : MouseButtonMask.Middle;
+        Input.ParseInputEvent(new InputEventMouseMotion { Position = a, GlobalPosition = a });
+        await Frames(1);
+        Input.ParseInputEvent(new InputEventMouseButton { Position = a, GlobalPosition = a, ButtonIndex = button, Pressed = true, ButtonMask = mask });
+        await Frames(1);
+        for (int i = 1; i <= 6 && a != b; i++)
+        {
+            Vector2 p = a + ((b - a) * (i / 6f));
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = p, GlobalPosition = p, ButtonMask = mask });
+            await Frames(1);
+        }
+
+        Input.ParseInputEvent(new InputEventMouseButton { Position = b, GlobalPosition = b, ButtonIndex = button, Pressed = false });
+        await Frames(3);
     }
 
     private async Task MoveMouse(GameScreen game, Vector2 at)

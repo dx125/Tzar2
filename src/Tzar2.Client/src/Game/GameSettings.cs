@@ -43,6 +43,9 @@ public sealed class GameSettings
     /// <summary>Scroll speed step 1-10.</summary>
     public int ScrollSpeed { get => Get("scroll_speed", 5); set => Set("scroll_speed", Math.Clamp(value, 1, 10)); }
 
+    /// <summary>Holding the right mouse button and moving drags the map (a right click without moving still gives orders).</summary>
+    public bool DragScroll { get => Get("drag_scroll", 1) != 0; set => Set("drag_scroll", value ? 1 : 0); }
+
     /// <summary>Day/night visualisation.</summary>
     public bool DayNight { get => Get("day_night", 1) != 0; set => Set("day_night", value ? 1 : 0); }
 

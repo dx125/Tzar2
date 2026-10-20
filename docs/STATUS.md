@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (campaign completion measured)
+* **Last updated:** 2026-10-20 (first play-test; controls and HUD fixed)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -23,7 +23,7 @@ and it has not been re-run since the handover.
 | M0 Foundations | **Done** | One ADR per spike: S2 (0007), S4 (0008), S3 (0009), S1 (0010), S6 (0013; S5 mobile export is PX); S1 renderer met on Windows (ADR 0010); CI green; no original files tracked (CI job `legal`). |
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
-| M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174); open before M3 closes: the gathering rate and a first play-test by the owner. |
+| M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). The owner's first play-test is done (2026-10-20); open before M3 closes: its fixes (work queue 1–6) and a second play-test. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **14 of 19 measured** (2026-10-20, editor acceptance test on the clean GOG install, scripted solver, ADR 0134; not completed: `alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`), tutorial 7 of 7 (reported). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
@@ -53,29 +53,59 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-1. **Operator:** play a skirmish and a campaign mission with `tools/play/play.ps1` (DEVELOPMENT.md, "Playing the
-   game"); the run's log folder and the match replays go back to the maintainer.
-2. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+Items 1–6 are the fixes from the owner's first play-test (2026-10-20; log below), in this order.
+
+1. **Maintainer:** the whole command card: research, upgrades, capture, gates and the other orders the sim has but the
+   card shows greyed out ("not in this build yet"); the frame already carries researched technologies.
+2. **Maintainer:** peasants at work: the milking and carrying sprites the object INIs name (`image_milk`,
+   `image_carry*`), a cow stands still while it is milked, the field-digging animation.
+3. **Maintainer:** a match starts behind a loading screen with progress, and faster: the 13-second freeze in the
+   play-test is the sprite bank (decoding and packing 341 sheets on the UI thread), not the random map (28 ms).
+4. **Maintainer:** the original campaigns and maps in the menus: the import converts `Tzar.wcm`, `TzarTutorial.wcm` and
+   `Maps/*.wmp` into the package; the campaign screen laid out on the original's panels.
+5. **Maintainer:** a settings screen in the main menu and modern resolutions (ADR): the world view fills the window,
+   interface and world scale, window mode.
+6. **Maintainer:** unit behaviour, then the AI's tactics (owner decision below): units answer fire, move-advance
+   attacks buildings and towers, a blocked goal sends units to the nearest reachable point; then threat assessment,
+   base defence, target choice, retreat and tower avoidance, scaled by difficulty.
+7. **Operator:** a second play-test (`tools/play/play.ps1`) after items 1–3.
+8. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-3. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+9. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
    more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
-4. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+10. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
-5. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+11. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-6. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
+12. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
    solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
    diagonal rocks) to reach 19/19.
-7. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+13. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
-8. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-9. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+14. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+15. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — First play-test by the owner; controls and HUD fixed.** A skirmish against the AI and the demo
+  campaign's first mission; 15 findings, with causes from the run's log and the client code. Fixed now: a click selects
+  a unit anywhere on its drawn figure (the hit box was the INI selection box at its feet); a held right or middle button
+  drags the map and a right click gives its order on release; animations and rain follow game time, so they stop on
+  pause; the placement ghost has no fill, only the cells that block it turn red; card tooltips show the cost and why a
+  button is greyed out (the "unavailable" barracks and lumber mill lacked resources the card did not show); the frame
+  carries what the local player can make by the sim's requirement check and its researched technologies, so
+  technology-gated buttons no longer stay grey for ever; Repair on the card and by right click on an own damaged
+  building; portraits wear the owner's colour (ICONS.BMP uses the sprites' player range 240–255); cursors by action,
+  with Tzar2's own pickaxe (gold, stone) and saw (trees) painted in code, since the original has one harvest cursor, a
+  shovel, kept for fields; a hand over cows. The rest is work queue items 1–6.
+* **2026-10-20 — Owner decision: the AI keeps the original scripts for strategy, new tactics.** `random.ais` keeps
+  choosing the build order, technologies and army mix (the computer's character); the tactics are rewritten: threat
+  assessment, base defence, target choice, retreat, tower avoidance, with difficulty scaling how smart they are. The
+  play-test showed the military executor sending the army onto a watch tower's tile with a move-advance: the goal is
+  blocked, the soldiers stand under fire. An ADR comes with the work.
 * **2026-10-20 — Main campaign: 14 of 19 missions complete (measured).** The editor's acceptance test played every
   mission with the scripted solver on the clean GOG install and the current rules (walking speeds, gathering, TIME, the
   37.5-minute day): the same 14 as reported before the measurements; the five others time out.

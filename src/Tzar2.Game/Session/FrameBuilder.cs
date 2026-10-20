@@ -25,7 +25,8 @@ public static class FrameBuilder
     /// structures and resources as last seen), or null for everything.
     /// </param>
     /// <param name="outcome">The local outcome.</param>
-    public static void Fill(GameFrame frame, World world, byte? viewer, MatchOutcome outcome)
+    /// <param name="player">The kingdom whose command card the frame serves (<see cref="GameFrame.Makeable"/>); the viewer when null.</param>
+    public static void Fill(GameFrame frame, World world, byte? viewer, MatchOutcome outcome, byte? player = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
         ArgumentNullException.ThrowIfNull(world);
@@ -203,7 +204,13 @@ public static class FrameBuilder
             fp.Victorious = (state.Flags & PlayerFlags.Victorious) != 0;
             fp.Statistics = KingdomStatistics.From(world.Kingdoms[p]);
             fp.Score = VictorySystem.Score(world.Ruleset.World, world.Kingdoms[p]);
+            for (int w = 0; w < TechnologyRow.Capacity / 64; w++)
+            {
+                fp.Technologies[w] = state.Technologies[w];
+            }
         }
+
+        FillMakeable(frame, world, player ?? viewer);
 
         int tiles = world.Map.Width * world.Map.Height;
         if (viewer is { } fogOf)
@@ -241,6 +248,34 @@ public static class FrameBuilder
             {
                 buildable[(ty * width) + tx] = PlacementQueries.IsBuildableTile(world, tx, ty) ? (byte)1 : (byte)0;
             }
+        }
+    }
+
+    // What the player may build or train now, by the sim's own requirement check (ADR 0040).
+    private static void FillMakeable(GameFrame frame, World world, byte? player)
+    {
+        if (player is not { } who || !world.HasPlayer(who))
+        {
+            if (frame.Makeable.Length != 0)
+            {
+                frame.Makeable = [];
+            }
+
+            return;
+        }
+
+        int types = world.Ruleset.EntityTypes.Count;
+        if (frame.Makeable.Length != types)
+        {
+            frame.Makeable = new byte[types];
+        }
+
+        byte[] makeable = frame.Makeable;
+        for (int t = 0; t < types; t++)
+        {
+            EntityTypeDefinition type = world.Ruleset.EntityTypes[t];
+            bool made = type.Traits.Category is EntityCategory.Unit or EntityCategory.Building;
+            makeable[t] = made && PlacementQueries.RequirementsMet(world, who, (ushort)t) ? (byte)1 : (byte)0;
         }
     }
 

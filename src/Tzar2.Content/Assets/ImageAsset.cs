@@ -138,7 +138,37 @@ public sealed class ImageAsset
     }
 
     /// <summary>The image as RGBA8 (top-down). R8 values are shown as grey with full alpha where non-zero.</summary>
-    public byte[] ToRgba()
+    public byte[] ToRgba() => ToRgba(null);
+
+    /// <summary>
+    /// The image as RGBA8 with the player-colour entries of an indexed image (<paramref name="playerFirst"/> and the
+    /// next <see cref="PlayerPalette.RampLength"/> − 1, as in the sprites) drawn with <paramref name="playerRamp"/>: unit
+    /// and building portraits of <c>ICONS.BMP</c> wear their owner's colour like the sprites do.
+    /// </summary>
+    public byte[] ToRgba(IReadOnlyList<Rgba32>? playerRamp, int playerFirst = ImageSheets.PlayerFirst)
+    {
+        byte[] rgba = ToRgbaCore();
+        if (playerRamp is null || Format != PixelFormat.Indexed8)
+        {
+            return rgba;
+        }
+
+        for (int i = 0; i < Width * Height; i++)
+        {
+            int k = Pixels[i] - playerFirst;
+            if (k >= 0 && k < playerRamp.Count && k < PlayerPalette.RampLength && Palette[Pixels[i]].A != 0)
+            {
+                Rgba32 c = playerRamp[k];
+                rgba[4 * i] = c.R;
+                rgba[(4 * i) + 1] = c.G;
+                rgba[(4 * i) + 2] = c.B;
+            }
+        }
+
+        return rgba;
+    }
+
+    private byte[] ToRgbaCore()
     {
         byte[] rgba = new byte[Width * Height * 4];
         for (int i = 0; i < Width * Height; i++)

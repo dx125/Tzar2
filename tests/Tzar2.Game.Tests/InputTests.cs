@@ -193,6 +193,25 @@ public sealed class OrderTests
     }
 
     [Fact]
+    public void Right_click_on_an_own_damaged_building_sends_builders_to_repair_it()
+    {
+        EntityInfo damaged = SelectionTests.Building(4) with { Health = 60, IsRepairable = true };
+        IReadOnlyList<PlannedCommand> c = OrderResolver.RightClick([SelectionTests.Unit(1, harvester: true), SelectionTests.Unit(2)], damaged, 0, 0, KeyMods.None, Me);
+        Assert.Equal((CommandKind.Repair, damaged.Id), (c[0].Kind, c[0].Target));
+        Assert.Equal([SelectionTests.Id(1)], c[0].Entities);
+        Assert.Equal(CommandKind.Move, c[1].Kind);
+
+        // Full health or not repairable: builders just walk there.
+        Assert.Equal(CommandKind.Move, Assert.Single(OrderResolver.RightClick([SelectionTests.Unit(1, harvester: true)], damaged with { Health = 100 }, 0, 0, KeyMods.None, Me)).Kind);
+        Assert.Equal(CommandKind.Move, Assert.Single(OrderResolver.RightClick([SelectionTests.Unit(1, harvester: true)], damaged with { IsRepairable = false }, 0, 0, KeyMods.None, Me)).Kind);
+
+        // The card's Repair order: only builders go, only to an own damaged object.
+        PlannedCommand card = Assert.Single(OrderResolver.WithMode(OrderMode.Repair, [SelectionTests.Unit(1, harvester: true), SelectionTests.Unit(2)], damaged, 0, 0, KeyMods.None, Me));
+        Assert.Equal([SelectionTests.Id(1)], card.Entities);
+        Assert.Empty(OrderResolver.WithMode(OrderMode.Repair, [SelectionTests.Unit(1, harvester: true)], damaged with { Owner = 1 }, 0, 0, KeyMods.None, Me));
+    }
+
+    [Fact]
     public void Buildings_get_a_rally_point_and_enemies_get_nothing()
     {
         PlannedCommand rally = Assert.Single(OrderResolver.RightClick([SelectionTests.Building(3)], null, 7, 8, KeyMods.Ctrl, Me));

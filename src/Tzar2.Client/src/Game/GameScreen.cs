@@ -49,6 +49,9 @@ public partial class GameScreen : Node
     /// <summary>Edge-scroll speed in pixels per second (⚠ the original's scroll speeds are not measured).</summary>
     public const int ScrollSpeed = 720;
 
+    /// <summary>Pointer travel (pixels) after which a held right or middle button drags the map instead of clicking.</summary>
+    public const float GrabThreshold = 6f;
+
     private readonly ContentStore _store;
     private readonly UiAssets _ui;
     private readonly GameSession _session;
@@ -97,6 +100,11 @@ public partial class GameScreen : Node
     private int _workSoundBudget;
     private Rid _boxItem;
     private bool _faultShown;
+    private double _animMs;
+    private Vector2? _grabStart;
+    private Vector2I _grabPan;
+    private bool _grabbing;
+    private MouseButton _grabButton;
 
     /// <summary>Creates the screen for a session that has not started yet.</summary>
     public GameScreen(ContentStore store, UiAssets ui, GameSession session, string terrainSet, string? soundFont, GameSettings? settings = null)
@@ -338,7 +346,13 @@ public partial class GameScreen : Node
         HudLayout layout = _hud.Layout;
         double interval = frame.TickMs * 100.0 / Math.Max(1, frame.SpeedPercent);
         int alpha = frame.Paused ? 1000 : FrameInterpolator.Alpha((_now - _frameArrived) * 1000.0, interval * _interpolator.TickSpan);
-        long timeMs = (long)(_now * 1000);
+        // The world's animations run on game time: they stop with the pause and follow the game speed.
+        if (!frame.Paused)
+        {
+            _animMs += delta * 1000.0 * frame.SpeedPercent / 100.0;
+        }
+
+        long timeMs = (long)_animMs;
         float phase = DayPhase(frame);
         _world.Render(frame, fresh, _interpolator, alpha, _pan, layout.View.Position, layout.View.Size, timeMs, _selection.Selected, _session.LocalPlayer, Barred(), Darkness(phase), CurrentGhost(frame));
         DrawBox();
@@ -378,6 +392,7 @@ public partial class GameScreen : Node
         {
             case InputEventMouseMotion motion:
                 _mouse = motion.Position;
+                GrabScroll(motion);
                 break;
             case InputEventMouseButton button:
                 _mouse = button.Position;
@@ -566,7 +581,8 @@ public partial class GameScreen : Node
             t.Producer is not null,
             t.ResourceNode is not null,
             e.ConstructionPermille >= 0,
-            def.IsMobile);
+            def.IsMobile,
+            t.IsRepairable);
     }
 
     private List<EntityInfo> SelectedInfos()
@@ -599,7 +615,7 @@ public partial class GameScreen : Node
         var view = new Rect2(_pan, _hud.Layout.View.Size);
         foreach (Pickable p in _world.Pickables)
         {
-            if (view.Intersects(p.Rect))
+            if (view.Intersects(p.Hit))
             {
                 list.Add(InfoOf(_frame.Entities[p.Index]));
             }
@@ -619,7 +635,7 @@ public partial class GameScreen : Node
         Pickable? best = null;
         foreach (Pickable p in _world.Pickables)
         {
-            if (p.Rect.HasPoint(world) && (best is null || p.FootY >= best.Value.FootY))
+            if (p.Hit.HasPoint(world) && (best is null || p.FootY >= best.Value.FootY))
             {
                 best = p;
             }
@@ -686,7 +702,7 @@ public partial class GameScreen : Node
                     var inBox = new List<EntityInfo>();
                     foreach (Pickable p in _world.Pickables)
                     {
-                        if (box.Intersects(p.Rect))
+                        if (box.Intersects(p.Hit))
                         {
                             inBox.Add(InfoOf(_frame.Entities[p.Index]));
                         }
@@ -702,24 +718,90 @@ public partial class GameScreen : Node
                 SelectionSound();
             }
         }
-        else if (e.ButtonIndex == MouseButton.Right && e.Pressed)
+        else if (e.ButtonIndex is MouseButton.Right or MouseButton.Middle)
         {
-            if (_placing != ushort.MaxValue || _mode != OrderMode.None)
+            if (e.Pressed)
             {
-                _placing = ushort.MaxValue;
-                _mode = OrderMode.None;
-                RefreshCard();
+                // A held right (or middle) button drags the map; a right click without a drag gives the order on release.
+                if (InView(e.Position) && (e.ButtonIndex == MouseButton.Middle || Settings.DragScroll))
+                {
+                    _grabStart = e.Position;
+                    _grabPan = _pan;
+                    _grabbing = false;
+                    _grabButton = e.ButtonIndex;
+                    return;
+                }
+
+                if (e.ButtonIndex == MouseButton.Right)
+                {
+                    RightClick(e.Position, mods);
+                }
+
                 return;
             }
 
-            if (!InView(e.Position))
+            if (_grabStart is null || e.ButtonIndex != _grabButton)
             {
                 return;
             }
 
-            (int x, int y) = ToWorld(e.Position);
-            IReadOnlyList<PlannedCommand> orders = OrderResolver.RightClick(SelectedInfos(), PickAt(e.Position), x, y, mods, _session.LocalPlayer);
-            Send(orders);
+            bool dragged = _grabbing;
+            _grabStart = null;
+            _grabbing = false;
+            if (!dragged && e.ButtonIndex == MouseButton.Right)
+            {
+                RightClick(e.Position, mods);
+            }
+        }
+    }
+
+    private void RightClick(Vector2 position, KeyMods mods)
+    {
+        if (_placing != ushort.MaxValue || _mode != OrderMode.None)
+        {
+            _placing = ushort.MaxValue;
+            _mode = OrderMode.None;
+            RefreshCard();
+            return;
+        }
+
+        if (!InView(position))
+        {
+            return;
+        }
+
+        (int x, int y) = ToWorld(position);
+        Send(OrderResolver.RightClick(SelectedInfos(), PickAt(position), x, y, mods, _session.LocalPlayer));
+    }
+
+    // Drag scrolling: the map follows the pointer while the right (or middle) button is held, after a few pixels of
+    // travel so that a click stays a click.
+    private void GrabScroll(InputEventMouseMotion motion)
+    {
+        if (_grabStart is not { } start)
+        {
+            return;
+        }
+
+        MouseButtonMask held = _grabButton == MouseButton.Middle ? MouseButtonMask.Middle : MouseButtonMask.Right;
+        if ((motion.ButtonMask & held) == 0)
+        {
+            // The release happened outside the window: drop the drag without an order.
+            _grabStart = null;
+            _grabbing = false;
+            return;
+        }
+
+        Vector2 moved = motion.Position - start;
+        if (!_grabbing && moved.Length() > GrabThreshold)
+        {
+            _grabbing = true;
+        }
+
+        if (_grabbing)
+        {
+            _pan = _grabPan - (Vector2I)moved.Round();
+            ClampPan();
         }
     }
 
@@ -1019,7 +1101,7 @@ public partial class GameScreen : Node
         Vector2 dir = Vector2.Zero;
         bool focused = DisplayServer.WindowIsFocused();
         Vector2 m = GetViewport().GetMousePosition();
-        if (EdgeScroll && focused && Input.MouseMode == Input.MouseModeEnum.Visible && _dragStart is null && m.X >= 0 && m.Y >= 0 && m.X < size.X && m.Y < size.Y)
+        if (EdgeScroll && focused && Input.MouseMode == Input.MouseModeEnum.Visible && _dragStart is null && _grabStart is null && m.X >= 0 && m.Y >= 0 && m.X < size.X && m.Y < size.Y)
         {
             if (m.X <= 2) { dir.X -= 1; }
             if (m.X >= size.X - 3) { dir.X += 1; }
@@ -1119,20 +1201,26 @@ public partial class GameScreen : Node
         EntityTypeDefinition type = _rules.EntityTypes[_placing];
         (int x, int y) = ToWorld(_mouse);
         (int tx, int ty) = Placement.TopLeftFor(type, x, y);
-        bool legal = Placement.IsLegal(frame.Buildable, _world.MapWidth, _world.MapHeight, type, tx, ty);
-        if (legal && frame.Visibility.Length > 0)
+        List<(int Dx, int Dy)> blocked = Placement.BlockedCells(frame.Buildable, _world.MapWidth, _world.MapHeight, type, tx, ty);
+        if (frame.Visibility.Length == _world.MapWidth * _world.MapHeight)
         {
             // Not on unexplored ground.
-            for (int dy = 0; dy < type.FootprintHeight && legal; dy++)
+            for (int dy = 0; dy < type.FootprintHeight; dy++)
             {
-                for (int dx = 0; dx < type.FootprintWidth && legal; dx++)
+                for (int dx = 0; dx < type.FootprintWidth; dx++)
                 {
-                    legal = frame.Visibility[((ty + dy) * _world.MapWidth) + tx + dx] != 0;
+                    int cx = tx + dx, cy = ty + dy;
+                    bool inside = cx >= 0 && cy >= 0 && cx < _world.MapWidth && cy < _world.MapHeight;
+                    if (inside && frame.Visibility[(cy * _world.MapWidth) + cx] == 0 && !blocked.Contains((dx, dy)))
+                    {
+                        blocked.Add((dx, dy));
+                    }
                 }
             }
         }
 
-        return new Ghost(_placing, tx, ty, legal);
+        bool legal = blocked.Count == 0 && Placement.IsLegal(frame.Buildable, _world.MapWidth, _world.MapHeight, type, tx, ty);
+        return new Ghost(_placing, tx, ty, legal, blocked);
     }
 
     private void OnCard(int slot, bool right)
@@ -1144,7 +1232,7 @@ public partial class GameScreen : Node
 
         if (!s.Enabled)
         {
-            Message(s.Button.Tooltip + ": not available yet");
+            Message(s.Detail.Length > 0 ? $"{s.Button.Tooltip}: {s.Detail}" : s.Button.Tooltip + ": not available yet");
             return;
         }
 
@@ -1166,6 +1254,9 @@ public partial class GameScreen : Node
                 break;
             case CardAction.Guard:
                 _mode = OrderMode.Guard;
+                break;
+            case CardAction.Repair:
+                _mode = OrderMode.Repair;
                 break;
             case CardAction.Stop:
                 Send([new PlannedCommand(CommandKind.Stop, CommandFlags.None, EntityId.None, 0, 0, 0, 0, selected.Where(e => e.IsMobile && e.Owner == _session.LocalPlayer).Select(e => e.Id).ToList())]);
@@ -1242,7 +1333,8 @@ public partial class GameScreen : Node
 
                 foreach (CardButton b in buttons)
                 {
-                    card.Add(new CardSlot(b, Enabled(b, v.Civilization), Active(b)));
+                    (bool enabled, string detail) = Availability(b, v.Civilization);
+                    card.Add(new CardSlot(b, enabled, Active(b), detail));
                 }
             }
         }
@@ -1258,43 +1350,78 @@ public partial class GameScreen : Node
         CardAction.Harvest => _mode == OrderMode.Harvest,
         CardAction.Patrol => _mode == OrderMode.Patrol,
         CardAction.Guard => _mode == OrderMode.Guard,
+        CardAction.Repair => _mode == OrderMode.Repair,
         _ => false,
     };
 
-    private bool Enabled(CardButton b, string civ)
+    // Whether a card button works now and what its tooltip adds: the cost of what it makes, and why it is greyed out
+    // (missing building or technology, too few resources).
+    private (bool Enabled, string Detail) Availability(CardButton b, string civ)
     {
         switch (b.Action)
         {
-            case CardAction.Unsupported or CardAction.Repair:
-                return false;
+            case CardAction.Unsupported:
+                return (false, "not in this build yet");
+            case CardAction.Repair:
+                return SelectedInfos().Any(e => e.Owner == _session.LocalPlayer && e.CanBuild) ? (true, string.Empty) : (false, "needs a builder");
             case CardAction.Train or CardAction.Build:
                 int type = _catalog.TypeOfClass(civ, b.Argument);
-                return type >= 0 && Affordable(type) && RequirementsMet(type);
+                if (type < 0)
+                {
+                    return (false, "not available to this kingdom");
+                }
+
+                string cost = CostText(type);
+                if (MissingRequirement(type, civ) is { } missing)
+                {
+                    return (false, Join(cost, "needs " + missing));
+                }
+
+                return Shortfall(type) is { } shortfall ? (false, Join(cost, "not enough " + shortfall)) : (true, cost);
             case CardAction.Submenu:
                 foreach (CardButton child in _catalog.Card(b.Argument))
                 {
                     if (child.Action is CardAction.Build or CardAction.Train or CardAction.Submenu && _catalog.TypeOfClass(civ, child.Argument) >= 0)
                     {
-                        return true;
+                        return (true, string.Empty);
                     }
 
-                    if (child.Action == CardAction.Submenu && Enabled(child, civ))
+                    if (child.Action == CardAction.Submenu && Availability(child, civ).Enabled)
                     {
-                        return true;
+                        return (true, string.Empty);
                     }
                 }
 
-                return false;
+                return (false, "nothing to build there yet");
             default:
-                return true;
+                return (true, string.Empty);
         }
+
+        static string Join(string cost, string reason) => cost.Length == 0 ? reason : $"{cost} - {reason}";
     }
 
-    private bool Affordable(int type)
+    // "200 food, 200 stone" (the base cost; technologies that make things cheaper are not shown yet).
+    private string CostText(int type)
+    {
+        var cost = _rules.EntityTypes[type].Traits.Cost;
+        var parts = new List<string>();
+        for (int r = 0; r < cost.Length && r < _rules.ResourceTypes.Count; r++)
+        {
+            if (cost[r] > 0)
+            {
+                parts.Add($"{cost[r]} {_rules.ResourceTypes[r]}");
+            }
+        }
+
+        return string.Join(", ", parts);
+    }
+
+    // The first resource the player lacks for the type, as "food (150 of 200)", or null when affordable.
+    private string? Shortfall(int type)
     {
         if (_frame is null || _frame.Players.Length <= _session.LocalPlayer)
         {
-            return false;
+            return "resources";
         }
 
         FramePlayer p = _frame.Players[_session.LocalPlayer];
@@ -1303,40 +1430,81 @@ public partial class GameScreen : Node
         {
             if (p.Resources[r] < cost[r])
             {
-                return false;
+                return $"{(r < _rules.ResourceTypes.Count ? _rules.ResourceTypes[r] : "resources")} ({p.Resources[r]} of {cost[r]})";
             }
         }
 
-        return true;
+        return null;
     }
 
-    private bool RequirementsMet(int type)
+    // What the type still needs (a building or a technology), or null when its requirements are met. The sim's verdict
+    // comes with the frame (GameFrame.Makeable); the names come from the type's requirement sets for the civilization.
+    private string? MissingRequirement(int type, string civ)
     {
-        EntityTraits t = _rules.EntityTypes[type].Traits;
-        if (t.RequiredTechnology.Length > 0)
+        if (_frame is null)
         {
-            return false;
+            return "a game";
         }
 
-        foreach (ushort required in t.RequiredTypes)
+        if (_frame.Makeable.Length > type && _frame.Makeable[type] != 0)
         {
-            bool found = false;
-            foreach (FrameEntity e in _frame!.Entities)
+            return null;
+        }
+
+        EntityTraits t = _rules.EntityTypes[type].Traits;
+        FramePlayer me = _frame.Players.Length > _session.LocalPlayer ? _frame.Players[_session.LocalPlayer] : default;
+        foreach (RequirementSet set in t.Requirements)
+        {
+            if (!set.AppliesTo(civ))
             {
-                if (e.Owner == _session.LocalPlayer && e.TypeId == required && e.ConstructionPermille < 0)
+                continue;
+            }
+
+            if (set.Unsatisfiable)
+            {
+                return "something this kingdom cannot have";
+            }
+
+            foreach (ushort tech in set.Technologies)
+            {
+                if (!me.HasTechnology(tech))
                 {
-                    found = true;
-                    break;
+                    return "the technology " + _rules.Technologies[tech].Name;
                 }
             }
 
-            if (!found)
+            foreach (ushort building in set.Types)
             {
-                return false;
+                if (!HasCompleted(building))
+                {
+                    return _catalog.Type(building).Name;
+                }
             }
         }
 
-        return true;
+        foreach (ushort building in t.RequiredTypes)
+        {
+            if (!HasCompleted(building))
+            {
+                return _catalog.Type(building).Name;
+            }
+        }
+
+        // Without the sim's verdict (an old frame) the names above are all there is.
+        return _frame.Makeable.Length > type ? "requirements" : null;
+    }
+
+    private bool HasCompleted(ushort type)
+    {
+        foreach (FrameEntity e in _frame!.Entities)
+        {
+            if (e.Owner == _session.LocalPlayer && e.TypeId == type && e.ConstructionPermille < 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void HandleEvents(GameFrame frame)
@@ -1539,6 +1707,7 @@ public partial class GameScreen : Node
                 Health = e.MaxHealth > 0 ? e.Health / (float)e.MaxHealth : -1,
                 Strip = strip,
                 StripIsHealth = true,
+                Player = e.Owner < 8 ? e.Owner : -1,
             };
         }
 
@@ -1601,6 +1770,7 @@ public partial class GameScreen : Node
             Health = e.MaxHealth > 0 && t.Category != EntityCategory.Resource ? e.Health / (float)e.MaxHealth : -1,
             Stats = stats,
             Strip = strip,
+            Player = e.Owner < 8 ? e.Owner : -1,
         };
     }
 
@@ -1700,19 +1870,73 @@ public partial class GameScreen : Node
     private void UpdateCursor()
     {
         string name = "s_hand";
-        if (_placing == ushort.MaxValue && InView(_mouse))
+        if (_placing == ushort.MaxValue && !_grabbing && InView(_mouse))
         {
             if (_mode != OrderMode.None)
             {
-                name = _mode switch { OrderMode.Attack => "s_attack", OrderMode.Harvest => "s_harvest", OrderMode.Patrol => "s_patrol", OrderMode.Guard => "s_guard", _ => "s_move" };
+                name = _mode switch
+                {
+                    OrderMode.Attack => "s_attack",
+                    OrderMode.Harvest => "s_harvest",
+                    OrderMode.Patrol => "s_patrol",
+                    OrderMode.Guard => "s_guard",
+                    OrderMode.Repair => "s_repair",
+                    _ => "s_move",
+                };
             }
             else if (_selection.IsOwn && PickAt(_mouse) is { } hover)
             {
-                name = hover.Owner != _session.LocalPlayer && hover.Owner != 0xFF ? "s_attack" : hover.IsResourceNode ? "s_harvest" : "s_hand";
+                name = HoverCursor(hover, SelectedInfos());
             }
         }
 
         CursorCache.Apply(_ui, name);
+    }
+
+    // The cursor of the right click's default action on what the pointer is over (OrderResolver.RightClick): attack for
+    // enemies (armed units only), the tool of the resource for harvesters (pickaxe, saw, the original's shovel over
+    // fields; a cow is milked by hand), the repair hammer over own sites and damaged buildings for builders.
+    private string HoverCursor(EntityInfo hover, List<EntityInfo> selection)
+    {
+        byte me = _session.LocalPlayer;
+        bool armed = false, harvesters = false, builders = false;
+        foreach (EntityInfo e in selection)
+        {
+            if (e.Owner == me && e.IsMobile)
+            {
+                armed |= e.IsArmed;
+                harvesters |= e.CanHarvest;
+                builders |= e.CanBuild;
+            }
+        }
+
+        if (hover.Owner != me && hover.Category is EntityCategory.Unit or EntityCategory.Building && !hover.IsResourceNode)
+        {
+            return armed ? "s_attack" : "s_hand";
+        }
+
+        if (hover.IsResourceNode && harvesters)
+        {
+            if (hover.Category == EntityCategory.Unit)
+            {
+                return "s_hand";
+            }
+
+            string resource = _rules.EntityTypes[hover.TypeId].Traits.ResourceNode is { } node && node.Resource < _rules.ResourceTypes.Count ? _rules.ResourceTypes[node.Resource] : string.Empty;
+            return resource switch
+            {
+                "wood" => OwnCursors.Saw,
+                "gold" or "stone" or "iron" => OwnCursors.Mine,
+                _ => "s_harvest",
+            };
+        }
+
+        if (hover.Owner == me && builders && (hover.UnderConstruction || OrderResolver.NeedsRepair(hover)))
+        {
+            return "s_repair";
+        }
+
+        return "s_hand";
     }
 
     private void Screenshot()

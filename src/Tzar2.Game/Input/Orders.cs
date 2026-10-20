@@ -27,7 +27,7 @@ public enum OrderMode
     /// <summary>Follow and protect the clicked unit (guard; the sim's Follow order).</summary>
     Guard,
 
-    /// <summary>Repair the clicked building (not in the sim yet).</summary>
+    /// <summary>Repair the clicked own damaged building, ship or siege weapon (builders).</summary>
     Repair,
 
     /// <summary>Set the rally point of the selected buildings.</summary>
@@ -65,8 +65,8 @@ public sealed record PlannedCommand(CommandKind Kind, CommandFlags Flags, Entity
 /// <summary>
 /// Turns a right click (or a click with a pending <see cref="OrderMode"/>) into commands (TDD §7.4 CommandBuilder; UI
 /// semantics of Appendix E.6): enemy → attack, resource → harvest (harvesters; the others walk there), own construction
-/// site → help build (builders), ground → move; Ctrl = move-advance, Alt = move-sneak, Shift = waypoints (queue); a
-/// selection of producers sets the rally point. Engine-free and unit-tested.
+/// site → help build (builders), own damaged building → repair (builders), ground → move; Ctrl = move-advance, Alt =
+/// move-sneak, Shift = waypoints (queue); a selection of producers sets the rally point. Engine-free and unit-tested.
 /// </summary>
 public static class OrderResolver
 {
@@ -135,7 +135,7 @@ public static class OrderResolver
                 result.Add(new PlannedCommand(CommandKind.Harvest, flags & CommandFlags.Queue, node.Id, x, y, 0, 0, harvesters));
             }
         }
-        else if (target is { } own && own.Owner == player && own.UnderConstruction)
+        else if (target is { } own && own.Owner == player && (own.UnderConstruction || NeedsRepair(own)))
         {
             var builders = new List<EntityId>();
             foreach (EntityInfo e in mobile)
@@ -145,7 +145,8 @@ public static class OrderResolver
 
             if (builders.Count > 0)
             {
-                result.Add(new PlannedCommand(CommandKind.Build, flags & CommandFlags.Queue, own.Id, x, y, 0, 0, builders));
+                CommandKind kind = own.UnderConstruction ? CommandKind.Build : CommandKind.Repair;
+                result.Add(new PlannedCommand(kind, flags & CommandFlags.Queue, own.Id, x, y, 0, 0, builders));
             }
         }
         else
@@ -194,8 +195,27 @@ public static class OrderResolver
             OrderMode.Guard when target is { IsMobile: true } g && g.Id != EntityId.None
                 => [new PlannedCommand(CommandKind.Follow, queue, g.Id, x, y, 0, 0, own)],
             OrderMode.Rally => [new PlannedCommand(CommandKind.SetRally, CommandFlags.None, EntityId.None, x, y, 0, 0, own)],
+            OrderMode.Repair when target is { } r && r.Owner == player && NeedsRepair(r) && Builders(selection, player) is { Count: > 0 } builders
+                => [new PlannedCommand(CommandKind.Repair, queue, r.Id, x, y, 0, 0, builders)],
             _ => [],
         };
+    }
+
+    /// <summary>Whether builders can repair <paramref name="e"/> now: a finished repairable object below full health (GAME-03).</summary>
+    public static bool NeedsRepair(in EntityInfo e) => e.IsRepairable && !e.UnderConstruction && e.MaxHealth > 0 && e.Health < e.MaxHealth;
+
+    private static List<EntityId> Builders(IReadOnlyList<EntityInfo> selection, byte player)
+    {
+        var builders = new List<EntityId>();
+        foreach (EntityInfo e in selection)
+        {
+            if (e.Owner == player && e.IsMobile && e.CanBuild)
+            {
+                builders.Add(e.Id);
+            }
+        }
+
+        return builders;
     }
 
     /// <summary>The command flags of the modifiers (Shift = queue, Ctrl = move-advance, Alt = move-sneak).</summary>

@@ -119,11 +119,40 @@ public sealed class SessionTests
             {
                 bool expected = PlacementQueries.CanPlace(world, house, tx, ty);
                 Assert.Equal(expected, Placement.IsLegal(frame.Buildable, world.Map.Width, world.Map.Height, type, tx, ty));
+                Assert.Equal(expected, Placement.BlockedCells(frame.Buildable, world.Map.Width, world.Map.Height, type, tx, ty).Count == 0);
                 checkedLegal += expected ? 1 : 0;
             }
         }
 
         Assert.True(checkedLegal > 50);
+        Assert.Equal(type.FootprintWidth * type.FootprintHeight, Placement.BlockedCells(frame.Buildable, world.Map.Width, world.Map.Height, type, -10, -10).Count);
+    }
+
+    [Fact]
+    public void The_frame_says_what_the_local_player_can_make_and_what_it_has_researched()
+    {
+        using var session = new GameSession(Setup() with { ComputerAi = false }, Rules.Value, fog: false);
+        session.Step(1);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        World world = session.Simulation.World;
+        Assert.Equal(Rules.Value.EntityTypes.Count, frame.Makeable.Length);
+        for (int t = 0; t < frame.Makeable.Length; t++)
+        {
+            EntityTypeDefinition type = Rules.Value.EntityTypes[t];
+            if (type.Traits.Category is EntityCategory.Unit or EntityCategory.Building)
+            {
+                Assert.Equal(PlacementQueries.RequirementsMet(world, session.LocalPlayer, (ushort)t), frame.Makeable[t] != 0);
+            }
+        }
+
+        Assert.Contains(frame.Makeable, m => m != 0);
+        Assert.Contains(frame.Makeable, m => m == 0);
+        int tech = Rules.Value.Technologies.Count - 1;
+        Assert.False(frame.Players[session.LocalPlayer].HasTechnology(tech));
+        world.Players[session.LocalPlayer].AddTechnology(tech);
+        session.Step(1);
+        frame = session.AcquireFrame(out _)!;
+        Assert.True(frame.Players[session.LocalPlayer].HasTechnology(tech));
     }
 
     [Theory]

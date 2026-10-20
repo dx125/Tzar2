@@ -33,9 +33,11 @@ public sealed class WorldOptions
 
 /// <summary>Something drawn on screen that the mouse can pick.</summary>
 /// <param name="Index">Index into the frame's entities.</param>
-/// <param name="Rect">Selection box in world pixels.</param>
+/// <param name="Rect">Selection box in world pixels (IMAGES.INI <c>selection</c>: marks and health bars).</param>
 /// <param name="FootY">Painter's order (higher = in front).</param>
-public readonly record struct Pickable(int Index, Rect2 Rect, int FootY);
+/// <param name="Hit">What a click or a drag box hits, in world pixels: for units the selection box joined with the drawn
+/// figure, so a click on the head selects as well as one at the feet.</param>
+public readonly record struct Pickable(int Index, Rect2 Rect, int FootY, Rect2 Hit);
 
 /// <summary>
 /// Draws the world of a <see cref="GameFrame"/> (TDD §13.3 layers): terrain chunks, ground decals (corpses, fields),
@@ -277,7 +279,8 @@ public sealed class WorldRenderer : IDisposable
                 int cell = 8 + (int)(phase % 19u);
                 var at = new Vector2I(left + (TilePixels / 2) - 48, top + TilePixels - 124);
                 AddSheet(options.TranslucentTrees ? _translucent : _objects, trees, at, cell, 0, -1, (uint)(foot + 4096) << 6, shadows: true);
-                _pickables.Add(new Pickable(index, new Rect2(at.X + 24, at.Y + 8, 48, 112), foot));
+                var treeBox = new Rect2(at.X + 24, at.Y + 8, 48, 112);
+                _pickables.Add(new Pickable(index, treeBox, foot, treeBox));
                 return;
             }
 
@@ -312,14 +315,15 @@ public sealed class WorldRenderer : IDisposable
 
             if (sheet is null)
             {
-                _pickables.Add(new Pickable(index, footprint, foot));
+                _pickables.Add(new Pickable(index, footprint, foot, footprint));
                 return;
             }
 
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
             AddSheet(ground ? _ground : _objects, sheet, origin, variant, frameIndex, player, (uint)((ground ? 0 : foot) + 4096) << 6, shadows: true);
             Rect2 sel = new(origin + sheet.Selection.Position, sheet.Selection.Size);
-            _pickables.Add(new Pickable(index, sel.Size.X > 4 ? sel : footprint, ground ? 0 : foot));
+            Rect2 box = sel.Size.X > 4 ? sel : footprint;
+            _pickables.Add(new Pickable(index, box, ground ? 0 : foot, box));
             return;
         }
 
@@ -336,7 +340,8 @@ public sealed class WorldRenderer : IDisposable
         SheetRef? s = _bank.Get(visual.Image(anim)) ?? _bank.Get(visual.Image(UnitAnim.Base));
         if (s is null)
         {
-            _pickables.Add(new Pickable(index, new Rect2(px - 8, py - 16, 16, 24), py));
+            var stand = new Rect2(px - 8, py - 16, 16, 24);
+            _pickables.Add(new Pickable(index, stand, py, stand));
             return;
         }
 
@@ -357,7 +362,18 @@ public sealed class WorldRenderer : IDisposable
         int dir = SpriteRules.Direction(e.Facing, s.Sheet.Directions);
         var cellOrigin = new Vector2I(px - s.Object.Position.X - (s.Object.Size.X / 2), py - s.Object.Position.Y - (s.Object.Size.Y / 2));
         AddSheet(_objects, s, cellOrigin, dir, frame, player, ((uint)(py + 4096) << 6) | 2, shadows: true);
-        _pickables.Add(new Pickable(index, new Rect2(cellOrigin + s.Selection.Position, s.Selection.Size), py));
+        var selection = new Rect2(cellOrigin + s.Selection.Position, s.Selection.Size);
+        _pickables.Add(new Pickable(index, selection, py, CellBounds(s, cellOrigin, dir, frame) is { } figure ? selection.Merge(figure) : selection));
+    }
+
+    // The drawn (trimmed) pixels of one cell of a sheet, in world pixels, or null for an empty cell.
+    private Rect2? CellBounds(SheetRef sheet, Vector2I origin, int direction, int frame)
+    {
+        SpriteSheet s = sheet.Sheet;
+        int d = Math.Clamp(direction, 0, s.Directions - 1);
+        int f = ((frame % s.FramesPerDirection) + s.FramesPerDirection) % s.FramesPerDirection;
+        AtlasCell cell = _bank.Gpu!.Atlas.GetCell(sheet.SheetIndex, (d * s.FramesPerDirection) + f);
+        return cell.IsEmpty ? null : new Rect2(origin.X + cell.OffsetX, origin.Y + cell.OffsetY, cell.Width, cell.Height);
     }
 
     private void AddSheet(SpriteRenderer renderer, SheetRef sheet, Vector2I origin, int direction, int frame, int player, uint key, bool shadows)
@@ -451,9 +467,18 @@ public sealed class WorldRenderer : IDisposable
             Add(_objects, sheet, origin, 0, 0, localPlayer, uint.MaxValue >> 1, shadowOnly: false);
         }
 
-        Color tint = ghost.Legal ? new Color(0.2f, 1f, 0.2f, 0.35f) : new Color(1f, 0.15f, 0.1f, 0.45f);
-        RS.CanvasItemAddRect(_marksOver, rect, tint);
-        Corners(_marksOver, rect, ghost.Legal ? Colors.Green : Colors.Red);
+        // The building itself shows where it goes: no fill over a legal site (the original fills nothing); only the
+        // cells that block it turn red.
+        if (!ghost.Legal)
+        {
+            var red = new Color(1f, 0.15f, 0.1f, 0.45f);
+            foreach ((int dx, int dy) in ghost.Blocked ?? [])
+            {
+                RS.CanvasItemAddRect(_marksOver, new Rect2(left + (dx * TilePixels), top + (dy * TilePixels), TilePixels, TilePixels), red);
+            }
+        }
+
+        Corners(_marksOver, rect, ghost.Legal ? new Color(0.4f, 1f, 0.4f) : new Color(1f, 0.25f, 0.2f));
     }
 
     private void UpdateFogAndLight(GameFrame frame, bool fresh, bool useFog, byte localPlayer, float darkness)
@@ -553,4 +578,5 @@ public sealed class WorldRenderer : IDisposable
 /// <param name="TileX">Footprint top-left tile X.</param>
 /// <param name="TileY">Footprint top-left tile Y.</param>
 /// <param name="Legal">Whether the sim would accept it now.</param>
-public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal);
+/// <param name="Blocked">Footprint cells (offsets from the top-left) that block it.</param>
+public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null);
