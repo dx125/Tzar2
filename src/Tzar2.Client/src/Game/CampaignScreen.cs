@@ -231,47 +231,4 @@ public partial class CampaignScreen : ArtScreen
         area.Pressed += pressed;
         _details!.AddChild(area);
     }
-
-    // The text cut to the width (with "..."), so nothing spills over the panel frames.
-    private string Fit(string text, int width, string font)
-    {
-        if (Ui.Measure(text, font) <= width)
-        {
-            return text;
-        }
-
-        string cut = text;
-        while (cut.Length > 1 && Ui.Measure(cut + "...", font) > width)
-        {
-            cut = cut[..^1];
-        }
-
-        return cut + "...";
-    }
-
-    private List<string> Wrap(string text, int width)
-    {
-        var lines = new List<string>();
-        foreach (string paragraph in (text ?? string.Empty).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n'))
-        {
-            var line = new System.Text.StringBuilder();
-            foreach (string word in paragraph.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            {
-                string next = line.Length == 0 ? word : line + " " + word;
-                if (line.Length > 0 && Ui.Measure(next) > width)
-                {
-                    lines.Add(line.ToString());
-                    line.Clear().Append(word);
-                }
-                else
-                {
-                    line.Clear().Append(next);
-                }
-            }
-
-            lines.Add(line.ToString());
-        }
-
-        return lines;
-    }
 }

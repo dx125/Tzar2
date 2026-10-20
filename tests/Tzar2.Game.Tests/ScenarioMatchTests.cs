@@ -39,6 +39,50 @@ public sealed class ScenarioMatchTests
     }
 
     [Fact]
+    public void A_custom_map_keeps_its_own_settings_unless_the_setup_changes_them()
+    {
+        var b = new ScenarioBuilder();
+        b.Structure("euro.castle", 0, 4, 4);
+        b.Structure("euro.castle", 1, 30, 20);
+        ScenarioData plain = b.Scenario();
+        KingdomDef Kingdom(int number, PlayerType type) => new(number, $"k{number}", string.Empty, Civilization.European, type, true, 1234, 567, 89, 10, string.Empty, true, true, false, 0, 0,
+            EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty);
+        var scenario = new ScenarioData(
+            plain.Properties with { PopulationLimit = 120 },
+            plain.ObjectCount,
+            plain.Objects,
+            new[] { Kingdom(1, PlayerType.HumanOrAi), Kingdom(2, PlayerType.AiOnly) },
+            plain.Diplomacy,
+            plain.Variables,
+            plain.Events,
+            plain.Actions,
+            plain.Rules,
+            plain.Conversations,
+            plain.Sounds,
+            plain.Music);
+        var mission = new MissionContent(b.Map(), scenario);
+        int food = Rules.ResourceId("food");
+
+        MatchSetup asIs = ScenarioMatch.Setup(mission, Rules, computerAi: false);
+        Assert.Equal(("euro", Difficulty.Normal, 120, -1), (asIs.Players[0].Civilization, asIs.Players[1].Difficulty, asIs.PopulationLimit, asIs.StartingResources));
+        using (var session = new GameSession(asIs, Rules))
+        {
+            Assert.Equal(1234, session.Simulation.World.Players[0].Resources[food]);
+        }
+
+        // A civilization the ruleset has a castle for (the synthetic tables may have only the European one).
+        string civ = new[] { "arab", "asia" }.FirstOrDefault(c => Rules.EntityTypeId(c + ".castle") >= 0) ?? "euro";
+        var custom = new CustomMapSettings { Difficulty = Difficulty.Hard, Civilization = civ, StartingResources = 2, PopulationLimit = 300, NoFog = true };
+        MatchSetup changed = ScenarioMatch.Setup(mission, Rules, computerAi: false, custom: custom);
+        Assert.Equal((civ, "euro", Difficulty.Hard, 300, 2, true), (changed.Players[0].Civilization, changed.Players[1].Civilization, changed.Players[1].Difficulty, changed.PopulationLimit, changed.StartingResources, changed.NoFog));
+        Assert.Equal(ControllerKind.Human, changed.Players[0].Controller);
+        using (var session = new GameSession(changed, Rules))
+        {
+            Assert.NotEqual(1234, session.Simulation.World.Players[0].Resources[food]); // the chosen level, not the map's stockpile
+        }
+    }
+
+    [Fact]
     public void The_solver_issues_only_orders_and_skill_replacing_assistance()
     {
         Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Move, 0));

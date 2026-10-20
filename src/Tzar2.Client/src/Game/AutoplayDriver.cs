@@ -200,6 +200,40 @@ public sealed class AutoplayDriver
             _app.ShowSetup();
             await Frames(5);
             await Shot("skirmish-setup");
+
+            // Single player: the menu, the original maps (converted behind the loading screen), a map's setup, its match.
+            _app.ShowSinglePlayer();
+            await Frames(5);
+            await Shot("single-player");
+            _app.ShowCustomMaps();
+            for (int i = 0; i < 600 && _app.Current is not ChooseMapScreen; i++)
+            {
+                await Frames(1);
+            }
+
+            await Frames(5);
+            await Shot("choose-map");
+            Vector2 art = (Vector2)(GameApp.Screen - new Vector2I(800, 600)) / 2;
+            Vector2 play = art + new Vector2(535 + 117, 544 + 12);
+            await RealButton(play, play, MouseButton.Left);
+            await Frames(5);
+            if (_app.Current is MapSetupScreen)
+            {
+                await Shot("map-setup");
+                Vector2 start = art + new Vector2(555 + 105, 499 + 13);
+                await RealButton(start, start, MouseButton.Left);
+                for (int i = 0; i < 900 && _app.Game is null; i++)
+                {
+                    await Frames(1);
+                }
+
+                if (_app.Game is { } custom)
+                {
+                    await Seconds(custom, 3);
+                    await Shot("custom-map");
+                    Log(custom, "custom map");
+                }
+            }
         }
         catch (Exception e) when (e is InvalidOperationException or NullReferenceException or IOException or ArgumentException)
         {
