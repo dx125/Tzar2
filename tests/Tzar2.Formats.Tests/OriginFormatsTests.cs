@@ -23,8 +23,9 @@ namespace Tzar2.Formats.Tests;
 /// </summary>
 public class OriginFormatsTests
 {
+    // The reference build's files only: a played install also holds crash dumps and the installer's files.
     private static IEnumerable<string> Files(string extension)
-        => Directory.EnumerateFiles(OriginPaths.RequireOrigin(), "*", SearchOption.AllDirectories)
+        => OriginPaths.ReferenceFiles()
             .Where(f => f.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
             .Order(StringComparer.Ordinal);
 
@@ -122,7 +123,7 @@ public class OriginFormatsTests
             duplicates.AddRange(ini.DuplicateSectionNames());
         }
 
-        Assert.Equal(2_619, sections);
+        Assert.Equal(2_615, sections); // the reference build's 176 INI files (docs/formats/ini-tsv.md)
         Assert.Equal(["stone_wall_tower", "galleon", "a_church", "item_sword"], duplicates);
 
         var tables = Files(".txt").Where(f => Path.GetFileName(f).Contains("UNITS", StringComparison.Ordinal) || Path.GetFileName(f).Contains("BUILDINGS", StringComparison.Ordinal)).ToList();

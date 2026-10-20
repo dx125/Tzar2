@@ -49,6 +49,17 @@ several PRs, run it on the combined result.
 | `TZAR2_SOUNDFONT` | a General MIDI SoundFont | music in the client |
 | `TZAR2_FIDELITY_FACTS` | another facts folder | `Tzar2.Fidelity.Tests` |
 
+CI cannot run them, so **run them locally after any change to the importer, the formats or the classic ruleset**
+(`TZAR2_ORIGIN` pointing at a clean GOG v1.10 EN install): they pin what the reference build imports to, including
+`legacy.referenceDataHash` in `classic.yaml`, and went stale for a day once (2026-10-20). They read only the files the
+reference manifest lists, so a played install with crash dumps (`Logs/`) and the installer's files still passes.
+
+## Playing the game
+
+`pwsh tools/play/play.ps1 -TzarPath <your Tzar install> -Godot <Godot 4.7.2 .NET editor binary>` imports the original
+game into a package under `%LOCALAPPDATA%\Tzar2Play` (once, and again when the importer changed), builds the client and
+starts it in a window. When the game closes it prints the run's log folder and the match replays (see Diagnostics).
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every PR and on `main`:

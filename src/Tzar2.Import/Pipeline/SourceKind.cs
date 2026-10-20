@@ -57,6 +57,15 @@ public static class SourceClassifier
             return SourceKind.Ignored;
         }
 
+        // Not the game: the crash dumps and log the game writes at run time (logs/<id>/error.bmp, logs/tzar.log) and the
+        // installer's and the store's files at the root (unins000.dat/.ini, goglog.ini, EULA.txt). A GOG install that was
+        // played has them; they would otherwise end up in the package as art and tables.
+        if (path.StartsWith("logs/", StringComparison.Ordinal)
+            || (!path.Contains('/', StringComparison.Ordinal) && (path.StartsWith("unins", StringComparison.Ordinal) || path is "goglog.ini" or "eula.txt")))
+        {
+            return SourceKind.Ignored;
+        }
+
         int dot = path.LastIndexOf('.');
         string ext = dot >= 0 && dot > path.LastIndexOf('/') ? path[dot..] : string.Empty;
         return ext switch
