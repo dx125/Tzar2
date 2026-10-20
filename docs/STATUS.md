@@ -52,29 +52,32 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-1. **Maintainer:** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a view no unit walks
+1. **Operator:** batch E (`-Batch E`, ~19 min). **Maintainer:** analyse it.
+2. **Maintainer:** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a view no unit walks
    through, in a match the Hard AI does not end (find a setup without an attacking AI). Then **Operator:** run it.
-2. **Maintainer:** a speed scenario for the classes not measured yet (UNK-12, ADR 0172): Arabian and Asian units need
+3. **Maintainer:** a speed scenario for the classes not measured yet (UNK-12, ADR 0172): Arabian and Asian units need
    a kingdom of that civilisation (MP4 has one of each; spawning only works for the own civilisation), and find out why
    catapults, ballistas and caravans did not spawn.
-3. **Maintainer:** before batches E–I, move or guard the scenarios that leave soldiers idle in MP2's middle next to
-   Nature's cows (combat outcomes, experience, damage bonuses, capture; ADR 0171). **Operator:** batches E–I;
-   **Maintainer:** analyse each.
-4. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+4. **Maintainer:** before batches F and H, move or guard the scenarios that leave soldiers idle in MP2's middle next to
+   Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I; **Maintainer:** analyse each.
+5. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-5. **Maintainer:** decode UNK-70…80, compare random maps with our generator, fix the passability case; run the
+6. **Maintainer:** decode UNK-70…80, compare random maps with our generator, fix the passability case; run the
    original-campaign harness locally (`t2 campaign run`, `TZAR2_ORIGIN`) to replace the reported 14–15/19 with a
    measured figure and push it to 19/19.
-6. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+7. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
-7. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-8. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+8. **Maintainer:** issue #62 (flaky `RelayTests`), issue #68 (allocation gate); M6 soak to 500 matches.
+9. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — Batch E prepared.** Batch A's melee duels gave no hits because the enemy defender, idle while memory
+  was scanned, walked off to Nature's cows in MP2's middle and the attack click hit empty ground. `damage-bonuses` now
+  fights by our base (row 53, ADR 0171's view); the other batch E scenarios use peasants, buildings or our base already.
 * **2026-10-19 — A day lasts 37.5 minutes; a match starts at 10:00 (ADR 0173).** Batch D: the clock globe (24 frames,
   one per hour) stepped every 93.7 s; the day-clock analysis now reads the globe and ignores brightness that units
   spoil. The Hard AI ended the passive game after 12 minutes, before the night: the night's share needs a longer run.
