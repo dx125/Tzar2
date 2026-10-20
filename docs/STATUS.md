@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-19 (fidelity gate to M8; gather-rate scenario)
+* **Last updated:** 2026-10-19 (gathering time)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -53,31 +53,31 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-1. **Operator:** `-Scenarios gather-rate` (~3 min): one measurement of the gathering time (ADR 0174). **Maintainer:**
-   apply it to every resource.
-2. **Maintainer:** tracing for diagnosis (sim events, commands, AI decisions, client errors) before the first play-test;
+1. **Maintainer:** tracing for diagnosis (sim events, commands, AI decisions, client errors) before the first play-test;
    then a playable Windows build from the owner's GOG copy. **Operator:** play a skirmish and a campaign mission.
-3. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+2. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-4. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+3. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
    more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
-5. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+4. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
-6. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+5. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-7. **Maintainer:** decode UNK-70…80, compare random maps with our generator, fix the passability case; run the
+6. **Maintainer:** decode UNK-70…80, compare random maps with our generator, fix the passability case; run the
    original-campaign harness locally (`t2 campaign run`, `TZAR2_ORIGIN`) to replace the reported 14–15/19 with a
    measured figure and push it to 19/19.
-8. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+7. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
-9. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-10. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+8. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+9. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — Gathering: 900 ms per unit (ADR 0175).** One load of 10 wood took ~9.0 s in the `gather-rate` burst;
+  applied to every resource. Batches B and E had timed groups of peasants, so "two or three times faster" was wrong.
 * **2026-10-19 — The fidelity gate moves to M8 (ADR 0174, owner decision).** Next: the gathering rate (one
   measurement), tracing for diagnosis, then a playable build for the owner's first play-test.
 * **2026-10-19 — Owner decision: stop measuring unit by unit.** Measuring each unit's speed, attack and so on is not

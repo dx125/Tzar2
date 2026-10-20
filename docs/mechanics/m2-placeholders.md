@@ -53,7 +53,7 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 | Melee reach | 8 px edge to edge (buildings: the interaction reach) | YAML `gameplay.meleeReachPx` | UNK-07, UNK-11 | captures of melee contact |
 | Worker reach | 32 px from the footprint | YAML `gameplay.interactionReachPx` | UNK-17, UNK-18 | captures of gathering/building positions |
 | Carry capacity | 10 units — **VERIFIED for wood, stone and gold** (capture-20261018-222649, `gather-*`: every delivery 10); a node may set its own load, cows 50 (m3 register, ADR 0170) | YAML `^class.peon.Harvester.capacity`, `ResourceNode.carry` | UNK-17 | done (fields: not measured) |
-| Gather time | 1,000 ms per unit, every resource (batch B trips, walk included: wood 6.9 s, stone 9.8 s, gold 5.4 s per 10 units, so probably shorter; not tuned until the walk is separated) | YAML `^class.peon.Harvester.gatherMs` | UNK-17 | `gather-wood-far` (batch E) with the measured peasant speed |
+| Gather time | ~~1,000 ms~~ — **900 ms per unit, measured once on wood and applied to every resource** (capture-20261019-232318, `gather-rate`: one load of 10 chopped in ~9.0 s ± 0.5 s; ADRs 0174, 0175). Batches B and E timed deliveries of several peasants at once, not trips of one | YAML `^class.peon.Harvester.gatherMs` | UNK-17 | M8: more loads, other resources |
 | Wood per tree | 100 | YAML `comm.tree.ResourceNode.amount` | UNK-17 | tree depletion capture |
 | Node search radius | 12 tiles | YAML `gameplay.nodeSearchRadiusTiles` | UNK-17 | observe auto-continue after depletion |
 | Queue length | 10 | YAML `gameplay.queueCapacity` | UNK-20 | UI capture |
