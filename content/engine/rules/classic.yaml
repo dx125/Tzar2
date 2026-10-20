@@ -326,6 +326,7 @@ legacy:
 # Fields produce unlimited food (manual §5.5) and need constant care: neglected, they decay and disappear.
 ^class.field:
   ResourceNode: { resource: food, amount: unlimited }
+  WalkableFootprint: {}               # UNVERIFIED: units walk over fields and the farmer works on the field (play-test 2026-10-20)
   DropOff: { autoGather: true }       # UNVERIFIED: the builder starts farming the new field
   Decay: { afterMs: 60000, healthPerMinute: 30 }   # UNVERIFIED (UNK-17)
   -Burnable:

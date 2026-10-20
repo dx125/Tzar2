@@ -70,7 +70,7 @@ public sealed class EconomySystem : ISimSystem
         EntityTypeDefinition type = world.TypeOf(worker);
         HarvesterDefinition harvester = type.Traits.Harvester!;
         byte owner = world.Identities.Get(worker).Owner;
-        if (s < 0 || world.ResourceStocks.At(s).Amount == 0 || world.Constructions.Has(node)
+        if (s < 0 || (world.ResourceStocks.At(s).Amount == 0 && !Regrows(world, node)) || world.Constructions.Has(node)
             || !Interaction.MayHarvest(world, owner, node)
             || !Interaction.WorkerReaches(world, worker, node))
         {
@@ -112,13 +112,35 @@ public sealed class EconomySystem : ISimSystem
             }
         }
 
-        if (w.CarryAmount >= capacity || stock.Amount == 0)
+        // A cow milked dry: the milker fills the pail at another node of the resource nearby (another cow, a field), and
+        // waits by this one for its milk to regrow only when there is none, instead of carrying home a unit or two at a
+        // time (play-test 2026-10-20; UNVERIFIED with the regrowth rate, UNK-17).
+        if (w.CarryAmount >= capacity || (stock.Amount == 0 && definition.RegenMs <= 0))
         {
             w.Phase = WorkerPhase.ToDropOff;
             w.TimerMs = 0;
             w.Retries = 0;
         }
+        else if (stock.Amount == 0)
+        {
+            Position at = world.Positions.Get(worker);
+            EntityId other = Interaction.NearestNode(world, owner, resource, at.X, at.Y, world.Ruleset.Gameplay.NodeSearchRadiusTiles, type.Locomotor);
+            if (!other.IsNone && other != node)
+            {
+                w.Target = other.Value;
+                w.Phase = WorkerPhase.ToNode;
+                w.Retries = 0;
+                w.TimerMs = 0;
+                return;
+            }
+
+            w.TimerMs = Math.Min(w.TimerMs, gatherMs); // waiting does not bank gather time
+        }
     }
+
+    // Whether the node regrows what is taken (cows' milk), so an empty one is worth waiting at.
+    private static bool Regrows(World world, EntityId node)
+        => world.TypeOf(node).Traits.ResourceNode is { RegenMs: > 0 };
 
     private static void Deliver(World world, EntityId worker, ref Worker w)
     {

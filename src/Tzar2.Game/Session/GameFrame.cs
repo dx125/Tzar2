@@ -27,6 +27,34 @@ public enum UnitActivity : byte
 
     /// <summary>Building or repairing.</summary>
     Build = 6,
+
+    /// <summary>Milking a cow.</summary>
+    Milk = 7,
+}
+
+/// <summary>What a worker carries, for its carrying sprite (the original's <c>_tree</c>, <c>_gold</c>, <c>_milk</c>... images).</summary>
+public enum FrameCarry : byte
+{
+    /// <summary>Nothing.</summary>
+    None = 0,
+
+    /// <summary>Logs.</summary>
+    Wood,
+
+    /// <summary>Gold.</summary>
+    Gold,
+
+    /// <summary>Stone (and iron).</summary>
+    Stone,
+
+    /// <summary>Food from a field.</summary>
+    Food,
+
+    /// <summary>A pail of milk from a cow.</summary>
+    Milk,
+
+    /// <summary>Meat from a butchered animal.</summary>
+    Meat,
 }
 
 /// <summary>The kind of a producer's queue item.</summary>
@@ -114,6 +142,9 @@ public struct FrameEntity
 
     /// <summary>Carried amount.</summary>
     public int CarryAmount;
+
+    /// <summary>What the load looks like (with <see cref="CarryAmount"/> &gt; 0).</summary>
+    public FrameCarry Carry;
 
     /// <summary>Construction progress 0-1000, or -1 when the entity is not a construction site.</summary>
     public int ConstructionPermille;
@@ -312,6 +343,9 @@ public sealed class GameFrame
 
     /// <summary>The map passability version <see cref="Buildable"/> was computed for.</summary>
     public int BuildableVersion { get; internal set; } = -1;
+
+    /// <summary>The fields version (<c>World.WalkableFootprintsVersion</c>) <see cref="Buildable"/> was computed for.</summary>
+    public int BuildableFieldsVersion { get; internal set; } = -1;
 
     /// <summary>
     /// For the local player, per entity type id: 1 where its requirements are met (buildings and

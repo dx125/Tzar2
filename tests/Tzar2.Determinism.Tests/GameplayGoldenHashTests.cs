@@ -27,9 +27,11 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // three quarters of its hit points, so a repair completes whatever the battle does.
     // (ADR 0173) the day is 37.5 minutes (dayLengthMs 2,250,000, measured on the clock globe): only the ruleset hash moves.
     // (ADR 0175) peasants gather 900 ms per unit (measured once on wood, applied to every resource), not 1,000.
-    private const ulong GoldenRulesetHash = 0x7C42717F60EEAE57UL;
-    private const ulong GoldenHashStream = 0x0D08559C7D70C34DUL;
-    private const ulong GoldenFinalFullHash = 0x4588781B9D935998UL;
+    // (play-test 2026-10-20) a claimed cow stops where it is, and its milker waits for the milk to regrow until the pail
+    // is full instead of carrying home a unit or two at a time; fields are walkable (WalkableFootprint, in the ruleset hash).
+    private const ulong GoldenRulesetHash = 0xB3F9CB058E71E673UL;
+    private const ulong GoldenHashStream = 0x935E14B71392AE8DUL;
+    private const ulong GoldenFinalFullHash = 0xC00299A8410BA30CUL;
 
     private const int Ticks = 1600;
 

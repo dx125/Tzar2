@@ -13,11 +13,15 @@ public static class PlacementQueries
     /// <summary>How far from a coast building's footprint the water for its ships may be (tiles; UNVERIFIED, UNK-02).</summary>
     public const int CoastReachTiles = GameplayCommands.CoastReachTiles;
 
-    /// <summary>Whether a footprint tile at (<paramref name="tileX"/>, <paramref name="tileY"/>) may be covered: walkable land without a structure.</summary>
+    /// <summary>
+    /// Whether a footprint tile at (<paramref name="tileX"/>, <paramref name="tileY"/>) may be covered: walkable land
+    /// without a structure, a bridge deck or a field.
+    /// </summary>
     public static bool IsBuildableTile(World world, int tileX, int tileY)
     {
         ArgumentNullException.ThrowIfNull(world);
-        return world.Map.ContainsTile(tileX, tileY) && world.Map.IsPassable(Locomotor.Foot, tileX, tileY);
+        return world.Map.ContainsTile(tileX, tileY) && world.Map.IsPassable(Locomotor.Foot, tileX, tileY)
+            && world.Map.Bridges[(tileY * world.Map.Width) + tileX] == 0 && !world.IsUnderWalkableFootprint(tileX, tileY);
     }
 
     /// <summary>

@@ -77,7 +77,14 @@ public sealed class WorkerSystem : ISimSystem
                 byte owner = world.Identities.Get(worker).Owner;
                 if (!Interaction.IsHarvestable(world, node, w.NodeResource, owner))
                 {
+                    // Gone or empty: the nearest other node of the resource; a dry cow is waited for when there is none.
+                    EntityId dry = Interaction.IsHarvestable(world, node, w.NodeResource, owner, waitForRegrowth: true) ? node : EntityId.None;
                     node = Interaction.NearestNode(world, owner, w.NodeResource, w.NodeX, w.NodeY, world.Ruleset.Gameplay.NodeSearchRadiusTiles, world.TypeOf(worker).Locomotor);
+                    if (node.IsNone)
+                    {
+                        node = dry;
+                    }
+
                     if (node.IsNone)
                     {
                         if (w.CarryAmount > 0)
@@ -348,7 +355,7 @@ public sealed class WorkerSystem : ISimSystem
         }
 
         w.Retries++;
-        (int x, int y) = Interaction.WorkPoint(world, target, position, type.Locomotor);
+        (int x, int y) = Interaction.WorkPoint(world, target, position, type.Locomotor, worker);
         Interaction.MoveTo(world, worker, x, y);
         return true;
     }

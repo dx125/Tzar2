@@ -104,6 +104,21 @@ public sealed class SessionTests
     }
 
     [Fact]
+    public void A_load_looks_like_what_it_was_taken_from()
+    {
+        Ruleset r = Rules.Value;
+        EntityTypeDefinition Type(string key) => r.EntityTypes[r.EntityTypeId(key)];
+        int food = r.ResourceId("food");
+        Assert.Equal(FrameCarry.Wood, FrameBuilder.CarryOf(r, r.ResourceId("wood"), null));
+        Assert.Equal(FrameCarry.Gold, FrameBuilder.CarryOf(r, r.ResourceId("gold"), null));
+        Assert.Equal(FrameCarry.Stone, FrameBuilder.CarryOf(r, r.ResourceId("stone"), null));
+        Assert.Equal(FrameCarry.Milk, FrameBuilder.CarryOf(r, food, Type("comm.cow")));
+        Assert.Equal(FrameCarry.Meat, FrameBuilder.CarryOf(r, food, Type("comm.meat")));
+        Assert.Equal(FrameCarry.Food, FrameBuilder.CarryOf(r, food, Type("comm.field")));
+        Assert.Equal(FrameCarry.Food, FrameBuilder.CarryOf(r, food, null));
+    }
+
+    [Fact]
     public void The_buildable_layer_matches_the_sim_placement_query()
     {
         using var session = new GameSession(Setup(), Rules.Value);
