@@ -216,7 +216,7 @@ public sealed class CombatSystem : ISimSystem
         // Hand-to-hand attackers hit a building from the tiles next to it, like workers do (interaction reach).
         int range = Range(world, attacker, self, type, arm);
         int reach = range > 0 ? range
-            : world.Footprints.Has(target) ? world.Ruleset.Gameplay.InteractionReachUnits
+            : world.Footprints.Has(target) ? (Interaction.IsMoving(world, attacker) ? world.Ruleset.Gameplay.InteractionTouchUnits : world.Ruleset.Gameplay.InteractionReachUnits)
             : world.Ruleset.Gameplay.MeleeReachUnits;
         if (distance <= reach && distance >= arm.MinRangeUnits)
         {

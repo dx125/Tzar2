@@ -30,9 +30,11 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // the milk to regrow until the pail is full.
     // (ADR 0178) the AI's tactics weigh threats by difficulty (towers and buildings at home, waves and retreat by power,
     // targets by danger, gatherers avoid towers); a unit on a move-advance answers fire.
-    private const ulong GoldenCommandStream = 0x5A44A369E2496ACEUL;
-    private const ulong GoldenHashStream = 0x1EB43303A0D34E61UL;
-    private const ulong GoldenFinalFullHash = 0x7DBFC41CD63E2029UL;
+    // (owner play-test 2026-10-20) a unit still walking to a structure works on, fights or boards it only next to it
+    // (interactionTouchPx 12, in the ruleset hash).
+    private const ulong GoldenCommandStream = 0x0BE44D85F8874361UL;
+    private const ulong GoldenHashStream = 0xC99BB6802C6D5DA4UL;
+    private const ulong GoldenFinalFullHash = 0x1D4297F06F0BD362UL;
 
     private const int Ticks = 9600;
 

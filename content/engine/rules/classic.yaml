@@ -46,7 +46,9 @@ gameplay:
   resistanceScale: 1000               # UNVERIFIED (UNK-08): building damage x 1000 / (1000 + RESISTANCE) (manual ch. 4); owner
                                       # decision: 100 made castles (1000) practically immune to melee; capture uses RESISTANCE alone
   meleeReachPx: 8                     # UNVERIFIED (UNK-07/11): edge-to-edge reach of hand-to-hand attacks
-  interactionReachPx: 32              # UNVERIFIED (UNK-17/18): worker reach to a node, drop-off or site
+  interactionReachPx: 32              # UNVERIFIED (UNK-17/18): worker reach to a node, drop-off or site, once stopped
+  interactionTouchPx: 12              # UNVERIFIED (UNK-17/18): the same while still walking there: units go up to the wall
+                                      # (owner play-test 2026-10-20: they stood a tile away from what they worked on)
   acquireIntervalMs: 200              # UNVERIFIED: target scan cadence of idle armed units
   nodeSearchRadiusTiles: 12           # UNVERIFIED (UNK-17): where a worker looks for the next node of a resource
   queueCapacity: 10                   # UNVERIFIED (UNK-20): production queue length

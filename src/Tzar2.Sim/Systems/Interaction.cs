@@ -97,16 +97,18 @@ internal static class Interaction
         bool shipWorker = type.Locomotor == Locomotor.Ship;
         bool across = shipWorker ? world.Footprints.Has(target) : other.IsMobile && other.Locomotor == Locomotor.Ship;
         int extra = across ? MapState.UnitsPerTile : 0;
-        return Reaches(world, world.Positions.Get(worker), type.Radius + extra, target);
+        return Reaches(world, world.Positions.Get(worker), type.Radius + extra, target, IsMoving(world, worker));
     }
 
     /// <summary>
     /// Whether a unit at <paramref name="position"/> reaches <paramref name="target"/>: its footprint (structures), or
-    /// its body (units: cows, ships; footprint-less nodes: fish patches, meat) within the interaction reach.
+    /// its body (units: cows, ships; footprint-less nodes: fish patches, meat) within the interaction reach; a unit still
+    /// <paramref name="moving"/> reaches a structure only once it stands next to it (the touch reach).
     /// </summary>
-    public static bool Reaches(World world, Position position, int radius, EntityId target)
+    public static bool Reaches(World world, Position position, int radius, EntityId target, bool moving = false)
     {
-        long reach = (long)radius + world.Ruleset.Gameplay.InteractionReachUnits;
+        GameplaySettings g = world.Ruleset.Gameplay;
+        long reach = (long)radius + (moving && world.Footprints.Has(target) ? g.InteractionTouchUnits : g.InteractionReachUnits);
         if (!world.Footprints.Has(target))
         {
             reach += RadiusOf(world, target);

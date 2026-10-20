@@ -30,9 +30,11 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (play-test 2026-10-20) a claimed cow stops where it is, and its milker waits for the milk to regrow until the pail
     // is full instead of carrying home a unit or two at a time; fields are walkable (WalkableFootprint, in the ruleset hash).
     // (ADR 0178) a unit on a move-advance that is hit fights back and resumes its way; a unit may chase what can hit it.
-    private const ulong GoldenRulesetHash = 0xB3F9CB058E71E673UL;
-    private const ulong GoldenHashStream = 0x6FD0AE18EFACB8A7UL;
-    private const ulong GoldenFinalFullHash = 0x0F3167C8FEDE93A1UL;
+    // (owner play-test 2026-10-20) a unit still walking to a structure works on, fights or boards it only next to it
+    // (interactionTouchPx 12, in the ruleset hash).
+    private const ulong GoldenRulesetHash = 0x151A6BE3E1E5D673UL;
+    private const ulong GoldenHashStream = 0xA056FB177F872419UL;
+    private const ulong GoldenFinalFullHash = 0x7EF8CE4BC9ECEDD2UL;
 
     private const int Ticks = 1600;
 

@@ -59,6 +59,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly SpriteRenderer _ground;
     private readonly SpriteRenderer _objects;
     private readonly SpriteRenderer _translucent;
+    private readonly SpriteRenderer _glow;
     private readonly Rid _marksUnder;
     private readonly Rid _marksOver;
     private readonly Rid _fogItem;
@@ -71,6 +72,12 @@ public sealed class WorldRenderer : IDisposable
     private readonly byte[] _lightBytes;
     private readonly List<Pickable> _pickables = [];
     private readonly HashSet<uint> _selected = [];
+    private readonly Dictionary<uint, (int X, int Y)> _shotStart = [];
+    private readonly Dictionary<uint, (int X, int Y)> _shotPrevious = [];
+    private readonly Dictionary<uint, (int X, int Y, byte Kind)> _shotCurrent = [];
+    private readonly HashSet<uint> _shotSeen = [];
+    private readonly List<uint> _shotGone = [];
+    private readonly List<(SheetRef Sheet, int X, int Y, long StartMs)> _bursts = [];
     private long _timeMs;
     private bool _lightsValid;
     private ImageTexture? _lightPatternTexture;
@@ -90,10 +97,13 @@ public sealed class WorldRenderer : IDisposable
         _objects = new SpriteRenderer(host, _root, 30);
         _translucent = new SpriteRenderer(host, _root, 34);
         _translucent.SetModulate(new Color(1, 1, 1, 0.45f));
+        _glow = new SpriteRenderer(host, _root, 36, additive: true);
+        _glow.SetShadowsVisible(false);
         _marksOver = Item(40);
         _ground.SetAtlas(bank.Gpu);
         _objects.SetAtlas(bank.Gpu);
         _translucent.SetAtlas(bank.Gpu);
+        _glow.SetAtlas(bank.Gpu);
 
         MapWidth = grid.Width;
         MapHeight = grid.Height;
@@ -160,6 +170,7 @@ public sealed class WorldRenderer : IDisposable
         _ground.SetView(view, screen);
         _objects.SetView(view, screen);
         _translucent.SetView(view, screen);
+        _glow.SetView(view, screen);
         _ground.SetShadowsVisible(options.Shadows);
         _objects.SetShadowsVisible(options.Shadows);
         RS.CanvasItemSetTransform(_marksUnder, view);
@@ -170,6 +181,7 @@ public sealed class WorldRenderer : IDisposable
         _ground.Clear();
         _objects.Clear();
         _translucent.Clear();
+        _glow.Clear();
         _pickables.Clear();
         _selected.Clear();
         foreach (EntityId id in selection)
@@ -224,8 +236,10 @@ public sealed class WorldRenderer : IDisposable
             DrawEntity(in e, i, def, px, py, player, timeMs, options);
         }
 
+        DrawProjectiles(frame, fresh, alpha, cull);
         _ground.Commit();
         _translucent.Commit();
+        _glow.Commit();
         DrawMarks(frame, interpolator, alpha, localPlayer, options);
         if (ghost is { } g)
         {
@@ -244,6 +258,7 @@ public sealed class WorldRenderer : IDisposable
         _ground.Dispose();
         _objects.Dispose();
         _translucent.Dispose();
+        _glow.Dispose();
         foreach (Rid rid in new[] { _marksUnder, _marksOver, _fogItem, _root })
         {
             RS.FreeRid(rid);
@@ -321,6 +336,11 @@ public sealed class WorldRenderer : IDisposable
 
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
             AddSheet(ground ? _ground : _objects, sheet, origin, variant, frameIndex, player, (uint)((ground ? 0 : foot) + 4096) << 6, shadows: true);
+            if (e.Burning)
+            {
+                DrawFire(in e, def, left, top, foot);
+            }
+
             Rect2 sel = new(origin + sheet.Selection.Position, sheet.Selection.Size);
             Rect2 box = sel.Size.X > 4 ? sel : footprint;
             _pickables.Add(new Pickable(index, box, ground ? 0 : foot, box));
@@ -420,6 +440,143 @@ public sealed class WorldRenderer : IDisposable
             gpu.GlobalCell(sheet.SheetIndex, index), cell.PaletteRow, player, key, shadowOnly));
     }
 
+    // Projectiles in flight (GAME-07): the original's picture of each kind, raised on an arc from where it was first seen
+    // to its target and turned along its flight; explosive ones leave an explosion where they vanish.
+    private const int ShotLift = 14; // shots leave and hit at a body's height (pixels)
+
+    private void DrawProjectiles(GameFrame frame, bool fresh, int alpha, Rect2I cull)
+    {
+        ReadOnlySpan<FrameProjectile> shots = frame.Projectiles;
+        if (fresh)
+        {
+            _shotSeen.Clear();
+            foreach (FrameProjectile s in shots)
+            {
+                _shotSeen.Add(s.Id);
+            }
+
+            _shotGone.Clear();
+            foreach ((uint id, (int x, int y, byte kind)) in _shotCurrent)
+            {
+                if (_shotSeen.Contains(id))
+                {
+                    continue;
+                }
+
+                _shotGone.Add(id);
+                if (kind < _rules.Projectiles.Count && EffectImages.Impact(_rules.Projectiles[kind].Key) is { } name && _bank.Get(name) is { } burst)
+                {
+                    _bursts.Add((burst, x, y, _timeMs));
+                }
+            }
+
+            foreach (uint id in _shotGone)
+            {
+                _shotStart.Remove(id);
+            }
+
+            _shotPrevious.Clear();
+            foreach ((uint id, (int x, int y, byte _)) in _shotCurrent)
+            {
+                _shotPrevious[id] = (x, y);
+            }
+
+            _shotCurrent.Clear();
+            foreach (FrameProjectile s in shots)
+            {
+                _shotCurrent[s.Id] = (s.X, s.Y, s.Kind);
+                _shotStart.TryAdd(s.Id, (s.X, s.Y));
+            }
+        }
+
+        uint top = uint.MaxValue >> 2;
+        foreach (FrameProjectile s in shots)
+        {
+            if (s.Kind >= _rules.Projectiles.Count)
+            {
+                continue;
+            }
+
+            string key = _rules.Projectiles[s.Kind].Key;
+            if (EffectImages.Projectile(key) is not { } image || _bank.Get(image) is not { } sheet)
+            {
+                continue;
+            }
+
+            int a = Math.Clamp(alpha, 0, 1000);
+            (int x, int y) = _shotPrevious.TryGetValue(s.Id, out (int X, int Y) from) ? (from.X + (int)((long)(s.X - from.X) * a / 1000), from.Y + (int)((long)(s.Y - from.Y) * a / 1000)) : (s.X, s.Y);
+            (int sx, int sy) = _shotStart.TryGetValue(s.Id, out (int X, int Y) start) ? start : (x, y);
+            double length = Math.Sqrt(((double)(s.TargetX - sx) * (s.TargetX - sx)) + ((double)(s.TargetY - sy) * (s.TargetY - sy))) / UnitsPerPixel;
+            double left = Math.Sqrt(((double)(s.TargetX - x) * (s.TargetX - x)) + ((double)(s.TargetY - y) * (s.TargetY - y))) / UnitsPerPixel;
+            double progress = length > 0 ? 1 - (left / length) : 1;
+            int lift = ShotLift + EffectImages.ArcHeight(key, length, progress);
+            int px = x / UnitsPerPixel, py = y / UnitsPerPixel;
+            if (!cull.HasPoint(new Vector2I(px, py)))
+            {
+                continue;
+            }
+
+            int frameIndex;
+            if (EffectImages.Turns(key))
+            {
+                // The screen direction along the arc: the ground direction, tilted by the arc's slope.
+                double dx = (s.TargetX - x) / (double)UnitsPerPixel, dy = (s.TargetY - y) / (double)UnitsPerPixel;
+                double d = Math.Max(1, Math.Sqrt((dx * dx) + (dy * dy)));
+                double step = Math.Max(0.01, 4 / Math.Max(1, length));
+                double rise = EffectImages.ArcHeight(key, length, Math.Min(1, progress + step)) - EffectImages.ArcHeight(key, length, progress);
+                frameIndex = EffectImages.TurnFrame(dx / d * step * length, (dy / d * step * length) - rise, sheet.Sheet.FramesPerDirection);
+            }
+            else
+            {
+                frameIndex = sheet.Animation.FrameAt(_timeMs + (s.Id * 37));
+            }
+
+            if (sheet.Shadow is { } shadow)
+            {
+                Add(_objects, shadow, new Vector2I(px, py) - sheet.Anchor, 0, frameIndex, -1, top, shadowOnly: true);
+            }
+
+            Add(EffectImages.Glows(key) ? _glow : _objects, sheet, new Vector2I(px, py - lift) - sheet.Anchor, 0, frameIndex, -1, top | 1, shadowOnly: false);
+        }
+
+        // Explosions where explosive shots landed.
+        for (int i = _bursts.Count - 1; i >= 0; i--)
+        {
+            (SheetRef burst, int bx, int by, long startMs) = _bursts[i];
+            long age = _timeMs - startMs;
+            if (age < 0 || age >= burst.Animation.CycleMs)
+            {
+                _bursts.RemoveAt(i);
+                continue;
+            }
+
+            Add(_glow, burst, new Vector2I(bx / UnitsPerPixel, (by / UnitsPerPixel) - ShotLift) - burst.Anchor, 0, burst.Animation.FrameAt(age), -1, top | 2, shadowOnly: false);
+        }
+    }
+
+    // Flames on a burning building (GAME-03): the original's fire strips at a few spots of the footprint, more on larger
+    // buildings (⚠ the original's flame positions are not measured).
+    private void DrawFire(in FrameEntity e, EntityTypeDefinition def, int left, int top, int foot)
+    {
+        int area = Math.Max(1, def.FootprintWidth * def.FootprintHeight);
+        if (_bank.Get(area >= 9 ? EffectImages.FireBig : EffectImages.FireSmall) is not { } fire)
+        {
+            return;
+        }
+
+        int flames = Math.Clamp(area / 6, 1, 4);
+        int w = def.FootprintWidth * TilePixels, h = def.FootprintHeight * TilePixels;
+        uint seed = (uint)e.Id.Index * 2654435761u;
+        for (int k = 0; k < flames; k++)
+        {
+            uint r = seed ^ ((uint)k * 40503u);
+            int fx = left + (int)((w / 5) + (r % (uint)Math.Max(1, w * 3 / 5)));
+            int fy = top + (int)((h / 8) + ((r >> 8) % (uint)Math.Max(1, h / 3))); // the upper part: roofs burn
+            int f = fire.Animation.FrameAt(_timeMs + (r % 1000u));
+            Add(_glow, fire, new Vector2I(fx, fy) - fire.Anchor, 0, f, -1, ((uint)(foot + 4096) << 6) | 3, shadowOnly: false);
+        }
+    }
+
     private void DrawMarks(GameFrame frame, FrameInterpolator interpolator, int alpha, byte localPlayer, WorldOptions options)
     {
         ReadOnlySpan<FrameEntity> entities = frame.Entities;
@@ -444,8 +601,8 @@ public sealed class WorldRenderer : IDisposable
                 }
                 else
                 {
-                    (int x, int y) = interpolator.Position(e, alpha);
-                    Ellipse(_marksUnder, new Vector2(x / UnitsPerPixel, (y / UnitsPerPixel) + 3), Math.Max(8f, p.Rect.Size.X * 0.45f), mark);
+                    // Units: the square of the original's selection box (IMAGES.INI selection), as on structures.
+                    Corners(_marksOver, p.Rect, mark);
                 }
             }
 
@@ -557,19 +714,6 @@ public sealed class WorldRenderer : IDisposable
         RS.CanvasItemSetDrawIndex(item, drawIndex);
         RS.CanvasItemSetDefaultTextureFilter(item, RS.CanvasItemTextureFilter.Nearest);
         return item;
-    }
-
-    private static void Ellipse(Rid item, Vector2 centre, float rx, Color colour)
-    {
-        const int n = 20;
-        var points = new Vector2[n + 1];
-        for (int i = 0; i <= n; i++)
-        {
-            float a = i * MathF.Tau / n;
-            points[i] = centre + new Vector2(MathF.Round(MathF.Cos(a) * rx), MathF.Round(MathF.Sin(a) * rx * 0.5f));
-        }
-
-        RS.CanvasItemAddPolyline(item, points, [colour], 1f);
     }
 
     private static void Corners(Rid item, Rect2 r, Color colour)

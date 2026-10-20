@@ -55,6 +55,13 @@ public sealed record GameplaySettings
     /// </summary>
     public int InteractionReachUnits { get; init; } = 2048;
 
+    /// <summary>
+    /// The reach (world units, edge to edge) to a structure of a unit still walking to it: it works on, fights or boards
+    /// it only once it stands next to it; one that has stopped (arrived, or blocked by others) has
+    /// <see cref="InteractionReachUnits"/> (owner play-test 2026-10-20: in the original units stand at the wall).
+    /// </summary>
+    public int InteractionTouchUnits { get; init; } = 768;
+
     /// <summary>How far (world units, edge to edge) a melee attacker reaches (UNK-07/11).</summary>
     public int MeleeReachUnits { get; init; } = 512;
 
@@ -164,6 +171,8 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfLessThan(ResistanceScale, 1);
         ArgumentOutOfRangeException.ThrowIfNegative(InteractionReachUnits);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(InteractionReachUnits, 8 * 2048);
+        ArgumentOutOfRangeException.ThrowIfNegative(InteractionTouchUnits);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(InteractionTouchUnits, InteractionReachUnits);
         ArgumentOutOfRangeException.ThrowIfNegative(MeleeReachUnits);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MeleeReachUnits, 8 * 2048);
         ArgumentOutOfRangeException.ThrowIfLessThan(AcquireIntervalMs, 1);

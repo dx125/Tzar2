@@ -137,6 +137,9 @@ public struct FrameEntity
     /// <summary>The caster's mana pool, or 0 for entities that cast nothing.</summary>
     public int MaxMana;
 
+    /// <summary>A building on fire (GAME-03).</summary>
+    public bool Burning;
+
     /// <summary>Animation choice.</summary>
     public UnitActivity Activity;
 
@@ -204,6 +207,16 @@ public struct FrameEntity
     public bool Remembered;
 #pragma warning restore CA1051
 }
+
+/// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
+/// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>
+/// <param name="X">X in world units.</param>
+/// <param name="Y">Y in world units.</param>
+/// <param name="TargetX">Where it flies (world units).</param>
+/// <param name="TargetY">Where it flies.</param>
+/// <param name="Kind">The projectile kind (<c>Ruleset.Projectiles</c>).</param>
+/// <param name="Spell">The spell it carries, or 0xFFFF.</param>
+public readonly record struct FrameProjectile(uint Id, int X, int Y, int TargetX, int TargetY, byte Kind, ushort Spell);
 
 /// <summary>A corpse on the ground (decal).</summary>
 /// <param name="X">X in world units.</param>
@@ -317,6 +330,7 @@ public sealed class GameFrame
 {
     private FrameEntity[] _entities = new FrameEntity[256];
     private FrameCorpse[] _corpses = new FrameCorpse[64];
+    private FrameProjectile[] _projectiles = new FrameProjectile[64];
 
     /// <summary>The tick the frame shows the result of.</summary>
     public Tick Tick { get; internal set; }
@@ -332,6 +346,12 @@ public sealed class GameFrame
 
     /// <summary>Corpses.</summary>
     public ReadOnlySpan<FrameCorpse> Corpses => _corpses.AsSpan(0, CorpseCount);
+
+    /// <summary>Projectiles in flight the viewer sees.</summary>
+    public ReadOnlySpan<FrameProjectile> Projectiles => _projectiles.AsSpan(0, ProjectileCount);
+
+    /// <summary>Number of valid entries in <see cref="Projectiles"/>.</summary>
+    public int ProjectileCount { get; internal set; }
 
     /// <summary>Number of corpses.</summary>
     public int CorpseCount { get; internal set; }
@@ -395,6 +415,16 @@ public sealed class GameFrame
         }
 
         return _entities;
+    }
+
+    internal FrameProjectile[] ProjectileBuffer(int count)
+    {
+        if (_projectiles.Length < count)
+        {
+            _projectiles = new FrameProjectile[Math.Max(count, _projectiles.Length * 2)];
+        }
+
+        return _projectiles;
     }
 
     internal FrameCorpse[] CorpseBuffer(int count)
