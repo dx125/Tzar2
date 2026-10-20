@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (playable build)
+* **Last updated:** 2026-10-20 (campaign completion measured)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -24,7 +24,7 @@ and it has not been re-run since the handover.
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
 | M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174); open before M3 closes: the gathering rate and a first play-test by the owner. |
-| M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign 14–15 of 19 missions, tutorial 7 of 7 (reported 2026-10-18, scripted solver, ADR 0134). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
+| M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **14 of 19 measured** (2026-10-20, editor acceptance test on the clean GOG install, scripted solver, ADR 0134; not completed: `alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`), tutorial 7 of 7 (reported). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
 | M7 Windows beta | Not started | Installer, signing, crash reporting, min-spec tuning, closed beta. |
@@ -63,9 +63,9 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
 5. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-6. **Maintainer:** decode UNK-70…80, compare random maps with our generator, fix the passability case; run the
-   original-campaign harness locally (`t2 campaign run`, `TZAR2_ORIGIN`) to replace the reported 14–15/19 with a
-   measured figure and push it to 19/19.
+6. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
+   solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
+   diagonal rocks) to reach 19/19.
 7. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
 8. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
@@ -76,6 +76,9 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — Main campaign: 14 of 19 missions complete (measured).** The editor's acceptance test played every
+  mission with the scripted solver on the clean GOG install and the current rules (walking speeds, gathering, TIME, the
+  37.5-minute day): the same 14 as reported before the measurements; the five others time out.
 * **2026-10-20 — Playable from the repository; local-only tests green again.** `tools/play/play.ps1` imports the
   owner's copy, builds and starts the client. The importer no longer takes the game's crash dumps (`Logs/`) and the
   installer's files from a played GOG install into the package. The local-only tests had gone stale since #24 because
