@@ -46,4 +46,15 @@ public static class PlacementQueries
         return typeId < world.Ruleset.EntityTypes.Count
             && GameplayCommands.RequirementsMet(world, player, world.Ruleset.EntityTypes[typeId], world.PlayerCivilization(player));
     }
+
+    /// <summary>
+    /// Whether <paramref name="player"/> meets the prerequisites of technology <paramref name="technology"/> by its
+    /// civilization's tree (the research command's check before cost and queue room; ADR 0040).
+    /// </summary>
+    public static bool ResearchRequirementsMet(World world, byte player, int technology)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        return (uint)technology < (uint)world.Ruleset.Technologies.Count
+            && ResearchRules.RequirementsMet(world, player, world.PlayerCivilization(player), world.Ruleset.Technologies[technology].Requirements, []);
+    }
 }

@@ -147,6 +147,21 @@ public sealed class SessionTests
 
         Assert.Contains(frame.Makeable, m => m != 0);
         Assert.Contains(frame.Makeable, m => m == 0);
+        Assert.Equal(Rules.Value.Technologies.Count, frame.Researchable.Length);
+
+        // Research queued in the castle shows as a research item and as "researching" for the kingdom.
+        int feudalism = Rules.Value.TechnologyId("te_feudalism");
+        Assert.Equal(1, frame.Researchable[feudalism]);
+        FrameEntity castle = frame.Entities.ToArray().First(e => e.Owner == session.LocalPlayer && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "castle");
+        var research = new CommandList();
+        research.Add(CommandKind.Research, [castle.Id], arg0: feudalism, player: session.LocalPlayer);
+        session.Submit(research);
+        session.Step(2);
+        frame = session.AcquireFrame(out _)!;
+        FrameEntity researching = frame.Entities.ToArray().Single(e => e.Id == castle.Id);
+        Assert.Equal((FrameQueueKind.Research, (ushort)feudalism), (researching.QueueKind, researching.QueueHead));
+        Assert.True(frame.Players[session.LocalPlayer].IsResearching(feudalism));
+        Assert.False(frame.Players[session.LocalPlayer].HasTechnology(feudalism));
         int tech = Rules.Value.Technologies.Count - 1;
         Assert.False(frame.Players[session.LocalPlayer].HasTechnology(tech));
         world.Players[session.LocalPlayer].AddTechnology(tech);

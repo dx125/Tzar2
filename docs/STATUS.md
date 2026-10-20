@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (first play-test; controls and HUD fixed)
+* **Last updated:** 2026-10-20 (play-test fixes: command card)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -55,8 +55,8 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 
 Items 1–6 are the fixes from the owner's first play-test (2026-10-20; log below), in this order.
 
-1. **Maintainer:** the whole command card: research, upgrades, capture, gates and the other orders the sim has but the
-   card shows greyed out ("not in this build yet"); the frame already carries researched technologies.
+1. **Maintainer:** the rest of the command card: spells, items, spies, trade, the tavern (loans, gambling) and holders
+   (board, the units inside), still greyed out as "not in this build yet".
 2. **Maintainer:** peasants at work: the milking and carrying sprites the object INIs name (`image_milk`,
    `image_carry*`), a cow stands still while it is milked, the field-digging animation.
 3. **Maintainer:** a match starts behind a loading screen with progress, and faster: the 13-second freeze in the
@@ -68,7 +68,7 @@ Items 1–6 are the fixes from the owner's first play-test (2026-10-20; log belo
 6. **Maintainer:** unit behaviour, then the AI's tactics (owner decision below): units answer fire, move-advance
    attacks buildings and towers, a blocked goal sends units to the nearest reachable point; then threat assessment,
    base defence, target choice, retreat and tower avoidance, scaled by difficulty.
-7. **Operator:** a second play-test (`tools/play/play.ps1`) after items 1–3.
+7. **Operator:** a second play-test (`tools/play/play.ps1`) after items 2–3.
 8. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 9. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
@@ -90,6 +90,14 @@ Items 1–6 are the fixes from the owner's first play-test (2026-10-20; log belo
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — The command card does what the sim can.** Research (castle, guilds, mills), upgrades (towers,
+  walls, gates, ships), capture, move-advance and move-sneak, stances, gate control, explore, destroy, emerge and
+  unload, become priest or Jihad warrior, attack ground, next idle peasant and the quest log, with costs, research times
+  and reasons in the tooltips. Researched technologies and owned upgrades leave the card, as do orders a technology
+  unlocks until it is researched (TECHTREE `[orders]`). A card with more than eight orders gets pages of seven and a
+  page button (a European peasant has nine); hotkeys reach every page. The frame carries each producer's queue item
+  kind (unit, research, upgrade), the entity's upgrades, stance and gate state, the research queued by each kingdom and
+  what the local player may research.
 * **2026-10-20 — First play-test by the owner; controls and HUD fixed.** A skirmish against the AI and the demo
   campaign's first mission; 15 findings, with causes from the run's log and the client code. Fixed now: a click selects
   a unit anywhere on its drawn figure (the hit box was the INI selection box at its feet); a held right or middle button

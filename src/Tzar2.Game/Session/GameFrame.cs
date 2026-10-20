@@ -29,6 +29,36 @@ public enum UnitActivity : byte
     Build = 6,
 }
 
+/// <summary>The kind of a producer's queue item.</summary>
+public enum FrameQueueKind : byte
+{
+    /// <summary>A unit in training.</summary>
+    Unit = 0,
+
+    /// <summary>A technology being researched.</summary>
+    Research = 1,
+
+    /// <summary>An upgrade of this entity.</summary>
+    Upgrade = 2,
+}
+
+/// <summary>A gate's state in a frame.</summary>
+[Flags]
+public enum FrameGate : byte
+{
+    /// <summary>Not a gate.</summary>
+    None = 0,
+
+    /// <summary>A gate.</summary>
+    Present = 1,
+
+    /// <summary>It is open.</summary>
+    Open = 2,
+
+    /// <summary>It opens and closes by itself for its owner's units.</summary>
+    Automatic = 4,
+}
+
 /// <summary>Match outcome for the local player.</summary>
 public enum MatchOutcome : byte
 {
@@ -91,11 +121,26 @@ public struct FrameEntity
     /// <summary>Queued units of a producer (0 when none).</summary>
     public int QueueCount;
 
-    /// <summary>The type in training (first queue item), valid when <see cref="QueueCount"/> &gt; 0.</summary>
+    /// <summary>
+    /// The first queue item's id, valid when <see cref="QueueCount"/> &gt; 0: a unit type, technology or upgrade id by
+    /// <see cref="QueueKind"/>.
+    /// </summary>
     public ushort QueueHead;
 
-    /// <summary>Training progress of the first item 0-1000.</summary>
+    /// <summary>What <see cref="QueueHead"/> is.</summary>
+    public FrameQueueKind QueueKind;
+
+    /// <summary>Progress of the first item 0-1000 (training, research or upgrade).</summary>
     public int QueuePermille;
+
+    /// <summary>Upgrades the entity has or has queued (bit = upgrade id; towers, walls, gates, galleons).</summary>
+    public uint Upgrades;
+
+    /// <summary>Combat stance of an armed entity (0 aggressive, 1 stand ground, 2 hold fire; GAME-07).</summary>
+    public byte Stance;
+
+    /// <summary>A gate's state: <see cref="FrameGate"/> flags (0 = not a gate).</summary>
+    public FrameGate Gate;
 
     /// <summary>Footprint top-left tile X of a structure, or -1.</summary>
     public int TileX;
@@ -158,11 +203,19 @@ public struct FramePlayer
 
     /// <summary>Researched technologies (bit = technology id, GAME-06).</summary>
     public TechnologyRow Technologies;
+
+    /// <summary>Technologies queued for research in one of the kingdom's buildings.</summary>
+    public TechnologyRow Researching;
 #pragma warning restore CA1051
 
     /// <summary>Whether technology <paramref name="technology"/> is researched.</summary>
-    public readonly bool HasTechnology(int technology)
-        => (uint)technology < TechnologyRow.Capacity && (Technologies[technology >> 6] & (1UL << (technology & 63))) != 0;
+    public readonly bool HasTechnology(int technology) => Has(Technologies, technology);
+
+    /// <summary>Whether technology <paramref name="technology"/> is queued for research.</summary>
+    public readonly bool IsResearching(int technology) => Has(Researching, technology);
+
+    private static bool Has(in TechnologyRow row, int technology)
+        => (uint)technology < TechnologyRow.Capacity && (row[technology >> 6] & (1UL << (technology & 63))) != 0;
 }
 
 /// <summary>Researched-technology bits of a kingdom (the sim's <c>TechnologyBits</c>, copied for the presentation).</summary>
@@ -266,6 +319,12 @@ public sealed class GameFrame
     /// without a player (replays of all kingdoms). The command card greys out what the player cannot make yet and says why.
     /// </summary>
     public byte[] Makeable { get; internal set; } = [];
+
+    /// <summary>
+    /// For the local player, per technology id: 1 where its prerequisites are met for the kingdom's civilization (the
+    /// sim's research check before cost and queue room); empty without a player.
+    /// </summary>
+    public byte[] Researchable { get; internal set; } = [];
 
     /// <summary>Local outcome.</summary>
     public MatchOutcome Outcome { get; internal set; }

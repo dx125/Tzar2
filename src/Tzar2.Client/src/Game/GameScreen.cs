@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using Godot;
@@ -100,6 +101,8 @@ public partial class GameScreen : Node
     private int _workSoundBudget;
     private Rid _boxItem;
     private bool _faultShown;
+    private readonly List<CardSlot> _wholeCard = [];
+    private int _cardPage;
     private double _animMs;
     private Vector2? _grabStart;
     private Vector2I _grabPan;
@@ -245,6 +248,7 @@ public partial class GameScreen : Node
         };
         _selection.Changed += () =>
         {
+            _cardPage = 0;
             _menuStack.Clear();
             _mode = OrderMode.None;
             RefreshCard();
@@ -863,11 +867,11 @@ public partial class GameScreen : Node
         if (k >= GameKey.A && k <= GameKey.Z && (mods & (KeyMods.Ctrl | KeyMods.Alt)) == 0)
         {
             char letter = (char)('A' + (k - GameKey.A));
-            for (int i = 0; i < Card.Count; i++)
+            foreach (CardSlot slot in _wholeCard)
             {
-                if (Card[i] is { } slot && slot.Button.Hotkey == letter)
+                if (slot.Button.Hotkey == letter)
                 {
-                    OnCard(i, false);
+                    OnButton(slot, false);
                     return;
                 }
             }
@@ -1225,8 +1229,23 @@ public partial class GameScreen : Node
 
     private void OnCard(int slot, bool right)
     {
-        if (slot < 0 || slot >= Card.Count || Card[slot] is not { } s || _frame is null)
+        if (slot >= 0 && slot < Card.Count && Card[slot] is { } s)
         {
+            OnButton(s, right);
+        }
+    }
+
+    private void OnButton(CardSlot s, bool right)
+    {
+        if (_frame is null)
+        {
+            return;
+        }
+
+        if (s.Button.Action == CardAction.Page)
+        {
+            _cardPage++;
+            RefreshCard();
             return;
         }
 
@@ -1263,6 +1282,7 @@ public partial class GameScreen : Node
                 break;
             case CardAction.Submenu:
                 _menuStack.Push(s.Button.Argument);
+                _cardPage = 0;
                 break;
             case CardAction.Build:
                 int building = _catalog.TypeOfClass(civ, s.Button.Argument);
@@ -1301,9 +1321,109 @@ public partial class GameScreen : Node
                 }
 
                 break;
+            case CardAction.Research when _rules.TechnologyId(s.Button.Argument) is >= 0 and var tech:
+                Submit(CommandKind.Research, OwnIds(selected, e => e.IsProducer && !e.UnderConstruction), arg0: tech);
+                break;
+            case CardAction.Upgrade when _rules.UpgradeId(s.Button.Argument) is >= 0 and var upgrade:
+                Submit(CommandKind.Upgrade, OwnIds(selected, e => !e.UnderConstruction), arg0: upgrade);
+                break;
+            case CardAction.Capture:
+                _mode = OrderMode.Capture;
+                break;
+            case CardAction.MoveAdvance:
+                _mode = OrderMode.MoveAdvance;
+                break;
+            case CardAction.MoveSneak:
+                _mode = OrderMode.MoveSneak;
+                break;
+            case CardAction.AttackGround:
+                _mode = OrderMode.AttackGround;
+                break;
+            case CardAction.Stance when int.TryParse(s.Button.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int stance):
+                Submit(CommandKind.SetStance, OwnIds(selected, e => e.IsArmed), arg0: stance);
+                break;
+            case CardAction.Gate:
+                foreach (EntityInfo gate in selected.Where(e => e.Owner == _session.LocalPlayer))
+                {
+                    FrameGate state = _indexById.TryGetValue(gate.Id.Value, out int gi) ? _frame.Entities[gi].Gate : FrameGate.None;
+                    int mode = s.Button.Argument switch { "open" => 1, "close" => 0, "auto" => 2, _ => (state & FrameGate.Open) != 0 ? 1 : 0 };
+                    if (state != FrameGate.None)
+                    {
+                        Submit(CommandKind.SetGate, [gate.Id], arg0: mode);
+                    }
+                }
+
+                break;
+            case CardAction.Explore:
+                Submit(CommandKind.Explore, OwnIds(selected, e => e.IsMobile));
+                break;
+            case CardAction.Delete:
+                DeleteSelected(important: false);
+                break;
+            case CardAction.Unload:
+                foreach (EntityInfo holder in selected.Where(e => e.Owner == _session.LocalPlayer))
+                {
+                    if (_indexById.TryGetValue(holder.Id.Value, out int hi))
+                    {
+                        Submit(CommandKind.Unload, [holder.Id], _frame.Entities[hi].X, _frame.Entities[hi].Y);
+                    }
+                }
+
+                break;
+            case CardAction.Become when _catalog.TypeOfClass(civ, s.Button.Argument) is >= 0 and var into:
+                Submit(CommandKind.ConvertUnit, OwnIds(selected, e => e.IsMobile), arg0: into);
+                break;
+            case CardAction.NextIdle:
+                SelectNextIdlePeasant();
+                break;
+            case CardAction.Quests when _session.Scenario is not null:
+                ShowQuests();
+                break;
+            case CardAction.Quests:
+                Message(_catalog.Text("sp_setupmap", "vcond_0", "Standard") + ": destroy every enemy unit and building.");
+                break;
         }
 
         RefreshCard();
+    }
+
+    private EntityId[] OwnIds(List<EntityInfo> selected, Func<EntityInfo, bool> which)
+        => selected.Where(e => e.Owner == _session.LocalPlayer && which(e)).Select(e => e.Id).ToArray();
+
+    private void Submit(CommandKind kind, EntityId[] entities, int x = 0, int y = 0, int arg0 = 0)
+    {
+        if (entities.Length == 0)
+        {
+            return;
+        }
+
+        var batch = new CommandList();
+        batch.Add(kind, entities, x, y, arg0: arg0);
+        _session.Submit(batch);
+    }
+
+    // The idle peasant after the current selection (the original's "next idle peasant" button and key).
+    private void SelectNextIdlePeasant()
+    {
+        if (_frame is null)
+        {
+            return;
+        }
+
+        ReadOnlySpan<FrameEntity> all = _frame.Entities;
+        int start = Lead() is { } lead ? lead + 1 : 0;
+        for (int k = 0; k < all.Length; k++)
+        {
+            FrameEntity e = all[(start + k) % all.Length];
+            if (e.Owner == _session.LocalPlayer && e.Activity == UnitActivity.Idle && _rules.EntityTypes[e.TypeId].Traits.Harvester is not null)
+            {
+                _selection.SelectOwn([e.Id]);
+                CenterOn(e.X, e.Y);
+                return;
+            }
+        }
+
+        Message("No idle peasants.");
     }
 
     private void RefreshCard()
@@ -1314,6 +1434,7 @@ public partial class GameScreen : Node
         }
 
         var card = new List<CardSlot?>();
+        _wholeCard.Clear();
         if (_placing == ushort.MaxValue && _selection.IsOwn && Lead() is { } lead)
         {
             FrameEntity e = _frame.Entities[lead];
@@ -1325,16 +1446,37 @@ public partial class GameScreen : Node
             else
             {
                 string? menu = _menuStack.Count > 0 ? _menuStack.Peek() : v.Menu;
-                var buttons = _catalog.Card(menu).ToList();
+                var buttons = _catalog.Card(menu).Where(b => !Hidden(b, e)).ToList();
                 if (buttons.Count > HudLayout.CardSlots)
                 {
-                    buttons = buttons.Where(b => b.Action != CardAction.Unsupported).Concat(buttons.Where(b => b.Action == CardAction.Unsupported)).Take(HudLayout.CardSlots).ToList();
+                    // What this build cannot do yet goes to the last page.
+                    buttons = buttons.Where(b => b.Action != CardAction.Unsupported).Concat(buttons.Where(b => b.Action == CardAction.Unsupported)).ToList();
                 }
 
                 foreach (CardButton b in buttons)
                 {
                     (bool enabled, string detail) = Availability(b, v.Civilization);
-                    card.Add(new CardSlot(b, enabled, Active(b), detail));
+                    _wholeCard.Add(new CardSlot(b, enabled, Active(b), detail));
+                }
+
+                // More orders than slots (a peasant has nine): pages of seven and a page button; hotkeys reach every page.
+                if (_wholeCard.Count <= HudLayout.CardSlots)
+                {
+                    card.AddRange(_wholeCard.Select(c => (CardSlot?)c));
+                }
+                else
+                {
+                    const int perPage = HudLayout.CardSlots - 1;
+                    int pages = (_wholeCard.Count + perPage - 1) / perPage;
+                    int page = _cardPage % pages;
+                    card.AddRange(_wholeCard.Skip(page * perPage).Take(perPage).Select(c => (CardSlot?)c));
+                    while (card.Count < perPage)
+                    {
+                        card.Add(null);
+                    }
+
+                    var more = new CardButton("page", '\0', CardAction.Page, $"{page + 1}/{pages}", -1, "More orders");
+                    card.Add(new CardSlot(more, true, false, $"page {page + 1} of {pages}"));
                 }
             }
         }
@@ -1351,33 +1493,130 @@ public partial class GameScreen : Node
         CardAction.Patrol => _mode == OrderMode.Patrol,
         CardAction.Guard => _mode == OrderMode.Guard,
         CardAction.Repair => _mode == OrderMode.Repair,
+        CardAction.Capture => _mode == OrderMode.Capture,
+        CardAction.MoveAdvance => _mode == OrderMode.MoveAdvance,
+        CardAction.MoveSneak => _mode == OrderMode.MoveSneak,
+        CardAction.AttackGround => _mode == OrderMode.AttackGround,
+        CardAction.Stance => Lead() is { } l && _frame is not null && b.Argument == _frame.Entities[l].Stance.ToString(CultureInfo.InvariantCulture),
+        CardAction.Gate => Lead() is { } g && _frame is not null && GateButtonOn(b.Argument, _frame.Entities[g].Gate),
         _ => false,
     };
+
+    private static bool GateButtonOn(string argument, FrameGate gate) => argument switch
+    {
+        "open" => (gate & (FrameGate.Open | FrameGate.Automatic)) == FrameGate.Open,
+        "close" => gate != FrameGate.None && (gate & (FrameGate.Open | FrameGate.Automatic)) == 0,
+        "auto" => (gate & FrameGate.Automatic) != 0,
+        _ => gate != FrameGate.None && (gate & FrameGate.Automatic) == 0,
+    };
+
+    // Researched technologies and upgrades the entity has (or does not take) leave the card, as in the original, and so
+    // do orders a technology unlocks (TECHTREE [orders]: bribe, spells, loans...) until it is researched.
+    private bool Hidden(CardButton b, in FrameEntity lead)
+    {
+        if (_frame is null)
+        {
+            return false;
+        }
+
+        int gate = _rules.OrderTechnology(b.Order, _catalog.Type(lead.TypeId).Civilization);
+        if (gate >= 0 && !Me().HasTechnology(gate))
+        {
+            return true;
+        }
+
+        switch (b.Action)
+        {
+            case CardAction.Research:
+                int tech = _rules.TechnologyId(b.Argument);
+                return tech >= 0 && _frame.Players.Length > _session.LocalPlayer && _frame.Players[_session.LocalPlayer].HasTechnology(tech);
+            case CardAction.Upgrade:
+                int up = _rules.UpgradeId(b.Argument);
+                if (up < 0)
+                {
+                    return false;
+                }
+
+                UpgradeDefinition u = _rules.Upgrades[up];
+                return (lead.Upgrades & (1u << up)) != 0 || (u.IsConversion && u.ConvertedType(lead.TypeId) < 0);
+            default:
+                return false;
+        }
+    }
 
     // Whether a card button works now and what its tooltip adds: the cost of what it makes, and why it is greyed out
     // (missing building or technology, too few resources).
     private (bool Enabled, string Detail) Availability(CardButton b, string civ)
     {
+        List<EntityInfo> selected = SelectedInfos();
+        byte me = _session.LocalPlayer;
         switch (b.Action)
         {
             case CardAction.Unsupported:
                 return (false, "not in this build yet");
             case CardAction.Repair:
-                return SelectedInfos().Any(e => e.Owner == _session.LocalPlayer && e.CanBuild) ? (true, string.Empty) : (false, "needs a builder");
-            case CardAction.Train or CardAction.Build:
+                return selected.Any(e => e.Owner == me && e.CanBuild) ? (true, string.Empty) : (false, "needs a builder");
+            case CardAction.Capture:
+                return selected.Any(e => e.Owner == me && _rules.EntityTypes[e.TypeId].Traits.IsCapturer) ? (true, string.Empty) : (false, "needs a peasant");
+            case CardAction.Train or CardAction.Build or CardAction.Become:
                 int type = _catalog.TypeOfClass(civ, b.Argument);
                 if (type < 0)
                 {
                     return (false, "not available to this kingdom");
                 }
 
-                string cost = CostText(type);
+                ImmutableArray<int> typeCost = _rules.EntityTypes[type].Traits.Cost;
+                string cost = CostText(typeCost);
                 if (MissingRequirement(type, civ) is { } missing)
                 {
                     return (false, Join(cost, "needs " + missing));
                 }
 
-                return Shortfall(type) is { } shortfall ? (false, Join(cost, "not enough " + shortfall)) : (true, cost);
+                return Shortfall(typeCost) is { } shortfall ? (false, Join(cost, "not enough " + shortfall)) : (true, cost);
+            case CardAction.Research:
+                int tech = _rules.TechnologyId(b.Argument);
+                if (tech < 0)
+                {
+                    return (false, "not in this ruleset");
+                }
+
+                TechnologyDefinition t = _rules.Technologies[tech];
+                string researchCost = Join(CostText(t.Cost), $"{t.TimeMs / 1000} s");
+                if (Me().IsResearching(tech))
+                {
+                    return (false, Join(researchCost, "being researched"));
+                }
+
+                if (_frame!.Researchable.Length > tech && _frame.Researchable[tech] == 0)
+                {
+                    return (false, Join(researchCost, "needs " + (MissingIn(t.Requirements, civ) ?? "requirements")));
+                }
+
+                return Shortfall(t.Cost) is { } lacking ? (false, Join(researchCost, "not enough " + lacking)) : (true, researchCost);
+            case CardAction.Upgrade:
+                int up = _rules.UpgradeId(b.Argument);
+                if (up < 0 || Lead() is not { } lead)
+                {
+                    return (false, "not in this ruleset");
+                }
+
+                UpgradeDefinition u = _rules.Upgrades[up];
+                FrameEntity entity = _frame!.Entities[lead];
+                string upgradeCost = Join(CostText(u.Cost), $"{u.TimeMs / 1000} s");
+                foreach (ushort before in u.After)
+                {
+                    if ((entity.Upgrades & (1u << before)) == 0)
+                    {
+                        return (false, Join(upgradeCost, "needs " + _rules.Upgrades[before].Name));
+                    }
+                }
+
+                if (MissingIn(u.Requirements, _catalog.Type(entity.TypeId).Civilization) is { } prerequisite)
+                {
+                    return (false, Join(upgradeCost, "needs " + prerequisite));
+                }
+
+                return Shortfall(u.Cost) is { } low ? (false, Join(upgradeCost, "not enough " + low)) : (true, upgradeCost);
             case CardAction.Submenu:
                 foreach (CardButton child in _catalog.Card(b.Argument))
                 {
@@ -1386,7 +1625,7 @@ public partial class GameScreen : Node
                         return (true, string.Empty);
                     }
 
-                    if (child.Action == CardAction.Submenu && Availability(child, civ).Enabled)
+                    if (child.Action is CardAction.Submenu or CardAction.Research && Availability(child, civ).Enabled)
                     {
                         return (true, string.Empty);
                     }
@@ -1397,13 +1636,14 @@ public partial class GameScreen : Node
                 return (true, string.Empty);
         }
 
-        static string Join(string cost, string reason) => cost.Length == 0 ? reason : $"{cost} - {reason}";
+        static string Join(string first, string second) => first.Length == 0 ? second : second.Length == 0 ? first : $"{first} - {second}";
     }
 
+    private FramePlayer Me() => _frame is not null && _frame.Players.Length > _session.LocalPlayer ? _frame.Players[_session.LocalPlayer] : default;
+
     // "200 food, 200 stone" (the base cost; technologies that make things cheaper are not shown yet).
-    private string CostText(int type)
+    private string CostText(ImmutableArray<int> cost)
     {
-        var cost = _rules.EntityTypes[type].Traits.Cost;
         var parts = new List<string>();
         for (int r = 0; r < cost.Length && r < _rules.ResourceTypes.Count; r++)
         {
@@ -1416,8 +1656,8 @@ public partial class GameScreen : Node
         return string.Join(", ", parts);
     }
 
-    // The first resource the player lacks for the type, as "food (150 of 200)", or null when affordable.
-    private string? Shortfall(int type)
+    // The first resource the player lacks, as "food (150 of 200)", or null when affordable.
+    private string? Shortfall(ImmutableArray<int> cost)
     {
         if (_frame is null || _frame.Players.Length <= _session.LocalPlayer)
         {
@@ -1425,7 +1665,6 @@ public partial class GameScreen : Node
         }
 
         FramePlayer p = _frame.Players[_session.LocalPlayer];
-        var cost = _rules.EntityTypes[type].Traits.Cost;
         for (int r = 0; r < cost.Length && r < 8; r++)
         {
             if (p.Resources[r] < cost[r])
@@ -1452,8 +1691,28 @@ public partial class GameScreen : Node
         }
 
         EntityTraits t = _rules.EntityTypes[type].Traits;
-        FramePlayer me = _frame.Players.Length > _session.LocalPlayer ? _frame.Players[_session.LocalPlayer] : default;
-        foreach (RequirementSet set in t.Requirements)
+        if (MissingIn(t.Requirements, civ) is { } missing)
+        {
+            return missing;
+        }
+
+        foreach (ushort building in t.RequiredTypes)
+        {
+            if (!HasCompleted(building))
+            {
+                return _catalog.Type(building).Name;
+            }
+        }
+
+        // Without the sim's verdict (an old frame) the names above are all there is.
+        return _frame.Makeable.Length > type ? "requirements" : null;
+    }
+
+    // The first unmet prerequisite of the sets for the civilization: a technology or a building, by name.
+    private string? MissingIn(ImmutableArray<RequirementSet> sets, string civ)
+    {
+        FramePlayer me = Me();
+        foreach (RequirementSet set in sets)
         {
             if (!set.AppliesTo(civ))
             {
@@ -1482,16 +1741,7 @@ public partial class GameScreen : Node
             }
         }
 
-        foreach (ushort building in t.RequiredTypes)
-        {
-            if (!HasCompleted(building))
-            {
-                return _catalog.Type(building).Name;
-            }
-        }
-
-        // Without the sim's verdict (an old frame) the names above are all there is.
-        return _frame.Makeable.Length > type ? "requirements" : null;
+        return null;
     }
 
     private bool HasCompleted(ushort type)
@@ -1686,7 +1936,7 @@ public partial class GameScreen : Node
         TypeVisual v = _catalog.Type(e.TypeId);
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
         string owner = e.Owner < 8 ? SpritePage.PlayerNames[e.Owner] : string.Empty;
-        var strip = new List<(int, int)>();
+        var strip = new List<(int, int, bool)>();
         if (_selection.Selected.Count > 1)
         {
             // Multi-selection shows health only (REQ-UI-01) and the selected units' icons.
@@ -1695,7 +1945,7 @@ public partial class GameScreen : Node
                 if (_indexById.TryGetValue(id.Value, out int i))
                 {
                     FrameEntity m = frame.Entities[i];
-                    strip.Add((_catalog.Type(m.TypeId).IconIndex, m.MaxHealth > 0 ? m.Health * 1000 / m.MaxHealth : -1));
+                    strip.Add((_catalog.Type(m.TypeId).IconIndex, m.MaxHealth > 0 ? m.Health * 1000 / m.MaxHealth : -1, false));
                 }
             }
 
@@ -1748,7 +1998,12 @@ public partial class GameScreen : Node
             stats.Add(("art/icons/time.t2img", $"{e.QueuePermille / 10} %"));
             for (int q = 0; q < e.QueueCount && q < 1; q++)
             {
-                strip.Add((_catalog.Type(e.QueueHead).IconIndex, e.QueuePermille));
+                strip.Add(e.QueueKind switch
+                {
+                    FrameQueueKind.Research when e.QueueHead < _rules.Technologies.Count => (_catalog.ButtonImage(_rules.Technologies[e.QueueHead].Key), e.QueuePermille, true),
+                    FrameQueueKind.Upgrade when e.QueueHead < _rules.Upgrades.Count => (_catalog.ButtonImage(_rules.Upgrades[e.QueueHead].Key), e.QueuePermille, true),
+                    _ => (_catalog.Type(e.QueueHead).IconIndex, e.QueuePermille, false),
+                });
             }
 
             if (e.QueueCount > 1)
@@ -1881,6 +2136,8 @@ public partial class GameScreen : Node
                     OrderMode.Patrol => "s_patrol",
                     OrderMode.Guard => "s_guard",
                     OrderMode.Repair => "s_repair",
+                    OrderMode.AttackGround or OrderMode.MoveAdvance => "s_attack",
+                    OrderMode.Capture => "s_hand",
                     _ => "s_move",
                 };
             }

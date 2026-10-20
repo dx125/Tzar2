@@ -21,8 +21,11 @@ public sealed class SelectionInfo
     /// <summary>Stat rows: icon asset and value.</summary>
     public IReadOnlyList<(string Icon, string Value)> Stats { get; init; } = [];
 
-    /// <summary>Icons in the info area (multi-selection or production queue) with an optional progress 0-1000.</summary>
-    public IReadOnlyList<(int Icon, int Progress)> Strip { get; init; } = [];
+    /// <summary>
+    /// Icons in the info area (multi-selection or production queue) with an optional progress 0-1000: portraits of
+    /// ICONS.BMP, or with <c>Order</c> an order button of ORDERS/BUTTONS.BMP (a technology or upgrade in progress).
+    /// </summary>
+    public IReadOnlyList<(int Icon, int Progress, bool Order)> Strip { get; init; } = [];
 
     /// <summary>Whether the strip values are health (green/yellow/red) rather than progress.</summary>
     public bool StripIsHealth { get; init; }
@@ -221,7 +224,7 @@ public partial class Hud : Control
             _statValues[i].Texture = has ? _ui.Text(info!.Stats[i].Value, UiAssets.SmallFont, Colors.White) : null;
         }
 
-        IReadOnlyList<(int Icon, int Progress)> strip = info?.Strip ?? [];
+        IReadOnlyList<(int Icon, int Progress, bool Order)> strip = info?.Strip ?? [];
         Rect2I area = _layout.InfoArea;
         int perRow = area.Size.X / 49;
         while (_strip.Count < Math.Min(strip.Count, perRow * 2))
@@ -235,7 +238,7 @@ public partial class Hud : Control
         for (int i = 0; i < _strip.Count; i++)
         {
             bool has = i < strip.Count;
-            _strip[i].Texture = has ? _ui.PlayerCell(Icons, strip[i].Icon, info!.Player) : null;
+            _strip[i].Texture = !has ? null : strip[i].Order ? _ui.Cell(Buttons, strip[i].Icon) : _ui.PlayerCell(Icons, strip[i].Icon, info!.Player);
             _stripBars[i].Visible = has && strip[i].Progress >= 0;
             if (has && strip[i].Progress >= 0)
             {
@@ -259,7 +262,9 @@ public partial class Hud : Control
         {
             CardSlot? slot = i < card.Count ? card[i] : null;
             _card[i] = slot;
-            _cardIcons[i].Texture = slot is { } s ? _ui.Cell(Buttons, s.Button.ImageIndex) ?? _ui.Text(s.Button.Hotkey.ToString(), UiAssets.BoldFont) : null;
+            _cardIcons[i].Texture = slot is { } s
+                ? _ui.Cell(Buttons, s.Button.ImageIndex) ?? _ui.Text(s.Button.Action == CardAction.Page ? s.Button.Argument : s.Button.Hotkey.ToString(), UiAssets.BoldFont)
+                : null;
             _cardShade[i].Visible = slot is { Enabled: false };
             _cardIcons[i].Modulate = slot is { Enabled: false } ? new Color(0.5f, 0.5f, 0.5f) : Colors.White;
             _cardFrames[i].Visible = slot is { Active: true };
