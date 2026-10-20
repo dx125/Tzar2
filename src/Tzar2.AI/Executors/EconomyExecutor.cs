@@ -16,6 +16,8 @@ namespace Tzar2.AI.Executors;
 /// still need; idle workers go to the resource furthest below its share, and a few workers per run move from the most
 /// over- to the most under-staffed resource. Nodes are chosen near the drop-offs, with a cap of workers per node. Food
 /// comes from fields: when the food share is larger than the kingdom's fields, it builds one more next to the farm.
+/// With the tactics' <see cref="TacticsLevel.AvoidTowers"/> (ADR 0178), nodes in reach of a hostile tower are avoided
+/// and their gatherers sent elsewhere.
 /// </summary>
 public sealed class EconomyExecutor : IAiExecutor
 {
@@ -28,6 +30,7 @@ public sealed class EconomyExecutor : IAiExecutor
     private readonly bool[] _gatherable = new bool[Ruleset.MaxResourceTypes];
     private readonly bool[] _resourceGoalSeen = new bool[Ruleset.MaxResourceTypes];
     private readonly List<EntityId> _idle = [];
+    private readonly List<EntityId> _endangered = [];
     private readonly List<EntityId> _dropOffs = [];
     private readonly List<(long Score, int Node)>[] _shortlist = new List<(long, int)>[Ruleset.MaxResourceTypes];
     private readonly Dictionary<int, int> _assignedNow = [];
@@ -62,6 +65,7 @@ public sealed class EconomyExecutor : IAiExecutor
         Array.Clear(_gatherable);
         Array.Clear(_resourceGoalSeen);
         _idle.Clear();
+        _endangered.Clear();
         _assignedNow.Clear();
         CollectDropOffs(context);
         BuildShortlists(context);
@@ -84,6 +88,10 @@ public sealed class EconomyExecutor : IAiExecutor
             if (state.Task == WorkerTask.Harvest && state.NodeResource < resources)
             {
                 _current[state.NodeResource]++;
+                if (InTowerReach(context, state.Target))
+                {
+                    _endangered.Add(w);
+                }
             }
             else if (!context.IsMoving(w))
             {
@@ -95,6 +103,55 @@ public sealed class EconomyExecutor : IAiExecutor
         BuildFields(context);
         AssignIdle(context);
         Rebalance(context);
+        Evacuate(context);
+    }
+
+    // A node a hostile tower reaches, with a tile to spare (tactics AvoidTowers).
+    private static bool InTowerReach(AiExecutorContext context, uint node)
+    {
+        if (!context.Tactics.AvoidTowers || node == 0)
+        {
+            return false;
+        }
+
+        EntityId e = EntityId.FromValue(node);
+        if (!context.World.Entities.IsAlive(e) || context.World.Positions.IndexOf(e) is not (>= 0 and var i))
+        {
+            return false;
+        }
+
+        Position p = context.World.Positions.At(i);
+        return context.Threats.Covered(p.X, p.Y, MapState.UnitsPerTile);
+    }
+
+    // Gatherers on a node in reach of a hostile tower go to a safe node of the same resource, or home.
+    private void Evacuate(AiExecutorContext context)
+    {
+        World world = context.World;
+        int moved = 0;
+        foreach (EntityId w in _endangered)
+        {
+            if (moved >= context.Options.Economy.AssignmentsPerRun || context.CommandsLeft <= 0)
+            {
+                return;
+            }
+
+            if (context.IsClaimed(w))
+            {
+                continue;
+            }
+
+            moved++;
+            if (SendTo(context, w, world.Workers.Get(w).NodeResource))
+            {
+                continue;
+            }
+
+            context.Selection.Clear();
+            context.Selection.Add(w);
+            (int tx, int ty) = context.Player.Town;
+            context.Issue(CommandKind.Move, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(context.Selection), tx, ty);
+        }
     }
 
     private void CollectDropOffs(AiExecutorContext context)
@@ -147,6 +204,11 @@ public sealed class EconomyExecutor : IAiExecutor
             }
 
             if (context.Census.WorkersOn(node.Id.Index) >= Capacity(context, node))
+            {
+                continue;
+            }
+
+            if (context.Tactics.AvoidTowers && context.Threats.Covered(node.X, node.Y, MapState.UnitsPerTile))
             {
                 continue;
             }

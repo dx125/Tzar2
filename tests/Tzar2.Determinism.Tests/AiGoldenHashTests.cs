@@ -28,9 +28,11 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0175) peasants gather 900 ms per unit, not 1,000.
     // (play-test 2026-10-20) fields are walkable and their farmers work on them; a claimed cow stops; a milker waits for
     // the milk to regrow until the pail is full.
-    private const ulong GoldenCommandStream = 0xA4B6469B53563387UL;
-    private const ulong GoldenHashStream = 0xD40C4C839A8FA55AUL;
-    private const ulong GoldenFinalFullHash = 0xDC59A0E27BA61A41UL;
+    // (ADR 0178) the AI's tactics weigh threats by difficulty (towers and buildings at home, waves and retreat by power,
+    // targets by danger, gatherers avoid towers); a unit on a move-advance answers fire.
+    private const ulong GoldenCommandStream = 0x5A44A369E2496ACEUL;
+    private const ulong GoldenHashStream = 0x1EB43303A0D34E61UL;
+    private const ulong GoldenFinalFullHash = 0x7DBFC41CD63E2029UL;
 
     private const int Ticks = 9600;
 

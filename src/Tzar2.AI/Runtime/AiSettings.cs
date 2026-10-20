@@ -87,6 +87,9 @@ public sealed record AiOptions
     /// <summary>Economy tuning.</summary>
     public EconomyOptions Economy { get; init; } = new();
 
+    /// <summary>Tactics per difficulty (ADR 0178).</summary>
+    public TacticsOptions Tactics { get; init; } = new();
+
     /// <summary>Naval tuning (ADR 0144).</summary>
     public NavalOptions Naval { get; init; } = new();
 
@@ -112,6 +115,8 @@ public sealed record AiOptions
         ArgumentNullException.ThrowIfNull(ExtraExecutors);
         Military.Validate();
         Economy.Validate();
+        ArgumentNullException.ThrowIfNull(Tactics);
+        Tactics.Validate();
         ArgumentNullException.ThrowIfNull(Naval);
         Naval.Validate();
     }

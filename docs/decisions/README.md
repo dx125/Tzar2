@@ -119,3 +119,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0175](0175-gathering-time-900-ms-per-unit.md) | Peasants gather 900 ms per unit, measured once on wood and applied to every resource | Accepted | 2026-10-19 |
 | [0176](0176-diagnostics-session-logs-traces-and-replays.md) | Diagnostics: a log per run, match and AI traces, crash reports and a replay of every match | Accepted | 2026-10-19 |
 | [0177](0177-wide-screens-and-a-settings-screen.md) | Fill modern screens with the world (Wide by default) and add a settings screen | Accepted | 2026-10-20 |
+| [0178](0178-ai-tactics-weigh-threats-by-difficulty.md) | Keep the original scripts for strategy and give the AI its own tactics, scaled by difficulty | Accepted | 2026-10-20 |

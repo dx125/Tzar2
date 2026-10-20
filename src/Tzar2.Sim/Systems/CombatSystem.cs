@@ -259,7 +259,8 @@ public sealed class CombatSystem : ISimSystem
         // Out of reach (or too close for a minimum range): the swing is lost.
         c.HitInMs = -1;
         c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
-        long leash = Math.Max(Sight(world, self, type), range);
+        // A unit may always chase what can hit it from where it stands (a tower that outranges its sight).
+        long leash = Math.Max(Math.Max(Sight(world, self, type), range), ReachOf(world, target));
         bool mobile = world.Motions.IndexOf(attacker) is >= 0 and var m && world.Motions.At(m).SpeedPerTick > 0;
         bool tooClose = distance < arm.MinRangeUnits;
         bool across = IsAcrossShore(PlaneOf(type), PlaneOf(world.TypeOf(target))); // REQ-PATH-09: no chasing across the shore
@@ -553,18 +554,27 @@ public sealed class CombatSystem : ISimSystem
             return;
         }
 
-        // Retaliation: an idle armed unit that is hit fights back (not on hold fire).
+        // Retaliation: an idle armed unit that is hit fights back (not on hold fire). So does a unit on a move-advance
+        // without a target, which then resumes its way: a tower that outranges its sight would shoot it down unanswered.
         int k = world.Combats.IndexOf(hit.Target);
         if (k >= 0 && attackerAlive && world.Identities.Get(hit.Attacker).Owner != victim.Owner)
         {
             ref Combat other = ref world.Combats.At(k);
-            if (other.Target == 0 && other.Mode == CombatMode.None && targetType.Traits.Armament!.AutoAcquire
-                && !Interaction.IsMoving(world, hit.Target) && !HasTask(world, hit.Target) && StanceOf(world, hit.Target) != CombatStance.HoldFire
-                && !world.IsHeld(hit.Attacker))
+            bool idle = other.Mode == CombatMode.None && targetType.Traits.Armament!.AutoAcquire
+                && !Interaction.IsMoving(world, hit.Target) && !HasTask(world, hit.Target);
+            bool advancing = other.Mode == CombatMode.AttackMove;
+            if (other.Target == 0 && (idle || advancing) && StanceOf(world, hit.Target) != CombatStance.HoldFire && !world.IsHeld(hit.Attacker))
             {
                 other.Target = hit.Attacker.Value;
-                other.Mode = CombatMode.Auto;
                 other.ChaseTick = -1;
+                if (advancing)
+                {
+                    other.Resume = 1;
+                }
+                else
+                {
+                    other.Mode = CombatMode.Auto;
+                }
             }
         }
     }
@@ -752,6 +762,12 @@ public sealed class CombatSystem : ISimSystem
 
     private static int Range(World world, EntityId attacker, Identity self, EntityTypeDefinition type, ArmamentDefinition arm)
         => arm.RangeUnits <= 0 ? 0 : ResearchRules.LevelBonus(world, attacker, ModifierStat.Range, world.Stats.Apply(self.Owner, ModifierStat.Range, type.Id, arm.RangeUnits));
+
+    private static int ReachOf(World world, EntityId target)
+    {
+        EntityTypeDefinition type = world.TypeOf(target);
+        return type.Traits.Armament is { } arm ? Range(world, target, world.Identities.Get(target), type, arm) : 0;
+    }
 
     private static int Sight(World world, Identity self, EntityTypeDefinition type)
         => world.Stats.Apply(self.Owner, ModifierStat.Sight, type.Id, type.Traits.SightUnits);

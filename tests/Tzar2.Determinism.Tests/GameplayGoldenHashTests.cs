@@ -29,9 +29,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0175) peasants gather 900 ms per unit (measured once on wood, applied to every resource), not 1,000.
     // (play-test 2026-10-20) a claimed cow stops where it is, and its milker waits for the milk to regrow until the pail
     // is full instead of carrying home a unit or two at a time; fields are walkable (WalkableFootprint, in the ruleset hash).
+    // (ADR 0178) a unit on a move-advance that is hit fights back and resumes its way; a unit may chase what can hit it.
     private const ulong GoldenRulesetHash = 0xB3F9CB058E71E673UL;
-    private const ulong GoldenHashStream = 0x935E14B71392AE8DUL;
-    private const ulong GoldenFinalFullHash = 0xC00299A8410BA30CUL;
+    private const ulong GoldenHashStream = 0x6FD0AE18EFACB8A7UL;
+    private const ulong GoldenFinalFullHash = 0x0F3167C8FEDE93A1UL;
 
     private const int Ticks = 1600;
 

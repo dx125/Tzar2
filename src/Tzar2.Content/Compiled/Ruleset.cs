@@ -314,12 +314,69 @@ public sealed partial class Ruleset
 
     /// <summary>
     /// The technology <paramref name="civilization"/> needs for <paramref name="order"/> (<c>TECHTREE [orders]</c>: a spell,
-    /// loan, bribe...), or -1 when the order is not gated for it (binary search; for the systems of GAME-11/14).
+    /// loan, bribe...), or -1 when the order is not gated for it (binary search; for the systems of GAME-11/14). It does
+    /// not allocate: the sim asks on every cast.
     /// </summary>
     public int OrderTechnology(string order, string civilization)
     {
-        int i = Array.BinarySearch(_orderGateKeys, order + "\n" + civilization, StringComparer.Ordinal);
-        return i >= 0 ? _orderGates[_orderGateIndex[i]].Technology : -1;
+        int lo = 0;
+        int hi = _orderGateKeys.Length - 1;
+        while (lo <= hi)
+        {
+            int mid = lo + ((hi - lo) >> 1);
+            int c = CompareGateKey(_orderGateKeys[mid], order, civilization);
+            if (c == 0)
+            {
+                return _orderGates[_orderGateIndex[mid]].Technology;
+            }
+
+            if (c < 0)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid - 1;
+            }
+        }
+
+        return -1;
+    }
+
+    // Ordinal comparison of a gate key with order + "\n" + civilization, without building the latter.
+    private static int CompareGateKey(ReadOnlySpan<char> key, ReadOnlySpan<char> order, ReadOnlySpan<char> civilization)
+    {
+        int c = ComparePart(ref key, order);
+        if (c == 0)
+        {
+            c = ComparePart(ref key, "\n");
+        }
+
+        if (c == 0)
+        {
+            c = ComparePart(ref key, civilization);
+        }
+
+        return c != 0 ? c : key.IsEmpty ? 0 : 1;
+
+        // Compares the start of key with part and consumes it when equal; a key that ends first is the smaller.
+        static int ComparePart(ref ReadOnlySpan<char> key, ReadOnlySpan<char> part)
+        {
+            int n = Math.Min(key.Length, part.Length);
+            int c = key[..n].SequenceCompareTo(part[..n]);
+            if (c != 0)
+            {
+                return c;
+            }
+
+            if (key.Length < part.Length)
+            {
+                return -1;
+            }
+
+            key = key[n..];
+            return 0;
+        }
     }
 
     /// <summary>The id of upgrade <paramref name="key"/>, or -1.</summary>
