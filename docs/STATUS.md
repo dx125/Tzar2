@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-19 (batch E; owner decision on measurements)
+* **Last updated:** 2026-10-19 (fidelity gate to M8; gather-rate scenario)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -23,18 +23,18 @@ and it has not been re-run since the handover.
 | M0 Foundations | **Done** | One ADR per spike: S2 (0007), S4 (0008), S3 (0009), S1 (0010), S6 (0013; S5 mobile export is PX); S1 renderer met on Windows (ADR 0010); CI green; no original files tracked (CI job `legal`). |
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
-| M3 Classic gameplay & skirmish | **In progress** — blocked on fidelity | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). **Fidelity suite ≥ 80 %: 9 of 30 (30 %)**, see below. |
+| M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174); open before M3 closes: the gathering rate and a first play-test by the owner. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign 14–15 of 19 missions, tutorial 7 of 7 (reported 2026-10-18, scripted solver, ADR 0134). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
 | M7 Windows beta | Not started | Installer, signing, crash reporting, min-spec tuning, closed beta. |
-| M8 Modding, polish, release | Not started | |
+| M8 Modding, polish, release | Not started | Also the **fidelity suite ≥ 80 %** (moved from M3, ADR 0174): **9 of 30 (30 %)** today, see below. |
 | PX Platform expansion | Post-1.0 (DEC-14) | |
 
-## M3 fidelity gate
+## Fidelity gate (M8 since ADR 0174)
 
 The suite (`t2 fidelity report`, ADR 0112) has 30 checks from TDD §22.3; the gate is passing / all, pending counts as
-not passing, so 24 must pass. AI script semantics stays pending by owner decision, so 24 of the other 29 must pass.
+not passing, so 24 must pass. Since ADR 0174 it is an M8 criterion, and no more unit-by-unit measurements are made. AI script semantics stays pending by owner decision, so 24 of the other 29 must pass.
 Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools/capture/run-capture.ps1 -Batch X`).
 
 | Batch | Measures | State |
@@ -53,29 +53,33 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-1. **Operator:** batch E (`-Batch E`, ~19 min). **Maintainer:** analyse it.
-2. **Maintainer:** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a view no unit walks
-   through, in a match the Hard AI does not end (find a setup without an attacking AI). Then **Operator:** run it.
-3. **Maintainer:** a speed scenario for the classes not measured yet (UNK-12, ADR 0172): Arabian and Asian units need
-   a kingdom of that civilisation (MP4 has one of each; spawning only works for the own civilisation), and find out why
-   catapults, ballistas and caravans did not spawn.
-4. **Maintainer:** before batches F and H, move or guard the scenarios that leave soldiers idle in MP2's middle next to
-   Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I; **Maintainer:** analyse each.
-5. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+1. **Operator:** `-Scenarios gather-rate` (~3 min): one measurement of the gathering time (ADR 0174). **Maintainer:**
+   apply it to every resource.
+2. **Maintainer:** tracing for diagnosis (sim events, commands, AI decisions, client errors) before the first play-test;
+   then a playable Windows build from the owner's GOG copy. **Operator:** play a skirmish and a campaign mission.
+3. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+   view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
+4. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+   more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
+5. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+   MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
+6. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-6. **Maintainer:** decode UNK-70…80, compare random maps with our generator, fix the passability case; run the
+7. **Maintainer:** decode UNK-70…80, compare random maps with our generator, fix the passability case; run the
    original-campaign harness locally (`t2 campaign run`, `TZAR2_ORIGIN`) to replace the reported 14–15/19 with a
    measured figure and push it to 19/19.
-7. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+8. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
-8. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-9. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+9. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+10. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — The fidelity gate moves to M8 (ADR 0174, owner decision).** Next: the gathering rate (one
+  measurement), tracing for diagnosis, then a playable build for the owner's first play-test.
 * **2026-10-19 — Owner decision: stop measuring unit by unit.** Measuring each unit's speed, attack and so on is not
   worth it at this stage. Where the original's tables have a value and a conversion has been measured (TIME 1.25 s per
   unit, carry loads, walking speed by stride, the day), apply the conversion to every entity; where a value is missing
