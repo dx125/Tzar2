@@ -68,7 +68,7 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
    measured figure and push it to 19/19.
 7. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
-8. **Maintainer:** issue #62 (flaky `RelayTests`), issue #68 (allocation gate); M6 soak to 500 matches.
+8. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
 9. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 ## Decision and event log
