@@ -23,9 +23,10 @@ public sealed class OriginImportTests : IDisposable
     /// <summary>
     /// SHA-256 of base.original.t2pkg imported from the clean GOG v1.10 EN build (REQ-IMP-02). A digest of our own output,
     /// not of an original file. Pinned so every machine that has the original can prove it builds the same bytes;
-    /// update it only for an intentional change of the package format or layout.
+    /// update it only for an intentional change of the package format or layout (2026-10-20: the campaigns and maps
+    /// joined the package under <c>legacy/</c>).
     /// </summary>
-    private const string ReferencePackageSha256 = "71d18d1279b16fd15134a2716834c11331ed2c686363eb4172b56b4192adcbfb";
+    private const string ReferencePackageSha256 = "023a9427f4a8b6f136703fdfeb3ddcc02734a34288d9ca21907f07d466826c7c";
 
     private readonly string _out = Path.Combine(Path.GetTempPath(), "tzar2-origin-import-" + Guid.NewGuid().ToString("N"));
 

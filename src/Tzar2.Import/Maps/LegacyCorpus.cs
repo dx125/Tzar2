@@ -33,10 +33,13 @@ public static class LegacyCorpus
 
     /// <summary>Converts a file by extension (<c>.wcm</c> = campaign, otherwise map).</summary>
     public static (MapConversion? Map, CampaignConversion? Campaign) ConvertFile(string path, LegacyConversionOptions? options = null)
+        => Convert(File.ReadAllBytes(path), Path.GetFileName(path), options);
+
+    /// <summary>Converts the bytes of a legacy file named <paramref name="name"/> by its extension (<c>.wcm</c> = campaign, otherwise map).</summary>
+    public static (MapConversion? Map, CampaignConversion? Campaign) Convert(byte[] data, string name, LegacyConversionOptions? options = null)
     {
-        byte[] data = File.ReadAllBytes(path);
-        string name = Path.GetFileName(path);
-        return path.EndsWith(".wcm", StringComparison.OrdinalIgnoreCase)
+        ArgumentNullException.ThrowIfNull(name);
+        return name.EndsWith(".wcm", StringComparison.OrdinalIgnoreCase)
             ? (null, LegacyCampaignConverter.Convert(data, name, options))
             : (LegacyMapConverter.Convert(data, name, options), null);
     }

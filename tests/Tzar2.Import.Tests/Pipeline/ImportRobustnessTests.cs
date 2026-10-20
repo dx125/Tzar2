@@ -21,9 +21,10 @@ public sealed class ImportRobustnessTests : IDisposable
 {
     /// <summary>
     /// SHA-256 of the package built from <see cref="SyntheticGame"/> (no edition). Pinned so that the CI jobs on Linux,
-    /// macOS and Windows prove cross-OS byte identity (REQ-IMP-02). Update it only for an intentional format change.
+    /// macOS and Windows prove cross-OS byte identity (REQ-IMP-02). Update it only for an intentional format change
+    /// (2026-10-20: campaigns and maps are kept under <c>legacy/</c>).
     /// </summary>
-    private const string SyntheticPackageSha256 = "ac30535a27b2990bd53d4cad1af59839d8cc5cb609380862cc66d93e4c2c3b0a";
+    private const string SyntheticPackageSha256 = "1b94ab124ac34186e764d90f101b75670a562b4a288380a9396e2b5929c4531f";
 
     private readonly SyntheticGame _game = new();
 

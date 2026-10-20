@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (play-test fixes: match loading)
+* **Last updated:** 2026-10-20 (play-test fixes: the original campaigns)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -57,8 +57,8 @@ Items 1–4 are the fixes from the owner's first play-test (2026-10-20; log belo
 
 1. **Maintainer:** the rest of the command card: spells, items, spies, trade, the tavern (loans, gambling) and holders
    (board, the units inside), still greyed out as "not in this build yet".
-2. **Maintainer:** the original campaigns and maps in the menus: the import converts `Tzar.wcm`, `TzarTutorial.wcm` and
-   `Maps/*.wmp` into the package; the campaign screen laid out on the original's panels.
+2. **Maintainer:** the original's maps in single player: the map choice screens (`S_SINGLECHOOSEMAP`) over the
+   package's `legacy/maps/*.wmp` (MP1–MP6, intro); the campaigns are in (log below).
 3. **Maintainer:** a settings screen in the main menu and modern resolutions (ADR): the world view fills the window,
    interface and world scale, window mode.
 4. **Maintainer:** unit behaviour, then the AI's tactics (owner decision below): units answer fire, move-advance
@@ -86,6 +86,12 @@ Items 1–4 are the fixes from the owner's first play-test (2026-10-20; log belo
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — The original campaigns are in the campaign screen.** The import keeps the install's campaigns and
+  maps (`Campaign/*.wcm`, `Maps/*.wmp`) in the package under `legacy/`; the client converts the campaigns when the
+  screen first opens (the tutorial's 7 missions and the main campaign's 19: 0.4 s) with the converter of ADR 0120,
+  shared with the CLI (`LegacyPlayables`). The screen is laid out on the original art's panels: the missions (paged),
+  the briefing, the campaigns, the description with progress and RESTART, and BACK and PLAY in the bar's button slots.
+  The reference and synthetic package hashes are re-pinned.
 * **2026-10-20 — A match starts in under a second, behind the original's wait screen.** The 13-second freeze was the
   terrain, not the map (28 ms) or the sprites (0.4 s): the composer looked up a terrain's bitmap for every pixel and
   redrew whole chunks for each of the water's 515 animation frames. Now bitmaps are looked up per tile, later frames

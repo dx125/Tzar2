@@ -437,6 +437,7 @@ public static class ImportPipeline
                     break;
                 case SourceKind.Container:
                     result.Info = ValidateContainer(data, context.CodePage, 0);
+                    result.Outputs.Add((asset!, data)); // the user's campaigns and maps, for the campaign and map screens
                     break;
                 default:
                     throw new InvalidOperationException($"Unhandled kind {kind}.");

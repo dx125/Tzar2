@@ -197,7 +197,8 @@ public sealed class ImportPipelineTests : IDisposable
     [InlineData("data/euro units.txt", SourceKind.Tsv, "tables/data/euro units.txt.json")]
     [InlineData("data/changes.txt", SourceKind.Text, "text/data/changes.txt")]
     [InlineData("local/fonts/small.fnt", SourceKind.Font, "fonts/small.json")]
-    [InlineData("campaign/tzar.wcm", SourceKind.Container, null)]
+    [InlineData("campaign/tzar.wcm", SourceKind.Container, "legacy/campaign/tzar.wcm")]
+    [InlineData("maps/mp1.wmp", SourceKind.Container, "legacy/maps/mp1.wmp")]
     [InlineData("tzar.exe", SourceKind.Ignored, null)]
     [InlineData("__support/app/tzar.ini", SourceKind.Ignored, null)]
     public void Classifies_sources(string path, SourceKind kind, string? asset)

@@ -108,6 +108,7 @@ public static class SourceClassifier
             SourceKind.Music => source.StartsWith("music/", StringComparison.Ordinal) ? source : "music-extra/" + source,
             SourceKind.Ini or SourceKind.Tsv => "tables/" + source + ".json",
             SourceKind.Text => "text/" + source,
+            SourceKind.Container => "legacy/" + source, // campaigns and maps, converted when played (LegacyPlayables)
             _ => null,
         };
     }
