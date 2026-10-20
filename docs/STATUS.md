@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (play-test fixes: spells, items and the other card orders)
+* **Last updated:** 2026-10-20 (owner findings: reach, selection marks, fire, projectiles)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -81,6 +81,16 @@ Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — Units touch what they work on; arrows, shells and flames are drawn.** Before the second play-test
+  the owner added four findings. Soldiers hit buildings and peasants unloaded a tile away: the interaction reach
+  (32 px from the footprint, plus the unit's radius) let them stop as soon as they came near; now a unit still walking
+  must touch the structure (12 px), the full reach stays for one that stopped (blocked by others). The selection mark of
+  units is the square of the original's selection box (IMAGES.INI `selection`), like the structures' corners, instead
+  of an ellipse. Burning buildings show the original's `fire_big` / `fire_small` flames, drawn additively as the
+  original's effects are painted on black. Projectiles are in the frame and drawn with the original's pictures
+  (arrows and ballista bolts turned along the flight, catapult stones and cannon balls with their shadows, rockets,
+  magic stars, flame and freeze bolts) on an arc; stones, shells, rockets and the bolts leave the original's explosions.
+  The pairing of projectile kinds and pictures, the flame spots and the arcs are ours (UNVERIFIED).
 * **2026-10-20 — Spells, items and the other card orders the sim already had.** The 21 spell orders, raise dead and
   the ninjas' cloak and murder cast at once on the caster (self spells) or on the clicked unit or ground with the
   original's spell cursor; loans and their repayment in the tavern; bribery; the cathedral's crusade; picking up, using

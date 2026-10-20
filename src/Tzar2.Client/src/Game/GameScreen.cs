@@ -221,6 +221,11 @@ public partial class GameScreen : Node
             }
         }
 
+        foreach (string effect in EffectImages.All)
+        {
+            _bank.Add(effect);
+        }
+
         _bank.AddTrees(set);
         long decoded = watch.ElapsedMilliseconds;
         _bank.Pack();

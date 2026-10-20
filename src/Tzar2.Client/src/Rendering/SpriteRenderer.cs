@@ -53,14 +53,17 @@ public sealed class SpriteRenderer : IDisposable
     private bool _visible = true;
     private bool _shadowsVisible = true;
 
-    /// <summary>Creates the canvas items under <paramref name="parent"/>; <paramref name="drawIndex"/> orders them among siblings.</summary>
-    public SpriteRenderer(Node host, Rid parent, int drawIndex)
+    /// <summary>
+    /// Creates the canvas items under <paramref name="parent"/>; <paramref name="drawIndex"/> orders them among siblings.
+    /// <paramref name="additive"/> adds the colours to what is below (the original's fire and explosions, on black).
+    /// </summary>
+    public SpriteRenderer(Node host, Rid parent, int drawIndex, bool additive = false)
     {
         ArgumentNullException.ThrowIfNull(host);
         _host = host;
         _quad = UnitQuad();
         var shader = GD.Load<Shader>("res://shaders/sprite.gdshader");
-        _colourMaterial = new ShaderMaterial { Shader = shader };
+        _colourMaterial = new ShaderMaterial { Shader = additive ? GD.Load<Shader>("res://shaders/sprite_add.gdshader") : shader };
         _shadowMaterial = new ShaderMaterial { Shader = shader };
         _shadowMaterial.SetShaderParameter("shadow_pass", true);
         _compositeMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/shadow_composite.gdshader") };

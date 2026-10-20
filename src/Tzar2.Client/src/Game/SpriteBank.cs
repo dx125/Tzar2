@@ -30,6 +30,9 @@ public sealed class SheetRef
     /// <summary>IMAGES.INI <c>selection</c> box inside the cell (hit testing, bars), or the object box.</summary>
     public Rect2I Selection { get; init; }
 
+    /// <summary>The point an effect is drawn at (IMAGES.INI <c>hotspot</c>, else the <c>object</c> box's corner).</summary>
+    public Vector2I Anchor { get; init; }
+
     /// <summary>Offset of a <c>_c</c> overlay relative to the cell (its <c>object</c> x, y).</summary>
     public Vector2I OverlayOffset { get; init; }
 
@@ -175,6 +178,7 @@ public sealed class SpriteBank : IDisposable
         _sheets.Add(sheet);
         int[]? box = entry.GetInts("object");
         int[]? sel = entry.GetInts("selection");
+        int[]? hot = entry.GetInts("hotspot");
         Rect2I obj = box is { Length: >= 4 } ? new Rect2I(box[0], box[1], box[2], box[3]) : new Rect2I(0, 0, sheet.CellWidth, sheet.CellHeight);
         return new SheetRef
         {
@@ -185,6 +189,7 @@ public sealed class SpriteBank : IDisposable
             Object = obj,
             Selection = sel is { Length: >= 4 } && sel[2] > 1 && sel[3] > 1 ? new Rect2I(sel[0], sel[1], sel[2], sel[3]) : obj,
             OverlayOffset = box is { Length: >= 2 } ? new Vector2I(box[0], box[1]) : Vector2I.Zero,
+            Anchor = hot is { Length: >= 2 } ? new Vector2I(hot[0], hot[1]) : box is { Length: >= 2 } ? new Vector2I(box[0], box[1]) : new Vector2I(sheet.CellWidth / 2, sheet.CellHeight / 2),
         };
     }
 }

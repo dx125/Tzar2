@@ -134,7 +134,7 @@ public sealed class ErrandSystem : ISimSystem
         EntityTypeDefinition other = world.TypeOf(target);
         bool across = other.IsMobile && other.Locomotor != type.Locomotor && (other.Locomotor == Locomotor.Ship || other.Locomotor == Locomotor.Air);
         int extra = across ? 2 * MapState.UnitsPerTile : 0;
-        return Interaction.Reaches(world, world.Positions.Get(unit), type.Radius + extra, target);
+        return Interaction.Reaches(world, world.Positions.Get(unit), type.Radius + extra, target, Interaction.IsMoving(world, unit));
     }
 
     private static bool Converting(World world, EntityId unit, ref Errand e, int tickMs)

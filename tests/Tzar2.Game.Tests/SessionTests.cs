@@ -204,6 +204,38 @@ public sealed class SessionTests
         Assert.Equal((0, 0), (footman.Mana, footman.MaxMana));
     }
 
+    [Fact]
+    public void The_frame_carries_projectiles_in_flight_and_burning_buildings()
+    {
+        var b = new Tzar2.Tests.Scenario.ScenarioBuilder();
+        b.Structure("euro.castle", 0, 4, 4);
+        b.Unit("euro.footman", 0, 16, 10);
+        b.Structure("comm.tower_wood", 1, 22, 10);
+        b.Structure("euro.house", 1, 30, 20);
+        b.Structure("euro.castle", 1, 38, 4);
+        var mission = new Campaigns.MissionContent(b.Map(), b.Scenario());
+        using var session = new GameSession(Campaigns.ScenarioMatch.Setup(mission, Rules.Value, computerAi: false), Rules.Value, fog: false);
+        World world = session.Simulation.World;
+        EntityId house = world.Identities.Entities.ToArray().Single(e => world.TypeOf(e).Key == "euro.house");
+        ref Sim.Components.Health health = ref world.Healths.Get(house);
+        health.Current = health.Max / 5; // below the burn threshold
+        bool shot = false;
+        for (int t = 0; t < 200 && !shot; t++)
+        {
+            session.Step(1);
+            GameFrame frame = session.AcquireFrame(out _)!;
+            foreach (FrameProjectile p in frame.Projectiles)
+            {
+                shot |= Rules.Value.Projectiles[p.Kind].Key == "arrow" && p.TargetX > 0;
+            }
+        }
+
+        Assert.True(shot, "the tower's arrows never showed in a frame");
+        FrameEntity burning = session.AcquireFrame(out _)!.Entities.ToArray().Single(e => e.Id == house);
+        Assert.True(burning.Burning);
+        Assert.DoesNotContain(session.AcquireFrame(out _)!.Entities.ToArray(), e => e.Burning && e.Id != house);
+    }
+
     [Theory]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Continental)]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Lakes)]

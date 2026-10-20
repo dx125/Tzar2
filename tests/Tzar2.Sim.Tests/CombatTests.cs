@@ -140,6 +140,46 @@ public class CombatTests
     }
 
     [Fact]
+    public void Units_strike_and_deliver_at_a_buildings_wall_not_a_tile_away()
+    {
+        // Owner play-test 2026-10-20: soldiers hit buildings and peasants unloaded a tile away from what they touched.
+        using var d = new SimDriver(
+            TestMap(40, 24, [Structure("euro.castle", 1, 20, 8), Structure("euro.castle", 0, 2, 2), Structure("comm.tree", 0, 18, 18), Unit("euro.footman", 0, 4, 10), Unit("euro.peon", 0, 12, 18)]),
+            ruleset: Classic);
+        World w = d.World;
+        EntityId enemy = OfType(w, "euro.castle", 1).Single();
+        EntityId own = OfType(w, "euro.castle", 0).Single();
+        EntityId footman = OfType(w, "euro.footman").Single();
+        EntityId peon = OfType(w, "euro.peon").Single();
+        d.Order(0, CommandKind.Attack, [footman], 0, 0, target: enemy);
+        d.Order(0, CommandKind.Harvest, [peon], 0, 0, target: OfType(w, "comm.tree").Single());
+        double struck = -1, delivered = -1;
+        for (int t = 0; t < 4000 && (struck < 0 || delivered < 0); t++)
+        {
+            d.Step();
+            foreach (var e in d.Events.Where(e => e.Tick == w.Tick.Value - 1))
+            {
+                if (struck < 0 && e.Event.Kind == SimEventKind.Damaged && e.Event.Entity == enemy)
+                {
+                    Position p = w.Positions.Get(footman);
+                    struck = Math.Sqrt(Systems.Interaction.DistanceSquaredTo(w, p.X, p.Y, enemy)) / Tile;
+                }
+
+                if (delivered < 0 && e.Event.Kind == SimEventKind.ResourceDelivered && e.Event.Entity == peon)
+                {
+                    Position p = w.Positions.Get(peon);
+                    delivered = Math.Sqrt(Systems.Interaction.DistanceSquaredTo(w, p.X, p.Y, own)) / Tile;
+                }
+            }
+        }
+
+        // Next to the wall: in a tile beside the footprint (a side tile's centre is 0.5 tiles out, a corner tile's 0.71);
+        // before, the reach let them stop 1.2 tiles out.
+        Assert.InRange(struck, 0, 0.9);
+        Assert.InRange(delivered, 0, 0.9);
+    }
+
+    [Fact]
     public void A_unit_with_no_way_past_an_enemy_stops_and_fights_it()
     {
         // A one-tile corridor through a cliff wall, held by an enemy: no alternative, so the soldier stops (Blocked)

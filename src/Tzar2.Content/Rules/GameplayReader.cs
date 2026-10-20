@@ -11,7 +11,7 @@ internal sealed class GameplayReader
     private static readonly string[] KnownFields =
     [
         "groupMoveSpeed", "populationLimit", "startingResources", "defaultStartingResources", "minimumDamage", "resistanceScale",
-        "interactionReachPx", "meleeReachPx", "acquireIntervalMs", "nodeSearchRadiusTiles", "constructionRefundPercent",
+        "interactionReachPx", "interactionTouchPx", "meleeReachPx", "acquireIntervalMs", "nodeSearchRadiusTiles", "constructionRefundPercent",
         "productionRefundPercent", "queueCapacity", "speedPixelsPerSecondPerPoint", "attackCycleMs", "hitDelayPercent",
         "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
         "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "wallContinueRadiusTiles", "maxWallSegments",
@@ -73,6 +73,7 @@ internal sealed class GameplayReader
             MinimumDamage = Range("minimumDamage", d.MinimumDamage, 0, 1_000_000),
             ResistanceScale = Range("resistanceScale", d.ResistanceScale, 1, 1_000_000),
             InteractionReachUnits = Range("interactionReachPx", d.InteractionReachUnits / 64, 0, 256) * 64,
+            InteractionTouchUnits = Range("interactionTouchPx", d.InteractionTouchUnits / 64, 0, 256) * 64,
             MeleeReachUnits = Range("meleeReachPx", d.MeleeReachUnits / 64, 0, 256) * 64,
             AcquireIntervalMs = Range("acquireIntervalMs", d.AcquireIntervalMs, 1, 60_000),
             NodeSearchRadiusTiles = Range("nodeSearchRadiusTiles", d.NodeSearchRadiusTiles, 0, 64),

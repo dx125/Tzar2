@@ -80,6 +80,7 @@ public static class FrameBuilder
                 e.MaxHealth = health.Max;
             }
 
+            e.Burning = world.Burnings.Has(id);
             if (world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool is { } pool)
             {
                 e.MaxMana = world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max);
@@ -236,6 +237,24 @@ public static class FrameBuilder
         }
 
         frame.CorpseCount = nc;
+
+        // Projectiles where the viewer sees them.
+        ReadOnlySpan<EntityId> shots = world.Projectiles.Entities;
+        Span<Projectile> flights = world.Projectiles.Components;
+        FrameProjectile[] projectiles = frame.ProjectileBuffer(shots.Length);
+        int np = 0;
+        for (int i = 0; i < shots.Length; i++)
+        {
+            Projectile s = flights[i];
+            if (viewer is { } sees && !world.Visibility.IsVisibleAt(sees, s.X, s.Y))
+            {
+                continue;
+            }
+
+            projectiles[np++] = new FrameProjectile(shots[i].Value, s.X, s.Y, s.TargetX, s.TargetY, s.Kind, s.Spell);
+        }
+
+        frame.ProjectileCount = np;
 
         int players = world.Players.Length;
         if (frame.Players.Length != players)
