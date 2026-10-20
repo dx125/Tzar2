@@ -115,3 +115,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0171](0171-speed-four-is-40-px-per-second-and-speed-scenarios-moved.md) | SPEED 4 walks 40 px/s (10 px/s per point); speed scenarios move away from Nature's cows | Accepted (with notes) | 2026-10-19 |
 | [0172](0172-walking-speed-per-class-not-from-speed.md) | Walking speed is per class and does not follow SPEED (foot 40 px/s, mounted 72) | Accepted (with notes) | 2026-10-19 |
 | [0173](0173-day-is-37-5-minutes-read-from-the-clock-globe.md) | A game day lasts 37.5 minutes, read from the clock globe; a match starts at 10:00 | Accepted (with notes) | 2026-10-19 |
+| [0174](0174-fidelity-gate-moves-to-m8-and-measure-once.md) | The fidelity gate moves from M3 to M8; a missing rate is measured once and applied to all | Accepted | 2026-10-19 |

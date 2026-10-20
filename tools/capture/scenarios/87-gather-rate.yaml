@@ -1,0 +1,60 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: gather-rate
+title: Gathering time per unit, measured once: wood next to a lumber mill (UNK-17)
+resolves: [UNK-17]
+priority: 2
+minutes: 2.5
+default: false                      # not in a batch: run with -Scenarios gather-rate (owner decision 2026-10-19, ADR 0174)
+description: |
+  One measurement applied to every resource (owner decision 2026-10-19). Batches B and E timed whole trips, but the
+  walk could not be separated: the castle Ctrl+C selects (our right-hand castle) made the positions uncertain. Here the
+  view is clamped to MP2's bottom-left corner (tile (x, y) at screen (150 + 32x, 32y - 1280), ADR 0171): a spawned
+  peasant builds a lumber mill (2 x 2 tiles) at once with hmbuildozer right below the tree at tile (19, 50) and then
+  gathers that tree, so a trip is almost only gathering: the wood stockpile (900 after the mill) is followed in memory
+  and steps by the load at every delivery. The trial's tree and mill edges let the suite remove the short walk. A burst
+  of the tree and the mill shows where the peasant stands and walks.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: wood
+    vars: {target: tree, target_xy: "774,352", dropoff_xy: "790,384"}   # the tree's bottom edge, the mill's top edge
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
+  - wait: 1
+  - snapshot: view
+  - move: [700, 430]                # tile (17.2, 53.4), open ground
+  - chat: "${cheat}spawn peon"
+  - click: [700, 430]               # place
+  - wait: 0.5                       # longer than the double-click time
+  - click: [700, 430]               # select
+  - chat: "${cheat}buildozer"       # build at once (batch E: the lumber mill of damage-building stood at once)
+  - key: B
+  - key: L
+  - click: [790, 384]               # the mill's centre: footprint tiles (19-20, 51-52) right below the tree
+  - wait: 2
+  - chat: "${cheat}buildozer"       # off again
+  - click: {at: [774, 330], button: right}   # gather the tree at tile (19, 50)
+  - memscan: {name: res-all, value: "900", width: 4}   # wood: 1000 at the start, the mill cost 100
+  - wait: 1
+  - memscan: {name: res-stable, from: res-all, mode: unchanged}
+  - memsample: {name: res-stable-series, scan: res-stable, max_addresses: 4096, interval_ms: 100, duration_s: 100}
+  - move: [70, 400]
+  # Runs while the memory sample goes on in the background.
+  - burst: {name: tree, count: 200, interval_ms: 200, region: [680, 260, 200, 200]}
+  - memscan: {name: res-up, from: res-stable, mode: increased}
+  - memsample: {name: res-series, scan: res-up, max_addresses: 256, interval_ms: 50, duration_s: 50}
+  - wait: 51
+  - snapshot: after
+analysis: [gather-rates]
