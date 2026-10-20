@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 
 namespace Tzar2.Game.Input;
@@ -32,6 +33,35 @@ public static class Placement
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// The footprint cells (offsets from the top-left) where <paramref name="type"/> cannot stand at (<paramref name="tileX"/>,
+    /// <paramref name="tileY"/>): off the map or not buildable. The placement ghost marks only these.
+    /// </summary>
+    public static List<(int Dx, int Dy)> BlockedCells(ReadOnlySpan<byte> buildable, int width, int height, EntityTypeDefinition type, int tileX, int tileY)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        var blocked = new List<(int Dx, int Dy)>();
+        ReadOnlySpan<byte> mask = type.Footprint;
+        for (int dy = 0; dy < type.FootprintHeight; dy++)
+        {
+            for (int dx = 0; dx < type.FootprintWidth; dx++)
+            {
+                if (mask.Length == type.FootprintWidth * type.FootprintHeight && mask[(dy * type.FootprintWidth) + dx] == 0)
+                {
+                    continue;
+                }
+
+                int x = tileX + dx, y = tileY + dy;
+                if (x < 0 || y < 0 || x >= width || y >= height || buildable.Length != width * height || buildable[(y * width) + x] == 0)
+                {
+                    blocked.Add((dx, dy));
+                }
+            }
+        }
+
+        return blocked;
     }
 
     /// <summary>The footprint top-left tile for a ghost centred on the world point (<paramref name="x"/>, <paramref name="y"/>).</summary>

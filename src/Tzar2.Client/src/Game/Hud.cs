@@ -29,13 +29,17 @@ public sealed class SelectionInfo
 
     /// <summary>Health share 0-1 for the portrait bar, or −1.</summary>
     public float Health { get; init; } = -1;
+
+    /// <summary>The owner whose colour the portraits wear (0-7), or −1 (Nature, resources).</summary>
+    public int Player { get; init; } = -1;
 }
 
 /// <summary>A command-card slot.</summary>
 /// <param name="Button">The MENU.INI button.</param>
 /// <param name="Enabled">Whether it can be used now.</param>
 /// <param name="Active">Whether its order is pending (highlighted).</param>
-public readonly record struct CardSlot(CardButton Button, bool Enabled, bool Active);
+/// <param name="Detail">What the tooltip adds: the cost, and why the button is greyed out.</param>
+public readonly record struct CardSlot(CardButton Button, bool Enabled, bool Active, string Detail = "");
 
 /// <summary>
 /// The authentic desktop HUD (REQ-UI-01) on a <c>CanvasLayer</c>: the <c>S_VIEW</c> screen bitmap of the
@@ -70,6 +74,7 @@ public partial class Hud : Control
     private readonly TextureRect _status;
     private CardSlot?[] _card = new CardSlot?[HudLayout.CardSlots];
     private int _clockFrame = -1;
+    private int _hovered = -1;
 
     /// <summary>Creates the HUD for <paramref name="layout"/>.</summary>
     public Hud(UiAssets ui, HudLayout layout, PresentationCatalog catalog)
@@ -121,8 +126,16 @@ public partial class Hud : Control
             _cardShade[i] = Add(new ColorRect { Position = r.Position, Size = r.Size, Color = new Color(0, 0, 0, 0.55f), MouseFilter = MouseFilterEnum.Ignore, Visible = false });
             _cardFrames[i] = Add(new TextureRect { Position = r.Position - new Vector2I(3, 3), Texture = ui.Texture("art/orders/frame.t2img"), MouseFilter = MouseFilterEnum.Ignore, Visible = false });
             _cardIcons[i].GuiInput += e => CardInput(slot, e);
-            _cardIcons[i].MouseEntered += () => ShowTooltip(slot);
-            _cardIcons[i].MouseExited += () => _tooltip!.Texture = null;
+            _cardIcons[i].MouseEntered += () =>
+            {
+                _hovered = slot;
+                ShowTooltip(slot);
+            };
+            _cardIcons[i].MouseExited += () =>
+            {
+                _hovered = -1;
+                _tooltip!.Texture = null;
+            };
         }
 
         for (int i = 0; i < _messages.Length; i++)
@@ -191,7 +204,7 @@ public partial class Hud : Control
     /// <summary>Fills the selection view (null = nothing selected).</summary>
     public void SetSelection(SelectionInfo? info)
     {
-        _portrait.Texture = info is null ? null : _ui.Cell(Icons, info.Icon);
+        _portrait.Texture = info is null ? null : _ui.PlayerCell(Icons, info.Icon, info.Player);
         _portraitBar.Visible = info is { Health: >= 0 };
         if (info is { Health: >= 0 } h)
         {
@@ -222,7 +235,7 @@ public partial class Hud : Control
         for (int i = 0; i < _strip.Count; i++)
         {
             bool has = i < strip.Count;
-            _strip[i].Texture = has ? _ui.Cell(Icons, strip[i].Icon) : null;
+            _strip[i].Texture = has ? _ui.PlayerCell(Icons, strip[i].Icon, info!.Player) : null;
             _stripBars[i].Visible = has && strip[i].Progress >= 0;
             if (has && strip[i].Progress >= 0)
             {
@@ -240,6 +253,7 @@ public partial class Hud : Control
     public void SetCard(IReadOnlyList<CardSlot?> card)
     {
         ArgumentNullException.ThrowIfNull(card);
+        CardSlot?[] before = _card;
         _card = new CardSlot?[HudLayout.CardSlots];
         for (int i = 0; i < HudLayout.CardSlots; i++)
         {
@@ -249,6 +263,12 @@ public partial class Hud : Control
             _cardShade[i].Visible = slot is { Enabled: false };
             _cardIcons[i].Modulate = slot is { Enabled: false } ? new Color(0.5f, 0.5f, 0.5f) : Colors.White;
             _cardFrames[i].Visible = slot is { Active: true };
+        }
+
+        // The tooltip of the slot under the pointer follows the card (resources change while it is shown).
+        if (_hovered >= 0 && !Equals(before[_hovered], _card[_hovered]))
+        {
+            ShowTooltip(_hovered);
         }
     }
 
@@ -281,10 +301,12 @@ public partial class Hud : Control
 
     private void ShowTooltip(int slot)
     {
+        _tooltip.Texture = null;
         if (_card[slot] is { } s)
         {
             string key = s.Button.Hotkey != '\0' ? $" ({s.Button.Hotkey})" : string.Empty;
-            _tooltip.Texture = _ui.Text(s.Button.Tooltip + key + (s.Enabled ? string.Empty : " - not available yet"), UiAssets.BoldFont, new Color(1f, 0.95f, 0.7f));
+            string detail = s.Detail.Length > 0 ? ": " + s.Detail : s.Enabled ? string.Empty : " - not available yet";
+            _tooltip.Texture = _ui.Text(s.Button.Tooltip + key + detail, UiAssets.BoldFont, s.Enabled ? new Color(1f, 0.95f, 0.7f) : new Color(1f, 0.7f, 0.55f));
         }
     }
 

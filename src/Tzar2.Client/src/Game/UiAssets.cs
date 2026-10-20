@@ -93,6 +93,48 @@ public sealed class UiAssets : IDisposable
         => index < 0 ? null : Region(asset, new Rect2I(0, index * size, size, size));
 
     /// <summary>
+    /// Cell <paramref name="index"/> of a strip in player <paramref name="player"/>'s colour (portraits of ICONS.BMP: the
+    /// sprites' player range 240-255 takes the owner's ramp), or the plain cell for no player (−1, Nature).
+    /// </summary>
+    public Texture2D? PlayerCell(string asset, int index, int player, int size = 48)
+    {
+        if (player is < 0 or >= PlayerPalette.Players)
+        {
+            return Cell(asset, index, size);
+        }
+
+        string key = $"{asset}|player{player}";
+        if (!_textures.TryGetValue(key, out ImageTexture? strip))
+        {
+            ImageAsset? source = null;
+            try
+            {
+                source = _store.LoadImage(asset);
+            }
+            catch (InvalidDataException)
+            {
+            }
+
+            strip = source is null ? null : ImageTexture.CreateFromImage(Godot.Image.CreateFromData(source.Width, source.Height, false, Godot.Image.Format.Rgba8, source.ToRgba(_store.Palette.RampOf(player))));
+            _textures[key] = strip;
+        }
+
+        if (index < 0 || strip is null || (index + 1) * size > strip.GetHeight())
+        {
+            return null;
+        }
+
+        string cellKey = $"{key}|{index}|{size}";
+        if (!_cells.TryGetValue(cellKey, out Texture2D? cell))
+        {
+            cell = new AtlasTexture { Atlas = strip, Region = new Rect2(0, index * size, size, size) };
+            _cells[cellKey] = cell;
+        }
+
+        return cell;
+    }
+
+    /// <summary>
     /// <paramref name="text"/> drawn with an imported bitmap font (1:1 glyphs, coverage → alpha) in
     /// <paramref name="colour"/>, or null when the font is missing.
     /// </summary>

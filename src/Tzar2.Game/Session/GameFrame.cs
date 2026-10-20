@@ -155,7 +155,24 @@ public struct FramePlayer
 
     /// <summary>Match statistics (F4 and the statistics file; GAME-17).</summary>
     public KingdomStatistics Statistics;
+
+    /// <summary>Researched technologies (bit = technology id, GAME-06).</summary>
+    public TechnologyRow Technologies;
 #pragma warning restore CA1051
+
+    /// <summary>Whether technology <paramref name="technology"/> is researched.</summary>
+    public readonly bool HasTechnology(int technology)
+        => (uint)technology < TechnologyRow.Capacity && (Technologies[technology >> 6] & (1UL << (technology & 63))) != 0;
+}
+
+/// <summary>Researched-technology bits of a kingdom (the sim's <c>TechnologyBits</c>, copied for the presentation).</summary>
+[System.Runtime.CompilerServices.InlineArray(Capacity / 64)]
+public struct TechnologyRow
+{
+    /// <summary>Technologies the row holds (<c>Ruleset.MaxTechnologies</c>).</summary>
+    public const int Capacity = Tzar2.Content.Compiled.Ruleset.MaxTechnologies;
+
+    private ulong _bits;
 }
 
 /// <summary>
@@ -242,6 +259,13 @@ public sealed class GameFrame
 
     /// <summary>The map passability version <see cref="Buildable"/> was computed for.</summary>
     public int BuildableVersion { get; internal set; } = -1;
+
+    /// <summary>
+    /// For the local player, per entity type id: 1 where its requirements are met (buildings and
+    /// technologies by the kingdom's tech tree, ADR 0040), the same check the sim's Build and Train commands make; empty
+    /// without a player (replays of all kingdoms). The command card greys out what the player cannot make yet and says why.
+    /// </summary>
+    public byte[] Makeable { get; internal set; } = [];
 
     /// <summary>Local outcome.</summary>
     public MatchOutcome Outcome { get; internal set; }

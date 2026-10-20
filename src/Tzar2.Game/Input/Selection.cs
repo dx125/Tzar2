@@ -21,6 +21,7 @@ namespace Tzar2.Game.Input;
 /// <param name="IsResourceNode">A tree, rock or field.</param>
 /// <param name="UnderConstruction">A construction site.</param>
 /// <param name="IsMobile">Moves.</param>
+/// <param name="IsRepairable">Builders can repair it when damaged (buildings, ships, siege weapons; GAME-03).</param>
 public readonly record struct EntityInfo(
     EntityId Id,
     ushort TypeId,
@@ -36,7 +37,8 @@ public readonly record struct EntityInfo(
     bool IsProducer,
     bool IsResourceNode,
     bool UnderConstruction,
-    bool IsMobile);
+    bool IsMobile,
+    bool IsRepairable = false);
 
 /// <summary>
 /// The local selection and control groups with the original's mouse semantics (Appendix E.6, HK.TXT): click, Shift+click

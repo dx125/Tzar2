@@ -127,6 +127,18 @@ public class ImageAssetTests
         Assert.Throws<InvalidDataException>(() => ImageAsset.Parse(image.ToBytes()[..^1]));
         Assert.Throws<InvalidDataException>(() => new ImageAsset { Format = PixelFormat.Indexed8, Width = 1, Height = 1, Pixels = [0] }.ToBytes());
     }
+
+    [Fact]
+    public void Portraits_wear_the_player_colour_on_the_sprite_range()
+    {
+        // Indices 240-255 are the player range (grey in ICONS.BMP); 10 is an ordinary colour; 241 with alpha 0 is a key.
+        Rgba32[] palette = Enumerable.Range(0, 256).Select(i => new Rgba32((byte)i, (byte)i, (byte)i, i == 242 ? (byte)0 : (byte)255)).ToArray();
+        var image = new ImageAsset { Format = PixelFormat.Indexed8, Width = 4, Height = 1, Palette = palette, Pixels = [10, 240, 255, 242] };
+        Rgba32[] ramp = Enumerable.Range(0, 16).Select(k => new Rgba32(0, 0, (byte)(100 + k), 255)).ToArray();
+        byte[] rgba = image.ToRgba(ramp);
+        Assert.Equal(new byte[] { 10, 10, 10, 255, 0, 0, 100, 255, 0, 0, 115, 255, 0, 0, 0, 0 }, rgba);
+        Assert.Equal(image.ToRgba(), image.ToRgba(null));
+    }
 }
 
 public class AtlasPackerTests

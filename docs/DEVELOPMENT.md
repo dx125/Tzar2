@@ -60,6 +60,10 @@ reference manifest lists, so a played install with crash dumps (`Logs/`) and the
 game into a package under `%LOCALAPPDATA%\Tzar2Play` (once, and again when the importer changed), builds the client and
 starts it in a window. When the game closes it prints the run's log folder and the match replays (see Diagnostics).
 
+Controls beyond the original's: a held right (or middle) button drags the map, and a right click without moving gives
+its order on release (setting `drag_scroll` in `user://game.cfg`). The client's scripted check
+(`--autoplay <dir>`, a window and the package needed) also clicks a unit and drags the map through real mouse events.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every PR and on `main`:

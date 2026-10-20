@@ -64,6 +64,11 @@ public partial class WeatherLayer : Node2D
         }
 
         Visible = true;
+        if (_screen.Frame is { Paused: true })
+        {
+            return; // the rain stands still with the game
+        }
+
         for (int i = 0; i < Drops; i++)
         {
             _drops[i] += new Vector2(-0.25f, 1f) * _speed[i] * (float)delta;

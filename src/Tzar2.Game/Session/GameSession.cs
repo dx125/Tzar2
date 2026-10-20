@@ -827,7 +827,7 @@ public sealed class GameSession : IDisposable
         GameFrame frame = _frames.Back;
         int view = _view;
         byte? fog = view == 255 ? null : view >= 0 ? (byte)view : _fog ? LocalPlayer : null;
-        FrameBuilder.Fill(frame, Simulation.World, fog, Outcome());
+        FrameBuilder.Fill(frame, Simulation.World, fog, Outcome(), LocalPlayer);
         frame.SpeedPercent = SpeedPercent;
         frame.Paused = Paused;
         frame.Scenario = Scenario?.View;
