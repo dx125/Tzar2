@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (play-test fixes: the AI's tactics)
+* **Last updated:** 2026-10-20 (play-test fixes: single player and the original maps)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -23,7 +23,7 @@ and it has not been re-run since the handover.
 | M0 Foundations | **Done** | One ADR per spike: S2 (0007), S4 (0008), S3 (0009), S1 (0010), S6 (0013; S5 mobile export is PX); S1 renderer met on Windows (ADR 0010); CI green; no original files tracked (CI job `legal`). |
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
-| M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). The owner's first play-test is done (2026-10-20); open before M3 closes: its fixes (work queue 1–2) and a second play-test (item 3). |
+| M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). The owner's first play-test is done (2026-10-20); open before M3 closes: its fixes (work queue 1) and a second play-test (item 2). |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **14 of 19 measured** (2026-10-20, editor acceptance test on the clean GOG install, scripted solver, ADR 0134; not completed: `alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`), tutorial 7 of 7 (reported). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
@@ -53,34 +53,39 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-Items 1–2 are the fixes left from the owner's first play-test (2026-10-20; log below), in this order.
+Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
 
 1. **Maintainer:** the rest of the command card: spells, items, spies, trade, the tavern (loans, gambling) and holders
    (board, the units inside), still greyed out as "not in this build yet".
-2. **Maintainer:** the original's maps in single player: the map choice screens (`S_SINGLECHOOSEMAP`) over the
-   package's `legacy/maps/*.wmp` (MP1–MP6, intro); the campaigns are in (log below).
-3. **Operator:** a second play-test (`tools/play/play.ps1`): the fixes merged so far, and the remaining items as they land.
-4. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+2. **Operator:** a second play-test (`tools/play/play.ps1`): the fixes merged so far, and the remaining items as they land.
+3. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-5. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+4. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
    more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
-6. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+5. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
-7. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+6. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-8. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
+7. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
    solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
    diagonal rocks) to reach 19/19.
-9. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+8. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
-10. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-11. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+9. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+10. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — Single player as in the original, with its maps.** SINGLE PLAYER opens the original's menu
+  (`S_SINGLEPLAYER`: CAMPAIGN, CUSTOM MAP, RANDOM MAP, LOAD GAME, BACK). CUSTOM MAP lists the package's original maps
+  (`legacy/maps/*.wmp`, converted with ADR 0120's converter behind the loading screen the first time) with a picture
+  and the description (`S_SINGLECHOOSEMAP`); the map's setup (`S_SINGLESETUP`) keeps the map's own kingdom,
+  stockpiles, population limit and fog unless the player changes them, and sets the computers' difficulty. The
+  computers play the original `random.ais`, not the map's own AI script names (not resolved yet). RANDOM MAP moved to
+  its own art (`S_SINGLERND`) and gained No Fog and Explore; LOAD GAME loads the last quick save of a campaign mission.
 * **2026-10-20 — The AI weighs threats; units on a move-advance answer fire (ADR 0178).** Two causes of "the AI
   ignores towers": a unit on a move-advance did not fight back when hit from beyond its sight (a stone tower hits at
   13 tiles, a footman sees 6), and the military executor never looked at towers or compared strengths. Now a

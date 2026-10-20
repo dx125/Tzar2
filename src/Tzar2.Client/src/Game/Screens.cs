@@ -129,6 +129,50 @@ public abstract partial class ArtScreen : Control
         Text(at + new Vector2I(0, y), line.ToString(), UiAssets.SmallFont, new Color(1f, 0.6f, 0.4f));
     }
 
+    /// <summary>The text cut to the width (with "..."), so nothing spills over the panel frames.</summary>
+    protected string Fit(string text, int width, string font)
+    {
+        if (Ui.Measure(text, font) <= width)
+        {
+            return text;
+        }
+
+        string cut = text;
+        while (cut.Length > 1 && Ui.Measure(cut + "...", font) > width)
+        {
+            cut = cut[..^1];
+        }
+
+        return cut + "...";
+    }
+
+    /// <summary>The text broken into lines no wider than <paramref name="width"/> (paragraphs at line breaks).</summary>
+    protected List<string> Wrap(string text, int width)
+    {
+        var lines = new List<string>();
+        foreach (string paragraph in (text ?? string.Empty).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n'))
+        {
+            var line = new System.Text.StringBuilder();
+            foreach (string word in paragraph.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                string next = line.Length == 0 ? word : line + " " + word;
+                if (line.Length > 0 && Ui.Measure(next) > width)
+                {
+                    lines.Add(line.ToString());
+                    line.Clear().Append(word);
+                }
+                else
+                {
+                    line.Clear().Append(next);
+                }
+            }
+
+            lines.Add(line.ToString());
+        }
+
+        return lines;
+    }
+
     /// <summary>An invisible click area relative to the background (labels baked into the art, UNK-15).</summary>
     protected Button Area(Rect2I rect, Action pressed)
     {
@@ -232,70 +276,76 @@ public sealed class SkirmishOptions
     /// <summary>Index into <see cref="MapSizes"/>.</summary>
     public int MapSize { get; set; } = 1;
 
+    /// <summary>No Fog (GAME-12).</summary>
+    public bool NoFog { get; set; }
+
+    /// <summary>Explore: the map starts explored (GAME-12).</summary>
+    public bool Explore { get; set; }
+
     /// <summary>Match seed.</summary>
     public ulong Seed { get; set; } = 0x7A42_0003UL;
 }
 
-/// <summary>The skirmish setup dialog (<c>S_SINGLESETUP</c>): six option sliders, the map preview, PLAY and CANCEL.</summary>
+/// <summary>
+/// The random-map setup (<c>S_SINGLERND</c>): six option sliders (kingdom, difficulty, starting resources, population
+/// limit, No Fog, Explore), the map rows of the right panel (type, size, terrain, kingdoms) above a preview of the map,
+/// PLAY and BACK.
+/// </summary>
 public partial class SkirmishSetupScreen : ArtScreen
 {
+    private const int Slots = 10;
     private readonly SkirmishOptions _options;
     private readonly PresentationCatalog? _catalog;
-    private readonly TextureRect[] _values = new TextureRect[8];
+    private readonly TextureRect[] _values = new TextureRect[Slots];
     private readonly Func<SkirmishOptions, Image?>? _preview;
     private readonly TextureRect _map;
 
     /// <summary>Creates the dialog.</summary>
     public SkirmishSetupScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, SkirmishOptions options, Func<SkirmishOptions, Image?>? preview = null, string? notice = null)
-        : base(ui, screen, "art/screens/s_singlesetup/back.t2img")
+        : base(ui, screen, "art/screens/s_singlernd/back.t2img")
     {
         Notice(notice, new Vector2I(66, 88));
         _options = options;
         _catalog = catalog;
         _preview = preview;
-        _map = new TextureRect { Position = Origin + new Vector2I(554, 63), Size = new Vector2(180, 226), StretchMode = TextureRect.StretchModeEnum.KeepCentered, MouseFilter = MouseFilterEnum.Ignore };
+        _map = new TextureRect { Position = Origin + new Vector2I(566, 272), Size = new Vector2(180, 172), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_map);
-        Text(new Vector2I(66, 40), catalog?.Text("singlescr", "random", "RANDOM MAP") ?? "SKIRMISH", UiAssets.TitleFont);
-        Text(new Vector2I(66, 70), "Random map: choose its type, size and terrain below", UiAssets.SmallFont, new Color(0.8f, 0.8f, 0.7f));
+        Text(new Vector2I(66, 40), catalog?.Text("singlescr", "random", "RANDOM MAP") ?? "RANDOM MAP", UiAssets.TitleFont);
+        Text(new Vector2I(66, 70), "A new map from the options on the right", UiAssets.SmallFont, new Color(0.8f, 0.8f, 0.7f));
         string[] titles =
         [
             "Kingdom",
-            catalog?.Text("sp_setupmap", "t_diff_lvl", "Difficulty Level") ?? "Difficulty Level",
-            catalog?.Text("sp_setupmap", "t_st_res", "Starting Resources") ?? "Starting Resources",
-            catalog?.Text("sp_setupmap", "t_poplimit", "Population Limit") ?? "Population Limit",
-            "Kingdoms",
-            "Terrain",
-            "Map Type",
-            "Map Size",
+            T("t_diff_lvl", "Difficulty Level"),
+            T("t_st_res", "Starting Resources"),
+            T("t_poplimit", "Population Limit"),
+            T("t_fog", "No Fog"),
+            T("t_expolre", "Explore"),
+            T("t_map_type", "Map Type"),
+            T("t_map_size", "Map Size"),
+            T("t_terrain", "Terrain"),
+            T("t_num_players", "Number of Players"),
         ];
-        for (int i = 0; i < 8; i++)
+        int[] rows = [58, 113, 171, 230]; // the right panel's rows of back.bmp, measured on the art
+        for (int i = 0; i < Slots; i++)
         {
             int slot = i;
-
-            // Rows 0-2 are the dialog's slider slots; the map type and size row above them uses the common arrows.
-            var at = i < 6 ? new Vector2I(i % 2 == 0 ? 66 : 271, 370 + ((i / 2) * 58)) : new Vector2I(i == 6 ? 66 : 271, 300);
-            Text(at - new Vector2I(0, 18), titles[i], UiAssets.SmallFont, new Color(0.85f, 0.85f, 0.75f));
-            if (i >= 6)
-            {
-                Arrow(at, "art/screens/common/btn left.t2img");
-                Arrow(at + new Vector2I(154, 0), "art/screens/common/btn right.t2img");
-            }
-
+            var at = i < 6 ? new Vector2I(i % 2 == 0 ? 66 : 271, 370 + ((i / 2) * 58)) : new Vector2I(566, rows[i - 6]);
+            Text(at - new Vector2I(0, 17), titles[i], UiAssets.SmallFont, new Color(0.85f, 0.85f, 0.75f));
             Area(new Rect2I(at, new Vector2I(27, 27)), () => Change(slot, -1));
             Area(new Rect2I(at + new Vector2I(154, 0), new Vector2I(27, 27)), () => Change(slot, +1));
             _values[i] = Text(at + new Vector2I(30, 6), string.Empty, UiAssets.SmallFont, Colors.White);
         }
 
-        const string Btn = "art/screens/s_singlesetup/btn.t2img";
-        Button(new Vector2I(555, 499), new Vector2I(210, 27), Btn, catalog?.Text("sp_setupmap", "play", "PLAY") ?? "PLAY", () => Play?.Invoke(_options));
-        Button(new Vector2I(555, 554), new Vector2I(210, 27), Btn, catalog?.Text("general", "cancel", "CANCEL") ?? "CANCEL", () => Cancel?.Invoke());
+        const string Btn = "art/screens/s_singlernd/btn.t2img";
+        Button(new Vector2I(555, 499), new Vector2I(210, 27), Btn, T("play", "PLAY"), () => Play?.Invoke(_options));
+        Button(new Vector2I(555, 554), new Vector2I(210, 27), Btn, T("back", "BACK"), () => Cancel?.Invoke());
         Refresh();
     }
 
     /// <summary>PLAY.</summary>
     public event Action<SkirmishOptions>? Play;
 
-    /// <summary>CANCEL.</summary>
+    /// <summary>BACK.</summary>
     public event Action? Cancel;
 
     /// <summary>Changes option <paramref name="slot"/> by one step.</summary>
@@ -308,38 +358,35 @@ public partial class SkirmishSetupScreen : ArtScreen
             case 1: _options.Difficulty = (Difficulty)Wrap((int)_options.Difficulty + step, 3); break;
             case 2: _options.StartingResources = Wrap(_options.StartingResources + step, 4); break;
             case 3: _options.PopulationLimit = Wrap(_options.PopulationLimit + step, SkirmishOptions.PopulationLimits.Length); break;
-            case 4: _options.Players = 2 + Wrap(_options.Players - 2 + step, 7); break;
-            case 5: _options.Terrain = Wrap(_options.Terrain + step, SkirmishOptions.TerrainSets.Length); break;
+            case 4: _options.NoFog = !_options.NoFog; break;
+            case 5: _options.Explore = !_options.Explore; break;
             case 6: _options.MapType = Wrap(_options.MapType + step, SkirmishOptions.MapTypes.Length); break;
             case 7: _options.MapSize = Wrap(_options.MapSize + step, SkirmishOptions.MapSizes.Length); break;
+            case 8: _options.Terrain = Wrap(_options.Terrain + step, SkirmishOptions.TerrainSets.Length); break;
+            case 9: _options.Players = 2 + Wrap(_options.Players - 2 + step, 7); break;
         }
 
         Refresh();
     }
 
-    private void Arrow(Vector2I at, string image)
-    {
-        if (Ui.Region(image, new Rect2I(0, 0, 27, 27)) is { } t)
-        {
-            AddChild(new TextureRect { Texture = t, Position = Origin + at, MouseFilter = MouseFilterEnum.Ignore });
-        }
-    }
+    private string T(string key, string fallback) => _catalog?.Text("sp_setuprnd", key, fallback) ?? fallback;
 
     private void Refresh()
     {
-        string T(string section, string key, string fallback) => _catalog?.Text(section, key, fallback) ?? fallback;
         string[] values =
         [
-            T("sp_setupmap", $"race_{_options.Civilization + 1}", SkirmishOptions.Civilizations[_options.Civilization]),
-            T("sp_setupmap", $"difflvl_{(int)_options.Difficulty}", _options.Difficulty.ToString()),
-            T("sp_setupmap", $"resurcs_{_options.StartingResources}", _options.StartingResources.ToString(CultureInfo.InvariantCulture)),
+            T($"race_{_options.Civilization + 1}", SkirmishOptions.Civilizations[_options.Civilization]),
+            T($"difflvl_{(int)_options.Difficulty}", _options.Difficulty.ToString()),
+            T($"resurcs_{_options.StartingResources}", _options.StartingResources.ToString(CultureInfo.InvariantCulture)),
             SkirmishOptions.PopulationLimits[_options.PopulationLimit].ToString(CultureInfo.InvariantCulture),
-            _options.Players.ToString(CultureInfo.InvariantCulture),
-            Content.MapGen.RandomMapNames.Name(SkirmishOptions.TerrainSets[_options.Terrain]),
+            _options.NoFog ? "Yes" : "No",
+            _options.Explore ? "Yes" : "No",
             Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapTypes[_options.MapType]),
             Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapSizes[_options.MapSize]),
+            Content.MapGen.RandomMapNames.Name(SkirmishOptions.TerrainSets[_options.Terrain]),
+            _options.Players.ToString(CultureInfo.InvariantCulture),
         ];
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < Slots; i++)
         {
             _values[i].Texture = Ui.Text(values[i], UiAssets.SmallFont, Colors.White);
         }

@@ -56,6 +56,34 @@ public sealed class InMemoryCampaignSource : ICampaignSource
 }
 
 /// <summary>
+/// What the single-player setup of a custom map (<c>S_SINGLESETUP</c>) changes in its match; the defaults keep what
+/// the map says.
+/// </summary>
+public sealed record CustomMapSettings
+{
+    /// <summary>The computer kingdoms' difficulty.</summary>
+    public Difficulty Difficulty { get; init; } = Difficulty.Normal;
+
+    /// <summary>The local player's civilization key (<c>euro</c>, <c>arab</c>, <c>asia</c>), or null for the map's.</summary>
+    public string? Civilization { get; init; }
+
+    /// <summary>Starting-resource level (0 low, 1 normal, 2 high), or -1 for the map's stockpiles.</summary>
+    public int StartingResources { get; init; } = -1;
+
+    /// <summary>Population limit, or -1 for the map's.</summary>
+    public int PopulationLimit { get; init; } = -1;
+
+    /// <summary>No Fog, or null for the map's.</summary>
+    public bool? NoFog { get; init; }
+
+    /// <summary>Explore (the map starts explored), or null for the map's.</summary>
+    public bool? Explored { get; init; }
+
+    /// <summary>The computer kingdoms' strategy script (the original <c>random.ais</c> of the package).</summary>
+    public SkirmishAi Ai { get; init; } = SkirmishAi.EngineDefault;
+}
+
+/// <summary>
 /// Builds the match of a scenario map (ADR 0133): kingdoms from the scenario's kingdom table (the first active
 /// Human-or-AI kingdom is the local player, the others computers), civilizations, victory condition and population
 /// limit from the map properties, a seed derived from the map, and the match-start preparation (starting stockpiles,
@@ -69,7 +97,8 @@ public static class ScenarioMatch
     /// <param name="carry">Campaign carry-over (persistent units, variables), or null.</param>
     /// <param name="computerAi">Whether computer kingdoms run the legacy AI.</param>
     /// <param name="cheats">Whether cheats are allowed (the headless solver).</param>
-    public static MatchSetup Setup(MissionContent mission, Ruleset ruleset, CampaignProgress? carry = null, bool computerAi = true, bool cheats = false)
+    /// <param name="custom">The single-player setup of a custom map, or null (campaigns: the map as it is).</param>
+    public static MatchSetup Setup(MissionContent mission, Ruleset ruleset, CampaignProgress? carry = null, bool computerAi = true, bool cheats = false, CustomMapSettings? custom = null)
     {
         ArgumentNullException.ThrowIfNull(mission);
         ArgumentNullException.ThrowIfNull(ruleset);
@@ -140,12 +169,17 @@ public static class ScenarioMatch
                 Civilization.Asian => "asia",
                 _ => "euro",
             };
+            if (p == human && custom?.Civilization is { } chosen)
+            {
+                civ = chosen;
+            }
+
             if (ruleset.EntityTypeId(civ + ".castle") < 0)
             {
                 civ = "euro";
             }
 
-            list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue ? ControllerKind.Passive : ControllerKind.Computer, Difficulty.Normal);
+            list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue ? ControllerKind.Passive : ControllerKind.Computer, custom?.Difficulty ?? Difficulty.Normal);
         }
 
         var hasher = new StateHasher();
@@ -163,13 +197,15 @@ public static class ScenarioMatch
                 ScenarioVictory.TimeLimit => Sim.VictoryCondition.TimeLimit,
                 _ => Sim.VictoryCondition.NotSpecified,
             },
-            PopulationLimit = s.Properties.PopulationLimit > 0 ? s.Properties.PopulationLimit : -1,
-            NoFog = s.Properties.NoFog,
-            Explored = s.Properties.Explore,
+            PopulationLimit = custom is { PopulationLimit: > 0 } ? custom.PopulationLimit : s.Properties.PopulationLimit > 0 ? s.Properties.PopulationLimit : -1,
+            StartingResources = custom is { StartingResources: >= 0 } ? custom.StartingResources : -1,
+            NoFog = custom?.NoFog ?? s.Properties.NoFog,
+            Explored = custom?.Explored ?? s.Properties.Explore,
             Scenario = s,
+            Ai = custom?.Ai ?? SkirmishAi.EngineDefault,
             ComputerAi = computerAi,
             CheatsAllowed = cheats,
-            Preparation = new Preparation(s, carry, (byte)human, rescue),
+            Preparation = new Preparation(s, carry, (byte)human, rescue, mapStockpiles: custom is not { StartingResources: >= 0 }),
         };
     }
 
@@ -228,7 +264,8 @@ public static class ScenarioMatch
     }
 
     /// <summary>Match start: stockpiles and diplomacy of the scenario's kingdoms, then the campaign carry-over.</summary>
-    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue) : IMatchPreparation
+    // mapStockpiles: the kingdoms start with the map's stockpiles (false: a starting-resource level was chosen).
+    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, bool mapStockpiles = true) : IMatchPreparation
     {
         public void Prepare(Simulation simulation, LegacyTriggerSystem? triggers)
         {
@@ -237,7 +274,7 @@ public static class ScenarioMatch
             foreach (KingdomDef k in scenario.Kingdoms)
             {
                 int p = k.Number - 1;
-                if (!world.HasPlayer(p))
+                if (!mapStockpiles || !world.HasPlayer(p))
                 {
                     continue;
                 }

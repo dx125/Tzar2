@@ -71,6 +71,9 @@ public partial class GameApp : Node
     /// <summary>The running game screen, or null.</summary>
     public GameScreen? Game => _current as GameScreen;
 
+    /// <summary>The screen shown now (test drivers; menus are wrapped in a canvas layer).</summary>
+    public Node? Current => _current is CanvasLayer layer && layer.GetChildCount() > 0 ? layer.GetChild(0) : _current;
+
     /// <inheritdoc/>
     public override void _Ready()
     {
@@ -222,7 +225,7 @@ public partial class GameApp : Node
     public void ShowMainMenu()
     {
         var menu = new MainMenuScreen(_ui!, _catalog, Screen, _ai.Notice);
-        menu.SinglePlayer += ShowSetup;
+        menu.SinglePlayer += ShowSinglePlayer;
         menu.Campaign += ShowCampaigns;
         menu.MultiplayerPressed += ShowMultiplayer;
         menu.Credits += () => GD.Print("Credits: see text/local/credits.txt of your package.");
@@ -256,7 +259,7 @@ public partial class GameApp : Node
     {
         var setup = new SkirmishSetupScreen(_ui!, _catalog, Screen, _skirmish, Preview, _ai.Notice);
         setup.Play += StartSkirmish;
-        setup.Cancel += ShowMainMenu;
+        setup.Cancel += ShowSinglePlayer;
         Replace(setup, music: null);
     }
 
@@ -280,7 +283,19 @@ public partial class GameApp : Node
             return null;
         }
 
-        int scale = Math.Max(1, 176 / Math.Max(map.Width, map.Height));
+        return MapPreview(map);
+    }
+
+    /// <summary>A small picture of <paramref name="map"/>: land and water, trees, mines and the kingdoms' objects.</summary>
+    public Image? MapPreview(MapData map, int size = 176)
+    {
+        ArgumentNullException.ThrowIfNull(map);
+        if (_rules is null || map.Width <= 0 || map.Height <= 0)
+        {
+            return null;
+        }
+
+        int scale = Math.Max(1, size / Math.Max(map.Width, map.Height));
         var image = Image.CreateEmpty(map.Width * scale, map.Height * scale, false, Image.Format.Rgba8);
         var water = new Color(0.15f, 0.25f, 0.55f);
         var grass = new Color(0.3f, 0.45f, 0.18f);
@@ -297,14 +312,14 @@ public partial class GameApp : Node
         {
             Color c = o.TypeKey switch
             {
-                "comm.tree" => new Color(0.08f, 0.22f, 0.06f),
+                _ when o.TypeKey.StartsWith("comm.tree", StringComparison.Ordinal) => new Color(0.08f, 0.22f, 0.06f),
                 "comm.res_gold" => new Color(0.95f, 0.8f, 0.2f),
                 "comm.res_stone" => new Color(0.65f, 0.65f, 0.65f),
                 _ when o.Owner < 8 => PlayerColour(o.Owner),
                 _ => grass,
             };
-            int size = o.TypeKey.EndsWith(".castle", StringComparison.Ordinal) ? 6 : o.TypeKey.StartsWith("comm.res", StringComparison.Ordinal) ? 3 : 1;
-            image.FillRect(new Rect2I(o.X / MapData.UnitsPerTile * scale, o.Y / MapData.UnitsPerTile * scale, size * scale, size * scale), c);
+            int dot = o.TypeKey.EndsWith(".castle", StringComparison.Ordinal) ? 6 : o.TypeKey.StartsWith("comm.res", StringComparison.Ordinal) ? 3 : 1;
+            image.FillRect(new Rect2I(o.X / MapData.UnitsPerTile * scale, o.Y / MapData.UnitsPerTile * scale, dot * scale, dot * scale), c);
         }
 
         return image;
@@ -417,6 +432,8 @@ public partial class GameApp : Node
             Seed = options.Seed,
             StartingResources = options.StartingResources >= 3 ? -1 : options.StartingResources,
             PopulationLimit = SkirmishOptions.PopulationLimits[options.PopulationLimit],
+            NoFog = options.NoFog,
+            Explored = options.Explore,
             Ai = _ai,
         };
     }
@@ -444,11 +461,11 @@ public partial class GameApp : Node
         return Color.Color8(c.R, c.G, c.B);
     }
 
-    private void ShowResults(MatchOutcome outcome, MatchStats stats)
+    private void ShowResults(MatchOutcome outcome, MatchStats stats, Action? restart = null, Action? quit = null)
     {
         var results = new ResultsScreen(_ui!, _catalog, Screen, outcome, stats);
-        results.Restart += () => StartSkirmish(_skirmish);
-        results.Quit += ShowMainMenu;
+        results.Restart += restart ?? (() => StartSkirmish(_skirmish));
+        results.Quit += quit ?? ShowMainMenu;
         Replace(results, music: outcome == MatchOutcome.Victory ? "music/win1.mid" : "music/outro.mid");
     }
 
