@@ -21,6 +21,7 @@ public partial class GameApp
     private string? _missionMap;
     private GameSession? _mission;
     private bool _missionEnding;
+    private List<ICampaignSource>? _original;
 
     private ProfileStore Profiles => _profiles ??= new ProfileStore(ProjectSettings.GlobalizePath("user://"));
 
@@ -45,15 +46,88 @@ public partial class GameApp
         }
     }
 
-    // The campaigns offered: the built-in demo, and a campaign converted or edited in the editor this session (M5).
-    private List<ICampaignSource> Campaigns() => _converted is null ? [DemoCampaign()] : [DemoCampaign(), _converted];
+    // The campaigns offered: the original's from the package (the tutorial first), the built-in demo, and a campaign
+    // converted or edited in the editor this session (M5).
+    private List<ICampaignSource> Campaigns()
+    {
+        var all = new List<ICampaignSource>(_original ?? []) { DemoCampaign() };
+        if (_converted is not null)
+        {
+            all.Add(_converted);
+        }
+
+        return all;
+    }
 
     private static ICampaignSource DemoCampaign() => Tzar2.Game.Campaigns.DemoCampaign.Create();
 
-    /// <summary>Shows the campaign screen.</summary>
+    // The original campaigns the import put in the package (legacy/campaign/*.wcm), converted once per run (ADR 0120).
+    private List<ICampaignSource> OriginalCampaigns()
+    {
+        var sources = new List<ICampaignSource>();
+        if (_rules is null)
+        {
+            return sources;
+        }
+
+        var options = new Tzar2.Import.Maps.LegacyConversionOptions { Ruleset = _rules, ConvertImages = false };
+        var problems = new List<string>();
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var files = new List<string>(_store.Vfs.Enumerate(OriginalCampaignFolder));
+        files.Sort((a, b) => (IsTutorial(a), IsTutorial(b)) switch
+        {
+            (true, false) => -1,
+            (false, true) => 1,
+            _ => string.CompareOrdinal(a, b),
+        });
+        foreach (string file in files)
+        {
+            if (!file.EndsWith(".wcm", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (Tzar2.Import.Maps.LegacyPlayables.Convert(_store.Read(file), Path.GetFileName(file), options, problems) is { } playable)
+            {
+                var maps = new Dictionary<string, MissionContent>(StringComparer.Ordinal);
+                foreach (var (id, map) in playable.Maps)
+                {
+                    maps[id] = new MissionContent(map.Map, map.Scenario);
+                }
+
+                sources.Add(new InMemoryCampaignSource(playable.Campaign, maps));
+            }
+        }
+
+        ClientLog.Info($"original campaigns: {sources.Count} converted in {watch.ElapsedMilliseconds} ms from {OriginalCampaignFolder}");
+        foreach (string problem in problems)
+        {
+            ClientLog.Warn("original campaigns: " + problem);
+        }
+
+        return sources;
+
+        static bool IsTutorial(string path) => path.Contains("tutorial", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Where the import puts the original campaigns (<c>Campaign/*.wcm</c> of the install).</summary>
+    public const string OriginalCampaignFolder = "legacy/campaign/";
+
+    /// <summary>Shows the campaign screen (the original campaigns are converted the first time, behind the loading screen).</summary>
     public void ShowCampaigns()
     {
-        var screen = new CampaignScreen(_ui!, Screen, Campaigns(), Profile);
+        if (_original is null)
+        {
+            ShowLoading("the campaigns");
+            _ = AfterFrames(2, () =>
+            {
+                _original = OriginalCampaigns();
+                ShowCampaigns();
+            });
+            return;
+        }
+
+        var screen = new CampaignScreen(_ui!, _catalog, Screen, Campaigns(), Profile);
         screen.Play += (source, map) => StartMission(source, map);
         screen.Restart += source =>
         {
