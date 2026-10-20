@@ -349,6 +349,7 @@ public partial class GameApp : Node
         }
 
         CursorCache.Reset();
+        ClientLog.Info("screen: " + next.GetType().Name);
         _current = next;
         if (next is Control control)
         {

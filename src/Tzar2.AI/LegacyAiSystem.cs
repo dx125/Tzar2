@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.IO;
 using Tzar2.AI.Executors;
 using Tzar2.AI.Legacy.Syntax;
 using Tzar2.AI.Runtime;
+using Tzar2.Core.Diagnostics;
 using Tzar2.Core.Hashing;
 using Tzar2.Core.Serialization;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
+using Tzar2.Sim.Events;
 using Tzar2.Sim.Snapshots;
 using Tzar2.Sim.Systems;
 
@@ -40,6 +43,7 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
     private readonly List<AiChatMessage> _chat = [];
     private readonly long[] _issued;
     private readonly ulong _optionsFingerprint;
+    private readonly string?[] _tracedGoals; // diagnostics only: the last traced goals per player (not state)
 
     private LegacyAiSystem(Simulation simulation, IReadOnlyList<AiPlayerSettings> players, AiOptions options)
     {
@@ -53,6 +57,7 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
         _states = new AiPlayerState[sorted.Count];
         _bindings = new AiBinding[sorted.Count];
         _issued = new long[sorted.Count];
+        _tracedGoals = new string?[sorted.Count];
         var bindings = new List<AiBinding>();
         var diagnostics = ImmutableArray.CreateBuilder<AiDiagnostic>();
         for (int i = 0; i < sorted.Count; i++)
@@ -146,6 +151,8 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
         _commands.Clear();
         _chat.Clear();
         int tick = world.Tick.Value;
+        ITraceSink trace = world.Trace;
+        bool traced = trace.IsEnabled(TraceArea.Ai, LogLevel.Debug);
         for (int i = 0; i < _states.Length; i++)
         {
             AiPlayerState state = _states[i];
@@ -160,7 +167,20 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
             if (state.InPass || tick >= state.NextPassTick)
             {
                 _census.Update(world);
+                int passes = state.PassCount;
                 AiInterpreter.Step(world, _census, _bindings[i], state, _options, _chat, _options.InstructionBudgetPerTick);
+                if (traced && state.PassCount != passes)
+                {
+                    // A pass is traced at Debug when its goals changed, at Verbose when it repeats the previous one.
+                    string pass = DescribeGoals(_bindings[i].Program, state);
+                    bool changed = !string.Equals(pass, _tracedGoals[i], StringComparison.Ordinal);
+                    _tracedGoals[i] = pass;
+                    LogLevel level = changed ? LogLevel.Debug : LogLevel.Verbose;
+                    if (trace.IsEnabled(TraceArea.Ai, level))
+                    {
+                        trace.Write(TraceArea.Ai, level, tick, string.Create(CultureInfo.InvariantCulture, $"p{slot} script pass {state.PassCount}{(changed ? string.Empty : " (unchanged)")}: {pass}"));
+                    }
+                }
             }
 
             int interval = _options.ExecutorIntervalTicks;
@@ -176,7 +196,16 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
                         break;
                     }
 
+                    int mark = _commands.Count;
                     executor.Run(_context);
+                    if (traced)
+                    {
+                        // Diagnostics only (ADR 0176): which executor issued which command; nothing reads it back.
+                        for (int c = mark; c < _commands.Count; c++)
+                        {
+                            trace.Write(TraceArea.Ai, LogLevel.Debug, tick, $"p{slot} {executor.Name}: {CommandText.Describe(world, _commands, c)}");
+                        }
+                    }
                 }
 
                 _issued[i] += _commands.Count - before;
@@ -185,8 +214,45 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
 
         if (_commands.Count > 0)
         {
+            int events = world.Events.Events.Length;
             CommandSystem.ExecuteInTick(world, _commands);
+            if (trace.IsEnabled(TraceArea.Ai, LogLevel.Warn))
+            {
+                ReadOnlySpan<SimEvent> raised = world.Events.Events;
+                for (int e = events; e < raised.Length; e++)
+                {
+                    if (raised[e].Kind == SimEventKind.CommandRejected && raised[e].X >= 0 && raised[e].X < _commands.Count)
+                    {
+                        trace.Write(TraceArea.Ai, LogLevel.Warn, tick, $"p{raised[e].Player} AI command rejected ({(CommandRejection)raised[e].Arg}): {CommandText.Describe(world, _commands, raised[e].X)}");
+                    }
+                }
+            }
         }
+    }
+
+    // A finished script pass: the goals it set, by the script's own names (diagnostics, ADR 0176).
+    private static string DescribeGoals(Tzar2.AI.Legacy.Program.AiProgram program, AiPlayerState state)
+    {
+        var text = new System.Text.StringBuilder();
+        text.Append(CultureInfo.InvariantCulture, $"{state.Goals.Count} goals");
+        for (int g = 0; g < Math.Min(state.Goals.Count, 16); g++)
+        {
+            AiGoal goal = state.Goals[g];
+            string name = goal.Symbol >= 0 && goal.Symbol < program.Symbols.Length ? program.Symbols[goal.Symbol] : string.Create(CultureInfo.InvariantCulture, $"symbol {goal.Symbol}");
+            text.Append(CultureInfo.InvariantCulture, $"{(g == 0 ? ": " : ", ")}{goal.Kind} {name} x{goal.Number}{(goal.Percent ? "%" : string.Empty)}");
+        }
+
+        if (state.Goals.Count > 16)
+        {
+            text.Append(", ...");
+        }
+
+        if (state.ResignRequested)
+        {
+            text.Append("; resign requested");
+        }
+
+        return text.ToString();
     }
 
     // Every option that changes the commands (ADR 0051: they are part of the match), canonically.

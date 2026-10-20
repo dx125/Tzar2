@@ -55,8 +55,8 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 
 1. **Operator:** `-Scenarios gather-rate` (~3 min): one measurement of the gathering time (ADR 0174). **Maintainer:**
    apply it to every resource.
-2. **Maintainer:** tracing for diagnosis (sim events, commands, AI decisions, client errors) before the first play-test;
-   then a playable Windows build from the owner's GOG copy. **Operator:** play a skirmish and a campaign mission.
+2. **Maintainer:** a playable Windows build from the owner's GOG copy (tracing is in, ADR 0176). **Operator:** play a
+   skirmish and a campaign mission; the run's log folder and the match replays go back to the maintainer.
 3. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 4. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
@@ -78,6 +78,11 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-19 — Diagnostics for the play-tests (ADR 0176).** A log folder per run of the client (`game.log`: match
+  setup, every command, gameplay events, AI goals and orders, triggers, kingdom summaries every 20 s, Godot's output and
+  errors), crash reports with the running match's replay, and a replay of every match including campaign missions.
+  Default level: debug everywhere. A traced match at verbose has the same hash as an untraced one. The first trace
+  shows the Hard AI ordering two buildings onto one site in a tick.
 * **2026-10-19 — The fidelity gate moves to M8 (ADR 0174, owner decision).** Next: the gathering rate (one
   measurement), tracing for diagnosis, then a playable build for the owner's first play-test.
 * **2026-10-19 — Owner decision: stop measuring unit by unit.** Measuring each unit's speed, attack and so on is not
