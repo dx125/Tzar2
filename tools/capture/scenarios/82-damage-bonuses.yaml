@@ -9,8 +9,13 @@ minutes: 4
 default: false                      # batch E (ADR 0113)
 experimental: true
 description: |
-  Like attack-timing (same set-up), with pairs that have a BONUS.INI match. The suite checks the engine's rule
+  Like attack-timing, with pairs that have a BONUS.INI match. The suite checks the engine's rule
   attack x (1 + bonus) - defence, truncated, at least the minimum damage. European stats of the reference tables.
+  The duel is fought by our base (the view clamped to MP2's bottom-left corner, tile (x, y) at (150 + 32x, 32y - 1280);
+  ADR 0171), not in the middle like batch A's attack-timing: there the defender, an idle enemy soldier, walked off to
+  Nature's cows while memory was scanned, the attack click then hit empty ground and every melee pair gave no hits.
+  Here (row 53) the nearest cow is 6.4 tiles away (a Rescue cow), our nearest peasant 7, our castle about 12 (melee
+  sight: 5).
 launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: pikeman-vs-knight
@@ -32,27 +37,27 @@ steps:
   - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
   - wait: 1
   - chat: "${cheat}kingdom 2"
-  - minimap: [0.5, 0.5]
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
   - wait: 1
-  - move: [600, 340]
+  - move: [630, 430]                # tile (15.0, 53.4)
   - chat: "${cheat}spawn ${defender}"
-  - click: [600, 340]               # place
-  - click: [600, 340]               # select
+  - click: [630, 430]               # place
+  - click: [630, 430]               # select
   - chat: "${cheat}kingdom 2"
-  - click: [720, 280]               # clear the selection
+  - click: [500, 460]               # clear the selection (open ground, tile (10.9, 54.4))
   - chat: "${cheat}kingdom 1"
-  - minimap: [0.5, 0.5]
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
   - wait: 1
   - wait: 1
   - memscan: {name: hp-all, value: "${defender_hp}", width: 4}
   - wait: 1
   - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
-  - move: [660, 340]
+  - move: [690, 430]                # tile (16.9, 53.4)
   - chat: "${cheat}spawn ${attacker}"
-  - click: [660, 340]               # place
+  - click: [690, 430]               # place
   - memsample: {name: hp-stable-series, scan: hp-stable, max_addresses: 4096, interval_ms: 20, duration_s: 20}
-  - click: [660, 340]               # select the attacker
-  - click: {at: [600, 340], button: right}   # attack the defender
+  - click: [690, 430]               # select the attacker
+  - click: {at: [630, 430], button: right}   # attack the defender
   - wait: 3
   - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
   - memsample: {name: hp-series, scan: hp-hit, max_addresses: 256, interval_ms: 10, duration_s: 15}
