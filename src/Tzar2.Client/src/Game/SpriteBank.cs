@@ -139,12 +139,22 @@ public sealed class SpriteBank : IDisposable
         }
     }
 
-    /// <summary>Packs and uploads everything registered.</summary>
+    /// <summary>The packed atlas (after <see cref="Pack"/>), or null.</summary>
+    public SpriteAtlas? Packed { get; private set; }
+
+    /// <summary>Packs everything registered into an atlas (CPU only: may run off the main thread).</summary>
+    public void Pack() => Packed = SpriteAtlas.Build(_sheets);
+
+    /// <summary>Uploads the packed atlas (packing first if needed); main thread.</summary>
     public void Upload()
     {
         Gpu?.Dispose();
-        SpriteAtlas atlas = SpriteAtlas.Build(_sheets);
-        Gpu = new GpuSpriteAtlas(atlas, _store.Palette);
+        if (Packed is null)
+        {
+            Pack();
+        }
+
+        Gpu = new GpuSpriteAtlas(Packed!, _store.Palette);
     }
 
     /// <inheritdoc/>

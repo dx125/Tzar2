@@ -24,6 +24,7 @@ public sealed class ContentStore : IDisposable
     private readonly IContentSource _source;
     private readonly Dictionary<string, SpriteSheet?> _sheets = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ImageAsset?> _images = new(StringComparer.Ordinal);
+    private readonly object _gate = new();
 
     private ContentStore(string path, IContentSource source)
     {
@@ -90,19 +91,28 @@ public sealed class ContentStore : IDisposable
         }
     }
 
-    /// <summary>Reads a file.</summary>
-    public byte[] Read(string path) => Vfs.ReadAllBytes(path);
+    /// <summary>Reads a file (thread-safe, like the loaders below: matches load on several threads).</summary>
+    public byte[] Read(string path)
+    {
+        lock (_gate)
+        {
+            return Vfs.ReadAllBytes(path);
+        }
+    }
 
     /// <summary>A <c>.t2img</c>, cached; null when missing or malformed.</summary>
     public ImageAsset? LoadImage(string asset)
     {
-        if (!_images.TryGetValue(asset, out ImageAsset? image))
+        lock (_gate)
         {
-            image = Vfs.Exists(asset) ? ImageAsset.Parse(Read(asset)) : null;
-            _images[asset] = image;
-        }
+            if (!_images.TryGetValue(asset, out ImageAsset? image))
+            {
+                image = Vfs.Exists(asset) ? ImageAsset.Parse(Read(asset)) : null;
+                _images[asset] = image;
+            }
 
-        return image;
+            return image;
+        }
     }
 
     /// <summary>
@@ -116,6 +126,14 @@ public sealed class ContentStore : IDisposable
         bool overlay = entry is not null && entry.Name.EndsWith("_c", StringComparison.Ordinal);
         int cols = entry?.GetInt("cols", 1) ?? 1, rows = entry?.GetInt("rows", 1) ?? 1;
         string key = $"{asset}|{cols}|{rows}|{shadow}|{overlay}";
+        lock (_gate)
+        {
+            return LoadSheetLocked(asset, key, cols, rows, shadow, overlay);
+        }
+    }
+
+    private SpriteSheet? LoadSheetLocked(string asset, string key, int cols, int rows, bool shadow, bool overlay)
+    {
         if (!_sheets.TryGetValue(key, out SpriteSheet? sheet))
         {
             if (!Vfs.Exists(asset))
@@ -141,8 +159,11 @@ public sealed class ContentStore : IDisposable
     /// <summary>Drops the decoded-asset caches.</summary>
     public void ClearCaches()
     {
-        _sheets.Clear();
-        _images.Clear();
+        lock (_gate)
+        {
+            _sheets.Clear();
+            _images.Clear();
+        }
     }
 
     /// <inheritdoc/>

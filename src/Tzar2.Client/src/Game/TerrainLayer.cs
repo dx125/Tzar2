@@ -24,7 +24,10 @@ public sealed class TerrainLayer : IDisposable
     private readonly List<(Rgb555Surface Surface, Rect2I Pixels)> _chunks = [];
     private readonly TerrainComposer _composer;
 
-    /// <summary>Composes and uploads the terrain of <paramref name="grid"/>.</summary>
+    /// <summary>
+    /// Composes and uploads the terrain of <paramref name="grid"/>. The chunks are composed in parallel (one composer per
+    /// thread; <paramref name="load"/> must be thread-safe), then uploaded in order on the calling thread.
+    /// </summary>
     public TerrainLayer(Rid parent, int drawIndex, TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load)
     {
         ArgumentNullException.ThrowIfNull(set);
@@ -33,14 +36,32 @@ public sealed class TerrainLayer : IDisposable
         Width = grid.Width;
         Height = grid.Height;
         TileColours = new Color[Width * Height];
+        var origins = new List<(int X, int Y)>();
         for (int cy = 0; cy < Height; cy += ChunkTiles)
         {
             for (int cx = 0; cx < Width; cx += ChunkTiles)
             {
-                var surface = new Rgb555Surface(parent, drawIndex);
-                _chunks.Add((surface, new Rect2I(cx * TerrainComposer.TileSize, cy * TerrainComposer.TileSize, 0, 0)));
-                Issues += Compose(_chunks.Count - 1, grid, cx, cy);
+                origins.Add((cx, cy));
+                _chunks.Add((new Rgb555Surface(parent, drawIndex), new Rect2I(cx * TerrainComposer.TileSize, cy * TerrainComposer.TileSize, 0, 0)));
             }
+        }
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var composed = new (TerrainImage First, List<byte[]> Frames)[origins.Count];
+        System.Threading.Tasks.Parallel.For(
+            0,
+            origins.Count,
+            () => new TerrainComposer(set, load),
+            (i, _, composer) =>
+            {
+                composed[i] = ComposeChunk(composer, grid, origins[i].X, origins[i].Y);
+                return composer;
+            },
+            _ => { });
+        ComposeMs = watch.ElapsedMilliseconds;
+        for (int i = 0; i < origins.Count; i++)
+        {
+            Issues += Upload(i, composed[i].First, composed[i].Frames, origins[i].X, origins[i].Y);
         }
     }
 
@@ -63,6 +84,13 @@ public sealed class TerrainLayer : IDisposable
 
     private int Compose(int chunk, TerrainGrid grid, int cx, int cy)
     {
+        (TerrainImage first, List<byte[]> frames) = ComposeChunk(_composer, grid, cx, cy);
+        return Upload(chunk, first, frames, cx, cy);
+    }
+
+    // Every animation frame of the chunk whose top-left tile is (cx, cy); later frames redraw only the tiles that move.
+    private (TerrainImage First, List<byte[]> Frames) ComposeChunk(TerrainComposer composer, TerrainGrid grid, int cx, int cy)
+    {
         int w = Math.Min(ChunkTiles, Width - cx), h = Math.Min(ChunkTiles, Height - cy);
         var sub = new TerrainGrid(w, h, 0);
         for (int y = 0; y <= h; y++)
@@ -73,22 +101,39 @@ public sealed class TerrainLayer : IDisposable
             }
         }
 
-        int frames = _composer.FrameCount(sub);
+        int frames = composer.FrameCount(sub);
         var images = new List<byte[]>(frames);
-        TerrainImage first = _composer.Compose(sub, 0, cx, cy);
+        TerrainImage first = composer.Compose(sub, 0, cx, cy);
         images.Add(first.Pixels);
         for (int f = 1; f < frames; f++)
         {
-            images.Add(_composer.Compose(sub, f, cx, cy).Pixels);
+            images.Add(composer.Compose(sub, f, cx, cy, first).Pixels);
         }
 
+        return (first, images);
+    }
+
+    private int Upload(int chunk, TerrainImage first, List<byte[]> frames, int cx, int cy)
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        FrameTotal += frames.Count;
         Rgb555Surface surface = _chunks[chunk].Surface;
         var origin = new Vector2I(cx * TerrainComposer.TileSize, cy * TerrainComposer.TileSize);
-        surface.Set(first.Width, first.Height, images, origin, showKeys: false);
+        surface.Set(first.Width, first.Height, frames, origin, showKeys: false);
         _chunks[chunk] = (surface, new Rect2I(origin, first.Width, first.Height));
-        Average(first, cx, cy, w, h);
+        Average(first, cx, cy, Math.Min(ChunkTiles, Width - cx), Math.Min(ChunkTiles, Height - cy));
+        UploadMs += watch.ElapsedMilliseconds;
         return first.Issues.Count;
     }
+
+    /// <summary>Time spent composing chunk pixels (diagnostics).</summary>
+    public long ComposeMs { get; private set; }
+
+    /// <summary>Time spent uploading chunk textures (diagnostics).</summary>
+    public long UploadMs { get; private set; }
+
+    /// <summary>Animation frames composed over all chunks (diagnostics).</summary>
+    public int FrameTotal { get; private set; }
 
     /// <summary>Tiles across.</summary>
     public int Width { get; }

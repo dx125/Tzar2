@@ -393,6 +393,18 @@ public class ViewerAssetTests
             Assert.Equal(0x8000 | (0x100 + (f % 2)), WordAt(image, 32, 10));
         }
 
+        // Later frames drawn from frame 0 (only the tiles that move) are the same pixels as frames drawn in full.
+        var still = new TerrainGrid(4, 2, 2);
+        still[0, 0] = 0;
+        still[1, 0] = 0;
+        still[0, 1] = 0;
+        still[1, 1] = 0;
+        TerrainImage first = composer.Compose(still, 0, 3, 5);
+        for (int f = 1; f < composer.FrameCount(still); f++)
+        {
+            Assert.Equal(composer.Compose(still, f, 3, 5).Pixels, composer.Compose(still, f, 3, 5, first).Pixels);
+        }
+
         // Three terrains in one tile, and the unresolved cliff pseudo-terrain 8.
         var mixed = new TerrainGrid(3, 1, 1);
         mixed[0, 0] = 0;

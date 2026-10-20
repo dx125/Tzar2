@@ -65,10 +65,19 @@ public partial class GameApp
         Replace(screen, music: null);
     }
 
-    /// <summary>Starts a mission of <paramref name="source"/>: <paramref name="mapId"/> if unlocked, else the current one.</summary>
+    /// <summary>
+    /// Starts a mission of <paramref name="source"/>: <paramref name="mapId"/> if unlocked, else the current one (the
+    /// loading screen at once, the mission a frame later).
+    /// </summary>
     public void StartMission(ICampaignSource source, string? mapId, SaveGame? resume = null)
     {
         ArgumentNullException.ThrowIfNull(source);
+        ShowLoading(source.Campaign.Name);
+        _ = AfterFrames(2, () => BuildMission(source, mapId, resume));
+    }
+
+    private void BuildMission(ICampaignSource source, string? mapId, SaveGame? resume)
+    {
         if (_rules is null)
         {
             ShowMainMenu();
