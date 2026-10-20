@@ -35,7 +35,7 @@ public sealed class AutoplayDriver
         try
         {
             Directory.CreateDirectory(_dir);
-            DisplayServer.WindowSetSize(GameApp.Screen);
+            DisplayServer.WindowSetSize(GameApp.ClassicScreen);
             await Frames(30);
             GameScreen game = _app.Game ?? throw new InvalidOperationException("No game.");
             game.EdgeScroll = false;

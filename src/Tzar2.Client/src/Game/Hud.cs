@@ -90,7 +90,7 @@ public partial class Hud : Control
         Size = layout.Size;
         MouseFilter = MouseFilterEnum.Ignore;
 
-        AddChild(new TextureRect { Texture = ui.Texture(layout.Image), MouseFilter = MouseFilterEnum.Ignore });
+        AddOverlay(ui, layout);
 
         // Blocks clicks on the panels from reaching the world (top bar and bottom panel).
         AddChild(new Control { Position = Vector2.Zero, Size = new Vector2(layout.Size.X, layout.View.Position.Y), MouseFilter = MouseFilterEnum.Stop });
@@ -368,6 +368,49 @@ public partial class Hud : Control
                 Position = rect.Position + new Vector2I((rect.Size.X - t.GetWidth()) / 2, (rect.Size.Y - t.GetHeight()) / 2),
                 MouseFilter = MouseFilterEnum.Ignore,
             });
+        }
+    }
+
+    // The S_VIEW bitmap: whole on its own screen size; on a Wide screen (ADR 0177) cut into anchored pieces with a plain
+    // slice repeated between them. The cuts are measured on SCREEN 1024.BMP: the top bar's left part ends after the
+    // population box, its vine ornament is the last 219 px; the panel's left part ends where the info area's marble
+    // starts plain, its letters and ornament are the last 164 px.
+    private void AddOverlay(UiAssets ui, HudLayout layout)
+    {
+        if (!layout.Wide)
+        {
+            AddChild(new TextureRect { Texture = ui.Texture(layout.Image), MouseFilter = MouseFilterEnum.Ignore });
+            return;
+        }
+
+        const int TopLeft = 805, TopRight = 219, TopFillX = 850, TopFill = 150;
+        const int PanelLeft = 660, PanelRight = 164, PanelFill = 200;
+        Vector2I size = layout.Size, bitmap = layout.Base;
+        int top = layout.View.Position.Y;
+        int panel = HudLayout.PanelHeight;
+        int from = bitmap.Y - panel, to = size.Y - panel;
+        Piece(new Rect2I(0, 0, TopLeft, top), Vector2I.Zero);
+        Tile(new Rect2I(TopFillX, 0, TopFill, top), new Rect2I(TopLeft, 0, size.X - TopLeft - TopRight, top));
+        Piece(new Rect2I(bitmap.X - TopRight, 0, TopRight, top), new Vector2I(size.X - TopRight, 0));
+        Piece(new Rect2I(0, from, PanelLeft, panel), new Vector2I(0, to));
+        Tile(new Rect2I(PanelLeft, from, PanelFill, panel), new Rect2I(PanelLeft, to, size.X - PanelLeft - PanelRight, panel));
+        Piece(new Rect2I(bitmap.X - PanelRight, from, PanelRight, panel), new Vector2I(size.X - PanelRight, to));
+        Piece(layout.GlobeOrnamentSource, layout.GlobeOrnament.Position);
+
+        void Piece(Rect2I source, Vector2I at)
+        {
+            if (ui.Region(layout.Image, source) is { } t)
+            {
+                AddChild(new TextureRect { Texture = t, Position = at, MouseFilter = MouseFilterEnum.Ignore });
+            }
+        }
+
+        void Tile(Rect2I source, Rect2I target)
+        {
+            if (target.Size.X > 0 && ui.Slice(layout.Image, source) is { } t)
+            {
+                AddChild(new TextureRect { Texture = t, Position = target.Position, Size = target.Size, StretchMode = TextureRect.StretchModeEnum.Tile, MouseFilter = MouseFilterEnum.Ignore });
+            }
         }
     }
 

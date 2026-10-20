@@ -13,13 +13,17 @@ using Tzar2.Game.Session;
 namespace Tzar2.Client.Game;
 
 /// <summary>
-/// The game mode of the client (TDD §25 M3): main menu → skirmish setup → game → results, at the original's logical
-/// 1024×768 with integer scaling (REQ-GFX-07 Authentic). Also runs the headless game smoke test and the autoplay driver.
+/// The game mode of the client (TDD §25 M3): main menu → skirmish setup → game → results, on a logical screen chosen by
+/// the display preset (ADR 0177: Wide fills the window, Authentic is the original's 1024×768 with integer scaling). Also
+/// runs the headless game smoke test and the autoplay driver.
 /// </summary>
 public partial class GameApp : Node
 {
-    /// <summary>Logical screen size (LAYOUT1024H).</summary>
-    public static readonly Vector2I Screen = new(1024, 768);
+    /// <summary>The original's logical screen (LAYOUT1024H; Authentic preset, test drivers).</summary>
+    public static readonly Vector2I ClassicScreen = new(1024, 768);
+
+    /// <summary>The logical screen now: the window over the interface scale (Wide) or <see cref="ClassicScreen"/>.</summary>
+    public static Vector2I Screen { get; private set; } = ClassicScreen;
 
     private readonly ContentStore _store;
     private readonly ViewerArgs _args;
@@ -30,6 +34,7 @@ public partial class GameApp : Node
     private SkirmishAi _ai = SkirmishAi.EngineDefault;
     private PresentationCatalog? _catalog;
     private int _loadings;
+    private Vector2I _window;
     private Node? _current;
     private MidiPlayer? _menuMusic;
 
@@ -69,11 +74,7 @@ public partial class GameApp : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
-        Window root = GetTree().Root;
-        root.ContentScaleSize = Screen;
-        root.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
-        root.ContentScaleAspect = Window.ContentScaleAspectEnum.Keep;
-        root.ContentScaleStretch = Window.ContentScaleStretchEnum.Integer;
+        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke);
         _ui = new UiAssets(_store);
         try
         {
@@ -137,6 +138,77 @@ public partial class GameApp : Node
         }
     }
 
+    /// <summary>
+    /// Applies the display settings (ADR 0177): with <paramref name="window"/>, the window mode and size first (test
+    /// drivers keep their window); then the logical screen and the root's content scale.
+    /// </summary>
+    public void ApplyDisplay(bool window = true)
+    {
+        Window root = GetTree().Root;
+        root.MinSize = new Vector2I(DisplayMath.MinWidth, DisplayMath.MinHeight);
+        if (window)
+        {
+            Window.ModeEnum mode = _settings.WindowMode == 1 ? Window.ModeEnum.Fullscreen : Window.ModeEnum.Windowed;
+            if (root.Mode != mode)
+            {
+                root.Mode = mode;
+            }
+
+            if (mode == Window.ModeEnum.Windowed && _settings.WindowWidth > 0 && _settings.WindowHeight > 0)
+            {
+                root.Size = new Vector2I(_settings.WindowWidth, _settings.WindowHeight);
+            }
+        }
+
+        Relayout();
+    }
+
+    // Called every frame (_Process in GameApp.Multiplayer): the window was resized or maximised (the root's size signal
+    // does not cover every way it changes).
+    private void WatchWindow()
+    {
+        if (DisplayServer.WindowGetSize() != _window)
+        {
+            Relayout();
+        }
+    }
+
+    // The logical screen for the window now; screens follow (menus re-centre, the game rebuilds its HUD).
+    private void Relayout()
+    {
+        Window root = GetTree().Root;
+        Vector2I window = DisplayServer.WindowGetSize();
+        _window = window;
+        Vector2I logical = ClassicScreen;
+        if (_settings.DisplayPreset == 0)
+        {
+            int k = DisplayMath.Scale(window.X, window.Y, _settings.InterfaceScale);
+            (int w, int h) = DisplayMath.Logical(window.X, window.Y, k);
+            logical = new Vector2I(Math.Max(w, DisplayMath.MinWidth), Math.Max(h, DisplayMath.MinHeight));
+        }
+
+        root.ContentScaleSize = logical;
+        root.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+        root.ContentScaleAspect = Window.ContentScaleAspectEnum.Keep;
+        root.ContentScaleStretch = Window.ContentScaleStretchEnum.Integer;
+        if (logical == Screen)
+        {
+            return;
+        }
+
+        Screen = logical;
+        ClientLog.Info($"display: window {window.X}x{window.Y}, logical {logical.X}x{logical.Y}, {(_settings.DisplayPreset == 0 ? "Wide" : "Authentic")}");
+        Node? shown = _current is CanvasLayer layer && layer.GetChildCount() > 0 ? layer.GetChild(0) : _current;
+        if (shown is ArtScreen art)
+        {
+            art.Resize(logical);
+        }
+        else if (shown is GameScreen game)
+        {
+            game.Relayout();
+        }
+    }
+
     /// <inheritdoc/>
     public override void _ExitTree()
     {
@@ -156,8 +228,27 @@ public partial class GameApp : Node
         menu.Credits += () => GD.Print("Credits: see text/local/credits.txt of your package.");
         menu.Viewer += () => ViewerRequested?.Invoke();
         menu.Editor += () => ShowEditor();
+        menu.Settings += ShowSettings;
         menu.Quit += () => GetTree().Quit();
         Replace(menu, music: "music/intro.mid");
+    }
+
+    /// <summary>Shows SETTINGS (ADR 0177): changes are saved and applied at once.</summary>
+    public void ShowSettings()
+    {
+        var screen = new SettingsScreen(_ui!, _catalog, Screen, _settings);
+        screen.Changed += display =>
+        {
+            if (display)
+            {
+                ApplyDisplay();
+            }
+
+            SoundMixer.SetVolume(SoundMixer.SfxBus, _settings.SoundVolume);
+            SoundMixer.SetVolume(SoundMixer.MusicBus, _settings.MusicVolume);
+        };
+        screen.Closed += ShowMainMenu;
+        Replace(screen, music: null);
     }
 
     /// <summary>Shows the skirmish setup.</summary>

@@ -204,3 +204,31 @@ public sealed class GameArgsTests
         Assert.NotEmpty(ViewerArgs.Parse(["--ticks", "x"]).Errors);
     }
 }
+
+public sealed class DisplayMathTests
+{
+    [Theory]
+    [InlineData(1440, 900, 0, 1)]
+    [InlineData(1920, 1080, 0, 1)]
+    [InlineData(2560, 1440, 0, 2)]
+    [InlineData(3840, 2160, 0, 3)]
+    [InlineData(2560, 1440, 3, 2)] // 3x would make the logical screen 853 x 480: too small for the HUD
+    [InlineData(3840, 2160, 2, 2)]
+    [InlineData(1024, 720, 4, 1)]
+    [InlineData(800, 600, 0, 1)]
+    public void The_interface_scale_keeps_the_logical_screen_large_enough_for_the_hud(int width, int height, int setting, int expected)
+    {
+        int k = DisplayMath.Scale(width, height, setting);
+        Assert.Equal(expected, k);
+        (int w, int h) = DisplayMath.Logical(width, height, k);
+        Assert.True(k == 1 || (w >= DisplayMath.MinWidth && h >= DisplayMath.MinHeight), $"{w} x {h}");
+    }
+
+    [Fact]
+    public void The_logical_screen_is_the_window_over_the_scale()
+    {
+        Assert.Equal((1280, 720), DisplayMath.Logical(2560, 1440, 2));
+        Assert.Equal((1920, 1080), DisplayMath.Logical(1920, 1080, 1));
+        Assert.Equal((1024, 768), DisplayMath.Classic);
+    }
+}

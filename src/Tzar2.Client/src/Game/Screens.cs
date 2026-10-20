@@ -20,9 +20,11 @@ public abstract partial class ArtScreen : Control
         Ui = ui;
         Size = screen;
         MouseFilter = MouseFilterEnum.Stop;
-        AddChild(new ColorRect { Size = screen, Color = dim ? new Color(0, 0, 0, 0.45f) : Colors.Black, MouseFilter = MouseFilterEnum.Ignore });
+        _backdrop = new ColorRect { Size = screen, Color = dim ? new Color(0, 0, 0, 0.45f) : Colors.Black, MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_backdrop);
         ImageTexture? back = ui.Texture(background);
         Vector2I size = back is null ? new Vector2I(500, 320) : new Vector2I(back.GetWidth(), back.GetHeight());
+        _artSize = size;
         Origin = (screen - size) / 2;
         if (back is not null)
         {
@@ -34,11 +36,35 @@ public abstract partial class ArtScreen : Control
         }
     }
 
+    private readonly ColorRect _backdrop;
+    private readonly Vector2I _artSize;
+
     /// <summary>The UI assets.</summary>
     protected UiAssets Ui { get; }
 
     /// <summary>Top-left of the background on screen.</summary>
-    protected Vector2I Origin { get; }
+    protected Vector2I Origin { get; private set; }
+
+    /// <summary>The logical screen changed (the window was resized, ADR 0177): the backdrop covers it, the art stays centred.</summary>
+    public void Resize(Vector2I screen)
+    {
+        Vector2I origin = (screen - _artSize) / 2;
+        Vector2I delta = origin - Origin;
+        Size = screen;
+        foreach (Node child in GetChildren())
+        {
+            if (child == _backdrop)
+            {
+                _backdrop.Size = screen;
+            }
+            else if (child is Control control)
+            {
+                control.Position += delta;
+            }
+        }
+
+        Origin = origin;
+    }
 
     /// <summary>Text at a position relative to the background (centred in <paramref name="width"/> when given).</summary>
     protected TextureRect Text(Vector2I at, string text, string font = UiAssets.BoldFont, Color? colour = null, int width = 0)
@@ -129,6 +155,7 @@ public partial class MainMenuScreen : ArtScreen
         Button(new Vector2I(270, 335), size, Image, Label("multi", "MULTIPLAYER"), () => MultiplayerPressed?.Invoke());
         Button(new Vector2I(270, 395), size, Image, "ASSET VIEWER", () => Viewer?.Invoke());
         Button(new Vector2I(520, 395), new Vector2I(120, 25), Image, "EDITOR", () => Editor?.Invoke());
+        Button(new Vector2I(520, 455), new Vector2I(120, 25), Image, "SETTINGS", () => Settings?.Invoke());
         Button(new Vector2I(270, 455), size, Image, Label("credits", "CREDITS"), () => Credits?.Invoke());
         Button(new Vector2I(270, 515), size, Image, Label("quit", "QUIT"), () => Quit?.Invoke());
         Text(new Vector2I(8, 584), $"{Tzar2.Game.GameInfo.Codename} {Tzar2.Game.GameInfo.Version}", UiAssets.SmallFont, new Color(0.7f, 0.7f, 0.6f));
@@ -151,6 +178,9 @@ public partial class MainMenuScreen : ArtScreen
 
     /// <summary>CREDITS.</summary>
     public event Action? Credits;
+
+    /// <summary>SETTINGS (ADR 0177).</summary>
+    public event Action? Settings;
 
     /// <summary>QUIT.</summary>
     public event Action? Quit;
