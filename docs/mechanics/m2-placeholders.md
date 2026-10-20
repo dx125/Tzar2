@@ -46,7 +46,7 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 |---|---|---|---|---|
 | TIME column (units, buildings) | ~~1 s per unit~~ — **VERIFIED: 1.25 s per unit** (capture-20261018-155421: `train-time` 9.99 s for TIME 8, `build-time` 36.85 s for TIME 30; ADR 0169) | importer `LegacyTime.MsPerTimeUnit` | UNK-20, UNK-18 | done (research times: UNK-21, batch E) |
 | Walking speed | **VERIFIED per class, not from SPEED** (capture-20261019-163231 and -190321; ADR 0172): every measured foot class 40 px/s (SPEED 2–4), knight and crusader 72, troll 47, ghost 67, cow and bear 26 — YAML `^class.*.Mobile.pixelsPerSecond`. Unmeasured classes: SPEED × 10 px/s, UNVERIFIED and not the original's rule (speed follows the walk sheet's stride, `move_len`, by an unknown rule) | YAML `gameplay.speedPixelsPerSecondPerPoint` (fallback) | UNK-12 | Arabian and Asian classes (a kingdom of that civilisation), siege weapons and caravans (spawning failed), ships, flyers |
-| Group move speed | `slowest` in both rulesets (owner decision) | YAML `gameplay.groupMoveSpeed` | UNK-12 | same captures with mixed groups |
+| Group move speed | `slowest` — **VERIFIED** (capture-20261019-221300, `group-speed`: a knight, 72 px/s alone, and a pikeman, 40, walked 40.2 and 39.9 px/s together) | YAML `gameplay.groupMoveSpeed` | UNK-12 | done |
 | Time between hits | 6,000 ms / RATE — **VERIFIED** (capture-20261018-155421, `attack-timing`: two series within tolerance) | YAML `gameplay.attackCycleMs` | UNK-07 | done |
 | Hit frame | 50% of the cycle | YAML `gameplay.hitDelayPercent` | UNK-07 | `actionrow` vs. captures |
 | Minimum damage | 1 | YAML `gameplay.minimumDamage` | UNK-08 | damage grid |

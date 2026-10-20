@@ -34,6 +34,7 @@ internal static class UnitSpeed
         var notes = new List<string>();
         var entries = new List<YamlWriter>();
         var relation = new List<(double Stat, double Speed)>();
+        int clean = 0;
         foreach (TrialData trial in trials)
         {
             foreach (CaptureData burst in trial.Of("burst"))
@@ -78,9 +79,13 @@ internal static class UnitSpeed
                         e.Add("rejected", reason);
                         notes.Add($"{trial.Trial}/{burst.Name}: rejected, {reason}");
                     }
-                    else if (double.TryParse(trial.Var("speed_stat"), NumberStyles.Float, CultureInfo.InvariantCulture, out double stat) && fit.R2 > 0.95)
+                    else if (fit.R2 > 0.95)
                     {
-                        relation.Add((stat, fit.PixelsPerSecond));
+                        clean++;
+                        if (double.TryParse(trial.Var("speed_stat"), NumberStyles.Float, CultureInfo.InvariantCulture, out double stat))
+                        {
+                            relation.Add((stat, fit.PixelsPerSecond));
+                        }
                     }
                 }
 
@@ -103,7 +108,8 @@ internal static class UnitSpeed
             });
         }
 
-        bool ok = entries.Count > 0 && relation.Count > 0;
+        // A clean fit is enough: a mixed group (group-speed) has no SPEED and adds nothing to the relation (batch E).
+        bool ok = clean > 0;
         return new AnalysisOutcome(ok ? "ok" : "inconclusive", facts, notes);
     }
 
