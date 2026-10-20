@@ -88,6 +88,23 @@ public sealed class UiAssets : IDisposable
         return cell;
     }
 
+    /// <summary>
+    /// A sub-rectangle of an image as a texture of its own (for tiling: an atlas region cannot repeat), or null.
+    /// </summary>
+    public ImageTexture? Slice(string asset, Rect2I rect)
+    {
+        string key = $"{asset}|slice|{rect.Position.X},{rect.Position.Y},{rect.Size.X},{rect.Size.Y}";
+        if (!_textures.TryGetValue(key, out ImageTexture? slice))
+        {
+            slice = Image(asset) is { } image && rect.End.X <= image.GetWidth() && rect.End.Y <= image.GetHeight() && rect.Size.X > 0
+                ? ImageTexture.CreateFromImage(image.GetRegion(rect))
+                : null;
+            _textures[key] = slice;
+        }
+
+        return slice;
+    }
+
     /// <summary>Cell <paramref name="index"/> of a vertical strip of square cells (icons.bmp, buttons.bmp), or null.</summary>
     public Texture2D? Cell(string asset, int index, int size = 48)
         => index < 0 ? null : Region(asset, new Rect2I(0, index * size, size, size));

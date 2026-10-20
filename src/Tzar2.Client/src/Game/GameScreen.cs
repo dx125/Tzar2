@@ -102,6 +102,8 @@ public partial class GameScreen : Node
     private Rid _boxItem;
     private bool _faultShown;
     private readonly List<CardSlot> _wholeCard = [];
+    private CanvasLayer? _hudLayer;
+    private CanvasLayer? _weatherLayer;
     private int _cardPage;
     private double _animMs;
     private Vector2? _grabStart;
@@ -191,7 +193,7 @@ public partial class GameScreen : Node
     public override void _Ready()
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        HudLayout layout = HudLayout.Load(_store.Vfs.Exists("tables/data/layout.ini.json") ? IniTable.Parse(_store.Read("tables/data/layout.ini.json")) : IniTable.Empty);
+        HudLayout layout = LoadLayout();
         string setId = _session.Map.TerrainSet ?? _terrainSetId;
         TerrainSet set = _store.TerrainSets.FirstOrDefault(s => s.Id == setId) ?? _store.TerrainSets.FirstOrDefault()
             ?? throw new InvalidOperationException("The package has no terrain sets.");
@@ -235,25 +237,11 @@ public partial class GameScreen : Node
         RenderingServer.CanvasItemSetParent(_boxItem, GetViewport().FindWorld2D().Canvas);
         RenderingServer.CanvasItemSetZIndex(_boxItem, 100);
 
-        var weather = new CanvasLayer { Layer = 1 };
-        AddChild(weather);
-        weather.AddChild(new WeatherLayer(this, _ui, layout.View));
-
-        var hudLayer = new CanvasLayer { Layer = 2 };
-        AddChild(hudLayer);
-        _hud = new Hud(_ui, layout, _catalog);
-        hudLayer.AddChild(_hud);
-        _hud.CardPressed += OnCard;
-        _hud.MinimapPressed += (share, right, mods) => OnMinimap(share, right, mods);
-        _hud.MenuPressed += () => ShowMenu();
-        _hud.DiplomacyPressed += () => Message(_catalog.Text("game_scr", "diplomacy", "DIPLOMACY") + ": not available yet");
-        _hud.ChatPressed += () =>
-        {
-            if (!_session.IsMultiplayer)
-            {
-                Message(_catalog.Text("game_scr", "chat", "CHAT") + ": needs multiplayer");
-            }
-        };
+        _weatherLayer = new CanvasLayer { Layer = 1 };
+        AddChild(_weatherLayer);
+        _hudLayer = new CanvasLayer { Layer = 2 };
+        AddChild(_hudLayer);
+        BuildHud(layout);
         _selection.Changed += () =>
         {
             _cardPage = 0;
@@ -303,6 +291,56 @@ public partial class GameScreen : Node
         }
 
         RefreshCard();
+    }
+
+    /// <summary>
+    /// The logical screen changed (the window was resized or the display preset changed, ADR 0177): the HUD and the
+    /// weather overlay are built again for the new size, and the camera stays on the map.
+    /// </summary>
+    public void Relayout()
+    {
+        if (_hud is null || _hudLayer is null)
+        {
+            return;
+        }
+
+        _hudLayer.RemoveChild(_hud);
+        _hud.QueueFree();
+        foreach (Node old in _weatherLayer!.GetChildren())
+        {
+            _weatherLayer.RemoveChild(old);
+            old.QueueFree();
+        }
+
+        BuildHud(LoadLayout());
+        ClampPan();
+        RefreshCard();
+    }
+
+    // LAYOUT1024H for the logical screen: the bitmap's own size in the Authentic preset, the window's in Wide.
+    private HudLayout LoadLayout()
+    {
+        IniTable ini = _store.Vfs.Exists("tables/data/layout.ini.json") ? IniTable.Parse(_store.Read("tables/data/layout.ini.json")) : IniTable.Empty;
+        Vector2 visible = GetViewport().GetVisibleRect().Size;
+        return HudLayout.Load(ini, "LAYOUT1024H", new Vector2I(Math.Max(1, (int)visible.X), Math.Max(1, (int)visible.Y)));
+    }
+
+    private void BuildHud(HudLayout layout)
+    {
+        _weatherLayer!.AddChild(new WeatherLayer(this, _ui, layout.View));
+        _hud = new Hud(_ui, layout, _catalog);
+        _hudLayer!.AddChild(_hud);
+        _hud.CardPressed += OnCard;
+        _hud.MinimapPressed += (share, right, mods) => OnMinimap(share, right, mods);
+        _hud.MenuPressed += () => ShowMenu();
+        _hud.DiplomacyPressed += () => Message(_catalog.Text("game_scr", "diplomacy", "DIPLOMACY") + ": not available yet");
+        _hud.ChatPressed += () =>
+        {
+            if (!_session.IsMultiplayer)
+            {
+                Message(_catalog.Text("game_scr", "chat", "CHAT") + ": needs multiplayer");
+            }
+        };
     }
 
     /// <inheritdoc/>
@@ -1113,7 +1151,7 @@ public partial class GameScreen : Node
         Vector2 dir = Vector2.Zero;
         bool focused = DisplayServer.WindowIsFocused();
         Vector2 m = GetViewport().GetMousePosition();
-        if (EdgeScroll && focused && Input.MouseMode == Input.MouseModeEnum.Visible && _dragStart is null && _grabStart is null && m.X >= 0 && m.Y >= 0 && m.X < size.X && m.Y < size.Y)
+        if (EdgeScroll && Settings.EdgeScroll && focused && Input.MouseMode == Input.MouseModeEnum.Visible && _dragStart is null && _grabStart is null && m.X >= 0 && m.Y >= 0 && m.X < size.X && m.Y < size.Y)
         {
             if (m.X <= 2) { dir.X -= 1; }
             if (m.X >= size.X - 3) { dir.X += 1; }

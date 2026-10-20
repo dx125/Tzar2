@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Tzar2.Client.Logic;
 
 namespace Tzar2.Client.Game;
 
@@ -45,6 +46,24 @@ public sealed class GameSettings
 
     /// <summary>Holding the right mouse button and moving drags the map (a right click without moving still gives orders).</summary>
     public bool DragScroll { get => Get("drag_scroll", 1) != 0; set => Set("drag_scroll", value ? 1 : 0); }
+
+    /// <summary>Scrolling when the pointer touches the window's edge.</summary>
+    public bool EdgeScroll { get => Get("edge_scroll", 1) != 0; set => Set("edge_scroll", value ? 1 : 0); }
+
+    /// <summary>Display preset (ADR 0177): 0 Wide (the world fills the window), 1 Authentic (1024 × 768, letterboxed).</summary>
+    public int DisplayPreset { get => Get("display_preset", 0); set => Set("display_preset", Math.Clamp(value, 0, 1)); }
+
+    /// <summary>Interface scale of the Wide preset: 0 Auto, 1-4 times.</summary>
+    public int InterfaceScale { get => Get("interface_scale", 0); set => Set("interface_scale", Math.Clamp(value, 0, DisplayMath.MaxScale)); }
+
+    /// <summary>0 windowed, 1 fullscreen.</summary>
+    public int WindowMode { get => Get("window_mode", 0); set => Set("window_mode", Math.Clamp(value, 0, 1)); }
+
+    /// <summary>Windowed size in pixels (0 = the project default).</summary>
+    public int WindowWidth { get => Get("window_width", 0); set => Set("window_width", Math.Max(0, value)); }
+
+    /// <summary>Windowed height in pixels (0 = the project default).</summary>
+    public int WindowHeight { get => Get("window_height", 0); set => Set("window_height", Math.Max(0, value)); }
 
     /// <summary>Day/night visualisation.</summary>
     public bool DayNight { get => Get("day_night", 1) != 0; set => Set("day_night", value ? 1 : 0); }

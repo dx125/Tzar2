@@ -64,6 +64,8 @@ public partial class GameApp
     /// <inheritdoc/>
     public override void _Process(double delta)
     {
+        WatchWindow();
+
         // The lobby polls the match; once the session exists (loading), the game screen takes over.
         if (_network is { Session: { } session } && _lobby is not null && !_networkGameShown)
         {
