@@ -172,9 +172,12 @@ legacy:
   # GAME-11: objects outside the tables imported with their cost and fog_range (crusade anchor, magic vision's revealer).
   objects: [CrusadeAnchor, fog_revealer]
   # Hash of what the compiler reads from the tables of the clean reference build; another value means a modified
-  # installation (a warning in the import and ruleset reports, not an error). Changes with the lists above.
+  # installation (a warning in the import and ruleset reports, not an error). Changes with the lists above and with the
+  # importer's output: re-pin it from the local-only tests (TZAR2_ORIGIN) whenever those change. Re-pinned 2026-10-20 on a
+  # clean GOG v1.10 EN install (2,916/2,916 files identical): the pin had not followed the importer since #24 (TIME in
+  # 1.25-s units, #61, among others) because nobody ran the local-only tests.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "6E4A7EB7A913D5E6"
+  referenceDataHash: "28744B7FB33B50AB"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 

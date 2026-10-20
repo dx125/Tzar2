@@ -84,10 +84,10 @@ public sealed class OriginRulesetTests(ITestOutputHelper output) : IDisposable
         int wood = classic.ResourceId("wood");
         int gold = classic.ResourceId("gold");
         Assert.Equal(50, peon.Traits.Cost[food]);
-        Assert.Equal(8000, peon.Traits.BuildTimeMs);
+        Assert.Equal(8 * LegacyTime.MsPerTimeUnit, peon.Traits.BuildTimeMs); // TIME 8 (ADR 0169)
         Assert.Equal(50, peon.MaxHealth);
         Assert.Equal(5, peon.Traits.Armament!.Attack);
-        Assert.Equal(4 * 12 * 64, peon.SpeedUnitsPerSecond);
+        Assert.Equal(40 * 64, peon.SpeedUnitsPerSecond); // measured 40 px/s whatever its SPEED (ADR 0172)
         Assert.Equal(5 * 2048, peon.Traits.SightUnits);
 
         EntityTypeDefinition archer = Get(classic, "euro.archer");

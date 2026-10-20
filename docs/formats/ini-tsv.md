@@ -27,8 +27,9 @@ bare    := text without '='        ; e.g. [accept] allunits, [euro] hero names i
 comment := ';' anything            ; also allowed after a value: cut at the first ';'
 ```
 
-Rules checked over all 177 INI files with `tzini.py`: 2,619 sections, 0 syntax warnings,
-318 bare lines.
+Rules checked over all INI files with `tzini.py`: 0 syntax warnings, 318 bare lines. The reference build (GOG v1.10 EN,
+its manifest) has 176 INI files with 2,615 sections; the first count, 177 files and 2,619 sections, was taken on another
+install with one more INI file (`OriginFormatsTests` checks the reference build, 2026-10-20).
 
 * **Case-insensitive** section and key names (`IMAGES.INI` uses lower case, `DATA/OBJECTS`
   mixed; file paths inside values are case-insensitive Windows paths with `\`).

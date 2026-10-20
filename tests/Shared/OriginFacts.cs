@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace Tzar2.Tests.Shared;
@@ -58,6 +60,26 @@ internal static class OriginPaths
 
     /// <summary>The original install; only call from tests marked <see cref="OriginFactAttribute"/>.</summary>
     public static string RequireOrigin() => Origin ?? throw new InvalidOperationException("TZAR2_ORIGIN is not set.");
+
+    /// <summary>
+    /// The install's files that the reference build lists (<c>docs/original-build/manifests/gog-1.10-en.reference.tsv</c>),
+    /// as full paths: a played GOG install also holds the game's crash dumps (<c>Logs/</c>) and the installer's files,
+    /// which are not the reference build and must not change the golden counts.
+    /// </summary>
+    public static IEnumerable<string> ReferenceFiles()
+    {
+        string origin = RequireOrigin();
+        string manifest = Path.Combine(RepositoryRoot, "docs", "original-build", "manifests", "gog-1.10-en.reference.tsv");
+        foreach (string line in File.ReadLines(manifest).Skip(1))
+        {
+            string relative = line.Split('\t')[0];
+            string full = Path.Combine(origin, relative.Replace('/', Path.DirectorySeparatorChar));
+            if (relative.Length > 0 && File.Exists(full))
+            {
+                yield return full;
+            }
+        }
+    }
 }
 
 /// <summary>A fact that needs the original install; skipped when <c>TZAR2_ORIGIN</c> is unset.</summary>
