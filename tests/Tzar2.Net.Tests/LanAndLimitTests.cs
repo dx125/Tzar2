@@ -20,11 +20,15 @@ public sealed class LanAndLimitTests
         using var beacon = new LanBeacon(port, 5_555, () => [lobby]);
         using var browser = new LanBrowser(port);
         var watch = Stopwatch.StartNew();
+        long nextQuery = 0;
         while (browser.Lobbies().Count == 0 && watch.ElapsedMilliseconds < 5_000)
         {
-            if (watch.ElapsedMilliseconds % 500 < 2)
+            // A query at once and then every 500 ms. "elapsed % 500 < 2" missed its 2-ms window for whole seconds when
+            // Thread.Sleep(1) slept a 15-ms timer tick on a loaded Windows runner, so no query went out at all (PR #74).
+            if (watch.ElapsedMilliseconds >= nextQuery)
             {
                 browser.Query();
+                nextQuery = watch.ElapsedMilliseconds + 500;
             }
 
             beacon.Poll();
