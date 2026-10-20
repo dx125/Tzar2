@@ -236,6 +236,18 @@ public sealed class OrderTests
         Assert.Equal(CommandKind.Capture, OrderResolver.WithMode(OrderMode.Capture, sel, SelectionTests.Building(8, owner: 1), 3, 4, KeyMods.None, Me)[0].Kind);
         Assert.Empty(OrderResolver.WithMode(OrderMode.Capture, sel, SelectionTests.Building(8), 3, 4, KeyMods.None, Me));
         Assert.Empty(OrderResolver.WithMode(OrderMode.Capture, sel, SelectionTests.Unit(9, owner: 1), 3, 4, KeyMods.None, Me));
+
+        // Spells (the mode's argument is the spell), bribery, items, and the cathedral's crusade.
+        PlannedCommand cast = OrderResolver.WithMode(OrderMode.Spell, sel, SelectionTests.Unit(9, owner: 1), 3, 4, KeyMods.None, Me, argument: 7)[0];
+        Assert.Equal((CommandKind.CastSpell, SelectionTests.Id(9), 7), (cast.Kind, cast.Target, cast.Arg0));
+        PlannedCommand ground = OrderResolver.WithMode(OrderMode.Spell, sel, null, 3, 4, KeyMods.None, Me, argument: 7)[0];
+        Assert.Equal((CommandKind.CastSpell, Core.Ids.EntityId.None, 3, 4), (ground.Kind, ground.Target, ground.X, ground.Y));
+        Assert.Equal(CommandKind.Bribe, OrderResolver.WithMode(OrderMode.Bribe, sel, SelectionTests.Unit(9, owner: 1), 3, 4, KeyMods.None, Me)[0].Kind);
+        Assert.Empty(OrderResolver.WithMode(OrderMode.Bribe, sel, SelectionTests.Unit(2), 3, 4, KeyMods.None, Me));
+        Assert.Equal(CommandKind.PickItem, OrderResolver.WithMode(OrderMode.PickItem, sel, SelectionTests.Unit(9, owner: 1), 3, 4, KeyMods.None, Me)[0].Kind);
+        Assert.Equal((CommandKind.UseItem, -1), OrderResolver.WithMode(OrderMode.UseItem, sel, null, 3, 4, KeyMods.None, Me)[0] is var use ? (use.Kind, use.Arg0) : default);
+        PlannedCommand crusade = Assert.Single(OrderResolver.WithMode(OrderMode.Crusade, [SelectionTests.Building(3)], null, 3, 4, KeyMods.None, Me));
+        Assert.Equal((CommandKind.PreachCrusade, SelectionTests.Id(3)), (crusade.Kind, crusade.Entities[0]));
     }
 
     [Fact]

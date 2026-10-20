@@ -131,6 +131,12 @@ public struct FrameEntity
     /// <summary>Maximum hit points.</summary>
     public int MaxHealth;
 
+    /// <summary>Mana of a caster (whole points), or 0.</summary>
+    public int Mana;
+
+    /// <summary>The caster's mana pool, or 0 for entities that cast nothing.</summary>
+    public int MaxMana;
+
     /// <summary>Animation choice.</summary>
     public UnitActivity Activity;
 

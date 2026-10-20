@@ -85,6 +85,7 @@ public partial class GameScreen : Node
     private Vector2? _dragStart;
     private Vector2 _mouse;
     private OrderMode _mode;
+    private int _modeArgument; // the spell id of OrderMode.Spell
     private ushort _placing = ushort.MaxValue;
     private int _eventCursor = -1;
     private int _locationCursor = -1;
@@ -722,7 +723,7 @@ public partial class GameScreen : Node
                 if (_mode != OrderMode.None)
                 {
                     (int x, int y) = ToWorld(e.Position);
-                    Send(OrderResolver.WithMode(_mode, SelectedInfos(), PickAt(e.Position), x, y, mods, _session.LocalPlayer));
+                    Send(OrderResolver.WithMode(_mode, SelectedInfos(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument));
                     if ((mods & KeyMods.Shift) == 0)
                     {
                         _mode = OrderMode.None;
@@ -1428,15 +1429,60 @@ public partial class GameScreen : Node
             case CardAction.Quests:
                 Message(_catalog.Text("sp_setupmap", "vcond_0", "Standard") + ": destroy every enemy unit and building.");
                 break;
+            case CardAction.Spell when SpellOf(s.Button) is >= 0 and var spell:
+                if (_rules.Spells[spell].Target == SpellTarget.Self)
+                {
+                    Submit(CommandKind.CastSpell, OwnIds(selected, e => CanCast(e, spell)), arg0: spell);
+                }
+                else
+                {
+                    _mode = OrderMode.Spell;
+                    _modeArgument = spell;
+                }
+
+                break;
+            case CardAction.Loan when s.Button.Argument == "return":
+                Submit(CommandKind.Loan, OwnIds(selected, e => !e.IsMobile && !e.UnderConstruction), arg1: 1);
+                break;
+            case CardAction.Loan when _rules.ResourceId(s.Button.Argument) is >= 0 and var resource:
+                Submit(CommandKind.Loan, OwnIds(selected, e => !e.IsMobile && !e.UnderConstruction), arg0: resource);
+                break;
+            case CardAction.Bribe:
+                _mode = OrderMode.Bribe;
+                break;
+            case CardAction.Crusade:
+                _mode = OrderMode.Crusade;
+                break;
+            case CardAction.PickItem:
+                _mode = OrderMode.PickItem;
+                break;
+            case CardAction.UseItem when s.Button.Argument == "self":
+                foreach (EntityInfo user in selected.Where(e => e.Owner == _session.LocalPlayer && e.IsMobile))
+                {
+                    Submit(CommandKind.UseItem, [user.Id], arg0: -1, target: user.Id);
+                }
+
+                break;
+            case CardAction.UseItem:
+                _mode = OrderMode.UseItem;
+                break;
+            case CardAction.DropItem:
+                Submit(CommandKind.DropItem, OwnIds(selected, e => e.IsMobile), arg0: 0);
+                break;
         }
 
         RefreshCard();
     }
 
+    // The spell of a card button: its key, or (the ninjas' cloak and murder, raise dead) its order's name.
+    private int SpellOf(CardButton b) => _rules.SpellId(b.Argument) is >= 0 and var id ? id : _rules.SpellId(b.Order);
+
+    private bool CanCast(EntityInfo e, int spell) => spell is >= 0 and <= ushort.MaxValue && _rules.EntityTypes[e.TypeId].Traits.CanCast((ushort)spell);
+
     private EntityId[] OwnIds(List<EntityInfo> selected, Func<EntityInfo, bool> which)
         => selected.Where(e => e.Owner == _session.LocalPlayer && which(e)).Select(e => e.Id).ToArray();
 
-    private void Submit(CommandKind kind, EntityId[] entities, int x = 0, int y = 0, int arg0 = 0)
+    private void Submit(CommandKind kind, EntityId[] entities, int x = 0, int y = 0, int arg0 = 0, int arg1 = 0, EntityId target = default)
     {
         if (entities.Length == 0)
         {
@@ -1444,7 +1490,7 @@ public partial class GameScreen : Node
         }
 
         var batch = new CommandList();
-        batch.Add(kind, entities, x, y, arg0: arg0);
+        batch.Add(kind, entities, x, y, target: target, arg0: arg0, arg1: arg1);
         _session.Submit(batch);
     }
 
@@ -1543,6 +1589,11 @@ public partial class GameScreen : Node
         CardAction.MoveAdvance => _mode == OrderMode.MoveAdvance,
         CardAction.MoveSneak => _mode == OrderMode.MoveSneak,
         CardAction.AttackGround => _mode == OrderMode.AttackGround,
+        CardAction.Spell => _mode == OrderMode.Spell && _modeArgument == SpellOf(b),
+        CardAction.Bribe => _mode == OrderMode.Bribe,
+        CardAction.Crusade => _mode == OrderMode.Crusade,
+        CardAction.PickItem => _mode == OrderMode.PickItem,
+        CardAction.UseItem => _mode == OrderMode.UseItem,
         CardAction.Stance => Lead() is { } l && _frame is not null && b.Argument == _frame.Entities[l].Stance.ToString(CultureInfo.InvariantCulture),
         CardAction.Gate => Lead() is { } g && _frame is not null && GateButtonOn(b.Argument, _frame.Entities[g].Gate),
         _ => false,
@@ -1600,6 +1651,22 @@ public partial class GameScreen : Node
         {
             case CardAction.Unsupported:
                 return (false, "not in this build yet");
+            case CardAction.Spell:
+                int spellId = SpellOf(b);
+                if (spellId < 0)
+                {
+                    return (false, "not in this build yet");
+                }
+
+                int manaCost = _rules.Spells[spellId].ManaCost;
+                string mana = manaCost > 0 ? string.Create(CultureInfo.InvariantCulture, $"mana {manaCost}") : string.Empty;
+                return selected.Any(e => e.Owner == me && CanCast(e, spellId)) ? (true, mana) : (false, "needs a caster");
+            case CardAction.Loan or CardAction.Crusade:
+                return selected.Any(e => e.Owner == me && !e.IsMobile && !e.UnderConstruction) ? (true, string.Empty) : (false, "needs the building");
+            case CardAction.Bribe:
+                return selected.Any(e => e.Owner == me && e.CanBuild) ? (true, string.Empty) : (false, "needs a peasant");
+            case CardAction.PickItem or CardAction.UseItem or CardAction.DropItem:
+                return selected.Any(e => e.Owner == me && e.IsMobile) ? (true, string.Empty) : (false, "needs a unit");
             case CardAction.Repair:
                 return selected.Any(e => e.Owner == me && e.CanBuild) ? (true, string.Empty) : (false, "needs a builder");
             case CardAction.Capture:
@@ -2028,6 +2095,11 @@ public partial class GameScreen : Node
             stats.Add(("art/icons/resistance.t2img", HudText.Number(t.Resistance)));
         }
 
+        if (e.MaxMana > 0)
+        {
+            stats.Add(("art/icons/manna.t2img", string.Create(CultureInfo.InvariantCulture, $"{e.Mana}/{e.MaxMana}")));
+        }
+
         if (e.CarryAmount > 0 && e.CarryResource < _rules.ResourceTypes.Count)
         {
             string res = _rules.ResourceTypes[e.CarryResource];
@@ -2183,7 +2255,9 @@ public partial class GameScreen : Node
                     OrderMode.Guard => "s_guard",
                     OrderMode.Repair => "s_repair",
                     OrderMode.AttackGround or OrderMode.MoveAdvance => "s_attack",
-                    OrderMode.Capture => "s_hand",
+                    OrderMode.Capture or OrderMode.Bribe or OrderMode.PickItem => "s_hand",
+                    OrderMode.Spell => "s_spell",
+                    OrderMode.UseItem => "s_potion",
                     _ => "s_move",
                 };
             }

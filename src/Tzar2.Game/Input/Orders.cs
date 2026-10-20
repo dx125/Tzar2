@@ -47,6 +47,21 @@ public enum OrderMode
 
     /// <summary>Move-sneak to the clicked point (a move with Alt).</summary>
     MoveSneak,
+
+    /// <summary>Cast a spell (its id is the mode's argument) on the clicked unit, or at the clicked point.</summary>
+    Spell,
+
+    /// <summary>Peasants bribe the clicked enemy unit (Bribery).</summary>
+    Bribe,
+
+    /// <summary>The selected cathedral preaches a crusade at the clicked point (GAME-11).</summary>
+    Crusade,
+
+    /// <summary>Pick up the clicked item (GAME-10).</summary>
+    PickItem,
+
+    /// <summary>Use the default item on the clicked target or point (GAME-10).</summary>
+    UseItem,
 }
 
 /// <summary>One command to send: the kind, its parameters and the subset of the selection it applies to.</summary>
@@ -177,14 +192,14 @@ public static class OrderResolver
         return result;
     }
 
-    /// <summary>Plans a click with a pending command-card order.</summary>
-    public static IReadOnlyList<PlannedCommand> WithMode(OrderMode mode, IReadOnlyList<EntityInfo> selection, EntityInfo? target, int x, int y, KeyMods mods, byte player)
+    /// <summary>Plans a click with a pending command-card order (<paramref name="argument"/>: the spell id of <see cref="OrderMode.Spell"/>).</summary>
+    public static IReadOnlyList<PlannedCommand> WithMode(OrderMode mode, IReadOnlyList<EntityInfo> selection, EntityInfo? target, int x, int y, KeyMods mods, byte player, int argument = 0)
     {
         ArgumentNullException.ThrowIfNull(selection);
         var own = new List<EntityId>();
         foreach (EntityInfo e in selection)
         {
-            if (e.Owner == player && (e.IsMobile || mode == OrderMode.Rally))
+            if (e.Owner == player && (e.IsMobile || mode is OrderMode.Rally or OrderMode.Crusade))
             {
                 own.Add(e.Id);
             }
@@ -214,6 +229,13 @@ public static class OrderResolver
             OrderMode.AttackGround => [new PlannedCommand(CommandKind.AttackGround, queue, EntityId.None, x, y, 0, 0, own)],
             OrderMode.MoveAdvance => [new PlannedCommand(CommandKind.Move, CommandFlags.Ctrl | queue, EntityId.None, x, y, 0, 0, own)],
             OrderMode.MoveSneak => [new PlannedCommand(CommandKind.Move, CommandFlags.Alt | queue, EntityId.None, x, y, 0, 0, own)],
+            OrderMode.Spell when target is { } s && s.Id != EntityId.None => [new PlannedCommand(CommandKind.CastSpell, CommandFlags.None, s.Id, x, y, argument, 0, own)],
+            OrderMode.Spell => [new PlannedCommand(CommandKind.CastSpell, CommandFlags.None, EntityId.None, x, y, argument, 0, own)],
+            OrderMode.Bribe when target is { IsMobile: true } b && b.Owner != player && b.Id != EntityId.None
+                => [new PlannedCommand(CommandKind.Bribe, CommandFlags.None, b.Id, x, y, 0, 0, own)],
+            OrderMode.Crusade => [new PlannedCommand(CommandKind.PreachCrusade, CommandFlags.None, EntityId.None, x, y, 0, 0, own)],
+            OrderMode.PickItem when target is { } item && item.Id != EntityId.None => [new PlannedCommand(CommandKind.PickItem, queue, item.Id, x, y, 0, 0, own)],
+            OrderMode.UseItem => [new PlannedCommand(CommandKind.UseItem, CommandFlags.None, target?.Id ?? EntityId.None, x, y, -1, 0, own)],
             _ => [],
         };
     }
