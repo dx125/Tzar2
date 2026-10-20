@@ -231,7 +231,9 @@ legacy:
   BribeImmune: {}                     # TDD GAME-11: peasants cannot be bribed
   Harvester:
     capacity: 10                      # UNVERIFIED (UNK-17)
-    gatherMs: { food: 1000, wood: 1000, stone: 1000, gold: 1000, iron: 1000 }   # UNVERIFIED (UNK-17): per unit
+    # Measured once and applied to every resource (ADR 0174): a peasant chopped a load of 10 wood in ~9.0 s
+    # (capture-20261019-232318, gather-rate burst: chopping from ~41.3 s, the log carried off at 50.3 s; ADR 0175)
+    gatherMs: { food: 900, wood: 900, stone: 900, gold: 900, iron: 900 }   # per unit
 
 ^class.fishing_boat:
   inherits: [^Ship]

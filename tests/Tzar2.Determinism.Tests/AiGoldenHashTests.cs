@@ -25,9 +25,10 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0169) the legacy TIME column is 1.25 s per unit (operator capture, batch A): every training and construction takes 25 % longer.
     // (ADR 0171) SPEED 4 is 40 px/s (operator capture, unit-speed): speedPixelsPerSecondPerPoint 12 -> 10, every unit walks a sixth slower.
     // (ADR 0172) the original ignores SPEED: measured classes walk at their own speed (foot 40 px/s, mounted 72, ...).
-    private const ulong GoldenCommandStream = 0x4C0A86174FD1DDB4UL;
-    private const ulong GoldenHashStream = 0xF122B75E635164E2UL;
-    private const ulong GoldenFinalFullHash = 0xC76F6F702A93D873UL;
+    // (ADR 0175) peasants gather 900 ms per unit, not 1,000.
+    private const ulong GoldenCommandStream = 0x92309C8B6B1276AFUL;
+    private const ulong GoldenHashStream = 0x9672AA0779DFBC0FUL;
+    private const ulong GoldenFinalFullHash = 0xE937ED15C895BAC6UL;
 
     private const int Ticks = 9600;
 
