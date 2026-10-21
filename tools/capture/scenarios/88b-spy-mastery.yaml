@@ -1,0 +1,133 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: spy-mastery
+title: The disguise meter's growth, and a seasoned disguise against another kingdom's spy (MAG-012)
+resolves: []
+priority: 3
+minutes: 8.5
+default: false                      # batch J
+experimental: true
+description: |
+  As spy-unmask, but A keeps its look for 5 minutes before the approach while the selection panel is captured every
+  2 s: the meter by the portrait, its growth and whether it reaches 100 (the owner, 2026-10-21: at 100 the spy can
+  hardly be unmasked). Then the same approach to B, tile by tile. Last, A walks back to tile 14, reveals itself (V),
+  impersonates a second kingdom-3 peasant P2 and the panel is captured for 15 s: does the meter start again from 0?
+  Analysed by hand; facts go to tests/fidelity/facts/manual.yaml.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: seasoned
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
+  - wait: 1
+  - snapshot: view
+  # P: the look to copy, a peasant of kingdom 3.
+  - move: [486, 400]
+  - chat: "${cheat}spawn peon"
+  - click: [486, 400]               # place
+  - wait: 0.5                       # longer than the double-click time
+  - click: [486, 400]               # select
+  - chat: "${cheat}kingdom 3"
+  - wait: 1
+  # A: our spy, two tiles from P; it impersonates P and stands its ground.
+  - move: [550, 432]
+  - chat: "${cheat}spawn spy"
+  - click: [550, 432]               # place
+  - wait: 0.5
+  - click: [550, 432]               # select
+  - snapshot: {name: spy-card, game: false}
+  - key: I                          # impersonate (MENU.INI spy_add)
+  - click: [486, 400]               # P
+  - wait: 5
+  - key: N                          # stand ground: no walking off to fight while it waits
+  - snapshot: {name: disguised, game: false}
+  # B: the detector, a spy of kingdom 3 that stands its ground at tile (22, 52).
+  - move: [870, 400]
+  - chat: "${cheat}spawn spy"
+  - click: [870, 400]               # place
+  - wait: 0.5
+  - click: [870, 400]               # select
+  - key: N                          # stand ground, before it changes hands
+  - chat: "${cheat}kingdom 3"
+  - wait: 1
+  # A again (a box selects only our own units: P and B are kingdom 3's).
+  - drag: {from: [430, 350], to: [620, 470]}
+  - move: [70, 400]
+  - burst: {name: meter, count: 150, interval_ms: 2000, region: [4, 165, 142, 140]}
+  - snapshot: {name: start, game: false, tags: {a_tile: "11", b_tile: "22"}}
+  # The approach: one tile at a time, 4 s per tile, the mouse parked so the cursor hides nothing.
+  - click: {at: [550, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-12, game: false, tags: {a_tile: "12", b_tile: "22"}}
+  - click: {at: [582, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-13, game: false, tags: {a_tile: "13", b_tile: "22"}}
+  - click: {at: [614, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-14, game: false, tags: {a_tile: "14", b_tile: "22"}}
+  - click: {at: [646, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-15, game: false, tags: {a_tile: "15", b_tile: "22"}}
+  - click: {at: [678, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-16, game: false, tags: {a_tile: "16", b_tile: "22"}}
+  - click: {at: [710, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-17, game: false, tags: {a_tile: "17", b_tile: "22"}}
+  - click: {at: [742, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-18, game: false, tags: {a_tile: "18", b_tile: "22"}}
+  - click: {at: [774, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-19, game: false, tags: {a_tile: "19", b_tile: "22"}}
+  - click: {at: [806, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-20, game: false, tags: {a_tile: "20", b_tile: "22"}}
+  - click: {at: [838, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 4
+  - snapshot: {name: at-21, game: false, tags: {a_tile: "21", b_tile: "22"}}
+  # Back to tile 14, out of B's reach; reveal; impersonate P2, a second peasant of kingdom 3 at tile (10, 54).
+  - click: {at: [614, 400], button: right, alt: true}
+  - move: [70, 400]
+  - wait: 8
+  - snapshot: {name: back, game: false, tags: {a_tile: "14", b_tile: "22"}}
+  - key: V                          # reveal (MENU.INI spy_add)
+  - wait: 2
+  - key: N                          # stand ground: B, 8 tiles off, is an enemy again
+  - snapshot: {name: revealed, game: false}
+  - move: [486, 464]
+  - chat: "${cheat}spawn peon"
+  - click: [486, 464]               # place
+  - wait: 0.5
+  - click: [486, 464]               # select
+  - chat: "${cheat}kingdom 3"
+  - wait: 1
+  - drag: {from: [560, 350], to: [680, 450]}   # A at tile 14
+  - key: I
+  - click: [486, 464]               # P2
+  - wait: 6
+  - move: [70, 400]
+  - burst: {name: meter-again, count: 15, interval_ms: 1000, region: [4, 165, 142, 140]}
+  - snapshot: after
+analysis: [capture-quality]

@@ -95,7 +95,7 @@ rules:
     source: [owner 2026-10-21 (fourth play-test)]
     status: tested
   BLD-022:
-    rule: A repair restores a set number of hit points with each blow of a repairer, so its time depends on how many hit points the building lacks.
-    source: [owner 2026-10-21 (fourth play-test), owner 2026-10-21 (answers)]
+    rule: A repair restores hit points with each blow of a repairer, so its time depends on how many hit points the building lacks; the amount may differ by building.
+    source: [owner 2026-10-21 (fourth play-test), owner 2026-10-21 (answers), owner 2026-10-21 (repair per building)]
     status: partial
-    note: Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). The original's data has no repair value, so the hit points per blow need a capture.
+    note: Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). The original's data has no repair value. The owner thinks the amount differs by building, a share of its hit points or its own number; batch J (repair-mill, repair-barracks, repair-castle; HEALTH 800, 1400 and 8000) tells a fixed amount, a share and the construction rate apart.

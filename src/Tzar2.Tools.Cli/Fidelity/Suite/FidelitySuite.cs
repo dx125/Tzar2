@@ -755,7 +755,7 @@ internal static class FidelitySuite
         var rates = Counters(f, "lumber").Select(c => PhaseOf(c, "hp-repair")).OfType<YamlMapping>().Where(p => Num(p, "rate_per_min") > 0).Select(p => Num(p, "rate_per_min")).ToList();
         if (rates.Count == 0)
         {
-            return Pending("no repair phase with rising hit points yet (fire-repair, batch F)");
+            return Pending("no repair phase with rising hit points yet (repair-mill, batch J; fire-repair, batch F)");
         }
 
         // Engine: one peasant repairs the full HEALTH (800) in the build time (TIME 30 s) x repairTimePercent.

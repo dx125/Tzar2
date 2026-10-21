@@ -107,7 +107,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 2 | 14 | 6 | 9 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 8 | 2 | 2 | 3 | 1 | 0 |
-| [Magic, religion and spies](magic.yaml) (MAG) | 20 | 14 | 4 | 1 | 0 | 0 | 1 |
+| [Magic, religion and spies](magic.yaml) (MAG) | 21 | 14 | 4 | 1 | 1 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 9 | 4 | 3 | 2 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 334 | 160 | 73 | 42 | 38 | 9 | 12 |
+| **All** | 335 | 160 | 73 | 42 | 39 | 9 | 12 |
 
 ## Not done yet
 
@@ -138,7 +138,7 @@ Missing and partial rules.
 
 * **BLD-018** (partial): A wall shows green where it can be laid; a gate can be placed over a wall already built, or anywhere it fits. *A gate cannot replace a piece of wall.*
 * **BLD-019**: Holding Alt while placing a bridge turns it. *The editor turns bridges with Alt; the game's placement does not.*
-* **BLD-022** (partial): A repair restores a set number of hit points with each blow of a repairer, so its time depends on how many hit points the building lacks. *Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). The original's data has no repair value, so the hit points per blow need a capture.*
+* **BLD-022** (partial): A repair restores hit points with each blow of a repairer, so its time depends on how many hit points the building lacks; the amount may differ by building. *Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). The original's data has no repair value. The owner thinks the amount differs by building, a share of its hit points or its own number; batch J (repair-mill, repair-barracks, repair-castle; HEALTH 800, 1400 and 8000) tells a fixed amount, a share and the construction rate apart.*
 
 ### Selection, mouse and pointers
 
@@ -197,6 +197,7 @@ Missing and partial rules.
 ### Magic, religion and spies
 
 * **MAG-017** (partial): After all crusaders have died a full crusade needs some time; one preached earlier brings fewer crusaders for the same price. *Tzar2 refuses a crusade during the wait instead of bringing fewer crusaders.*
+* **MAG-021**: A disguised spy has a meter by its portrait, up to 100, that grows the longer it keeps one look; at 100 it can hardly be unmasked. *The owner's description adds "or trains". How fast the meter grows, whether a new look starts it again and how it weighs against the unmasking spy are for batch J (spy-mastery).* Work: STATUS work queue 3.
 
 ### Nature, gateways, day and weather
 

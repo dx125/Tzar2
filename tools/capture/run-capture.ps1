@@ -30,9 +30,10 @@ param(
     # Scenario ids (see: t2 fidelity scenarios). Default: the default set. "all" runs every scenario.
     [string[]]$Scenarios = @(),
     # A prepared batch of at most 30 minutes (ADR 0112): A = cheats, colours, combat, shadows, production;
-    # B = unit speeds (first half) and gathering; C = unit speeds (second half); D = the day clock; E-I: ADR 0113.
+    # B = unit speeds (first half) and gathering; C = unit speeds (second half); D = the day clock; E-I: ADR 0113;
+    # J = repair per blow and the spy's disguise (the owner's questions, 2026-10-21).
     # Overrides -Scenarios.
-    [ValidateSet("A", "B", "C", "D", "E", "F", "G", "H", "I")][string]$Batch = "",
+    [ValidateSet("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")][string]$Batch = "",
     # Where the session folder and the zip go.
     [string]$Out = (Join-Path ([Environment]::GetFolderPath("UserProfile")) "Tzar2Capture"),
     # cnc-ddraw (default: a pinned, verified DirectDraw wrapper that runs the game in a window),
@@ -57,6 +58,9 @@ $batches = @{
     "G" = @("smoke", "mana-spell", "loans", "score")
     "H" = @("smoke", "combat-outcomes")
     "I" = @("smoke", "trade", "gamble")
+    # J (2026-10-21): hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise,
+    # and the disguise meter.
+    "J" = @("smoke", "repair-mill", "repair-barracks", "repair-castle", "spy-unmask", "spy-mastery")
 }
 if ($Batch) { $Scenarios = $batches[$Batch] }
 $repo = Resolve-Path (Join-Path $PSScriptRoot "../..")
