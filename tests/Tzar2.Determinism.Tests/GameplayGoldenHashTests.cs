@@ -37,7 +37,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // reach; units leave a building on free tiles of its open side; peasants of any civilization help on sites; idle
     // peasants find work after 10 s; hashed layout 8.
     // (fourth play-test 2026-10-21) every load goes to the drop-off nearest to where it was gathered.
-    private const ulong GoldenRulesetHash = 0x579C0A42D5E61161UL;
+    // (the owner's check of technology bonuses, 2026-10-21) Banking raises the profit at markets (it targeted the castle
+    // and did nothing) and Gunpowder raises the cannon towers' attack: the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0x207371E8278B1164UL;
     private const ulong GoldenHashStream = 0xE1E5C587EDB8DF2BUL;
     private const ulong GoldenFinalFullHash = 0x37E0477EC4C35A38UL;
 

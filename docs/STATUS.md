@@ -53,8 +53,8 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the other; items 4 and 5 come from the
-fourth play-test.
+Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the other; item 4 comes from the fourth
+play-test.
 
 1. **Maintainer:** the ledger's first fill and the data account are done (log below). Next: bring the hotkey
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
@@ -72,28 +72,38 @@ fourth play-test.
    order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
    (TECH-019), one farmer per field (ECO-021), siege weapons hurting their own side (WAR-013), the attack's hit frame
    from the data (WAR-014). Then the screens: diplomacy, tribute, inventory, save and load.
-4. **Maintainer:** units never stand on one another (WORLD-015): a collision radius from the units' size and a resolve
-   that leaves no overlap, without bringing back ORIG-02's jams at bridges and gates.
-5. **Maintainer:** the owner's check of 2026-10-21: every bonus of a building or technology (gathering, the
-   blacksmith's, lumber mill's and guilds' unit stats, everything else) is applied; a test per effect, and the
-   effects the sources describe but Tzar2 lacks in the ledger.
-6. **Operator:** a fifth play-test (`tools/play/play.ps1`) once items 4 and 5 are merged.
-7. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+4. **Maintainer:** units never stand on one another (WORLD-015).
+   * What the probes of 2026-10-21 measured:
+     * At rest, units keep 16 px apart.
+     * While walking or fighting, units come as close as 8 px, with a collision diameter of 14 px and sprites about
+       25 px wide.
+     * The push apart is soft and capped per tick.
+   * What did not work: treating friends walking the same way as hard obstacles jams opposing columns on a narrow
+     bridge (ORIG-02). A radius of 12 px alone changes nothing in a crowd and shifts the AI's goldens.
+   * The data: the original's units have a 25 × 25 selection box and a 32 × 32 object box, a whole tile.
+   * Plan:
+     * a body size from the data;
+     * hard contact with rules for who gives way: idle units step aside, units coming the other way squeeze past,
+       fighting units hold;
+     * free places around an attack target instead of a crowd;
+     * ORIG-02's jams at bridges and gates must not come back.
+5. **Operator:** a fifth play-test (`tools/play/play.ps1`) once item 4 is merged.
+6. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-8. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+7. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
    more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
-9. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+8. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
-10. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-11. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
+10. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
     solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
     diagonal rocks) to reach 19/19.
-12. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
-13. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-14. M7 planning: installer, code signing, crash reporting, min-spec hardware.
-15. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
+12. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+13. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
 
@@ -102,6 +112,30 @@ fourth play-test.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-21 — Every technology bonus checked (the owner's request after the fourth play-test).**
+  * **The tests:**
+    * `TechnologyEffectTests` runs every technology of the classic ruleset that has effects. It checks that each
+      effect changes its targets, only for the kingdom that researched it.
+    * A row per technology checks that it reaches the right units or buildings: swords and not bows for Temper Iron,
+      the trees for the Saw, the markets for trade bonuses...
+    * Tests of the mechanics that had none: Medicine's range, the profit bonus of Trade Taxes and Banking,
+      Concentration's mana, and Fanaticism making capture slower.
+    * A local test on the original's data (`OriginTechnologyTests`) checks that every one of its 87 technologies does
+      something: an effect, units or buildings it allows, an order it gates, or a mechanic of the simulation. It also
+      checks that every effect reaches something.
+  * **Found and fixed:**
+    * Banking targeted the castle, but the profit bonus applies to markets, so it did nothing. It now raises the
+      profit at markets (the game's own text: "increases trade profit").
+    * Gunpowder had no effect. It now raises the cannon towers' attack (a placeholder; TECH-013).
+    * The ruleset hash is re-pinned.
+  * **Left as they are:**
+    * Tournaments does nothing yet (TECH-029). Jewelry gates the market's item orders, which are missing (TECH-030).
+    * Piracy and Boarding Ram are named by the manual and the texts but are not in the original's data (TECH-031,
+      unclear).
+    * Fanaticism's +20 % of a house's RESISTANCE 40 barely changes the damage it takes (under 1 % with the placeholder
+      scale, UNK-08); it does make capture slower.
+    * The gathering technologies speed up gathering; the help says they raise the load carried (TECH-006, TECH-010,
+      unclear).
 * **2026-10-21 — Fourth play-test by the owner: six findings and a check.**
   * **Wood went to the mill of the first trip** (ECO-013). A worker kept its drop-off from trip to trip, so after a
     nearer lumber mill went up it still walked to the old one. Every load now goes to the drop-off nearest to where it

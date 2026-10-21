@@ -113,11 +113,11 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 9 | 4 | 0 | 0 | 1 | 1 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 0 | 10 | 10 | 6 | 2 | 0 |
-| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 12 | 13 | 2 | 5 | 0 | 4 |
+| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 25 | 1 | 3 | 2 | 0 | 5 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 333 | 135 | 81 | 45 | 45 | 9 | 18 |
+| **All** | 333 | 148 | 69 | 46 | 42 | 9 | 19 |
 
 ## Not done yet
 
@@ -247,12 +247,10 @@ Missing and partial rules.
 
 ### Technologies and upgrades
 
-* **TECH-013**: Gunpowder (Asians) raises the attack of cannon towers.
 * **TECH-019** (partial): Landing Tactics lets ships carry 50 % more troops, once. *Tzar2 adds 4 places (placeholder); the help gives 50 %.*
-* **TECH-028**: Mastery (Asians) lets priests teach kung-fu units and turn mana into experience.
+* **TECH-028** (partial): Mastery (Asians) lets priests teach kung-fu units and turn mana into experience. *Mastery gates the spell that turns mana into experience (spell_raiseexp), which works; whether priests "teaching kung-fu units" is more than that is not known.*
 * **TECH-029**: Tournaments (Asians) lets kung-fu units share their experience.
 * **TECH-030**: Jewelry (Asians) lets the markets sell and buy items, the same items in every market. *The markets' item menus (market_items, market_sell) are empty in MENU.INI and filled by the game; Tzar2 has no item trade.*
-* **TECH-031**: Piracy gives boarding units an attack bonus, and Boarding Ram lets ships board others.
 * **TECH-036** (partial): Each cannon level of a ship, up to level six, makes its cannons fire more often. *Tzar2 adds attack instead (placeholder, UNK-21).*
 
 ### Trade, tavern and loans
@@ -268,7 +266,7 @@ Missing and partial rules.
 
 * **WORLD-012** (partial): Each kind of unit walks at its own speed, which follows the stride of its walking animation. *18 classes are measured; the others use SPEED times 10 px/s, a placeholder, until their strides are read (ADRs 0172, 0174).*
 * **WORLD-013** (partial): A random map grows as many trees as its terrain set's data gives for its size. *Tzar2's generator uses its own forest density (ADR 0060).*
-* **WORLD-015** (partial): A unit cannot stand where another unit stands. *Units are pushed apart each step with a collision radius of 7 px (UNK-11); in a crowd, at a bridge or a gate, they still overlap.*
+* **WORLD-015** (partial): A unit cannot stand where another unit stands. *Units are pushed apart softly with a collision radius of 7 px (UNK-11); walking or fighting in a crowd they come within 8 px of each other, while the original's units have a 25 px selection box and a 32 px object box (work queue).*
 
 ## Unclear
 
@@ -312,7 +310,8 @@ The sources disagree or say too little.
 * **TECH-006**: Rotating Fields and Irrigation (Asians) make fields give more food. *The help says they raise the amount of food a peasant carries; Tzar2 makes farming faster instead, by a placeholder (UNK-21).*
 * **TECH-010**: Saw, Stone Mining, Gold Mining and Ore Flotation (Arabians) make gathering wood, stone and gold more productive. *The help says they raise the amount a peasant carries; Tzar2 makes gathering faster instead, by a placeholder (UNK-21).*
 * **TECH-023**: Trade Taxes makes the markets produce resources over time. *The manual says the markets produce resources for a while; the game's own text says it increases trade profit. Tzar2 adds 10 % to the markets' income (placeholder).*
-* **TECH-024**: Banking (Asians) adds resources to the treasury over time. *The manual says it adds to the treasury from time to time; the game's own text says it increases trade profit. Tzar2 adds 10 % to the castle's income (placeholder).*
+* **TECH-024**: Banking (Asians) adds resources to the treasury over time. *The manual says it adds to the treasury from time to time; the game's own text says it increases trade profit. Tzar2 adds 10 % to the profit at markets (placeholder); until 2026-10-21 it targeted the castle and did nothing.*
+* **TECH-031**: Piracy gives boarding units an attack bonus, and Boarding Ram lets ships board others. *The manual and the game's texts name them, but the original's data has no such technologies: they look cut from the game.*
 
 ### Trade, tavern and loans
 

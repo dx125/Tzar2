@@ -13,7 +13,7 @@ rules:
   TECH-003:
     rule: Feudalism (Europeans and Asians) and Slavery (Arabians) make peasants cheaper.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-21).
   TECH-004:
     rule: Architecture makes building faster and allows stone walls, gates and bridges.
@@ -33,17 +33,17 @@ rules:
   TECH-007:
     rule: Horsemanship (Arabians) makes mounted units cheaper.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-21).
   TECH-008:
     rule: Temper Iron raises sword attack; Scimitar (Arabians) raises it again and allows satraps.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-21).
   TECH-009:
     rule: Scale Armor and then Chain Mail raise the defence of infantry.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-21).
   TECH-010:
     rule: Saw, Stone Mining, Gold Mining and Ore Flotation (Arabians) make gathering wood, stone and gold more productive.
@@ -53,17 +53,18 @@ rules:
   TECH-011:
     rule: Crossbow raises the attack of arrows; Chemistry (Asians) gives flaming arrows with more attack.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-21).
   TECH-012:
     rule: Engineering raises the attack of catapults and heavy catapults.
     source: [manual Researching Technologies, patch 1.09 (TZAR110.TXT)]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-21).
   TECH-013:
     rule: Gunpowder (Asians) raises the attack of cannon towers.
     source: [strings STRINGS.INI orders_add te_gunpowder]
-    status: missing
+    status: tested
+    note: By how much is a placeholder (UNK-21); added after the owner's check of 2026-10-21 found Gunpowder did nothing.
   TECH-014:
     rule: Heroism lets units gain unlimited experience and become heroes.
     source: [manual Researching Technologies]
@@ -76,7 +77,7 @@ rules:
   TECH-016:
     rule: Honor raises the attack of heroes fighting other heroes.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-23).
   TECH-017:
     rule: Warfare, Tactics and Sun Tzu's Book (Asians) make units learn faster.
@@ -96,12 +97,12 @@ rules:
   TECH-020:
     rule: Fanaticism (Europeans and Arabians) and Buddhism (Asians) raise the resistance of all buildings.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-19, UNK-21).
   TECH-021:
     rule: Inquisition makes the priests' exorcism stronger; Medicine lets priests heal from farther away.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-26).
   TECH-022:
     rule: Supply Storage and Seafood (Asians) raise the population limit.
@@ -117,16 +118,16 @@ rules:
     rule: Banking (Asians) adds resources to the treasury over time.
     source: [manual Researching Technologies, strings STRINGS.INI orders_add te_banking]
     status: unclear
-    note: The manual says it adds to the treasury from time to time; the game's own text says it increases trade profit. Tzar2 adds 10 % to the castle's income (placeholder).
+    note: The manual says it adds to the treasury from time to time; the game's own text says it increases trade profit. Tzar2 adds 10 % to the profit at markets (placeholder); until 2026-10-21 it targeted the castle and did nothing.
   TECH-025:
     rule: Riding Hordes (Arabians) raises the attack and defence of all mounted units.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-21).
   TECH-026:
     rule: Kung-Fu (Asians) raises the attack of peasants, monks and priests.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-21).
   TECH-027:
     rule: Meditation (Asians) makes monks cheaper, and Philosophy makes new monks start at a higher level.
@@ -136,7 +137,8 @@ rules:
   TECH-028:
     rule: Mastery (Asians) lets priests teach kung-fu units and turn mana into experience.
     source: [manual Researching Technologies]
-    status: missing
+    status: partial
+    note: Mastery gates the spell that turns mana into experience (spell_raiseexp), which works; whether priests "teaching kung-fu units" is more than that is not known.
   TECH-029:
     rule: Tournaments (Asians) lets kung-fu units share their experience.
     source: [manual Researching Technologies]
@@ -149,11 +151,12 @@ rules:
   TECH-031:
     rule: Piracy gives boarding units an attack bonus, and Boarding Ram lets ships board others.
     source: [manual Asian Buildings (Harbor), strings STRINGS.INI orders_add te_piracy te_boardingram]
-    status: missing
+    status: unclear
+    note: The manual and the game's texts name them, but the original's data has no such technologies: they look cut from the game.
   TECH-032:
     rule: Concentration (Asians) makes mana come back faster.
     source: [manual Researching Technologies]
-    status: implemented
+    status: tested
     note: By how much is a placeholder (UNK-26).
   TECH-033:
     rule: Technologies of spells and summons (Bat, Stone Golem, Invisibility, Lightning, Freeze, Whirlpool, Flame Bolt, Dragon, Turn To Stone, Confusion, Magic Carpet, Jinn, Rain of Fire, Magic Vision, Necromancy, Healing, Bless) make their spell possible.
