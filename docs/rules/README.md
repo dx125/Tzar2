@@ -106,7 +106,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 1 | 13 | 6 | 11 | 2 | 1 |
-| [Items](items.yaml) (ITEM) | 15 | 6 | 2 | 3 | 3 | 1 | 0 |
+| [Items](items.yaml) (ITEM) | 15 | 8 | 2 | 2 | 2 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 20 | 12 | 3 | 3 | 1 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 8 | 4 | 4 | 2 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 333 | 148 | 69 | 46 | 42 | 9 | 19 |
+| **All** | 333 | 150 | 69 | 45 | 41 | 9 | 19 |
 
 ## Not done yet
 
@@ -191,8 +191,6 @@ Missing and partial rules.
 ### Items
 
 * **ITEM-007** (partial): Some items must be used at a place; the Fire Rain book makes fire rain where the player clicks, on everyone there, own units included. *The simulation does it; the client uses the first item, as there is no inventory to pick from (HUD-017).*
-* **ITEM-008** (partial): Only the Arabians make items, in the magic workshop after Witchcraft; the player picks the kind of item and how much gold to spend, and better items cost more and take longer. *The simulation crafts items; the card's Build Magic Item order and its dialog are missing (command-card work).* Work: STATUS work queue 3.
-* **ITEM-009**: Magic books made in the magic workshop cost four times more and take twice as long.
 * **ITEM-010** (partial): A soul item kills a unit or makes it go berserk; a hero is not killed. *The simulation does it; the card's item_kill and item_berserk orders do nothing yet.*
 * **ITEM-012**: A unit that picks up a magic book has yellow stars floating above it.
 * **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).

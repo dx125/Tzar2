@@ -316,6 +316,8 @@ public sealed class CommandCard
                 return new CardPress(Dialog: CardDialogKind.Exchange);
             case CardAction.Trade:
                 return new CardPress(Dialog: CardDialogKind.Trade);
+            case CardAction.Craft:
+                return new CardPress(Dialog: CardDialogKind.Craft);
             default:
                 return CardPress.Nothing;
         }
@@ -328,6 +330,48 @@ public sealed class CommandCard
     /// <summary>The exchange the tavern dialog asked for (ten given for one), or null without an own tavern selected.</summary>
     public CommandList? Exchange(CardContext context, string give, string get, int amount)
         => List(CommandKind.Convert, Taverns(context), arg0: _rules.ResourceId(give) | (_rules.ResourceId(get) << 8), arg1: amount);
+
+    /// <summary>The item types the selected magic workshops make (GAME-10), in the rules' order; empty without one.</summary>
+    public IReadOnlyList<ushort> CraftableItems(CardContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        foreach (EntityInfo e in Selected(context))
+        {
+            if (e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is { } crafter)
+            {
+                return crafter.Items;
+            }
+        }
+
+        return [];
+    }
+
+    /// <summary>The gold one point of an item's power costs (books cost more, 1.05).</summary>
+    public int CraftPricePerPower(ushort itemType)
+    {
+        CombatSettings c = _rules.Combat;
+        return _rules.EntityTypes[itemType].Traits.Item is { Kind: ItemKind.SpellBook } ? c.CraftGoldPerPower * c.CraftBookCostPercent / 100 : c.CraftGoldPerPower;
+    }
+
+    /// <summary>The most power an item may be made with.</summary>
+    public int CraftMaxPower => _rules.Combat.CraftMaxPower;
+
+    /// <summary>The item the dialog asked for, made by the first idle selected workshop; null without one.</summary>
+    public CommandList? Craft(CardContext context, ushort itemType, int gold)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        Dictionary<uint, int> index = Index(context.Frame);
+        foreach (EntityInfo e in Selected(context))
+        {
+            if (e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is not null
+                && index.TryGetValue(e.Id.Value, out int i) && context.Frame.Entities[i].CraftPermille < 0)
+            {
+                return List(CommandKind.CraftItem, [e.Id], arg0: itemType, arg1: gold);
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// The trade route of the selected traders to the clicked far market or harbor: they load at the own market of their
@@ -728,6 +772,13 @@ public sealed class CommandCard
                 return HireAvailability(context, b);
             case CardAction.Trade:
                 return selected.Any(e => e.Owner == _me && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null) ? (true, string.Empty) : (false, "needs a trader");
+            case CardAction.Craft:
+                if (!selected.Any(e => e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is not null))
+                {
+                    return (false, "needs a magic workshop");
+                }
+
+                return Lead(context) is { } workshop && context.Frame.Entities[workshop].CraftPermille >= 0 ? (false, "making an item") : (true, string.Empty);
             case CardAction.Repair:
                 return selected.Any(e => e.Owner == _me && e.CanBuild) ? (true, string.Empty) : (false, "needs a builder");
             case CardAction.Capture:

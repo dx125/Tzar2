@@ -1373,6 +1373,16 @@ public partial class GameScreen : Node
                 exchange.Exchange += (give, get, amount) => Submit(_card.Exchange(CardNow(), give, get, amount));
                 OpenDialog(exchange);
                 break;
+            case CardDialogKind.Craft:
+                var items = _card.CraftableItems(CardNow()).Select(t => (t, CraftPicture(_catalog.Type(t).Class), _catalog.Type(t).Name)).ToList();
+                var craft = new CraftDialog(_ui, items, _card.CraftPricePerPower, _card.CraftMaxPower);
+                craft.Craft += (type, gold) =>
+                {
+                    Submit(_card.Craft(CardNow(), type, gold));
+                    CloseDialog();
+                };
+                OpenDialog(craft);
+                break;
             case CardDialogKind.Trade:
                 var trade = new TradeDialog(_ui);
                 trade.Route += (here, there, load) =>
@@ -1387,6 +1397,16 @@ public partial class GameScreen : Node
 
         RefreshCard();
     }
+
+    // The picture of an item kind in D_BUILD's items.bmp (bow, book, shield, sword, potion; ⚠ UNVERIFIED pairing).
+    private static int CraftPicture(string cls) => cls switch
+    {
+        "item_magic" => 1,
+        "item_armor" => 2,
+        "item_plusplus" => 3,
+        "item_health" => 4,
+        _ => 0,
+    };
 
     // What the command card is built for now (Tzar2.Game.Ui.CommandCard, ADR 0182).
     private CardContext CardNow()
@@ -1755,6 +1775,10 @@ public partial class GameScreen : Node
         else if (e.QueueCount > 0)
         {
             stats.Add(("art/icons/time.t2img", $"{e.QueuePermille / 10} %"));
+        }
+        else if (e.CraftPermille >= 0)
+        {
+            stats.Add(("art/icons/time.t2img", $"{e.CraftPermille / 10} %")); // an item being made in a magic workshop
         }
 
         return new SelectionInfo

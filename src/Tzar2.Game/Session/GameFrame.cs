@@ -173,6 +173,9 @@ public struct FrameEntity
     /// <summary>Progress of the first item 0-1000 (training, research or upgrade).</summary>
     public int QueuePermille;
 
+    /// <summary>Progress 0-1000 of the item a magic workshop is making, or -1 (GAME-10).</summary>
+    public int CraftPermille;
+
     /// <summary>Upgrades the entity has or has queued (bit = upgrade id; towers, walls, gates, galleons).</summary>
     public uint Upgrades;
 

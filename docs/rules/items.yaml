@@ -35,13 +35,12 @@ rules:
   ITEM-008:
     rule: Only the Arabians make items, in the magic workshop after Witchcraft; the player picks the kind of item and how much gold to spend, and better items cost more and take longer.
     source: [manual Producing Items, help ITEMS.TXT HT_CREATE_ITEMS]
-    status: partial
-    note: The simulation crafts items; the card's Build Magic Item order and its dialog are missing (command-card work).
-    work: STATUS work queue 3
+    status: tested
+    note: The card's Build Item order opens the D_BUILD dialog (kind of item, gold); which picture shows which kind is ours, and the panel's three small toggles (books, potions, power) are not used yet as no source says what they do.
   ITEM-009:
     rule: Magic books made in the magic workshop cost four times more and take twice as long.
     source: [patch 1.05 (TZAR110.TXT)]
-    status: missing
+    status: tested
   ITEM-010:
     rule: A soul item kills a unit or makes it go berserk; a hero is not killed.
     source: [data ORDERS.INI item_kill item_berserk, community TDD GAME-10]

@@ -138,6 +138,33 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-008")]
+    public void The_magic_workshop_makes_an_item_of_the_kind_and_gold_its_dialog_asks_for()
+    {
+        World world = _session.Simulation.World;
+        EntityId workshop = world.PlaceStructure((ushort)Rules.Value.EntityTypeId("arab.magicworkshop"), 0, 30, 30);
+        _session.Step(1);
+        _cards.Menus["arab_magicworkshop"] = [new CardButton("build_item", 'I', CardAction.Craft, string.Empty, 249, "Build item")];
+        _cards.MenuOverride[(ushort)Rules.Value.EntityTypeId("arab.magicworkshop")] = "arab_magicworkshop";
+        var card = new CommandCard(Rules.Value, _cards, 0);
+
+        CardSlot build = card.Build(Context([workshop]))[0]!.Value;
+        Assert.True(build.Enabled);
+        Assert.Equal(CardDialogKind.Craft, card.Press(Context([workshop]), build).Dialog);
+        ushort book = (ushort)Rules.Value.EntityTypeId("comm.item_magic");
+        Assert.Contains(book, card.CraftableItems(Context([workshop])));
+        Assert.Equal(4 * card.CraftPricePerPower((ushort)Rules.Value.EntityTypeId("comm.item")), card.CraftPricePerPower(book));
+
+        CommandList craft = card.Craft(Context([workshop]), book, 400)!;
+        Assert.Equal((CommandKind.CraftItem, (int)book, 400), (craft[0].Kind, craft[0].Arg0, craft[0].Arg1));
+        _session.Submit(craft);
+        _session.Step(2);
+        CardSlot busy = card.Build(Context([workshop]))[0]!.Value;
+        Assert.Equal((false, "making an item"), (busy.Enabled, busy.Detail));
+        Assert.Null(card.Craft(Context([workshop]), book, 400));
+    }
+
+    [Fact]
     public void An_order_that_needs_a_target_waits_for_it_and_is_highlighted()
     {
         EntityId peasant = Own("euro.peon");
@@ -192,12 +219,19 @@ public sealed class CommandCardTests : IDisposable
 
         public HashSet<string> Capturing { get; } = [];
 
+        public Dictionary<ushort, string> MenuOverride { get; } = [];
+
         public IReadOnlyList<CardButton> Card(string? menu) => menu is not null && Menus.TryGetValue(menu, out List<CardButton>? b) ? b : [];
 
         public bool CapturesKeys(string? menu) => menu is not null && Capturing.Contains(menu);
 
         public string? Menu(ushort typeId)
         {
+            if (MenuOverride.TryGetValue(typeId, out string? menu))
+            {
+                return menu;
+            }
+
             string key = rules.EntityTypes[typeId].Key;
             return key.StartsWith("euro.", StringComparison.Ordinal) ? "e_" + key[5..] : null;
         }

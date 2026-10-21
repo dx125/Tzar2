@@ -92,6 +92,15 @@ public static class FrameBuilder
             bool moving = m >= 0 && (world.Motions.At(m).VelocityX != 0 || world.Motions.At(m).VelocityY != 0);
             e.Activity = moving ? UnitActivity.Walk : UnitActivity.Idle;
 
+            e.CraftPermille = -1;
+            if (world.CraftJobs.IndexOf(id) is >= 0 and var cj)
+            {
+                CraftJob job = world.CraftJobs.At(cj);
+                bool book = world.Ruleset.EntityTypes[job.ItemType].Traits.Item is { Kind: ItemKind.SpellBook };
+                int total = Math.Max(1, world.Ruleset.Combat.CraftMs(book, job.Power));
+                e.CraftPermille = (int)Math.Clamp((long)(total - job.LeftMs) * 1000 / total, 0, 1000);
+            }
+
             int w = world.Workers.IndexOf(id);
             if (w >= 0)
             {

@@ -59,8 +59,8 @@ play-test.
 1. **Maintainer:** the ledger's first fill and the data account are done (log below). Next: bring the hotkey
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
    every change.
-2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done):
-   * the Magic Workshop's crafting (`build_item`: which item, how much gold);
+2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done).
+   The Magic Workshop's crafting is done (log below). Left:
    * the holders' list of units inside, to let one out (ORD-015);
    * the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013);
    * AI assistance (none, economy, war, full; AI-004) and the lists of heroes, spies and items with nothing selected
@@ -111,6 +111,15 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — The magic workshop makes items from the command card (work queue item 2).**
+  * Its Build Item order opens the original's D_BUILD panel: the kind of item (bow, book, shield, sword, potion), the
+    gold to spend (more gold, a stronger item), BUILD and CANCEL. While an item is being made the order is greyed out
+    and the workshop shows its progress.
+  * Patch 1.05: spell books cost four times more gold per point of power and take twice as long. Two new combat
+    settings, `craftBookCostPercent` and `craftBookTimePercent`, carry it; the ruleset hash is re-pinned.
+  * Which picture shows which kind of item, and the power shown in the dialog, are ours (⚠ UNVERIFIED).
+  * Ledger: ITEM-008 and ITEM-009 are tested.
 
 * **2026-10-21 — Every technology bonus checked (the owner's request after the fourth play-test).**
   * **The tests:**

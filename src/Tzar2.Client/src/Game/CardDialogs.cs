@@ -347,3 +347,77 @@ public partial class TradeDialog : CardDialog
         SetText(_load, Loads[_loadIndex] == 0 ? "full load" : Loads[_loadIndex].ToString(CultureInfo.InvariantCulture) + " per trip");
     }
 }
+
+/// <summary>
+/// Making an item in the Arabian magic workshop (order <c>build_item</c>; GAME-10 <c>CraftItem</c>) on the original's
+/// <c>D_BUILD</c> panel: the kind of item (its picture from <c>items.bmp</c>: bow, book, shield, sword, potion), BUILD; the
+/// gold to spend (more gold, a better item: "More gold increases item properties", STRINGS.INI <c>bu_amount</c>), CANCEL.
+/// The cells' places are measured on the panel; which picture shows which item and the power shown on the left are ours
+/// (⚠ UNVERIFIED).
+/// </summary>
+public partial class CraftDialog : CardDialog
+{
+    private readonly IReadOnlyList<(ushort Type, int Picture, string Name)> _items;
+    private readonly Func<ushort, int> _pricePerPower;
+    private readonly int _maxPower;
+    private readonly TextureRect _item;
+    private readonly TextureRect _gold;
+    private readonly TextureRect _power;
+    private int _index;
+    private int _strength = 1;
+
+    /// <summary>Creates the dialog.</summary>
+    /// <param name="ui">The UI assets.</param>
+    /// <param name="items">The kinds of item the workshop makes, with their pictures and names.</param>
+    /// <param name="pricePerPower">The gold one point of power costs for an item type.</param>
+    /// <param name="maxPower">The most power an item may have.</param>
+    public CraftDialog(UiAssets ui, IReadOnlyList<(ushort Type, int Picture, string Name)> items, Func<ushort, int> pricePerPower, int maxPower)
+        : base(ui, "d_build")
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        _items = items;
+        _pricePerPower = pricePerPower;
+        _maxPower = Math.Max(1, maxPower);
+        _item = Cell(new Rect2I(73, 11, 42, 42), s =>
+        {
+            _index = Wrap(_index + s, Math.Max(1, _items.Count));
+            Refresh();
+        });
+        Button(new Vector2I(127, 11), "build", () =>
+        {
+            if (_items.Count > 0)
+            {
+                Craft?.Invoke(_items[_index].Type, Gold);
+            }
+        });
+        var coins = Cell(new Rect2I(73, 67, 42, 42), s =>
+        {
+            _strength = Math.Clamp(_strength + s, 1, _maxPower);
+            Refresh();
+        });
+        coins.Texture = Ui.Texture("art/screens/d_build/amount.t2img");
+        _gold = Label(new Rect2I(73, 67, 42, 42));
+        Button(new Vector2I(127, 67), "cancel", Close);
+        _power = Label(new Rect2I(6, 40, 60, 42));
+        Refresh();
+    }
+
+    /// <summary>BUILD: the item type and the gold to spend.</summary>
+    public event Action<ushort, int>? Craft;
+
+    private int Gold => _items.Count == 0 ? 0 : _strength * _pricePerPower(_items[_index].Type);
+
+    private void Refresh()
+    {
+        if (_items.Count == 0)
+        {
+            return;
+        }
+
+        (ushort _, int picture, string name) = _items[_index];
+        _item.Texture = Ui.Region("art/screens/d_build/items.t2img", new Rect2I(0, picture * 48, 48, 48));
+        _item.TooltipText = name;
+        SetText(_gold, Gold.ToString(CultureInfo.InvariantCulture), UiAssets.TitleFont);
+        SetText(_power, "power " + _strength.ToString(CultureInfo.InvariantCulture));
+    }
+}

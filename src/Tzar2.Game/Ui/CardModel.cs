@@ -92,6 +92,9 @@ public enum CardAction
     /// <summary>A trade route of the selected traders between a near and a far market (its dialog, then a click on the far one).</summary>
     Trade,
 
+    /// <summary>The magic workshop makes an item (order <c>build_item</c>): its dialog picks the kind and the gold.</summary>
+    Craft,
+
     /// <summary>Hire tavern offer <see cref="CardButton.Argument"/> (its slot): a mercenary group or a hero (Tzar2 fills the
     /// original's empty <c>tavern_merc</c> / <c>tavern_hero</c> menus with the offers of the period).</summary>
     Hire,
@@ -221,6 +224,9 @@ public enum CardDialogKind
 
     /// <summary>A trader's route (then a click on the far market).</summary>
     Trade,
+
+    /// <summary>Making an item in a magic workshop: its kind and the gold to spend (D_BUILD).</summary>
+    Craft,
 }
 
 /// <summary>What pressing a card button asks of the client; the card's own menus and pages are already updated.</summary>

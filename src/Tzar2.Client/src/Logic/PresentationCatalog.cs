@@ -333,6 +333,7 @@ public sealed class PresentationCatalog : ICardSource
             "gamble" => (CardAction.Gamble, string.Empty),
             "trade1" => (CardAction.Exchange, string.Empty),
             "trade" => (CardAction.Trade, string.Empty),
+            "build_item" => (CardAction.Craft, string.Empty),
             _ => (CardAction.Unsupported, action),
         };
     }
