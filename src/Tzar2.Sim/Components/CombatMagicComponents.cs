@@ -93,7 +93,8 @@ public enum ErrandKind : byte
 
 /// <summary>
 /// A spy's disguise (MAG-012, ADR 0184): other kingdoms see a unit of <see cref="TypeId"/> owned by <see cref="Owner"/>,
-/// and that kingdom's units do not pick it as a target. It keeps its own abilities and stats.
+/// and that kingdom's units do not pick it as a target. It keeps its own abilities and stats. Its meter
+/// (<see cref="Mastery"/>, MAG-021) grows while it keeps the look.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Disguise : IComponent
@@ -104,8 +105,11 @@ public struct Disguise : IComponent
     /// <summary>The kingdom it seems to belong to.</summary>
     public byte Owner;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved;
+    /// <summary>
+    /// The disguise meter by the portrait, 0-100 (MAG-021): it fills in <c>DisguiseMasteryMs</c>, and another kingdom's
+    /// spy must come within (100 − meter) % of its detector radius to unmask it.
+    /// </summary>
+    public byte Mastery;
 }
 
 /// <summary>A unit's errand (ADRs 0093-0095).</summary>

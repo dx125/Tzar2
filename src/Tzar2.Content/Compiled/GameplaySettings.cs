@@ -134,6 +134,12 @@ public sealed record GameplaySettings
     /// </summary>
     public int RepairerFalloffBasisPoints { get; init; } = 2_500;
 
+    /// <summary>
+    /// How long a spy keeps one look until its disguise meter is full, 0 → 100 (MAG-021). The radius in which another
+    /// kingdom's spy unmasks it shrinks as the meter grows (⚠ UNVERIFIED: batch J).
+    /// </summary>
+    public int DisguiseMasteryMs { get; init; } = 120_000;
+
     internal void Validate(int resourceTypes)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(ResearchRefundBasisPoints);
@@ -169,6 +175,8 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairCostBasisPoints, 100_000);
         ArgumentOutOfRangeException.ThrowIfNegative(RepairerFalloffBasisPoints);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairerFalloffBasisPoints, 10_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(DisguiseMasteryMs, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(DisguiseMasteryMs, 3_600_000);
 
         if (GroupMoveSpeed > GroupMoveSpeed.Own)
         {

@@ -189,8 +189,12 @@ internal static class CombatMagicCommands
             return;
         }
 
+        // A new look starts the meter again; the same look again keeps it (MAG-021).
         Identity look = world.Identities.Get(target);
-        world.Disguises.Set(spy, new Disguise { TypeId = look.TypeId, Owner = look.Owner });
+        byte mastery = world.Disguises.IndexOf(spy) is >= 0 and var d && world.Disguises.At(d) is var old && old.TypeId == look.TypeId && old.Owner == look.Owner
+            ? old.Mastery
+            : (byte)0;
+        world.Disguises.Set(spy, new Disguise { TypeId = look.TypeId, Owner = look.Owner, Mastery = mastery });
         world.Events.Emit(new SimEvent(SimEventKind.Impersonated, owner, spy, target.Index, look.Owner, look.TypeId));
     }
 

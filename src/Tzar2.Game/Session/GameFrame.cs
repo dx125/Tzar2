@@ -197,6 +197,9 @@ public struct FrameEntity
     /// </summary>
     public int LooksLike;
 
+    /// <summary>For its own kingdom, a disguised spy's meter 0-100 (MAG-021), or -1.</summary>
+    public int DisguiseMastery;
+
     /// <summary>Upgrades the entity has or has queued (bit = upgrade id; towers, walls, gates, galleons).</summary>
     public uint Upgrades;
 

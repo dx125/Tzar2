@@ -116,7 +116,8 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Last-seen refresh | every 4 ticks per structure (a glimpse shorter than that may be missed) | YAML `world.memoryRefreshTicks` | — | engine bound |
 | Construction sites reveal | like the finished building | code (`Visibility`) | — | observation |
 | Detector radius (spies, ninjas) | 5 tiles | YAML `^class.spy/ninja.Detector` | — | detection captures (stream E cloaking) |
-| Unmasking a disguised spy | another kingdom's spy within its detector radius, at once | `ErrandSystem.Unmask` | — | batch J: `spy-unmask`, `spy-mastery` (MAG-012, MAG-021) |
+| Unmasking a disguised spy | another kingdom's spy within (100 − meter) % of its detector radius, at once; never with a full meter | `ErrandSystem.Unmask` | — | batch J: `spy-unmask`, `spy-mastery` (MAG-012, MAG-021) |
+| Disguise meter | 0 → 100 in 2 minutes in one look; a new look starts it again, the same look keeps it; drawn as a column at the portrait's right edge | YAML `gameplay.disguiseMasteryMs`, `Hud` | — | batch J: `spy-mastery` (the panel every 2 s) |
 | Stance change interval | 10 s per pair (anti flip-flop) | YAML `world.diplomacyChangeIntervalMs` | — | engine bound (owner decision welcome) |
 | Tribute | once per second, ≤ 100,000, no fee | YAML `world.tributeIntervalMs`, `maxTributeAmount` | — | tribute dialog captures (fee?) |
 | Stockpile cap | 10⁹ (overflow guard of world-system incomes) | YAML `world.stockpileCap` | — | engine bound |
@@ -238,7 +239,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Murder, souls | heroes and `KillImmune` types are immune | `MagicSystem` | UNK-26 |
 | Conversion | hit points in proportion; level, items and name carry over; a new order refunds it, death does not (the price is lost) | `CombatMagicCommands`, `World` | — |
 | Bribe | not peasants, crusaders or heroes | `CombatMagicCommands` | — |
-| Not implemented | `item_berserk`, Tournaments, ships entering harbors, the spy's disguise meter (MAG-021) | — | — |
+| Not implemented | `item_berserk`, Tournaments, ships entering harbors | — | — |
 
 # Naval: REQ-PATH-09, GAME-02/03/07/09 ships (ADRs 0140-0145)
 

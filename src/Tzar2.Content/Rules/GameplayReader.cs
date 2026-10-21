@@ -16,7 +16,7 @@ internal sealed class GameplayReader
         "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
         "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "wallContinueRadiusTiles", "maxWallSegments",
         "gateOpenReachPx", "manaRegenPerMinute", "gateCloseReachPx", "gateChangeIntervalMs", "maxGateChangesPerTick",
-        "repairCostPercent", "repairerFalloffPercent", "idleWorkAfterMs", "idleWorkRadiusTiles",
+        "repairCostPercent", "repairerFalloffPercent", "idleWorkAfterMs", "idleWorkRadiusTiles", "disguiseMasteryMs",
     ];
 
     private readonly RulesetCompiler.SectionSet _settings;
@@ -97,6 +97,7 @@ internal sealed class GameplayReader
             MaxGateChangesPerTick = Range("maxGateChangesPerTick", d.MaxGateChangesPerTick, 1, 4096),
             RepairCostBasisPoints = Range("repairCostPercent", d.RepairCostBasisPoints / 100, 0, 1000) * 100,
             RepairerFalloffBasisPoints = Range("repairerFalloffPercent", d.RepairerFalloffBasisPoints / 100, 0, 100) * 100,
+            DisguiseMasteryMs = Range("disguiseMasteryMs", d.DisguiseMasteryMs, 1, 3_600_000),
         };
     }
 

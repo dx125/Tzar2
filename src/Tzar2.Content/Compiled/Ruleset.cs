@@ -733,7 +733,7 @@ public sealed partial class Ruleset
             .Add(g.BurnThresholdBasisPoints).Add(g.BurnDamagePerMinute).Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
             .Add(g.GateOpenReachUnits).Add(g.GateCloseReachUnits).Add(g.GateChangeIntervalMs).Add(g.MaxGateChangesPerTick)
             .Add(g.RepairCostBasisPoints).Add(g.RepairerFalloffBasisPoints).Add(g.IdleWorkAfterMs).Add(g.IdleWorkRadiusTiles)
-            .Add(g.StartingResources.Length);
+            .Add(g.DisguiseMasteryMs).Add(g.StartingResources.Length);
         foreach (StartingResources level in g.StartingResources)
         {
             hasher.Add(Encoding.UTF8.GetBytes(level.Key)).AddSpan<int>(level.Amounts.AsSpan());

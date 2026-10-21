@@ -73,7 +73,7 @@ play-test.
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
      (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
      both. **Operator:** `pwsh tools/capture/run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch J` (~21 min, hands off).
-   * The spy's disguise meter (MAG-021, the owner's description), with placeholder rates until batch J.
+   * The spy's disguise meter (MAG-021, the owner's description) is done, with placeholder rates until batch J.
 4. **Maintainer:** units never stand on one another (WORLD-015).
    * What the probes of 2026-10-21 measured:
      * At rest, units keep 16 px apart.
@@ -113,6 +113,13 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — The spy's disguise meter (MAG-021, ADR 0184 amendment 2).**
+  * The meter fills from 0 to 100 in 2 minutes in one look; a new look starts it again.
+  * Another kingdom's spy must come within (100 − meter) % of its detector radius to unmask the spy, so a full meter
+    is never seen through.
+  * Its owner sees the meter as a column beside the portrait.
+  * The rates are placeholders until batch J. Only the ruleset hash changes.
 
 * **2026-10-21 — Batch J prepared: repairs and spies.** The owner asked for scenarios for the two values the data
   lacks and added two facts:

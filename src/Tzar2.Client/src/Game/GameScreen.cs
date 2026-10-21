@@ -1868,6 +1868,7 @@ public partial class GameScreen : Node
             StripIsHealth = true,
             Player = e.Owner < 8 ? e.Owner : -1,
             InsideHealth = insideHealth,
+            Disguise = e.DisguiseMastery >= 0 ? e.DisguiseMastery / 100f : -1,
         };
     }
 

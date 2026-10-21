@@ -107,7 +107,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 2 | 14 | 6 | 9 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 8 | 2 | 2 | 3 | 1 | 0 |
-| [Magic, religion and spies](magic.yaml) (MAG) | 21 | 14 | 4 | 1 | 1 | 0 | 1 |
+| [Magic, religion and spies](magic.yaml) (MAG) | 21 | 15 | 4 | 1 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 9 | 4 | 3 | 2 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 335 | 160 | 73 | 42 | 39 | 9 | 12 |
+| **All** | 335 | 161 | 73 | 42 | 38 | 9 | 12 |
 
 ## Not done yet
 
@@ -197,7 +197,6 @@ Missing and partial rules.
 ### Magic, religion and spies
 
 * **MAG-017** (partial): After all crusaders have died a full crusade needs some time; one preached earlier brings fewer crusaders for the same price. *Tzar2 refuses a crusade during the wait instead of bringing fewer crusaders.*
-* **MAG-021**: A disguised spy has a meter by its portrait, up to 100, that grows the longer it keeps one look; at 100 it can hardly be unmasked. *The owner's description adds "or trains". How fast the meter grows, whether a new look starts it again and how it weighs against the unmasking spy are for batch J (spy-mastery).* Work: STATUS work queue 3.
 
 ### Nature, gateways, day and weather
 
