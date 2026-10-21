@@ -36,6 +36,9 @@ public sealed class UiAssets : IDisposable
     /// <summary>Creates the cache over <paramref name="store"/>.</summary>
     public UiAssets(ContentStore store) => _store = store;
 
+    /// <summary>The numbers of key <paramref name="key"/> of IMAGES.INI entry <paramref name="entry"/> (a cursor's hotspot), or null.</summary>
+    public int[]? ImageInts(string entry, string key) => _store.Index.Find(entry)?.GetInts(key);
+
     /// <summary>An image as RGBA8, or null when missing.</summary>
     public Image? Image(string asset)
     {

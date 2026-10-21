@@ -254,6 +254,90 @@ public sealed class OrderTests
     }
 
     [Fact]
+    public void Right_click_on_an_own_unit_gathers_the_others_round_it_and_the_pointer_says_so()
+    {
+        // Play-test of 2026-10-20: a herd right-clicked on one of its cows walked on in formation instead.
+        EntityInfo[] herd = [SelectionTests.Unit(1, military: false), SelectionTests.Unit(2, military: false), SelectionTests.Unit(3, military: false)];
+        PlannedCommand follow = Assert.Single(OrderResolver.RightClick(herd, herd[1], 0, 0, KeyMods.None, Me));
+        Assert.Equal((CommandKind.Follow, SelectionTests.Id(2)), (follow.Kind, follow.Target));
+        Assert.Equal([SelectionTests.Id(1), SelectionTests.Id(3)], follow.Entities);
+        Assert.Equal(DefaultAction.Follow, OrderResolver.Hover(herd, herd[1], Me));
+        Assert.Equal(DefaultAction.Move, OrderResolver.Hover(herd, null, Me));
+        Assert.Equal(DefaultAction.Move, OrderResolver.Hover(herd, SelectionTests.Building(5), Me));
+        Assert.Equal(DefaultAction.None, OrderResolver.Hover([SelectionTests.Unit(1, owner: 1)], herd[1], Me));
+    }
+
+    [Fact]
+    public void Peasants_capture_enemy_buildings_soldiers_attack_them_and_items_are_picked_up()
+    {
+        EntityInfo peasant = SelectionTests.Unit(1, harvester: true) with { CanCapture = true };
+        EntityInfo soldier = SelectionTests.Unit(2) with { CanPickItems = true };
+        EntityInfo barracks = SelectionTests.Building(9, owner: 1) with { IsCapturable = true };
+        IReadOnlyList<PlannedCommand> c = OrderResolver.RightClick([peasant, soldier], barracks, 0, 0, KeyMods.None, Me);
+        Assert.Equal([(CommandKind.Attack, SelectionTests.Id(2)), (CommandKind.Capture, SelectionTests.Id(1))], c.Select(p => (p.Kind, p.Entities.Single())));
+        Assert.Equal(DefaultAction.Attack, OrderResolver.Hover([peasant, soldier], barracks, Me));
+        Assert.Equal(DefaultAction.Capture, OrderResolver.Hover([peasant], barracks, Me));
+
+        // Without the capture technology, or a site: peasants fight like the others.
+        Assert.Equal(DefaultAction.Attack, OrderResolver.ActionOf(peasant, barracks with { IsCapturable = false }, Me));
+        Assert.Equal(DefaultAction.Attack, OrderResolver.ActionOf(peasant, barracks with { UnderConstruction = true }, Me));
+
+        EntityInfo item = new(SelectionTests.Id(7), 30, 0xFF, EntityCategory.Other, false, 0, 0, 0, false, false, false, false, false, false, false, IsItem: true);
+        PlannedCommand[] pick = [.. OrderResolver.RightClick([peasant, soldier], item, 0, 0, KeyMods.None, Me)];
+        Assert.Equal([(CommandKind.PickItem, SelectionTests.Id(2)), (CommandKind.Move, SelectionTests.Id(1))], pick.Select(p => (p.Kind, p.Entities.Single())));
+        Assert.Equal(DefaultAction.PickItem, OrderResolver.Hover([peasant, soldier], item, Me));
+    }
+
+    [Fact]
+    public void With_the_rules_harvesters_gather_only_their_resources_and_units_board_holders_that_take_them()
+    {
+        Ruleset rules = HumanVsAiTests.SyntheticRules;
+        int holderType = -1, passenger = -1;
+        for (int t = 0; t < rules.EntityTypes.Count && holderType < 0; t++)
+        {
+            if (rules.EntityTypes[t].Traits.Holder is { Accepts.IsDefaultOrEmpty: false } h && rules.EntityTypes[t].HasFootprint)
+            {
+                (holderType, passenger) = (t, h.Accepts[0]);
+            }
+        }
+
+        Assert.True(holderType >= 0, "the synthetic rules have a holder building");
+        EntityInfo unit = SelectionTests.Unit(1, type: (ushort)passenger);
+        EntityInfo holder = SelectionTests.Building(5, type: (ushort)holderType);
+        PlannedCommand board = Assert.Single(OrderResolver.RightClick([unit], holder, 0, 0, KeyMods.None, Me, rules));
+        Assert.Equal((CommandKind.Board, SelectionTests.Id(5)), (board.Kind, board.Target));
+        Assert.Equal(DefaultAction.Move, OrderResolver.ActionOf(unit, holder with { UnderConstruction = true }, Me, rules));
+        Assert.Equal(DefaultAction.Move, OrderResolver.ActionOf(unit, holder, Me));
+
+        // A harvester that does not gather the node's resource walks there (a fishing boat at a tree).
+        int peasantType = rules.EntityTypeId("euro.peon"), treeType = -1, other = -1;
+        for (int t = 0; t < rules.EntityTypes.Count; t++)
+        {
+            if (rules.EntityTypes[t].Traits.ResourceNode is { } node && rules.EntityTypes[peasantType].Traits.Harvester!.CanGather(node.Resource))
+            {
+                treeType = t;
+                for (int h = 0; h < rules.EntityTypes.Count && other < 0; h++)
+                {
+                    if (rules.EntityTypes[h].Traits.Harvester is { } harvester && !harvester.CanGather(node.Resource))
+                    {
+                        other = h;
+                    }
+                }
+
+                if (other >= 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        Assert.True(treeType >= 0 && other >= 0, "a node one harvester gathers and another does not");
+        EntityInfo tree = SelectionTests.Tree(7) with { TypeId = (ushort)treeType };
+        Assert.Equal(DefaultAction.Harvest, OrderResolver.ActionOf(SelectionTests.Unit(1, type: (ushort)peasantType, harvester: true), tree, Me, rules));
+        Assert.Equal(DefaultAction.Move, OrderResolver.ActionOf(SelectionTests.Unit(2, type: (ushort)other, harvester: true), tree, Me, rules));
+    }
+
+    [Fact]
     public void Planned_commands_round_trip_into_a_command_list()
     {
         var list = new CommandList();

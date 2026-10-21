@@ -79,6 +79,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly List<uint> _shotGone = [];
     private readonly List<(SheetRef Sheet, int X, int Y, long StartMs)> _bursts = [];
     private long _timeMs;
+    private (int X, int Y, uint Target, long StartMs)? _order;
     private bool _lightsValid;
     private ImageTexture? _lightPatternTexture;
 
@@ -143,6 +144,16 @@ public sealed class WorldRenderer : IDisposable
 
     /// <summary>Instances drawn in the last frame.</summary>
     public int DrawnSprites => _ground.Count + _objects.Count;
+
+    /// <summary>How long the marks of an order's target flash (three blinks).</summary>
+    public const int ConfirmMs = 720;
+
+    /// <summary>
+    /// Confirms an order the player gave: on <paramref name="target"/> its marks flash; on the ground (no target) the
+    /// original's red cross turns and shrinks at (<paramref name="x"/>, <paramref name="y"/>) (world units). Game time:
+    /// it waits with the pause.
+    /// </summary>
+    public void ConfirmOrder(int x, int y, EntityId target) => _order = (x, y, target.Value, _timeMs);
 
     /// <summary>Draws <paramref name="frame"/>.</summary>
     public void Render(
@@ -237,6 +248,7 @@ public sealed class WorldRenderer : IDisposable
         }
 
         DrawProjectiles(frame, fresh, alpha, cull);
+        DrawOrder(frame, localPlayer);
         _ground.Commit();
         _translucent.Commit();
         _glow.Commit();
@@ -622,6 +634,60 @@ public sealed class WorldRenderer : IDisposable
                 }
             }
         }
+    }
+
+    // The confirmation of the last order: the target's marks blink three times, or the red cross plays where the ground
+    // was clicked (the original's anims\cursor; ⚠ the blink of a target is ours: the original's is not captured).
+    private void DrawOrder(GameFrame frame, byte localPlayer)
+    {
+        if (_order is not { } order)
+        {
+            return;
+        }
+
+        long age = _timeMs - order.StartMs;
+        if (order.Target != 0)
+        {
+            if (age >= ConfirmMs)
+            {
+                _order = null;
+                return;
+            }
+
+            if ((age / (ConfirmMs / 6)) % 2 != 0)
+            {
+                return;
+            }
+
+            ReadOnlySpan<FrameEntity> entities = frame.Entities;
+            foreach (Pickable p in _pickables)
+            {
+                ref readonly FrameEntity e = ref entities[p.Index];
+                if (e.Id.Value != order.Target)
+                {
+                    continue;
+                }
+
+                EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
+                Rect2 r = def.HasFootprint && e.TileX >= 0
+                    ? new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, def.FootprintWidth) * TilePixels, Math.Max(1, def.FootprintHeight) * TilePixels)
+                    : p.Rect;
+                Color mark = e.Owner == localPlayer ? new Color(0.25f, 1f, 0.25f) : e.Owner >= 8 ? new Color(1f, 1f, 0.4f) : new Color(1f, 0.3f, 0.25f);
+                Corners(_marksOver, r.Grow(2), mark);
+                return;
+            }
+
+            return;
+        }
+
+        if (_bank.Get(EffectImages.OrderCross) is not { } cross || age >= cross.Animation.CycleMs)
+        {
+            _order = null;
+            return;
+        }
+
+        var at = new Vector2I(order.X / UnitsPerPixel, order.Y / UnitsPerPixel) - cross.Anchor;
+        Add(_ground, cross, at, 0, cross.Animation.FrameAt(Math.Max(0, age)), -1, (uint)(order.Y / UnitsPerPixel + 4096) << 6, shadowOnly: false);
     }
 
     private void DrawGhost(Ghost ghost, byte localPlayer)

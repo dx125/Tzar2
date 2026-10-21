@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (the tavern and trade dialogs)
+* **Last updated:** 2026-10-20 (third play-test: right-click actions, pointers, order marks, pause)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -53,33 +53,45 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
+Items 1 and 2 are left from the owner's play-tests (2026-10-20; log below).
 
-1. **Maintainer:** the rest of the command card: the Magic Workshop's crafting (`build_item`: which item, how much
+1. **Maintainer:** the rest of the third play-test: cross-civilization help on sites, a production queue without a
+   limit that mixes items, loads that appear at once (milk trickles), the next tree near the drop-off, units leaving a
+   building around it on free ground with a way out, idle peasants finding work; the queue counts on the order buttons
+   and the hourglass TIME stat, upgrades in the same place, long names, cost tooltips.
+2. **Maintainer:** the rest of the command card: the Magic Workshop's crafting (`build_item`: which item, how much
    gold), the holders' list of units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and
    AI-mode orders need the sim first.
-2. **Operator:** a third play-test (`tools/play/play.ps1`) once the second one's fixes are merged (log below).
-3. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+3. **Operator:** a fourth play-test (`tools/play/play.ps1`) once the third one's fixes are merged (log below).
+4. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-4. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+5. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
    more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
-5. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+6. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
-6. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+7. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-7. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
+8. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
    solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
    diagonal rocks) to reach 19/19.
-8. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+9. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
    (Russian translations, never committed) and find a community map corpus.
-9. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-10. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+10. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+11. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — Third play-test by the owner: what a right click does, and how it shows.** ADR 0179: each selected unit
+  does its default action on what is clicked. Peasants capture enemy buildings (manual ch. 5 § 2.3), units board own
+  holders that take them, pick up items, and follow an own unit (a herd gathers round the clicked cow); harvesters gather
+  only resources they can. The pointer shows the selection's strongest action from the same rules (the hand only to
+  capture or pick up; it showed over everything). Every original pointer clicks with its IMAGES.INI `cs_*` hotspot (UNK-40
+  resolved for them). A move plays the original's red cross (`anims\cursor`) where the ground was clicked; an order on an
+  object blinks its marks. The pause holds the sounds that are playing and starts no work sounds (a chopping sound kept
+  playing). The rest of the play-test is work-queue item 1.
 * **2026-10-20 — The AI gathers and marches to reachable ground.** The second play-test's log had 270 unreachable
   goals: the AI's gather point (7 tiles from the town towards the map centre) and its waves' move-advance goals (a
   building's centre) often lay in a building, a forest or water. Both now snap to the nearest walkable tile of the

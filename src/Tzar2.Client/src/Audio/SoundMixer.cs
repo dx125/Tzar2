@@ -46,6 +46,7 @@ public partial class SoundMixer : Node
     private readonly int[] _priorities = new int[MaxVoices];
     private readonly Random _random = new(1234);
     private readonly bool[] _enabled = [true, true, true, true];
+    private bool _paused;
     private ContentStore? _store;
     private PresentationCatalog? _catalog;
 
@@ -93,6 +94,36 @@ public partial class SoundMixer : Node
 
     /// <summary>Enables or disables a category.</summary>
     public void SetEnabled(SoundCategory category, bool enabled) => _enabled[(int)category] = enabled;
+
+    /// <summary>
+    /// Holds (true) or resumes the sounds that are playing: the game's pause. New sounds still play (orders and
+    /// selections answer while paused); held voices are not reused until they resume.
+    /// </summary>
+    public void SetPaused(bool paused)
+    {
+        if (paused == _paused)
+        {
+            return;
+        }
+
+        _paused = paused;
+        foreach (AudioStreamPlayer voice in _voices)
+        {
+            if (voice is null)
+            {
+                continue;
+            }
+
+            if (paused && voice.Playing)
+            {
+                voice.StreamPaused = true;
+            }
+            else if (!paused && voice.StreamPaused)
+            {
+                voice.StreamPaused = false;
+            }
+        }
+    }
 
     /// <inheritdoc/>
     public override void _Ready()
@@ -155,7 +186,7 @@ public partial class SoundMixer : Node
         int slot = -1;
         for (int i = 0; i < _voices.Length && slot < 0; i++)
         {
-            if (!_voices[i].Playing)
+            if (!_voices[i].Playing && !_voices[i].StreamPaused)
             {
                 slot = i;
             }
@@ -181,6 +212,7 @@ public partial class SoundMixer : Node
         }
 
         AudioStreamPlayer voice = _voices[slot];
+        voice.StreamPaused = false;
         voice.Stream = stream;
         voice.VolumeDb = Mathf.LinearToDb(Math.Clamp(1f - (distance * 0.6f), 0.05f, 1f));
         voice.Play();

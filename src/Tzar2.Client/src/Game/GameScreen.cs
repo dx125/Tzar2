@@ -428,7 +428,9 @@ public partial class GameScreen : Node
         DrawBox();
         UpdateHud(frame, phase);
         UpdateCursor();
-        _workSoundBudget = Settings.NatureSounds ? 2 : 0;
+        // The pause holds the sounds that are playing and starts no work sounds (play-test of 2026-10-20).
+        _mixer?.SetPaused(paused);
+        _workSoundBudget = Settings.NatureSounds && !paused ? 2 : 0;
 
         // The sim's weather (GAME-16, ADR 0105); the setting only hides the overlay.
         Rain = ForceRain || (Settings.Weather && frame.Weather == Tzar2.Content.Compiled.WeatherKind.Rain);
@@ -652,7 +654,17 @@ public partial class GameScreen : Node
             t.ResourceNode is not null,
             e.ConstructionPermille >= 0,
             def.IsMobile,
-            t.IsRepairable);
+            t.IsRepairable,
+            t.IsCapturer,
+            t.Capturable is { } capture && (capture.RequiredTechnology < 0 || Researched(capture.RequiredTechnology)),
+            t.InventorySlots > 0,
+            t.Item is not null);
+    }
+
+    private bool Researched(int technology)
+    {
+        byte me = _session.LocalPlayer;
+        return _frame is { } f && me < f.Players.Length && f.Players[me].HasTechnology(technology);
     }
 
     private List<EntityInfo> SelectedInfos()
@@ -748,7 +760,7 @@ public partial class GameScreen : Node
                 if (_mode != OrderMode.None)
                 {
                     (int x, int y) = ToWorld(e.Position);
-                    Send(OrderResolver.WithMode(_mode, SelectedInfos(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument));
+                    SendAndConfirm(OrderResolver.WithMode(_mode, SelectedInfos(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument), x, y);
                     if ((mods & KeyMods.Shift) == 0)
                     {
                         _mode = OrderMode.None;
@@ -847,7 +859,7 @@ public partial class GameScreen : Node
         }
 
         (int x, int y) = ToWorld(position);
-        Send(OrderResolver.RightClick(SelectedInfos(), PickAt(position), x, y, mods, _session.LocalPlayer));
+        SendAndConfirm(OrderResolver.RightClick(SelectedInfos(), PickAt(position), x, y, mods, _session.LocalPlayer, _rules), x, y);
     }
 
     // Drag scrolling: the map follows the pointer while the right (or middle) button is held, after a few pixels of
@@ -879,6 +891,29 @@ public partial class GameScreen : Node
             _pan = _grabPan - (Vector2I)moved.Round();
             ClampPan();
         }
+    }
+
+    // Sends the orders of a click in the world and confirms them where they go: the target's marks flash, or the
+    // original's red cross plays on the clicked ground (play-test of 2026-10-20).
+    private void SendAndConfirm(IReadOnlyList<PlannedCommand> orders, int x, int y)
+    {
+        if (orders.Count == 0)
+        {
+            return;
+        }
+
+        Send(orders);
+        EntityId target = EntityId.None;
+        foreach (PlannedCommand c in orders)
+        {
+            if (c.Target != EntityId.None)
+            {
+                target = c.Target;
+                break;
+            }
+        }
+
+        _world?.ConfirmOrder(x, y, target);
     }
 
     private void Send(IReadOnlyList<PlannedCommand> orders)
@@ -1224,7 +1259,7 @@ public partial class GameScreen : Node
         int x = (int)(share.X * _world.MapWidth * 32 * WorldRenderer.UnitsPerPixel), y = (int)(share.Y * _world.MapHeight * 32 * WorldRenderer.UnitsPerPixel);
         if (right)
         {
-            Send(OrderResolver.RightClick(SelectedInfos(), null, x, y, mods, _session.LocalPlayer));
+            SendAndConfirm(OrderResolver.RightClick(SelectedInfos(), null, x, y, mods, _session.LocalPlayer, _rules), x, y);
         }
         else
         {
@@ -2488,57 +2523,41 @@ public partial class GameScreen : Node
             }
             else if (_selection.IsOwn && PickAt(_mouse) is { } hover)
             {
-                name = HoverCursor(hover, SelectedInfos());
+                name = HoverCursor(hover, SelectedInfos(), name);
             }
         }
 
         CursorCache.Apply(_ui, name);
     }
 
-    // The cursor of the right click's default action on what the pointer is over (OrderResolver.RightClick): attack for
-    // enemies (armed units only), the tool of the resource for harvesters (pickaxe, saw, the original's shovel over
-    // fields; a cow is milked by hand), the repair hammer over own sites and damaged buildings for builders.
-    private string HoverCursor(EntityInfo hover, List<EntityInfo> selection)
+    // The cursor of the right click's default action on what the pointer is over (OrderResolver.Hover, the same rules the
+    // click follows): the sword over enemies, the hand over buildings to capture and items to pick up, the resource's
+    // tool for harvesters (saw, pickaxe, the original's harvest cursor over fields, cows and fish), the hammer over own
+    // sites and damaged objects for builders, the move cursor over holders to board and units to follow; elsewhere the
+    // pointer (play-test of 2026-10-20: the hand showed over everything).
+    private string HoverCursor(EntityInfo hover, List<EntityInfo> selection, string pointer)
     {
-        byte me = _session.LocalPlayer;
-        bool armed = false, harvesters = false, builders = false;
-        foreach (EntityInfo e in selection)
+        switch (OrderResolver.Hover(selection, hover, _session.LocalPlayer, _rules))
         {
-            if (e.Owner == me && e.IsMobile)
-            {
-                armed |= e.IsArmed;
-                harvesters |= e.CanHarvest;
-                builders |= e.CanBuild;
-            }
-        }
-
-        if (hover.Owner != me && hover.Category is EntityCategory.Unit or EntityCategory.Building && !hover.IsResourceNode)
-        {
-            return armed ? "s_attack" : "s_hand";
-        }
-
-        if (hover.IsResourceNode && harvesters)
-        {
-            if (hover.Category == EntityCategory.Unit)
-            {
+            case DefaultAction.Attack:
+                return "s_attack";
+            case DefaultAction.Capture or DefaultAction.PickItem:
                 return "s_hand";
-            }
-
-            string resource = _rules.EntityTypes[hover.TypeId].Traits.ResourceNode is { } node && node.Resource < _rules.ResourceTypes.Count ? _rules.ResourceTypes[node.Resource] : string.Empty;
-            return resource switch
-            {
-                "wood" => OwnCursors.Saw,
-                "gold" or "stone" or "iron" => OwnCursors.Mine,
-                _ => "s_harvest",
-            };
+            case DefaultAction.Build or DefaultAction.Repair:
+                return "s_repair";
+            case DefaultAction.Board or DefaultAction.Follow:
+                return "s_move";
+            case DefaultAction.Harvest:
+                string resource = _rules.EntityTypes[hover.TypeId].Traits.ResourceNode is { } node && node.Resource < _rules.ResourceTypes.Count ? _rules.ResourceTypes[node.Resource] : string.Empty;
+                return resource switch
+                {
+                    "wood" => OwnCursors.Saw,
+                    "gold" or "stone" or "iron" => OwnCursors.Mine,
+                    _ => "s_harvest",
+                };
+            default:
+                return pointer;
         }
-
-        if (hover.Owner == me && builders && (hover.UnderConstruction || OrderResolver.NeedsRepair(hover)))
-        {
-            return "s_repair";
-        }
-
-        return "s_hand";
     }
 
     private void Screenshot()
