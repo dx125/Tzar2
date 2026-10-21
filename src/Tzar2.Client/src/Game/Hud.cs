@@ -22,9 +22,9 @@ public sealed class SelectionInfo
     public IReadOnlyList<(string Icon, string Value)> Stats { get; init; } = [];
 
     /// <summary>
-    /// Icons in the info area (multi-selection by type, or the production queue's head) with an optional progress
-    /// 0-1000 under them and a count on them: portraits of ICONS.BMP, or with <c>Order</c> an order button of
-    /// ORDERS/BUTTONS.BMP (a technology or upgrade in progress).
+    /// Icons in the info area (a multi-selection by type; a queue shows as counts on the card's buttons, ADR 0180) with
+    /// an optional progress 0-1000 under them and a count on them: portraits of ICONS.BMP, or with <c>Order</c> an order
+    /// button of ORDERS/BUTTONS.BMP.
     /// </summary>
     public IReadOnlyList<StripItem> Strip { get; init; } = [];
 
@@ -45,12 +45,53 @@ public sealed class SelectionInfo
 /// <param name="Count">How many it stands for (selected units of the type, units left to make), shown when above 1.</param>
 public readonly record struct StripItem(int Icon, int Progress, bool Order, int Count = 0);
 
+/// <summary>One item of a card button's price in its tooltip.</summary>
+/// <param name="Icon">The icon asset (a resource's, or the hourglass).</param>
+/// <param name="Value">The amount or the time.</param>
+/// <param name="Short">Whether the kingdom has less of the resource than this (drawn red).</param>
+public readonly record struct PriceItem(string Icon, string Value, bool Short = false);
+
 /// <summary>A command-card slot.</summary>
 /// <param name="Button">The MENU.INI button.</param>
 /// <param name="Enabled">Whether it can be used now.</param>
 /// <param name="Active">Whether its order is pending (highlighted).</param>
-/// <param name="Detail">What the tooltip adds: the cost, and why the button is greyed out.</param>
-public readonly record struct CardSlot(CardButton Button, bool Enabled, bool Active, string Detail = "");
+/// <param name="Detail">What the tooltip adds in words: why the button is greyed out, a mana cost, a page.</param>
+/// <param name="Count">How many of its item the selected buildings have queued, shown on the button (ADR 0180).</param>
+/// <param name="Price">The tooltip's price: resource and time icons with their values.</param>
+/// <param name="Description">What the order does (STRINGS.INI <c>orders_add</c>), or empty.</param>
+public readonly record struct CardSlot(CardButton Button, bool Enabled, bool Active, string Detail = "", int Count = 0, IReadOnlyList<PriceItem>? Price = null, string Description = "")
+{
+    /// <summary>Equality by what is shown (the price rows by value).</summary>
+    public bool Equals(CardSlot other)
+        => Button == other.Button && Enabled == other.Enabled && Active == other.Active && Detail == other.Detail && Count == other.Count
+            && Description == other.Description && SamePrice(Price, other.Price);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => HashCode.Combine(Button, Enabled, Active, Detail, Count, Description);
+
+    private static bool SamePrice(IReadOnlyList<PriceItem>? a, IReadOnlyList<PriceItem>? b)
+    {
+        if (a is null || b is null)
+        {
+            return (a?.Count ?? 0) == (b?.Count ?? 0);
+        }
+
+        if (a.Count != b.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < a.Count; i++)
+        {
+            if (a[i] != b[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
 
 /// <summary>
 /// The authentic desktop HUD (REQ-UI-01) on a <c>CanvasLayer</c>: the <c>S_VIEW</c> screen bitmap of the
@@ -69,6 +110,7 @@ public partial class Hud : Control
     private readonly TextureRect[] _cardIcons = new TextureRect[HudLayout.CardSlots];
     private readonly ColorRect[] _cardShade = new ColorRect[HudLayout.CardSlots];
     private readonly TextureRect[] _cardFrames = new TextureRect[HudLayout.CardSlots];
+    private readonly TextureRect[] _cardCounts = new TextureRect[HudLayout.CardSlots];
     private readonly TextureRect[] _stats = new TextureRect[5];
     private readonly TextureRect[] _statValues = new TextureRect[5];
     private readonly List<TextureRect> _strip = [];
@@ -78,17 +120,20 @@ public partial class Hud : Control
     private readonly TextureRect[] _messages = new TextureRect[6];
     private readonly TextureRect _portrait;
     private readonly ColorRect _portraitBar;
-    private readonly TextureRect _name;
-    private readonly TextureRect _detail;
+    private readonly Control _nameBox;
+    private string? _nameShown;
     private readonly TextureRect _clock;
     private readonly TextureRect _minimap;
     private readonly MinimapFrame _minimapFrame;
-    private readonly TextureRect _tooltip;
+    private readonly Control _tooltip;
     private readonly TextureRect _status;
     private CardSlot?[] _card = new CardSlot?[HudLayout.CardSlots];
     private CardDialog? _dialog;
     private int _clockFrame = -1;
     private int _hovered = -1;
+    private double _hoveredSince;
+    private double _tooltipGone = double.NegativeInfinity;
+    private double _seconds;
 
     /// <summary>Creates the HUD for <paramref name="layout"/>.</summary>
     public Hud(UiAssets ui, HudLayout layout, PresentationCatalog catalog)
@@ -123,8 +168,7 @@ public partial class Hud : Control
 
         _portrait = Add(new TextureRect { Position = layout.Portrait.Position, Size = layout.Portrait.Size });
         _portraitBar = Add(new ColorRect { Position = layout.Portrait.Position + new Vector2I(0, 50), Size = new Vector2(48, 3), Color = Colors.Green, Visible = false });
-        _name = Add(new TextureRect { Position = new Vector2(layout.Portrait.Position.X - 2, layout.Portrait.Position.Y + 57) });
-        _detail = Add(new TextureRect { Position = new Vector2(layout.Portrait.Position.X - 2, layout.Portrait.Position.Y + 73) });
+        _nameBox = Add(new Control { Position = new Vector2(layout.Portrait.Position.X - 2, layout.Portrait.Position.Y + 57), MouseFilter = MouseFilterEnum.Ignore });
         for (int i = 0; i < _stats.Length; i++)
         {
             Rect2I r = layout.StatRow(i);
@@ -139,17 +183,8 @@ public partial class Hud : Control
             _cardIcons[i] = Add(new TextureRect { Position = r.Position, Size = r.Size, MouseFilter = MouseFilterEnum.Stop });
             _cardShade[i] = Add(new ColorRect { Position = r.Position, Size = r.Size, Color = new Color(0, 0, 0, 0.55f), MouseFilter = MouseFilterEnum.Ignore, Visible = false });
             _cardFrames[i] = Add(new TextureRect { Position = r.Position - new Vector2I(3, 3), Texture = ui.Texture("art/orders/frame.t2img"), MouseFilter = MouseFilterEnum.Ignore, Visible = false });
+            _cardCounts[i] = Add(new TextureRect { Position = r.Position, MouseFilter = MouseFilterEnum.Ignore });
             _cardIcons[i].GuiInput += e => CardInput(slot, e);
-            _cardIcons[i].MouseEntered += () =>
-            {
-                _hovered = slot;
-                ShowTooltip(slot);
-            };
-            _cardIcons[i].MouseExited += () =>
-            {
-                _hovered = -1;
-                _tooltip!.Texture = null;
-            };
         }
 
         for (int i = 0; i < _messages.Length; i++)
@@ -157,7 +192,7 @@ public partial class Hud : Control
             _messages[i] = Add(new TextureRect { Position = new Vector2(layout.View.Position.X + 8, layout.View.Position.Y + 8 + (i * 15)), MouseFilter = MouseFilterEnum.Ignore });
         }
 
-        _tooltip = Add(new TextureRect { Position = new Vector2(layout.CardSlot(0).Position.X, layout.PanelTop - 16), MouseFilter = MouseFilterEnum.Ignore });
+        _tooltip = Add(new Control { MouseFilter = MouseFilterEnum.Ignore, Visible = false });
         _status = Add(new TextureRect { Position = new Vector2(layout.View.End.X - 220, layout.View.Position.Y + 8), MouseFilter = MouseFilterEnum.Ignore });
     }
 
@@ -226,8 +261,7 @@ public partial class Hud : Control
             _portraitBar.Color = HealthColour(h.Health);
         }
 
-        _name.Texture = info is null ? null : _ui.Text(info.Name, UiAssets.BoldFont, new Color(1f, 0.92f, 0.65f));
-        _detail.Texture = info is null ? null : _ui.Text(info.Detail, UiAssets.SmallFont, Colors.White);
+        SetName(info);
         for (int i = 0; i < _stats.Length; i++)
         {
             bool has = info is not null && i < info.Stats.Count;
@@ -288,13 +322,14 @@ public partial class Hud : Control
             _cardIcons[i].Visible = card;
             _cardShade[i].Visible = card && _card[i] is { Enabled: false };
             _cardFrames[i].Visible = card && _card[i] is { Active: true };
+            _cardCounts[i].Visible = card;
         }
 
         if (dialog is not null)
         {
             dialog.Position = _layout.CardSlot(0).Position - CardDialog.FirstCell - new Vector2I(3, 3);
             AddChild(dialog);
-            _tooltip!.Texture = null;
+            HideTooltip();
         }
     }
 
@@ -314,10 +349,28 @@ public partial class Hud : Control
             _cardShade[i].Visible = _dialog is null && slot is { Enabled: false };
             _cardIcons[i].Modulate = slot is { Enabled: false } ? new Color(0.5f, 0.5f, 0.5f) : Colors.White;
             _cardFrames[i].Visible = _dialog is null && slot is { Active: true };
+
+            // How many of the button's item are queued, in its bottom-right corner (as the original's "8" on the
+            // castle's peasant; ADR 0180).
+            int count = slot?.Count ?? 0;
+            if (count != (before[i]?.Count ?? 0) || (count > 0 && _cardCounts[i].Texture is null))
+            {
+                ImageTexture? text = count > 0 ? _ui.Text(count.ToString(CultureInfo.InvariantCulture), UiAssets.BoldFont, Colors.White) : null;
+                _cardCounts[i].Texture = text;
+                if (text is not null)
+                {
+                    Rect2I r = _layout.CardSlot(i);
+                    _cardCounts[i].Position = r.Position + new Vector2(r.Size.X - text.GetWidth() - 2, r.Size.Y - text.GetHeight() - 1);
+                    _cardCounts[i].Size = text.GetSize();
+                }
+            }
+
+            _cardCounts[i].Visible = _dialog is null;
         }
 
-        // The tooltip of the slot under the pointer follows the card (resources change while it is shown).
-        if (_hovered >= 0 && !Equals(before[_hovered], _card[_hovered]))
+        // The tooltip of the slot under the pointer follows the card (resources change while it is shown); a slot that
+        // emptied takes it away.
+        if (_hovered >= 0 && _tooltip.Visible && !Equals(before[_hovered], _card[_hovered]))
         {
             ShowTooltip(_hovered);
         }
@@ -350,14 +403,263 @@ public partial class Hud : Control
         return -1;
     }
 
+    /// <summary>Time the pointer rests on a button before its tooltip shows (a sweep across the card shows none).</summary>
+    public const double TooltipDelay = 0.15;
+
+    /// <summary>For this long after a tooltip went away, the next button's tooltip shows at once.</summary>
+    public const double TooltipWarm = 0.4;
+
+    /// <summary>Widest a tooltip's text runs before it wraps.</summary>
+    public const int TooltipTextWidth = 300;
+
+    /// <inheritdoc/>
+    public override void _Process(double delta)
+    {
+        _seconds += delta;
+        UpdateTooltip();
+    }
+
+    // The tooltip follows the control the pointer is really over, every frame (third play-test: it must never stay
+    // behind): the card button under the pointer, no dialog over the card, the HUD shown. Leaving the button, a new
+    // selection, an emptied slot or a dialog takes it away at once.
+    private void UpdateTooltip()
+    {
+        int slot = -1;
+        if (IsVisibleInTree() && _dialog is null && GetViewport().GuiGetHoveredControl() is TextureRect hovered)
+        {
+            slot = Array.IndexOf(_cardIcons, hovered);
+            if (slot >= 0 && _card[slot] is null)
+            {
+                slot = -1;
+            }
+        }
+
+        if (slot != _hovered)
+        {
+            if (_tooltip.Visible)
+            {
+                _tooltipGone = _seconds;
+            }
+
+            HideTooltip();
+            _hovered = slot;
+            _hoveredSince = _seconds;
+        }
+
+        if (_hovered >= 0 && !_tooltip.Visible && (_seconds - _hoveredSince >= TooltipDelay || _seconds - _tooltipGone <= TooltipWarm))
+        {
+            ShowTooltip(_hovered);
+        }
+    }
+
+    // The tooltip of a card button: the name with the hotkey on a key cap, the price with the original's resource icons
+    // (red where the kingdom has too little) and the time, what the order does, and why it is greyed out ("Requires: ...",
+    // the original's own words). It sits above the card (beside it on a side panel), clear of the buttons, inside the
+    // screen.
     private void ShowTooltip(int slot)
     {
-        _tooltip.Texture = null;
-        if (_card[slot] is { } s)
+        HideTooltip();
+        if (_dialog is not null || _card[slot] is not { } s)
         {
-            string key = s.Button.Hotkey != '\0' ? $" ({s.Button.Hotkey})" : string.Empty;
-            string detail = s.Detail.Length > 0 ? ": " + s.Detail : s.Enabled ? string.Empty : " - not available yet";
-            _tooltip.Texture = _ui.Text(s.Button.Tooltip + key + detail, UiAssets.BoldFont, s.Enabled ? new Color(1f, 0.95f, 0.7f) : new Color(1f, 0.7f, 0.55f));
+            return;
+        }
+
+        const int Pad = 6;
+        var lines = new List<Control>();
+        var title = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        float titleWidth = 0, titleHeight = 0;
+        if (_ui.Text(s.Button.Tooltip, UiAssets.BoldFont, new Color(1f, 0.92f, 0.65f)) is { } name)
+        {
+            title.AddChild(new TextureRect { Texture = name, Size = name.GetSize(), MouseFilter = MouseFilterEnum.Ignore });
+            titleWidth = name.GetWidth();
+            titleHeight = name.GetHeight();
+        }
+
+        if (s.Button.Hotkey != '\0' && _ui.Text(s.Button.Hotkey.ToString(), UiAssets.BoldFont, Colors.White) is { } letter)
+        {
+            // The hotkey on a key cap after the name.
+            var cap = new Vector2(Math.Max(letter.GetWidth() + 8, 16), letter.GetHeight() + 2);
+            float x = titleWidth + 8;
+            title.AddChild(new ColorRect { Position = new Vector2(x, 0), Size = cap, Color = new Color(0.22f, 0.18f, 0.1f), MouseFilter = MouseFilterEnum.Ignore });
+            title.AddChild(new ReferenceRect { Position = new Vector2(x, 0), Size = cap, BorderColor = new Color(0.85f, 0.7f, 0.35f), BorderWidth = 1, EditorOnly = false, MouseFilter = MouseFilterEnum.Ignore });
+            title.AddChild(new TextureRect { Texture = letter, Position = new Vector2(x + ((cap.X - letter.GetWidth()) / 2), 1), Size = letter.GetSize(), MouseFilter = MouseFilterEnum.Ignore });
+            titleWidth = x + cap.X;
+            titleHeight = Math.Max(titleHeight, cap.Y);
+        }
+
+        title.Size = new Vector2(titleWidth, titleHeight);
+        lines.Add(title);
+
+        if (s.Price is { Count: > 0 } price)
+        {
+            var row = new Control { MouseFilter = MouseFilterEnum.Ignore };
+            float x = 0, height = 0;
+            foreach (PriceItem item in price)
+            {
+                if (_ui.Texture(item.Icon) is { } picture)
+                {
+                    row.AddChild(new TextureRect { Texture = picture, Position = new Vector2(x, 0), Size = picture.GetSize(), MouseFilter = MouseFilterEnum.Ignore });
+                    x += picture.GetWidth() + 2;
+                    height = Math.Max(height, picture.GetHeight());
+                }
+
+                Color colour = item.Short ? new Color(1f, 0.45f, 0.35f) : Colors.White;
+                if (_ui.Text(item.Value, UiAssets.SmallFont, colour) is { } number)
+                {
+                    row.AddChild(new TextureRect { Texture = number, Position = new Vector2(x, 4), Size = number.GetSize(), MouseFilter = MouseFilterEnum.Ignore });
+                    x += number.GetWidth() + 10;
+                    height = Math.Max(height, number.GetHeight() + 4);
+                }
+            }
+
+            row.Size = new Vector2(x - 10, height);
+            lines.Add(row);
+        }
+
+        if (s.Description.Length > 0)
+        {
+            Wrapped(lines, s.Description, new Color(0.9f, 0.9f, 0.85f));
+        }
+
+        string note = s.Detail.Length > 0 ? s.Detail : s.Enabled ? string.Empty : "not available yet";
+        if (note.Length > 0)
+        {
+            Wrapped(lines, note, s.Enabled ? new Color(0.85f, 0.95f, 0.8f) : new Color(1f, 0.55f, 0.45f));
+        }
+
+        float width = 0, y = Pad;
+        foreach (Control line in lines)
+        {
+            line.Position = new Vector2(Pad, y);
+            y += line.Size.Y + 3;
+            width = Math.Max(width, line.Size.X);
+        }
+
+        var size = new Vector2(width + (2 * Pad), y + Pad - 3);
+        _tooltip.AddChild(new ColorRect { Size = size, Color = new Color(0.05f, 0.04f, 0.02f, 0.88f), MouseFilter = MouseFilterEnum.Ignore });
+        _tooltip.AddChild(new ReferenceRect { Size = size, BorderColor = new Color(0.75f, 0.6f, 0.3f), BorderWidth = 1, EditorOnly = false, MouseFilter = MouseFilterEnum.Ignore });
+        foreach (Control line in lines)
+        {
+            _tooltip.AddChild(line);
+        }
+
+        _tooltip.Size = size;
+        _tooltip.Position = TooltipPlace(_layout.CardSlot(slot), size);
+        _tooltip.Visible = true;
+    }
+
+    // Where a tooltip of size goes for a button: above the card when the card is at the bottom of the screen (the
+    // horizontal panel), else beside the button (a side panel), always inside the screen and never over the card.
+    private Vector2 TooltipPlace(Rect2I button, Vector2 size)
+    {
+        const int Gap = 4;
+        Vector2 screen = Size;
+        Vector2 at;
+        if (button.Position.Y > screen.Y / 2)
+        {
+            int cardTop = Math.Min(_layout.PanelTop, _layout.CardSlot(0).Position.Y - 3);
+            at = new Vector2(button.Position.X - 3, cardTop - size.Y - Gap);
+        }
+        else
+        {
+            bool left = button.Position.X > screen.X / 2;
+            at = new Vector2(left ? button.Position.X - size.X - Gap : button.End.X + Gap, button.Position.Y);
+        }
+
+        return new Vector2(Math.Clamp(at.X, Gap, Math.Max(Gap, screen.X - size.X - Gap)), Math.Clamp(at.Y, Gap, Math.Max(Gap, screen.Y - size.Y - Gap)));
+    }
+
+    // Adds text in lines of at most TooltipTextWidth pixels, broken between words.
+    private void Wrapped(List<Control> lines, string text, Color colour)
+    {
+        foreach (string line in WrapWords(text, UiAssets.SmallFont, TooltipTextWidth))
+        {
+            if (_ui.Text(line, UiAssets.SmallFont, colour) is { } t)
+            {
+                lines.Add(new TextureRect { Texture = t, Size = t.GetSize(), MouseFilter = MouseFilterEnum.Ignore });
+            }
+        }
+    }
+
+    private List<string> WrapWords(string text, string font, int width)
+    {
+        var result = new List<string>();
+        string current = string.Empty;
+        foreach (string word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string tried = current.Length == 0 ? word : current + " " + word;
+            if (current.Length > 0 && _ui.Measure(tried, font) > width)
+            {
+                result.Add(current);
+                current = word;
+            }
+            else
+            {
+                current = tried;
+            }
+        }
+
+        if (current.Length > 0)
+        {
+            result.Add(current);
+        }
+
+        return result;
+    }
+
+    private void HideTooltip()
+    {
+        foreach (Node child in _tooltip.GetChildren())
+        {
+            child.QueueFree();
+        }
+
+        _tooltip.Visible = false;
+    }
+
+    // The name and the health/owner line under the portrait, beside the stat column: the name in the bold font when it
+    // fits, else broken between words in the small one, and the detail likewise (third play-test: "Watch Tower" ran under
+    // the stats). Rebuilt only when the text changes.
+    private void SetName(SelectionInfo? info)
+    {
+        string shown = info is null ? string.Empty : info.Name + "\n" + info.Detail;
+        if (shown == _nameShown)
+        {
+            return;
+        }
+
+        _nameShown = shown;
+        foreach (Node child in _nameBox.GetChildren())
+        {
+            child.QueueFree();
+        }
+
+        if (info is null)
+        {
+            return;
+        }
+
+        int room = _layout.StatRow(0).Position.X - (int)_nameBox.Position.X - 3;
+        var parts = new List<(string Text, string Font, Color Colour)>();
+        var gold = new Color(1f, 0.92f, 0.65f);
+        if (_ui.Measure(info.Name, UiAssets.BoldFont) <= room)
+        {
+            parts.Add((info.Name, UiAssets.BoldFont, gold));
+        }
+        else
+        {
+            parts.AddRange(WrapWords(info.Name, UiAssets.SmallFont, room).ConvertAll(l => (l, UiAssets.SmallFont, gold)));
+        }
+
+        parts.AddRange(WrapWords(info.Detail, UiAssets.SmallFont, room).ConvertAll(l => (l, UiAssets.SmallFont, Colors.White)));
+        float y = 0;
+        foreach ((string text, string font, Color colour) in parts)
+        {
+            if (_ui.Text(text, font, colour) is { } t)
+            {
+                _nameBox.AddChild(new TextureRect { Texture = t, Position = new Vector2(0, y), Size = t.GetSize(), MouseFilter = MouseFilterEnum.Ignore });
+                y += font == UiAssets.BoldFont ? 16 : 13;
+            }
         }
     }
 

@@ -1713,7 +1713,8 @@ public partial class GameScreen : Node
                 foreach (CardButton b in buttons)
                 {
                     (bool enabled, string detail) = Availability(b, v.Civilization);
-                    _wholeCard.Add(new CardSlot(b, enabled, Active(b), detail));
+                    (ImmutableArray<int> cost, int timeMs) = Price(b, v.Civilization);
+                    _wholeCard.Add(new CardSlot(b, enabled, Active(b), detail, Queued(b, v.Civilization), PriceRows(cost, timeMs), _catalog.Text("orders_add", b.Order, string.Empty).Trim()));
                 }
 
                 // More orders than slots (a peasant has nine): pages of seven and a page button; hotkeys reach every page.
@@ -1741,6 +1742,93 @@ public partial class GameScreen : Node
         Card = card;
         _hud.SetCard(card);
     }
+
+    // How many of the button's item the selected own buildings have queued (ADR 0180).
+    private int Queued(CardButton b, string civ)
+    {
+        if (_frame is null)
+        {
+            return 0;
+        }
+
+        (FrameQueueKind kind, int id) = b.Action switch
+        {
+            CardAction.Train => (FrameQueueKind.Unit, _catalog.TypeOfClass(civ, b.Argument)),
+            CardAction.Research => (FrameQueueKind.Research, _rules.TechnologyId(b.Argument)),
+            CardAction.Upgrade => (FrameQueueKind.Upgrade, _rules.UpgradeId(b.Argument)),
+            _ => (FrameQueueKind.Unit, -1),
+        };
+        if (id < 0)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        foreach (FrameQueueEntry q in _frame.QueueEntries)
+        {
+            if (q.Kind == kind && q.Id == id && _selection.Selected.Contains(EntityId.FromValue(q.Entity)))
+            {
+                count += q.Count;
+            }
+        }
+
+        return count;
+    }
+
+    // What the button's order costs and how long it takes (units: their base cost; research and upgrades: theirs; a
+    // tavern offer: its price now).
+    private (ImmutableArray<int> Cost, int TimeMs) Price(CardButton b, string civ)
+    {
+        switch (b.Action)
+        {
+            case CardAction.Train or CardAction.Build or CardAction.Become:
+                int type = _catalog.TypeOfClass(civ, b.Argument);
+                return type < 0 ? ([], 0) : (_rules.EntityTypes[type].Traits.Cost, _rules.EntityTypes[type].Traits.BuildTimeMs);
+            case CardAction.Research:
+                int tech = _rules.TechnologyId(b.Argument);
+                return tech < 0 ? ([], 0) : (_rules.Technologies[tech].Cost, _rules.Technologies[tech].TimeMs);
+            case CardAction.Upgrade:
+                int up = _rules.UpgradeId(b.Argument);
+                return up < 0 ? ([], 0) : (_rules.Upgrades[up].Cost, _rules.Upgrades[up].TimeMs);
+            case CardAction.Hire when _frame is not null && int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int slot):
+                for (int i = 0; i < _frame.TavernOfferCount; i++)
+                {
+                    if (_frame.TavernOffers[i].Slot == slot)
+                    {
+                        return (ImmutableArray.Create(_frame.TavernCosts, i * _frame.TavernCostStride, _frame.TavernCostStride), 0);
+                    }
+                }
+
+                return ([], 0);
+            default:
+                return ([], 0);
+        }
+    }
+
+    // The tooltip's price: the original's resource icons with the amounts (short ones red), then the hourglass with the
+    // time.
+    private List<PriceItem>? PriceRows(ImmutableArray<int> cost, int timeMs)
+    {
+        List<PriceItem>? rows = null;
+        FramePlayer me = Me();
+        for (int r = 0; r < cost.Length && r < _rules.ResourceTypes.Count; r++)
+        {
+            if (cost[r] > 0)
+            {
+                (rows ??= []).Add(new PriceItem($"art/icons/res{_rules.ResourceTypes[r]}.t2img", HudText.Number(cost[r]), r < 8 && me.Resources[r] < cost[r]));
+            }
+        }
+
+        if (timeMs > 0)
+        {
+            (rows ??= []).Add(new PriceItem("art/icons/time.t2img", string.Create(CultureInfo.InvariantCulture, $"{(timeMs + 500) / 1000} s")));
+        }
+
+        return rows;
+    }
+
+    // The original's "Requires: ..." (STRINGS3.INI req3).
+    private string Requires(string what) => $"{_catalog.Text("misc", "req3", "Requires")}: {what}";
 
     // The original's tavern menus are empty in MENU.INI: the game lists the period's offers there. True: the heroes' menu.
     private static bool? TavernMenu(string? menu) => menu switch
@@ -1832,7 +1920,13 @@ public partial class GameScreen : Node
                 }
 
                 UpgradeDefinition u = _rules.Upgrades[up];
-                return (lead.Upgrades & (1u << up)) != 0 || (u.IsConversion && u.ConvertedType(lead.TypeId) < 0);
+                bool queued = false;
+                foreach (FrameQueueEntry q in _frame.QueueEntries)
+                {
+                    queued |= q.Entity == lead.Id.Value && q.Kind == FrameQueueKind.Upgrade && q.Id == up;
+                }
+
+                return ((lead.Upgrades & (1u << up)) != 0 && !queued) || (u.IsConversion && u.ConvertedType(lead.TypeId) < 0 && !queued);
             default:
                 return false;
         }
@@ -1882,7 +1976,6 @@ public partial class GameScreen : Node
 
                     int stride = _frame.TavernCostStride;
                     ImmutableArray<int> price = ImmutableArray.Create(_frame.TavernCosts, i * stride, stride);
-                    string priceText = CostText(price);
                     if (o.Taken)
                     {
                         return (false, "hired this period");
@@ -1895,7 +1988,7 @@ public partial class GameScreen : Node
                     }
 
                     string? shortOf = Shortfall(price);
-                    return shortOf is null ? (true, priceText) : (false, $"{priceText}; not enough {shortOf}");
+                    return shortOf is null ? (true, string.Empty) : (false, $"not enough {shortOf}");
                 }
 
                 return (false, "no offer now");
@@ -1913,13 +2006,12 @@ public partial class GameScreen : Node
                 }
 
                 ImmutableArray<int> typeCost = _rules.EntityTypes[type].Traits.Cost;
-                string cost = CostText(typeCost);
                 if (MissingRequirement(type, civ) is { } missing)
                 {
-                    return (false, Join(cost, "needs " + missing));
+                    return (false, Requires(missing));
                 }
 
-                return Shortfall(typeCost) is { } shortfall ? (false, Join(cost, "not enough " + shortfall)) : (true, cost);
+                return Shortfall(typeCost) is { } shortfall ? (false, "not enough " + shortfall) : (true, string.Empty);
             case CardAction.Research:
                 int tech = _rules.TechnologyId(b.Argument);
                 if (tech < 0)
@@ -1928,18 +2020,17 @@ public partial class GameScreen : Node
                 }
 
                 TechnologyDefinition t = _rules.Technologies[tech];
-                string researchCost = Join(CostText(t.Cost), $"{t.TimeMs / 1000} s");
                 if (Me().IsResearching(tech))
                 {
-                    return (false, Join(researchCost, "being researched"));
+                    return (false, "being researched");
                 }
 
                 if (_frame!.Researchable.Length > tech && _frame.Researchable[tech] == 0)
                 {
-                    return (false, Join(researchCost, "needs " + (MissingIn(t.Requirements, civ) ?? "requirements")));
+                    return (false, Requires(MissingIn(t.Requirements, civ) ?? "requirements"));
                 }
 
-                return Shortfall(t.Cost) is { } lacking ? (false, Join(researchCost, "not enough " + lacking)) : (true, researchCost);
+                return Shortfall(t.Cost) is { } lacking ? (false, "not enough " + lacking) : (true, string.Empty);
             case CardAction.Upgrade:
                 int up = _rules.UpgradeId(b.Argument);
                 if (up < 0 || Lead() is not { } lead)
@@ -1949,21 +2040,25 @@ public partial class GameScreen : Node
 
                 UpgradeDefinition u = _rules.Upgrades[up];
                 FrameEntity entity = _frame!.Entities[lead];
-                string upgradeCost = Join(CostText(u.Cost), $"{u.TimeMs / 1000} s");
+                if (Queued(b, civ) > 0)
+                {
+                    return (false, "being made");
+                }
+
                 foreach (ushort before in u.After)
                 {
                     if ((entity.Upgrades & (1u << before)) == 0)
                     {
-                        return (false, Join(upgradeCost, "needs " + _rules.Upgrades[before].Name));
+                        return (false, Requires(_rules.Upgrades[before].Name));
                     }
                 }
 
                 if (MissingIn(u.Requirements, _catalog.Type(entity.TypeId).Civilization) is { } prerequisite)
                 {
-                    return (false, Join(upgradeCost, "needs " + prerequisite));
+                    return (false, Requires(prerequisite));
                 }
 
-                return Shortfall(u.Cost) is { } low ? (false, Join(upgradeCost, "not enough " + low)) : (true, upgradeCost);
+                return Shortfall(u.Cost) is { } low ? (false, "not enough " + low) : (true, string.Empty);
             case CardAction.Submenu when TavernMenu(b.Argument) is { } heroes:
                 // The tavern's offers show (with their prices) once the technology is there, affordable or not.
                 string offersTech = heroes ? "te_heroesquest" : "te_mercenaries";
@@ -1993,26 +2088,10 @@ public partial class GameScreen : Node
             default:
                 return (true, string.Empty);
         }
-
-        static string Join(string first, string second) => first.Length == 0 ? second : second.Length == 0 ? first : $"{first} - {second}";
     }
 
     private FramePlayer Me() => _frame is not null && _frame.Players.Length > _session.LocalPlayer ? _frame.Players[_session.LocalPlayer] : default;
 
-    // "200 food, 200 stone" (the base cost; technologies that make things cheaper are not shown yet).
-    private string CostText(ImmutableArray<int> cost)
-    {
-        var parts = new List<string>();
-        for (int r = 0; r < cost.Length && r < _rules.ResourceTypes.Count; r++)
-        {
-            if (cost[r] > 0)
-            {
-                parts.Add($"{cost[r]} {_rules.ResourceTypes[r]}");
-            }
-        }
-
-        return string.Join(", ", parts);
-    }
 
     // The first resource the player lacks, as "food (150 of 200)", or null when affordable.
     private string? Shortfall(ImmutableArray<int> cost)
@@ -2377,20 +2456,15 @@ public partial class GameScreen : Node
             stats.Add(($"art/icons/res{_rules.ResourceTypes[node.Resource]}.t2img", HudText.Number(e.ResourceLeft)));
         }
 
-        if (e.QueueCount > 0)
-        {
-            // As in the original: what is being made, its progress under it and how many are left on it.
-            strip.Add(e.QueueKind switch
-            {
-                FrameQueueKind.Research when e.QueueHead < _rules.Technologies.Count => new StripItem(_catalog.ButtonImage(_rules.Technologies[e.QueueHead].Key), e.QueuePermille, true),
-                FrameQueueKind.Upgrade when e.QueueHead < _rules.Upgrades.Count => new StripItem(_catalog.ButtonImage(_rules.Upgrades[e.QueueHead].Key), e.QueuePermille, true),
-                _ => new StripItem(_catalog.Type(e.QueueHead).IconIndex, e.QueuePermille, false, e.QueueCount),
-            });
-        }
-
+        // As in the original (third play-test): the hourglass TIME stat says how far the work in progress is; what is
+        // queued shows as counts on the order buttons.
         if (e.ConstructionPermille >= 0)
         {
             stats.Add(("art/icons/time.t2img", $"{e.ConstructionPermille / 10} %"));
+        }
+        else if (e.QueueCount > 0)
+        {
+            stats.Add(("art/icons/time.t2img", $"{e.QueuePermille / 10} %"));
         }
 
         return new SelectionInfo
