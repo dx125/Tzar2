@@ -95,11 +95,11 @@ public class HolderTests
         d.Step();
         Assert.Contains(CommandRejection.HolderFull, d.Rejections());
 
-        Grant(d.World, 0, "te_landingtactics"); // +4 (UNVERIFIED)
-        Assert.Equal(6, d.World.HolderCapacity(ship));
+        Grant(d.World, 0, "te_landingtactics"); // 50 % more (help HT_USE_SHIPS)
+        Assert.Equal(3, d.World.HolderCapacity(ship));
         d.Order(0, CommandKind.Board, [.. footmen.Where(f => !d.World.IsHeld(f))], target: ship);
-        d.RunUntil(() => d.World.Holders.Get(ship).Count == 4, 600);
-        Assert.Equal(4, d.World.Holders.Get(ship).Count);
+        d.RunUntil(() => !d.World.Errands.Entities.ToArray().Intersect(footmen).Any(), 600);
+        Assert.Equal(3, d.World.Holders.Get(ship).Count);
     }
 
     [Fact]

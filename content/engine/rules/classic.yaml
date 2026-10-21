@@ -479,7 +479,7 @@ te_tactics: { Technology: { effects: [{ stat: experienceGain, percent: 25, categ
 te_suntzubook: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }  # UNVERIFIED (UNK-23)
 te_bodybuilding: { Technology: { effects: [{ stat: healthPerLevel, add: 5, category: unit }] } }     # UNVERIFIED (UNK-23)
 te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes: [monk] }] } }       # UNVERIFIED (UNK-23)
-te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, add: 4, groups: [ships] }] } } # UNVERIFIED (UNK-24)
+te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, percent: 50, groups: [ships] }] } } # help HT_USE_SHIPS: 50 % more units
 te_inquisition: { Technology: { effects: [{ stat: attack, percent: 50, classes: [priest] }] } }     # UNVERIFIED (UNK-26): exorcism is the priests' attack
 te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 4, classes: [priest] }] } }        # UNVERIFIED (UNK-26): +4 tiles of spell range
 te_tradetaxes: { Technology: { effects: [{ stat: income, percent: 10, classes: [market] }] } }       # UNVERIFIED (UNK-28)

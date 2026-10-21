@@ -1111,6 +1111,15 @@ public partial class GameScreen : Node
             case GameAction.SelectBuildingClass:
                 SelectBuildingClass((char)('A' + binding.Argument));
                 break;
+            case GameAction.SelectAboveAverageExperience or GameAction.SelectBelowAverageExperience:
+                _selection.SelectByExperience(OnScreen(), binding.Action == GameAction.SelectAboveAverageExperience);
+                break;
+            case GameAction.Chat when !_session.IsMultiplayer:
+                Message("Chat: single player has no chat line yet."); // multiplayer: the overlay's chat line takes Enter
+                break;
+            case GameAction.UseDefaultItem when _frame is not null:
+                Submit(_card.UseDefaultItem(CardNow()));
+                break;
             case GameAction.SelectAboveAverageHealth or GameAction.SelectBelowAverageHealth:
                 _selection.SelectByHealth(OnScreen(), binding.Action == GameAction.SelectAboveAverageHealth);
                 break;

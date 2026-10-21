@@ -26,6 +26,7 @@ namespace Tzar2.Game.Input;
 /// <param name="IsCapturable">Peasants can capture it now (its capture technology, if any, is researched).</param>
 /// <param name="CanPickItems">Carries items (an inventory; GAME-10).</param>
 /// <param name="IsItem">An item lying on the ground (GAME-10).</param>
+/// <param name="Level">Experience level (GAME-08), or -1 for what gains none.</param>
 public readonly record struct EntityInfo(
     EntityId Id,
     ushort TypeId,
@@ -46,7 +47,8 @@ public readonly record struct EntityInfo(
     bool CanCapture = false,
     bool IsCapturable = false,
     bool CanPickItems = false,
-    bool IsItem = false);
+    bool IsItem = false,
+    int Level = -1);
 
 /// <summary>
 /// The local selection and control groups with the original's mouse semantics (Appendix E.6, HK.TXT): click, Shift+click
@@ -241,6 +243,41 @@ public sealed class SelectionModel
         foreach (EntityInfo e in onScreen)
         {
             if (e.Owner == LocalPlayer && e.IsMobile && GroupOf(e.Id) == 0)
+            {
+                list.Add(e.Id);
+            }
+        }
+
+        if (list.Count > 0)
+        {
+            Set(list, own: true);
+        }
+    }
+
+    /// <summary>
+    /// Ctrl+] / Ctrl+[: of the selection (or, with nothing selected, the own units on screen), those with more or less
+    /// experience than their average level (HK.TXT; GAME-08).
+    /// </summary>
+    public void SelectByExperience(IReadOnlyList<EntityInfo> candidates, bool above)
+    {
+        ArgumentNullException.ThrowIfNull(candidates);
+        bool fromSelection = IsOwn && _selected.Count > 0;
+        var pool = new List<EntityInfo>();
+        long sum = 0;
+        foreach (EntityInfo e in candidates)
+        {
+            if (e.Owner == LocalPlayer && e.IsMobile && e.Level >= 0 && (!fromSelection || _selected.Contains(e.Id)))
+            {
+                pool.Add(e);
+                sum += e.Level;
+            }
+        }
+
+        var list = new List<EntityId>();
+        foreach (EntityInfo e in pool)
+        {
+            long scaled = (long)e.Level * pool.Count; // compared with the sum: no rounding of the average
+            if (above ? scaled > sum : scaled < sum)
             {
                 list.Add(e.Id);
             }

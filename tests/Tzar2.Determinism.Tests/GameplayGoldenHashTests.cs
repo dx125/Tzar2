@@ -42,7 +42,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (crafting on the command card, 2026-10-21) spell books cost four times more and take twice as long to craft (1.05),
     // two new combat settings: the ruleset hash only.
     // (ADR 0184) the spies' disguise store joins the hashed layout (version 9); behaviour unchanged.
-    private const ulong GoldenRulesetHash = 0x1C85E835B06CBF46UL;
+    // (the help, 2026-10-21) Landing Tactics gives ships 50 % more room, not 4 places: the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0x8CC1EC04F8CF26AAUL;
     private const ulong GoldenHashStream = 0x2BDE24C6A83538E7UL;
     private const ulong GoldenFinalFullHash = 0xA1DC4B70F3D37C14UL;
 
