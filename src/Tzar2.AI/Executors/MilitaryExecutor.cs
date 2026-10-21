@@ -7,6 +7,7 @@ using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Map;
+using Tzar2.Sim.Navigation;
 
 namespace Tzar2.AI.Executors;
 
@@ -165,7 +166,37 @@ public sealed class MilitaryExecutor : IAiExecutor
         long reach = Math.Min(length, (long)context.Options.Military.GatherDistanceTiles * MapState.UnitsPerTile);
         int x = (int)Math.Clamp(tx + (dx * reach / length), 0, world.Map.WorldWidth - 1);
         int y = (int)Math.Clamp(ty + (dy * reach / length), 0, world.Map.WorldHeight - 1);
-        return (x, y);
+        return Reachable(context, x, y);
+    }
+
+    // The walkable point of the town's land nearest to (x, y): a gather point or wave goal inside a building, a forest or
+    // water made every unit sent there report an unreachable goal (second play-test log, 2026-10-20).
+    private static (int X, int Y) Reachable(AiExecutorContext context, int x, int y)
+    {
+        World world = context.World;
+        AiCensusPlayer me = context.Player;
+        EntityId walker = me.Army.Count > 0 ? me.Army[0] : me.Workers.Count > 0 ? me.Workers[0] : EntityId.None;
+        if (walker.IsNone || world.Navigation.ForType(world.Identities.Get(walker).TypeId) is not { } layer)
+        {
+            return (x, y);
+        }
+
+        Position from = world.Positions.Get(walker);
+        int start = NavQueries.NearestWalkable(layer, layer.TileX(from.X), layer.TileY(from.Y), 4);
+        if (start < 0)
+        {
+            return (x, y);
+        }
+
+        int tile = layer.TileOf(x, y);
+        int component = layer.ComponentOf(start);
+        if (layer.IsWalkablePoint(x, y) && layer.ComponentOf(tile) == component)
+        {
+            return (x, y);
+        }
+
+        int nearest = NavQueries.NearestInComponent(layer, component, x, y, out _);
+        return nearest < 0 ? (x, y) : (layer.CenterX(nearest), layer.CenterY(nearest));
     }
 
     // Producers of soldiers rally at the gather point (one command for all that are not set yet).
@@ -446,7 +477,8 @@ public sealed class MilitaryExecutor : IAiExecutor
             _home.RemoveRange(state.WaveUnits.Count, _home.Count - state.WaveUnits.Count); // only tracked units go
         }
 
-        IssueGroups(context, _home, CommandKind.Move, EntityId.None, x, y, CommandFlags.Ctrl);
+        (int gx, int gy) = Reachable(context, x, y);
+        IssueGroups(context, _home, CommandKind.Move, EntityId.None, gx, gy, CommandFlags.Ctrl);
     }
 
     private void Attack(AiExecutorContext context, int gx, int gy)
@@ -512,7 +544,15 @@ public sealed class MilitaryExecutor : IAiExecutor
 
         // Close by: attack it outright (a building is not always in an idle soldier's sight); else move-advance to it.
         bool close = AiExecutorContext.Distance(cx, cy, x, y) <= 12L * MapState.UnitsPerTile;
-        IssueGroups(context, _orders, close ? CommandKind.Attack : CommandKind.Move, close ? entity : EntityId.None, x, y, close ? CommandFlags.None : CommandFlags.Ctrl);
+        if (close)
+        {
+            IssueGroups(context, _orders, CommandKind.Attack, entity, x, y, CommandFlags.None);
+        }
+        else
+        {
+            (int ax, int ay) = Reachable(context, x, y);
+            IssueGroups(context, _orders, CommandKind.Move, EntityId.None, ax, ay, CommandFlags.Ctrl);
+        }
     }
 
     // What idle wave soldiers attack first (tactics FocusTargets), within the threat radius of the wave: the nearest

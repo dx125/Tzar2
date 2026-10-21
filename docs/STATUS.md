@@ -81,6 +81,10 @@ Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — The AI gathers and marches to reachable ground.** The second play-test's log had 270 unreachable
+  goals: the AI's gather point (7 tiles from the town towards the map centre) and its waves' move-advance goals (a
+  building's centre) often lay in a building, a forest or water. Both now snap to the nearest walkable tile of the
+  town's land (ai-placeholders E10/E12 unchanged otherwise); the AI golden is re-pinned.
 * **2026-10-20 — Second play-test by the owner; its findings fixed.** On the original map "There is not enough room for
   two of us" every kingdom owns European, Arabian and Asian castles and peasants, but the client loaded the sprites of the
   kingdoms' civilizations only: the others were invisible though selectable. Now the sprites of every civilization on the

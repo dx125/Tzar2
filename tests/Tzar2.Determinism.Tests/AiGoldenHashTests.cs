@@ -32,9 +32,10 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // targets by danger, gatherers avoid towers); a unit on a move-advance answers fire.
     // (owner play-test 2026-10-20) a unit still walking to a structure works on, fights or boards it only next to it
     // (interactionTouchPx 12, in the ruleset hash).
-    private const ulong GoldenCommandStream = 0x0BE44D85F8874361UL;
-    private const ulong GoldenHashStream = 0xC99BB6802C6D5DA4UL;
-    private const ulong GoldenFinalFullHash = 0x1D4297F06F0BD362UL;
+    // (second play-test log) the gather point and the waves' move-advance goals snap to the nearest reachable ground.
+    private const ulong GoldenCommandStream = 0x8A130FC0A10290BDUL;
+    private const ulong GoldenHashStream = 0x4E6C5663C81EFAEFUL;
+    private const ulong GoldenFinalFullHash = 0xC992D50BE23E1BE6UL;
 
     private const int Ticks = 9600;
 
