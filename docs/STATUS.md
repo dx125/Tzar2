@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (third play-test: queues, loads, next tree, exits, help on sites, idle work)
+* **Last updated:** 2026-10-21 (third play-test: the HUD, queue counts, tooltips)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -55,8 +55,8 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 
 Items 1 and 2 are left from the owner's play-tests (2026-10-20; log below).
 
-1. **Maintainer:** the rest of the third play-test, the HUD: the queue counts on the order buttons and the hourglass TIME
-   stat (the frame carries the queue entries), upgrades in the same place, long names, cost tooltips.
+1. **Maintainer:** the original's side panels (LAYOUT.INI `LAYOUT1024L` and `R`: the HUD down the left or right side)
+   as a setting; the card, the tooltips and the selection view already place themselves by the layout.
 2. **Maintainer:** the rest of the command card: the Magic Workshop's crafting (`build_item`: which item, how much
    gold), the holders' list of units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and
    AI-mode orders need the sim first.
@@ -82,6 +82,23 @@ Items 1 and 2 are left from the owner's play-tests (2026-10-20; log below).
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-21 — Third play-test: the HUD.**
+  * As in the owner's screenshot of the original castle panel, each order button shows how many of its item the
+    selected buildings have queued, and the hourglass TIME stat shows the progress of the work in hand. The queue strip
+    is gone.
+  * An upgrade being made keeps its button with its count (it was hidden, its progress shown apart).
+  * Long names ("Watch Tower") and the health line wrap between words beside the stats instead of running under them.
+  * Card tooltips: the original's was one line ("Create Knight - 'K' ( Gold:70 Food:120 ) Requires: Stable, Plate
+    Armor"). The owner preferred the box, with the hotkey added. It shows:
+    * the name with the hotkey on a key cap;
+    * the price with the original's resource icons, short ones in red, and the time;
+    * what the order does (`orders_add`);
+    * why it is greyed out, in the original's words ("Requires: ...").
+  * Tooltip behaviour follows common practice:
+    * 150 ms before it shows, and at once when moving to the next button;
+    * it sits above the card, never over a button, inside the screen;
+    * it follows the control the pointer is really over every frame, so a new selection, an emptied slot, a dialog or
+      leaving the button takes it away.
 * **2026-10-20 — Third play-test: the sim's rules.** ADR 0180, from the owner's knowledge of the original:
   * any builder helps on a site, whatever its civilization;
   * a queue takes any number of any items, one entry per item, and a right click on an order button cancels one of it;
