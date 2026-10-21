@@ -96,7 +96,7 @@ public class EconomyTests
     [Trait("Rule", "ECO-013")]
     public void Loads_go_to_the_nearest_completed_drop_off_that_accepts_them()
     {
-        // The storage is nearest to the tree but takes only stone/gold/iron; the lumber mill takes wood; the castle
+        // The storage is nearest to the tree but takes only stone and gold; the lumber mill takes wood; the castle
         // (everything) is far away.
         using var d = new SimDriver(
             TestMap(48, 16,
@@ -124,6 +124,16 @@ public class EconomyTests
         Assert.Equal(500, d.World.Players[0].Resources[Resource("stone")]);
         Assert.True(d.World.Players[0].Resources[Resource("gold")] > 500);
         Assert.True(d.World.Players[0].Resources[Resource("wood")] > 500);
+    }
+
+    [Fact]
+    [Trait("Rule", "ECO-014")]
+    public void Every_civilizations_storage_takes_gold_and_stone_and_nothing_else()
+    {
+        EntityTypeDefinition[] storages = [.. Classic.EntityTypes.Where(t => t.Traits.LegacyClass == "storage")];
+        Assert.NotEmpty(storages);
+        Assert.All(storages, s => Assert.True(s.Traits.AcceptsDropOff(Resource("gold")) && s.Traits.AcceptsDropOff(Resource("stone"))
+            && !s.Traits.AcceptsDropOff(Resource("wood")) && !s.Traits.AcceptsDropOff(Resource("food"))));
     }
 
     [Fact]

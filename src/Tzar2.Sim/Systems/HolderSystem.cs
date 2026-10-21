@@ -36,6 +36,11 @@ public sealed class ErrandSystem : ISimSystem
     {
         ArgumentNullException.ThrowIfNull(context);
         World world = context.World;
+        if (world.Disguises.Count != 0)
+        {
+            Unmask(world);
+        }
+
         if (world.Errands.Count == 0)
         {
             return;
@@ -184,6 +189,41 @@ public sealed class ErrandSystem : ISimSystem
                 break;
         }
     }
+
+    // Another kingdom's spy or ninja close to a disguised spy sees through it and ends the disguise (the owner: other
+    // spies unmask it if they come close enough; the reach is the detector's, UNVERIFIED). Allies do not.
+    private void Unmask(World world)
+    {
+        _unmasked.Clear();
+        ReadOnlySpan<EntityId> spies = world.Disguises.Entities;
+        for (int i = 0; i < spies.Length; i++)
+        {
+            EntityId spy = spies[i];
+            if (world.IsHeld(spy) || world.Positions.IndexOf(spy) is not (>= 0 and var p))
+            {
+                continue;
+            }
+
+            byte owner = world.Identities.Get(spy).Owner;
+            Position at = world.Positions.At(p);
+            for (int k = 0; k < world.Players.Length; k++)
+            {
+                if (k != owner && world.HasPlayer((byte)k) && world.Diplomacy.StanceOf(k, owner) != Kingdoms.Stance.Ally
+                    && Kingdoms.Visibility.IsDetectedBy(world, k, at))
+                {
+                    _unmasked.Add(spy);
+                    break;
+                }
+            }
+        }
+
+        foreach (EntityId spy in _unmasked)
+        {
+            world.Disguises.Remove(spy);
+        }
+    }
+
+    private readonly List<EntityId> _unmasked = [];
 }
 
 /// <summary>

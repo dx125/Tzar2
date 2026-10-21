@@ -20,8 +20,8 @@ rules:
     status: unclear
     note: The guide describes one campaign mission; whether it is the AI's general behaviour is not known.
   AI-004:
-    rule: A player can put his kingdom under the computer's assistance, none, economy, war or full, from the card with nothing selected.
-    source: ['data MENU.INI [aiassist]', 'data ORDERS.INI view_ai set_ai_full', 'strings STRINGS2.INI set_ai_none set_ai_eco set_ai_war set_ai_full', 'strings STRINGS.INI [mp_setupmap] ai_assist']
+    rule: A player can put his kingdom under the computer's assistance, none, economy, war or full, from the card with nothing selected. The war adviser commands the troops, builds the military buildings and trains troops; the economy adviser builds the economic buildings, researches and gathers.
+    source: ['data MENU.INI [aiassist]', 'data ORDERS.INI view_ai set_ai_full', 'strings STRINGS2.INI set_ai_none set_ai_eco set_ai_war set_ai_full', 'strings STRINGS.INI [mp_setupmap] ai_assist', owner 2026-10-21 (answers)]
     status: tested
     adr: [0183]
-    note: The original offers it with the lobby's AI Assist; our single-player skirmishes always offer it. What each half does is the AI's own split into economy and war, unverified against the original.
+    note: Single player has it too (the owner). Military are units that neither work nor trade, towers, walls, gates and buildings that train only such units; the original's exact split is not in its data.

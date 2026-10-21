@@ -80,6 +80,20 @@ public class EconomyM3Tests
         Assert.Single(OfType(d.World, "euro.harbor"));
     }
 
+    [Theory]
+    [Trait("Rule", "ECO-018")]
+    [InlineData("euro")]
+    [InlineData("arab")]
+    public void Peasants_of_every_civilization_milk_cows(string civ)
+    {
+        // The owner (2026-10-21): milking is the same for every civilization's peasants (the rules give it to every
+        // ^class.peon; the synthetic tables have no Asian peasant).
+        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("comm.cow", 0, 12, 4), Unit(civ + ".peon", 0, 10, 4)), ruleset: Classic);
+        d.Order(0, CommandKind.Harvest, [OfType(d.World, civ + ".peon").Single()], target: OfType(d.World, "comm.cow").Single());
+        d.RunUntil(() => d.Count(SimEventKind.ResourceDelivered) >= 1, 2000);
+        Assert.Equal(50, d.Events.First(e => e.Event.Kind == SimEventKind.ResourceDelivered).Event.Arg);
+    }
+
     [Fact]
     [Trait("Rule", "ECO-017")]
     public void Peasants_milk_cows_which_regrow_and_butchered_cows_leave_rotting_meat()

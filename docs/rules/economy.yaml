@@ -63,10 +63,10 @@ rules:
     source: [manual Civilizations (Castle Farm Lumbermill Harbor), owner 2026-10-21 (fourth play-test)]
     status: tested
   ECO-014:
-    rule: The storage takes gold and iron for the Europeans, gold and stone for the Asians, and iron, gold and stone for the Arabians.
-    source: [manual Civilizations (Storage)]
-    status: unclear
-    note: Tzar2 follows the manual, but the European storage researches Stone Mining, which suggests it takes stone too.
+    rule: Every civilization's storage takes gold and stone, as the lumber mill takes wood; it stores nothing of its own.
+    source: [owner 2026-10-21 (answers)]
+    status: tested
+    note: The manual's per-civilization lists (with iron) are not the game's.
   ECO-015:
     rule: A peasant carries 10 wood, stone or gold; a load of milk or meat from a cow is 50.
     source: [capture capture-20261018-222649]
@@ -82,10 +82,10 @@ rules:
     source: [manual European Buildings (Farm), owner 2026-10-20]
     status: tested
   ECO-018:
-    rule: Asian peasants do not tend cows or carry milk.
-    source: [manual Asian Units (Peasant)]
-    status: unclear
-    note: The manual's list of the Asian peasant's work leaves out milk and cows, though the Asian farm makes cows; Tzar2 lets any peasant milk.
+    rule: Peasants of every civilization tend cows and carry milk alike.
+    source: [owner 2026-10-21 (answers)]
+    status: tested
+    note: The manual's list of the Asian peasant's work leaves out milk; the owner confirms they milk as the others do.
   ECO-019:
     rule: Arabian peasants with Cow Poaching take enemy cows.
     source: [manual Arabian technologies (Cow Poaching)]

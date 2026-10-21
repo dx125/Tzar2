@@ -825,6 +825,16 @@ public partial class GameScreen : Node
 
     private void RightClick(Vector2 position, KeyMods mods)
     {
+        if (_mode == OrderMode.Unload && _placing == ushort.MaxValue && InView(position))
+        {
+            // Emerge and unload: a right click gives the place too (the manual, the owner 2026-10-21; ORD-015).
+            (int ux, int uy) = ToWorld(position);
+            SendAndConfirm(OrderResolver.WithMode(_mode, SelectedInfos(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument), ux, uy);
+            _mode = OrderMode.None;
+            RefreshCard();
+            return;
+        }
+
         if (_placing != ushort.MaxValue || _mode != OrderMode.None)
         {
             _placing = ushort.MaxValue;
@@ -1402,7 +1412,7 @@ public partial class GameScreen : Node
                 OpenDialog(exchange);
                 break;
             case CardDialogKind.Craft:
-                var items = _card.CraftableItems(CardNow()).Select(t => (t, CraftPicture(_catalog.Type(t).Class), _catalog.Type(t).Name)).ToList();
+                var items = _card.CraftableItems(CardNow()).Select(CraftChoiceOf).ToList();
                 var craft = new CraftDialog(_ui, items, _card.CraftPricePerPower, _card.CraftMaxPower);
                 craft.Craft += (type, gold) =>
                 {
@@ -1426,15 +1436,23 @@ public partial class GameScreen : Node
         RefreshCard();
     }
 
-    // The picture of an item kind in D_BUILD's items.bmp (bow, book, shield, sword, potion; ⚠ UNVERIFIED pairing).
-    private static int CraftPicture(string cls) => cls switch
+    // An item of the magic workshop's dialog: its kind (books, potions, weapons and shields) and picture. A book shows its
+    // spell's order picture (the owner's screenshot: Fire Rain's burning buildings), the others D_BUILD's items.bmp (bow,
+    // book, shield, sword, potion; which weapon shows the bow and which the sword is ours, ⚠ UNVERIFIED).
+    private CraftChoice CraftChoiceOf(ushort type)
     {
-        "item_magic" => 1,
-        "item_armor" => 2,
-        "item_plusplus" => 3,
-        "item_health" => 4,
-        _ => 0,
-    };
+        ItemDefinition? item = _rules.EntityTypes[type].Traits.Item;
+        int kind = item?.Kind switch { ItemKind.SpellBook => 0, ItemKind.Potion => 1, _ => 2 };
+        Texture2D? picture = null;
+        if (item is { Kind: ItemKind.SpellBook, Spell: >= 0 } book && book.Spell < _rules.Spells.Count)
+        {
+            picture = _ui.Cell("art/orders/buttons.t2img", _catalog.OrderImage(_rules.Spells[book.Spell].Key));
+        }
+
+        int cell = item?.Kind switch { ItemKind.SpellBook => 1, ItemKind.Armor => 2, ItemKind.Potion => 4, _ => _catalog.Type(type).Class == "item_plusplus" ? 3 : 0 };
+        picture ??= _ui.Region("art/screens/d_build/items.t2img", new Rect2I(0, cell * 48, 48, 48));
+        return new CraftChoice(type, kind, picture, _catalog.Type(type).Name);
+    }
 
     // What the command card is built for now (Tzar2.Game.Ui.CommandCard, ADR 0182).
     private CardContext CardNow()

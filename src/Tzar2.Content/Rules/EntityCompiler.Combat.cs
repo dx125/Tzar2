@@ -24,7 +24,7 @@ internal sealed partial class EntityCompiler
         ["Spellcaster"] = ["spells"],
         ["Experience"] = [],
         ["Briber"] = [],
-        ["Impersonator"] = [],
+        ["Impersonator"] = ["never", "except"],
         ["BribeImmune"] = [],
         ["CrusadePreacher"] = [],
         ["TrainingDummy"] = [],
@@ -178,6 +178,19 @@ internal sealed partial class EntityCompiler
             | (entry.Find("TrainingDummy") is not null ? AbilityFlags.TrainingDummy : 0)
             | (entry.Find("KillImmune") is not null ? AbilityFlags.KillImmune : 0)
             | (entry.Find("Impersonator") is not null ? AbilityFlags.Impersonate : 0);
+        if (entry.Find("Impersonator") is { } impersonator)
+        {
+            if (impersonator.Get("never") is { } never)
+            {
+                specs.ImpersonateNever = (RulesDocument.StringList(never.Node, never.Source, Where("Impersonator", "never")), never);
+            }
+
+            if (impersonator.Get("except") is { } except)
+            {
+                specs.ImpersonateExcept = (RulesDocument.StringList(except.Node, except.Source, Where("Impersonator", "except")), except);
+            }
+        }
+
         if (entry.Find("ConvertsFrom") is { } convert)
         {
             string order = StrOf("ConvertsFrom", "order") ?? throw new RulesException(convert.Source, convert.Line, $"{key}.ConvertsFrom needs an order");
@@ -254,5 +267,9 @@ internal sealed class CombatSpecs
 
     public (List<string> Specs, RuleValue At)? ConvertClasses { get; set; }
 
-    public bool IsEmpty => HolderAccepts is null && ItemHolders is null && ConvertClasses is null;
+    public (List<string> Specs, RuleValue At)? ImpersonateNever { get; set; }
+
+    public (List<string> Specs, RuleValue At)? ImpersonateExcept { get; set; }
+
+    public bool IsEmpty => HolderAccepts is null && ItemHolders is null && ConvertClasses is null && ImpersonateNever is null;
 }

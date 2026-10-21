@@ -97,7 +97,7 @@ location messages in the multiplayer chat). Updated 2026-10-21: items, experienc
 | Card letters of `MENU.INI` (M move, B build, H harvest, A attack, S stop, P peasant…) | done | letters are read from the user's tables; plain letters go to the card first |
 | Card orders move, attack (on ground: move-advance), harvest, patrol, guard (follow), stop | done | |
 | Build menu and its sub-menus, placement ghost with legality, Shift keeps placing | done | right click or Esc cancels (manual ch. 6) |
-| Train / right click on a train button cancels the last queued unit | done | Shift+click queues five |
+| Train / right click on a train button takes one queued unit off | done | Shift+click queues five, Shift+right click takes five off (the owner, 2026-10-21) |
 | Repair, capture, explore, stand ground, pick items, bribe, spells, technologies, gates | done | the command card model (ADR 0182); an order greyed out says why in its tooltip |
 
 ## Mouse

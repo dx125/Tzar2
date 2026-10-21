@@ -53,10 +53,11 @@ rules:
     source: [patch 1.05 (TZAR110.TXT)]
     status: tested
   BLD-013:
-    rule: Peasants under a spy's spell cannot build.
-    source: [patch 1.05 (TZAR110.TXT)]
-    status: unclear
-    note: The patch note says "obsessed by spies"; what it means is not known, and spies cannot impersonate yet (MAG).
+    rule: A spy in a peasant's look cannot build.
+    source: [patch 1.05 (TZAR110.TXT), owner 2026-10-21 (answers)]
+    status: implemented
+    adr: [0184]
+    note: The patch's "obsessed by spies peasants" are spies impersonating peasants (the owner). A disguised spy keeps the spy's own abilities.
   BLD-014:
     rule: A destroyed building leaves a ruin.
     source: [community TDD GAME-03]
@@ -94,7 +95,7 @@ rules:
     source: [owner 2026-10-21 (fourth play-test)]
     status: tested
   BLD-022:
-    rule: How long a repair takes.
-    source: [owner 2026-10-21 (fourth play-test)]
-    status: unclear
-    note: Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). Five peasants mended a bridge from almost nothing in 22 s, which looked instant while they stood still (BLD-021); whether the original repairs more slowly is to be confirmed.
+    rule: A repair restores a set number of hit points with each blow of a repairer, so its time depends on how many hit points the building lacks.
+    source: [owner 2026-10-21 (fourth play-test), owner 2026-10-21 (answers)]
+    status: partial
+    note: Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). The original's data has no repair value, so the hit points per blow need a capture.

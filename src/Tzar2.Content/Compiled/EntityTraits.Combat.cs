@@ -23,6 +23,12 @@ public sealed partial record EntityTraits
     /// <summary>Special abilities.</summary>
     public AbilityFlags Abilities { get; init; }
 
+    /// <summary>
+    /// The unit types an impersonator cannot copy, ascending (machines, ships and magic creatures: the owner, MAG-012;
+    /// flyers are never copied either).
+    /// </summary>
+    public ImmutableArray<ushort> NotImpersonated { get; init; } = [];
+
     /// <summary>Made from another unit in place (Jihad warriors from peasants), or null.</summary>
     public ConversionDefinition? ConvertsFrom { get; init; }
 

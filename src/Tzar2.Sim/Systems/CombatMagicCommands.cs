@@ -142,17 +142,26 @@ internal static class CombatMagicCommands
             return CommandRejection.InvalidArgument;
         }
 
+        CommandRejection? last = CommandRejection.NoValidEntities;
         int applied = 0;
         foreach (EntityId unit in entities)
         {
-            if (IsCommandedUnit(world, unit, command.Player) && (world.TypeOf(unit).Traits.Abilities & AbilityFlags.Impersonate) != 0)
+            if (!IsCommandedUnit(world, unit, command.Player) || (world.TypeOf(unit).Traits.Abilities & AbilityFlags.Impersonate) == 0)
             {
-                StartErrand(world, unit, ErrandKind.Impersonate, command.Target, 0);
-                applied++;
+                continue;
             }
+
+            if (world.TypeOf(unit).Traits.NotImpersonated.BinarySearch(world.Identities.Get(command.Target).TypeId) >= 0)
+            {
+                last = CommandRejection.NotAccepted; // a machine, a ship or a magic creature
+                continue;
+            }
+
+            StartErrand(world, unit, ErrandKind.Impersonate, command.Target, 0);
+            applied++;
         }
 
-        return applied > 0 ? null : CommandRejection.NoValidEntities;
+        return applied > 0 ? null : last;
     }
 
     /// <summary>The listed own disguised spies show their true selves (order <c>reveal_self</c>).</summary>
@@ -175,7 +184,7 @@ internal static class CombatMagicCommands
     public static void TryImpersonate(World world, EntityId spy, EntityId target)
     {
         byte owner = world.Identities.Get(spy).Owner;
-        if (!CanBeImpersonated(world, owner, target))
+        if (!CanBeImpersonated(world, owner, target) || world.TypeOf(spy).Traits.NotImpersonated.BinarySearch(world.Identities.Get(target).TypeId) >= 0)
         {
             return;
         }
@@ -185,11 +194,13 @@ internal static class CombatMagicCommands
         world.Events.Emit(new SimEvent(SimEventKind.Impersonated, owner, spy, target.Index, look.Owner, look.TypeId));
     }
 
-    // Another kingdom's unit on the map, walking or riding on land (not a ship, a flyer or a building).
+    // Another kingdom's unit on the map, walking or riding on land: not a ship, a flyer, a building or an animal kept for
+    // food (the spy's own list leaves out machines and magic creatures).
     private static bool CanBeImpersonated(World world, byte player, EntityId target)
         => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var t && !world.IsHeld(target)
             && world.Identities.At(t).Owner != player && world.HasPlayer(world.Identities.At(t).Owner)
-            && world.TypeOf(target) is { IsMobile: true, Locomotor: Locomotor.Foot or Locomotor.Mounted } type && type.Traits.Category == EntityCategory.Unit;
+            && world.TypeOf(target) is { IsMobile: true, Locomotor: Locomotor.Foot or Locomotor.Mounted } type && type.Traits.Category == EntityCategory.Unit
+            && type.Traits.ResourceNode is null;
 
     public static CommandRejection? PickItem(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {

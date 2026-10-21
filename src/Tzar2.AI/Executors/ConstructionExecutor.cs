@@ -25,7 +25,7 @@ public sealed class ConstructionExecutor : IAiExecutor
     public void Run(AiExecutorContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (!context.EconomyAi || context.Player.Workers.Count == 0)
+        if (!(context.EconomyAi || context.WarAi) || context.Player.Workers.Count == 0)
         {
             return;
         }
@@ -102,6 +102,11 @@ public sealed class ConstructionExecutor : IAiExecutor
 
             Position p = context.World.Positions.Get(site);
             ushort typeId = context.World.Identities.Get(site).TypeId;
+            if (!context.Makes(typeId))
+            {
+                continue; // the other adviser's site (AI assistance)
+            }
+
             PickBuilders(context, typeId, p.X, p.Y, 1);
             if (context.Selection.Count > 0 && context.Issue(CommandKind.Build, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(context.Selection), target: site))
             {
@@ -159,6 +164,11 @@ public sealed class ConstructionExecutor : IAiExecutor
 
             EntityTypeDefinition type = world.Ruleset.EntityTypes[typeId];
             int cls = context.Model.ClassOf(typeId);
+            if (!context.Makes(typeId))
+            {
+                continue; // the other adviser's building (AI assistance)
+            }
+
             if (cls < 0 || !type.HasFootprint || type.Traits.BuildTimeMs <= 0 || !context.FirstAttempt(cls, 0))
             {
                 continue; // not buildable, or already tried this run (a goal repeated by many rules counts once)

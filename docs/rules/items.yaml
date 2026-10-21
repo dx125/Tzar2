@@ -33,10 +33,10 @@ rules:
     status: partial
     note: The simulation does it; the client uses the first item, as there is no inventory to pick from (HUD-017).
   ITEM-008:
-    rule: Only the Arabians make items, in the magic workshop after Witchcraft; the player picks the kind of item and how much gold to spend, and better items cost more and take longer.
-    source: [manual Producing Items, help ITEMS.TXT HT_CREATE_ITEMS]
+    rule: Only the Arabians make items, in the magic workshop after Witchcraft; the player picks the kind (books, potions, or weapons and shields) and the item, and how much gold to spend; better items cost more and take longer.
+    source: [manual Producing Items, help ITEMS.TXT HT_CREATE_ITEMS, owner 2026-10-21 (answers)]
     status: tested
-    note: The card's Build Item order opens the D_BUILD dialog (kind of item, gold); which picture shows which kind is ours, and the panel's three small toggles (books, potions, power) are not used yet as no source says what they do.
+    note: The D_BUILD panel has the three kind toggles, the item, the gold, CANCEL and BUILD, as the owner's screenshot shows; a book shows its spell's picture. Where the toggles sit on the horizontal panel is ours.
   ITEM-009:
     rule: Magic books made in the magic workshop cost four times more and take twice as long.
     source: [patch 1.05 (TZAR110.TXT)]
@@ -67,3 +67,9 @@ rules:
     rule: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
     source: ['data RES.INI [TreasuryItem] [WeaponItem] [ArmourItem] [PotionItem]']
     status: missing
+  ITEM-016:
+    rule: Each kind of item the magic workshop makes has several items, books of different spells, potions of different effects, and weapons for attack or defence (swords, bows, shields).
+    source: ['data IMAGES.INI item_book1-3 item_potion1-8 item_sword1-3 item_bow1-3 item_shield1-3', owner 2026-10-21 (answers)]
+    status: missing
+    note: Tzar2 has one item per kind (a Fire Rain book, a potion, a weapon, a shield, a plus item); several need items with their own spell or effect.
+    work: STATUS work queue 3

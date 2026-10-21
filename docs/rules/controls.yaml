@@ -106,10 +106,10 @@ rules:
     source: [manual Hints About Gameplay]
     status: implemented
   CTRL-023:
-    rule: The image of the building being placed is green where it can be built.
-    source: [manual Constructing A Building, manual Commanding Units (Build)]
-    status: unclear
-    note: After the owner's first play-test the ghost has no fill and only the cells that block it turn red (CTRL-018); whether the original tints the whole image green is to be confirmed by the owner.
+    rule: The image of the building being placed is green, without the kingdom's colours.
+    source: [manual Constructing A Building, manual Commanding Units (Build), owner 2026-10-21 (answers)]
+    status: implemented
+    note: The cells that block it turn red (CTRL-018).
   CTRL-024:
     rule: Holding Alt or Ctrl while placing a gate turns the direction of the gate to be built.
     source: [manual Common Buildings (Wood Gate and Stone Gate), help ITEMS.TXT HT_BUILD_WALLS_GATES]
@@ -128,10 +128,9 @@ rules:
     source: [manual Commanding Units (Guard)]
     status: missing
   CTRL-028:
-    rule: Shift+click on an order button of a building queues five.
-    source: [owner 2026-10-21 (Tzar2's hotkey list)]
-    status: unclear
-    note: Tzar2's assumption from the hotkey checklist; no source of the original says so.
+    rule: Shift+click on an order button of a building queues five, and Shift+right click takes five off.
+    source: [owner 2026-10-21 (answers)]
+    status: tested
   CTRL-029:
     rule: In the build menu the letters of the buildings in its categories (guilds, common, rare) work directly, without opening the category.
     source: [data MENU.INI capturekeys]

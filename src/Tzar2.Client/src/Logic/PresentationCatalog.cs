@@ -401,6 +401,10 @@ public sealed class PresentationCatalog : ICardSource
     /// <inheritdoc/>
     public string Civilization(ushort typeId) => _types[typeId].Civilization;
 
+    /// <summary>The <c>orders/buttons.bmp</c> cell of ORDERS.INI order <paramref name="order"/> (its IMG), or −1.</summary>
+    public int OrderImage(string order)
+        => _orders.Section(order)?.Get("IMG") is { } img && int.TryParse(img, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ? index : -1;
+
     /// <inheritdoc/>
     public IReadOnlyList<CardButton> AbilityButtons(string ability) => ability == "impersonate" ? Card("spy_add") : [];
 

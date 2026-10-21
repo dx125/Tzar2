@@ -43,7 +43,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // two new combat settings: the ruleset hash only.
     // (ADR 0184) the spies' disguise store joins the hashed layout (version 9); behaviour unchanged.
     // (the help, 2026-10-21) Landing Tactics gives ships 50 % more room, not 4 places: the ruleset hash only.
-    private const ulong GoldenRulesetHash = 0x8CC1EC04F8CF26AAUL;
+    // (the owner's answers, 2026-10-21) every storage takes gold and stone; spies copy no machine, ship or magic
+    // creature: the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0x3B095C036F3865E2UL;
     private const ulong GoldenHashStream = 0x2BDE24C6A83538E7UL;
     private const ulong GoldenFinalFullHash = 0xA1DC4B70F3D37C14UL;
 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Tzar2.AI.Runtime;
 using Tzar2.AI.Scenarios;
 using Tzar2.Content.Compiled;
@@ -17,23 +18,25 @@ public class AiAssistTests
     [Trait("Rule", "AI-004")]
     public void A_standby_AI_waits_then_runs_the_economy_or_the_war_its_human_asks_for()
     {
+        var model = new AiRulesetModel(AiFixtures.Classic);
         Assert.Empty(Run(assist: -1));
 
-        HashSet<CommandKind> economy = Run(assist: 1);
-        Assert.Contains(CommandKind.Harvest, economy);
-        Assert.DoesNotContain(CommandKind.Attack, economy);
+        // The economy adviser gathers, builds and trains workers; no troops (the owner's description).
+        List<(CommandKind Kind, int Arg0)> economy = Run(assist: 1);
+        Assert.Contains(economy, c => c.Kind == CommandKind.Harvest);
+        Assert.DoesNotContain(economy, c => c.Kind == CommandKind.Attack || (c.Kind == CommandKind.Train && model.IsMilitary(c.Arg0)));
 
-        HashSet<CommandKind> war = Run(assist: 2);
-        Assert.DoesNotContain(CommandKind.Harvest, war);
-        Assert.DoesNotContain(CommandKind.Build, war);
-        Assert.DoesNotContain(CommandKind.Train, war);
+        // The war adviser never gathers; what it trains are troops.
+        List<(CommandKind Kind, int Arg0)> war = Run(assist: 2);
+        Assert.DoesNotContain(war, c => c.Kind == CommandKind.Harvest || c.Kind == CommandKind.Research);
+        Assert.All(war.Where(c => c.Kind == CommandKind.Train), c => Assert.True(model.IsMilitary(c.Arg0)));
 
         // Back to none: the AI stops.
         Assert.Empty(Run(assist: 1, thenNone: true));
     }
 
-    // The kinds of command the human's standby AI issues in 30 s of play after its human asks for assistance (-1: never).
-    private static HashSet<CommandKind> Run(int assist, bool thenNone = false)
+    // The commands (kind and first argument) the human's standby AI issues in 30 s of play after its human asks for assistance (-1: never).
+    private static List<(CommandKind Kind, int Arg0)> Run(int assist, bool thenNone = false)
     {
         Ruleset rules = AiFixtures.Classic;
         MapData map = AiSkirmishScenario.CreateMap(rules, Options);
@@ -59,16 +62,16 @@ public class AiAssistTests
             sim.Tick(stop);
         }
 
-        var kinds = new HashSet<CommandKind>();
+        var issued = new List<(CommandKind Kind, int Arg0)>();
         for (int t = 0; t < 600; t++)
         {
             sim.Tick(none);
             for (int c = 0; c < ai.LastCommands.Count; c++)
             {
-                kinds.Add(ai.LastCommands[c].Kind);
+                issued.Add((ai.LastCommands[c].Kind, ai.LastCommands[c].Arg0));
             }
         }
 
-        return kinds;
+        return issued;
     }
 }

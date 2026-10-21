@@ -285,6 +285,12 @@ public sealed class AiExecutorContext
     /// <summary>Whether the AI defends and attacks this run: the map's "War AI", or the takeover or war assistance.</summary>
     public bool WarAi { get; private set; }
 
+    /// <summary>
+    /// Whether this run makes <paramref name="typeId"/>: troops and military buildings with the war half, everything
+    /// else with the economy half (the owner's description of the original's two advisers; ADR 0183).
+    /// </summary>
+    public bool Makes(int typeId) => Model.IsMilitary(typeId) ? WarAi : EconomyAi;
+
     internal CommandList Output { get; }
 
     internal void Begin(World world, AiBinding binding, AiPlayerState state, AiOptions options)

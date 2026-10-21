@@ -64,9 +64,13 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
-   (TECH-019), one farmer per field (ECO-021), siege weapons hurting their own side (WAR-013), the attack's hit frame
-   from the data (WAR-014). Then the screens: diplomacy, tribute, inventory, save and load.
+   order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), one farmer per field
+   (ECO-021), siege weapons hurting their own side (WAR-013), the attack's hit frame from the data (WAR-014), and the
+   magic workshop's several items per kind (ITEM-016: books of different spells, potions of different effects,
+   swords, bows and shields). Then the screens: diplomacy, tribute, inventory, save and load. Landing Tactics (TECH-019)
+   is done.
+   * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
+     (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012).
 4. **Maintainer:** units never stand on one another (WORLD-015).
    * What the probes of 2026-10-21 measured:
      * At rest, units keep 16 px apart.
@@ -106,6 +110,26 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — The owner's answers on the open questions.**
+  * Spies (MAG-012, BLD-013, MAG-018):
+    * they copy any man of any civilization from next to him, but no machine, flyer, ship or magic creature (BONUS.INI
+      groups; the mage, listed there, is a man and can be copied);
+    * fighting keeps the disguise;
+    * another kingdom's spy close by unmasks it, towers do not;
+    * the 1.05 note's "obsessed by spies peasants" are spies in a peasant's look, which cannot build.
+  * AI assistance is in single player too. The war adviser commands the troops, builds the military buildings and
+    trains troops; the economy adviser builds the economic buildings, researches and gathers. Our AI now splits its
+    construction and production that way (ADR 0183).
+  * The magic workshop's panel has three toggles (books, potions, weapons and shields), each with several items; the
+    dialog follows the owner's screenshot. Several items per kind is a new rule to build (ITEM-016).
+  * Emerge takes the place by right click; with no unit chosen, everyone comes out at once.
+  * The building being placed is green, without the kingdom's colours.
+  * Right click takes one unit off a queue; Shift+click adds five, Shift+right click takes five off.
+  * Every civilization's storage takes gold and stone, like the lumber mill wood. Asian peasants milk cows as the
+    others do.
+  * Repairs restore a set number of hit points per blow; the data has no value, so it waits for a capture.
+  * The gameplay golden's ruleset hash is re-pinned; the scenarios' state hashes and the benches are unchanged.
 
 * **2026-10-21 — The hotkey checklist is current (work queue item 1).**
   * Ctrl+] and Ctrl+[ select by experience level, above or below the average of the selection or of the own units

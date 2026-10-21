@@ -46,7 +46,9 @@ public sealed class CommandCardTests : IDisposable
 
     [Fact]
     [Trait("Rule", "PROD-001")]
+    [Trait("Rule", "PROD-002")]
     [Trait("Rule", "PROD-003")]
+    [Trait("Rule", "CTRL-028")]
     public void Queued_units_count_on_their_button_a_right_click_takes_one_off_and_shift_orders_five()
     {
         EntityId castle = Own("euro.castle");
@@ -65,6 +67,9 @@ public sealed class CommandCardTests : IDisposable
         Assert.Equal((CommandKind.Cancel, -1, peon + 1), (cancel.Kind, cancel.Arg0, cancel.Arg1));
         Command five = Single(card.Press(Context([castle]), slot, shift: true));
         Assert.Equal((CommandKind.Train, (int)peon, 5), (five.Kind, five.Arg0, five.Arg1));
+        CommandList fiveOff = card.Press(Context([castle]), slot, right: true, shift: true).Commands!;
+        Assert.Equal(5, fiveOff.Count);
+        Assert.All(Enumerable.Range(0, 5), i => Assert.Equal((CommandKind.Cancel, peon + 1), (fiveOff[i].Kind, fiveOff[i].Arg1)));
     }
 
     [Fact]

@@ -59,6 +59,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly SpriteRenderer _ground;
     private readonly SpriteRenderer _objects;
     private readonly SpriteRenderer _translucent;
+    private readonly SpriteRenderer _ghostLayer; // the building being placed: green, without the kingdom's colours
     private readonly SpriteRenderer _glow;
     private readonly Rid _marksUnder;
     private readonly Rid _marksOver;
@@ -100,11 +101,15 @@ public sealed class WorldRenderer : IDisposable
         _translucent.SetModulate(new Color(1, 1, 1, 0.45f));
         _glow = new SpriteRenderer(host, _root, 36, additive: true);
         _glow.SetShadowsVisible(false);
+        _ghostLayer = new SpriteRenderer(host, _root, 38);
+        _ghostLayer.SetModulate(new Color(0.35f, 1f, 0.35f, 0.8f));
+        _ghostLayer.SetShadowsVisible(false);
         _marksOver = Item(40);
         _ground.SetAtlas(bank.Gpu);
         _objects.SetAtlas(bank.Gpu);
         _translucent.SetAtlas(bank.Gpu);
         _glow.SetAtlas(bank.Gpu);
+        _ghostLayer.SetAtlas(bank.Gpu);
 
         MapWidth = grid.Width;
         MapHeight = grid.Height;
@@ -182,6 +187,7 @@ public sealed class WorldRenderer : IDisposable
         _objects.SetView(view, screen);
         _translucent.SetView(view, screen);
         _glow.SetView(view, screen);
+        _ghostLayer.SetView(view, screen);
         _ground.SetShadowsVisible(options.Shadows);
         _objects.SetShadowsVisible(options.Shadows);
         RS.CanvasItemSetTransform(_marksUnder, view);
@@ -193,6 +199,7 @@ public sealed class WorldRenderer : IDisposable
         _objects.Clear();
         _translucent.Clear();
         _glow.Clear();
+        _ghostLayer.Clear();
         _pickables.Clear();
         _selected.Clear();
         foreach (EntityId id in selection)
@@ -255,10 +262,11 @@ public sealed class WorldRenderer : IDisposable
         DrawMarks(frame, interpolator, alpha, localPlayer, options);
         if (ghost is { } g)
         {
-            DrawGhost(g, localPlayer);
+            DrawGhost(g);
         }
 
         _objects.Commit();
+        _ghostLayer.Commit();
 
         UpdateFogAndLight(frame, fresh, useFog, localPlayer, options.DayNight ? darkness : 0f);
     }
@@ -271,6 +279,7 @@ public sealed class WorldRenderer : IDisposable
         _objects.Dispose();
         _translucent.Dispose();
         _glow.Dispose();
+        _ghostLayer.Dispose();
         foreach (Rid rid in new[] { _marksUnder, _marksOver, _fogItem, _root })
         {
             RS.FreeRid(rid);
@@ -693,7 +702,7 @@ public sealed class WorldRenderer : IDisposable
         Add(_ground, cross, at, 0, cross.Animation.FrameAt(Math.Max(0, age)), -1, (uint)(order.Y / UnitsPerPixel + 4096) << 6, shadowOnly: false);
     }
 
-    private void DrawGhost(Ghost ghost, byte localPlayer)
+    private void DrawGhost(Ghost ghost)
     {
         EntityTypeDefinition def = _rules.EntityTypes[ghost.TypeId];
         int left = ghost.TileX * TilePixels, top = ghost.TileY * TilePixels;
@@ -701,11 +710,11 @@ public sealed class WorldRenderer : IDisposable
         if (_bank.Get(_catalog.Type(ghost.TypeId).Image(UnitAnim.Base)) is { } sheet)
         {
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
-            AddSheet(_objects, sheet, origin, 0, 0, localPlayer, uint.MaxValue >> 1, shadows: false); // with the kingdom's colours
+            // Green and without the kingdom's colours, as in the original (the owner, 2026-10-21; CTRL-023).
+            AddSheet(_ghostLayer, sheet, origin, 0, 0, -1, uint.MaxValue >> 1, shadows: false);
         }
 
-        // The building itself shows where it goes: no fill over a legal site (the original fills nothing); only the
-        // cells that block it turn red.
+        // The green building shows where it goes (no fill over a legal site); only the cells that block it turn red.
         if (!ghost.Legal)
         {
             var red = new Color(1f, 0.15f, 0.1f, 0.45f);

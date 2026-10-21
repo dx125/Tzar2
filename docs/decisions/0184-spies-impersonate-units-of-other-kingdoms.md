@@ -56,3 +56,21 @@ see through it, and whether attacking ends the disguise.
 * ⚠ UNVERIFIED, for the owner or a capture: the reach, which units can be copied, whether towers and detectors see
   through a disguise, and whether attacking ends it.
 * Old saves and snapshots are refused by version; every golden and bench hash is re-pinned.
+
+## Amendment: the owner's answers (2026-10-21)
+
+The owner settled the unknowns from the original:
+
+* **Reach:** the spy comes right next to the unit, as decided.
+* **What it copies:** any man of any civilization, but no machine, flyer or magic creature. The spy's trait lists
+  what it never copies (`Impersonator: { never: [machines, ships, magic_creatures], except: [mage] }`, BONUS.INI
+  groups; the mage is listed among the magic creatures but is a man). Flyers and animals kept for food are refused
+  by the sim itself.
+* **Fighting:** attacking does not end the disguise. This replaces "and so does attacking" above.
+* **Who sees through it:**
+  * towers do not;
+  * another kingdom's spy (a detector) that comes close enough unmasks it and ends the disguise; allies do not.
+  * The distance is not in the data. Tzar2 uses the detector's radius (5 tiles, UNVERIFIED) until a capture
+    measures it.
+* **1.05's "obsessed by spies peasants cannot build":** a spy in a peasant's look, which keeps the spy's
+  abilities.
