@@ -111,6 +111,33 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-029")]
+    [Trait("Rule", "HUD-034")]
+    public void In_the_build_menu_the_letters_of_its_categories_buildings_work_and_each_category_lists_them()
+    {
+        // MENU.INI marks the build menu "capturekeys": its categories (guilds, common, rare) have no letter of their own,
+        // and the letters of their buildings work from the build menu. The owner's fourth play-test asked to see them.
+        EntityId peasant = Own("euro.peon");
+        _cards.Menus["e_peon"] = [new CardButton("build", 'B', CardAction.Submenu, "e_build", 1, "Build")];
+        _cards.Menus["e_build"] = [new CardButton("e_common", '\0', CardAction.Submenu, "e_common", 2, "Common buildings"), new CardButton("e_barrack", 'B', CardAction.Build, "barrack", 3, "Build Barracks")];
+        _cards.Menus["e_common"] = [new CardButton("e_house", 'H', CardAction.Build, "house", 4, "Build House")];
+        _cards.Capturing.Add("e_build");
+        var card = new CommandCard(Rules.Value, _cards, 0);
+
+        card.Press(Context([peasant]), card.Build(Context([peasant]))[0]!.Value);
+        CardSlot common = card.Build(Context([peasant]))[0]!.Value;
+        Assert.Equal("Keys: H Build House.", common.Description);
+        CardSlot house = Assert.IsType<CardSlot>(card.SlotOfKey(Context([peasant]), 'H'));
+        Assert.Equal((ushort)Rules.Value.EntityTypeId("euro.house"), card.Press(Context([peasant]), house).Placing);
+        Assert.Equal("e_barrack", card.SlotOfKey(Context([peasant]), 'B')!.Value.Button.Order);
+        Assert.Null(card.SlotOfKey(Context([peasant]), 'Q'));
+
+        _cards.Capturing.Clear(); // a menu that does not capture: only its own letters
+        card.Build(Context([peasant]));
+        Assert.Null(card.SlotOfKey(Context([peasant]), 'H'));
+    }
+
+    [Fact]
     public void An_order_that_needs_a_target_waits_for_it_and_is_highlighted()
     {
         EntityId peasant = Own("euro.peon");
@@ -163,7 +190,11 @@ public sealed class CommandCardTests : IDisposable
     {
         public Dictionary<string, List<CardButton>> Menus { get; } = [];
 
+        public HashSet<string> Capturing { get; } = [];
+
         public IReadOnlyList<CardButton> Card(string? menu) => menu is not null && Menus.TryGetValue(menu, out List<CardButton>? b) ? b : [];
+
+        public bool CapturesKeys(string? menu) => menu is not null && Capturing.Contains(menu);
 
         public string? Menu(ushort typeId)
         {

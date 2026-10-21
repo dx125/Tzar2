@@ -163,6 +163,12 @@ public interface ICardSource
     /// <summary>The buttons of card (menu) <paramref name="menu"/>, in order; empty when there is none.</summary>
     IReadOnlyList<CardButton> Card(string? menu);
 
+    /// <summary>
+    /// Whether the letters of the buttons in <paramref name="menu"/>'s submenus work from the menu itself (MENU.INI
+    /// <c>capturekeys</c>: in the build menu, the letter of a building in a category builds it at once).
+    /// </summary>
+    bool CapturesKeys(string? menu);
+
     /// <summary>The menu of an entity type's card, or null.</summary>
     string? Menu(ushort typeId);
 

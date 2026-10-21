@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-21 (the ledger of the original's rules)
+* **Last updated:** 2026-10-21 (fourth play-test)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -53,7 +53,8 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the other.
+Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the other; items 4 and 5 come from the
+fourth play-test.
 
 1. **Maintainer:** the ledger's first fill and the data account are done (log below). Next: bring the hotkey
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
@@ -71,23 +72,28 @@ Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the
    order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
    (TECH-019), one farmer per field (ECO-021), siege weapons hurting their own side (WAR-013), the attack's hit frame
    from the data (WAR-014). Then the screens: diplomacy, tribute, inventory, save and load.
-4. **Operator:** a fourth play-test (`tools/play/play.ps1`); the third one's fixes are merged.
-5. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+4. **Maintainer:** units never stand on one another (WORLD-015): a collision radius from the units' size and a resolve
+   that leaves no overlap, without bringing back ORIG-02's jams at bridges and gates.
+5. **Maintainer:** the owner's check of 2026-10-21: every bonus of a building or technology (gathering, the
+   blacksmith's, lumber mill's and guilds' unit stats, everything else) is applied; a test per effect, and the
+   effects the sources describe but Tzar2 lacks in the ledger.
+6. **Operator:** a fifth play-test (`tools/play/play.ps1`) once items 4 and 5 are merged.
+7. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-6. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+8. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
    more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
-7. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+9. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
-8. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+10. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-9. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
+11. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
     solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
     diagonal rocks) to reach 19/19.
-10. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+12. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
-11. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-12. M7 planning: installer, code signing, crash reporting, min-spec hardware.
-13. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
+13. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+14. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+15. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
 
@@ -96,6 +102,24 @@ Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-21 — Fourth play-test by the owner: six findings and a check.**
+  * **Wood went to the mill of the first trip** (ECO-013). A worker kept its drop-off from trip to trip, so after a
+    nearer lumber mill went up it still walked to the old one. Every load now goes to the drop-off nearest to where it
+    was gathered. The gameplay and AI goldens and the two benches are re-pinned.
+  * **A bridge hid the units on it** (WORLD-014). Bridges are now drawn on the ground layer, like fields.
+  * **The bridge seemed repaired at once** (BLD-021, BLD-022).
+    * Repairing peasants were shown standing: the frame had no activity for repairing. They now show the building
+      animation and its sound.
+    * The log of the session shows five peasants mended the bridge in 22 s (four repairers work 2.5 times as fast as
+      one; UNK-18). Whether the original is slower is a question for the owner.
+  * **Esc opens the game menu** when there is nothing left to cancel or deselect (SHELL-028, the owner's request).
+  * **The build menu's categories had no shortcuts** (CTRL-029, HUD-034).
+    * MENU.INI marks the build menu `capturekeys`: the original's categories have no letters, and the letters of their
+      buildings work from the build menu. Tzar2 ignored the mark; the card model now honours it.
+    * A category's hint lists the letters of its buildings.
+  * **Units stand on one another** (WORLD-015). The collision radius is 7 px, half a sprite's width, and the push apart
+    is soft and capped. It becomes work-queue item 4.
+  * **The owner's check, that every bonus of buildings and technologies applies**, becomes work-queue item 5.
 * **2026-10-21 — The core stays free of engines and of the original; UI logic moves into models (ADR 0182).**
   * **Owner's question:** a new game on the same core, with new balance, units and civilizations, perhaps on a 3D
     engine.

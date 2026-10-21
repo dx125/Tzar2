@@ -9,6 +9,7 @@ using Tzar2.Game.Maps;
 using Tzar2.Game.Session;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
+using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
 using Tzar2.Sim.Systems;
 using Xunit;
@@ -282,6 +283,30 @@ public sealed class SessionTests
         FrameQueueEntry entry = Assert.Single(frame.QueueEntries.ToArray(), q => q.Entity == castle.Value);
         Assert.Equal((FrameQueueKind.Unit, peon, 3), (entry.Kind, entry.Id, entry.Count));
         Assert.Equal(3, frame.Entities.ToArray().Single(e => e.Id == castle).QueueCount);
+    }
+
+    [Fact]
+    [Trait("Rule", "BLD-021")]
+    public void A_repairing_peasant_is_shown_at_work()
+    {
+        // Fourth play-test: peasants repairing a bridge stood still, and the repair looked instant.
+        using var session = new GameSession(Setup() with { ComputerAi = false }, Rules.Value, fog: false);
+        World world = session.Simulation.World;
+        EntityId castle = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Traits.LegacyClass == "castle");
+        EntityId peon = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Traits.Harvester is not null);
+        world.Healths.Get(castle).Current = world.Healths.Get(castle).Max / 2;
+        var batch = new CommandList();
+        batch.Add(CommandKind.Repair, [peon], target: castle);
+        session.Submit(batch);
+        for (int t = 0; t < 400 && world.Workers.Get(peon).Phase != WorkerPhase.Repairing; t++)
+        {
+            session.Step(1);
+        }
+
+        session.Step(2);
+        Assert.Equal(WorkerPhase.Repairing, world.Workers.Get(peon).Phase);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        Assert.Equal(UnitActivity.Build, frame.Entities.ToArray().Single(e => e.Id == peon).Activity);
     }
 
     [Theory]

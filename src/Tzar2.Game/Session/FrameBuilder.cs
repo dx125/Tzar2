@@ -110,9 +110,9 @@ public static class FrameBuilder
                 {
                     e.Activity = node is { Traits.Category: EntityCategory.Unit } ? UnitActivity.Milk : GatherActivity(world.Ruleset, worker.NodeResource);
                 }
-                else if (!moving && worker.Phase == WorkerPhase.Building)
+                else if (!moving && worker.Phase is WorkerPhase.Building or WorkerPhase.Repairing)
                 {
-                    e.Activity = UnitActivity.Build;
+                    e.Activity = UnitActivity.Build; // repairing looks and sounds like building (the fourth play-test)
                 }
             }
 

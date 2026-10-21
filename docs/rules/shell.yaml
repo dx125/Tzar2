@@ -130,3 +130,8 @@ rules:
     rule: Quitting, resigning and disconnecting ask for confirmation.
     source: ['strings STRINGS.INI [q]']
     status: missing
+  SHELL-028:
+    rule: Esc opens the game menu when there is nothing left for it to cancel or deselect.
+    source: [owner 2026-10-21 (fourth play-test)]
+    status: deviation
+    note: The original opens the menu only with the MENU button, F1 and F10; the owner asked for Esc too.

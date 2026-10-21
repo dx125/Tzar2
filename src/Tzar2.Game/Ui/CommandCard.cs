@@ -90,11 +90,20 @@ public sealed class CommandCard
             buttons = [.. buttons.Where(b => b.Action != CardAction.Unsupported), .. buttons.Where(b => b.Action == CardAction.Unsupported)];
         }
 
+        bool captures = _source.CapturesKeys(menu);
         foreach (CardButton b in buttons)
         {
             (bool enabled, string detail) = Availability(context, b, civ);
             (ImmutableArray<int> cost, int timeMs) = Price(context, b, civ);
-            whole.Add(new CardSlot(b, enabled, Active(context, b), detail, Queued(context, b, civ), PriceRows(context, cost, timeMs), _source.Text("orders_add", b.Order, string.Empty).Trim()));
+            string description = _source.Text("orders_add", b.Order, string.Empty).Trim();
+            if (captures && b.Action == CardAction.Submenu && CapturedKeys(b.Argument) is { Length: > 0 } keys)
+            {
+                // A category of the build menu has no letter of its own; its hint lists the letters of what is in it, which
+                // work from the build menu itself (the owner's fourth play-test).
+                description = description.Length > 0 ? description + " " + keys : keys;
+            }
+
+            whole.Add(new CardSlot(b, enabled, Active(context, b), detail, Queued(context, b, civ), PriceRows(context, cost, timeMs), description));
         }
 
         // More orders than slots (a peasant has nine): pages of seven and a page button.
@@ -116,6 +125,49 @@ public sealed class CommandCard
         var more = new CardButton("page", '\0', CardAction.Page, $"{page + 1}/{pages}", -1, "More orders");
         card.Add(new CardSlot(more, true, false, $"page {page + 1} of {pages}"));
         return card;
+    }
+
+    /// <summary>
+    /// The slot a letter presses on the current card: a button with that letter, or, on a menu that captures its
+    /// submenus' keys (the build menu), the button with that letter in one of its submenus. Null when there is none.
+    /// </summary>
+    /// <param name="context">What the card was built for (after <see cref="Build"/>).</param>
+    /// <param name="letter">The letter, upper case.</param>
+    public CardSlot? SlotOfKey(CardContext context, char letter)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        foreach (CardSlot slot in WholeCard)
+        {
+            if (slot.Button.Hotkey == letter)
+            {
+                return slot;
+            }
+        }
+
+        if (Lead(context) is not { } lead || !_source.CapturesKeys(OpenMenu ?? _source.Menu(context.Frame.Entities[lead].TypeId)))
+        {
+            return null;
+        }
+
+        string civ = _source.Civilization(context.Frame.Entities[lead].TypeId);
+        foreach (CardSlot category in WholeCard)
+        {
+            if (category.Button.Action != CardAction.Submenu)
+            {
+                continue;
+            }
+
+            foreach (CardButton b in _source.Card(category.Button.Argument))
+            {
+                if (b.Hotkey == letter && !Hidden(context, b, context.Frame.Entities[lead]))
+                {
+                    (bool enabled, string detail) = Availability(context, b, civ);
+                    return new CardSlot(b, enabled, false, detail);
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Presses a slot: a left click, or a right click (one queued item less).</summary>
@@ -454,6 +506,14 @@ public sealed class CommandCard
         var list = new CommandList();
         list.Add(kind, entities, x, y, arg0: arg0, arg1: arg1);
         return list;
+    }
+
+    // "Keys: C Castle, Y Warriors' Guild..." for a category whose buttons' letters work from the menu above it.
+    private string CapturedKeys(string submenu)
+    {
+        IEnumerable<string> keys = _source.Card(submenu).Where(b => b.Hotkey != '\0').Select(b => $"{b.Hotkey} {b.Tooltip}");
+        string list = string.Join(", ", keys);
+        return list.Length > 0 ? "Keys: " + list + "." : string.Empty;
     }
 
     // The spell of a card button: its key, or (the ninjas' cloak and murder, raise dead) its order's name.

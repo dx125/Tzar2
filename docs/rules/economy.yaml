@@ -59,8 +59,8 @@ rules:
     source: [manual Resources]
     status: tested
   ECO-013:
-    rule: Loads go to the nearest finished building that takes them; the castle takes everything, the farm food, the lumber mill wood, the harbor fish.
-    source: [manual Civilizations (Castle Farm Lumbermill Harbor)]
+    rule: Each load goes to the finished building nearest to where it was gathered that takes it, even one built after the worker's first trip; the castle takes everything, the farm food, the lumber mill wood, the harbor fish.
+    source: [manual Civilizations (Castle Farm Lumbermill Harbor), owner 2026-10-21 (fourth play-test)]
     status: tested
   ECO-014:
     rule: The storage takes gold and iron for the Europeans, gold and stone for the Asians, and iron, gold and stone for the Arabians.

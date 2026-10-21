@@ -49,7 +49,7 @@ waits for. "Blocked" rows close by themselves when the features land (items, dip
 | `send-location` | Ctrl+Enter | Sends the view position to the other players | blocked | needs multiplayer |
 | `center` | Space | Centres the view on the selection | done | |
 | `default-item` | Backspace | Uses the unit's default item at once | blocked | items are not in the sim yet |
-| `escape` | Esc | Cancels a pending order or placement, closes a sub-menu, else deselects | done | |
+| `escape` | Esc | Cancels a pending order or placement, closes a sub-menu, else deselects | done | with nothing selected it opens the game menu (the owner's request, SHELL-028) |
 | `event-last` | Home | Jumps to the latest event (unit trained, building finished) | done | technology events come with research |
 | `event-next` | PgDn | Next event after Home | done | |
 | `event-prev` | PgUp | Previous event after Home | done | |

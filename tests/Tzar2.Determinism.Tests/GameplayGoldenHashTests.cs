@@ -36,9 +36,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // settings in the ruleset hash); loads but milk appear at once; the next node lies toward the drop-off and within
     // reach; units leave a building on free tiles of its open side; peasants of any civilization help on sites; idle
     // peasants find work after 10 s; hashed layout 8.
+    // (fourth play-test 2026-10-21) every load goes to the drop-off nearest to where it was gathered.
     private const ulong GoldenRulesetHash = 0x579C0A42D5E61161UL;
-    private const ulong GoldenHashStream = 0x8340803A13B71883UL;
-    private const ulong GoldenFinalFullHash = 0xD198A6E58E40A32BUL;
+    private const ulong GoldenHashStream = 0xE1E5C587EDB8DF2BUL;
+    private const ulong GoldenFinalFullHash = 0x37E0477EC4C35A38UL;
 
     private const int Ticks = 1600;
 

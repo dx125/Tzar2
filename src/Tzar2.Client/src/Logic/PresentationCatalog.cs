@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Tzar2.Content.Compiled;
 using Tzar2.Game.Ui;
 
@@ -267,6 +268,11 @@ public sealed class PresentationCatalog : ICardSource
 
         return buttons;
     }
+
+    /// <inheritdoc/>
+    public bool CapturesKeys(string? menu)
+        => _menus.Section(menu) is { } section
+            && section.Entries.Any(e => e.Key is null && string.Equals(e.Value.Trim(), "capturekeys", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Maps an ORDERS.INI <c>ACTION</c> (with the order's <c>CLASSNAME</c>: the technology or upgrade key) onto what

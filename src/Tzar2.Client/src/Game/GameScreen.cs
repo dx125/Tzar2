@@ -942,13 +942,10 @@ public partial class GameScreen : Node
         if (k >= GameKey.A && k <= GameKey.Z && (mods & (KeyMods.Ctrl | KeyMods.Alt)) == 0)
         {
             char letter = (char)('A' + (k - GameKey.A));
-            foreach (CardSlot slot in _card.WholeCard)
+            if (_frame is not null && _card.SlotOfKey(CardNow(), letter) is { } slot)
             {
-                if (slot.Button.Hotkey == letter)
-                {
-                    OnButton(slot, false);
-                    return;
-                }
+                OnButton(slot, false);
+                return;
             }
         }
 
@@ -1013,9 +1010,14 @@ public partial class GameScreen : Node
                 {
                     _card.Back();
                 }
-                else
+                else if (_selection.Selected.Count > 0)
                 {
                     _selection.Clear();
+                }
+                else
+                {
+                    ShowMenu(); // nothing left to cancel: Esc opens the game menu (the owner's fourth play-test)
+                    return;
                 }
 
                 RefreshCard();
