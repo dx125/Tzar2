@@ -295,6 +295,10 @@ public partial class Hud : Control
     public static Color HealthColour(float share)
         => share > 0.5f ? new Color(0.1f, 0.85f, 0.1f) : share > 0.25f ? new Color(0.95f, 0.85f, 0.1f) : new Color(0.9f, 0.1f, 0.1f);
 
+    // A button without art: the page number, its letter, or (an entry of a kingdom list) its name's first letter.
+    private static string ButtonText(CardButton b)
+        => b.Action == CardAction.Page ? b.Argument : b.Hotkey != '\0' ? b.Hotkey.ToString() : b.Tooltip.Length > 0 ? b.Tooltip[..1] : "?";
+
     /// <summary>Shows <paramref name="dialog"/> in the command card's place (null: the card again).</summary>
     public void ShowDialog(CardDialog? dialog)
     {
@@ -328,7 +332,7 @@ public partial class Hud : Control
             CardSlot? slot = i < card.Count ? card[i] : null;
             _card[i] = slot;
             _cardIcons[i].Texture = slot is { } s
-                ? _ui.Cell(Buttons, s.Button.ImageIndex) ?? _ui.Text(s.Button.Action == CardAction.Page ? s.Button.Argument : s.Button.Hotkey.ToString(), UiAssets.BoldFont)
+                ? _ui.Cell(Buttons, s.Button.ImageIndex) ?? _ui.Text(ButtonText(s.Button), UiAssets.BoldFont)
                 : null;
             _cardShade[i].Visible = _dialog is null && slot is { Enabled: false };
             _cardIcons[i].Modulate = slot is { Enabled: false } ? new Color(0.5f, 0.5f, 0.5f) : Colors.White;

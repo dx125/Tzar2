@@ -25,6 +25,9 @@ public sealed class CommandCard
     private readonly ICardSource _source;
     private readonly byte _me;
     private readonly Stack<string> _menus = new();
+
+    // The menu of a kingdom list on the stack (a name no card source uses), followed by the list's kind.
+    private const string ListMenu = "\u0001list:";
     private readonly Dictionary<uint, int> _index = [];
     private GameFrame? _indexed;
     private int _page;
@@ -99,7 +102,8 @@ public sealed class CommandCard
             return card;
         }
 
-        var buttons = (TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).Where(b => !Hidden(context, b, e)).ToList();
+        var buttons = (menu?.StartsWith(ListMenu, StringComparison.Ordinal) == true ? KingdomList(context, menu[ListMenu.Length..])
+            : TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).Where(b => !Hidden(context, b, e)).ToList();
         if (buttons.Count > Slots)
         {
             // What this build cannot do yet goes to the last page.
@@ -309,6 +313,12 @@ public sealed class CommandCard
                 return Commands(CommandKind.ConvertUnit, OwnIds(selected, e => e.IsMobile), arg0: into);
             case CardAction.NextIdle:
                 return new CardPress(NextIdlePeasant: true);
+            case CardAction.KingdomList:
+                _menus.Push(ListMenu + b.Argument);
+                _page = 0;
+                return CardPress.Nothing;
+            case CardAction.SelectUnit when uint.TryParse(b.Argument, NumberStyles.None, CultureInfo.InvariantCulture, out uint listed):
+                return new CardPress(Select: EntityId.FromValue(listed));
             case CardAction.AiAssist when context.AiAssist && int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int assist):
                 var help = new CommandList();
                 help.Add(CommandKind.SetAiAssist, [], arg0: assist);
@@ -373,7 +383,7 @@ public sealed class CommandCard
         var list = new List<FrameHeld>();
         foreach (FrameHeld h in context.Frame.Helds)
         {
-            if (h.Holder == holder.Id.Value)
+            if (h.Holder == holder.Id.Value && !h.IsItem)
             {
                 list.Add(h);
             }
@@ -577,6 +587,40 @@ public sealed class CommandCard
         return list;
     }
 
+    // The kingdom's heroes, spies (and ninjas: the units that detect the invisible) or carried items, each a button that
+    // selects the unit (an item: its carrier). The original fills its empty HEROES, SPYS and ITEMS menus at run time.
+    private List<CardButton> KingdomList(CardContext context, string kind)
+    {
+        var list = new List<CardButton>();
+        Dictionary<uint, int> index = Index(context.Frame);
+        if (kind == "items")
+        {
+            foreach (FrameHeld h in context.Frame.Helds)
+            {
+                if (h.IsItem && index.TryGetValue(h.Holder, out int c) && context.Frame.Entities[c].Owner == _me)
+                {
+                    ushort carrier = context.Frame.Entities[c].TypeId;
+                    list.Add(new CardButton("item", '\0', CardAction.SelectUnit, h.Holder.ToString(CultureInfo.InvariantCulture), _source.TrainImage(carrier),
+                        $"{_source.Name(h.TypeId)} ({_source.Name(carrier)})"));
+                }
+            }
+
+            return list;
+        }
+
+        foreach (FrameEntity e in context.Frame.Entities)
+        {
+            bool listed = e.Owner == _me && !e.Remembered && (kind == "heroes" ? e.Hero : kind == "spies" && _rules.EntityTypes[e.TypeId].Traits.World.DetectUnits > 0);
+            if (listed)
+            {
+                list.Add(new CardButton("unit", '\0', CardAction.SelectUnit, e.Id.Value.ToString(CultureInfo.InvariantCulture), _source.TrainImage(e.TypeId),
+                    e.Level > 0 ? $"{_source.Name(e.TypeId)}, level {e.Level}" : _source.Name(e.TypeId)));
+            }
+        }
+
+        return list;
+    }
+
     private int InsideCount(CardContext context, EntityId holder)
         => Index(context.Frame).TryGetValue(holder.Value, out int i) ? context.Frame.Entities[i].Inside : 0;
 
@@ -590,7 +634,7 @@ public sealed class CommandCard
 
         foreach (FrameHeld h in context.Frame.Helds)
         {
-            if (h.Unit == context.Picked)
+            if (h.Unit == context.Picked && !h.IsItem)
             {
                 return Index(context.Frame).TryGetValue(h.Holder, out int i) && !Info(_rules, context.Frame, context.Frame.Entities[i], _me).IsMobile
                     ? EntityId.FromValue(h.Holder)
@@ -853,6 +897,8 @@ public sealed class CommandCard
                 return selected.Any(e => e.Owner == _me && InsideCount(context, e.Id) > 0) ? (true, string.Empty) : (false, "nobody inside");
             case CardAction.AiAssist:
                 return context.AiAssist ? (true, string.Empty) : (false, "this match offers no AI assistance");
+            case CardAction.KingdomList:
+                return KingdomList(context, b.Argument).Count > 0 ? (true, string.Empty) : (false, "none yet");
             case CardAction.Craft:
                 if (!selected.Any(e => e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is not null))
                 {

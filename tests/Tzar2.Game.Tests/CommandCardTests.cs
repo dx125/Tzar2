@@ -9,6 +9,7 @@ using Tzar2.Game.Session;
 using Tzar2.Game.Ui;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
+using Tzar2.Sim.Components;
 using Xunit;
 
 namespace Tzar2.Game.Tests;
@@ -244,6 +245,42 @@ public sealed class CommandCardTests : IDisposable
         Assert.True((_session.Simulation.World.Players[0].Flags & PlayerFlags.AssistEconomy) != 0);
         CardContext after = Context([]) with { IsOwn = false, AiAssist = true };
         Assert.Equal((false, true), (card.Build(after)[0]!.Value.Active, card.Build(after)[1]!.Value.Active));
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-033")]
+    public void The_kingdom_lists_its_carried_items_and_a_press_selects_the_carrier_and_an_empty_list_is_greyed_out()
+    {
+        using var session = new GameSession(SessionTests.Setup() with { ComputerAi = false, CheatsAllowed = true }, Rules.Value, fog: false);
+        World world = session.Simulation.World;
+        EntityId footman = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Key == "euro.footman");
+        Position at = world.Positions.Get(footman);
+        ushort potion = (ushort)Rules.Value.EntityTypeId("comm.item_health");
+        var spawn = new CommandList();
+        spawn.Add(CommandKind.DebugSpawn, x: at.X + 1024, y: at.Y, arg0: potion, arg1: 1);
+        session.Submit(spawn);
+        session.Step(1);
+        EntityId item = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).TypeId == potion);
+        var pick = new CommandList();
+        pick.Add(CommandKind.PickItem, [footman], target: item);
+        session.Submit(pick);
+        for (int i = 0; i < 400 && !world.IsHeld(item); i++)
+        {
+            session.Step(1);
+        }
+
+        session.Step(1);
+        _cards.Menus["kingdom"] = [new CardButton("view_spys", 'S', CardAction.KingdomList, "spies", 107, "Spies"), new CardButton("view_items", 'I', CardAction.KingdomList, "items", 120, "Items")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = new(session.AcquireFrame(out _)!, [], IsOwn: false);
+        IReadOnlyList<CardSlot?> kingdom = card.Build(none);
+        Assert.Equal((false, "none yet"), (kingdom[0]!.Value.Enabled, kingdom[0]!.Value.Detail));
+        Assert.True(kingdom[1]!.Value.Enabled);
+
+        card.Press(none, kingdom[1]!.Value);
+        CardSlot entry = Assert.Single(card.Build(none), s => s is not null)!.Value;
+        Assert.Contains(Rules.Value.EntityTypes[potion].Key, entry.Button.Tooltip, StringComparison.Ordinal);
+        Assert.Equal(footman, card.Press(none, entry).Select);
     }
 
     [Fact]

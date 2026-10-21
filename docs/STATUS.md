@@ -60,12 +60,9 @@ play-test.
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
    every change.
 2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done).
-   The Magic Workshop's crafting, the holders' list of units inside, the kingdom's card and AI assistance are done
-   (log below). Left:
-   * the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013);
-   * the lists of heroes, spies and items on the kingdom's card (HUD-033).
-
-   The spy orders need the sim first. `attack_type` is on no card of the original, so it is left
+   The Magic Workshop's crafting, the holders' list of units inside, the kingdom's card with its lists and AI
+   assistance are done (log below). Left: the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013), which
+   need the sim first. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
    order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
@@ -119,6 +116,9 @@ the process decisions that have no ADR.
     flags), using the AI's existing economy and war halves. The button in force is lit.
   * It is the lobby's "AI Assist" option, as in the original, and is always on in single-player skirmishes.
   * What each half does in the original is unverified; a capture with assistance on would settle it.
+  * The kingdom's lists, which the original fills at run time: its heroes, its spies (and ninjas: the units that see
+    the invisible) and the items its units carry. An entry selects the unit (an item: its carrier) and shows it.
+  * The selection view also shows LEVEL for the player's own units that gain experience (HUD-016).
 
 * **2026-10-21 — A holder's units inside: the list, Emerge one, and Unload at a place (work queue item 2).**
   * A selected castle, outpost, ship or carpet of the player shows INSIDE (how many units of how many) and the

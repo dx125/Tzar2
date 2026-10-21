@@ -174,7 +174,7 @@ Missing and partial rules.
 * **HUD-011** (partial): The chat screen opens with the CHAT button or Enter; the message goes to the allies, the enemies, everyone, or players picked from a list that shows each one's stance. *Multiplayer only, as a chat line where Tab cycles everyone, allies and enemies; there is no list of players to pick from.* (ADR 0168)
 * **HUD-012**: The diplomacy screen (DIPLOMACY, F5) shows each player's civilization and lets you choose ally, enemy or neutral towards him, offer shared vision, resources and unit control, and set allied victory; each button shows whether the other player agreed. *The simulation has stances, sharing and allied victory (ADR 0102); the screen is not built.*
 * **HUD-013**: The tribute screen (TRIBUTE, F6) sends gold, food, stone or wood to another player; a left click on the amount raises it and a right click lowers it; SEND or CANCEL. *The simulation has tribute (ADR 0102); the screen is not built.*
-* **HUD-016** (partial): The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level. *The kingdom's name (only its colour shows), power and the level are not shown; INSIDE shows for the player's own holders only.*
+* **HUD-016** (partial): The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level. *The kingdom's name (only its colour shows) and power are not shown. INSIDE and LEVEL show for the player's own objects only.*
 * **HUD-017**: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped. *Use and drop act on the first item; there is no inventory view.*
 * **HUD-018**: In an inventory a left click uses an item, a right click drops it, Ctrl makes either instant, Alt+click makes it the default item, and < and > turn its pages.
 * **HUD-020**: The question mark on the orders bar opens the online help, whose topics explain every unit, building and technology and how to play. *The help's 407 topics are in the original's HELP/ITEMS.TXT.*
@@ -184,7 +184,7 @@ Missing and partial rules.
 * **HUD-029**: An order shows only when its condition holds; the quest order only when there are quests. *The quest order is always there.*
 * **HUD-030** (partial): The minimap paints terrains, trees and cliffs in the colours of the terrain set's data. *Tzar2 takes each tile's colour from its picture.*
 * **HUD-032**: A working peasant is named by its job, woodcutter, farmer, miner or builder.
-* **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The kingdom's card shows with nothing selected; the quests, AI assistance and the next idle peasant work. The lists of heroes, spies and items open empty, as the original fills them at run time.*
+* **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. Heroes inside buildings are not listed. The online help is missing.*
 
 ### Items
 

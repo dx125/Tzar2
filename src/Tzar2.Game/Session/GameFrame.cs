@@ -182,6 +182,12 @@ public struct FrameEntity
     /// <summary>How many units this holder of the frame's kingdom takes, 0 when it is none or another kingdom's.</summary>
     public int InsideMax;
 
+    /// <summary>Experience level (GAME-08), 0 for what gains none.</summary>
+    public int Level;
+
+    /// <summary>A named hero (GAME-08).</summary>
+    public bool Hero;
+
     /// <summary>Upgrades the entity has or has queued (bit = upgrade id; towers, walls, gates, galleons).</summary>
     public uint Upgrades;
 
@@ -233,13 +239,17 @@ public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Coun
 /// <param name="Count">How many are queued.</param>
 public readonly record struct FrameQueueEntry(uint Entity, FrameQueueKind Kind, ushort Id, int Count);
 
-/// <summary>A unit inside a holder of the frame's kingdom (GAME-09; the selection view's list, ORD-015).</summary>
-/// <param name="Holder">The holder (<c>EntityId.Value</c>).</param>
-/// <param name="Unit">The unit.</param>
+/// <summary>
+/// A unit inside a holder of the frame's kingdom (GAME-09; the selection view's list, ORD-015), or an item one of its
+/// units carries (GAME-10; the kingdom's list of items, HUD-033).
+/// </summary>
+/// <param name="Holder">The holder or the carrier (<c>EntityId.Value</c>).</param>
+/// <param name="Unit">The unit or the item.</param>
 /// <param name="TypeId">Its type.</param>
 /// <param name="Health">Its hit points.</param>
 /// <param name="MaxHealth">Its most hit points.</param>
-public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth);
+/// <param name="IsItem">An item in a unit's inventory.</param>
+public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth, bool IsItem = false);
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
 /// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>
@@ -438,7 +448,7 @@ public sealed class GameFrame
     private FrameQueueEntry[] _queue = new FrameQueueEntry[16];
     private FrameHeld[] _held = new FrameHeld[16];
 
-    /// <summary>The units inside the frame's kingdom's holders, grouped by holder in the order they are kept.</summary>
+    /// <summary>The units inside the frame's kingdom's holders and the items its units carry, grouped by holder in the order they are kept.</summary>
     public ReadOnlySpan<FrameHeld> Helds => _held.AsSpan(0, HeldCount);
 
     /// <summary>Number of valid entries in <see cref="Helds"/>.</summary>

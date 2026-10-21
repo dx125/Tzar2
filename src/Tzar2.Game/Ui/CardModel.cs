@@ -61,6 +61,12 @@ public enum CardAction
     /// <summary>AI assistance <see cref="CardButton.Argument"/>: 0 none, 1 economy, 2 war, 3 full (ADR 0183).</summary>
     AiAssist,
 
+    /// <summary>Opens a list of the kingdom's <see cref="CardButton.Argument"/>: <c>heroes</c>, <c>spies</c> or <c>items</c> (HUD-033).</summary>
+    KingdomList,
+
+    /// <summary>Selects unit <see cref="CardButton.Argument"/> (<c>EntityId.Value</c>) and shows it: an entry of a kingdom list.</summary>
+    SelectUnit,
+
     /// <summary>The next page of a card with more orders than slots (Tzar2's; <see cref="CardButton.Argument"/> = "2/3").</summary>
     Page,
 
@@ -252,6 +258,7 @@ public enum CardDialogKind
 /// <param name="NextIdlePeasant">Select the next idle peasant.</param>
 /// <param name="ShowQuests">Show the quest log.</param>
 /// <param name="DeleteSelected">Delete the selection (as the Delete key).</param>
+/// <param name="Select">Select this unit and show it (an entry of a kingdom list).</param>
 public sealed record CardPress(
     CommandList? Commands = null,
     OrderMode? Mode = null,
@@ -261,7 +268,8 @@ public sealed record CardPress(
     string? Message = null,
     bool NextIdlePeasant = false,
     bool ShowQuests = false,
-    bool DeleteSelected = false)
+    bool DeleteSelected = false,
+    EntityId? Select = null)
 {
     /// <summary>Nothing to do (the card may have changed menu or page).</summary>
     public static CardPress Nothing { get; } = new();

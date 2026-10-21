@@ -1363,6 +1363,13 @@ public partial class GameScreen : Node
             SelectNextIdlePeasant();
         }
 
+        if (press.Select is { } chosen && _frame is not null && _indexById.TryGetValue(chosen.Value, out int at))
+        {
+            // An entry of a kingdom list (heroes, spies, items: HUD-033).
+            _selection.SelectOwn([chosen]);
+            CenterOn(_frame.Entities[at].X, _frame.Entities[at].Y);
+        }
+
         if (press.ShowQuests)
         {
             ShowQuests();
@@ -1756,6 +1763,11 @@ public partial class GameScreen : Node
         if (t.Category == EntityCategory.Unit)
         {
             stats.Add(("art/icons/defence.t2img", HudText.Number(t.Defence)));
+        }
+
+        if (t.GainsExperience && e.Owner == _session.LocalPlayer)
+        {
+            stats.Add(("art/icons/level.t2img", HudText.Number(e.Level))); // LEVEL (manual: The Selection View; HUD-016)
         }
 
         if (t.Category == EntityCategory.Building && t.Resistance > 0)

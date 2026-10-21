@@ -94,6 +94,12 @@ public static class FrameBuilder
             e.Activity = moving ? UnitActivity.Walk : UnitActivity.Idle;
 
             e.CraftPermille = -1;
+            if (world.Experiences.IndexOf(id) is >= 0 and var xp)
+            {
+                e.Level = world.Experiences.At(xp).Level;
+                e.Hero = (world.Experiences.At(xp).Flags & ExperienceFlags.Hero) != 0;
+            }
+
             if (world.Holders.IndexOf(id) is >= 0 and var ho && (card is null || identity.Owner == card))
             {
                 e.Inside = world.Holders.At(ho).Count;
@@ -373,7 +379,8 @@ public static class FrameBuilder
     }
 
     // What the player may build or train now, by the sim's own requirement check (ADR 0040).
-    // The units (not items) inside the holders of the card's kingdom, or of everyone without one, grouped by holder.
+    // The units inside the holders of the card's kingdom and the items its units carry (of everyone without one),
+    // grouped by holder.
     private static void FillHelds(GameFrame frame, World world, byte? card)
     {
         int n = 0;
@@ -381,13 +388,14 @@ public static class FrameBuilder
         {
             EntityId unit = world.Helds.Entities[i];
             EntityId holder = EntityId.FromValue(world.Helds.Components[i].Holder);
-            if (world.Items.Has(unit) || !world.Holders.Has(holder) || (card is { } k && world.Identities.Get(holder).Owner != k))
+            bool item = world.Items.Has(unit);
+            if ((!item && !world.Holders.Has(holder)) || (card is { } k && world.Identities.Get(holder).Owner != k))
             {
                 continue;
             }
 
             Health health = world.Healths.IndexOf(unit) is >= 0 and var h ? world.Healths.At(h) : default;
-            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max));
+            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item));
         }
 
         frame.HeldCount = n;

@@ -281,14 +281,20 @@ public sealed class PresentationCatalog : ICardSource
     public static (CardAction Action, string Argument) Classify(string action, string? submenu, string? className = null)
     {
         ArgumentNullException.ThrowIfNull(action);
+        string[] words = action.Split(' ', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        string verb = words.Length > 0 ? words[0].ToLowerInvariant() : string.Empty;
+        string argument = words.Length > 1 ? words[1] : string.Empty;
+        if (verb == "get" && argument.ToLowerInvariant() is "heroes" or "spys" or "items")
+        {
+            // The original's HEROES, SPYS and ITEMS menus are empty and filled at run time: the card's kingdom lists.
+            return (CardAction.KingdomList, argument.ToLowerInvariant() == "spys" ? "spies" : argument.ToLowerInvariant());
+        }
+
         if (!string.IsNullOrEmpty(submenu))
         {
             return (CardAction.Submenu, submenu);
         }
 
-        string[] words = action.Split(' ', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        string verb = words.Length > 0 ? words[0].ToLowerInvariant() : string.Empty;
-        string argument = words.Length > 1 ? words[1] : string.Empty;
         return verb switch
         {
             "move" => (CardAction.Move, string.Empty),
