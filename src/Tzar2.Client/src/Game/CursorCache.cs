@@ -15,6 +15,9 @@ public static class CursorCache
     /// <summary>The name that shows the system's own pointer.</summary>
     public const string System = "system";
 
+    /// <summary>The original's default pointer (<c>IMAGES/CURSORS/S_DEF</c>).</summary>
+    public const string Default = "s_def";
+
     /// <summary>Shows cursor <paramref name="name"/> (<c>s_hand</c>, <c>s_attack</c>..., <see cref="System"/>); unchanged names cost nothing.</summary>
     public static void Apply(UiAssets ui, string name)
     {
@@ -48,7 +51,9 @@ public static class CursorCache
             return;
         }
 
-        Vector2 hotspot = name == "s_hand" ? Vector2.Zero : texture.GetSize() / 2;
+        // The default pointer and the hand point with their top-left pixel (the spearhead's tip is there); the others
+        // with their centre (UNK-40).
+        Vector2 hotspot = name is "s_hand" or Default ? Vector2.Zero : texture.GetSize() / 2;
         Input.SetCustomMouseCursor(texture, Input.CursorShape.Arrow, hotspot);
     }
 

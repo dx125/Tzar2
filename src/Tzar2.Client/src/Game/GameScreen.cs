@@ -2465,8 +2465,9 @@ public partial class GameScreen : Node
 
     private void UpdateCursor()
     {
-        // Nothing pending: a pointer (Tzar2's, or the system's); the original's hand is for taking things.
-        string name = Settings.SystemCursor ? CursorCache.System : OwnCursors.Arrow;
+        // Nothing pending: the original's default pointer (s_def, a golden spearhead; owner's screenshot of the original)
+        // or the system's; the hand is for taking things.
+        string name = Settings.SystemCursor ? CursorCache.System : CursorCache.Default;
         if (_placing == ushort.MaxValue && !_grabbing && InView(_mouse))
         {
             if (_mode != OrderMode.None)
