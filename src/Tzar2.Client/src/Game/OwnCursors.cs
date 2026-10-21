@@ -6,8 +6,7 @@ namespace Tzar2.Client.Game;
 
 /// <summary>
 /// Cursors the original does not have (its <c>IMAGES/CURSORS</c> hold one harvest cursor, a shovel): a pickaxe over gold
-/// and stone and a saw over trees (play-test of 2026-10-20), and a pointer for when no order is pending (second play-test:
-/// the original's hand is for taking things). They are Tzar2's own art, painted at run time from a few
+/// and stone and a saw over trees (play-test of 2026-10-20). They are Tzar2's own art, painted at run time from a few
 /// shapes in the style of the original cursors: flat colours inside a one-pixel black outline.
 /// </summary>
 public static class OwnCursors
@@ -18,9 +17,6 @@ public static class OwnCursors
     /// <summary>Saw: trees.</summary>
     public const string Saw = "x_saw";
 
-    /// <summary>The pointer: nothing to do under it.</summary>
-    public const string Arrow = "x_arrow";
-
     /// <summary>Canvas size in pixels.</summary>
     public const int Size = 24;
 
@@ -28,8 +24,6 @@ public static class OwnCursors
     private static readonly Color Steel = Color.Color8(140, 140, 136);
     private static readonly Color Wood = Color.Color8(150, 96, 48);
     private static readonly Color DarkWood = Color.Color8(96, 60, 28);
-    private static readonly Color Gold = Color.Color8(222, 176, 70);
-    private static readonly Color PaleGold = Color.Color8(250, 222, 140);
 
     private static readonly Shape[] Pickaxe =
     [
@@ -48,29 +42,17 @@ public static class OwnCursors
         new Hole([new(16.5f, 13.5f), new(18, 12.5f), new(20.5f, 15.5f), new(19.5f, 18.5f), new(17.5f, 18.5f), new(15.5f, 15.5f)]),
     ];
 
-    private static readonly Shape[] Pointer =
-    [
-        new Polygon(Gold, [new(1.5f, 1.5f), new(1.5f, 17.5f), new(5.5f, 13.5f), new(8.5f, 20.5f), new(11, 19.5f), new(8.5f, 12.5f), new(13.5f, 12.5f)]),
-        new Polygon(PaleGold, [new(2.5f, 3.5f), new(2.5f, 13.5f), new(4.5f, 11.5f), new(4.5f, 5.5f)]),
-    ];
-
     /// <summary>Whether <paramref name="name"/> is one of these cursors.</summary>
-    public static bool Has(string name) => name is Mine or Saw or Arrow;
+    public static bool Has(string name) => name is Mine or Saw;
 
-    /// <summary>The point that clicks: the pick's tip, the saw's tip, the pointer's tip.</summary>
-    public static Vector2 Hotspot(string name) => name switch
-    {
-        Mine => new Vector2(3, 6),
-        Arrow => new Vector2(1, 1),
-        _ => new Vector2(2, 3),
-    };
+    /// <summary>The point that clicks: the pick's tip, the saw's tip.</summary>
+    public static Vector2 Hotspot(string name) => name == Mine ? new Vector2(3, 6) : new Vector2(2, 3);
 
     /// <summary>Paints cursor <paramref name="name"/>, or returns null for an unknown name.</summary>
     public static Image? Paint(string name) => name switch
     {
         Mine => Render(Pickaxe),
         Saw => Render(HandSaw),
-        Arrow => Render(Pointer),
         _ => null,
     };
 

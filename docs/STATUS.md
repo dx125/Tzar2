@@ -91,8 +91,8 @@ the process decisions that have no ADR.
   map are loaded too. The production queue shows, as in the original, what is being made with its progress under the
   icon and how many are left on it (no more "71 % (+4)" among the stats). The placement ghost wears the local
   kingdom's colours (it lacked the player-colour overlay). A selection of many units shows one icon per type with the
-  count and the average health. The pointer is Tzar2's own arrow (the original's hand is for taking things), or the
-  system's (SETTINGS → Pointer). The pause froze nothing: the session publishes frames only after ticks, so the client
+  count and the average health. The pointer is the original's default cursor `s_def`, a golden spearhead (the owner's
+  screenshot of the original; the hand is for taking things), or the system's (SETTINGS → Pointer). The pause froze nothing: the session publishes frames only after ticks, so the client
   now reads the session's pause itself; animations and rain stop. Guard: a click on an own unit or building follows and
   defends it (the guards watch for enemies while walking, keep guarding after a fight and come back), on an enemy
   attacks it, on open ground holds it with a move-advance; before, only a moving unit could be guarded, and the first
