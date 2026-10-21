@@ -106,6 +106,10 @@ re-run the failed job (`gh run rerun <id> --failed`) and note it on the PR.
 * **Determinism**: the simulation uses fixed-point integers, no floating point, wall clock, unordered iteration or
   global randomness (TDD §8; the analyzers in `Tzar2.Analyzers`, ADR 0004, flag what they can). Hashes must agree across
   OSes, runtimes and worker counts.
+* **The original's rules are in a ledger** ([rules/](rules/README.md), ADR 0181). A feature starts from its chapter;
+  a play-test finding about the original becomes a rule there with a test that names it (`[Trait("Rule", "PROD-001")]`)
+  in the change that fixes it; `t2 rules check` (CI) keeps the chapters, the tests and the report in step, and
+  `t2 rules report` rewrites the report.
 * **Placeholders are not balance knobs.** A value that is neither in the original's tables nor measured stays in its
   register as UNVERIFIED until a capture fact replaces it; then it is marked VERIFIED with the session that proved it.
 * **A decision gets an ADR** when it shapes code or data others build on, or when it picks between real alternatives.
@@ -175,6 +179,7 @@ is in `user://replays/` (the log says which file). Godot keeps its own `user://l
 | Current state, next steps, process decisions | [STATUS.md](STATUS.md) |
 | A design decision and its reasons | an ADR in [decisions/](decisions/) |
 | Requirements, binding decisions, unknowns (UNK-*) | [TDD.md](TDD.md) and its appendices in [tdd/](tdd/) |
+| The original's rules, their sources and status | the ledger in [rules/](rules/README.md) |
 | Gameplay values not yet measured | the placeholder registers in [mechanics/](mechanics/) |
 | What we know about the original's file formats | [formats/](formats/) |
 | Measurements of the original | `tests/fidelity/facts/` (generated) and [mechanics/fidelity-summary.md](mechanics/fidelity-summary.md) |

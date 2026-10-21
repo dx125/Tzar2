@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-21 (third play-test: the HUD, queue counts, tooltips)
+* **Last updated:** 2026-10-21 (the ledger of the original's rules)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -23,7 +23,7 @@ and it has not been re-run since the handover.
 | M0 Foundations | **Done** | One ADR per spike: S2 (0007), S4 (0008), S3 (0009), S1 (0010), S6 (0013; S5 mobile export is PX); S1 renderer met on Windows (ADR 0010); CI green; no original files tracked (CI job `legal`). |
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
-| M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). The owner's first play-test is done (2026-10-20); open before M3 closes: its fixes (work queue 1) and a second play-test (item 2). |
+| M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). Three play-tests by the owner are done and their findings fixed (2026-10-20/21). Open before M3 closes: the ledger of the original's rules ([rules/](rules/README.md)) and its missing rules (work queue 1), and a fourth play-test. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **14 of 19 measured** (2026-10-20, editor acceptance test on the clean GOG install, scripted solver, ADR 0134; not completed: `alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`), tutorial 7 of 7 (reported). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
@@ -53,14 +53,21 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-Items 1 and 2 are left from the owner's play-tests (2026-10-20; log below).
+Items 1 to 4 are the owner's order of 2026-10-21 (log below), done one after the other.
 
-1. **Maintainer:** the original's side panels (LAYOUT.INI `LAYOUT1024L` and `R`: the HUD down the left or right side)
-   as a setting; the card, the tooltips and the selection view already place themselves by the layout.
-2. **Maintainer:** the rest of the command card: the Magic Workshop's crafting (`build_item`: which item, how much
-   gold), the holders' list of units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and
-   AI-mode orders need the sim first.
-3. **Operator:** a fourth play-test (`tools/play/play.ps1`) once the third one's fixes are merged (log below).
+1. **Maintainer:** fill the ledger of the original's rules ([rules/](rules/README.md), ADR 0181) from every source: the
+   manual, the strategy guide, the patch notes, the order descriptions of `STRINGS.INI`, the item help and the
+   decisions in this file; the status of each rule from the code; existing tests get their rule ids. Then report the
+   missing, partial and unclear rules to the owner.
+2. **Maintainer:** account for the original's data (ADR 0181, decision 5): a local-only test of which INI sections and
+   keys the import and the client read, against `docs/rules/data-usage.yaml`.
+3. **Maintainer:** the rest of the command card, starting with moving the card's logic out of the Godot client into
+   `Tzar2.Game` so that it is tested: the Magic Workshop's crafting (`build_item`: which item, how much gold), the
+   holders' list of units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and AI-mode
+   orders need the sim first.
+4. **Maintainer:** an ADR for the split of the engine, the original's content and a future game on the same core (the
+   owner's question of 2026-10-21: a new game with new balance, units and races, maybe on a 3D engine).
+5. **Operator:** a fourth play-test (`tools/play/play.ps1`); the third one's fixes are merged.
 4. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 5. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
@@ -76,12 +83,24 @@ Items 1 and 2 are left from the owner's play-tests (2026-10-20; log below).
    (Russian translations, never committed) and find a community map corpus.
 10. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
 11. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+12. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
+    and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
+    place themselves by the layout.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-21 — A ledger of the original's rules (ADR 0181).** About 40 findings of three play-tests: about 8 are
+  in the manual, about 10 in the original's data files nobody read, about 12 known only from playing the original, the
+  rest plain defects. The owner asked for an automatic check. Each rule of the original now sits in
+  [rules/](rules/README.md) with its source and status, and tests name the rules they check with
+  `[Trait("Rule", "ID")]`. `t2 rules check` runs in CI. It fails on an unknown id, on a `tested` rule without a test,
+  and on a stale report. The first chapters hold the play-tests' 49 rules, 20 of them tested by tests that existed.
+  Owner decisions:
+  * the side panels wait for M8;
+  * the order of work is the ledger, the data accounting, the command card, then the engine/content split ADR.
 * **2026-10-21 — Third play-test: the HUD.**
   * As in the owner's screenshot of the original castle panel, each order button shows how many of its item the
     selected buildings have queued, and the hourglass TIME stat shows the progress of the work in hand. The queue strip

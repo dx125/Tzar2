@@ -1,0 +1,16 @@
+schema: tzar2-rules/1
+prefix: ORD
+title: Unit orders
+rules:
+  ORD-001:
+    rule: Guard on an own unit or building makes the guards follow and defend it; they fight what attacks it, keep guarding after the fight and come back.
+    source: [manual "Commanding Units" (Guard), owner 2026-10-20 (second play-test)]
+    status: tested
+  ORD-002:
+    rule: Guard on an enemy attacks it; Guard on open ground holds that place with a move-advance.
+    source: [owner 2026-10-20 (second play-test)]
+    status: implemented
+  ORD-003:
+    rule: A move-advance fights the enemies met on the way and then goes on to its destination.
+    source: [manual "Commanding Units" (Move-advance)]
+    status: tested

@@ -1,0 +1,29 @@
+schema: tzar2-rules/1
+prefix: PROD
+title: Production and population
+rules:
+  PROD-001:
+    rule: A building queues any number of units of any kinds, each paid for when ordered ("10 archers, 10 swordsmen and 100 knights"); they are made in the order the kinds were first ordered.
+    source: [owner 2026-10-20 (third play-test)]
+    status: tested
+    adr: [0180]
+  PROD-002:
+    rule: A right click on an order button takes one unit of that kind off the queue and refunds it.
+    source: [owner 2026-10-21 (third play-test)]
+    status: unclear
+    note: Tzar2's choice (ADR 0180), from the original's per-button counts; whether the original cancels this way is not confirmed.
+  PROD-003:
+    rule: Each order button shows how many of its kind the selected buildings have queued, and the hourglass stat shows the progress of the one being made.
+    source: [owner 2026-10-21 (third play-test; the original's castle panel)]
+    status: implemented
+  PROD-004:
+    rule: New units appear around the building that made them, each on a free tile, not on top of each other.
+    source: [owner 2026-10-20 (third play-test)]
+    status: tested
+    adr: [0180]
+  PROD-005:
+    rule: New units never appear in a pocket shut in by walls or buildings while the building has a way out elsewhere.
+    source: [owner 2026-10-20 (third play-test)]
+    status: deviation
+    note: Fixes a bug of the original, at the owner's request.
+    adr: [0180]

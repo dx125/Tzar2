@@ -1,0 +1,9 @@
+schema: tzar2-rules/1
+prefix: BLD
+title: Construction and repair
+rules:
+  BLD-001:
+    rule: Any peasant of the kingdom helps build a site, whatever its civilization; placing a new site needs a peasant whose civilization builds that type.
+    source: [owner 2026-10-20 (third play-test)]
+    status: tested
+    adr: [0180]

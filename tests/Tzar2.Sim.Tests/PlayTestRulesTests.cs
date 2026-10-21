@@ -16,6 +16,7 @@ public class PlayTestRulesTests
     private const int Tile = MapState.UnitsPerTile;
 
     [Fact]
+    [Trait("Rule", "PROD-001")]
     public void A_queue_takes_any_number_of_any_units_one_entry_per_type_and_cancels_one_of_an_item()
     {
         // No population room: nothing leaves, so the queue only grows.
@@ -58,6 +59,7 @@ public class PlayTestRulesTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-001")]
     public void Peasants_of_another_civilization_help_build_a_site()
     {
         using var d = new SimDriver(TestMap(40, 24, Structure("euro.castle", 0, 2, 2), Unit("arab.peon", 0, 12, 10), Unit("arab.peon", 0, 13, 10)), ruleset: Classic);
@@ -72,6 +74,8 @@ public class PlayTestRulesTests
     }
 
     [Fact]
+    [Trait("Rule", "PROD-004")]
+    [Trait("Rule", "PROD-005")]
     public void Units_appear_around_the_building_on_free_tiles_with_a_way_out()
     {
         // The castle's south side (tiles 2..6 of row 7) is a pocket shut in by cliffs: the original could put units there.
@@ -105,6 +109,8 @@ public class PlayTestRulesTests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-001")]
+    [Trait("Rule", "ECO-003")]
     public void A_load_appears_at_once_but_milk_fills_the_pail()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Tree(12, 4), Unit("euro.peon", 0, 10, 4), Unit("comm.cow", 0, 12, 10), Unit("euro.peon", 0, 10, 10)), ruleset: Classic);
@@ -128,6 +134,7 @@ public class PlayTestRulesTests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-004")]
     public void After_a_tree_falls_the_next_one_is_on_the_way_to_the_drop_off_and_reachable()
     {
         // Tree A falls first. B touches A but lies away from the castle; C is two tiles from A toward the castle; D, right
@@ -167,6 +174,7 @@ public class PlayTestRulesTests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-005")]
     public void An_idle_peasant_finds_work_by_itself_after_a_while()
     {
         using var d = new SimDriver(TestMap(40, 24, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 14, 10), Unit("euro.peon", 0, 30, 12), Tree(32, 12)), ruleset: Classic);

@@ -151,6 +151,7 @@ public class EconomyM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-008")]
     public void Fields_are_walked_over_and_farmed_from_inside_but_nothing_is_built_on_them()
     {
         // A field (3 x 3 tiles at 12, 2) between a footman and his goal, and a peasant sent to farm it.
