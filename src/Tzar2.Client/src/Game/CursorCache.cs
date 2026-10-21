@@ -3,12 +3,31 @@ using Godot;
 namespace Tzar2.Client.Game;
 
 /// <summary>
-/// Hardware cursors from the imported <c>IMAGES/CURSORS</c> (TDD §13.8) and Tzar2's own (<see cref="OwnCursors"/>).
-/// ⚠ UNK-40: the original hotspots are not decoded yet; the hand points with its top-left pixel and every other
-/// original cursor with its centre.
+/// Hardware cursors from the imported <c>IMAGES/CURSORS</c> (TDD §13.8) and Tzar2's own (<see cref="OwnCursors"/>). Each
+/// original cursor clicks with the <c>hotspot</c> of its IMAGES.INI software-cursor entry (<c>cs_arrow</c> = <c>s_def</c>
+/// at 2, 0; UNK-40); a cursor without an entry clicks with its centre.
 /// </summary>
 public static class CursorCache
 {
+    // The IMAGES.INI entry of each cursor picture (the game's cs_* names).
+    private static readonly System.Collections.Generic.Dictionary<string, string> s_entries = new(global::System.StringComparer.OrdinalIgnoreCase)
+    {
+        ["s_def"] = "cs_arrow",
+        ["s_attack"] = "cs_attack",
+        ["cs_attackset"] = "cs_attackset",
+        ["cs_attacktype"] = "cs_attacktype",
+        ["s_guard"] = "cs_guard",
+        ["s_harvest"] = "cs_harvest",
+        ["s_move"] = "cs_move",
+        ["s_none"] = "cs_none",
+        ["s_patrol"] = "cs_patrol",
+        ["s_patrol2"] = "cs_patrol_ex",
+        ["s_hand"] = "cs_pick",
+        ["s_repair"] = "cs_repair",
+        ["s_spell"] = "cs_spell",
+        ["s_spell_good"] = "cs_magicmodify",
+    };
+
     private static readonly System.Collections.Generic.Dictionary<string, ImageTexture> s_own = [];
     private static string? s_current;
 
@@ -51,9 +70,9 @@ public static class CursorCache
             return;
         }
 
-        // The default pointer and the hand point with their top-left pixel (the spearhead's tip is there); the others
-        // with their centre (UNK-40).
-        Vector2 hotspot = name is "s_hand" or Default ? Vector2.Zero : texture.GetSize() / 2;
+        Vector2 hotspot = s_entries.TryGetValue(name, out string? entry) && ui.ImageInts(entry, "hotspot") is { Length: >= 2 } hot
+            ? new Vector2(hot[0], hot[1])
+            : texture.GetSize() / 2;
         Input.SetCustomMouseCursor(texture, Input.CursorShape.Arrow, hotspot);
     }
 
