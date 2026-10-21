@@ -67,6 +67,9 @@ public enum CardAction
     /// <summary>Selects unit <see cref="CardButton.Argument"/> (<c>EntityId.Value</c>) and shows it: an entry of a kingdom list.</summary>
     SelectUnit,
 
+    /// <summary>Cloaked units become visible again (a ninja's uncloak, MAG-013).</summary>
+    Uncloak,
+
     /// <summary>The next page of a card with more orders than slots (Tzar2's; <see cref="CardButton.Argument"/> = "2/3").</summary>
     Page,
 
@@ -189,6 +192,12 @@ public interface ICardSource
     /// with <paramref name="aiAssist"/> also AI assistance), or null.
     /// </summary>
     string? KingdomMenu(bool aiAssist);
+
+    /// <summary>
+    /// The variant of <paramref name="menu"/> for an object in a state (<c>cloaked</c>: a cloaked ninja's card offers
+    /// uncloak instead of cloak), or null when it has none.
+    /// </summary>
+    string? MenuVariant(string? menu, string state);
 
     /// <summary>The civilization an entity type belongs to (empty for the common ones).</summary>
     string Civilization(ushort typeId);

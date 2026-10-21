@@ -58,11 +58,10 @@ rules:
     status: missing
     work: STATUS work queue 3
   MAG-013:
-    rule: Spies and ninjas see through each other's invisibility, and a spy can uncloak a ninja.
-    source: [patch 1.05 (TZAR110.TXT), data ORDERS.INI uncloak]
-    status: partial
-    note: Detection works; the uncloak order does nothing yet.
-    work: STATUS work queue 3
+    rule: Spies and ninjas see through each other's invisibility, and a cloaked ninja can drop its cloak (uncloak).
+    source: [patch 1.05 (TZAR110.TXT), 'data MENU.INI [ninja_cloaked] uncloak', data ORDERS.INI uncloak]
+    status: tested
+    note: Uncloak is on the cloaked ninja's own card (MENU.INI ninja_cloaked), not a spy's order; the card switches to it while the unit is cloaked.
   MAG-014:
     rule: Ninjas (Asians, with Ninjas) cloak themselves and murder units.
     source: [manual Asian Units (Ninja)]

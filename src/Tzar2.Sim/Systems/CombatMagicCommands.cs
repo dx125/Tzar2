@@ -118,6 +118,22 @@ internal static class CombatMagicCommands
         return any ? null : CommandRejection.NoValidEntities;
     }
 
+    /// <summary>The listed own cloaked units become visible again (MAG-013: the ninja's uncloak).</summary>
+    public static CommandRejection? Uncloak(World world, in Command command, ReadOnlySpan<EntityId> entities)
+    {
+        bool any = false;
+        foreach (EntityId unit in entities)
+        {
+            if (IsCommandedUnit(world, unit, command.Player) && world.IsCloaked(unit))
+            {
+                world.Statuses.At(world.Statuses.IndexOf(unit)).CloakUntil = 0;
+                any = true;
+            }
+        }
+
+        return any ? null : CommandRejection.NoValidEntities;
+    }
+
     public static CommandRejection? PickItem(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         EntityId item = command.Target;

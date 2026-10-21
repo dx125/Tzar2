@@ -83,6 +83,7 @@ public static class FrameBuilder
             }
 
             e.Burning = world.Burnings.Has(id);
+            e.Cloaked = world.IsCloaked(id);
             if (world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool is { } pool)
             {
                 e.MaxMana = world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max);

@@ -188,6 +188,9 @@ public struct FrameEntity
     /// <summary>A named hero (GAME-08).</summary>
     public bool Hero;
 
+    /// <summary>Invisible (a ninja's cloak or the invisibility spell; GAME-11), as its owner and detectors see it.</summary>
+    public bool Cloaked;
+
     /// <summary>Upgrades the entity has or has queued (bit = upgrade id; towers, walls, gates, galleons).</summary>
     public uint Upgrades;
 

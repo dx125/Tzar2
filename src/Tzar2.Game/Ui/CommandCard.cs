@@ -96,6 +96,10 @@ public sealed class CommandCard
             }
 
             menu = OpenMenu ?? _source.Menu(e.TypeId);
+            if (OpenMenu is null && e.Cloaked)
+            {
+                menu = _source.MenuVariant(menu, "cloaked") ?? menu;
+            }
         }
         else
         {
@@ -313,6 +317,8 @@ public sealed class CommandCard
                 return Commands(CommandKind.ConvertUnit, OwnIds(selected, e => e.IsMobile), arg0: into);
             case CardAction.NextIdle:
                 return new CardPress(NextIdlePeasant: true);
+            case CardAction.Uncloak:
+                return Commands(CommandKind.Uncloak, OwnIds(selected, e => e.IsMobile));
             case CardAction.KingdomList:
                 _menus.Push(ListMenu + b.Argument);
                 _page = 0;

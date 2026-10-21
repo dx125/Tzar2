@@ -133,6 +133,9 @@ public enum CommandKind : ushort
     /// drops the command otherwise.
     /// </summary>
     SetAiAssist = 49,
+
+    /// <summary>The listed own units drop their invisibility at once (a cloaked ninja's <c>uncloak</c>, MAG-013).</summary>
+    Uncloak = 50,
     // GAME-07…11 (ADR 0096): values 20-39.
 
     /// <summary>The listed units walk to own holder <see cref="Command.Target"/> (castle, outpost, ship, carpet) and enter it (GAME-09).</summary>

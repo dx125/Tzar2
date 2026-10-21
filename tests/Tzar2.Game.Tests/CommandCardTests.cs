@@ -342,6 +342,8 @@ public sealed class CommandCardTests : IDisposable
 
         public string? KingdomMenu(bool aiAssist) => aiAssist ? "kingdom_ai" : "kingdom";
 
+        public string? MenuVariant(string? menu, string state) => menu is not null && Menus.ContainsKey(menu + "_" + state) ? menu + "_" + state : null;
+
         public IReadOnlyList<CardButton> Card(string? menu) => menu is not null && Menus.TryGetValue(menu, out List<CardButton>? b) ? b : [];
 
         public bool CapturesKeys(string? menu) => menu is not null && Capturing.Contains(menu);

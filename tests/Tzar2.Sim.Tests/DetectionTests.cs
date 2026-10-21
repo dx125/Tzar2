@@ -3,6 +3,7 @@ using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Components;
+using Tzar2.Sim.Events;
 using Xunit;
 using static Tzar2.Sim.Tests.CombatMagicFixtures;
 using static Tzar2.Sim.Tests.GameplayFixtures;
@@ -38,5 +39,28 @@ public class DetectionTests
         d.Step();
         Assert.True(w.IsCloaked(footman));
         Assert.False(w.Visibility.CanSee(w, 1, footman)); // garrisoned (the castle centre is within 6 tiles), the detector sees nothing
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-013")]
+    public void Uncloak_makes_a_cloaked_unit_visible_again_at_once()
+    {
+        using var d = new SimDriver(TestMap(40, 12, Unit("euro.mage", 0, 2, 4), Unit("euro.footman", 0, 8, 4)), ruleset: Rules);
+        World w = d.World;
+        EntityId mage = OfType(w, "euro.mage").Single();
+        EntityId footman = OfType(w, "euro.footman", 0).Single();
+        d.Order(0, CommandKind.SetStance, [mage, footman], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.CastSpell, [mage], target: footman, arg0: Spell(Rules, "spell_cloak"));
+        d.RunUntil(() => w.IsCloaked(footman), 200);
+
+        d.Order(1, CommandKind.Uncloak, [footman]); // not the owner's
+        d.Step();
+        Assert.True(w.IsCloaked(footman));
+        d.Order(0, CommandKind.Uncloak, [footman]);
+        d.Step();
+        Assert.False(w.IsCloaked(footman));
+        d.Order(0, CommandKind.Uncloak, [footman]); // nothing to drop
+        d.Step();
+        Assert.Equal([CommandRejection.NoValidEntities, CommandRejection.NoValidEntities], d.Rejections());
     }
 }
