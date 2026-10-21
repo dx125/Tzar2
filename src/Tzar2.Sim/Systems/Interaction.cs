@@ -338,7 +338,15 @@ internal static class Interaction
         int m = world.Motions.IndexOf(unit);
         if (m >= 0 && world.Motions.At(m).State == MotionState.Moving)
         {
-            MovementOrders.Stop(world, unit, ref world.Motions.At(m));
+            // A guard stops to fight but keeps guarding (the follow order of a guard order).
+            ref Motion motion = ref world.Motions.At(m);
+            uint guarded = motion.Order == MotionOrder.Follow ? motion.FollowTarget : 0;
+            MovementOrders.Stop(world, unit, ref motion);
+            if (guarded != 0)
+            {
+                motion.Order = MotionOrder.Follow;
+                motion.FollowTarget = guarded;
+            }
         }
     }
 }

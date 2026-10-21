@@ -48,6 +48,7 @@ public partial class SettingsScreen : ArtScreen
         Row(Controls, 0, "Edge scroll", () => OnOff(_settings.EdgeScroll), _ => _settings.EdgeScroll = !_settings.EdgeScroll);
         Row(Controls, 1, "Drag map with right button", () => OnOff(_settings.DragScroll), _ => _settings.DragScroll = !_settings.DragScroll);
         Row(Controls, 2, T("options", "t_ss", "Scroll Speed"), () => _settings.ScrollSpeed.ToString(CultureInfo.InvariantCulture), step => _settings.ScrollSpeed += step);
+        Row(Controls, 3, "Pointer", () => _settings.SystemCursor ? "System" : "Tzar2", _ => _settings.SystemCursor = !_settings.SystemCursor);
 
         Title(Sound, T("options", "t_sopt", "SOUND"));
         Row(Sound, 0, T("options", "t_svol", "Sound Volume"), () => $"{_settings.SoundVolume} %", step => _settings.SoundVolume += step * 10);

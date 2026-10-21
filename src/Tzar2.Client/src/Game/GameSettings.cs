@@ -47,6 +47,9 @@ public sealed class GameSettings
     /// <summary>Holding the right mouse button and moving drags the map (a right click without moving still gives orders).</summary>
     public bool DragScroll { get => Get("drag_scroll", 1) != 0; set => Set("drag_scroll", value ? 1 : 0); }
 
+    /// <summary>The system's own pointer in the game instead of Tzar2's (when no order is pending).</summary>
+    public bool SystemCursor { get => Get("system_cursor", 0) != 0; set => Set("system_cursor", value ? 1 : 0); }
+
     /// <summary>Scrolling when the pointer touches the window's edge.</summary>
     public bool EdgeScroll { get => Get("edge_scroll", 1) != 0; set => Set("edge_scroll", value ? 1 : 0); }
 

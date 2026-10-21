@@ -440,10 +440,10 @@ public sealed class WorldRenderer : IDisposable
             gpu.GlobalCell(sheet.SheetIndex, index), cell.PaletteRow, player, key, shadowOnly));
     }
 
-    // Projectiles in flight (GAME-07): the original's picture of each kind, raised on an arc from where it was first seen
-    // to its target and turned along its flight; explosive ones leave an explosion where they vanish.
     private const int ShotLift = 14; // shots leave and hit at a body's height (pixels)
 
+    // Projectiles in flight (GAME-07): the original's picture of each kind, raised on an arc from where it was first seen
+    // to its target and turned along its flight; explosive ones leave an explosion where they vanish.
     private void DrawProjectiles(GameFrame frame, bool fresh, int alpha, Rect2I cull)
     {
         ReadOnlySpan<FrameProjectile> shots = frame.Projectiles;
@@ -632,7 +632,7 @@ public sealed class WorldRenderer : IDisposable
         if (_bank.Get(_catalog.Type(ghost.TypeId).Image(UnitAnim.Base)) is { } sheet)
         {
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
-            Add(_objects, sheet, origin, 0, 0, localPlayer, uint.MaxValue >> 1, shadowOnly: false);
+            AddSheet(_objects, sheet, origin, 0, 0, localPlayer, uint.MaxValue >> 1, shadows: false); // with the kingdom's colours
         }
 
         // The building itself shows where it goes: no fill over a legal site (the original fills nothing); only the

@@ -140,6 +140,23 @@ public class CombatTests
     }
 
     [Fact]
+    public void A_guard_fights_on_the_way_and_keeps_guarding_after_the_fight()
+    {
+        // Owner play-test 2026-10-20: "guard" did nothing. A footman guards a peasant that walks towards an enemy.
+        using var d = new SimDriver(TestMap(48, 12, Unit("euro.footman", 0, 3, 5), Unit("euro.peon", 0, 5, 5), Unit("euro.peon", 1, 30, 5)), ruleset: Classic);
+        World w = d.World;
+        EntityId guard = OfType(w, "euro.footman").Single();
+        EntityId ward = OfType(w, "euro.peon", 0).Single();
+        EntityId enemy = OfType(w, "euro.peon", 1).Single();
+        d.Order(0, CommandKind.Follow, [guard], 0, 0, target: ward);
+        d.MoveToTile(0, [ward], 26, 5);
+        d.RunUntil(() => !w.Entities.IsAlive(enemy), 3000);
+        Assert.False(w.Entities.IsAlive(enemy), "the guard never fought");
+        Motion m = w.Motions.Get(guard);
+        Assert.Equal((MotionOrder.Follow, ward.Value), (m.Order, m.FollowTarget));
+    }
+
+    [Fact]
     public void Units_strike_and_deliver_at_a_buildings_wall_not_a_tile_away()
     {
         // Owner play-test 2026-10-20: soldiers hit buildings and peasants unloaded a tile away from what they touched.

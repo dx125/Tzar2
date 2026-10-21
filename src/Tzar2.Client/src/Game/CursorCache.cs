@@ -12,7 +12,10 @@ public static class CursorCache
     private static readonly System.Collections.Generic.Dictionary<string, ImageTexture> s_own = [];
     private static string? s_current;
 
-    /// <summary>Shows cursor <paramref name="name"/> (<c>s_hand</c>, <c>s_attack</c>...); unchanged names cost nothing.</summary>
+    /// <summary>The name that shows the system's own pointer.</summary>
+    public const string System = "system";
+
+    /// <summary>Shows cursor <paramref name="name"/> (<c>s_hand</c>, <c>s_attack</c>..., <see cref="System"/>); unchanged names cost nothing.</summary>
     public static void Apply(UiAssets ui, string name)
     {
         if (name == s_current || DisplayServer.GetName() == "headless")
@@ -21,6 +24,12 @@ public static class CursorCache
         }
 
         s_current = name;
+        if (name == System)
+        {
+            Input.SetCustomMouseCursor(null);
+            return;
+        }
+
         if (OwnCursors.Has(name))
         {
             if (!s_own.TryGetValue(name, out ImageTexture? own) && OwnCursors.Paint(name) is { } painted)

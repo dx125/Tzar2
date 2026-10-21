@@ -64,7 +64,7 @@ public partial class WeatherLayer : Node2D
         }
 
         Visible = true;
-        if (_screen.Frame is { Paused: true })
+        if (_screen.Frame is { Paused: true } || _screen.Session.Paused)
         {
             return; // the rain stands still with the game
         }

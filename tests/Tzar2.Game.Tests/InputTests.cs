@@ -229,6 +229,9 @@ public sealed class OrderTests
         Assert.Equal((CommandKind.Move, CommandFlags.Ctrl), (advance.Kind, advance.Flags));
         Assert.Equal(CommandKind.Patrol, OrderResolver.WithMode(OrderMode.Patrol, sel, null, 3, 4, KeyMods.None, Me)[0].Kind);
         Assert.Equal(CommandKind.Follow, OrderResolver.WithMode(OrderMode.Guard, sel, SelectionTests.Unit(2), 3, 4, KeyMods.None, Me)[0].Kind);
+        Assert.Equal(CommandKind.Follow, OrderResolver.WithMode(OrderMode.Guard, sel, SelectionTests.Building(8), 3, 4, KeyMods.None, Me)[0].Kind);
+        Assert.Equal(CommandKind.Attack, OrderResolver.WithMode(OrderMode.Guard, sel, SelectionTests.Unit(9, owner: 1), 3, 4, KeyMods.None, Me)[0].Kind);
+        Assert.Equal((CommandKind.Move, CommandFlags.Ctrl), OrderResolver.WithMode(OrderMode.Guard, sel, null, 3, 4, KeyMods.None, Me)[0] is var held ? (held.Kind, held.Flags) : default);
         Assert.Empty(OrderResolver.WithMode(OrderMode.Harvest, sel, null, 3, 4, KeyMods.None, Me));
         Assert.Equal((CommandKind.Move, CommandFlags.Ctrl), OrderResolver.WithMode(OrderMode.MoveAdvance, sel, null, 3, 4, KeyMods.None, Me)[0] is var a ? (a.Kind, a.Flags) : default);
         Assert.Equal((CommandKind.Move, CommandFlags.Alt), OrderResolver.WithMode(OrderMode.MoveSneak, sel, null, 3, 4, KeyMods.None, Me)[0] is var n ? (n.Kind, n.Flags) : default);

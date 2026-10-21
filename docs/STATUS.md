@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (owner findings: reach, selection marks, fire, projectiles)
+* **Last updated:** 2026-10-20 (second play-test fixes)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -59,7 +59,7 @@ Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
    the Magic Workshop's crafting (dialogs `D_TRADE`, `D_TRADE1`, `D_GAMBLE` in the card's place), the holders' list of
    units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and AI-mode orders need the sim
    first.
-2. **Operator:** a second play-test (`tools/play/play.ps1`): the fixes merged so far, and the remaining items as they land.
+2. **Operator:** a third play-test (`tools/play/play.ps1`) once the second one's fixes are merged (log below).
 3. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 4. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
@@ -81,6 +81,18 @@ Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — Second play-test by the owner; its findings fixed.** On the original map "There is not enough room for
+  two of us" every kingdom owns European, Arabian and Asian castles and peasants, but the client loaded the sprites of the
+  kingdoms' civilizations only: the others were invisible though selectable. Now the sprites of every civilization on the
+  map are loaded too. The production queue shows, as in the original, what is being made with its progress under the
+  icon and how many are left on it (no more "71 % (+4)" among the stats). The placement ghost wears the local
+  kingdom's colours (it lacked the player-colour overlay). A selection of many units shows one icon per type with the
+  count and the average health. The pointer is Tzar2's own arrow (the original's hand is for taking things), or the
+  system's (SETTINGS → Pointer). The pause froze nothing: the session publishes frames only after ticks, so the client
+  now reads the session's pause itself; animations and rain stop. Guard: a click on an own unit or building follows and
+  defends it (the guards watch for enemies while walking, keep guarding after a fight and come back), on an enemy
+  attacks it, on open ground holds it with a move-advance; before, only a moving unit could be guarded, and the first
+  fight ended the order.
 * **2026-10-20 — Units touch what they work on; arrows, shells and flames are drawn.** Before the second play-test
   the owner added four findings. Soldiers hit buildings and peasants unloaded a tile away: the interaction reach
   (32 px from the footprint, plus the unit's radius) let them stop as soon as they came near; now a unit still walking

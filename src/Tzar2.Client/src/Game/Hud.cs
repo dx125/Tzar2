@@ -22,10 +22,11 @@ public sealed class SelectionInfo
     public IReadOnlyList<(string Icon, string Value)> Stats { get; init; } = [];
 
     /// <summary>
-    /// Icons in the info area (multi-selection or production queue) with an optional progress 0-1000: portraits of
-    /// ICONS.BMP, or with <c>Order</c> an order button of ORDERS/BUTTONS.BMP (a technology or upgrade in progress).
+    /// Icons in the info area (multi-selection by type, or the production queue's head) with an optional progress
+    /// 0-1000 under them and a count on them: portraits of ICONS.BMP, or with <c>Order</c> an order button of
+    /// ORDERS/BUTTONS.BMP (a technology or upgrade in progress).
     /// </summary>
-    public IReadOnlyList<(int Icon, int Progress, bool Order)> Strip { get; init; } = [];
+    public IReadOnlyList<StripItem> Strip { get; init; } = [];
 
     /// <summary>Whether the strip values are health (green/yellow/red) rather than progress.</summary>
     public bool StripIsHealth { get; init; }
@@ -36,6 +37,13 @@ public sealed class SelectionInfo
     /// <summary>The owner whose colour the portraits wear (0-7), or −1 (Nature, resources).</summary>
     public int Player { get; init; } = -1;
 }
+
+/// <summary>An icon of the info area: a portrait or order button, a progress 0-1000 (−1: none) and a count (0: none).</summary>
+/// <param name="Icon">The icon index.</param>
+/// <param name="Progress">Health or production progress per mille, or −1.</param>
+/// <param name="Order">Whether the icon is an order button rather than a portrait.</param>
+/// <param name="Count">How many it stands for (selected units of the type, units left to make), shown when above 1.</param>
+public readonly record struct StripItem(int Icon, int Progress, bool Order, int Count = 0);
 
 /// <summary>A command-card slot.</summary>
 /// <param name="Button">The MENU.INI button.</param>
@@ -65,6 +73,8 @@ public partial class Hud : Control
     private readonly TextureRect[] _statValues = new TextureRect[5];
     private readonly List<TextureRect> _strip = [];
     private readonly List<ColorRect> _stripBars = [];
+    private readonly List<ColorRect> _stripBacks = [];
+    private readonly List<TextureRect> _stripCounts = [];
     private readonly TextureRect[] _messages = new TextureRect[6];
     private readonly TextureRect _portrait;
     private readonly ColorRect _portraitBar;
@@ -224,7 +234,7 @@ public partial class Hud : Control
             _statValues[i].Texture = has ? _ui.Text(info!.Stats[i].Value, UiAssets.SmallFont, Colors.White) : null;
         }
 
-        IReadOnlyList<(int Icon, int Progress, bool Order)> strip = info?.Strip ?? [];
+        IReadOnlyList<StripItem> strip = info?.Strip ?? [];
         Rect2I area = _layout.InfoArea;
         int perRow = area.Size.X / 49;
         while (_strip.Count < Math.Min(strip.Count, perRow * 2))
@@ -232,18 +242,32 @@ public partial class Hud : Control
             int n = _strip.Count;
             var at = new Vector2(area.Position.X + ((n % perRow) * 49), area.Position.Y + ((n / perRow) * 62));
             _strip.Add(Add(new TextureRect { Position = at, Size = new Vector2(48, 48), MouseFilter = MouseFilterEnum.Ignore }));
-            _stripBars.Add(Add(new ColorRect { Position = at + new Vector2(0, 50), Size = new Vector2(48, 3), MouseFilter = MouseFilterEnum.Ignore }));
+            _stripBacks.Add(Add(new ColorRect { Position = at + new Vector2(0, 50), Size = new Vector2(48, 5), Color = new Color(0, 0, 0, 0.85f), MouseFilter = MouseFilterEnum.Ignore }));
+            _stripBars.Add(Add(new ColorRect { Position = at + new Vector2(1, 51), Size = new Vector2(46, 3), MouseFilter = MouseFilterEnum.Ignore }));
+            _stripCounts.Add(Add(new TextureRect { Position = at, Size = new Vector2(48, 48), MouseFilter = MouseFilterEnum.Ignore }));
         }
 
         for (int i = 0; i < _strip.Count; i++)
         {
             bool has = i < strip.Count;
             _strip[i].Texture = !has ? null : strip[i].Order ? _ui.Cell(Buttons, strip[i].Icon) : _ui.PlayerCell(Icons, strip[i].Icon, info!.Player);
-            _stripBars[i].Visible = has && strip[i].Progress >= 0;
-            if (has && strip[i].Progress >= 0)
+            bool bar = has && strip[i].Progress >= 0;
+            _stripBars[i].Visible = bar;
+            _stripBacks[i].Visible = bar;
+            if (bar)
             {
-                _stripBars[i].Size = new Vector2(Math.Max(1, 48 * strip[i].Progress / 1000), 3);
+                _stripBars[i].Size = new Vector2(Math.Max(1, 46 * strip[i].Progress / 1000), 3);
                 _stripBars[i].Color = info!.StripIsHealth ? HealthColour(strip[i].Progress / 1000f) : new Color(0.9f, 0.75f, 0.3f);
+            }
+
+            // The count in the icon's bottom-right corner, white on a dark outline.
+            ImageTexture? count = has && strip[i].Count > 1 ? _ui.Text(strip[i].Count.ToString(System.Globalization.CultureInfo.InvariantCulture), UiAssets.BoldFont, Colors.White) : null;
+            _stripCounts[i].Texture = count;
+            if (count is not null)
+            {
+                Vector2 icon = _strip[i].Position;
+                _stripCounts[i].Position = icon + new Vector2(46 - count.GetWidth(), 46 - count.GetHeight());
+                _stripCounts[i].Size = count.GetSize();
             }
         }
     }
