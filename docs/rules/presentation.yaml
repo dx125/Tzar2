@@ -19,3 +19,24 @@ rules:
     rule: Units and buildings of another civilization that a kingdom owns look as in their own civilization.
     source: [owner 2026-10-20 (second play-test on the map "There is not enough room for two of us")]
     status: implemented
+  PRES-005:
+    rule: Units have their own animations for capturing and collecting meat (peasants), murder (ninjas), prayer (priests), casting (mages and priests) and other attack swings (footmen, macemen, peasants, bears, ninjas).
+    source: [data OBJECTS image_capture image_meat image_murder image_pray image_spell image_attack2 image_attack3]
+    status: missing
+  PRES-006:
+    rule: A hero shows a hero's portrait.
+    source: [data OBJECTS icon_hero]
+    status: missing
+  PRES-007:
+    rule: A unit plays its creation sound when it is made.
+    source: [data OBJECTS sound_create]
+    status: missing
+  PRES-008:
+    rule: Some animations start inside their sheet, at the row and column the data gives.
+    source: [data IMAGES.INI startrow startcol]
+    status: missing
+  PRES-009:
+    rule: Trees, stumps and bushes are drawn from the tree sheet of the terrain set, at the positions and with the shadows the data gives.
+    source: [data TREES.INI, 'data TERRAIN.INI [trees] [treename]']
+    status: partial
+    note: Trees are drawn from the sheet with an assumed position of the trunk; the data's positions and shadows are not read.

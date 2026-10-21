@@ -50,3 +50,13 @@ rules:
     source: [manual Preferences Screen (path depth)]
     status: deviation
     note: The original limited the search depth (TDD §5, ORIG-03); Tzar2 always finds the way and drops the option.
+  WORLD-012:
+    rule: Each kind of unit walks at its own speed, which follows the stride of its walking animation.
+    source: [data IMAGES.INI move_len, capture capture-20261019-163231]
+    status: partial
+    note: 18 classes are measured; the others use SPEED times 10 px/s, a placeholder, until their strides are read (ADRs 0172, 0174).
+  WORLD-013:
+    rule: A random map grows as many trees as its terrain set's data gives for its size.
+    source: ['data TERRAIN.INI [randomtreeset]']
+    status: partial
+    note: Tzar2's generator uses its own forest density (ADR 0060).

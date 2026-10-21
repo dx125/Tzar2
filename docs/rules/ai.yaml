@@ -19,3 +19,9 @@ rules:
     source: [guide Campaign Discussion (Mission 17)]
     status: unclear
     note: The guide describes one campaign mission; whether it is the AI's general behaviour is not known.
+  AI-004:
+    rule: A player can put his kingdom under the computer's assistance, none, economy, war or full, from the card with nothing selected.
+    source: ['data MENU.INI [aiassist]', 'data ORDERS.INI view_ai set_ai_full', 'strings STRINGS2.INI set_ai_none set_ai_eco set_ai_war set_ai_full']
+    status: missing
+    note: The simulation can hand a whole kingdom to the computer (SetController); the economy and war halves and the orders are missing.
+    work: STATUS work queue 3

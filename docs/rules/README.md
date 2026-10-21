@@ -62,9 +62,31 @@ public void A_queue_takes_any_number_of_any_units() { ... }
 
 `dotnet test --filter Rule=PROD-001` runs the tests of one rule. A trait on a class applies to all its tests.
 
+## The original's data
+
+[data-usage.yaml](data-usage.yaml) says what Tzar2 does with every data file of the original. It covers the INI files
+and the unit and building tables, and lists names only (REQ-LEGAL-01). Each file is accounted for in one of these ways:
+
+* by its key names, section names or table columns, each of them:
+  * used (the code quotes it);
+  * restated (its facts are typed into code or rules by hand);
+  * ignored, with why;
+  * to do, with the rule that will use it;
+* as a whole table that a reader takes as it is;
+* as not read at all, with why.
+
+On CI, `t2 rules check` fails when a used name is not quoted anywhere in the code, or when a to-do names an unknown
+rule. With the original install it also fails on any section, key or column of the reference build that is not
+accounted for:
+
+```sh
+t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTests does the same locally
+```
+
 ## Commands
 
-* `t2 rules check`: validates the chapters, the tests' rule ids and this report. CI runs it (`RulesLedgerTests`).
+* `t2 rules check [--origin <install>]`: validates the chapters, the tests' rule ids, the data account and this report.
+  CI runs it (`RulesLedgerTests`); with an install it also checks the data account against every data file.
 * `t2 rules report`: rewrites the report below.
 * `t2 rules list missing partial`: prints the rules with those statuses.
 
@@ -74,28 +96,28 @@ public void A_queue_takes_any_number_of_any_units() { ... }
 
 | Chapter | Rules | Tested | Implemented | Partial | Missing | Deviation | Unclear |
 |---|---|---|---|---|---|---|---|
-| [Computer opponents](ai.yaml) (AI) | 3 | 0 | 0 | 1 | 0 | 1 | 1 |
+| [Computer opponents](ai.yaml) (AI) | 4 | 0 | 0 | 1 | 1 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
-| [Combat](combat.yaml) (WAR) | 13 | 6 | 4 | 0 | 3 | 0 | 0 |
+| [Combat](combat.yaml) (WAR) | 14 | 6 | 4 | 0 | 4 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 20 | 13 | 3 | 1 | 1 | 0 | 2 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 28 | 12 | 8 | 2 | 4 | 0 | 2 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 6 | 1 | 2 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 13 | 5 | 0 | 1 | 0 | 3 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 28 | 0 | 14 | 4 | 9 | 1 | 0 |
-| [Items](items.yaml) (ITEM) | 14 | 6 | 2 | 3 | 2 | 1 | 0 |
+| [The screen](interface.yaml) (HUD) | 33 | 0 | 14 | 6 | 11 | 1 | 1 |
+| [Items](items.yaml) (ITEM) | 15 | 6 | 2 | 3 | 3 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 20 | 12 | 3 | 3 | 1 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 8 | 4 | 4 | 2 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 4 | 0 | 3 | 1 | 0 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 8 | 5 | 0 | 0 | 1 | 1 |
-| [Menus, setup and pause](shell.yaml) (SHELL) | 25 | 0 | 11 | 10 | 3 | 1 | 0 |
+| [Menus, setup and pause](shell.yaml) (SHELL) | 27 | 0 | 10 | 10 | 6 | 1 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 12 | 13 | 2 | 5 | 0 | 4 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 11 | 5 | 4 | 0 | 0 | 2 | 0 |
-| **All** | 309 | 131 | 83 | 39 | 33 | 7 | 16 |
+| [Terrain and movement](world.yaml) (WORLD) | 13 | 5 | 4 | 2 | 0 | 2 | 0 |
+| **All** | 326 | 131 | 82 | 44 | 45 | 7 | 17 |
 
 ## Not done yet
 
@@ -104,12 +126,14 @@ Missing and partial rules.
 ### Computer opponents
 
 * **AI-001** (partial): Each computer kingdom plays an AI script, chosen per player before the game. *Tzar2 picks the script; it cannot be chosen (SHELL-010, SHELL-016).* (ADR 0178)
+* **AI-004**: A player can put his kingdom under the computer's assistance, none, economy, war or full, from the card with nothing selected. *The simulation can hand a whole kingdom to the computer (SetController); the economy and war halves and the orders are missing.* Work: STATUS work queue 3.
 
 ### Combat
 
 * **WAR-009**: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it.
 * **WAR-010**: The Messiah (campaign) is immune to magic.
 * **WAR-013**: Siege weapons hurt every unit where their shots land, their own kingdom's included. *Stones and shells spare the shooter's own units.*
+* **WAR-014**: An attack's blow lands at the frame of its animation that the data marks (the action row), so each unit strikes at its own moment of the swing. *Tzar2 lands every blow at half the cycle (hitDelayPercent, a placeholder, UNK-07).*
 
 ### Construction and repair
 
@@ -159,6 +183,10 @@ Missing and partial rules.
 * **HUD-022**: The kingdom of a spy is shown as its true kingdom to its owner. *Spies cannot impersonate yet (MAG).*
 * **HUD-025**: The fish patch a kingdom's boats are fishing is marked with a blue selection.
 * **HUD-028** (partial): The \ key shows the trees translucent so that units under them can be seen. *Trees are drawn at 45 % opacity, not with the original's look.*
+* **HUD-029**: An order shows only when its condition holds; the quest order only when there are quests. *The quest order is always there.*
+* **HUD-030** (partial): The minimap paints terrains, trees and cliffs in the colours of the terrain set's data. *Tzar2 takes each tile's colour from its picture.*
+* **HUD-032**: A working peasant is named by its job, woodcutter, farmer, miner or builder.
+* **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The quests and the next idle peasant work; the lists of heroes, spies and items open empty, as the original fills them at run time.*
 
 ### Items
 
@@ -167,6 +195,7 @@ Missing and partial rules.
 * **ITEM-009**: Magic books made in the magic workshop cost four times more and take twice as long.
 * **ITEM-010** (partial): A soul item kills a unit or makes it go berserk; a hero is not killed. *The simulation does it; the card's item_kill and item_berserk orders do nothing yet.*
 * **ITEM-012**: A unit that picks up a magic book has yellow stars floating above it.
+* **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
 
 ### Magic, religion and spies
 
@@ -191,6 +220,11 @@ Missing and partial rules.
 ### Animations, effects and sounds
 
 * **PRES-002** (partial): Arrows, bolts, stones, cannon balls, rockets and spells fly as the original's pictures, and stones, shells, rockets and bolts leave its explosions. *Which picture goes with which weapon, the flames' spots and the arcs are Tzar2's guesses.*
+* **PRES-005**: Units have their own animations for capturing and collecting meat (peasants), murder (ninjas), prayer (priests), casting (mages and priests) and other attack swings (footmen, macemen, peasants, bears, ninjas).
+* **PRES-006**: A hero shows a hero's portrait.
+* **PRES-007**: A unit plays its creation sound when it is made.
+* **PRES-008**: Some animations start inside their sheet, at the row and column the data gives.
+* **PRES-009** (partial): Trees, stumps and bushes are drawn from the tree sheet of the terrain set, at the positions and with the shadows the data gives. *Trees are drawn from the sheet with an assumed position of the trunk; the data's positions and shadows are not read.*
 
 ### Menus, setup and pause
 
@@ -205,8 +239,11 @@ Missing and partial rules.
 * **SHELL-017**: Only the player himself chooses his AI script in the multiplayer screen, and every player is told when the host changes one.
 * **SHELL-018** (partial): The multiplayer settings choose a random or a custom map, the random map's options, the game type, the difficulty, the victory condition, the starting resources, No Fog, Explore, the population limit, and day and night and weather; with MAP SETTINGS only No Fog, Explore, day and night and weather can change. *The game type, the victory condition and the random map's resources and options cannot be set.* (ADR 0168)
 * **SHELL-019** (partial): The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears. *CD audio and when the menu bar appears are missing; the path depth is dropped on purpose (TDD ORIG-03).*
+* **SHELL-020**: The credits screen shows the makers of the game. *CREDITS prints where the credits file is.*
 * **SHELL-021** (partial): The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game. *Instructions, load game and save game are missing; F2 quick-saves a campaign mission.*
 * **SHELL-022** (partial): F2 opens the save dialog and F3 the load dialog. *F2 and F3 quick-save and quick-load a campaign mission; there are no dialogs and no saves of other games.*
+* **SHELL-026**: The controls of the menu screens explain themselves in a hint line.
+* **SHELL-027**: Quitting, resigning and disconnecting ask for confirmation.
 
 ### Technologies and upgrades
 
@@ -226,6 +263,11 @@ Missing and partial rules.
 ### Exploration and visibility
 
 * **FOG-005** (partial): Invisible units become visible when they attack, use an item or cast a spell. *Attacking and casting reveal them; using an item does not.*
+
+### Terrain and movement
+
+* **WORLD-012** (partial): Each kind of unit walks at its own speed, which follows the stride of its walking animation. *18 classes are measured; the others use SPEED times 10 px/s, a placeholder, until their strides are read (ADRs 0172, 0174).*
+* **WORLD-013** (partial): A random map grows as many trees as its terrain set's data gives for its size. *Tzar2's generator uses its own forest density (ADR 0060).*
 
 ## Unclear
 
@@ -250,6 +292,10 @@ The sources disagree or say too little.
 * **ECO-002**: Gathering broken off before the load is complete gives nothing. *Tzar2 drops the work done (ADR 0180); a capture of an interrupted gather would settle it (UNK-17).*
 * **ECO-014**: The storage takes gold and iron for the Europeans, gold and stone for the Asians, and iron, gold and stone for the Arabians. *Tzar2 follows the manual, but the European storage researches Stone Mining, which suggests it takes stone too.*
 * **ECO-018**: Asian peasants do not tend cows or carry milk. *The manual's list of the Asian peasant's work leaves out milk and cows, though the Asian farm makes cows; Tzar2 lets any peasant milk.*
+
+### The screen
+
+* **HUD-031**: Selection marks and the selection box are drawn in the terrain set's selection colour (white in every set). *Tzar2 draws own units green, enemies red and Nature yellow, and the box green; whether the original colours them by owner is to be confirmed.*
 
 ### Magic, religion and spies
 
@@ -299,5 +345,60 @@ Tzar2 does these differently on purpose.
 
 * **WORLD-010**: The bodies of the dead never block the way (a bug of the original where battlefields became walls). *Fixes a bug of the original (TDD §5, ORIG-01).*
 * **WORLD-011**: Units find a way to any place they can reach, however long; there is no path depth to set. *The original limited the search depth (TDD §5, ORIG-03); Tzar2 always finds the way and drops the option.*
+
+## The original's data
+
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 142 used, 4 restated by hand, 18 not needed and 48 to do.
+
+To do:
+
+* `DATA/CREDITSFNT.INI` (the whole file): the font of the credits screen (SHELL-020).
+* `DATA/EQUATIONS.INI` `enablequestbutton`: when the quest order is on (HUD-029)
+* `DATA/IMAGES.INI` `actionrow`: the frame of an attack at which the blow lands (WAR-014)
+* `DATA/IMAGES.INI` `move_len`: the stride of a walk, for the walking speed of the classes not measured (WORLD-012)
+* `DATA/IMAGES.INI` `startcol`: animations that start inside their sheet (PRES-008)
+* `DATA/IMAGES.INI` `startrow`: animations that start inside their sheet (PRES-008)
+* `DATA/LAYOUT.INI` `layout1024l`: the interface down the left side (HUD-009)
+* `DATA/LAYOUT.INI` `layout1024r`: the interface down the right side (HUD-009)
+* `DATA/OBJECTS/*.INI` `buildicon`: meaning not decoded
+* `DATA/OBJECTS/*.INI` `icon_hero`: the portrait of a hero (PRES-006)
+* `DATA/OBJECTS/*.INI` `image_attack2`: other attack swings (PRES-005)
+* `DATA/OBJECTS/*.INI` `image_attack3`: other attack swings (PRES-005)
+* `DATA/OBJECTS/*.INI` `image_capture`: the peasant's capture animation (PRES-005)
+* `DATA/OBJECTS/*.INI` `image_meat`: the peasant's meat collecting animation (PRES-005)
+* `DATA/OBJECTS/*.INI` `image_murder`: the ninja's murder animation (PRES-005)
+* `DATA/OBJECTS/*.INI` `image_pray`: the priest's prayer animation (PRES-005)
+* `DATA/OBJECTS/*.INI` `image_spell`: the casting animation of mages and priests (PRES-005)
+* `DATA/OBJECTS/*.INI` `sound_create`: the sound of a unit being made (PRES-007)
+* `DATA/ORDERS.INI` `enable`: an order shown only when its condition holds, the quest order (HUD-029)
+* `DATA/RES.INI` `armouritem`: the strength of the map's random items (ITEM-015)
+* `DATA/RES.INI` `potionitem`: the strength of the map's random items (ITEM-015)
+* `DATA/RES.INI` `treasuryitem`: the strength of the map's random items (ITEM-015)
+* `DATA/RES.INI` `weaponitem`: the strength of the map's random items (ITEM-015)
+* `DATA/TREES.INI` `bushes`: where the bushes are in the tree sheet (PRES-009)
+* `DATA/TREES.INI` `chopped`: where the stumps are in the tree sheet (PRES-009)
+* `DATA/TREES.INI` `img_shadows`: the trees' shadow sheet (PRES-009)
+* `DATA/TREES.INI` `img_trees`: the tree sheet (PRES-009)
+* `DATA/TREES.INI` `pos_shadow`: where a tree's shadow sits (PRES-009)
+* `DATA/TREES.INI` `pos_tree`: where a tree sits on its tile (PRES-009)
+* `HELP/HELP_STR.INI` (the whole file): the labels of the online help (HUD-020).
+* `IMAGES/TERRAIN/*.IMAGES.INI` `ruinpoints`: meaning not decoded
+* `IMAGES/TERRAIN/*.TERRAIN.INI` `colors`: the colour of selection marks (HUD-031)
+* `IMAGES/TERRAIN/*.TERRAIN.INI` `minidatargb`: the minimap's colours of terrains, trees and cliffs (HUD-030)
+* `IMAGES/TERRAIN/*.TERRAIN.INI` `randomtreeset`: how many trees a random map grows, by map size (WORLD-013)
+* `IMAGES/TERRAIN/*.TERRAIN.INI` `treename`: the kinds of trees in the sheet (PRES-009)
+* `LOCAL/HELP.INI` (the whole file): the hints of the menu screens' controls (SHELL-026).
+* `LOCAL/STRINGS.INI` `adds`: messages such as "Build more houses" (HUD-026)
+* `LOCAL/STRINGS.INI` `defmsg`: the hint line's description of orders (HUD-001)
+* `LOCAL/STRINGS.INI` `msg`: the game's messages in the original's words (HUD-026)
+* `LOCAL/STRINGS.INI` `peons`: a working peasant named by its job, woodcutter, farmer, miner, builder (HUD-032)
+* `LOCAL/STRINGS.INI` `q`: the confirmations of quit, resign and disconnect (SHELL-027)
+* `LOCAL/STRINGS.INI` `wnd_message`: the message window's button (HUD-026)
+* `LOCAL/STRINGS.INI` `wnd_quests`: the quest window's texts (HUD-026)
+* `LOCAL/STRINGS2.INI` `chooseai`: the AI script dialog (SHELL-010)
+* `LOCAL/STRINGS2.INI` `vm`: messages such as a time limit hit or a location sent (HUD-026)
+* `LOCAL/STRINGS3.INI` `defmsg`: the hint line's description of orders (HUD-001)
+* `LOCAL/STRINGS3.INI` `msg`: the game's messages in the original's words (HUD-026)
+* `LOCAL/STRINGS3.INI` `vm`: messages such as sending results (HUD-026)
 
 <!-- END t2 rules report -->

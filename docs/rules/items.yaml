@@ -64,3 +64,7 @@ rules:
     source: [community TDD ORIG-11]
     status: deviation
     note: Fixes the original's item cloning (TDD §5, ORIG-11).
+  ITEM-015:
+    rule: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
+    source: ['data RES.INI [TreasuryItem] [WeaponItem] [ArmourItem] [PotionItem]']
+    status: missing
