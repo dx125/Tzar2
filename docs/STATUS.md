@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (second play-test fixes)
+* **Last updated:** 2026-10-20 (the tavern and trade dialogs)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -55,10 +55,9 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 
 Item 1 is the fix left from the owner's first play-test (2026-10-20; log below).
 
-1. **Maintainer:** the rest of the command card: the market's and the caravans' trade, the tavern's gambling and hiring,
-   the Magic Workshop's crafting (dialogs `D_TRADE`, `D_TRADE1`, `D_GAMBLE` in the card's place), the holders' list of
-   units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and AI-mode orders need the sim
-   first.
+1. **Maintainer:** the rest of the command card: the Magic Workshop's crafting (`build_item`: which item, how much
+   gold), the holders' list of units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and
+   AI-mode orders need the sim first.
 2. **Operator:** a third play-test (`tools/play/play.ps1`) once the second one's fixes are merged (log below).
 3. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
@@ -85,6 +84,14 @@ the process decisions that have no ADR.
   goals: the AI's gather point (7 tiles from the town towards the map centre) and its waves' move-advance goals (a
   building's centre) often lay in a building, a forest or water. Both now snap to the nearest walkable tile of the
   town's land (ai-placeholders E10/E12 unchanged otherwise); the AI golden is re-pinned.
+* **2026-10-20 — The tavern and trade dialogs.** The tavern's gambling (`D_GAMBLE`: the resource, the stake, the dice
+  rolling and the original's win or lose picture, the proportions 1:1 to 1:10) and exchange (`D_TRADE1`: ten for one)
+  and a trader's route (`D_TRADE`: the goods each way, the load per trip, then a click on the far market; the near one
+  is the trader's nearest own market) open in the card's place on the original's panels; what each cell does is ours.
+  The original's tavern menus for mercenaries and heroes are empty in MENU.INI: Tzar2 lists the period's offers there
+  (the frame now carries them) with the original's training icons, the count, the level and the price. A submenu opens
+  when any of its orders works (the loans' menu was greyed out); the tavern's offers show unaffordable too. The odds
+  pictures say 1:1, 1:2, 1:5 and 1:10, while the placeholder odds are 2, 3, 5 and 10 (UNK-28; left to the captures).
 * **2026-10-20 — Second play-test by the owner; its findings fixed.** On the original map "There is not enough room for
   two of us" every kingdom owns European, Arabian and Asian castles and peasants, but the client loaded the sprites of the
   kingdoms' civilizations only: the others were invisible though selectable. Now the sprites of every civilization on the

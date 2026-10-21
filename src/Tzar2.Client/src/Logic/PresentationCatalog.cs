@@ -161,6 +161,19 @@ public enum CardAction
 
     /// <summary>Drop the first item where the unit stands.</summary>
     DropItem,
+
+    /// <summary>Gambling in the selected tavern (its dialog in the card's place).</summary>
+    Gamble,
+
+    /// <summary>Exchanging resources in the selected tavern, ten for one (its dialog).</summary>
+    Exchange,
+
+    /// <summary>A trade route of the selected traders between a near and a far market (its dialog, then a click on the far one).</summary>
+    Trade,
+
+    /// <summary>Hire tavern offer <see cref="CardButton.Argument"/> (its slot): a mercenary group or a hero (Tzar2 fills the
+    /// original's empty <c>tavern_merc</c> / <c>tavern_hero</c> menus with the offers of the period).</summary>
+    Hire,
 }
 
 /// <summary>A button of a command card (MENU.INI entry + ORDERS.INI order).</summary>
@@ -409,6 +422,9 @@ public sealed class PresentationCatalog
             "item_use" => (CardAction.UseItem, string.Empty),
             "item_use_instant" => (CardAction.UseItem, "self"),
             "item_drop" => (CardAction.DropItem, string.Empty),
+            "gamble" => (CardAction.Gamble, string.Empty),
+            "trade1" => (CardAction.Exchange, string.Empty),
+            "trade" => (CardAction.Trade, string.Empty),
             _ => (CardAction.Unsupported, action),
         };
     }
@@ -433,6 +449,22 @@ public sealed class PresentationCatalog
         }
 
         return _imageByClass.TryGetValue(className, out int image) ? image : -1;
+    }
+
+    /// <summary>The <c>orders/buttons.bmp</c> cell of the order that trains class <paramref name="cls"/> (<c>create footman</c>), or −1.</summary>
+    public int TrainImage(string cls)
+    {
+        ArgumentNullException.ThrowIfNull(cls);
+        foreach (IniSection o in _orders.Sections)
+        {
+            if (o.Get("ACTION") is { } action && string.Equals(action.Trim(), "create " + cls, StringComparison.OrdinalIgnoreCase)
+                && o.Get("IMG") is { } img && int.TryParse(img, NumberStyles.Integer, CultureInfo.InvariantCulture, out int ix))
+            {
+                return ix;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>The ruleset type a card button trains or builds for <paramref name="civilization"/>, or −1.</summary>

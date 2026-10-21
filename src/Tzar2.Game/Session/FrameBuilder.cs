@@ -306,6 +306,7 @@ public static class FrameBuilder
         }
 
         FillMakeable(frame, world, player ?? viewer);
+        FillTavern(frame, world, player ?? viewer);
 
         int tiles = world.Map.Width * world.Map.Height;
         if (viewer is { } fogOf)
@@ -385,6 +386,44 @@ public static class FrameBuilder
         {
             frame.Researchable[t] = PlacementQueries.ResearchRequirementsMet(world, who, t) ? (byte)1 : (byte)0;
         }
+    }
+
+    // The tavern's offers of the card's kingdom (GAME-14): what the hire buttons show.
+    private static void FillTavern(GameFrame frame, World world, byte? player)
+    {
+        frame.TavernOfferCount = 0;
+        if (player is not { } who || !world.HasPlayer(who))
+        {
+            return;
+        }
+
+        int slots = TavernOffers.SlotCount(world);
+        int resources = world.Ruleset.ResourceTypes.Count;
+        FrameTavernOffer[] offers = frame.OfferBuffer(slots);
+        if (frame.TavernCosts.Length < slots * resources)
+        {
+            frame.TavernCosts = new int[slots * resources];
+        }
+
+        frame.TavernCostStride = resources;
+        KingdomState k = world.Kingdoms[who];
+        int period = TavernOffers.PeriodAt(world, world.Tick.Value);
+        int taken = k.TavernPeriod == period ? k.TavernTaken : 0;
+        Span<int> cost = stackalloc int[Ruleset.MaxResourceTypes];
+        int n = 0;
+        for (int slot = 0; slot < slots; slot++)
+        {
+            if (TavernOffers.Offer(world, who, slot) is not { } offer)
+            {
+                continue;
+            }
+
+            TavernOffers.CostOf(world, who, offer, cost);
+            cost[..resources].CopyTo(frame.TavernCosts.AsSpan(n * resources, resources));
+            offers[n++] = new FrameTavernOffer(slot, offer.TypeId, offer.Count, offer.Level, offer.IsHero, (taken & (1 << slot)) != 0);
+        }
+
+        frame.TavernOfferCount = n;
     }
 
     /// <summary>The look of a load of <paramref name="resource"/> taken from a node of type <paramref name="node"/> (null when gone).</summary>

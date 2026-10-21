@@ -86,6 +86,9 @@ public partial class GameScreen : Node
     private Vector2 _mouse;
     private OrderMode _mode;
     private int _modeArgument; // the spell id of OrderMode.Spell
+    private CardDialog? _dialog;
+    private EntityId _dialogFor;
+    private (int Goods, int Load)? _route; // a trade route waiting for the far market's click
     private ushort _placing = ushort.MaxValue;
     private int _eventCursor = -1;
     private int _locationCursor = -1;
@@ -736,6 +739,12 @@ public partial class GameScreen : Node
                     return;
                 }
 
+                if (_route is { } route)
+                {
+                    PickMarket(e.Position, route);
+                    return;
+                }
+
                 if (_mode != OrderMode.None)
                 {
                     (int x, int y) = ToWorld(e.Position);
@@ -987,7 +996,12 @@ public partial class GameScreen : Node
 
                 break;
             case GameAction.DeselectOrBack:
-                if (_placing != ushort.MaxValue || _mode != OrderMode.None)
+                if (_dialog is not null || _route is not null)
+                {
+                    CloseDialog();
+                    _route = null;
+                }
+                else if (_placing != ushort.MaxValue || _mode != OrderMode.None)
                 {
                     _placing = ushort.MaxValue;
                     _mode = OrderMode.None;
@@ -1485,9 +1499,104 @@ public partial class GameScreen : Node
             case CardAction.DropItem:
                 Submit(CommandKind.DropItem, OwnIds(selected, e => e.IsMobile), arg0: 0);
                 break;
+            case CardAction.Hire when int.TryParse(s.Button.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int offer):
+                Submit(CommandKind.Hire, Taverns(), arg0: offer);
+                break;
+            case CardAction.Gamble:
+                var gamble = new GambleDialog(_ui, _rules.World.MaxGambleStake, _rules.World.GambleOdds.Length);
+                gamble.Bet += (resource, odds, stake) => Submit(CommandKind.Gamble, Taverns(), arg0: _rules.ResourceId(resource) | (odds << 8), arg1: stake);
+                OpenDialog(gamble);
+                break;
+            case CardAction.Exchange:
+                var exchange = new ExchangeDialog(_ui, _rules.World.ConvertRatio);
+                exchange.Exchange += (give, get, amount) => Submit(CommandKind.Convert, Taverns(), arg0: _rules.ResourceId(give) | (_rules.ResourceId(get) << 8), arg1: amount);
+                OpenDialog(exchange);
+                break;
+            case CardAction.Trade:
+                var trade = new TradeDialog(_ui);
+                trade.Route += (here, there, load) =>
+                {
+                    _route = (_rules.ResourceId(here) | (_rules.ResourceId(there) << 8), load);
+                    CloseDialog();
+                    Message("Trade: click the far market or harbor.");
+                };
+                OpenDialog(trade);
+                break;
         }
 
         RefreshCard();
+    }
+
+    // A dialog in the card's place, for the building or units selected now (it closes when the selection changes).
+    private void OpenDialog(CardDialog dialog)
+    {
+        CloseDialog();
+        _dialog = dialog;
+        _dialogFor = _selection.Selected.Count > 0 ? _selection.Selected[0] : EntityId.None;
+        dialog.Closed += CloseDialog;
+        _hud?.ShowDialog(dialog);
+    }
+
+    private void CloseDialog()
+    {
+        if (_dialog is null)
+        {
+            return;
+        }
+
+        _dialog = null;
+        _hud?.ShowDialog(null);
+    }
+
+    private EntityId[] Taverns() => OwnIds(SelectedInfos(), e => !e.IsMobile && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.World.IsTavern);
+
+    private EntityId[] Traders() => OwnIds(SelectedInfos(), e => e.IsMobile && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null);
+
+    // The far market of a trade route: a market or harbor under the pointer. The near one is the own market (of the
+    // traders' kind: land or water) nearest to the first trader.
+    private void PickMarket(Vector2 screen, (int Goods, int Load) route)
+    {
+        EntityId[] traders = Traders();
+        if (traders.Length == 0 || _frame is null || !_indexById.TryGetValue(traders[0].Value, out int first))
+        {
+            _route = null;
+            return;
+        }
+
+        Content.Compiled.DropOffAccess access = _rules.EntityTypes[_frame.Entities[first].TypeId].Traits.World.Trader!.Access;
+        if (PickAt(screen) is not { } far || (_rules.EntityTypes[far.TypeId].Traits.World.TradeDock & access) == 0 || far.UnderConstruction)
+        {
+            Message("Trade: that is not a market of this trader's kind.");
+            return;
+        }
+
+        FrameEntity t = _frame.Entities[first];
+        EntityId near = EntityId.None;
+        long best = long.MaxValue;
+        foreach (FrameEntity m in _frame.Entities)
+        {
+            if (m.Owner != _session.LocalPlayer || m.Id == far.Id || m.ConstructionPermille >= 0 || (_rules.EntityTypes[m.TypeId].Traits.World.TradeDock & access) == 0)
+            {
+                continue;
+            }
+
+            long d = ((long)(m.X - t.X) * (m.X - t.X)) + ((long)(m.Y - t.Y) * (m.Y - t.Y));
+            if (d < best)
+            {
+                best = d;
+                near = m.Id;
+            }
+        }
+
+        _route = null;
+        if (near.IsNone)
+        {
+            Message("Trade: no own market to load at.");
+            return;
+        }
+
+        (int x, int y) = _indexById.TryGetValue(far.Id.Value, out int fi) ? (_frame.Entities[fi].X, _frame.Entities[fi].Y) : ToWorld(screen);
+        Submit(CommandKind.Trade, traders, x, y, arg0: route.Goods, arg1: route.Load, target: near);
     }
 
     // The spell of a card button: its key, or (the ninjas' cloak and murder, raise dead) its order's name.
@@ -1541,6 +1650,11 @@ public partial class GameScreen : Node
             return;
         }
 
+        if (_dialog is not null && (_selection.Selected.Count == 0 || _selection.Selected[0] != _dialogFor))
+        {
+            CloseDialog(); // the selection changed
+        }
+
         var card = new List<CardSlot?>();
         _wholeCard.Clear();
         if (_placing == ushort.MaxValue && _selection.IsOwn && Lead() is { } lead)
@@ -1554,7 +1668,7 @@ public partial class GameScreen : Node
             else
             {
                 string? menu = _menuStack.Count > 0 ? _menuStack.Peek() : v.Menu;
-                var buttons = _catalog.Card(menu).Where(b => !Hidden(b, e)).ToList();
+                var buttons = (TavernMenu(menu) is { } heroes ? HireButtons(heroes) : _catalog.Card(menu)).Where(b => !Hidden(b, e)).ToList();
                 if (buttons.Count > HudLayout.CardSlots)
                 {
                     // What this build cannot do yet goes to the last page.
@@ -1591,6 +1705,38 @@ public partial class GameScreen : Node
 
         Card = card;
         _hud.SetCard(card);
+    }
+
+    // The original's tavern menus are empty in MENU.INI: the game lists the period's offers there. True: the heroes' menu.
+    private static bool? TavernMenu(string? menu) => menu switch
+    {
+        _ when string.Equals(menu, "tavern_merc", StringComparison.OrdinalIgnoreCase) => false,
+        _ when string.Equals(menu, "tavern_hero", StringComparison.OrdinalIgnoreCase) => true,
+        _ => null,
+    };
+
+    private List<CardButton> HireButtons(bool heroes)
+    {
+        var buttons = new List<CardButton>();
+        if (_frame is null)
+        {
+            return buttons;
+        }
+
+        foreach (FrameTavernOffer o in _frame.TavernOffers)
+        {
+            if (o.IsHero != heroes)
+            {
+                continue;
+            }
+
+            TypeVisual v = _catalog.Type(o.TypeId);
+            string what = o.IsHero ? $"Hire a hero: {v.Name} (level {o.Level})" : $"Hire {o.Count} x {v.Name} (level {o.Level})";
+            char key = (char)('1' + buttons.Count);
+            buttons.Add(new CardButton(o.IsHero ? "hire_hero" : "hire_merc", key, CardAction.Hire, o.Slot.ToString(CultureInfo.InvariantCulture), _catalog.TrainImage(v.Class), what));
+        }
+
+        return buttons;
     }
 
     private bool Active(CardButton b) => b.Action switch
@@ -1683,6 +1829,43 @@ public partial class GameScreen : Node
                 return selected.Any(e => e.Owner == me && e.CanBuild) ? (true, string.Empty) : (false, "needs a peasant");
             case CardAction.PickItem or CardAction.UseItem or CardAction.DropItem:
                 return selected.Any(e => e.Owner == me && e.IsMobile) ? (true, string.Empty) : (false, "needs a unit");
+            case CardAction.Gamble or CardAction.Exchange:
+                return selected.Any(e => e.Owner == me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.World.IsTavern) ? (true, string.Empty) : (false, "needs a tavern");
+            case CardAction.Hire:
+                if (_frame is null || !int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int slot))
+                {
+                    return (false, string.Empty);
+                }
+
+                for (int i = 0; i < _frame.TavernOfferCount; i++)
+                {
+                    FrameTavernOffer o = _frame.TavernOffers[i];
+                    if (o.Slot != slot)
+                    {
+                        continue;
+                    }
+
+                    int stride = _frame.TavernCostStride;
+                    ImmutableArray<int> price = ImmutableArray.Create(_frame.TavernCosts, i * stride, stride);
+                    string priceText = CostText(price);
+                    if (o.Taken)
+                    {
+                        return (false, "hired this period");
+                    }
+
+                    string hireTech = o.IsHero ? "te_heroesquest" : "te_mercenaries";
+                    if (_rules.TechnologyId(hireTech) is >= 0 and var hireGate && !Me().HasTechnology(hireGate))
+                    {
+                        return (false, o.IsHero ? "needs Heroes' Quest" : "needs Mercenaries");
+                    }
+
+                    string? shortOf = Shortfall(price);
+                    return shortOf is null ? (true, priceText) : (false, $"{priceText}; not enough {shortOf}");
+                }
+
+                return (false, "no offer now");
+            case CardAction.Trade:
+                return selected.Any(e => e.Owner == me && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null) ? (true, string.Empty) : (false, "needs a trader");
             case CardAction.Repair:
                 return selected.Any(e => e.Owner == me && e.CanBuild) ? (true, string.Empty) : (false, "needs a builder");
             case CardAction.Capture:
@@ -1746,15 +1929,26 @@ public partial class GameScreen : Node
                 }
 
                 return Shortfall(u.Cost) is { } low ? (false, Join(upgradeCost, "not enough " + low)) : (true, upgradeCost);
+            case CardAction.Submenu when TavernMenu(b.Argument) is { } heroes:
+                // The tavern's offers show (with their prices) once the technology is there, affordable or not.
+                string offersTech = heroes ? "te_heroesquest" : "te_mercenaries";
+                if (_rules.TechnologyId(offersTech) is >= 0 and var offersGate && !Me().HasTechnology(offersGate))
+                {
+                    return (false, heroes ? "needs Heroes' Quest" : "needs Mercenaries");
+                }
+
+                return HireButtons(heroes).Count > 0 ? (true, string.Empty) : (false, "no offer now");
             case CardAction.Submenu:
-                foreach (CardButton child in _catalog.Card(b.Argument))
+                IEnumerable<CardButton> children = _catalog.Card(b.Argument);
+                foreach (CardButton child in children)
                 {
                     if (child.Action is CardAction.Build or CardAction.Train or CardAction.Submenu && _catalog.TypeOfClass(civ, child.Argument) >= 0)
                     {
                         return (true, string.Empty);
                     }
 
-                    if (child.Action is CardAction.Submenu or CardAction.Research && Availability(child, civ).Enabled)
+                    // Any other order that works now (research, loans, hiring...) opens the menu too.
+                    if (child.Action is not (CardAction.Build or CardAction.Train or CardAction.Back or CardAction.Unsupported) && Availability(child, civ).Enabled)
                     {
                         return (true, string.Empty);
                     }
@@ -1892,6 +2086,11 @@ public partial class GameScreen : Node
         int attackSounds = 0;
         foreach (SimEvent e in _events)
         {
+            if (e.Kind == SimEventKind.Gambled && e.Player == me && _dialog is GambleDialog dice)
+            {
+                dice.ShowResult(e.Y == 1, e.Arg);
+            }
+
             switch (e.Kind)
             {
                 case SimEventKind.UnitTrained when e.Player == me:
