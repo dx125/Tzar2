@@ -1,0 +1,75 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: repair-castle
+title: Hit points per repair blow, castle (BLD-022, UNK-18)
+resolves: [UNK-18]
+priority: 3
+minutes: 2.5
+default: false                      # batch J
+experimental: true
+description: |
+  As repair-mill, on our own starting castle (HEALTH 8000, TIME 120) in MP2's bottom-left corner: footprint tiles
+  (0-6, 56-62), centre at screen (262, 624). Three spawned knights attack it for 12 s; a spawned peasant repairs it.
+  The memory scan for 8000 also finds our two other castles and the enemy's; only the attacked one decreases.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: castle
+    vars: {quantity: hp, subject: castle, max_value: "8000", primary: hp-attack, direction: down, n: "1"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
+  - wait: 1
+  - snapshot: view
+  # The repairer: a spawned peasant at tile (13, 56), east of the castle.
+  - move: [582, 528]
+  - chat: "${cheat}spawn peon"
+  - click: [582, 528]               # place
+  - wait: 0.5                       # longer than the double-click time
+  - click: [582, 528]               # select
+  - key: {key: "2", ctrl: true}     # group 2
+  - memscan: {name: hp-all, value: "${max_value}", width: 4}
+  - wait: 1
+  - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
+  # Three knights east of the castle, at tiles (8, 58), (8, 60) and (7, 59).
+  - move: [422, 592]
+  - chat: "${cheat}spawn knight"
+  - click: [422, 592]               # place
+  - move: [422, 656]
+  - chat: "${cheat}spawn knight"
+  - click: [422, 656]               # place
+  - move: [390, 624]
+  - chat: "${cheat}spawn knight"
+  - click: [390, 624]               # place
+  - drag: {from: [376, 570], to: [450, 680]}
+  - key: {key: "1", ctrl: true}     # group 1
+  - key: A
+  - click: [262, 624]               # attack the castle
+  - wait: 3
+  - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
+  - memsample: {name: hp-attack, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 12}
+  - wait: 12
+  - key: "1"
+  - key: S
+  - click: {at: [774, 432], button: right}   # away, to tile (19, 53)
+  - memsample: {name: hp-pause, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 6}
+  - wait: 6
+  - snapshot: {name: damaged, game: false}
+  - key: "2"
+  - key: R
+  - click: [262, 624]               # repair the castle
+  - move: [70, 400]
+  - memsample: {name: hp-repair, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 45}
+  - wait: 46
+  - snapshot: after
+analysis: [counter-rate]

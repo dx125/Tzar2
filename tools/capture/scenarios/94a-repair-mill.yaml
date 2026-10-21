@@ -1,0 +1,89 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: repair-mill
+title: Hit points per repair blow, lumber mill (BLD-022, UNK-18)
+resolves: [UNK-18]
+priority: 3
+minutes: 2.5
+default: false                      # batch J
+experimental: true
+description: |
+  How much one repair blow restores, on three buildings with different HEALTH and TIME (repair-mill, repair-barracks,
+  repair-castle: 800 / 30, 1400 / 60, 8000 / 120). The owner thinks the amount differs by building (2026-10-21): a
+  fixed amount per blow gives equal steps, a share of HEALTH 1 : 1.75 : 10, and a full repair in the construction
+  time about 1 : 0.9 : 2.5 hit points per second. In MP2's bottom-left corner (tile (x, y) at screen
+  (150 + 32x, 32y - 1280), ADR 0171) a spawned peasant puts up a lumber mill at once with hmbuildozer on the open
+  rows 51-55 and walks off; three spawned knights (group 1) attack the mill for 8 s and are sent away; then the peasant
+  repairs it alone. The mill's hit points are sampled every 100 ms: the repair phase's steps are the hit points per
+  blow, their spacing the time between blows. If the mill burns, fire steps show among the repair steps with the other
+  sign.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: lumber-mill
+    vars: {quantity: hp, subject: lumber, max_value: "800", primary: hp-attack, direction: down, n: "1"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
+  - wait: 1
+  - snapshot: view
+  # The builder and repairer: a spawned peasant at tile (23, 54).
+  - move: [902, 464]
+  - chat: "${cheat}spawn peon"
+  - click: [902, 464]               # place
+  - wait: 0.5                       # longer than the double-click time
+  - click: [902, 464]               # select
+  - key: {key: "2", ctrl: true}     # group 2
+  - chat: "${cheat}buildozer"       # build at once
+  - key: B
+  - key: L
+  - click: [630, 448]               # the mill's centre: footprint tiles (14-15, 53-54) on open ground
+  - wait: 2
+  - chat: "${cheat}buildozer"       # off again
+  - click: {at: [966, 560], button: right}   # the peasant walks off to tile (25, 57)
+  - memscan: {name: hp-all, value: "${max_value}", width: 4}
+  - wait: 1
+  - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
+  - snapshot: {name: built, game: false}
+  # Three knights east of the mill, at tiles (19, 52), (19, 54) and (20, 53).
+  - move: [774, 400]
+  - chat: "${cheat}spawn knight"
+  - click: [774, 400]               # place
+  - move: [774, 464]
+  - chat: "${cheat}spawn knight"
+  - click: [774, 464]               # place
+  - move: [806, 432]
+  - chat: "${cheat}spawn knight"
+  - click: [806, 432]               # place
+  - drag: {from: [750, 375], to: [835, 490]}
+  - key: {key: "1", ctrl: true}     # group 1
+  - key: A
+  - click: [630, 448]               # attack the mill
+  - wait: 3
+  - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
+  - memsample: {name: hp-attack, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 8}
+  - wait: 8
+  - key: "1"
+  - key: S
+  - click: {at: [454, 592], button: right}   # away, to tile (9, 58)
+  - memsample: {name: hp-pause, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 6}
+  - wait: 6
+  - snapshot: {name: damaged, game: false}
+  - key: "2"
+  - key: R
+  - click: [630, 448]               # repair the mill
+  - move: [70, 400]
+  - memsample: {name: hp-repair, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 45}
+  - wait: 46
+  - snapshot: after
+analysis: [counter-rate]

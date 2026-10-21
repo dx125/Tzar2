@@ -45,6 +45,7 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | D | day length, night share (no input) | **Day length done** (ADR 0173): 37.5 min, read from the clock globe; a match starts at 10:00. The game ended after 12 min (the Hard AI), before the night: **night share open**, needs a 35-min run the AI does not end. |
 | E | group speed, research, damage bonuses, capture, far gathering | **Done, one result** (2026-10-19): a mixed group walks at its slowest member's speed (passes). The rest failed: units given to kingdom 2 are taken over by its AI and leave the duel; Feudalism never started; Ctrl+C picked another castle, so the far tree was not the one gathered; the capture analysis saw no colour change. Not repeated: owner decision below. |
 | F–I | fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | deferred (owner decision below) |
+| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Ready** (2026-10-21, ~21 min): `run-capture.ps1 -Batch J` |
 
 Facts live in `tests/fidelity/facts/` (numbers only; captures stay on the operator's PC). A measured fact that disagrees
 with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that makes it pass go in the same PR.
@@ -70,7 +71,9 @@ play-test.
    swords, bows and shields). Then the screens: diplomacy, tribute, inventory, save and load. Landing Tactics (TECH-019)
    is done.
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
-     (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012).
+     (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
+     both. **Operator:** `pwsh tools/capture/run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch J` (~21 min, hands off).
+   * The spy's disguise meter (MAG-021, the owner's description), with placeholder rates until batch J.
 4. **Maintainer:** units never stand on one another (WORLD-015).
    * What the probes of 2026-10-21 measured:
      * At rest, units keep 16 px apart.
@@ -110,6 +113,22 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — Batch J prepared: repairs and spies.** The owner asked for scenarios for the two values the data
+  lacks and added two facts:
+  * repairs may restore a different amount per building, a share of its hit points or its own number (BLD-022);
+  * a disguised spy has a meter by its portrait, up to 100, that grows the longer it keeps one look; at 100 it can
+    hardly be unmasked (MAG-021);
+  * the mage and the chariot can be copied (MAG-012), as built.
+
+  The batch, in MP2's bottom-left corner (ADR 0171):
+  * `repair-mill`, `repair-barracks`, `repair-castle` (HEALTH 800, 1400, 8000) follow the hit points every 100 ms
+    while one peasant repairs. Equal steps mean a fixed amount, steps of 1 : 1.75 : 10 a share; a full repair in the
+    construction time shows as about 1 : 0.9 : 2.5 per second.
+  * `spy-unmask` and `spy-mastery` give the copied peasant and the detecting spy to kingdom 3, which has no castle and
+    no AI on MP2 (units given to kingdom 2 are taken over by its AI, batch E). Our disguised spy then walks to the
+    detector one tile at a time, sneaking, once fresh and once after 5 minutes in the look. The selection panel is
+    captured for the meter.
 
 * **2026-10-21 — The owner's answers on the open questions.**
   * Spies (MAG-012, BLD-013, MAG-018):

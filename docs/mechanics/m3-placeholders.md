@@ -56,7 +56,7 @@ Shift + Delete; what each technology does (not how much).
 | Fields are walkable | units cross a field and its farmers work on it, each on a tile of its own; nothing is built on it (play-test 2026-10-20: farmers digging beside the field looked wrong) | YAML `^class.field.WalkableFootprint` | — | order a unit across a field; watch where a farmer stands |
 | Field builder farms it | after completing a field | YAML `^class.field.DropOff.autoGather` | — | observation |
 | Peasants gather iron | 1 s per unit, like other resources | YAML `^class.peon.Harvester.gatherMs.iron` | UNK-14/17 | — |
-| Repair speed | a full repair by one peasant takes the build time | YAML `gameplay.repairTimePercent` | UNK-18 | repair captures |
+| Repair speed | a full repair by one peasant takes the build time | YAML `gameplay.repairTimePercent` | UNK-18 | batch J: `repair-mill`, `repair-barracks`, `repair-castle` (hit points per blow) |
 | Repair crews | each further repairer adds 25 points less (100%, 75%, 50%, 25%, then 0; owner decision) | YAML `gameplay.repairerFalloffPercent` | UNK-18 | repair captures with 1-8 peasants |
 | Repair cost | a full repair costs 50% of the construction cost, pro rata; pauses when unpaid (owner decision; the strategy guide only says repairing under attack works and repairers get hurt) | YAML `gameplay.repairCostPercent` | UNK-18 | stockpile during a repair |
 | Fire threshold | below 50% of the hit points | YAML `gameplay.burnThresholdPercent` | UNK-42 | damage a building step by step |
@@ -116,6 +116,7 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Last-seen refresh | every 4 ticks per structure (a glimpse shorter than that may be missed) | YAML `world.memoryRefreshTicks` | — | engine bound |
 | Construction sites reveal | like the finished building | code (`Visibility`) | — | observation |
 | Detector radius (spies, ninjas) | 5 tiles | YAML `^class.spy/ninja.Detector` | — | detection captures (stream E cloaking) |
+| Unmasking a disguised spy | another kingdom's spy within its detector radius, at once | `ErrandSystem.Unmask` | — | batch J: `spy-unmask`, `spy-mastery` (MAG-012, MAG-021) |
 | Stance change interval | 10 s per pair (anti flip-flop) | YAML `world.diplomacyChangeIntervalMs` | — | engine bound (owner decision welcome) |
 | Tribute | once per second, ≤ 100,000, no fee | YAML `world.tributeIntervalMs`, `maxTributeAmount` | — | tribute dialog captures (fee?) |
 | Stockpile cap | 10⁹ (overflow guard of world-system incomes) | YAML `world.stockpileCap` | — | engine bound |
@@ -237,7 +238,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Murder, souls | heroes and `KillImmune` types are immune | `MagicSystem` | UNK-26 |
 | Conversion | hit points in proportion; level, items and name carry over; a new order refunds it, death does not (the price is lost) | `CombatMagicCommands`, `World` | — |
 | Bribe | not peasants, crusaders or heroes | `CombatMagicCommands` | — |
-| Not implemented | `item_berserk`, Tournaments, ships entering harbors, spies' impersonation (visibility stream) | — | — |
+| Not implemented | `item_berserk`, Tournaments, ships entering harbors, the spy's disguise meter (MAG-021) | — | — |
 
 # Naval: REQ-PATH-09, GAME-02/03/07/09 ships (ADRs 0140-0145)
 

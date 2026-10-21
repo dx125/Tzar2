@@ -116,6 +116,10 @@ Batches E–I and the editor session (ADR 0113) cover the remaining §22.3 check
 stays pending by owner decision. Expected gate if every trial works: E 50 %, F 70 %, G 83 %, H 87 %, editor session
 90 %; trade and gambling need one follow-up after I's discovery run.
 
+Batch J (2026-10-21, ~21 min, `-Batch J`) answers the owner's questions of that day: the hit points per repair blow
+on a lumber mill, a barracks and a castle (`repair-*`, counter-rate), and how close another kingdom's spy must come to
+unmask a disguise, fresh and after 5 minutes, with the disguise meter (`spy-*`, analysed by hand).
+
 Still without a scenario before ADR 0113: XP gain, trade profit, technology magnitudes, repair, fire, capture, random maps (RE-10),
 AI experiments (RE-07), and the "one level darker" terrain patches (UNK-32).
 

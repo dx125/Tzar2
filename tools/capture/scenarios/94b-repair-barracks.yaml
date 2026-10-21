@@ -1,0 +1,82 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: repair-barracks
+title: Hit points per repair blow, barracks (BLD-022, UNK-18)
+resolves: [UNK-18]
+priority: 3
+minutes: 2.5
+default: false                      # batch J
+experimental: true
+description: |
+  As repair-mill, with a barracks (HEALTH 1400, TIME 60, 5 x 5 tiles) built at once on the same open rows; the
+  barracks' hit points are sampled every 100 ms and the repair phase's steps are the hit points per blow.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: barracks
+    vars: {quantity: hp, subject: barrack, max_value: "1400", primary: hp-attack, direction: down, n: "1"}
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
+  - wait: 1
+  - snapshot: view
+  # The builder and repairer: a spawned peasant at tile (23, 54).
+  - move: [902, 464]
+  - chat: "${cheat}spawn peon"
+  - click: [902, 464]               # place
+  - wait: 0.5                       # longer than the double-click time
+  - click: [902, 464]               # select
+  - key: {key: "2", ctrl: true}     # group 2
+  - chat: "${cheat}buildozer"       # build at once
+  - key: B
+  - key: B                          # barracks (e_build: e_barrack = B)
+  - click: [614, 464]               # the barracks' centre tile (14, 54): footprint tiles (12-16, 52-56) on open ground
+  - wait: 2
+  - chat: "${cheat}buildozer"       # off again
+  - click: {at: [966, 560], button: right}   # the peasant walks off to tile (25, 57)
+  - memscan: {name: hp-all, value: "${max_value}", width: 4}
+  - wait: 1
+  - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
+  - snapshot: {name: built, game: false}
+  # Three knights east of the barracks, at tiles (19, 52), (19, 54) and (20, 53).
+  - move: [774, 400]
+  - chat: "${cheat}spawn knight"
+  - click: [774, 400]               # place
+  - move: [774, 464]
+  - chat: "${cheat}spawn knight"
+  - click: [774, 464]               # place
+  - move: [806, 432]
+  - chat: "${cheat}spawn knight"
+  - click: [806, 432]               # place
+  - drag: {from: [750, 375], to: [835, 490]}
+  - key: {key: "1", ctrl: true}     # group 1
+  - key: A
+  - click: [614, 464]               # attack the barracks
+  - wait: 3
+  - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
+  - memsample: {name: hp-attack, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 8}
+  - wait: 8
+  - key: "1"
+  - key: S
+  - click: {at: [454, 592], button: right}   # away, to tile (9, 58)
+  - memsample: {name: hp-pause, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 6}
+  - wait: 6
+  - snapshot: {name: damaged, game: false}
+  - key: "2"
+  - key: R
+  - click: [614, 464]               # repair the barracks
+  - move: [70, 400]
+  - memsample: {name: hp-repair, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 45}
+  - wait: 46
+  - snapshot: after
+analysis: [counter-rate]
