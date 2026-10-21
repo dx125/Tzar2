@@ -99,25 +99,25 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Computer opponents](ai.yaml) (AI) | 4 | 0 | 0 | 1 | 1 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 6 | 4 | 0 | 4 | 0 | 0 |
-| [Construction and repair](construction.yaml) (BLD) | 20 | 13 | 3 | 1 | 1 | 0 | 2 |
-| [Selection, mouse and pointers](controls.yaml) (CTRL) | 28 | 12 | 8 | 2 | 4 | 0 | 2 |
+| [Construction and repair](construction.yaml) (BLD) | 22 | 14 | 3 | 1 | 1 | 0 | 3 |
+| [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 13 | 8 | 2 | 4 | 0 | 2 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 6 | 1 | 2 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 13 | 5 | 0 | 1 | 0 | 3 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 33 | 1 | 13 | 6 | 11 | 1 | 1 |
+| [The screen](interface.yaml) (HUD) | 34 | 1 | 13 | 6 | 11 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 15 | 6 | 2 | 3 | 3 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 20 | 12 | 3 | 3 | 1 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 8 | 4 | 4 | 2 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 9 | 4 | 0 | 0 | 1 | 1 |
-| [Menus, setup and pause](shell.yaml) (SHELL) | 27 | 0 | 10 | 10 | 6 | 1 | 0 |
+| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 0 | 10 | 10 | 6 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 12 | 13 | 2 | 5 | 0 | 4 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 13 | 5 | 4 | 2 | 0 | 2 | 0 |
-| **All** | 326 | 133 | 80 | 44 | 45 | 7 | 17 |
+| [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
+| **All** | 333 | 135 | 81 | 45 | 45 | 9 | 18 |
 
 ## Not done yet
 
@@ -268,6 +268,7 @@ Missing and partial rules.
 
 * **WORLD-012** (partial): Each kind of unit walks at its own speed, which follows the stride of its walking animation. *18 classes are measured; the others use SPEED times 10 px/s, a placeholder, until their strides are read (ADRs 0172, 0174).*
 * **WORLD-013** (partial): A random map grows as many trees as its terrain set's data gives for its size. *Tzar2's generator uses its own forest density (ADR 0060).*
+* **WORLD-015** (partial): A unit cannot stand where another unit stands. *Units are pushed apart each step with a collision radius of 7 px (UNK-11); in a crowd, at a bridge or a gate, they still overlap.*
 
 ## Unclear
 
@@ -281,6 +282,7 @@ The sources disagree or say too little.
 
 * **BLD-013**: Peasants under a spy's spell cannot build. *The patch note says "obsessed by spies"; what it means is not known, and spies cannot impersonate yet (MAG).*
 * **BLD-020**: Deleting a building just after its construction began gives its cost back. *Tzar2 refunds a cancelled site in full at any time (placeholder); "at the beginning" suggests the original refunds only early, or less later.*
+* **BLD-022**: How long a repair takes. *Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). Five peasants mended a bridge from almost nothing in 22 s, which looked instant while they stood still (BLD-021); whether the original repairs more slowly is to be confirmed.*
 
 ### Selection, mouse and pointers
 
@@ -328,6 +330,7 @@ Tzar2 does these differently on purpose.
 ### The screen
 
 * **HUD-001**: An order button's hint gives its name, its hotkey, its price and what it still requires ("Create Knight - 'K' ( Gold:70 Food:120 ) Requires Stable, Plate Armor"). *Tzar2 shows a box with the name and a hotkey key cap, the price with the resource icons (what is short in red), the time, the order's description and the requirements; the owner preferred it to the original's single line (2026-10-21).*
+* **HUD-034**: The hint of a category of the build menu lists the letters of the buildings in it. *The original's categories have no letter of their own (MENU.INI); the owner asked to see shortcuts for them too, and the letters of what is inside work from the build menu (CTRL-029).*
 
 ### Items
 
@@ -340,6 +343,7 @@ Tzar2 does these differently on purpose.
 ### Menus, setup and pause
 
 * **SHELL-015**: The multiplayer screen takes the player's name, lets him create a game, search for games (with their information) and join one. *IPX and direct TCP/IP give way to a relay with join codes and a LAN browser (TDD ORIG-07, ADR 0168).* (ADR 0168)
+* **SHELL-028**: Esc opens the game menu when there is nothing left for it to cancel or deselect. *The original opens the menu only with the MENU button, F1 and F10; the owner asked for Esc too.*
 
 ### Terrain and movement
 

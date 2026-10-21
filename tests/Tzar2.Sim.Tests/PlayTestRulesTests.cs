@@ -10,7 +10,7 @@ using static Tzar2.Sim.Tests.GameplayFixtures;
 
 namespace Tzar2.Sim.Tests;
 
-/// <summary>The rules the owner's third play-test asked for (2026-10-20; ADR 0180).</summary>
+/// <summary>The rules the owner's play-tests asked for (third: 2026-10-20, ADR 0180; fourth: 2026-10-21).</summary>
 public class PlayTestRulesTests
 {
     private const int Tile = MapState.UnitsPerTile;
@@ -191,4 +191,32 @@ public class PlayTestRulesTests
         // from the tree's side only for the search; the castle is far: it still chops and carries the wood home).
         Assert.Equal(WorkerTask.Harvest, d.World.Workers.Get(chopper).Task);
     }
+
+    [Fact]
+    [Trait("Rule", "ECO-013")]
+    public void Each_load_goes_to_the_nearest_drop_off_even_one_built_after_the_first_trip()
+    {
+        // Fourth play-test: after a nearer lumber mill went up, peasants kept carrying wood to the drop-off of their first
+        // trip. The castle is far from the trees; a lumber mill is built next to them while the chopper works.
+        using var d = new SimDriver(
+            TestMap(48, 20, [Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 30, 8), Unit("euro.peon", 0, 26, 14), .. Enumerable.Range(0, 6).Select(i => Tree(30 + i, 11))]),
+            ruleset: Classic);
+        EntityId chopper = OfType(d.World, "euro.peon").First(p => d.World.Positions.Get(p).Y < 10 * Tile);
+        EntityId builder = OfType(d.World, "euro.peon").First(p => p != chopper);
+        EntityId castle = OfType(d.World, "euro.castle").Single();
+        d.Order(0, CommandKind.Harvest, [chopper], target: OfType(d.World, "comm.tree").First());
+        d.RunUntil(() => Deliveries(d, chopper).Count >= 1, 4000);
+        Assert.Equal(castle.Index, Deliveries(d, chopper)[0]);
+
+        d.Order(0, CommandKind.Build, [builder], 27 * Tile, 12 * Tile, arg0: Id("euro.lumber"));
+        d.RunUntil(() => d.Count(SimEventKind.ConstructionCompleted) == 1, 4000);
+        EntityId mill = OfType(d.World, "euro.lumber").Single();
+        // The load on its way when the mill went up may still go to the castle; every later one goes to the mill.
+        int before = Deliveries(d, chopper).Count;
+        d.RunUntil(() => Deliveries(d, chopper).Count >= before + 3, 6000);
+        Assert.Equal([mill.Index, mill.Index], Deliveries(d, chopper).Skip(before + 1).Take(2));
+    }
+
+    private static List<int> Deliveries(SimDriver d, EntityId worker)
+        => [.. d.Events.Where(x => x.Event.Kind == SimEventKind.ResourceDelivered && x.Event.Entity == worker).Select(x => x.Event.Y)];
 }

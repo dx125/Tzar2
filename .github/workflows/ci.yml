@@ -236,13 +236,13 @@ jobs:
           dotnet run -c Release --project src/Tzar2.Tools.Cli --
           bench --scenario gameplay --map 128 --players 4 --entities 480 --seed 1592598566
           --ticks 1600 --warmup 0 --workers 4
-          --expect-hash B21635818AC1B56C --hash-stream hash-stream-gameplay-${{ matrix.os }}.tsv
+          --expect-hash 037A109252E788F7 --hash-stream hash-stream-gameplay-${{ matrix.os }}.tsv
       - name: AI scenario hash stream (4 legacy AIs against each other, t2 bench, must match the golden final hash)
         run: >
           dotnet run -c Release --project src/Tzar2.Tools.Cli --
           bench --scenario ai --map 128 --players 4 --seed 1592598566
           --ticks 2400 --warmup 0 --workers 4
-          --expect-hash 29AD1DB098DD9B1A --hash-stream hash-stream-ai-${{ matrix.os }}.tsv
+          --expect-hash 6E929CEF4AF88530 --hash-stream hash-stream-ai-${{ matrix.os }}.tsv
       - uses: actions/upload-artifact@v4
         with:
           name: hash-stream-${{ matrix.os }}

@@ -132,3 +132,7 @@ rules:
     source: [owner 2026-10-21 (Tzar2's hotkey list)]
     status: unclear
     note: Tzar2's assumption from the hotkey checklist; no source of the original says so.
+  CTRL-029:
+    rule: In the build menu the letters of the buildings in its categories (guilds, common, rare) work directly, without opening the category.
+    source: [data MENU.INI capturekeys]
+    status: tested

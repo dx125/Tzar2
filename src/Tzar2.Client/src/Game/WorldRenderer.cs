@@ -313,8 +313,11 @@ public sealed class WorldRenderer : IDisposable
 
             SheetRef? sheet;
             int frameIndex = 0, variant = 0;
-            bool ground = visual.Class == "field";
-            if (e.ConstructionPermille >= 0 && !ground)
+            // Fields and bridges lie on the ground: units walk over them and are drawn on top (a bridge hid the units
+            // crossing it, the owner's fourth play-test).
+            bool field = def.Traits.WalkableFootprint;
+            bool ground = field || def.Traits.IsBridge;
+            if (e.ConstructionPermille >= 0 && !field)
             {
                 sheet = _bank.Get(SpriteRules.BuildSiteName(def));
                 if (sheet is not null)

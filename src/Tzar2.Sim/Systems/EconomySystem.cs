@@ -86,6 +86,7 @@ public sealed class EconomySystem : ISimSystem
         if (w.CarryAmount > 0 && w.CarryResource != resource)
         {
             w.Phase = WorkerPhase.ToDropOff; // deliver the other load first
+            w.DropTarget = 0; // to the nearest drop-off from here
             return;
         }
 
@@ -143,7 +144,10 @@ public sealed class EconomySystem : ISimSystem
         // time (play-test 2026-10-20; UNVERIFIED with the regrowth rate, UNK-17).
         if (w.CarryAmount >= capacity || (stock.Amount == 0 && definition.RegenMs <= 0))
         {
+            // Every load goes to the drop-off nearest to where it was gathered, not to the one of the last trip (the owner's
+            // fourth play-test: peasants kept walking to the mill they had first used after a nearer one was built).
             w.Phase = WorkerPhase.ToDropOff;
+            w.DropTarget = 0;
             w.TimerMs = 0;
             w.Retries = 0;
         }

@@ -35,9 +35,10 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (second play-test log) the gather point and the waves' move-advance goals snap to the nearest reachable ground.
     // (ADR 0180, third play-test) queues of entries (the AI keeps at most 10 items queued, as before), loads but milk
     // appear at once, the next node toward the drop-off, units leave on free tiles, idle peasants find work; layout 8.
-    private const ulong GoldenCommandStream = 0xB8EC8408591460CBUL;
-    private const ulong GoldenHashStream = 0x02D43EB95C04BAD4UL;
-    private const ulong GoldenFinalFullHash = 0x15520328F731E09AUL;
+    // (fourth play-test 2026-10-21) every load goes to the drop-off nearest to where it was gathered.
+    private const ulong GoldenCommandStream = 0xCD94857D53DBAD5AUL;
+    private const ulong GoldenHashStream = 0x3F570539D75F6617UL;
+    private const ulong GoldenFinalFullHash = 0xC3D5077C366508FBUL;
 
     private const int Ticks = 9600;
 
