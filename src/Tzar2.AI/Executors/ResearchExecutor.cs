@@ -5,6 +5,7 @@ using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
+using Tzar2.Sim.Components;
 using Tzar2.Sim.Systems;
 
 namespace Tzar2.AI.Executors;
@@ -130,7 +131,7 @@ public sealed class ResearchExecutor : IAiExecutor
                 continue;
             }
 
-            int count = world.Productions.Get(p).Count;
+            int count = QueueRuns.Items(world.Productions.Get(p));
             if (count < bestCount)
             {
                 bestCount = count;

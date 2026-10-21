@@ -55,13 +55,13 @@ public class BuildAndTrainTests
         d.Order(0, CommandKind.Train, [barracks], arg0: Id("euro.footman"), arg1: 1);
         d.Step();
         Assert.Equal(294, d.World.Players[0].Resources[Food]); // 66 food, paid when queued
-        Assert.Equal(1, d.World.Productions.Get(barracks).Count);
+        Assert.Equal(1, QueueRuns.Items(d.World.Productions.Get(barracks)));
 
         // TIME 11 x 1.25 s = 13.75 s of training, then the footman leaves toward the rally point and walks there.
         ticks = d.RunUntil(() => d.Count(SimEventKind.UnitTrained) == 1, 400);
         Assert.InRange(ticks, 273, 276);
         EntityId footman = OfType(d.World, "euro.footman").Single();
-        Assert.Equal(0, d.World.Productions.Get(barracks).Count);
+        Assert.Equal(0, QueueRuns.Items(d.World.Productions.Get(barracks)));
         d.RunUntil(() => !d.IsMoving(footman), 600);
         Position at = d.PositionOf(footman);
         Assert.True(IntMath.DistanceSquared(at.X, at.Y, rallyX, rallyY) < (long)Tile * Tile, $"footman stopped at ({at.X}, {at.Y})");
@@ -117,7 +117,7 @@ public class BuildAndTrainTests
         Assert.False(d.World.Entities.IsAlive(house));
         Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 14, 4));
         Assert.NotEqual(version, d.World.Map.ObstacleVersion);
-        Assert.Equal(2, d.World.Productions.Get(castle).Count);
+        Assert.Equal(2, QueueRuns.Items(d.World.Productions.Get(castle)));
         Assert.Equal(1, d.Count(SimEventKind.ConstructionCancelled));
         d.Step();
         Assert.Equal(WorkerTask.None, d.World.Workers.Get(peon).Task);
@@ -175,10 +175,10 @@ public class BuildAndTrainTests
         Assert.Equal(220, d.World.Players[0].Resources[Wood]);
         Assert.Empty(OfType(d.World, "euro.house"));
 
-        // Training more than the queue holds queues up to the capacity; more than the player can pay stops there.
+        // Training more than the player can pay stops there (the queue holds any number: ADR 0180).
         d.Order(0, CommandKind.Train, [barracks], arg0: Id("euro.footman"), arg1: 16);
         d.Step();
-        Assert.Equal(3, d.World.Productions.Get(barracks).Count); // 210 food / 66
+        Assert.Equal(3, QueueRuns.Items(d.World.Productions.Get(barracks))); // 210 food / 66
         Assert.Equal(12, d.World.Players[0].Resources[Food]);
     }
 
@@ -195,13 +195,13 @@ public class BuildAndTrainTests
         d.RunUntil(() => d.Count(SimEventKind.ProductionStalled) == 1, 400);
         Assert.Equal(1, d.Count(SimEventKind.ProductionStalled));
         Assert.Equal((byte)ProductionStall.Population, d.World.Productions.Get(castle).Stall);
-        Assert.Equal(1, d.World.Productions.Get(castle).Count);
+        Assert.Equal(1, QueueRuns.Items(d.World.Productions.Get(castle)));
 
         // One peasant less: the finished one leaves.
         d.Order(0, CommandKind.Delete, [OfType(d.World, "euro.peon").First()]);
         d.RunUntil(() => d.Count(SimEventKind.UnitTrained) == 1, 10);
         Assert.Equal(1, d.Count(SimEventKind.UnitTrained));
-        Assert.Equal(0, d.World.Productions.Get(castle).Count);
+        Assert.Equal(0, QueueRuns.Items(d.World.Productions.Get(castle)));
     }
 
     [Fact]

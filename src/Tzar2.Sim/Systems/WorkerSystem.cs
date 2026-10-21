@@ -10,9 +10,10 @@ namespace Tzar2.Sim.Systems;
 /// Pipeline step 6 (activities, TDD §8.5): the state machines of workers (ADRs 0035, 0036, 0042-0044). A harvester walks
 /// to its node, gathers (step 5), carries the load to the nearest own completed drop-off that accepts it from its kind
 /// of worker (boats deliver fish to harbors), and returns; when the node is gone it takes the nearest node of the same
-/// resource within <c>nodeSearchRadiusTiles</c>. A builder walks to its site and builds (step 4) until the site is
-/// complete, then moves on to the next unfinished segment of the wall it built. A repairer walks to its target and
-/// repairs it (step 4) until it is whole. A capturer walks to its target and digs (step 12), or takes an animal at once.
+/// resource within <c>nodeSearchRadiusTiles</c> it can get to, toward the drop-off (ADR 0180). A builder walks to its site
+/// and builds (step 4) until the site is complete, then moves on to the next unfinished segment of the wall it built. A
+/// repairer walks to its target and repairs it (step 4) until it is whole. A capturer walks to its target and digs (step
+/// 12), or takes an animal at once. A peasant that stands idle for <c>idleWorkAfterMs</c> finds work nearby by itself.
 /// Movement goes through the normal path requests (step 7); a worker that cannot get within reach after
 /// <see cref="MaxRetries"/> moves gives up.
 /// </summary>
@@ -36,13 +37,22 @@ public sealed class WorkerSystem : ISimSystem
         ArgumentNullException.ThrowIfNull(context);
         World world = context.World;
         int tick = world.Tick.Value;
+        int tickMs = world.Config.TickLengthMilliseconds;
         for (int i = 0; i < world.Workers.Count; i++)
         {
             // Index-based: the passes below never add or remove workers (an instant capture changes an owner only).
             EntityId worker = world.Workers.Entities[i];
             ref Worker w = ref world.Workers.At(i);
+            if (w.Task != WorkerTask.None)
+            {
+                w.IdleMs = 0;
+            }
+
             switch (w.Task)
             {
+                case WorkerTask.None:
+                    IdleWork(world, worker, ref w, tickMs);
+                    break;
                 case WorkerTask.Harvest:
                     Harvest(world, worker, ref w, tick);
                     break;
@@ -79,7 +89,7 @@ public sealed class WorkerSystem : ISimSystem
                 {
                     // Gone or empty: the nearest other node of the resource; a dry cow is waited for when there is none.
                     EntityId dry = Interaction.IsHarvestable(world, node, w.NodeResource, owner, waitForRegrowth: true) ? node : EntityId.None;
-                    node = Interaction.NearestNode(world, owner, w.NodeResource, w.NodeX, w.NodeY, world.Ruleset.Gameplay.NodeSearchRadiusTiles, world.TypeOf(worker).Locomotor);
+                    node = Interaction.NextNode(world, worker, w.NodeResource, w.NodeX, w.NodeY, world.Ruleset.Gameplay.NodeSearchRadiusTiles);
                     if (node.IsNone)
                     {
                         node = dry;
@@ -242,7 +252,7 @@ public sealed class WorkerSystem : ISimSystem
         for (int i = 0; i < sites.Length; i++)
         {
             Identity identity = world.Identities.Get(sites[i]);
-            if (identity.Owner != owner || !world.Ruleset.EntityTypes[identity.TypeId].Traits.IsWall || !builder.CanBuild(identity.TypeId))
+            if (identity.Owner != owner || !world.Ruleset.EntityTypes[identity.TypeId].Traits.IsWall || !builder.IsBuilder)
             {
                 continue;
             }
@@ -365,6 +375,111 @@ public sealed class WorkerSystem : ISimSystem
         w.Phase = WorkerPhase.ToDropOff;
         w.DropTarget = 0;
         w.Retries = 0;
+    }
+
+    // A peasant without a task that has stood still and out of a fight for idleWorkAfterMs takes the nearest work within
+    // idleWorkRadiusTiles (the owner's play-tests: the original's peasants did; ⚠ UNVERIFIED delay and radius): help an
+    // own site, repair an own damaged building, or gather the resource it can (toward a drop-off that takes it). Boats
+    // and units busy otherwise (inside a holder, on an errand, trading, following or patrolling) are left alone.
+    private static void IdleWork(World world, EntityId worker, ref Worker w, int tickMs)
+    {
+        GameplaySettings g = world.Ruleset.Gameplay;
+        EntityTypeDefinition type = world.TypeOf(worker);
+        if (g.IdleWorkAfterMs <= 0 || type.Locomotor == Locomotor.Ship || !StandsIdle(world, worker))
+        {
+            w.IdleMs = 0;
+            return;
+        }
+
+        w.IdleMs = Math.Min(w.IdleMs + tickMs, g.IdleWorkAfterMs);
+        if (w.IdleMs < g.IdleWorkAfterMs)
+        {
+            return;
+        }
+
+        w.IdleMs = 0; // nothing found: look again after another wait
+        byte owner = world.Identities.Get(worker).Owner;
+        Position at = world.Positions.Get(worker);
+        long limit = (long)g.IdleWorkRadiusTiles * Map.MapState.UnitsPerTile;
+        long best = (limit * limit) + 1;
+        EntityId job = EntityId.None;
+        WorkerTask task = WorkerTask.None;
+        EntityTraits traits = type.Traits;
+        if (traits.IsBuilder)
+        {
+            ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+            for (int i = 0; i < structures.Length; i++)
+            {
+                EntityId s = structures[i];
+                if (world.Identities.Get(s).Owner != owner)
+                {
+                    continue;
+                }
+
+                bool site = world.Constructions.Has(s);
+                if (!site && (!world.TypeOf(s).Traits.IsRepairable || world.Healths.IndexOf(s) is not (>= 0 and var h)
+                    || world.Healths.At(h).Current >= world.Healths.At(h).Max))
+                {
+                    continue;
+                }
+
+                long d = Interaction.DistanceSquaredTo(world, at.X, at.Y, s);
+                if (d < best)
+                {
+                    best = d;
+                    job = s;
+                    task = site ? WorkerTask.Build : WorkerTask.Repair;
+                }
+            }
+        }
+
+        EntityId node = EntityId.None;
+        if (traits.Harvester is { } harvester)
+        {
+            long nodeBest = best;
+            for (int r = 0; r < world.Ruleset.ResourceTypes.Count; r++)
+            {
+                if (!harvester.CanGather(r) || Interaction.NearestDropOff(world, owner, r, at, Interaction.AccessOf(type)).IsNone)
+                {
+                    continue;
+                }
+
+                EntityId candidate = Interaction.NextNode(world, worker, r, at.X, at.Y, g.IdleWorkRadiusTiles);
+                if (!candidate.IsNone && Interaction.DistanceSquaredTo(world, at.X, at.Y, candidate) is var d && d < nodeBest)
+                {
+                    nodeBest = d;
+                    node = candidate;
+                }
+            }
+
+            if (!node.IsNone)
+            {
+                job = EntityId.None;
+            }
+        }
+
+        if (!node.IsNone)
+        {
+            GameplayCommands.StartHarvest(world, owner, worker, node);
+        }
+        else if (!job.IsNone)
+        {
+            GameplayCommands.StartWork(world, worker, job, task);
+        }
+    }
+
+    // Standing still with no order, out of a fight, not inside anything and not busy with an errand, a trade or a cast.
+    private static bool StandsIdle(World world, EntityId worker)
+    {
+        if (world.IsHeld(worker) || world.Errands.Has(worker) || world.TradeRoutes.Has(worker) || world.Explorers.Has(worker)
+            || (world.Motions.IndexOf(worker) is >= 0 and var m && (world.Motions.At(m).State != MotionState.Idle || world.Motions.At(m).Order != MotionOrder.None))
+            || (world.Combats.IndexOf(worker) is >= 0 and var c && world.Combats.At(c).Target != 0)
+            || (world.Casters.IndexOf(worker) is >= 0 and var k && world.Casters.At(k).Phase != CastPhase.None))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static void Idle(ref Worker w)

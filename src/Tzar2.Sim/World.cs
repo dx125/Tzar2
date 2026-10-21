@@ -1038,7 +1038,7 @@ public sealed partial class World
                     _ => (WorkerPhase)0xFF,
                 } || w.Phase > WorkerPhase.Capturing || w.CarryAmount < 0
                 || w.CarryAmount > Math.Max(capacity, Stats.Apply(Identities.Get(ids[i]).Owner, ModifierStat.CarryCapacity, Identities.Get(ids[i]).TypeId, capacity))
-                || w.TimerMs < 0 || w.Retries < 0 || (w.CarryAmount > 0 && w.CarryResource == Worker.NoResource)
+                || w.TimerMs < 0 || w.Retries < 0 || w.IdleMs < 0 || w.IdleMs > Ruleset.Gameplay.IdleWorkAfterMs || (w.CarryAmount > 0 && w.CarryResource == Worker.NoResource)
                 || (w.CarryResource != Worker.NoResource && w.CarryResource >= resources)
                 || (w.NodeResource != Worker.NoResource && w.NodeResource >= resources))
             {
@@ -1085,12 +1085,24 @@ public sealed partial class World
 
             for (int k = 0; k < ProducerDefinition.MaxQueueCapacity; k++)
             {
-                PaidModifier paid = q.Paid[k];
-                bool unitItem = k < q.Count && !QueueItems.IsResearch(q.Queue[k]) && !QueueItems.IsUpgrade(q.Queue[k]);
-                if ((k < q.Count ? !Systems.ResearchRules.IsValidQueueItem(this, producer, q.Queue[k]) : q.Queue[k] != 0)
-                    || (!unitItem && (paid.Add != 0 || paid.BasisPoints != 0)) || !ValidPaid(paid))
+                QueueRun run = q.Queue[k];
+                PaidModifier paid = run.Paid;
+                bool used = k < q.Count;
+                bool unitItem = used && !QueueItems.IsResearch(run.Item) && !QueueItems.IsUpgrade(run.Item);
+                if ((used ? !Systems.ResearchRules.IsValidQueueItem(this, producer, run.Item) || run.Count == 0 : run.Item != 0 || run.Count != 0)
+                    || (!unitItem && (paid.Add != 0 || paid.BasisPoints != 0)) || !ValidPaid(paid)
+                    || (used && (QueueItems.IsResearch(run.Item) || QueueItems.IsUpgrade(run.Item)) && run.Count != 1))
                 {
                     throw Invalid("invalid production queue item");
+                }
+
+                // One entry per item and payment.
+                for (int j = 0; used && j < k; j++)
+                {
+                    if (q.Queue[j].Item == run.Item && q.Queue[j].Paid.Add == paid.Add && q.Queue[j].Paid.BasisPoints == paid.BasisPoints)
+                    {
+                        throw Invalid("duplicate production queue entry");
+                    }
                 }
             }
         }

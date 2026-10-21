@@ -107,6 +107,12 @@ public sealed record GameplaySettings
     /// <summary>Most segments one dragged wall may place.</summary>
     public int MaxWallSegments { get; init; } = 64;
 
+    /// <summary>How long a peasant stands idle before it finds work by itself (0 = never; ADR 0180).</summary>
+    public int IdleWorkAfterMs { get; init; } = 10_000;
+
+    /// <summary>Radius in tiles in which an idle peasant looks for work.</summary>
+    public int IdleWorkRadiusTiles { get; init; } = 12;
+
     /// <summary>An automatic gate opens while a unit of its owner is this close to it (world units, edge to edge).</summary>
     public int GateOpenReachUnits { get; init; } = 2048;
 
@@ -144,6 +150,9 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(BurnThresholdBasisPoints, 10_000);
         ArgumentOutOfRangeException.ThrowIfNegative(BurnDamagePerMinute);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(BurnDamagePerMinute, 1_000_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(IdleWorkAfterMs);
+        ArgumentOutOfRangeException.ThrowIfNegative(IdleWorkRadiusTiles);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(IdleWorkRadiusTiles, 64);
         ArgumentOutOfRangeException.ThrowIfNegative(WallContinueRadiusTiles);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(WallContinueRadiusTiles, 64);
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxWallSegments, 1);

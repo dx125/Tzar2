@@ -36,7 +36,7 @@ public class ResearchTests
         d.Order(0, CommandKind.Research, [smith], arg0: temper.Id);
         d.Step();
         Assert.Equal(500 - temper.Cost[Gold], d.World.Players[0].Resources[Gold]);
-        Assert.Equal(QueueItems.Research(temper.Id), d.World.Productions.Get(smith).Queue[0]);
+        Assert.Equal(QueueItems.Research(temper.Id), d.World.Productions.Get(smith).Queue[0].Item);
         Assert.False(d.World.Players[0].HasTechnology(temper.Id));
 
         int ticks = d.RunUntil(() => d.Count(SimEventKind.ResearchCompleted) == 1, 2000);
@@ -125,7 +125,8 @@ public class ResearchTests
     public void Gather_technologies_speed_up_gathering_from_their_nodes()
     {
         Ruleset rules = ClassicWith("te_woodplus: { Technology: { effects: [{ stat: gatherRate, percent: 100, classes: [tree] }] } }");
-        int Gathered(bool researched)
+        // Ticks from the first chop until the whole load appears in the peasant's hands (ADR 0180), and the load.
+        (int Ticks, int Load) Gathered(bool researched)
         {
             using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Tree(12, 4), Tree(12, 5), Unit("euro.peon", 0, 11, 4)), ruleset: rules);
             if (researched)
@@ -136,12 +137,18 @@ public class ResearchTests
             EntityId peon = OfType(d.World, "euro.peon").Single();
             d.Order(0, CommandKind.Harvest, [peon], target: OfType(d.World, "comm.tree").First());
             d.RunUntil(() => d.World.Workers.Get(peon).Phase == WorkerPhase.Gathering, 200);
-            d.RunUntil(() => false, 100); // 5 s
-            return d.World.Workers.Get(peon).CarryAmount;
+            int start = d.World.Tick.Value;
+            d.RunUntil(() => d.World.Workers.Get(peon).CarryAmount > 0, 2000);
+            return (d.World.Tick.Value - start, d.World.Workers.Get(peon).CarryAmount);
         }
 
-        Assert.Equal(5, Gathered(false)); // 1 unit per s (UNVERIFIED)
-        Assert.Equal(10, Gathered(true)); // twice as fast
+        (int plain, int load) = Gathered(false);
+        (int faster, int fasterLoad) = Gathered(true);
+        Assert.Equal(GameplayCommandsCapacity(), load); // the whole load at once
+        Assert.Equal(load, fasterLoad);
+        Assert.InRange(faster * 2, plain - 2, plain + 2); // twice as fast
+
+        int GameplayCommandsCapacity() => rules.EntityTypes[rules.EntityTypeId("euro.peon")].Traits.Harvester!.Capacity;
     }
 
     [Fact]

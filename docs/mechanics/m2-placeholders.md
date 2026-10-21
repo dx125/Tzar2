@@ -55,8 +55,9 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 | Carry capacity | 10 units — **VERIFIED for wood, stone and gold** (capture-20261018-222649, `gather-*`: every delivery 10); a node may set its own load, cows 50 (m3 register, ADR 0170) | YAML `^class.peon.Harvester.capacity`, `ResourceNode.carry` | UNK-17 | done (fields: not measured) |
 | Gather time | ~~1,000 ms~~ — **900 ms per unit, measured once on wood and applied to every resource** (capture-20261019-232318, `gather-rate`: one load of 10 chopped in ~9.0 s ± 0.5 s; ADRs 0174, 0175). Batches B and E timed deliveries of several peasants at once, not trips of one | YAML `^class.peon.Harvester.gatherMs` | UNK-17 | M8: more loads, other resources |
 | Wood per tree | 100 | YAML `comm.tree.ResourceNode.amount` | UNK-17 | tree depletion capture |
-| Node search radius | 12 tiles | YAML `gameplay.nodeSearchRadiusTiles` | UNK-17 | observe auto-continue after depletion |
-| Queue length | 10 | YAML `gameplay.queueCapacity` | UNK-20 | UI capture |
+| Node search radius | 12 tiles; the next node is the one within reach (a walkable tile of the worker's area touches it) with the shortest way from the last node plus from it to the nearest drop-off, so cutting moves toward the lumber mill (owner's third play-test: peasants walked to far trees; ADR 0180) | YAML `gameplay.nodeSearchRadiusTiles` | UNK-17 | observe auto-continue after depletion |
+| Queue length | ~~10~~ — **any number of any items** (owner's third play-test, 2026-10-20: the original queued 10 archers, 10 swordsmen and 100 knights at once); 24 different items at a time (ours: queue entries, ADR 0180) | YAML `gameplay.queueCapacity` (different items) | UNK-20 | — |
+| Idle work | a peasant idle for 10 s takes the nearest work within 12 tiles: an own site, an own damaged building, a resource it gathers that an own drop-off takes (owner's third play-test: the original's peasants did; delay and radius UNVERIFIED; ADR 0180) | YAML `gameplay.idleWorkAfterMs`, `idleWorkRadiusTiles` | — | capture: idle peasants next to a site, a tree and a damaged building |
 | Population limit default | 200 — **VERIFIED** (capture-20261018-024524, `smoke/plain` window capture `setup`: the setup screen's default) | YAML `gameplay.populationLimit` | UNK-20 | done |
 | Starting resources default | `medium` | YAML `gameplay.defaultStartingResources` | — | lobby default |
 | Refund on cancel | 100% (sites at any progress, and queue items) | YAML `gameplay.*RefundPercent` | — | cancel captures |
@@ -86,7 +87,9 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 | Site health | grows linearly from 1 to the maximum with progress; damage taken stays taken | `ProductionSystem` | UNK-18 |
 | Payment | at placement (sites) and when queued (units) | `GameplayCommands` | — |
 | Full population | the finished unit waits in the building (`ProductionStalled`) | `ProductionSystem` | UNK-20 |
-| Exit point | the free tile next to the building nearest to the rally point, else its south side | `ProductionSystem` | — |
+| Exit point | a tile around the building no unit stands on, on the ring nearest to its walls, nearest to the rally point (else its south side), in the connected area with the most room around it: a pocket shut in by walls or buildings is left out (owner's third play-test; ADR 0180) | `Interaction.SpawnPoint` | — |
+| Loads | the whole load appears at once when the work for it is done (one gather time per unit); milk fills the pail unit by unit; work broken off is lost (owner's third play-test; ADR 0180) | `EconomySystem` | UNK-17 |
+| Helping on a site | any builder, whatever its civilization; placing one needs a builder of its type (owner's third play-test; ADR 0180) | `GameplayCommands` | — |
 | Mixed loads | a worker carrying another resource delivers it before gathering | `WorkerSystem`/`EconomySystem` | UNK-17 |
 | Giving up | after 5 movement attempts without reaching the target | `WorkerSystem` | — |
 | Enemy in the way | a mover side-steps around it (right first, then left) and stops (`Blocked`) only when neither side is free; once idle it acquires the blocker, a move-advance engages it at once (owner decision) | `MovementSystem`, `CombatSystem` | UNK-11 |

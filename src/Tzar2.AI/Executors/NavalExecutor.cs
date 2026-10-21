@@ -216,7 +216,7 @@ public sealed class NavalExecutor : IAiExecutor
         World world = context.World;
         ProducerDefinition producer = world.TypeOf(harbor).Traits.Producer!;
         Production queue = world.Productions.Get(harbor);
-        if (queue.Count >= 2)
+        if (QueueRuns.Items(queue) >= 2)
         {
             return;
         }
@@ -231,8 +231,8 @@ public sealed class NavalExecutor : IAiExecutor
 
         for (int k = 0; k < queue.Count; k++)
         {
-            ushort item = queue.Queue[k];
-            if (!QueueItems.IsResearch(item) && !QueueItems.IsUpgrade(item) && QueueItems.Id(item) < world.Ruleset.EntityTypes.Count)
+            ushort item = queue.Queue[k].Item;
+            for (int n = 0; n < queue.Queue[k].Count && !QueueItems.IsResearch(item) && !QueueItems.IsUpgrade(item) && QueueItems.Id(item) < world.Ruleset.EntityTypes.Count; n++)
             {
                 Count(world.Ruleset.EntityTypes[QueueItems.Id(item)], ref boats, ref holders, ref armed);
             }

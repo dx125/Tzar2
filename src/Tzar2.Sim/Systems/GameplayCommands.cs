@@ -323,7 +323,8 @@ internal static class GameplayCommands
             for (int n = 0; n < command.Arg1; n++)
             {
                 ref Production production = ref world.Productions.At(q);
-                if (production.Count >= capacity)
+                (int add, int bp) = world.Stats.Modifier(command.Player, ModifierStat.Cost, type.Id);
+                if (!QueueRuns.HasRoom(production, typeId, new PaidModifier { Add = add, BasisPoints = bp }, capacity))
                 {
                     reason = queued > 0 ? null : CommandRejection.QueueFull;
                     break;
@@ -335,8 +336,7 @@ internal static class GameplayCommands
                     break;
                 }
 
-                production.Paid[production.Count] = paid;
-                production.Queue[production.Count++] = typeId;
+                QueueRuns.Add(ref production, typeId, paid);
                 queued++;
             }
         }
@@ -378,7 +378,7 @@ internal static class GameplayCommands
             }
 
             ref Production production = ref world.Productions.At(q);
-            if (production.Count >= world.TypeOf(entity).Traits.Producer!.QueueCapacity)
+            if (!QueueRuns.HasRoom(production, QueueItems.Research(technology), default, world.TypeOf(entity).Traits.Producer!.QueueCapacity))
             {
                 reason = CommandRejection.QueueFull;
                 continue;
@@ -389,7 +389,7 @@ internal static class GameplayCommands
                 return CommandRejection.NotAffordable;
             }
 
-            production.Queue[production.Count++] = QueueItems.Research(technology);
+            QueueRuns.Add(ref production, QueueItems.Research(technology), default);
             return null;
         }
 
@@ -434,7 +434,7 @@ internal static class GameplayCommands
             }
 
             ref Production production = ref world.Productions.At(q);
-            if (production.Count >= world.TypeOf(entity).Traits.Producer!.QueueCapacity)
+            if (!QueueRuns.HasRoom(production, QueueItems.Upgrade(upgrade), default, world.TypeOf(entity).Traits.Producer!.QueueCapacity))
             {
                 reason = queued > 0 ? null : CommandRejection.QueueFull;
                 continue;
@@ -446,7 +446,7 @@ internal static class GameplayCommands
                 break;
             }
 
-            production.Queue[production.Count++] = QueueItems.Upgrade(upgrade);
+            QueueRuns.Add(ref production, QueueItems.Upgrade(upgrade), default);
             queued++;
         }
 
@@ -480,29 +480,15 @@ internal static class GameplayCommands
             }
 
             ref Production production = ref world.Productions.At(q);
-            int slot = command.Arg0 < 0 ? production.Count - 1 : command.Arg0;
+            int slot = command.Arg1 > 0 ? LastEntryOf(production, command.Arg1 - 1) : command.Arg0 < 0 ? production.Count - 1 : command.Arg0;
             if (slot < 0 || slot >= production.Count)
             {
                 continue;
             }
 
-            ushort item = production.Queue[slot];
-            PaidModifier itemPaid = production.Paid[slot];
-            for (int k = slot + 1; k < production.Count; k++)
-            {
-                production.Queue[k - 1] = production.Queue[k];
-                production.Paid[k - 1] = production.Paid[k];
-            }
-
-            production.Count--;
-            production.Queue[production.Count] = 0;
-            production.Paid[production.Count] = default;
-            if (slot == 0)
-            {
-                production.ProgressMs = 0;
-                production.Stall = 0;
-            }
-
+            QueueRun taken = QueueRuns.TakeOne(ref production, slot);
+            ushort item = taken.Item;
+            PaidModifier itemPaid = taken.Paid;
             GameplaySettings g = world.Ruleset.Gameplay;
             if (QueueItems.IsResearch(item))
             {
@@ -812,12 +798,26 @@ internal static class GameplayCommands
     internal static bool RequirementsMet(World world, byte player, EntityTypeDefinition type, string civilization)
         => ResearchRules.CanMake(world, player, civilization, type);
 
+    // The last entry holding the queue item (Cancel's Arg1 − 1), or −1.
+    private static int LastEntryOf(in Production q, int item)
+    {
+        for (int k = q.Count - 1; k >= 0; k--)
+        {
+            if (q.Queue[k].Item == item)
+            {
+                return k;
+            }
+        }
+
+        return -1;
+    }
+
     private static bool QueuedConversion(World world, int productionIndex)
     {
         ref Production q = ref world.Productions.At(productionIndex);
         for (int k = 0; k < q.Count; k++)
         {
-            if (QueueItems.IsUpgrade(q.Queue[k]) && world.Ruleset.Upgrades[QueueItems.Id(q.Queue[k])].IsConversion)
+            if (QueueItems.IsUpgrade(q.Queue[k].Item) && world.Ruleset.Upgrades[QueueItems.Id(q.Queue[k].Item)].IsConversion)
             {
                 return true; // one conversion at a time: the next one depends on what the entity becomes
             }
@@ -826,26 +826,35 @@ internal static class GameplayCommands
         return false;
     }
 
+    // Any builder helps on a site, whatever its civilization (the owner's play-test: Arabian and Asian peasants could not
+    // help build a European castle; the original's could); only placing a site needs a builder of its type.
     private static int Assign(World world, byte player, EntityId target, ushort typeId, ReadOnlySpan<EntityId> entities, WorkerTask task)
     {
+        _ = typeId;
         int assigned = 0;
         foreach (EntityId entity in entities)
         {
-            if (OwnedWorker(world, entity, player) < 0 || (task == WorkerTask.Build ? !world.TypeOf(entity).Traits.CanBuild(typeId) : !world.TypeOf(entity).Traits.IsBuilder))
+            if (OwnedWorker(world, entity, player) < 0 || !world.TypeOf(entity).Traits.IsBuilder)
             {
                 continue;
             }
 
-            ClearTasks(world, entity);
-            Interaction.Halt(world, entity);
-            ref Worker worker = ref world.Workers.Get(entity);
-            worker.Task = task;
-            worker.Phase = task == WorkerTask.Build ? WorkerPhase.ToSite : WorkerPhase.ToTarget;
-            worker.Target = target.Value;
+            StartWork(world, entity, target, task);
             assigned++;
         }
 
         return assigned;
+    }
+
+    /// <summary>Gives a builder the task of building or repairing <paramref name="target"/> (its tasks so far end).</summary>
+    public static void StartWork(World world, EntityId entity, EntityId target, WorkerTask task)
+    {
+        ClearTasks(world, entity);
+        Interaction.Halt(world, entity);
+        ref Worker worker = ref world.Workers.Get(entity);
+        worker.Task = task;
+        worker.Phase = task == WorkerTask.Build ? WorkerPhase.ToSite : WorkerPhase.ToTarget;
+        worker.Target = target.Value;
     }
 
     // Whether one of the listed own workers can build the type; its civilization's tree decides the requirements.

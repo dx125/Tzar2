@@ -108,7 +108,7 @@ public class RulesetCompilerTests
 
         EntityTypeDefinition castle = Type(Classic, "euro.castle");
         Assert.Equal(["euro.peon"], castle.Traits.Producer!.Produces.Select(id => Classic.EntityTypes[id].Key));
-        Assert.Equal(10, castle.Traits.Producer.QueueCapacity);
+        Assert.Equal(ProducerDefinition.MaxQueueCapacity, castle.Traits.Producer.QueueCapacity);
         Assert.Equal(24, castle.Traits.PopulationProvided);
         Assert.Equal(0b11111, castle.Traits.DropOffMask);
         Assert.Equal(EntityCategory.Building, castle.Traits.Category);

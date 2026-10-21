@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-20 (third play-test: right-click actions, pointers, order marks, pause)
+* **Last updated:** 2026-10-20 (third play-test: queues, loads, next tree, exits, help on sites, idle work)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -55,10 +55,8 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 
 Items 1 and 2 are left from the owner's play-tests (2026-10-20; log below).
 
-1. **Maintainer:** the rest of the third play-test: cross-civilization help on sites, a production queue without a
-   limit that mixes items, loads that appear at once (milk trickles), the next tree near the drop-off, units leaving a
-   building around it on free ground with a way out, idle peasants finding work; the queue counts on the order buttons
-   and the hourglass TIME stat, upgrades in the same place, long names, cost tooltips.
+1. **Maintainer:** the rest of the third play-test, the HUD: the queue counts on the order buttons and the hourglass TIME
+   stat (the frame carries the queue entries), upgrades in the same place, long names, cost tooltips.
 2. **Maintainer:** the rest of the command card: the Magic Workshop's crafting (`build_item`: which item, how much
    gold), the holders' list of units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and
    AI-mode orders need the sim first.
@@ -84,6 +82,16 @@ Items 1 and 2 are left from the owner's play-tests (2026-10-20; log below).
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-20 — Third play-test: the sim's rules.** ADR 0180, from the owner's knowledge of the original:
+  * any builder helps on a site, whatever its civilization;
+  * a queue takes any number of any items, one entry per item, and a right click on an order button cancels one of it;
+  * loads appear at once when their work is done, while milk still fills the pail;
+  * after a node falls, the worker takes the next one it can reach on the way to the drop-off;
+  * units appear around the building on free tiles of the area with a way out;
+  * idle peasants find work after 10 s.
+
+  Delay and radius are placeholders. The goldens and bench hashes are re-pinned, the hashed layout is version 8, and
+  `MultiplayerTests.A_save_with_everyones_consent…` once timed out under the full parallel run but passes alone.
 * **2026-10-20 — Third play-test by the owner: what a right click does, and how it shows.** ADR 0179: each selected unit
   does its default action on what is clicked. Peasants capture enemy buildings (manual ch. 5 § 2.3), units board own
   holders that take them, pick up items, and follow an own unit (a herd gathers round the clicked cow); harvesters gather

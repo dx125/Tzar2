@@ -1412,7 +1412,7 @@ public partial class GameScreen : Node
                     var batch = new CommandList();
                     if (right)
                     {
-                        batch.Add(CommandKind.Cancel, producers.ToArray(), arg0: -1);
+                        batch.Add(CommandKind.Cancel, producers.ToArray(), arg0: -1, arg1: unit + 1); // one of this unit (ADR 0180)
                     }
                     else
                     {

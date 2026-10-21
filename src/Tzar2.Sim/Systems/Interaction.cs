@@ -4,6 +4,7 @@ using Tzar2.Core.Ids;
 using Tzar2.Core.Numerics;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Map;
+using Tzar2.Sim.Navigation;
 
 namespace Tzar2.Sim.Systems;
 
@@ -236,6 +237,250 @@ internal static class Interaction
         }
 
         return best;
+    }
+
+    /// <summary>
+    /// The next node of <paramref name="resource"/> for <paramref name="worker"/>, which worked at (<paramref name="x"/>,
+    /// <paramref name="y"/>) (ADR 0180; the owner's play-test: peasants walked to far trees): among the nodes within
+    /// <paramref name="radiusTiles"/> that the worker can get next to (a tree inside a forest is left for later), the one
+    /// with the shortest way from there plus the way from it to the owner's nearest drop-off for the resource, so the
+    /// cutting moves toward the lumber mill (ties: lower entity index), or <see cref="EntityId.None"/>.
+    /// </summary>
+    public static EntityId NextNode(World world, EntityId worker, int resource, int x, int y, int radiusTiles)
+    {
+        byte owner = world.Identities.Get(worker).Owner;
+        EntityTypeDefinition type = world.TypeOf(worker);
+        bool boat = type.Locomotor == Locomotor.Ship;
+        DropOffAccess access = AccessOf(type);
+        Span<int> drops = stackalloc int[2 * MaxDropOffs];
+        int dropCount = DropOffCenters(world, owner, resource, access, drops);
+        NavLayer? layer = world.Navigation.ForType(type.Id);
+        Position at = world.Positions.Get(worker);
+        int component = layer is null ? -1 : layer.ComponentOf(layer.TileOf(at.X, at.Y));
+        long limit = (long)radiusTiles * MapState.UnitsPerTile;
+        long limitSquared = limit * limit;
+        EntityId best = EntityId.None;
+        long bestScore = long.MaxValue;
+        ReadOnlySpan<EntityId> nodes = world.ResourceStocks.Entities;
+        Span<ResourceStock> stocks = world.ResourceStocks.Components;
+        for (int i = 0; i < nodes.Length; i++)
+        {
+            if (stocks[i].Amount == 0 || world.TypeOf(nodes[i]).Traits.ResourceNode!.Resource != resource || world.Constructions.Has(nodes[i])
+                || !MayHarvest(world, owner, nodes[i]) || IsOnWater(world, nodes[i]) != boat)
+            {
+                continue;
+            }
+
+            long d = DistanceSquaredTo(world, x, y, nodes[i]);
+            if (d > limitSquared)
+            {
+                continue;
+            }
+
+            Position p = world.Positions.Get(nodes[i]);
+            long toDrop = 0;
+            if (dropCount > 0)
+            {
+                toDrop = long.MaxValue;
+                for (int k = 0; k < dropCount; k++)
+                {
+                    toDrop = Math.Min(toDrop, IntMath.DistanceSquared(p.X, p.Y, drops[2 * k], drops[(2 * k) + 1]));
+                }
+            }
+
+            long score = IntMath.ISqrt(d) + IntMath.ISqrt(toDrop);
+            if (score < bestScore && (component < 0 || CanWorkAt(world, nodes[i], layer!, component)))
+            {
+                bestScore = score;
+                best = nodes[i];
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>Most drop-offs <see cref="NextNode"/> weighs (the nearest of the first ones in entity order).</summary>
+    public const int MaxDropOffs = 32;
+
+    // The centres of the owner's completed drop-offs taking the resource from the access (at most MaxDropOffs).
+    private static int DropOffCenters(World world, byte owner, int resource, DropOffAccess access, Span<int> centers)
+    {
+        int n = 0;
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length && n < MaxDropOffs; i++)
+        {
+            EntityId s = structures[i];
+            Identity identity = world.Identities.Get(s);
+            EntityTraits traits = world.Ruleset.EntityTypes[identity.TypeId].Traits;
+            if (identity.Owner != owner || !traits.AcceptsDropOff(resource) || (traits.DropOffAccess & access) == 0 || world.Constructions.Has(s))
+            {
+                continue;
+            }
+
+            Position p = world.Positions.Get(s);
+            centers[2 * n] = p.X;
+            centers[(2 * n) + 1] = p.Y;
+            n++;
+        }
+
+        return n;
+    }
+
+    /// <summary>
+    /// Whether a worker standing in <paramref name="component"/> of <paramref name="layer"/> can get next to
+    /// <paramref name="target"/>: a walkable tile of that component touches its footprint (a tree inside a forest has
+    /// none), or a footprint-less target stands on or next to one.
+    /// </summary>
+    public static bool CanWorkAt(World world, EntityId target, NavLayer layer, int component)
+    {
+        ArgumentNullException.ThrowIfNull(layer);
+        bool footprint = world.Footprints.Has(target);
+        int fx, fy, fw, fh;
+        if (footprint)
+        {
+            (fx, fy, fw, fh) = world.FootprintRect(target);
+        }
+        else
+        {
+            Position p = world.Positions.Get(target);
+            (fx, fy, fw, fh) = (p.X / MapState.UnitsPerTile, p.Y / MapState.UnitsPerTile, 1, 1);
+        }
+
+        for (int ty = fy - 1; ty <= fy + fh; ty++)
+        {
+            for (int tx = fx - 1; tx <= fx + fw; tx++)
+            {
+                bool inside = tx >= fx && tx < fx + fw && ty >= fy && ty < fy + fh;
+                if ((footprint && inside) || !layer.IsWalkable(tx, ty))
+                {
+                    continue;
+                }
+
+                if (layer.ComponentOf((ty * layer.Width) + tx) == component)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>How many rings of tiles around a building <see cref="SpawnPoint"/> looks at.</summary>
+    public const int SpawnRings = 4;
+
+    /// <summary>
+    /// Where a unit of <paramref name="type"/> made in <paramref name="structure"/> appears (ADR 0180; the owner's
+    /// play-test: they appeared on top of each other): a tile around the building, on the ring nearest to its walls,
+    /// that no unit stands on, nearest to (<paramref name="towardX"/>, <paramref name="towardY"/>), in the connected area
+    /// around the building with the most room, so a pocket closed in by walls or other buildings is left out when there
+    /// is a way out elsewhere (the original's units could appear where they could not leave). Without a free tile within
+    /// <see cref="SpawnRings"/> rings the unit stands on the best tile anyway; false when no tile it can stand on is around.
+    /// </summary>
+    public static bool SpawnPoint(World world, EntityId structure, int towardX, int towardY, EntityTypeDefinition type, out int x, out int y)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        NavLayer? layer = world.Navigation.ForType(type.Id);
+        if (layer is null || !world.Footprints.Has(structure))
+        {
+            return ApproachPoint(world, structure, towardX, towardY, type.Locomotor, out x, out y);
+        }
+
+        (int fx, int fy, int fw, int fh) = world.FootprintRect(structure);
+        int area = -1;
+        int room = 0;
+        for (int ring = 1; ring <= SpawnRings; ring++)
+        {
+            for (int ty = fy - ring; ty <= fy + fh - 1 + ring; ty++)
+            {
+                bool edgeRow = ty == fy - ring || ty == fy + fh - 1 + ring;
+                for (int tx = fx - ring; tx <= fx + fw - 1 + ring; tx += edgeRow || tx == fx + fw - 1 + ring ? 1 : fw - 1 + (2 * ring))
+                {
+                    if (!layer.IsWalkable(tx, ty))
+                    {
+                        continue;
+                    }
+
+                    int c = layer.ComponentOf((ty * layer.Width) + tx);
+                    int size = layer.ComponentSize(c);
+                    if (size > room || (size == room && c < area))
+                    {
+                        room = size;
+                        area = c;
+                    }
+                }
+            }
+        }
+
+        if (area < 0)
+        {
+            return ApproachPoint(world, structure, towardX, towardY, type.Locomotor, out x, out y);
+        }
+
+        MapState map = world.Map;
+        long fallback = long.MaxValue;
+        (x, y) = (0, 0);
+        for (int ring = 1; ring <= SpawnRings; ring++)
+        {
+            long best = long.MaxValue;
+            int bx = 0;
+            int by = 0;
+            for (int ty = fy - ring; ty <= fy + fh - 1 + ring; ty++)
+            {
+                bool edgeRow = ty == fy - ring || ty == fy + fh - 1 + ring;
+                for (int tx = fx - ring; tx <= fx + fw - 1 + ring; tx += edgeRow || tx == fx + fw - 1 + ring ? 1 : fw - 1 + (2 * ring))
+                {
+                    int tile = (ty * layer.Width) + tx;
+                    if (!layer.IsWalkable(tx, ty) || layer.ComponentOf(tile) != area)
+                    {
+                        continue;
+                    }
+
+                    int cx = layer.CenterX(tile);
+                    int cy = layer.CenterY(tile);
+                    long d = IntMath.DistanceSquared(cx, cy, towardX, towardY);
+                    if (ring == 1 && d < fallback)
+                    {
+                        fallback = d;
+                        (x, y) = (cx, cy);
+                    }
+
+                    if (d < best && TileFree(map, tx, ty))
+                    {
+                        best = d;
+                        bx = cx;
+                        by = cy;
+                    }
+                }
+            }
+
+            if (best != long.MaxValue)
+            {
+                (x, y) = (bx, by);
+                return true;
+            }
+        }
+
+        return fallback != long.MaxValue || ApproachPoint(world, structure, towardX, towardY, type.Locomotor, out x, out y);
+    }
+
+    // Whether no unit stands on any occupancy cell of a tile.
+    private static bool TileFree(MapState map, int tx, int ty)
+    {
+        int per = MapState.UnitsPerTile / map.UnitsPerCell;
+        ReadOnlySpan<int> occupancy = map.Occupancy;
+        for (int cy = ty * per; cy < (ty + 1) * per; cy++)
+        {
+            for (int cx = tx * per; cx < (tx + 1) * per; cx++)
+            {
+                if (occupancy[(cy * map.CellWidth) + cx] != 0)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

@@ -33,9 +33,11 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // (M3 F, ADRs 0100-0107) BC950AE8AB330411 / A9EC6EED34BA1812: kingdom state and diplomacy join the tick hash,
     // visibility (stamps, explored, last-seen) the full hash, two stores (trade, Nature homes) the layout ->
     // (M3 stream E, ADRs 0090-0096) the GAME-07…11 stores join the hashed layout; behaviour unchanged ->
-    // (naval, ADRs 0140-0143) 430E1DC0BEC256CB / F0A9532388B6ED2C: the docking and explorer stores join the layout.
-    private const ulong GoldenFinalFullHash = 0xF0A9532388B6ED2CUL;
-    private const ulong GoldenHashStream = 0x430E1DC0BEC256CBUL;
+    // (naval, ADRs 0140-0143) 430E1DC0BEC256CB / F0A9532388B6ED2C: the docking and explorer stores join the layout ->
+    // (ADR 0180) ECB4C7BEBF9D9D91 / 793657126549046E: the production queue holds entries (an item and a count) and the
+    // worker an idle timer, so the hashed layout version is 8; behaviour unchanged.
+    private const ulong GoldenFinalFullHash = 0x793657126549046EUL;
+    private const ulong GoldenHashStream = 0xECB4C7BEBF9D9D91UL;
 
     private const int Ticks = 300;
 

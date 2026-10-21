@@ -111,7 +111,7 @@ public class GameplayReviewRegressionTests
             {
                 world.Identities.Get(castle).Owner = MapObject.Nature;
                 world.Productions.Get(castle).Count = 1;
-                world.Productions.Get(castle).Queue[0] = Id("euro.peon");
+                world.Productions.Get(castle).Queue[0] = new QueueRun { Item = Id("euro.peon"), Count = 1 };
                 world.Productions.Get(castle).ProgressMs = 999_999;
             }
 
@@ -132,13 +132,24 @@ public class GameplayReviewRegressionTests
         int food = Resource("food");
         d.Order(0, CommandKind.Train, [castle], arg0: Id("euro.peon"), arg1: 3);
         d.RunUntil(() => false, 400);
-        Assert.Equal(3, d.World.Productions.Get(castle).Count);
+        Assert.Equal(3, QueueRuns.Items(d.World.Productions.Get(castle)));
         Assert.Equal((byte)ProductionStall.Population, d.World.Productions.Get(castle).Stall);
         Assert.Equal(500 - (3 * 45), d.World.Players[0].Resources[food]);
+
+        // One of the entry's waiting items goes first (ADR 0180): the finished one still waits for room.
         d.Order(0, CommandKind.Cancel, [castle], arg0: 0);
         d.Step();
-        Assert.Equal(2, d.World.Productions.Get(castle).Count);
+        Assert.Equal(2, QueueRuns.Items(d.World.Productions.Get(castle)));
+        Assert.Equal((byte)ProductionStall.Population, d.World.Productions.Get(castle).Stall);
         Assert.Equal(500 - (2 * 45), d.World.Players[0].Resources[food]);
+
+        // The last of the entry clears the stall.
+        d.Order(0, CommandKind.Cancel, [castle], arg0: 0);
+        d.Order(0, CommandKind.Cancel, [castle], arg0: 0);
+        d.Step();
+        Assert.Equal(0, d.World.Productions.Get(castle).Count);
+        Assert.Equal(0, d.World.Productions.Get(castle).Stall);
+        Assert.Equal(500, d.World.Players[0].Resources[food]);
     }
 
     [Fact]

@@ -8,9 +8,9 @@ using Tzar2.Sim.Events;
 namespace Tzar2.Sim.Systems;
 
 /// <summary>
-/// Pipeline step 5 (TDD §8.5, GAME-02; ADRs 0035, 0042): workers at a node gather one unit per gather time into their
-/// load (carry-over timers, REQ-SIM-02; the owner's gather-rate and capacity technologies apply) and workers at a
-/// drop-off deliver their load to the stockpile. Nodes that run out are removed after the pass (a tree's tile becomes
+/// Pipeline step 5 (TDD §8.5, GAME-02; ADRs 0035, 0042, 0180): workers at a node work one gather time per unit of their
+/// load and get the whole load at once when it is done (milk fills the pail unit by unit; carry-over timers, REQ-SIM-02;
+/// the owner's gather-rate and capacity technologies apply) and workers at a drop-off deliver their load to the stockpile. Nodes that run out are removed after the pass (a tree's tile becomes
 /// buildable again) unless they keep (cows regrow their milk). Neglected fields decay. Sequential, ascending worker
 /// order, so when several workers share a node the lower index gathers first.
 /// </summary>
@@ -101,14 +101,40 @@ public sealed class EconomySystem : ISimSystem
         int gatherMs = Math.Max(1, (int)((long)baseMs * 10_000 / Math.Max(1, 10_000 + bp)));
         int capacity = GameplayCommands.CarryCapacity(world, worker, definition);
         w.TimerMs += tickMs;
-        while (w.TimerMs >= gatherMs && w.CarryAmount < capacity && stock.Amount != 0)
+        if (definition.RegenMs > 0)
         {
-            w.TimerMs -= gatherMs;
-            w.CarryAmount++;
-            w.CarryResource = (byte)resource;
-            if (stock.Amount > 0 && --stock.Amount == 0 && !definition.KeepWhenEmpty)
+            // Milk fills the pail as the cow is milked (the owner's play-test of 2026-10-20).
+            while (w.TimerMs >= gatherMs && w.CarryAmount < capacity && stock.Amount != 0)
             {
-                _depleted.Add(node);
+                w.TimerMs -= gatherMs;
+                w.CarryAmount++;
+                w.CarryResource = (byte)resource;
+                if (stock.Amount > 0 && --stock.Amount == 0 && !definition.KeepWhenEmpty)
+                {
+                    _depleted.Add(node);
+                }
+            }
+        }
+        else
+        {
+            // Wood, stone, gold and food appear in the peasant's hands all at once when the work for the whole load is
+            // done (the owner's play-test: they did not grow chop by chop); a node gives what it has left. Work broken off
+            // is lost.
+            int load = capacity - w.CarryAmount;
+            if (stock.Amount > 0)
+            {
+                load = Math.Min(load, stock.Amount);
+            }
+
+            if (load > 0 && w.TimerMs >= (long)gatherMs * load)
+            {
+                w.TimerMs = 0;
+                w.CarryAmount += load;
+                w.CarryResource = (byte)resource;
+                if (stock.Amount > 0 && (stock.Amount -= load) == 0 && !definition.KeepWhenEmpty)
+                {
+                    _depleted.Add(node);
+                }
             }
         }
 

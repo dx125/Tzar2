@@ -64,6 +64,8 @@ public sealed class NavLayer
     private readonly byte[] _tileRegion;
     private readonly Cluster[] _clusters;
     private readonly int[] _regionComponent;
+    private readonly int[] _componentSizes;
+    private bool _sizesValid;
     private readonly int[] _unionParent;
     private readonly bool[] _dirtyCluster;
     private readonly int[] _dirtyList;
@@ -93,6 +95,7 @@ public sealed class NavLayer
         }
 
         _regionComponent = new int[_clusters.Length * 256];
+        _componentSizes = new int[_clusters.Length * 256];
         _unionParent = new int[_clusters.Length * 256];
         _dirtyCluster = new bool[_clusters.Length];
         _dirtyList = new int[_clusters.Length];
@@ -737,6 +740,37 @@ public sealed class NavLayer
         }
 
         ComponentCount = next;
+        _sizesValid = false;
+    }
+
+    /// <summary>
+    /// Walkable tiles in <paramref name="component"/> (0 for none): how much room a connected area has. Counted on first use
+    /// after the components change (derived state, not hashed).
+    /// </summary>
+    public int ComponentSize(int component)
+    {
+        if ((uint)component >= (uint)ComponentCount)
+        {
+            return 0;
+        }
+
+        if (!_sizesValid)
+        {
+            Array.Clear(_componentSizes, 0, ComponentCount);
+            int tiles = Width * Height;
+            for (int tile = 0; tile < tiles; tile++)
+            {
+                int c = ComponentOf(tile);
+                if (c >= 0)
+                {
+                    _componentSizes[c]++;
+                }
+            }
+
+            _sizesValid = true;
+        }
+
+        return _componentSizes[component];
     }
 
     private int Find(int key)

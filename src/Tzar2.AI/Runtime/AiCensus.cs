@@ -244,7 +244,8 @@ public sealed class AiCensus
                     ref readonly Production production = ref world.Productions.At(q);
                     for (int k = 0; k < production.Count; k++)
                     {
-                        ushort item = production.Queue[k];
+                        ushort item = production.Queue[k].Item;
+                        int runCount = production.Queue[k].Count;
                         if (QueueItems.IsResearch(item) || QueueItems.IsUpgrade(item))
                         {
                             continue; // research and upgrades: no unit, no population (GAME-06)
@@ -259,10 +260,10 @@ public sealed class AiCensus
                         int itemClass = Model.ClassOf(unit);
                         if (itemClass >= 0)
                         {
-                            player.InProgressWritable[itemClass]++;
+                            player.InProgressWritable[itemClass] += runCount;
                         }
 
-                        player.QueuedPopulation += types[unit].Traits.PopulationCost;
+                        player.QueuedPopulation += types[unit].Traits.PopulationCost * runCount;
                     }
                 }
 

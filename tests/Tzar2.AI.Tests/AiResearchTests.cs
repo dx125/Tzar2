@@ -80,7 +80,7 @@ public class AiResearchTests(ITestOutputHelper output)
         commands.Add(CommandKind.Upgrade, [Of(world, "comm.wall_wood", 0)], arg0: world.Ruleset.UpgradeId("to_wall_stone"), player: 0);
         sim.Tick(commands);
         Production queue = world.Productions.Get(Of(world, "euro.blacksmith", 0));
-        Assert.True(queue.Count == 1 && QueueItems.IsResearch(queue.Queue[0]));
+        Assert.True(queue.Count == 1 && QueueItems.IsResearch(queue.Queue[0].Item));
         var none = new CommandList();
         for (int t = 0; t < 200; t++)
         {

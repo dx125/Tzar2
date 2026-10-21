@@ -40,6 +40,7 @@ public static class FrameBuilder
         // Room for the remembered structures too (at most one per entity slot), so the buffer is not reallocated below.
         FrameEntity[] entities = frame.EntityBuffer(ids.Length + (viewer is { } room ? world.Visibility.Memory(room).Length : 0));
         int n = 0;
+        int queued = 0;
         for (int i = 0; i < ids.Length; i++)
         {
             EntityId id = ids[i];
@@ -148,13 +149,13 @@ public static class FrameBuilder
             if (q >= 0)
             {
                 Production production = world.Productions.At(q);
-                e.QueueCount = production.Count;
+                e.QueueCount = QueueRuns.Items(production);
                 e.HasRally = production.HasRally != 0;
                 e.RallyX = production.RallyX;
                 e.RallyY = production.RallyY;
                 if (production.Count > 0)
                 {
-                    ushort head = production.Queue[0];
+                    ushort head = production.Queue[0].Item;
                     int item = QueueItems.Id(head);
                     int total;
                     if (QueueItems.IsResearch(head))
@@ -179,10 +180,14 @@ public static class FrameBuilder
 
                 for (int item = 0; item < production.Count; item++)
                 {
-                    if (QueueItems.IsUpgrade(production.Queue[item]))
+                    QueueRun run = production.Queue[item];
+                    if (QueueItems.IsUpgrade(run.Item))
                     {
-                        e.Upgrades |= 1u << QueueItems.Id(production.Queue[item]);
+                        e.Upgrades |= 1u << QueueItems.Id(run.Item);
                     }
+
+                    FrameQueueKind kind = QueueItems.IsResearch(run.Item) ? FrameQueueKind.Research : QueueItems.IsUpgrade(run.Item) ? FrameQueueKind.Upgrade : FrameQueueKind.Unit;
+                    frame.SetQueueEntry(queued++, new FrameQueueEntry(id.Value, kind, (ushort)QueueItems.Id(run.Item), run.Count));
                 }
             }
 
@@ -215,6 +220,7 @@ public static class FrameBuilder
         }
 
         frame.EntityCount = n;
+        frame.QueueEntryCount = queued;
         frame.DayMinute = world.DayMinute;
         frame.IsNight = world.IsNight;
         frame.Weather = world.Weather;
@@ -298,7 +304,7 @@ public static class FrameBuilder
 
             for (int k = 0; k < production.Count; k++)
             {
-                if (QueueItems.IsResearch(production.Queue[k]) && QueueItems.Id(production.Queue[k]) is var t && t < TechnologyRow.Capacity)
+                if (QueueItems.IsResearch(production.Queue[k].Item) && QueueItems.Id(production.Queue[k].Item) is var t && t < TechnologyRow.Capacity)
                 {
                     frame.Players[owner].Researching[t >> 6] |= 1UL << (t & 63);
                 }

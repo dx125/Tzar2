@@ -95,11 +95,11 @@ public sealed record HarvesterDefinition(int Capacity, ImmutableArray<int> Gathe
 
 /// <summary>Trait <c>Producer</c> (GAME-05): trains units in a queue.</summary>
 /// <param name="Produces">Type ids this building trains, ascending.</param>
-/// <param name="QueueCapacity">Most queued items (UNK-20).</param>
+/// <param name="QueueCapacity">Most different items queued at once; any number of each (ADR 0180).</param>
 public sealed record ProducerDefinition(ImmutableArray<ushort> Produces, int QueueCapacity)
 {
-    /// <summary>Largest queue the sim stores per building.</summary>
-    public const int MaxQueueCapacity = 16;
+    /// <summary>Most queue entries (different items) the sim stores per building.</summary>
+    public const int MaxQueueCapacity = 24;
 
     /// <summary>Technology ids researched here, ascending (GAME-06: the building's command card, ADR 0040).</summary>
     public ImmutableArray<ushort> Researches { get; init; } = [];

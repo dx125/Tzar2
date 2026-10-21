@@ -51,7 +51,7 @@ gameplay:
                                       # (owner play-test 2026-10-20: they stood a tile away from what they worked on)
   acquireIntervalMs: 200              # UNVERIFIED: target scan cadence of idle armed units
   nodeSearchRadiusTiles: 12           # UNVERIFIED (UNK-17): where a worker looks for the next node of a resource
-  queueCapacity: 10                   # UNVERIFIED (UNK-20): production queue length
+  queueCapacity: 24                   # different items queued per building at once; any number of each (ADR 0180)
   constructionRefundPercent: 100      # UNVERIFIED: refund of a cancelled construction site
   productionRefundPercent: 100        # UNVERIFIED: refund of a cancelled queued unit
   researchRefundPercent: 100          # UNVERIFIED: refund of a cancelled research or upgrade
@@ -61,6 +61,8 @@ gameplay:
   burnDamagePerMinute: 60             # UNVERIFIED (UNK-42): hit points a burning building loses per minute
   wallContinueRadiusTiles: 6          # UNVERIFIED: builders move on to the next segment of a dragged wall within this
   maxWallSegments: 64                 # UNVERIFIED: most segments one dragged wall places
+  idleWorkAfterMs: 10000              # UNVERIFIED: an idle peasant finds work by itself after this (owner: the original's did)
+  idleWorkRadiusTiles: 12             # UNVERIFIED: where an idle peasant looks for a site, a repair or a resource
   repairCostPercent: 50               # UNVERIFIED (UNK-18): a full repair costs this share of the construction cost, pro rata (owner decision)
   repairerFalloffPercent: 25          # UNVERIFIED (UNK-18): repairers on one building add 100%, 75%, 50%, 25%, then nothing (owner decision)
   gateOpenReachPx: 32                 # UNVERIFIED: an automatic gate opens for its owner's units this close

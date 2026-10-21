@@ -41,12 +41,16 @@ public enum CommandKind : ushort
     /// </summary>
     Build = 7,
 
-    /// <summary>Queue Arg1 (1-16) units of type Arg0 in each listed producer, paid when queued (GAME-05).</summary>
+    /// <summary>
+    /// Queue Arg1 (1-24) units of type Arg0 in each listed producer, each paid when queued (GAME-05); any number of any
+    /// items queue (ADR 0180).
+    /// </summary>
     Train = 8,
 
     /// <summary>
-    /// Cancel: a listed construction site is removed with a refund; a listed producer drops queue item Arg0 (-1 = the last)
-    /// with a refund.
+    /// Cancel: a listed construction site is removed with a refund; a listed producer drops one item of queue entry Arg0
+    /// (-1 = the last entry), or with Arg1 &gt; 0 one item of queue item Arg1 − 1 (<c>QueueItems</c>), with a refund
+    /// (ADR 0180).
     /// </summary>
     Cancel = 9,
 

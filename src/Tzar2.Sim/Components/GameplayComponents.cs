@@ -133,7 +133,10 @@ public struct Worker : IComponent
     /// <summary>Units carried.</summary>
     public int CarryAmount;
 
-    /// <summary>Gathering time accumulated toward the next unit; while repairing, the hit-point remainder (× build time).</summary>
+    /// <summary>
+    /// Gathering time accumulated toward the whole load (one unit at a time for milk; ADR 0180); while repairing, the
+    /// hit-point remainder (× build time).
+    /// </summary>
     public int TimerMs;
 
     /// <summary>Where the last node was (the search center for the next node of the same resource).</summary>
@@ -144,6 +147,9 @@ public struct Worker : IComponent
 
     /// <summary>Movement attempts since the last progress (gives up after a few).</summary>
     public int Retries;
+
+    /// <summary>How long the worker has stood idle without a task (it finds work after <c>idleWorkAfterMs</c>; ADR 0180).</summary>
+    public int IdleMs;
 
     /// <summary>The task.</summary>
     public WorkerTask Task;
@@ -189,11 +195,125 @@ public struct Construction : IComponent
     public PaidModifier Paid;
 }
 
-/// <summary>Queued items of a producer: unit type ids, or research/upgrade ids tagged by <see cref="QueueItems"/>.</summary>
+/// <summary>
+/// One entry of a production queue (ADR 0180): an item (<see cref="QueueItems"/>), how many of it are queued, and the
+/// cost modifier they were paid with (research and upgrades: none).
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct QueueRun
+{
+    /// <summary>The item (<see cref="QueueItems"/>).</summary>
+    public ushort Item;
+
+    /// <summary>How many are queued (at least 1 in a used entry).</summary>
+    public ushort Count;
+
+    /// <summary>The cost modifier each of them was paid with (a refund returns what was paid).</summary>
+    public PaidModifier Paid;
+}
+
+/// <summary>The entries of a producer's queue, first = in progress.</summary>
 [InlineArray(ProducerDefinition.MaxQueueCapacity)]
 public struct ProductionQueue
 {
-    private ushort _item;
+    private QueueRun _run;
+}
+
+/// <summary>
+/// The production queue's rules (ADR 0180; the owner's play-test of 2026-10-20: the original queues any number of any
+/// items): one entry per item and payment, in the order the items were first ordered; any number of each.
+/// </summary>
+public static class QueueRuns
+{
+    /// <summary>How many of one item an entry holds at most.</summary>
+    public const int MaxCount = ushort.MaxValue;
+
+    /// <summary>How many items are queued in all.</summary>
+    public static int Items(in Production q)
+    {
+        int n = 0;
+        for (int k = 0; k < q.Count; k++)
+        {
+            n += q.Queue[k].Count;
+        }
+
+        return n;
+    }
+
+    /// <summary>The entry of <paramref name="item"/> paid with <paramref name="paid"/>, or −1.</summary>
+    public static int Find(in Production q, ushort item, PaidModifier paid)
+    {
+        for (int k = 0; k < q.Count; k++)
+        {
+            QueueRun run = q.Queue[k];
+            if (run.Item == item && run.Paid.Add == paid.Add && run.Paid.BasisPoints == paid.BasisPoints)
+            {
+                return k;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Whether <paramref name="item"/> is queued at all.</summary>
+    public static bool Contains(in Production q, ushort item)
+    {
+        for (int k = 0; k < q.Count; k++)
+        {
+            if (q.Queue[k].Item == item)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether one more <paramref name="item"/> paid with <paramref name="paid"/> fits (its entry, or a free one).</summary>
+    public static bool HasRoom(in Production q, ushort item, PaidModifier paid, int capacity)
+        => Find(q, item, paid) is var k && (k >= 0 ? q.Queue[k].Count < MaxCount : q.Count < capacity);
+
+    /// <summary>Queues one <paramref name="item"/> (call <see cref="HasRoom"/> first).</summary>
+    public static void Add(ref Production q, ushort item, PaidModifier paid)
+    {
+        int k = Find(q, item, paid);
+        if (k < 0)
+        {
+            k = q.Count++;
+            q.Queue[k] = new QueueRun { Item = item, Count = 0, Paid = paid };
+        }
+
+        q.Queue[k].Count++;
+    }
+
+    /// <summary>
+    /// Takes one item off entry <paramref name="run"/> (the last ordered of them; the first entry's item in progress goes
+    /// last) and returns it; an emptied entry leaves the queue, and the progress restarts when the first entry empties.
+    /// </summary>
+    public static QueueRun TakeOne(ref Production q, int run)
+    {
+        QueueRun taken = q.Queue[run];
+        taken.Count = 1;
+        if (--q.Queue[run].Count > 0)
+        {
+            return taken;
+        }
+
+        for (int k = run + 1; k < q.Count; k++)
+        {
+            q.Queue[k - 1] = q.Queue[k];
+        }
+
+        q.Count--;
+        q.Queue[q.Count] = default;
+        if (run == 0)
+        {
+            q.ProgressMs = 0;
+            q.Stall = 0;
+        }
+
+        return taken;
+    }
 }
 
 /// <summary>
@@ -254,7 +374,7 @@ public struct Production : IComponent
     /// <summary>Rally target (<c>EntityId.Value</c>) for <see cref="RallyMode.DefaultAction"/>, 0 = none; may be stale.</summary>
     public uint RallyTarget;
 
-    /// <summary>Items queued.</summary>
+    /// <summary>Queue entries used (<see cref="QueueRuns"/>).</summary>
     public byte Count;
 
     /// <summary>1 when a rally point is set.</summary>
@@ -266,11 +386,8 @@ public struct Production : IComponent
     /// <summary>What units do at the rally point (<see cref="Components.RallyMode"/>).</summary>
     public RallyMode RallyMode;
 
-    /// <summary>The queued items (<see cref="QueueItems"/>), first = in progress.</summary>
+    /// <summary>The queue's entries, first = in progress.</summary>
     public ProductionQueue Queue;
-
-    /// <summary>Per slot, the cost modifier a unit item was paid with (research and upgrades have fixed costs).</summary>
-    public PaidModifiers Paid;
 }
 
 /// <summary>Level upgrades an entity has bought (bit = upgrade id; ship cannon levels; GAME-06).</summary>
@@ -360,13 +477,6 @@ public struct PaidModifier
 
     /// <summary>Basis points on every cost component.</summary>
     public int BasisPoints;
-}
-
-/// <summary>Per queue slot, the cost modifier the item was paid with (refunds return what was paid).</summary>
-[InlineArray(ProducerDefinition.MaxQueueCapacity)]
-public struct PaidModifiers
-{
-    private PaidModifier _item;
 }
 
 /// <summary>A building on fire (GAME-03): fire damage accumulates per tick (UNK-42).</summary>
