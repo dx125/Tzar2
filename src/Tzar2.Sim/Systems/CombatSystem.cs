@@ -180,7 +180,9 @@ public sealed class CombatSystem : ISimSystem
         {
             c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
             bool idle = !Interaction.IsMoving(world, attacker) && !HasTask(world, attacker);
-            bool scan = c.Mode == CombatMode.AttackMove || (c.Mode == CombatMode.None && arm.AutoAcquire && idle && stance != CombatStance.HoldFire);
+            // A guard (follow order) watches for enemies while it walks with what it guards.
+            bool guarding = world.Motions.IndexOf(attacker) is >= 0 and var gm && world.Motions.At(gm).Order == MotionOrder.Follow;
+            bool scan = c.Mode == CombatMode.AttackMove || (c.Mode == CombatMode.None && arm.AutoAcquire && (idle || guarding) && stance != CombatStance.HoldFire);
             if (scan && (attacker.Index + tick) % acquireEvery == 0)
             {
                 long sight = Math.Max(Sight(world, self, type), Range(world, attacker, self, type, arm));
@@ -726,12 +728,20 @@ public sealed class CombatSystem : ISimSystem
         ref Motion motion = ref world.Motions.Get(attacker);
         int orderX = motion.OrderX;
         int orderY = motion.OrderY;
+        uint guarded = motion.Order == MotionOrder.Follow ? motion.FollowTarget : 0;
         Interaction.MoveTo(world, attacker, x, y);
         if (c.Mode == CombatMode.AttackMove)
         {
             // Keep the move-advance destination to resume it after the fight.
             motion.OrderX = orderX;
             motion.OrderY = orderY;
+        }
+
+        if (guarded != 0)
+        {
+            // A guard chases and then goes back to what it guards.
+            motion.Order = MotionOrder.Follow;
+            motion.FollowTarget = guarded;
         }
     }
 

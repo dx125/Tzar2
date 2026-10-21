@@ -199,9 +199,18 @@ public partial class GameScreen : Node
         TerrainSet set = _store.TerrainSets.FirstOrDefault(s => s.Id == setId) ?? _store.TerrainSets.FirstOrDefault()
             ?? throw new InvalidOperationException("The package has no terrain sets.");
 
-        // Sprites of the civilizations in the match (REQ-GFX-05).
+        // Sprites of the civilizations in the match (REQ-GFX-05): the kingdoms' and those of every object on the map (the
+        // original maps give a kingdom buildings and units of other civilizations).
         _bank = new SpriteBank(_store);
         var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { "comm", string.Empty };
+        foreach (MapObject o in _session.Map.Objects)
+        {
+            if (_rules.EntityTypeId(o.TypeKey) is >= 0 and var placed)
+            {
+                civs.Add(_catalog.Type((ushort)placed).Civilization);
+            }
+        }
+
         foreach (EntityTypeDefinition type in _rules.EntityTypes)
         {
             TypeVisual v = _catalog.Type(type.Id);
@@ -401,9 +410,11 @@ public partial class GameScreen : Node
 
         HudLayout layout = _hud.Layout;
         double interval = frame.TickMs * 100.0 / Math.Max(1, frame.SpeedPercent);
-        int alpha = frame.Paused ? 1000 : FrameInterpolator.Alpha((_now - _frameArrived) * 1000.0, interval * _interpolator.TickSpan);
+        // The session publishes frames only after ticks, so a pause shows in the session before any frame says so.
+        bool paused = frame.Paused || _session.Paused;
+        int alpha = paused ? 1000 : FrameInterpolator.Alpha((_now - _frameArrived) * 1000.0, interval * _interpolator.TickSpan);
         // The world's animations run on game time: they stop with the pause and follow the game speed.
-        if (!frame.Paused)
+        if (!paused)
         {
             _animMs += delta * 1000.0 * frame.SpeedPercent / 100.0;
         }
@@ -2029,7 +2040,7 @@ public partial class GameScreen : Node
         _hud.SetClock(phase);
         _messages.RemoveAll(m => m.Until < _now);
         _hud.SetMessages(_messages.ConvertAll(m => m.Text));
-        _hud.SetStatus(frame.Paused ? _catalog.Text("viewmsg", "pause", "PAUSED") : frame.SpeedPercent != 100 ? $"Speed {frame.SpeedPercent} %" : string.Empty);
+        _hud.SetStatus(frame.Paused || _session.Paused ? _catalog.Text("viewmsg", "pause", "PAUSED") : frame.SpeedPercent != 100 ? $"Speed {frame.SpeedPercent} %" : string.Empty);
         _hud.SetSelection(Describe(frame));
         if (_now >= _minimapDue)
         {
@@ -2054,17 +2065,33 @@ public partial class GameScreen : Node
         TypeVisual v = _catalog.Type(e.TypeId);
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
         string owner = e.Owner < 8 ? SpritePage.PlayerNames[e.Owner] : string.Empty;
-        var strip = new List<(int, int, bool)>();
+        var strip = new List<StripItem>();
         if (_selection.Selected.Count > 1)
         {
-            // Multi-selection shows health only (REQ-UI-01) and the selected units' icons.
+            // Multi-selection shows health only (REQ-UI-01) and one icon per type with how many there are and their
+            // average health (owner play-test 2026-10-20: not every single unit).
+            var byType = new List<(ushort Type, int Count, long Health)>();
             foreach (EntityId id in _selection.Selected)
             {
                 if (_indexById.TryGetValue(id.Value, out int i))
                 {
                     FrameEntity m = frame.Entities[i];
-                    strip.Add((_catalog.Type(m.TypeId).IconIndex, m.MaxHealth > 0 ? m.Health * 1000 / m.MaxHealth : -1, false));
+                    int share = m.MaxHealth > 0 ? m.Health * 1000 / m.MaxHealth : 1000;
+                    int k = byType.FindIndex(g => g.Type == m.TypeId);
+                    if (k < 0)
+                    {
+                        byType.Add((m.TypeId, 1, share));
+                    }
+                    else
+                    {
+                        byType[k] = (m.TypeId, byType[k].Count + 1, byType[k].Health + share);
+                    }
                 }
+            }
+
+            foreach ((ushort type, int count, long health) in byType)
+            {
+                strip.Add(new StripItem(_catalog.Type(type).IconIndex, (int)(health / count), false, count));
             }
 
             return new SelectionInfo
@@ -2118,21 +2145,13 @@ public partial class GameScreen : Node
 
         if (e.QueueCount > 0)
         {
-            stats.Add(("art/icons/time.t2img", $"{e.QueuePermille / 10} %"));
-            for (int q = 0; q < e.QueueCount && q < 1; q++)
+            // As in the original: what is being made, its progress under it and how many are left on it.
+            strip.Add(e.QueueKind switch
             {
-                strip.Add(e.QueueKind switch
-                {
-                    FrameQueueKind.Research when e.QueueHead < _rules.Technologies.Count => (_catalog.ButtonImage(_rules.Technologies[e.QueueHead].Key), e.QueuePermille, true),
-                    FrameQueueKind.Upgrade when e.QueueHead < _rules.Upgrades.Count => (_catalog.ButtonImage(_rules.Upgrades[e.QueueHead].Key), e.QueuePermille, true),
-                    _ => (_catalog.Type(e.QueueHead).IconIndex, e.QueuePermille, false),
-                });
-            }
-
-            if (e.QueueCount > 1)
-            {
-                stats[^1] = (stats[^1].Item1, $"{e.QueuePermille / 10} % (+{e.QueueCount - 1})");
-            }
+                FrameQueueKind.Research when e.QueueHead < _rules.Technologies.Count => new StripItem(_catalog.ButtonImage(_rules.Technologies[e.QueueHead].Key), e.QueuePermille, true),
+                FrameQueueKind.Upgrade when e.QueueHead < _rules.Upgrades.Count => new StripItem(_catalog.ButtonImage(_rules.Upgrades[e.QueueHead].Key), e.QueuePermille, true),
+                _ => new StripItem(_catalog.Type(e.QueueHead).IconIndex, e.QueuePermille, false, e.QueueCount),
+            });
         }
 
         if (e.ConstructionPermille >= 0)
@@ -2247,7 +2266,8 @@ public partial class GameScreen : Node
 
     private void UpdateCursor()
     {
-        string name = "s_hand";
+        // Nothing pending: a pointer (Tzar2's, or the system's); the original's hand is for taking things.
+        string name = Settings.SystemCursor ? CursorCache.System : OwnCursors.Arrow;
         if (_placing == ushort.MaxValue && !_grabbing && InView(_mouse))
         {
             if (_mode != OrderMode.None)

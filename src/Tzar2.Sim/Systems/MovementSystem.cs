@@ -229,6 +229,11 @@ public sealed class MovementSystem : ISimSystem
             return;
         }
 
+        if (world.Combats.IndexOf(entity) is >= 0 and var c && world.Combats.At(c).Target != 0)
+        {
+            return; // a guard in a fight: it comes back once the fight is over
+        }
+
         Position tp = world.Positions.At(t);
         Position p = world.Positions.Get(entity);
         long near = (long)m.Radius + MapState.UnitsPerTile + (3 * MapState.UnitsPerTile / 2);

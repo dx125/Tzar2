@@ -219,8 +219,13 @@ public static class OrderResolver
             OrderMode.Attack => [new PlannedCommand(CommandKind.Move, CommandFlags.Ctrl | queue, EntityId.None, x, y, 0, 0, own)],
             OrderMode.Harvest when target is { IsResourceNode: true } n => [new PlannedCommand(CommandKind.Harvest, queue, n.Id, x, y, 0, 0, own)],
             OrderMode.Patrol => [new PlannedCommand(CommandKind.Patrol, queue, EntityId.None, x, y, 0, 0, own)],
-            OrderMode.Guard when target is { IsMobile: true } g && g.Id != EntityId.None
+            // Guard: what is clicked (a unit or a building, own or not an enemy's) is followed and defended; an enemy is
+            // attacked, open ground held with a move-advance.
+            OrderMode.Guard when target is { } g && g.Id != EntityId.None && !g.IsResourceNode && g.Owner == player
                 => [new PlannedCommand(CommandKind.Follow, queue, g.Id, x, y, 0, 0, own)],
+            OrderMode.Guard when target is { } g && g.Id != EntityId.None && !g.IsResourceNode
+                => [new PlannedCommand(CommandKind.Attack, queue, g.Id, x, y, 0, 0, own)],
+            OrderMode.Guard => [new PlannedCommand(CommandKind.Move, CommandFlags.Ctrl | queue, EntityId.None, x, y, 0, 0, own)],
             OrderMode.Rally => [new PlannedCommand(CommandKind.SetRally, CommandFlags.None, EntityId.None, x, y, 0, 0, own)],
             OrderMode.Repair when target is { } r && r.Owner == player && NeedsRepair(r) && Builders(selection, player) is { Count: > 0 } builders
                 => [new PlannedCommand(CommandKind.Repair, queue, r.Id, x, y, 0, 0, builders)],
