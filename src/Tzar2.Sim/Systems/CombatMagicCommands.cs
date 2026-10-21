@@ -75,12 +75,33 @@ internal static class CombatMagicCommands
     {
         bool toPoint = world.Map.ContainsPoint(command.X, command.Y) && (command.X != 0 || command.Y != 0);
         int limit = command.Arg0 > 0 ? command.Arg0 : 0;
+        EntityId chosen = command.Target;
         bool any = false;
         foreach (EntityId holder in entities)
         {
             if (!world.MayCommand(command.Player, holder) || world.Holders.IndexOf(holder) is not (>= 0 and var hs)
                 || world.Holders.At(hs).Count == 0)
             {
+                continue;
+            }
+
+            if (!chosen.IsNone)
+            {
+                // Emerge one picked unit (manual: pick a unit, Emerge, then the place); not from ships, which dock first.
+                if (!world.IsShip(holder) && world.Entities.IsAlive(chosen) && world.Helds.IndexOf(chosen) is >= 0 and var hc
+                    && world.Helds.At(hc).Holder == holder.Value && !world.Items.Has(chosen))
+                {
+                    Position from = world.Positions.Get(holder);
+                    if (world.Unload(chosen, toPoint ? command.X : from.X, toPoint ? command.Y : from.Y))
+                    {
+                        any = true;
+                        if (toPoint)
+                        {
+                            Interaction.MoveTo(world, chosen, command.X, command.Y);
+                        }
+                    }
+                }
+
                 continue;
             }
 
@@ -695,8 +716,16 @@ internal static class CombatMagicCommands
             return CommandRejection.InvalidArgument;
         }
 
-        int power = Math.Min(command.Arg1 / settings.CraftGoldPerPower, settings.CraftMaxPower);
-        int price = power * settings.CraftGoldPerPower;
+        // 1.05: magic books cost four times more and take twice as long (craftBook*Percent).
+        bool book = world.Ruleset.EntityTypes[command.Arg0].Traits.Item is { Kind: ItemKind.SpellBook };
+        int unitPrice = book ? settings.CraftGoldPerPower * settings.CraftBookCostPercent / 100 : settings.CraftGoldPerPower;
+        if (command.Arg1 < unitPrice)
+        {
+            return CommandRejection.InvalidArgument;
+        }
+
+        int power = Math.Min(command.Arg1 / unitPrice, settings.CraftMaxPower);
+        int price = power * unitPrice;
         foreach (EntityId workshop in entities)
         {
             if (!world.Entities.IsAlive(workshop) || world.Identities.Get(workshop).Owner != command.Player || world.TypeOf(workshop).Traits.Crafter is not { } crafter
@@ -711,7 +740,7 @@ internal static class CombatMagicCommands
             }
 
             world.Players[command.Player].Resources[gold] -= price;
-            world.CraftJobs.Set(workshop, new CraftJob { ItemType = command.Arg0, Power = power, LeftMs = Math.Max(1, power * settings.CraftMsPerPower) });
+            world.CraftJobs.Set(workshop, new CraftJob { ItemType = command.Arg0, Power = power, LeftMs = Math.Max(1, settings.CraftMs(book, power)) });
             return null;
         }
 

@@ -175,4 +175,27 @@ public class ItemTests
         EntityId item = OfType(d.World, "comm.item").Single();
         Assert.Equal(6, d.World.Items.Get(item).Power);
     }
+
+    [Fact]
+    [Trait("Rule", "ITEM-009")]
+    public void A_spell_book_costs_four_times_more_gold_per_point_and_takes_twice_as_long()
+    {
+        // 1.05: magic books made in the magic workshop are four times more expensive and take twice as long.
+        (int Power, int LeftMs) Craft(string item)
+        {
+            using var d = new SimDriver(TestMap(24, 16, Structure("arab.magicworkshop", 0, 8, 4)), ruleset: Classic);
+            EntityId workshop = OfType(d.World, "arab.magicworkshop").Single();
+            d.Order(0, CommandKind.CraftItem, [workshop], arg0: Id(item), arg1: 400);
+            d.Step();
+            CraftJob job = d.World.CraftJobs.Get(workshop);
+            return (job.Power, job.LeftMs);
+        }
+
+        (int weaponPower, int weaponMs) = Craft("comm.item");
+        (int bookPower, int bookMs) = Craft("comm.item_magic");
+        Assert.Equal(8, weaponPower); // 400 gold at 50 per point
+        Assert.Equal(2, bookPower); // 400 gold at 200 per point
+        Assert.Equal(2 * 2 * 2000, bookMs + 50); // twice 2 s per point; one tick (50 ms) has run
+        Assert.Equal(8 * 2000, weaponMs + 50);
+    }
 }

@@ -35,6 +35,7 @@ public static class FrameBuilder
         frame.TickMs = tickMs;
         frame.Outcome = outcome;
 
+        byte? card = player ?? viewer; // whose holders show what is inside them
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         Span<Identity> identities = world.Identities.Components;
         // Room for the remembered structures too (at most one per entity slot), so the buffer is not reallocated below.
@@ -91,6 +92,27 @@ public static class FrameBuilder
             int m = world.Motions.IndexOf(id);
             bool moving = m >= 0 && (world.Motions.At(m).VelocityX != 0 || world.Motions.At(m).VelocityY != 0);
             e.Activity = moving ? UnitActivity.Walk : UnitActivity.Idle;
+
+            e.CraftPermille = -1;
+            if (world.Experiences.IndexOf(id) is >= 0 and var xp)
+            {
+                e.Level = world.Experiences.At(xp).Level;
+                e.Hero = (world.Experiences.At(xp).Flags & ExperienceFlags.Hero) != 0;
+            }
+
+            if (world.Holders.IndexOf(id) is >= 0 and var ho && (card is null || identity.Owner == card))
+            {
+                e.Inside = world.Holders.At(ho).Count;
+                e.InsideMax = world.HolderCapacity(id);
+            }
+
+            if (world.CraftJobs.IndexOf(id) is >= 0 and var cj)
+            {
+                CraftJob job = world.CraftJobs.At(cj);
+                bool book = world.Ruleset.EntityTypes[job.ItemType].Traits.Item is { Kind: ItemKind.SpellBook };
+                int total = Math.Max(1, world.Ruleset.Combat.CraftMs(book, job.Power));
+                e.CraftPermille = (int)Math.Clamp((long)(total - job.LeftMs) * 1000 / total, 0, 1000);
+            }
 
             int w = world.Workers.IndexOf(id);
             if (w >= 0)
@@ -221,6 +243,7 @@ public static class FrameBuilder
 
         frame.EntityCount = n;
         frame.QueueEntryCount = queued;
+        FillHelds(frame, world, card);
         frame.DayMinute = world.DayMinute;
         frame.IsNight = world.IsNight;
         frame.Weather = world.Weather;
@@ -282,6 +305,7 @@ public static class FrameBuilder
             fp.PopulationCap = state.PopulationCap;
             fp.Defeated = (state.Flags & PlayerFlags.Defeated) != 0;
             fp.Victorious = (state.Flags & PlayerFlags.Victorious) != 0;
+            fp.AiAssist = (byte)(((state.Flags & PlayerFlags.AssistEconomy) != 0 ? 1 : 0) | ((state.Flags & PlayerFlags.AssistWar) != 0 ? 2 : 0));
             fp.Statistics = KingdomStatistics.From(world.Kingdoms[p]);
             fp.Score = VictorySystem.Score(world.Ruleset.World, world.Kingdoms[p]);
             for (int w = 0; w < TechnologyRow.Capacity / 64; w++)
@@ -355,6 +379,29 @@ public static class FrameBuilder
     }
 
     // What the player may build or train now, by the sim's own requirement check (ADR 0040).
+    // The units inside the holders of the card's kingdom and the items its units carry (of everyone without one),
+    // grouped by holder.
+    private static void FillHelds(GameFrame frame, World world, byte? card)
+    {
+        int n = 0;
+        for (int i = 0; i < world.Helds.Count; i++)
+        {
+            EntityId unit = world.Helds.Entities[i];
+            EntityId holder = EntityId.FromValue(world.Helds.Components[i].Holder);
+            bool item = world.Items.Has(unit);
+            if ((!item && !world.Holders.Has(holder)) || (card is { } k && world.Identities.Get(holder).Owner != k))
+            {
+                continue;
+            }
+
+            Health health = world.Healths.IndexOf(unit) is >= 0 and var h ? world.Healths.At(h) : default;
+            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item));
+        }
+
+        frame.HeldCount = n;
+        frame.GroupHelds();
+    }
+
     private static void FillMakeable(GameFrame frame, World world, byte? player)
     {
         if (player is not { } who || !world.HasPlayer(who))

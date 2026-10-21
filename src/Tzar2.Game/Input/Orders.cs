@@ -62,6 +62,12 @@ public enum OrderMode
 
     /// <summary>Use the default item on the clicked target or point (GAME-10).</summary>
     UseItem,
+
+    /// <summary>
+    /// Holders let their units out at the clicked place (ships and carpets, manual: Unload), or only the unit picked in a
+    /// building's list (its <c>EntityId.Value</c> is the mode's argument; manual: Emerge, ORD-015).
+    /// </summary>
+    Unload,
 }
 
 /// <summary>
@@ -309,7 +315,7 @@ public static class OrderResolver
         var own = new List<EntityId>();
         foreach (EntityInfo e in selection)
         {
-            if (e.Owner == player && (e.IsMobile || mode is OrderMode.Rally or OrderMode.Crusade))
+            if (e.Owner == player && (e.IsMobile || mode is OrderMode.Rally or OrderMode.Crusade or OrderMode.Unload))
             {
                 own.Add(e.Id);
             }
@@ -351,6 +357,7 @@ public static class OrderResolver
             OrderMode.Crusade => [new PlannedCommand(CommandKind.PreachCrusade, CommandFlags.None, EntityId.None, x, y, 0, 0, own)],
             OrderMode.PickItem when target is { } item && item.Id != EntityId.None => [new PlannedCommand(CommandKind.PickItem, queue, item.Id, x, y, 0, 0, own)],
             OrderMode.UseItem => [new PlannedCommand(CommandKind.UseItem, CommandFlags.None, target?.Id ?? EntityId.None, x, y, -1, 0, own)],
+            OrderMode.Unload => [new PlannedCommand(CommandKind.Unload, CommandFlags.None, argument != 0 ? EntityId.FromValue(unchecked((uint)argument)) : EntityId.None, x, y, 0, 0, own)],
             _ => [],
         };
     }

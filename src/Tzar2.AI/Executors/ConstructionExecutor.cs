@@ -25,7 +25,7 @@ public sealed class ConstructionExecutor : IAiExecutor
     public void Run(AiExecutorContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (!context.Settings.EconomyAi || context.Player.Workers.Count == 0)
+        if (!context.EconomyAi || context.Player.Workers.Count == 0)
         {
             return;
         }

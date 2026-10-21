@@ -96,7 +96,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 
 | Chapter | Rules | Tested | Implemented | Partial | Missing | Deviation | Unclear |
 |---|---|---|---|---|---|---|---|
-| [Computer opponents](ai.yaml) (AI) | 4 | 0 | 0 | 1 | 1 | 1 | 1 |
+| [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 6 | 4 | 0 | 4 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 22 | 14 | 3 | 1 | 1 | 0 | 3 |
@@ -105,11 +105,11 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 13 | 5 | 0 | 1 | 0 | 3 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 34 | 1 | 13 | 6 | 11 | 2 | 1 |
-| [Items](items.yaml) (ITEM) | 15 | 6 | 2 | 3 | 3 | 1 | 0 |
+| [The screen](interface.yaml) (HUD) | 34 | 1 | 14 | 6 | 10 | 2 | 1 |
+| [Items](items.yaml) (ITEM) | 15 | 8 | 2 | 2 | 2 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 20 | 12 | 3 | 3 | 1 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
-| [Unit orders](orders.yaml) (ORD) | 18 | 8 | 4 | 4 | 2 | 0 | 0 |
+| [Unit orders](orders.yaml) (ORD) | 18 | 9 | 4 | 3 | 2 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 9 | 4 | 0 | 0 | 1 | 1 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 0 | 10 | 10 | 6 | 2 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 333 | 148 | 69 | 46 | 42 | 9 | 19 |
+| **All** | 333 | 152 | 70 | 44 | 39 | 9 | 19 |
 
 ## Not done yet
 
@@ -126,7 +126,6 @@ Missing and partial rules.
 ### Computer opponents
 
 * **AI-001** (partial): Each computer kingdom plays an AI script, chosen per player before the game. *Tzar2 picks the script; it cannot be chosen (SHELL-010, SHELL-016).* (ADR 0178)
-* **AI-004**: A player can put his kingdom under the computer's assistance, none, economy, war or full, from the card with nothing selected. *The simulation can hand a whole kingdom to the computer (SetController); the economy and war halves and the orders are missing.* Work: STATUS work queue 3.
 
 ### Combat
 
@@ -175,24 +174,21 @@ Missing and partial rules.
 * **HUD-011** (partial): The chat screen opens with the CHAT button or Enter; the message goes to the allies, the enemies, everyone, or players picked from a list that shows each one's stance. *Multiplayer only, as a chat line where Tab cycles everyone, allies and enemies; there is no list of players to pick from.* (ADR 0168)
 * **HUD-012**: The diplomacy screen (DIPLOMACY, F5) shows each player's civilization and lets you choose ally, enemy or neutral towards him, offer shared vision, resources and unit control, and set allied victory; each button shows whether the other player agreed. *The simulation has stances, sharing and allied victory (ADR 0102); the screen is not built.*
 * **HUD-013**: The tribute screen (TRIBUTE, F6) sends gold, food, stone or wood to another player; a left click on the amount raises it and a right click lowers it; SEND or CANCEL. *The simulation has tribute (ADR 0102); the screen is not built.*
-* **HUD-016** (partial): The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level. *The kingdom, power, the number of units inside and the level are not shown.*
+* **HUD-016** (partial): The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level. *The kingdom's name (only its colour shows) and power are not shown. INSIDE and LEVEL show for the player's own objects only.*
 * **HUD-017**: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped. *Use and drop act on the first item; there is no inventory view.*
 * **HUD-018**: In an inventory a left click uses an item, a right click drops it, Ctrl makes either instant, Alt+click makes it the default item, and < and > turn its pages.
 * **HUD-020**: The question mark on the orders bar opens the online help, whose topics explain every unit, building and technology and how to play. *The help's 407 topics are in the original's HELP/ITEMS.TXT.*
-* **HUD-021**: A selected castle or outpost shows, under its own health, a bar of the health of the units inside.
 * **HUD-022**: The kingdom of a spy is shown as its true kingdom to its owner. *Spies cannot impersonate yet (MAG).*
 * **HUD-025**: The fish patch a kingdom's boats are fishing is marked with a blue selection.
 * **HUD-028** (partial): The \ key shows the trees translucent so that units under them can be seen. *Trees are drawn at 45 % opacity, not with the original's look.*
 * **HUD-029**: An order shows only when its condition holds; the quest order only when there are quests. *The quest order is always there.*
 * **HUD-030** (partial): The minimap paints terrains, trees and cliffs in the colours of the terrain set's data. *Tzar2 takes each tile's colour from its picture.*
 * **HUD-032**: A working peasant is named by its job, woodcutter, farmer, miner or builder.
-* **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The quests and the next idle peasant work; the lists of heroes, spies and items open empty, as the original fills them at run time.*
+* **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. Heroes inside buildings are not listed. The online help is missing.*
 
 ### Items
 
 * **ITEM-007** (partial): Some items must be used at a place; the Fire Rain book makes fire rain where the player clicks, on everyone there, own units included. *The simulation does it; the client uses the first item, as there is no inventory to pick from (HUD-017).*
-* **ITEM-008** (partial): Only the Arabians make items, in the magic workshop after Witchcraft; the player picks the kind of item and how much gold to spend, and better items cost more and take longer. *The simulation crafts items; the card's Build Magic Item order and its dialog are missing (command-card work).* Work: STATUS work queue 3.
-* **ITEM-009**: Magic books made in the magic workshop cost four times more and take twice as long.
 * **ITEM-010** (partial): A soul item kills a unit or makes it go berserk; a hero is not killed. *The simulation does it; the card's item_kill and item_berserk orders do nothing yet.*
 * **ITEM-012**: A unit that picks up a magic book has yellow stars floating above it.
 * **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
@@ -214,8 +210,7 @@ Missing and partial rules.
 * **ORD-005**: Shift+right click adds waypoints; the units walk them in order. With Ctrl or Alt the waypoints are a move-advance or a move-sneak. *The client sends the Shift flag but the simulation replaces the order instead of queueing it.*
 * **ORD-006** (partial): Patrol walks between the unit's position and the clicked point; with Shift several points make a patrol path. *Patrol between two points works; the path of several points needs the waypoints of ORD-005.*
 * **ORD-007** (partial): Explore sends the unit to the clicked area, which it walks to explore it. *Explore takes no target; the units head for any unexplored ground they can reach.*
-* **ORD-014** (partial): Unload makes a loaded vehicle let its units out at the clicked place; the pointer's colour shows whether they can land there. *Units land at the clicked place; the pointer does not change colour.*
-* **ORD-015** (partial): Emerge lets one chosen unit out of a building at the clicked place. *All units come out next to the building; a unit cannot be picked from the list of those inside (command-card work).* Work: STATUS work queue 3.
+* **ORD-014** (partial): Unload makes a loaded vehicle let its units out at the clicked place; the pointer's colour shows whether they can land there. *The Unload button waits for a click on the place and the units land there; the pointer does not change colour.*
 
 ### Animations, effects and sounds
 

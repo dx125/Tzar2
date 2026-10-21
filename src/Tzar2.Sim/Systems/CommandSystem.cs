@@ -259,6 +259,9 @@ public sealed partial class CommandSystem : ISimSystem
             case CommandKind.SetController:
                 return KingdomCommands.SetController(world, command);
 
+            case CommandKind.SetAiAssist:
+                return KingdomCommands.SetAiAssist(world, command);
+
             case CommandKind.Trade:
                 return KingdomCommands.Trade(world, command, entities);
 

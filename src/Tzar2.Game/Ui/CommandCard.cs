@@ -25,6 +25,9 @@ public sealed class CommandCard
     private readonly ICardSource _source;
     private readonly byte _me;
     private readonly Stack<string> _menus = new();
+
+    // The menu of a kingdom list on the stack (a name no card source uses), followed by the list's kind.
+    private const string ListMenu = "\u0001list:";
     private readonly Dictionary<uint, int> _index = [];
     private GameFrame? _indexed;
     private int _page;
@@ -69,21 +72,38 @@ public sealed class CommandCard
         var card = new List<CardSlot?>();
         var whole = new List<CardSlot>();
         WholeCard = whole;
-        if (context.Placing || !context.IsOwn || Lead(context) is not { } lead)
+        if (context.Placing)
         {
             return card;
         }
 
-        FrameEntity e = context.Frame.Entities[lead];
-        string civ = _source.Civilization(e.TypeId);
-        if (e.ConstructionPermille >= 0)
+        FrameEntity e = default;
+        string civ = string.Empty;
+        string? menu;
+        if (context.Selection.Count == 0)
         {
-            card.Add(new CardSlot(new CardButton("cancel", 'C', CardAction.Cancel, string.Empty, 109, "Cancel construction"), true, false));
+            // Nothing selected: the kingdom's card (HUD-033), with AI assistance where the match offers it (AI-004).
+            menu = OpenMenu ?? _source.KingdomMenu(context.AiAssist);
+        }
+        else if (context.IsOwn && Lead(context) is { } lead)
+        {
+            e = context.Frame.Entities[lead];
+            civ = _source.Civilization(e.TypeId);
+            if (e.ConstructionPermille >= 0)
+            {
+                card.Add(new CardSlot(new CardButton("cancel", 'C', CardAction.Cancel, string.Empty, 109, "Cancel construction"), true, false));
+                return card;
+            }
+
+            menu = OpenMenu ?? _source.Menu(e.TypeId);
+        }
+        else
+        {
             return card;
         }
 
-        string? menu = OpenMenu ?? _source.Menu(e.TypeId);
-        var buttons = (TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).Where(b => !Hidden(context, b, e)).ToList();
+        var buttons = (menu?.StartsWith(ListMenu, StringComparison.Ordinal) == true ? KingdomList(context, menu[ListMenu.Length..])
+            : TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).Where(b => !Hidden(context, b, e)).ToList();
         if (buttons.Count > Slots)
         {
             // What this build cannot do yet goes to the last page.
@@ -271,9 +291,16 @@ public sealed class CommandCard
                 return Commands(CommandKind.Explore, OwnIds(selected, e => e.IsMobile));
             case CardAction.Delete:
                 return new CardPress(DeleteSelected: true);
+            case CardAction.Unload when selected.Any(e => e.Owner == _me && e.IsMobile && InsideCount(context, e.Id) > 0):
+                // Ships and carpets let their units out at the place clicked next (ORDERS.INI unload: PLACE command_unload).
+                return new CardPress(Mode: OrderMode.Unload);
+            case CardAction.Unload when HolderOfPicked(context) is { } pickedFrom && selected.Any(e => e.Owner == _me && e.Id == pickedFrom):
+                // A unit picked in a building's list comes out at the place clicked next (manual: Emerge).
+                return new CardPress(Mode: OrderMode.Unload, ModeArgument: unchecked((int)context.Picked.Value));
             case CardAction.Unload:
+                // Emerge without a pick: everyone comes out next to the building at once (ORDERS.INI emerge has no place).
                 var unload = new CommandList();
-                foreach (EntityInfo holder in selected.Where(e => e.Owner == _me))
+                foreach (EntityInfo holder in selected.Where(e => e.Owner == _me && InsideCount(context, e.Id) > 0))
                 {
                     if (Index(context.Frame).TryGetValue(holder.Id.Value, out int hi))
                     {
@@ -286,6 +313,16 @@ public sealed class CommandCard
                 return Commands(CommandKind.ConvertUnit, OwnIds(selected, e => e.IsMobile), arg0: into);
             case CardAction.NextIdle:
                 return new CardPress(NextIdlePeasant: true);
+            case CardAction.KingdomList:
+                _menus.Push(ListMenu + b.Argument);
+                _page = 0;
+                return CardPress.Nothing;
+            case CardAction.SelectUnit when uint.TryParse(b.Argument, NumberStyles.None, CultureInfo.InvariantCulture, out uint listed):
+                return new CardPress(Select: EntityId.FromValue(listed));
+            case CardAction.AiAssist when context.AiAssist && int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int assist):
+                var help = new CommandList();
+                help.Add(CommandKind.SetAiAssist, [], arg0: assist);
+                return new CardPress(Commands: help);
             case CardAction.Quests when context.HasQuests:
                 return new CardPress(ShowQuests: true);
             case CardAction.Quests:
@@ -316,6 +353,8 @@ public sealed class CommandCard
                 return new CardPress(Dialog: CardDialogKind.Exchange);
             case CardAction.Trade:
                 return new CardPress(Dialog: CardDialogKind.Trade);
+            case CardAction.Craft:
+                return new CardPress(Dialog: CardDialogKind.Craft);
             default:
                 return CardPress.Nothing;
         }
@@ -328,6 +367,72 @@ public sealed class CommandCard
     /// <summary>The exchange the tavern dialog asked for (ten given for one), or null without an own tavern selected.</summary>
     public CommandList? Exchange(CardContext context, string give, string get, int amount)
         => List(CommandKind.Convert, Taverns(context), arg0: _rules.ResourceId(give) | (_rules.ResourceId(get) << 8), arg1: amount);
+
+    /// <summary>
+    /// The units inside the focused holder of the selection, if it is the local kingdom's (the selection view's list;
+    /// a click picks one for Emerge, ORD-015); empty otherwise.
+    /// </summary>
+    public IReadOnlyList<FrameHeld> Inside(CardContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (Lead(context) is not { } lead || context.Frame.Entities[lead] is not { Inside: > 0 } holder || holder.Owner != _me)
+        {
+            return [];
+        }
+
+        var list = new List<FrameHeld>();
+        foreach (FrameHeld h in context.Frame.Helds)
+        {
+            if (h.Holder == holder.Id.Value && !h.IsItem)
+            {
+                list.Add(h);
+            }
+        }
+
+        return list;
+    }
+
+    /// <summary>The item types the selected magic workshops make (GAME-10), in the rules' order; empty without one.</summary>
+    public IReadOnlyList<ushort> CraftableItems(CardContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        foreach (EntityInfo e in Selected(context))
+        {
+            if (e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is { } crafter)
+            {
+                return crafter.Items;
+            }
+        }
+
+        return [];
+    }
+
+    /// <summary>The gold one point of an item's power costs (books cost more, 1.05).</summary>
+    public int CraftPricePerPower(ushort itemType)
+    {
+        CombatSettings c = _rules.Combat;
+        return _rules.EntityTypes[itemType].Traits.Item is { Kind: ItemKind.SpellBook } ? c.CraftGoldPerPower * c.CraftBookCostPercent / 100 : c.CraftGoldPerPower;
+    }
+
+    /// <summary>The most power an item may be made with.</summary>
+    public int CraftMaxPower => _rules.Combat.CraftMaxPower;
+
+    /// <summary>The item the dialog asked for, made by the first idle selected workshop; null without one.</summary>
+    public CommandList? Craft(CardContext context, ushort itemType, int gold)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        Dictionary<uint, int> index = Index(context.Frame);
+        foreach (EntityInfo e in Selected(context))
+        {
+            if (e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is not null
+                && index.TryGetValue(e.Id.Value, out int i) && context.Frame.Entities[i].CraftPermille < 0)
+            {
+                return List(CommandKind.CraftItem, [e.Id], arg0: itemType, arg1: gold);
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// The trade route of the selected traders to the clicked far market or harbor: they load at the own market of their
@@ -480,6 +585,64 @@ public sealed class CommandCard
         }
 
         return list;
+    }
+
+    // The kingdom's heroes, spies (and ninjas: the units that detect the invisible) or carried items, each a button that
+    // selects the unit (an item: its carrier). The original fills its empty HEROES, SPYS and ITEMS menus at run time.
+    private List<CardButton> KingdomList(CardContext context, string kind)
+    {
+        var list = new List<CardButton>();
+        Dictionary<uint, int> index = Index(context.Frame);
+        if (kind == "items")
+        {
+            foreach (FrameHeld h in context.Frame.Helds)
+            {
+                if (h.IsItem && index.TryGetValue(h.Holder, out int c) && context.Frame.Entities[c].Owner == _me)
+                {
+                    ushort carrier = context.Frame.Entities[c].TypeId;
+                    list.Add(new CardButton("item", '\0', CardAction.SelectUnit, h.Holder.ToString(CultureInfo.InvariantCulture), _source.TrainImage(carrier),
+                        $"{_source.Name(h.TypeId)} ({_source.Name(carrier)})"));
+                }
+            }
+
+            return list;
+        }
+
+        foreach (FrameEntity e in context.Frame.Entities)
+        {
+            bool listed = e.Owner == _me && !e.Remembered && (kind == "heroes" ? e.Hero : kind == "spies" && _rules.EntityTypes[e.TypeId].Traits.World.DetectUnits > 0);
+            if (listed)
+            {
+                list.Add(new CardButton("unit", '\0', CardAction.SelectUnit, e.Id.Value.ToString(CultureInfo.InvariantCulture), _source.TrainImage(e.TypeId),
+                    e.Level > 0 ? $"{_source.Name(e.TypeId)}, level {e.Level}" : _source.Name(e.TypeId)));
+            }
+        }
+
+        return list;
+    }
+
+    private int InsideCount(CardContext context, EntityId holder)
+        => Index(context.Frame).TryGetValue(holder.Value, out int i) ? context.Frame.Entities[i].Inside : 0;
+
+    // The building (not a ship: they dock first) holding the unit picked in the selection view's list, or null.
+    private EntityId? HolderOfPicked(CardContext context)
+    {
+        if (context.Picked.IsNone)
+        {
+            return null;
+        }
+
+        foreach (FrameHeld h in context.Frame.Helds)
+        {
+            if (h.Unit == context.Picked && !h.IsItem)
+            {
+                return Index(context.Frame).TryGetValue(h.Holder, out int i) && !Info(_rules, context.Frame, context.Frame.Entities[i], _me).IsMobile
+                    ? EntityId.FromValue(h.Holder)
+                    : null;
+            }
+        }
+
+        return null;
     }
 
     private FramePlayer Me(CardContext context) => context.Frame.Players.Length > _me ? context.Frame.Players[_me] : default;
@@ -649,6 +812,8 @@ public sealed class CommandCard
         CardAction.Crusade => context.Mode == OrderMode.Crusade,
         CardAction.PickItem => context.Mode == OrderMode.PickItem,
         CardAction.UseItem => context.Mode == OrderMode.UseItem,
+        CardAction.Unload => context.Mode == OrderMode.Unload,
+        CardAction.AiAssist => Me(context).AiAssist.ToString(CultureInfo.InvariantCulture) == b.Argument,
         CardAction.Stance => Lead(context) is { } l && b.Argument == context.Frame.Entities[l].Stance.ToString(CultureInfo.InvariantCulture),
         CardAction.Gate => Lead(context) is { } g && GateButtonOn(b.Argument, context.Frame.Entities[g].Gate),
         _ => false,
@@ -666,7 +831,7 @@ public sealed class CommandCard
     // do orders a technology unlocks (TECHTREE [orders]: bribe, spells, loans...) until it is researched.
     private bool Hidden(CardContext context, CardButton b, in FrameEntity lead)
     {
-        int gate = _rules.OrderTechnology(b.Order, _source.Civilization(lead.TypeId));
+        int gate = _rules.OrderTechnology(b.Order, lead.Id.IsNone ? string.Empty : _source.Civilization(lead.TypeId));
         if (gate >= 0 && !Me(context).HasTechnology(gate))
         {
             return true;
@@ -728,6 +893,19 @@ public sealed class CommandCard
                 return HireAvailability(context, b);
             case CardAction.Trade:
                 return selected.Any(e => e.Owner == _me && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null) ? (true, string.Empty) : (false, "needs a trader");
+            case CardAction.Unload:
+                return selected.Any(e => e.Owner == _me && InsideCount(context, e.Id) > 0) ? (true, string.Empty) : (false, "nobody inside");
+            case CardAction.AiAssist:
+                return context.AiAssist ? (true, string.Empty) : (false, "this match offers no AI assistance");
+            case CardAction.KingdomList:
+                return KingdomList(context, b.Argument).Count > 0 ? (true, string.Empty) : (false, "none yet");
+            case CardAction.Craft:
+                if (!selected.Any(e => e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is not null))
+                {
+                    return (false, "needs a magic workshop");
+                }
+
+                return Lead(context) is { } workshop && context.Frame.Entities[workshop].CraftPermille >= 0 ? (false, "making an item") : (true, string.Empty);
             case CardAction.Repair:
                 return selected.Any(e => e.Owner == _me && e.CanBuild) ? (true, string.Empty) : (false, "needs a builder");
             case CardAction.Capture:

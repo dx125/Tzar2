@@ -369,6 +369,16 @@ public sealed record CombatSettings
     /// <summary>Most power a crafted item may have.</summary>
     public int CraftMaxPower { get; init; } = 50;
 
+    /// <summary>A crafted spell book's price, in percent of another item's of its power (1.05: four times).</summary>
+    public int CraftBookCostPercent { get; init; } = 100;
+
+    /// <summary>A crafted spell book's time, in percent of another item's of its power (1.05: twice).</summary>
+    public int CraftBookTimePercent { get; init; } = 100;
+
+    /// <summary>How long crafting an item of <paramref name="power"/> takes (a spell book: <see cref="CraftBookTimePercent"/> of it).</summary>
+    public int CraftMs(bool book, int power)
+        => (int)Math.Min((long)power * CraftMsPerPower * (book ? CraftBookTimePercent : 100) / 100, int.MaxValue);
+
     /// <summary>Bribe cost as a share of the unit's cost, in gold (percent; UNK-26).</summary>
     public int BribeCostPercent { get; init; } = 200;
 
@@ -423,6 +433,8 @@ public sealed record CombatSettings
         Check(CraftGoldPerPower, 1, 1_000_000);
         Check(CraftMsPerPower, 0, 600_000);
         Check(CraftMaxPower, 1, 10_000);
+        Check(CraftBookCostPercent, 1, 10_000);
+        Check(CraftBookTimePercent, 1, 10_000);
         Check(BribeCostPercent, 0, 100_000);
         Check(CrusadeAnchor, -1, typeCount - 1);
         Check(Crusader, -1, typeCount - 1);

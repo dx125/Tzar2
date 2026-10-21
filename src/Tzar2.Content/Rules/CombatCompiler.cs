@@ -23,7 +23,8 @@ internal sealed class CombatCompiler
     [
         "experiencePerDamagePercent", "experiencePerKill", "levelBaseXp", "baseLevelCap", "attackPerLevel", "defenceHalvesPerLevel",
         "heroLevel", "leadershipTechnology", "leadershipRadiusTiles", "leadershipSharePercent", "honorTechnology", "honorAttackPercent",
-        "dummyMaxLevel", "exitRadiusTiles", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "bribeCostPercent", "crusadeAnchor",
+        "dummyMaxLevel", "exitRadiusTiles", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
+        "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
         "crusader", "crusadeSize", "crusadeAnchorRadiusTiles", "crusadeCooldownMs", "heroNames", "projectiles", "unitKeywords",
     ];
 
@@ -263,6 +264,8 @@ internal sealed class CombatCompiler
             CraftGoldPerPower = Range("craftGoldPerPower", d.CraftGoldPerPower, 1, 1_000_000),
             CraftMsPerPower = Range("craftMsPerPower", d.CraftMsPerPower, 0, 600_000),
             CraftMaxPower = Range("craftMaxPower", d.CraftMaxPower, 1, 10_000),
+            CraftBookCostPercent = Range("craftBookCostPercent", d.CraftBookCostPercent, 1, 10_000),
+            CraftBookTimePercent = Range("craftBookTimePercent", d.CraftBookTimePercent, 1, 10_000),
             BribeCostPercent = Range("bribeCostPercent", d.BribeCostPercent, 0, 100_000),
             CrusadeAnchor = Type("crusadeAnchor", types),
             Crusader = Type("crusader", types),

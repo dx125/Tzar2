@@ -58,6 +58,15 @@ public enum CardAction
     /// <summary>Show the quest log.</summary>
     Quests,
 
+    /// <summary>AI assistance <see cref="CardButton.Argument"/>: 0 none, 1 economy, 2 war, 3 full (ADR 0183).</summary>
+    AiAssist,
+
+    /// <summary>Opens a list of the kingdom's <see cref="CardButton.Argument"/>: <c>heroes</c>, <c>spies</c> or <c>items</c> (HUD-033).</summary>
+    KingdomList,
+
+    /// <summary>Selects unit <see cref="CardButton.Argument"/> (<c>EntityId.Value</c>) and shows it: an entry of a kingdom list.</summary>
+    SelectUnit,
+
     /// <summary>The next page of a card with more orders than slots (Tzar2's; <see cref="CardButton.Argument"/> = "2/3").</summary>
     Page,
 
@@ -91,6 +100,9 @@ public enum CardAction
 
     /// <summary>A trade route of the selected traders between a near and a far market (its dialog, then a click on the far one).</summary>
     Trade,
+
+    /// <summary>The magic workshop makes an item (order <c>build_item</c>): its dialog picks the kind and the gold.</summary>
+    Craft,
 
     /// <summary>Hire tavern offer <see cref="CardButton.Argument"/> (its slot): a mercenary group or a hero (Tzar2 fills the
     /// original's empty <c>tavern_merc</c> / <c>tavern_hero</c> menus with the offers of the period).</summary>
@@ -172,6 +184,12 @@ public interface ICardSource
     /// <summary>The menu of an entity type's card, or null.</summary>
     string? Menu(ushort typeId);
 
+    /// <summary>
+    /// The kingdom's card, shown with nothing selected (lists of heroes, spies and items, quests, the next idle peasant;
+    /// with <paramref name="aiAssist"/> also AI assistance), or null.
+    /// </summary>
+    string? KingdomMenu(bool aiAssist);
+
     /// <summary>The civilization an entity type belongs to (empty for the common ones).</summary>
     string Civilization(ushort typeId);
 
@@ -197,6 +215,8 @@ public interface ICardSource
 /// <param name="Mode">The order waiting for a click on the world.</param>
 /// <param name="ModeArgument">Its argument (a spell).</param>
 /// <param name="HasQuests">Whether the map has a quest log.</param>
+/// <param name="Picked">The unit picked in the list of those inside the selected building (ORD-015), or none.</param>
+/// <param name="AiAssist">Whether the match offers AI assistance (ADR 0183).</param>
 public sealed record CardContext(
     GameFrame Frame,
     IReadOnlyList<EntityId> Selection,
@@ -205,7 +225,9 @@ public sealed record CardContext(
     bool Placing = false,
     OrderMode Mode = OrderMode.None,
     int ModeArgument = 0,
-    bool HasQuests = false);
+    bool HasQuests = false,
+    EntityId Picked = default,
+    bool AiAssist = false);
 
 /// <summary>A dialog a card button opens in the card's place.</summary>
 public enum CardDialogKind
@@ -221,6 +243,9 @@ public enum CardDialogKind
 
     /// <summary>A trader's route (then a click on the far market).</summary>
     Trade,
+
+    /// <summary>Making an item in a magic workshop: its kind and the gold to spend (D_BUILD).</summary>
+    Craft,
 }
 
 /// <summary>What pressing a card button asks of the client; the card's own menus and pages are already updated.</summary>
@@ -233,6 +258,7 @@ public enum CardDialogKind
 /// <param name="NextIdlePeasant">Select the next idle peasant.</param>
 /// <param name="ShowQuests">Show the quest log.</param>
 /// <param name="DeleteSelected">Delete the selection (as the Delete key).</param>
+/// <param name="Select">Select this unit and show it (an entry of a kingdom list).</param>
 public sealed record CardPress(
     CommandList? Commands = null,
     OrderMode? Mode = null,
@@ -242,7 +268,8 @@ public sealed record CardPress(
     string? Message = null,
     bool NextIdlePeasant = false,
     bool ShowQuests = false,
-    bool DeleteSelected = false)
+    bool DeleteSelected = false,
+    EntityId? Select = null)
 {
     /// <summary>Nothing to do (the card may have changed menu or page).</summary>
     public static CardPress Nothing { get; } = new();

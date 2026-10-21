@@ -159,7 +159,7 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
             byte slot = state.Settings.Slot;
             PlayerFlags flags = world.Players[slot].Flags;
             if ((flags & PlayerFlags.Active) == 0 || (flags & PlayerFlags.Defeated) != 0
-                || (state.Settings.Standby && (flags & PlayerFlags.AiControlled) == 0))
+                || (state.Settings.Standby && (flags & (PlayerFlags.AiControlled | PlayerFlags.AssistEconomy | PlayerFlags.AssistWar)) == 0))
             {
                 continue;
             }

@@ -134,9 +134,10 @@ public sealed class GameSession : IDisposable
         {
             foreach (PlayerSetup p in setup.Players)
             {
-                if (p.Controller == ControllerKind.Computer || (setup.Multiplayer && p.Controller == ControllerKind.Human))
+                if (p.Controller == ControllerKind.Computer || ((setup.Multiplayer || setup.AiAssist) && p.Controller == ControllerKind.Human))
                 {
-                    // Multiplayer humans get a standby AI for the drop policy (REQ-NET-07; ADR 0163).
+                    // Multiplayer humans get a standby AI for the drop policy (REQ-NET-07; ADR 0163), and with AI
+                    // assistance for the halves of the kingdom its human hands to it (ADR 0183).
                     computers.Add(new AiPlayerSettings
                     {
                         Slot = p.Slot,

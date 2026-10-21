@@ -39,7 +39,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (fourth play-test 2026-10-21) every load goes to the drop-off nearest to where it was gathered.
     // (the owner's check of technology bonuses, 2026-10-21) Banking raises the profit at markets (it targeted the castle
     // and did nothing) and Gunpowder raises the cannon towers' attack: the ruleset hash only.
-    private const ulong GoldenRulesetHash = 0x207371E8278B1164UL;
+    // (crafting on the command card, 2026-10-21) spell books cost four times more and take twice as long to craft (1.05),
+    // two new combat settings: the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0x1C85E835B06CBF46UL;
     private const ulong GoldenHashStream = 0xE1E5C587EDB8DF2BUL;
     private const ulong GoldenFinalFullHash = 0x37E0477EC4C35A38UL;
 

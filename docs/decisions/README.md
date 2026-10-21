@@ -124,3 +124,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0180](0180-third-play-test-rules.md) | Queue any number of any items, give loads at once, and let peasants work without being told | Accepted | 2026-10-20 |
 | [0181](0181-a-ledger-of-the-originals-rules-checked-against-tests.md) | Keep a ledger of the original's rules, and check it against the tests | Accepted | 2026-10-21 |
 | [0182](0182-engine-core-original-content-and-a-future-game.md) | Keep the core free of any engine and of the original's content, and move UI logic into engine-free models | Accepted | 2026-10-21 |
+| [0183](0183-ai-assistance-runs-halves-of-a-human-kingdom.md) | Let a human's standby AI run the economy, the war or both of the kingdom when asked (AI assistance) | Accepted | 2026-10-21 |

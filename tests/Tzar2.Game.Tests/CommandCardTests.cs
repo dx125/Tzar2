@@ -9,6 +9,7 @@ using Tzar2.Game.Session;
 using Tzar2.Game.Ui;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
+using Tzar2.Sim.Components;
 using Xunit;
 
 namespace Tzar2.Game.Tests;
@@ -138,6 +139,151 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-008")]
+    public void The_magic_workshop_makes_an_item_of_the_kind_and_gold_its_dialog_asks_for()
+    {
+        World world = _session.Simulation.World;
+        EntityId workshop = world.PlaceStructure((ushort)Rules.Value.EntityTypeId("arab.magicworkshop"), 0, 30, 30);
+        _session.Step(1);
+        _cards.Menus["arab_magicworkshop"] = [new CardButton("build_item", 'I', CardAction.Craft, string.Empty, 249, "Build item")];
+        _cards.MenuOverride[(ushort)Rules.Value.EntityTypeId("arab.magicworkshop")] = "arab_magicworkshop";
+        var card = new CommandCard(Rules.Value, _cards, 0);
+
+        CardSlot build = card.Build(Context([workshop]))[0]!.Value;
+        Assert.True(build.Enabled);
+        Assert.Equal(CardDialogKind.Craft, card.Press(Context([workshop]), build).Dialog);
+        ushort book = (ushort)Rules.Value.EntityTypeId("comm.item_magic");
+        Assert.Contains(book, card.CraftableItems(Context([workshop])));
+        Assert.Equal(4 * card.CraftPricePerPower((ushort)Rules.Value.EntityTypeId("comm.item")), card.CraftPricePerPower(book));
+
+        CommandList craft = card.Craft(Context([workshop]), book, 400)!;
+        Assert.Equal((CommandKind.CraftItem, (int)book, 400), (craft[0].Kind, craft[0].Arg0, craft[0].Arg1));
+        _session.Submit(craft);
+        _session.Step(2);
+        CardSlot busy = card.Build(Context([workshop]))[0]!.Value;
+        Assert.Equal((false, "making an item"), (busy.Enabled, busy.Detail));
+        Assert.Null(card.Craft(Context([workshop]), book, 400));
+    }
+
+    [Fact]
+    [Trait("Rule", "ORD-015")]
+    [Trait("Rule", "HUD-016")]
+    public void A_unit_picked_in_the_castle_list_emerges_alone_at_the_clicked_place_and_emerge_alone_lets_all_out()
+    {
+        World world = _session.Simulation.World;
+        EntityId castle = Own("euro.castle");
+        EntityId[] peasants = [.. world.Identities.Entities.ToArray().Where(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Key == "euro.peon").Take(2)];
+        var board = new CommandList();
+        board.Add(CommandKind.Board, peasants, target: castle);
+        _session.Submit(board);
+        for (int i = 0; i < 600 && world.Holders.Get(castle).Count < peasants.Length; i++)
+        {
+            _session.Step(1);
+        }
+
+        _cards.Menus["e_castle"] = [new CardButton("emerge", 'E', CardAction.Unload, string.Empty, 8, "Emerge")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        Assert.Equal(peasants.Order(), card.Inside(Context([castle])).Select(h => h.Unit).Order());
+        GameFrame frame = Context([castle]).Frame;
+        FrameEntity held = frame.Entities.ToArray().Single(e => e.Id == castle);
+        Assert.Equal(2, held.Inside);
+        Assert.True(held.InsideMax >= 2);
+        CardSlot emerge = card.Build(Context([castle]))[0]!.Value;
+        Assert.True(emerge.Enabled);
+
+        // Picked in the list: Emerge waits for the place, and only that unit comes out there.
+        CardPress press = card.Press(Context([castle]) with { Picked = peasants[1] }, emerge);
+        Assert.Equal(OrderMode.Unload, press.Mode);
+        Assert.True(card.Build(Context([castle]) with { Mode = OrderMode.Unload })[0]!.Value.Active);
+        EntityInfo info = CommandCard.Info(Rules.Value, frame, held, 0);
+        var batch = new CommandList();
+        foreach (PlannedCommand c in OrderResolver.WithMode(OrderMode.Unload, [info], null, held.X + 4096, held.Y, KeyMods.None, 0, press.ModeArgument))
+        {
+            c.AddTo(batch);
+        }
+
+        _session.Submit(batch);
+        _session.Step(2);
+        Assert.False(world.IsHeld(peasants[1]));
+        Assert.True(world.IsHeld(peasants[0]));
+
+        // Nothing picked: everyone comes out at once; then the order is greyed out.
+        Command all = Single(card.Press(Context([castle]), emerge));
+        Assert.Equal((CommandKind.Unload, EntityId.None), (all.Kind, all.Target));
+        _session.Submit(card.Press(Context([castle]), emerge).Commands!);
+        _session.Step(2);
+        Assert.False(world.IsHeld(peasants[0]));
+        CardSlot empty = card.Build(Context([castle]))[0]!.Value;
+        Assert.Equal((false, "nobody inside"), (empty.Enabled, empty.Detail));
+        Assert.Empty(card.Inside(Context([castle])));
+    }
+
+    [Fact]
+    [Trait("Rule", "AI-004")]
+    [Trait("Rule", "HUD-033")]
+    public void With_nothing_selected_the_kingdom_card_shows_and_AI_assistance_is_asked_for_and_lit()
+    {
+        _cards.Menus["kingdom"] = [new CardButton("nextidle", 'N', CardAction.NextIdle, string.Empty, 82, "Next idle peasant")];
+        _cards.Menus["kingdom_ai"] = [.. _cards.Menus["kingdom"], new CardButton("view_ai", 'A', CardAction.Submenu, "aiassist", 250, "AI Assistance")];
+        _cards.Menus["aiassist"] = [new CardButton("set_ai_none", 'N', CardAction.AiAssist, "0", 268, "NO Assistance"), new CardButton("set_ai_eco", 'E', CardAction.AiAssist, "1", 267, "ECONOMY Assistance")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = Context([]) with { IsOwn = false };
+
+        Assert.Equal(["nextidle"], card.Build(none).Select(s => s!.Value.Button.Order));
+        Assert.True(card.Press(none, card.Build(none)[0]!.Value).NextIdlePeasant);
+        CardContext assist = none with { AiAssist = true };
+        CardSlot view = card.Build(assist)[1]!.Value;
+        Assert.Equal("view_ai", view.Button.Order);
+        card.Press(assist, view);
+        IReadOnlyList<CardSlot?> modes = card.Build(assist);
+        Assert.True(modes[0]!.Value.Active); // no assistance yet
+
+        Command eco = Single(card.Press(assist, modes[1]!.Value));
+        Assert.Equal((CommandKind.SetAiAssist, 1), (eco.Kind, eco.Arg0));
+        _session.Submit(card.Press(assist, modes[1]!.Value).Commands!);
+        _session.Step(2);
+        Assert.True((_session.Simulation.World.Players[0].Flags & PlayerFlags.AssistEconomy) != 0);
+        CardContext after = Context([]) with { IsOwn = false, AiAssist = true };
+        Assert.Equal((false, true), (card.Build(after)[0]!.Value.Active, card.Build(after)[1]!.Value.Active));
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-033")]
+    public void The_kingdom_lists_its_carried_items_and_a_press_selects_the_carrier_and_an_empty_list_is_greyed_out()
+    {
+        using var session = new GameSession(SessionTests.Setup() with { ComputerAi = false, CheatsAllowed = true }, Rules.Value, fog: false);
+        World world = session.Simulation.World;
+        EntityId footman = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Key == "euro.footman");
+        Position at = world.Positions.Get(footman);
+        ushort potion = (ushort)Rules.Value.EntityTypeId("comm.item_health");
+        var spawn = new CommandList();
+        spawn.Add(CommandKind.DebugSpawn, x: at.X + 1024, y: at.Y, arg0: potion, arg1: 1);
+        session.Submit(spawn);
+        session.Step(1);
+        EntityId item = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).TypeId == potion);
+        var pick = new CommandList();
+        pick.Add(CommandKind.PickItem, [footman], target: item);
+        session.Submit(pick);
+        for (int i = 0; i < 400 && !world.IsHeld(item); i++)
+        {
+            session.Step(1);
+        }
+
+        session.Step(1);
+        _cards.Menus["kingdom"] = [new CardButton("view_spys", 'S', CardAction.KingdomList, "spies", 107, "Spies"), new CardButton("view_items", 'I', CardAction.KingdomList, "items", 120, "Items")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = new(session.AcquireFrame(out _)!, [], IsOwn: false);
+        IReadOnlyList<CardSlot?> kingdom = card.Build(none);
+        Assert.Equal((false, "none yet"), (kingdom[0]!.Value.Enabled, kingdom[0]!.Value.Detail));
+        Assert.True(kingdom[1]!.Value.Enabled);
+
+        card.Press(none, kingdom[1]!.Value);
+        CardSlot entry = Assert.Single(card.Build(none), s => s is not null)!.Value;
+        Assert.Contains(Rules.Value.EntityTypes[potion].Key, entry.Button.Tooltip, StringComparison.Ordinal);
+        Assert.Equal(footman, card.Press(none, entry).Select);
+    }
+
+    [Fact]
     public void An_order_that_needs_a_target_waits_for_it_and_is_highlighted()
     {
         EntityId peasant = Own("euro.peon");
@@ -192,12 +338,21 @@ public sealed class CommandCardTests : IDisposable
 
         public HashSet<string> Capturing { get; } = [];
 
+        public Dictionary<ushort, string> MenuOverride { get; } = [];
+
+        public string? KingdomMenu(bool aiAssist) => aiAssist ? "kingdom_ai" : "kingdom";
+
         public IReadOnlyList<CardButton> Card(string? menu) => menu is not null && Menus.TryGetValue(menu, out List<CardButton>? b) ? b : [];
 
         public bool CapturesKeys(string? menu) => menu is not null && Capturing.Contains(menu);
 
         public string? Menu(ushort typeId)
         {
+            if (MenuOverride.TryGetValue(typeId, out string? menu))
+            {
+                return menu;
+            }
+
             string key = rules.EntityTypes[typeId].Key;
             return key.StartsWith("euro.", StringComparison.Ordinal) ? "e_" + key[5..] : null;
         }

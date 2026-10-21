@@ -528,6 +528,8 @@ combat:
   craftGoldPerPower: 50               # UNVERIFIED (UNK-25)
   craftMsPerPower: 2000               # UNVERIFIED (UNK-25)
   craftMaxPower: 20                   # UNVERIFIED (UNK-25)
+  craftBookCostPercent: 400           # patch 1.05: magic books in the magic workshop are four times more expensive
+  craftBookTimePercent: 200           # patch 1.05: and take twice as long
   # GAME-11.
   bribeCostPercent: 200               # UNVERIFIED (UNK-26): gold = 200% of the unit's cost
   crusadeAnchor: euro.crusadeanchor   # OBJECTS CRUSADE_ANCHOR.INI (cost from the data)

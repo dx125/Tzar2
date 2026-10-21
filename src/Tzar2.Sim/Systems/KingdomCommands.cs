@@ -122,6 +122,21 @@ internal static class KingdomCommands
         return null;
     }
 
+    /// <summary>AI assistance (ADR 0183): Arg0 bit 1 = economy, bit 2 = war, 0 = none.</summary>
+    public static CommandRejection? SetAiAssist(World world, in Command command)
+    {
+        if (command.Arg0 is < 0 or > 3 || command.Arg1 != 0)
+        {
+            return CommandRejection.InvalidArgument;
+        }
+
+        ref PlayerState player = ref world.Players[command.Player];
+        player.Flags = (player.Flags & ~(PlayerFlags.AssistEconomy | PlayerFlags.AssistWar))
+            | ((command.Arg0 & 1) != 0 ? PlayerFlags.AssistEconomy : PlayerFlags.None)
+            | ((command.Arg0 & 2) != 0 ? PlayerFlags.AssistWar : PlayerFlags.None);
+        return null;
+    }
+
     /// <summary>Trade (GAME-14, ADR 0103): sets the route of each listed trader the player commands.</summary>
     public static CommandRejection? Trade(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {

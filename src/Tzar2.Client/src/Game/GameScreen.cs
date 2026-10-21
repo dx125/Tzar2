@@ -87,6 +87,8 @@ public partial class GameScreen : Node
     private Vector2 _mouse;
     private OrderMode _mode;
     private int _modeArgument; // the spell id of OrderMode.Spell
+    private EntityId _picked; // the unit picked in the list of those inside the selected building (ORD-015)
+    private readonly List<EntityId> _insideShown = []; // the units of that list, in the info area's order
     private CardDialog? _dialog;
     private EntityId _dialogFor;
     private (int Goods, int Load)? _route; // a trade route waiting for the far market's click
@@ -263,6 +265,7 @@ public partial class GameScreen : Node
         _selection.Changed += () =>
         {
             _card.Reset();
+            _picked = EntityId.None;
             _mode = OrderMode.None;
             RefreshCard();
         };
@@ -348,6 +351,15 @@ public partial class GameScreen : Node
         _hud = new Hud(_ui, layout, _catalog);
         _hudLayer!.AddChild(_hud);
         _hud.CardPressed += OnCard;
+        _hud.StripPressed += i =>
+        {
+            // A unit of the list of those inside: picked for Emerge, or let go with a second click (manual: Emerge).
+            if (i < _insideShown.Count)
+            {
+                _picked = _picked == _insideShown[i] ? EntityId.None : _insideShown[i];
+                RefreshCard();
+            }
+        };
         _hud.MinimapPressed += (share, right, mods) => OnMinimap(share, right, mods);
         _hud.MenuPressed += () => ShowMenu();
         _hud.DiplomacyPressed += () => Message(_catalog.Text("game_scr", "diplomacy", "DIPLOMACY") + ": not available yet");
@@ -1351,6 +1363,13 @@ public partial class GameScreen : Node
             SelectNextIdlePeasant();
         }
 
+        if (press.Select is { } chosen && _frame is not null && _indexById.TryGetValue(chosen.Value, out int at))
+        {
+            // An entry of a kingdom list (heroes, spies, items: HUD-033).
+            _selection.SelectOwn([chosen]);
+            CenterOn(_frame.Entities[at].X, _frame.Entities[at].Y);
+        }
+
         if (press.ShowQuests)
         {
             ShowQuests();
@@ -1373,6 +1392,16 @@ public partial class GameScreen : Node
                 exchange.Exchange += (give, get, amount) => Submit(_card.Exchange(CardNow(), give, get, amount));
                 OpenDialog(exchange);
                 break;
+            case CardDialogKind.Craft:
+                var items = _card.CraftableItems(CardNow()).Select(t => (t, CraftPicture(_catalog.Type(t).Class), _catalog.Type(t).Name)).ToList();
+                var craft = new CraftDialog(_ui, items, _card.CraftPricePerPower, _card.CraftMaxPower);
+                craft.Craft += (type, gold) =>
+                {
+                    Submit(_card.Craft(CardNow(), type, gold));
+                    CloseDialog();
+                };
+                OpenDialog(craft);
+                break;
             case CardDialogKind.Trade:
                 var trade = new TradeDialog(_ui);
                 trade.Route += (here, there, load) =>
@@ -1388,9 +1417,19 @@ public partial class GameScreen : Node
         RefreshCard();
     }
 
+    // The picture of an item kind in D_BUILD's items.bmp (bow, book, shield, sword, potion; ⚠ UNVERIFIED pairing).
+    private static int CraftPicture(string cls) => cls switch
+    {
+        "item_magic" => 1,
+        "item_armor" => 2,
+        "item_plusplus" => 3,
+        "item_health" => 4,
+        _ => 0,
+    };
+
     // What the command card is built for now (Tzar2.Game.Ui.CommandCard, ADR 0182).
     private CardContext CardNow()
-        => new(_frame!, _selection.Selected, _selection.Focus, _selection.IsOwn, _placing != ushort.MaxValue, _mode, _modeArgument, _session.Scenario is not null);
+        => new(_frame!, _selection.Selected, _selection.Focus, _selection.IsOwn, _placing != ushort.MaxValue, _mode, _modeArgument, _session.Scenario is not null, _picked, _session.Setup.AiAssist);
 
     private void Submit(CommandList? commands)
     {
@@ -1669,6 +1708,7 @@ public partial class GameScreen : Node
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
         string owner = e.Owner < 8 ? SpritePage.PlayerNames[e.Owner] : string.Empty;
         var strip = new List<StripItem>();
+        _insideShown.Clear();
         if (_selection.Selected.Count > 1)
         {
             // Multi-selection shows health only (REQ-UI-01) and one icon per type with how many there are and their
@@ -1725,6 +1765,11 @@ public partial class GameScreen : Node
             stats.Add(("art/icons/defence.t2img", HudText.Number(t.Defence)));
         }
 
+        if (t.GainsExperience && e.Owner == _session.LocalPlayer)
+        {
+            stats.Add(("art/icons/level.t2img", HudText.Number(e.Level))); // LEVEL (manual: The Selection View; HUD-016)
+        }
+
         if (t.Category == EntityCategory.Building && t.Resistance > 0)
         {
             stats.Add(("art/icons/resistance.t2img", HudText.Number(t.Resistance)));
@@ -1756,6 +1801,34 @@ public partial class GameScreen : Node
         {
             stats.Add(("art/icons/time.t2img", $"{e.QueuePermille / 10} %"));
         }
+        else if (e.CraftPermille >= 0)
+        {
+            stats.Add(("art/icons/time.t2img", $"{e.CraftPermille / 10} %")); // an item being made in a magic workshop
+        }
+
+        // A holder of ours: INSIDE, how many units it holds of how many (manual: The Selection View), their portraits in
+        // the info area, where a click picks one for Emerge (ORD-015), and a bar of their health (HUD-021).
+        float insideHealth = -1;
+        if (e.InsideMax > 0)
+        {
+            stats.Add(("art/icons/inside.t2img", string.Create(CultureInfo.InvariantCulture, $"{e.Inside}/{e.InsideMax}")));
+            IReadOnlyList<FrameHeld> inside = _card.Inside(CardNow());
+            long share = 0;
+            foreach (FrameHeld h in inside)
+            {
+                int permille = h.MaxHealth > 0 ? h.Health * 1000 / h.MaxHealth : 1000;
+                share += permille;
+                _insideShown.Add(h.Unit);
+                strip.Add(new StripItem(_catalog.Type(h.TypeId).IconIndex, permille, false, 0, h.Unit == _picked));
+            }
+
+            insideHealth = inside.Count > 0 ? share / (float)inside.Count / 1000f : -1;
+        }
+
+        if (!_picked.IsNone && !_insideShown.Contains(_picked))
+        {
+            _picked = EntityId.None; // it came out, or died
+        }
 
         return new SelectionInfo
         {
@@ -1765,7 +1838,9 @@ public partial class GameScreen : Node
             Health = e.MaxHealth > 0 && t.Category != EntityCategory.Resource ? e.Health / (float)e.MaxHealth : -1,
             Stats = stats,
             Strip = strip,
+            StripIsHealth = true,
             Player = e.Owner < 8 ? e.Owner : -1,
+            InsideHealth = insideHealth,
         };
     }
 

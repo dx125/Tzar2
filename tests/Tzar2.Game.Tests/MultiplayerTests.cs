@@ -245,7 +245,7 @@ public sealed class MultiplayerTests : IDisposable
     [Fact]
     public void Descriptions_round_trip_and_reject_garbage()
     {
-        var settings = new MatchSettings { Map = MapSourceKind.RandomMap, MapType = Content.MapGen.RandomMapType.Lakes, Seed = 99, NoFog = true, SpeedPercent = 150, ResumeSnapshotHash = 7 };
+        var settings = new MatchSettings { Map = MapSourceKind.RandomMap, MapType = Content.MapGen.RandomMapType.Lakes, Seed = 99, NoFog = true, SpeedPercent = 150, ResumeSnapshotHash = 7, AiAssist = true };
         Assert.Equal(settings, MatchSettings.Parse(settings.ToBytes()));
         var descriptor = new MatchDescriptor(settings, [new MatchPlayer(0, "a", "euro", ControllerKind.Human, Difficulty.Easy, 1), new MatchPlayer(1, "b", "euro", ControllerKind.Computer, Difficulty.Hard, 1)]);
         MatchDescriptor back = MatchDescriptor.Parse(descriptor.ToBytes());

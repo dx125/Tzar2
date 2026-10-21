@@ -173,6 +173,21 @@ public struct FrameEntity
     /// <summary>Progress of the first item 0-1000 (training, research or upgrade).</summary>
     public int QueuePermille;
 
+    /// <summary>Progress 0-1000 of the item a magic workshop is making, or -1 (GAME-10).</summary>
+    public int CraftPermille;
+
+    /// <summary>Units inside this holder of the frame's kingdom (castle, outpost, ship, carpet; GAME-09), else 0.</summary>
+    public int Inside;
+
+    /// <summary>How many units this holder of the frame's kingdom takes, 0 when it is none or another kingdom's.</summary>
+    public int InsideMax;
+
+    /// <summary>Experience level (GAME-08), 0 for what gains none.</summary>
+    public int Level;
+
+    /// <summary>A named hero (GAME-08).</summary>
+    public bool Hero;
+
     /// <summary>Upgrades the entity has or has queued (bit = upgrade id; towers, walls, gates, galleons).</summary>
     public uint Upgrades;
 
@@ -224,6 +239,18 @@ public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Coun
 /// <param name="Count">How many are queued.</param>
 public readonly record struct FrameQueueEntry(uint Entity, FrameQueueKind Kind, ushort Id, int Count);
 
+/// <summary>
+/// A unit inside a holder of the frame's kingdom (GAME-09; the selection view's list, ORD-015), or an item one of its
+/// units carries (GAME-10; the kingdom's list of items, HUD-033).
+/// </summary>
+/// <param name="Holder">The holder or the carrier (<c>EntityId.Value</c>).</param>
+/// <param name="Unit">The unit or the item.</param>
+/// <param name="TypeId">Its type.</param>
+/// <param name="Health">Its hit points.</param>
+/// <param name="MaxHealth">Its most hit points.</param>
+/// <param name="IsItem">An item in a unit's inventory.</param>
+public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth, bool IsItem = false);
+
 /// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
 /// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>
 /// <param name="X">X in world units.</param>
@@ -263,6 +290,9 @@ public struct FramePlayer
 
     /// <summary>Score (F4; GAME-17, UNK-29 placeholder formula).</summary>
     public long Score;
+
+    /// <summary>AI assistance the kingdom has asked for: bit 1 economy, bit 2 war (ADR 0183).</summary>
+    public byte AiAssist;
 
     /// <summary>Match statistics (F4 and the statistics file; GAME-17).</summary>
     public KingdomStatistics Statistics;
@@ -416,6 +446,13 @@ public sealed class GameFrame
 
     private FrameTavernOffer[] _offers = [];
     private FrameQueueEntry[] _queue = new FrameQueueEntry[16];
+    private FrameHeld[] _held = new FrameHeld[16];
+
+    /// <summary>The units inside the frame's kingdom's holders and the items its units carry, grouped by holder in the order they are kept.</summary>
+    public ReadOnlySpan<FrameHeld> Helds => _held.AsSpan(0, HeldCount);
+
+    /// <summary>Number of valid entries in <see cref="Helds"/>.</summary>
+    public int HeldCount { get; internal set; }
 
     /// <summary>The queue entries of every producer, grouped by producer in entity order (first entry = in progress).</summary>
     public ReadOnlySpan<FrameQueueEntry> QueueEntries => _queue.AsSpan(0, QueueEntryCount);
@@ -431,6 +468,33 @@ public sealed class GameFrame
         }
 
         _queue[index] = entry;
+    }
+
+    internal void SetHeld(int index, FrameHeld entry)
+    {
+        if (_held.Length <= index)
+        {
+            Array.Resize(ref _held, Math.Max(index + 1, _held.Length * 2));
+        }
+
+        _held[index] = entry;
+    }
+
+    // Sorts the held units by holder, keeping each holder's own order (insertion sort: a handful of entries).
+    internal void GroupHelds()
+    {
+        for (int i = 1; i < HeldCount; i++)
+        {
+            FrameHeld entry = _held[i];
+            int j = i - 1;
+            while (j >= 0 && _held[j].Holder > entry.Holder)
+            {
+                _held[j + 1] = _held[j];
+                j--;
+            }
+
+            _held[j + 1] = entry;
+        }
     }
 
     internal FrameTavernOffer[] OfferBuffer(int count)

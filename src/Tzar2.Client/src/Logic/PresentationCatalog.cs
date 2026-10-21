@@ -281,14 +281,20 @@ public sealed class PresentationCatalog : ICardSource
     public static (CardAction Action, string Argument) Classify(string action, string? submenu, string? className = null)
     {
         ArgumentNullException.ThrowIfNull(action);
+        string[] words = action.Split(' ', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        string verb = words.Length > 0 ? words[0].ToLowerInvariant() : string.Empty;
+        string argument = words.Length > 1 ? words[1] : string.Empty;
+        if (verb == "get" && argument.ToLowerInvariant() is "heroes" or "spys" or "items")
+        {
+            // The original's HEROES, SPYS and ITEMS menus are empty and filled at run time: the card's kingdom lists.
+            return (CardAction.KingdomList, argument.ToLowerInvariant() == "spys" ? "spies" : argument.ToLowerInvariant());
+        }
+
         if (!string.IsNullOrEmpty(submenu))
         {
             return (CardAction.Submenu, submenu);
         }
 
-        string[] words = action.Split(' ', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        string verb = words.Length > 0 ? words[0].ToLowerInvariant() : string.Empty;
-        string argument = words.Length > 1 ? words[1] : string.Empty;
         return verb switch
         {
             "move" => (CardAction.Move, string.Empty),
@@ -319,6 +325,13 @@ public sealed class PresentationCatalog : ICardSource
             "attack_ground" => (CardAction.AttackGround, string.Empty),
             "next_idle_peon" => (CardAction.NextIdle, string.Empty),
             "view_quests" => (CardAction.Quests, string.Empty),
+            "set" when argument.ToLowerInvariant() is "ai_none" or "ai_eco" or "ai_war" or "ai_full" => (CardAction.AiAssist, argument.ToLowerInvariant() switch
+            {
+                "ai_eco" => "1",
+                "ai_war" => "2",
+                "ai_full" => "3",
+                _ => "0",
+            }),
             "spell" when argument.Length > 0 => (CardAction.Spell, argument.ToLowerInvariant()),
             "raisedead" or "cloak" or "murder" => (CardAction.Spell, verb),
             "mine" or "dig" or "chop" or "fishing" => (CardAction.Harvest, string.Empty),
@@ -333,6 +346,7 @@ public sealed class PresentationCatalog : ICardSource
             "gamble" => (CardAction.Gamble, string.Empty),
             "trade1" => (CardAction.Exchange, string.Empty),
             "trade" => (CardAction.Trade, string.Empty),
+            "build_item" => (CardAction.Craft, string.Empty),
             _ => (CardAction.Unsupported, action),
         };
     }
@@ -383,6 +397,9 @@ public sealed class PresentationCatalog : ICardSource
 
     /// <inheritdoc/>
     public string Civilization(ushort typeId) => _types[typeId].Civilization;
+
+    /// <inheritdoc/>
+    public string? KingdomMenu(bool aiAssist) => _menus.Section(aiAssist ? "ownership_ai" : "ownership") is null ? null : aiAssist ? "ownership_ai" : "ownership";
 
     /// <inheritdoc/>
     public string Name(ushort typeId) => _types[typeId].Name;

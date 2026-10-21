@@ -39,6 +39,33 @@ public class MultiplayerSimTests
     }
 
     [Fact]
+    [Trait("Rule", "AI-004")]
+    public void SetAiAssist_sets_the_halves_the_kingdom_asks_for_and_survives_a_snapshot()
+    {
+        using var d = new SimDriver(TestMap(48, 16, Unit("euro.peon", 0, 5, 8), Unit("euro.peon", 1, 30, 8)), ruleset: Classic);
+        const PlayerFlags Both = PlayerFlags.AssistEconomy | PlayerFlags.AssistWar;
+        d.Order(0, CommandKind.SetAiAssist, [], arg0: 3);
+        d.Order(1, CommandKind.SetAiAssist, [], arg0: 2);
+        d.Step();
+        Assert.Equal(Both, d.World.Players[0].Flags & Both);
+        Assert.Equal(PlayerFlags.AssistWar, d.World.Players[1].Flags & Both);
+
+        byte[] snapshot = d.Sim.CaptureSnapshot();
+        using (Simulation restored = Simulation.Restore(snapshot, d.World.Ruleset, d.World.Map.Data))
+        {
+            Assert.Equal(Both, restored.World.Players[0].Flags & Both);
+            Assert.Equal(d.Sim.ComputeFullHash(), restored.ComputeFullHash());
+        }
+
+        d.Order(0, CommandKind.SetAiAssist, [], arg0: 1);
+        d.Order(1, CommandKind.SetAiAssist, [], arg0: 4); // invalid
+        d.Step();
+        Assert.Equal(PlayerFlags.AssistEconomy, d.World.Players[0].Flags & Both);
+        Assert.Equal(PlayerFlags.AssistWar, d.World.Players[1].Flags & Both);
+        Assert.Equal([CommandRejection.InvalidArgument], d.Rejections());
+    }
+
+    [Fact]
     public void The_snapshot_diff_names_the_entity_component_and_player_field_that_differ()
     {
         MapData map = TestMap(48, 16, Unit("euro.peon", 0, 5, 8), Unit("euro.footman", 1, 30, 8));

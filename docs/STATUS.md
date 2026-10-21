@@ -59,14 +59,10 @@ play-test.
 1. **Maintainer:** the ledger's first fill and the data account are done (log below). Next: bring the hotkey
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
    every change.
-2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done):
-   * the Magic Workshop's crafting (`build_item`: which item, how much gold);
-   * the holders' list of units inside, to let one out (ORD-015);
-   * the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013);
-   * AI assistance (none, economy, war, full; AI-004) and the lists of heroes, spies and items with nothing selected
-     (HUD-033).
-
-   The spy orders and AI assistance need the sim first. `attack_type` is on no card of the original, so it is left
+2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done).
+   The Magic Workshop's crafting, the holders' list of units inside, the kingdom's card with its lists and AI
+   assistance are done (log below). Left: the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013), which
+   need the sim first. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
    order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
@@ -111,6 +107,42 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — The kingdom's card and AI assistance (ADR 0183; work queue item 2).**
+  * With nothing selected, the card is now the kingdom's (MENU.INI `ownership`): next idle peasant, quests, the lists
+    and, where the match offers it, AI assistance (`ownership_ai`). Before, it was empty: the ledger said the next-idle
+    and quest buttons worked, but only their keys and hotkeys did.
+  * AI assistance: the human's standby AI runs the economy, the war or both when asked (`SetAiAssist`, two player
+    flags), using the AI's existing economy and war halves. The button in force is lit.
+  * It is the lobby's "AI Assist" option, as in the original, and is always on in single-player skirmishes.
+  * What each half does in the original is unverified; a capture with assistance on would settle it.
+  * The kingdom's lists, which the original fills at run time: its heroes, its spies (and ninjas: the units that see
+    the invisible) and the items its units carry. An entry selects the unit (an item: its carrier) and shows it.
+  * The selection view also shows LEVEL for the player's own units that gain experience (HUD-016).
+
+* **2026-10-21 — A holder's units inside: the list, Emerge one, and Unload at a place (work queue item 2).**
+  * A selected castle, outpost, ship or carpet of the player shows INSIDE (how many units of how many) and the
+    portraits of the units inside, with their health, in the info area. A thin bar under its own health shows their
+    average health (HUD-021, from the guide).
+  * A click on a portrait picks that unit, and a second click lets it go. Emerge then waits for a click on the place,
+    and only that unit comes out there (ORD-015, manual). The simulation's Unload takes the chosen unit as its target.
+  * Without a pick, Emerge lets everyone out next to the building at once, as ORDERS.INI gives emerge no place.
+  * A ship's or carpet's Unload now waits for a click on the drop-off place, as the manual says (ORD-014). It used to
+    unload at once at the nearest shore.
+  * Emerge and Unload are greyed out when nobody is inside.
+  * Kept out: picking one unit out of a ship, which docks first. That would change the docking component and the
+    golden hashes.
+  * The manual says a right click gives the place; ours is a left click, as for every other order that waits for a
+    place.
+
+* **2026-10-21 — The magic workshop makes items from the command card (work queue item 2).**
+  * Its Build Item order opens the original's D_BUILD panel: the kind of item (bow, book, shield, sword, potion), the
+    gold to spend (more gold, a stronger item), BUILD and CANCEL. While an item is being made the order is greyed out
+    and the workshop shows its progress.
+  * Patch 1.05: spell books cost four times more gold per point of power and take twice as long. Two new combat
+    settings, `craftBookCostPercent` and `craftBookTimePercent`, carry it; the ruleset hash is re-pinned.
+  * Which picture shows which kind of item, and the power shown in the dialog, are ours (⚠ UNVERIFIED).
+  * Ledger: ITEM-008 and ITEM-009 are tested.
 
 * **2026-10-21 — Every technology bonus checked (the owner's request after the fourth play-test).**
   * **The tests:**

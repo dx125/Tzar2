@@ -169,6 +169,18 @@ public enum PlayerFlags
     /// by <see cref="Commands.CommandKind.SetController"/>, which the game layer issues from the relay's control events.
     /// </summary>
     AiControlled = 16,
+
+    /// <summary>
+    /// The computer runs the kingdom's economy for its human (AI assistance, ORDERS.INI <c>set_ai_eco</c>/<c>set_ai_full</c>;
+    /// ADR 0183): set by <see cref="Commands.CommandKind.SetAiAssist"/>.
+    /// </summary>
+    AssistEconomy = 32,
+
+    /// <summary>
+    /// The computer defends and attacks for the kingdom's human (AI assistance, <c>set_ai_war</c>/<c>set_ai_full</c>; ADR
+    /// 0183): set by <see cref="Commands.CommandKind.SetAiAssist"/>.
+    /// </summary>
+    AssistWar = 64,
 }
 
 /// <summary>A stockpile: one amount per resource type id of the ruleset (GAME-01; at most <see cref="Ruleset.MaxResourceTypes"/>).</summary>

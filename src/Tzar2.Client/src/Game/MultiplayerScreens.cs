@@ -409,6 +409,7 @@ public partial class LobbyScreen : ArtScreen
         Option("Speed", Speeds.Select(v => v + " %").ToArray(), Math.Max(0, Array.IndexOf(Speeds, s.SpeedPercent)), i => _match.SetSettings(s with { SpeedPercent = Speeds[i] }), ref y, host);
         Option("Dropped players", ["computer takes over", "neutral", "defeated"], (int)_drop, i => _drop = (DropRule)i, ref y, host);
         Check("No fog", s.NoFog, v => _match.SetSettings(s with { NoFog = v }), ref y, host);
+        Check("AI Assist", s.AiAssist, v => _match.SetSettings(s with { AiAssist = v }), ref y, host);
         Check("Cheats allowed", s.CheatsAllowed, v => _match.SetSettings(s with { CheatsAllowed = v && !s.Ranked }), ref y, host && !s.Ranked);
         Check("Ranked (never cheats)", s.Ranked, v => _match.SetSettings(s with { Ranked = v, CheatsAllowed = false }), ref y, host);
         if (host)

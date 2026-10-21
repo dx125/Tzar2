@@ -436,6 +436,7 @@ public partial class GameApp : Node
             NoFog = options.NoFog,
             Explored = options.Explore,
             Ai = _ai,
+            AiAssist = true, // the kingdom's card offers AI assistance (ADR 0183; the original only in its lobby)
         };
     }
 

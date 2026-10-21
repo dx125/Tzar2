@@ -76,7 +76,7 @@ rules:
     rule: The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level.
     source: [manual The Selection View]
     status: partial
-    note: The kingdom, power, the number of units inside and the level are not shown.
+    note: The kingdom's name (only its colour shows) and power are not shown. INSIDE and LEVEL show for the player's own objects only.
   HUD-017:
     rule: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped.
     source: [manual The Inventory, manual Hints About Gameplay]
@@ -99,7 +99,8 @@ rules:
   HUD-021:
     rule: A selected castle or outpost shows, under its own health, a bar of the health of the units inside.
     source: [guide Important tips]
-    status: missing
+    status: implemented
+    note: A thin bar under the holder's health shows the average health of the units inside, for every holder of the player.
   HUD-022:
     rule: The kingdom of a spy is shown as its true kingdom to its owner.
     source: [patch 1.05 (TZAR110.TXT)]
@@ -153,7 +154,7 @@ rules:
     rule: With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help.
     source: ['data MENU.INI [ownership] [ownership_ai]', 'data ORDERS.INI view_heroes view_spys view_items view_ai']
     status: partial
-    note: The quests and the next idle peasant work; the lists of heroes, spies and items open empty, as the original fills them at run time.
+    note: The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. Heroes inside buildings are not listed. The online help is missing.
   HUD-034:
     rule: The hint of a category of the build menu lists the letters of the buildings in it.
     source: [owner 2026-10-21 (fourth play-test)]

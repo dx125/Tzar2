@@ -27,7 +27,7 @@ public sealed class ProductionExecutor : IAiExecutor
     public void Run(AiExecutorContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (!context.Settings.EconomyAi)
+        if (!context.EconomyAi)
         {
             return;
         }
