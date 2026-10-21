@@ -1,0 +1,21 @@
+schema: tzar2-rules/1
+prefix: CAP
+title: Capture
+rules:
+  CAP-001:
+    rule: Peasants capture enemy buildings by digging at them; walls, fields and sites cannot be captured.
+    source: [manual Buildings, data OBJECTS type capture]
+    status: tested
+  CAP-002:
+    rule: A building's resistance says how hard it is to capture; buildings far from their kingdom's towns resist less.
+    source: [manual Buildings, manual The Selection View (Resistance)]
+    status: tested
+    note: How resistance turns into capture time is a placeholder (UNK-19).
+  CAP-003:
+    rule: The castle can be captured too, and then deleted.
+    source: [guide Campaign Discussion (Mission 18)]
+    status: implemented
+  CAP-004:
+    rule: Buildings of kingdoms that are not enemies cannot be captured.
+    source: [manual Diplomacy]
+    status: tested

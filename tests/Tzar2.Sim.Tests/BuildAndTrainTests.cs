@@ -22,6 +22,8 @@ public class BuildAndTrainTests
     private static int Wood => Resource("wood");
 
     [Fact]
+    [Trait("Rule", "BLD-002")]
+    [Trait("Rule", "PROD-006")]
     public void A_peasant_builds_barracks_which_train_a_footman_that_walks_to_the_rally_point()
     {
         using var d = new SimDriver(TestMap(40, 24, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 9, 10)), ruleset: Classic);
@@ -69,6 +71,7 @@ public class BuildAndTrainTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-010")]
     public void Several_builders_add_up_and_health_grows_with_progress()
     {
         using var d = new SimDriver(
@@ -124,6 +127,8 @@ public class BuildAndTrainTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-002")]
+    [Trait("Rule", "BLD-005")]
     public void Placement_affordability_requirements_and_ownership_are_validated()
     {
         string[] rows =
@@ -183,6 +188,7 @@ public class BuildAndTrainTests
     }
 
     [Fact]
+    [Trait("Rule", "PROD-008")]
     public void A_full_population_stalls_production_until_there_is_room()
     {
         using var d = new SimDriver(

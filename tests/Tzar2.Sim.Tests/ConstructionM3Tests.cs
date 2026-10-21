@@ -18,6 +18,7 @@ namespace Tzar2.Sim.Tests;
 public class ConstructionM3Tests
 {
     [Fact]
+    [Trait("Rule", "BLD-007")]
     public void Peasants_repair_a_damaged_building_back_to_full_health()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4), Unit("euro.peon", 0, 11, 7)), ruleset: Classic);
@@ -39,6 +40,7 @@ public class ConstructionM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-007")]
     public void Peasants_repair_ships()
     {
         using var d = new SimDriver(
@@ -52,6 +54,7 @@ public class ConstructionM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-006")]
     public void Badly_damaged_buildings_burn_down_unless_repaired_and_leave_a_ruin()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4), Structure("euro.house", 0, 20, 4), Unit("euro.peon", 0, 11, 7)), ruleset: Classic);
@@ -72,6 +75,7 @@ public class ConstructionM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-011")]
     public void A_dragged_wall_places_one_site_per_tile_and_the_builder_moves_along_it()
     {
         using var d = new SimDriver(TestMap(40, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 8)), ruleset: Classic);
@@ -136,6 +140,8 @@ public class ConstructionM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-004")]
+    [Trait("Rule", "WORLD-006")]
     public void A_bridge_needs_architecture_and_carries_land_units_over_water()
     {
         // Columns 6-8 are a river (6 and 8 are shore tiles that carry neither land units nor ships on test maps).
@@ -187,6 +193,7 @@ public class ConstructionM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-004")]
     public void Architecture_speeds_up_construction()
     {
         Ruleset rules = ClassicWith("te_architecture: { Technology: { effects: [{ stat: buildRate, percent: 100, category: building }] } }");

@@ -1,0 +1,51 @@
+schema: tzar2-rules/1
+prefix: TRADE
+title: Trade, tavern and loans
+rules:
+  TRADE-001:
+    rule: With Trade Routes, traders, caravans and ships trade between two markets or two harbors, carrying chosen goods each way; the profit grows with the distance and the load, and the player picks which resource the profit is paid in.
+    source: [manual Trade, help ITEMS.TXT HT_TRADE_CARAVANS, help ITEMS.TXT HT_TRADE_SHIPS]
+    status: tested
+    note: The profit formula is a placeholder (UNK-28).
+  TRADE-002:
+    rule: A trade is set up by picking the starting market or harbor and its goods, the far one and its goods, and the amount, then START.
+    source: [manual Performing Trade]
+    status: partial
+    note: The near market is the trader's nearest own one; the far one is clicked (ADR 0103).
+  TRADE-003:
+    rule: Trade can also be done with other kingdoms' markets.
+    source: [manual Trade]
+    status: unclear
+    note: Whether a trader may use another kingdom's market, and who profits, is not known.
+  TRADE-004:
+    rule: Asian peasants can trade between markets as caravans do.
+    source: [help ITEMS.TXT HT_TRADE_CARAVANS]
+    status: unclear
+    note: The help names "a caravan or an Asian peasant"; the manual gives the Asian market caravans. Tzar2 trades with caravans and traders only.
+  TRADE-005:
+    rule: The tavern converts resources, ten given for one received, choosing what to give, how much and what to get.
+    source: [manual Converting Resources]
+    status: tested
+  TRADE-006:
+    rule: With Gambling (after Usury) the tavern gambles a chosen stake of a chosen resource with chosen odds.
+    source: [manual Gambling, help ITEMS.TXT HT_GAMBLE]
+    status: tested
+    note: The odds (1:1 to 1:10 in the pictures) and the chances are placeholders (UNK-28).
+  TRADE-007:
+    rule: With Usury the tavern lends a resource; the first loan is 1,000, and after one is repaid the next grows to 1,200 after some time; a loan must be repaid before a new one.
+    source: [manual Getting A Loan]
+    status: tested
+    note: The time before the loan grows and any interest are placeholders (UNK-28).
+  TRADE-008:
+    rule: The amount the tavern will lend shows in the bottom left corner of the view.
+    source: [manual Getting A Loan]
+    status: missing
+  TRADE-009:
+    rule: With Mercenaries the tavern hires small groups of soldiers, and with Heroes' Quest heroes; Fame brings more and better mercenaries, cheaper and more experienced; they gather in the tavern over time, of all races.
+    source: [manual Researching Technologies, help ITEMS.TXT HT_REQRUIT]
+    status: tested
+    note: The offers, sizes and prices are placeholders (UNK-28).
+  TRADE-010:
+    rule: Markets need the merchants' guild and make traders or caravans.
+    source: [manual Civilizations (Market)]
+    status: implemented

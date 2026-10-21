@@ -83,6 +83,12 @@ public sealed class FidelitySuiteTests(ITestOutputHelper output)
 
     [FidelityTheory]
     [MemberData(nameof(MeasuredChecks))]
+    [Trait("Rule", "ECO-015")]
+    [Trait("Rule", "ECO-016")]
+    [Trait("Rule", "WORLD-007")]
+    [Trait("Rule", "WORLD-008")]
+    [Trait("Rule", "NAT-005")]
+    [Trait("Rule", "PROD-009")]
     public void Measured_fact_matches_the_engine(string id)
     {
         if (id == "none")

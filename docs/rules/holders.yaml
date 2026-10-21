@@ -1,0 +1,43 @@
+schema: tzar2-rules/1
+prefix: HOLD
+title: Holders and transport
+rules:
+  HOLD-001:
+    rule: Castles and outposts hold up to 50 units each.
+    source: [patch 1.09 (TZAR110.TXT), data OBJECTS max_obj_in_holder]
+    status: tested
+  HOLD-002:
+    rule: Ships carry units over water, 8 on a xebec, 16 on a hulk and 24 on a galleon; magic carpets carry 8 over water and land.
+    source: [help ITEMS.TXT HT_USE_SHIPS, help ITEMS.TXT HT_USE_MAGIC_CARPETS, data OBJECTS max_obj_in_holder]
+    status: tested
+    note: The manual's "up to eight units" is the xebec's number.
+  HOLD-003:
+    rule: Units in a castle or an outpost heal quickly; Emerge brings them out.
+    source: [guide Important tips, help ITEMS.TXT HT_GARRISON_UNITS, manual European Buildings (Outpost)]
+    status: tested
+    note: The healing rate is a placeholder (UNK-24).
+  HOLD-004:
+    rule: When a castle or outpost is hit, the units inside take a share of the damage, more from siege weapons and warships.
+    source: [guide Important tips, data OBJECTS damage]
+    status: tested
+  HOLD-005:
+    rule: Units inside a holder cannot be attacked and see nothing.
+    source: [community TDD GAME-09]
+    status: tested
+  HOLD-006:
+    rule: Units leave a building that is destroyed, but go down with a ship sunk at sea.
+    source: [manual Ships, community TDD GAME-09]
+    status: tested
+  HOLD-007:
+    rule: A holder takes only the kinds of units its data accepts; a European trader cannot board a magic carpet.
+    source: ['data OBJECTS [accept]', patch 1.05 (TZAR110.TXT)]
+    status: tested
+  HOLD-008:
+    rule: Ships, magic carpets and traders can load units, but only ships and carpets carry them over water.
+    source: [help ITEMS.TXT WI_TRANSPORT]
+    status: partial
+    note: Traders do not load units.
+  HOLD-009:
+    rule: A unit inside a holder keeps its items.
+    source: [community TDD GAME-10]
+    status: tested

@@ -230,6 +230,8 @@ The evidence is listed per item (sources in Appendix F). The fix is mandatory in
 ### 5.1 Regression checklist from official patch notes
 The new implementation MUST NOT reintroduce bugs fixed by Haemimont in 1.05–1.10 (`Origin/TZAR110.TXT`). Each line becomes a test in `tests/Regression/OfficialPatchNotes`: catapult multi-stone; fog and exploration after restart; chopped trees drawn over buildings; Curse spellbook; Asian market item colors; loans while paused; holder menu flicker; large units emerging from buildings; carpet selection visibility; double-click on dragons; ship repair behaviour; stand-ground/explore for ships; Raise Dead on buildings; ship storage double upgrade; crusade anchor updates when crusaders die inside ships/buildings or a spy impersonates one; stats file gold conversion; `hmspawn magic` crash; sub-selection removal on death; same-tech double research in lagged MP; Engineering tech effect; invisible units revealing when attacking/using items/casting.
 
+*Since ADR 0181 every line of the patch notes is a rule of the ledger in `docs/rules/` (source `patch 1.0x`), with its status and the tests that name it; `tests/Regression/OfficialPatchNotes` was never created.*
+
 ---
 
 ## 6. Technical scope

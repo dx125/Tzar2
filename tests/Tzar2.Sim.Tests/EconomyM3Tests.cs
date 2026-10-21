@@ -32,6 +32,7 @@ public class EconomyM3Tests
     ];
 
     [Fact]
+    [Trait("Rule", "MAG-001")]
     public void Iron_is_a_resource_but_not_in_the_hud_and_casters_regain_mana()
     {
         Assert.Equal(5, Classic.ResourceTypes.Count);
@@ -47,6 +48,7 @@ public class EconomyM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-010")]
     public void Fishing_boats_fish_and_deliver_at_the_harbor_not_on_land()
     {
         using var d = new SimDriver(
@@ -79,6 +81,7 @@ public class EconomyM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-017")]
     public void Peasants_milk_cows_which_regrow_and_butchered_cows_leave_rotting_meat()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("comm.cow", 0, 12, 4), Unit("euro.peon", 0, 10, 4)), ruleset: Classic);
@@ -117,6 +120,7 @@ public class EconomyM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-019")]
     public void Cow_poaching_steals_enemy_cows_at_once_once_researched()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("comm.cow", 1, 14, 4), Unit("euro.peon", 0, 10, 4)), ruleset: Classic);
@@ -133,6 +137,7 @@ public class EconomyM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-012")]
     public void Neglected_fields_decay_and_disappear_but_tended_ones_do_not()
     {
         using var d = new SimDriver(
@@ -192,6 +197,7 @@ public class EconomyM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-012")]
     public void Builders_of_a_lumber_mill_start_chopping_and_a_field_builder_farms_it()
     {
         using var d = new SimDriver(

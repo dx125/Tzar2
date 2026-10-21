@@ -71,6 +71,7 @@ public class MovementTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-008")]
     public void Stop_halts_a_moving_unit_and_drops_its_plan()
     {
         using var d = new SimDriver(Open(40));
@@ -223,6 +224,7 @@ public class MovementTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-015")]
     public void A_unit_inside_a_new_building_is_pushed_out()
     {
         using var d = new SimDriver(Open(20));
@@ -241,6 +243,7 @@ public class MovementTests
     }
 
     [Fact]
+    [Trait("Rule", "WORLD-001")]
     public void Air_units_fly_straight_over_cliffs_and_ships_sail_around_land()
     {
         string[] rows = new string[24];

@@ -151,6 +151,7 @@ public class M3eSnapshotTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-014")]
     public void An_open_ended_cloak_survives_a_snapshot()
     {
         // Review of PR #24: a cloak without a duration ("until it attacks") must stay within the restore bounds.

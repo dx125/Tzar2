@@ -32,6 +32,7 @@ public class TavernHiringTests
     private static EntityId Tavern(SimDriver d) => OfType(d.World, "euro.tavern").Single();
 
     [Fact]
+    [Trait("Rule", "TRADE-009")]
     public void Mercenaries_are_hired_in_groups_at_their_level_once_per_period()
     {
         using SimDriver d = Driver();
@@ -78,6 +79,7 @@ public class TavernHiringTests
     }
 
     [Fact]
+    [Trait("Rule", "TRADE-009")]
     public void Heroes_need_heroes_quest_and_come_named_at_the_hero_level_and_fame_makes_better_cheaper_groups()
     {
         using SimDriver d = Driver();

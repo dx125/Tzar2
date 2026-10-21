@@ -4,7 +4,7 @@ title: Unit orders
 rules:
   ORD-001:
     rule: Guard on an own unit or building makes the guards follow and defend it; they fight what attacks it, keep guarding after the fight and come back.
-    source: [manual "Commanding Units" (Guard), owner 2026-10-20 (second play-test)]
+    source: [manual Commanding Units (Guard), owner 2026-10-20 (second play-test)]
     status: tested
   ORD-002:
     rule: Guard on an enemy attacks it; Guard on open ground holds that place with a move-advance.
@@ -12,5 +12,72 @@ rules:
     status: implemented
   ORD-003:
     rule: A move-advance fights the enemies met on the way and then goes on to its destination.
-    source: [manual "Commanding Units" (Move-advance)]
+    source: [manual Commanding Units (Move-advance)]
+    status: tested
+  ORD-004:
+    rule: A move-sneak (Alt+right click) goes to its destination and fights back only when attacked.
+    source: [manual Commanding Units (Move-sneak), help HK.TXT]
+    status: missing
+    note: The client sends the Alt flag but the simulation moves as on a plain move.
+  ORD-005:
+    rule: Shift+right click adds waypoints; the units walk them in order. With Ctrl or Alt the waypoints are a move-advance or a move-sneak.
+    source: [manual Commanding Units (Move), help HK.TXT]
+    status: missing
+    note: The client sends the Shift flag but the simulation replaces the order instead of queueing it.
+  ORD-006:
+    rule: Patrol walks between the unit's position and the clicked point; with Shift several points make a patrol path.
+    source: [manual Commanding Units (Patrol)]
+    status: partial
+    note: Patrol between two points works; the path of several points needs the waypoints of ORD-005.
+  ORD-007:
+    rule: Explore sends the unit to the clicked area, which it walks to explore it.
+    source: [manual Commanding Units (Explore)]
+    status: partial
+    note: Explore takes no target; the units head for any unexplored ground they can reach.
+  ORD-008:
+    rule: Stop makes the unit stop what it is doing.
+    source: [manual Commanding Units (Stop)]
+    status: tested
+  ORD-009:
+    rule: Attack on the card waits for a click on the target.
+    source: [manual Commanding Units (Attack)]
+    status: implemented
+  ORD-010:
+    rule: Stand ground makes armed units hold their place and fight only what comes into reach; hold fire makes them never start a fight.
+    source: [data ORDERS.INI stand_ground hold_steady holdfire, manual Common Buildings (Stone Cannon Tower)]
+    status: tested
+  ORD-011:
+    rule: Cannon and rocket towers can be set to fire at will or to hold fire.
+    source: [manual Common Buildings (Stone Cannon Tower), manual Asian Buildings (Rocket Tower)]
+    status: implemented
+  ORD-012:
+    rule: Siege weapons can attack the ground at a clicked point.
+    source: [data ORDERS.INI attack_ground]
+    status: tested
+  ORD-013:
+    rule: Gates open and close on order, or open by themselves for the kingdom's units.
+    source: [manual Common Buildings (Wood Gate), data ORDERS.INI gateopen gateclose gate_subai_on gate_subai_off]
+    status: tested
+  ORD-014:
+    rule: Unload makes a loaded vehicle let its units out at the clicked place; the pointer's colour shows whether they can land there.
+    source: [manual Commanding Units (Unload)]
+    status: partial
+    note: Units land at the clicked place; the pointer does not change colour.
+  ORD-015:
+    rule: Emerge lets one chosen unit out of a building at the clicked place.
+    source: [manual Commanding Units (Emerge)]
+    status: partial
+    note: All units come out next to the building; a unit cannot be picked from the list of those inside (command-card work).
+    work: STATUS work queue 3
+  ORD-016:
+    rule: Large units such as catapults come out of buildings properly.
+    source: [patch 1.05 (TZAR110.TXT)]
+    status: implemented
+  ORD-017:
+    rule: Stand ground and explore work for ships.
+    source: [patch 1.05 (TZAR110.TXT)]
+    status: tested
+  ORD-018:
+    rule: Delete destroys the selected own units and buildings, never another kingdom's; the castle and the guilds need Shift+Del.
+    source: [manual Hot Keys, patch 1.05 (TZAR110.TXT)]
     status: tested

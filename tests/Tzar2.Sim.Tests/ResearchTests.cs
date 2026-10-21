@@ -28,6 +28,7 @@ public class ResearchTests
         [Structure("euro.castle", 0, 2, 2), Structure("euro.blacksmith", 0, 10, 2), Structure("euro.blacksmith", 0, 14, 2), .. extra]);
 
     [Fact]
+    [Trait("Rule", "TECH-001")]
     public void Research_is_paid_queued_timed_and_then_known()
     {
         using var d = new SimDriver(Base(), ruleset: Classic);
@@ -49,6 +50,7 @@ public class ResearchTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-001")]
     public void A_technology_is_researched_once_per_player()
     {
         using var d = new SimDriver(Base(), ruleset: Classic);
@@ -66,6 +68,8 @@ public class ResearchTests
     }
 
     [Fact]
+    [Trait("Rule", "PROD-006")]
+    [Trait("Rule", "TECH-002")]
     public void Prerequisites_follow_the_civilization_tree_and_unlock_units()
     {
         using var d = new SimDriver(Base(Structure("euro.barrack", 0, 20, 2)), ruleset: Classic);
@@ -152,6 +156,8 @@ public class ResearchTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-003")]
+    [Trait("Rule", "TECH-035")]
     public void Upgrades_convert_towers_in_place_in_order_and_need_their_technology()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("comm.tower_wood", 0, 12, 4)), ruleset: Classic);
@@ -178,6 +184,7 @@ public class ResearchTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-035")]
     public void Ship_cannon_levels_are_bought_in_order_and_add_attack_to_that_ship()
     {
         using var d = new SimDriver(

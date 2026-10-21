@@ -40,6 +40,7 @@ public sealed class CampaignTests(ITestOutputHelper output)
     }
 
     [Fact]
+    [Trait("Rule", "EXP-006")]
     public void A_persistent_hero_arrives_with_its_level_on_the_next_map()
     {
         InMemoryCampaignSource source = DemoCampaign.Create();

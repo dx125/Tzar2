@@ -15,6 +15,7 @@ namespace Tzar2.Sim.Tests;
 public class ConcealmentTests
 {
     [Fact]
+    [Trait("Rule", "MAG-002")]
     public void An_invisible_unit_is_hidden_from_the_enemys_sight_and_targeting()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 2, 4), Unit("euro.footman", 0, 7, 4), Unit("euro.footman", 1, 10, 4)), ruleset: Classic);
@@ -41,6 +42,7 @@ public class ConcealmentTests
     }
 
     [Fact]
+    [Trait("Rule", "HOLD-005")]
     public void A_unit_inside_a_holder_is_hidden_and_reveals_nothing()
     {
         using var d = new SimDriver(TestMap(48, 16, Structure("euro.castle", 0, 2, 4), Unit("euro.footman", 0, 30, 7), Unit("euro.footman", 1, 34, 7)), ruleset: Classic);

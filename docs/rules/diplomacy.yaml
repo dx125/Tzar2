@@ -1,0 +1,47 @@
+schema: tzar2-rules/1
+prefix: DIP
+title: Diplomacy and victory
+rules:
+  DIP-001:
+    rule: Each kingdom takes a stance towards each other one, ally, enemy or neutral, and the two stances may differ; an ally's units do not attack, an enemy's attack everything in sight, a neutral's attack only military units in sight.
+    source: [manual Diplomacy, help ITEMS.TXT WI_DIPLOMACY]
+    status: tested
+  DIP-002:
+    rule: A kingdom that treats another as an ally does not strike back when that one attacks it as an enemy.
+    source: [manual Diplomacy]
+    status: tested
+  DIP-003:
+    rule: Shared vision, shared resources and shared unit control each work when both kingdoms turn them on.
+    source: [manual Diplomacy Screen]
+    status: tested
+    note: Set by scripts and the lobby only; the diplomacy screen is missing (HUD-012).
+  DIP-004:
+    rule: With allied victory, one ally reaching the victory condition wins for all allies, who also lose together.
+    source: [manual Diplomacy, help ITEMS.TXT WI_ALLIED_VICTORY]
+    status: tested
+  DIP-005:
+    rule: Tribute sends gold, food, stone or wood to any other kingdom.
+    source: [manual Diplomacy (Tribute)]
+    status: tested
+    note: Sent by scripts only; the tribute screen is missing (HUD-013).
+  DIP-006:
+    rule: The victory conditions are standard (the last kingdom standing), destroy the castle, a score limit, a time limit, or none.
+    source: [manual Single Player Setup Screen, community TDD GAME-17]
+    status: tested
+    note: The setup screens cannot choose them (SHELL-007).
+  DIP-007:
+    rule: A Deathmatch game starts every kingdom rich.
+    source: [manual Random Map Screen (game type)]
+    status: implemented
+    note: The starting level (High) is a placeholder; the setup screens cannot choose Deathmatch (SHELL-010).
+  DIP-008:
+    rule: F4 shows the scores.
+    source: [manual Hot Keys]
+    status: partial
+    note: The scores show as messages; there is no score screen.
+    adr: [0106]
+  DIP-009:
+    rule: Computer kingdoms resign on their own when their AI flag allows it.
+    source: [patch 1.09 (TZAR110.TXT)]
+    status: partial
+    note: The scripts' resign request is recorded but never carried out, and the flag cannot be set (SHELL-013).

@@ -55,10 +55,8 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 
 Items 1 to 4 are the owner's order of 2026-10-21 (log below), done one after the other.
 
-1. **Maintainer:** fill the ledger of the original's rules ([rules/](rules/README.md), ADR 0181) from every source: the
-   manual, the strategy guide, the patch notes, the order descriptions of `STRINGS.INI`, the item help and the
-   decisions in this file; the status of each rule from the code; existing tests get their rule ids. Then report the
-   missing, partial and unclear rules to the owner.
+1. **Maintainer:** the ledger's first fill is done (log below). Next: bring the hotkey checklist up to date (several
+   rows still say "blocked" on features that exist), and keep the ledger current with every change.
 2. **Maintainer:** account for the original's data (ADR 0181, decision 5): a local-only test of which INI sections and
    keys the import and the client read, against `docs/rules/data-usage.yaml`.
 3. **Maintainer:** the rest of the command card, starting with moving the card's logic out of the Godot client into
@@ -67,7 +65,11 @@ Items 1 to 4 are the owner's order of 2026-10-21 (log below), done one after the
    orders need the sim first.
 4. **Maintainer:** an ADR for the split of the engine, the original's content and a future game on the same core (the
    owner's question of 2026-10-21: a new game with new balance, units and races, maybe on a 3D engine).
-5. **Operator:** a fourth play-test (`tools/play/play.ps1`); the third one's fixes are merged.
+5. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
+   order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
+   (TECH-019), one farmer per field (ECO-021), siege weapons hurting their own side (WAR-013). Then the screens:
+   diplomacy, tribute, inventory, save and load.
+6. **Operator:** a fourth play-test (`tools/play/play.ps1`); the third one's fixes are merged.
 4. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 5. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
@@ -92,6 +94,34 @@ Items 1 to 4 are the owner's order of 2026-10-21 (log below), done one after the
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-21 — The ledger's first fill: 309 rules in 21 chapters.**
+  * **Sources:**
+    * the manual and the strategy guide;
+    * the patch notes (`TZAR110.TXT`; TDD §5.1's patch-note tests never existed, the ledger now carries each line);
+    * the in-game help (`HELP/ITEMS.TXT`, 407 topics), the order descriptions of `STRINGS.INI`, `ORDERS.INI`;
+    * the three play-tests.
+  * **Status:**
+
+    | Tested | Implemented | Partial | Missing | Deviation | Unclear |
+    |---|---|---|---|---|---|
+    | 131 | 83 | 39 | 33 | 7 | 16 |
+
+    Existing tests now name 131 rules. A status of tested now needs a test that checks the rule itself, not the client's
+    flag.
+  * **Found:**
+    * The simulation ignores the Shift and Alt of an order, so there are no waypoints and no move-sneak; the client's
+      tests only checked the flag.
+    * No diplomacy, tribute, inventory, save, load or help screens; chat only in multiplayer.
+    * The selection view lacks the kingdom, the level and the units inside.
+    * The help gives facts that differ from Tzar2's placeholders:
+      * Landing Tactics +50 %;
+      * one peasant per field;
+      * siege weapons hurt their own side;
+      * the gathering technologies raise the load, not the speed;
+      * ship cannon levels fire faster, not harder.
+    * Unhandled orders on the original's cards: online help, impersonate, reveal, uncloak, the souls' kill and berserk,
+      Build Magic Item and the Asian market's item trade.
+  * The two old checklists (hotkeys, editor) stay as they are.
 * **2026-10-21 — A ledger of the original's rules (ADR 0181).** About 40 findings of three play-tests: about 8 are
   in the manual, about 10 in the original's data files nobody read, about 12 known only from playing the original, the
   rest plain defects. The owner asked for an automatic check. Each rule of the original now sits in

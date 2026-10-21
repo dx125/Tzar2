@@ -15,6 +15,7 @@ public class NatureTests
     private const byte Nature = Content.Compiled.MapObject.Nature;
 
     [Fact]
+    [Trait("Rule", "NAT-001")]
     public void A_gateway_is_claimed_by_the_touch_of_a_military_unit_and_then_summons()
     {
         using var d = new SimDriver(
@@ -52,6 +53,7 @@ public class NatureTests
     }
 
     [Fact]
+    [Trait("Rule", "NAT-003")]
     public void A_bear_fights_near_home_and_walks_back_when_lured_away()
     {
         using var d = new SimDriver(TestMap(64, 16, Unit("comm.bear", Nature, 20, 8), Unit("euro.footman", 0, 24, 8)), ruleset: Classic);
@@ -79,6 +81,7 @@ public class NatureTests
     }
 
     [Fact]
+    [Trait("Rule", "NAT-002")]
     public void Wild_cows_wander_and_join_the_kingdom_that_touches_them_and_birds_are_never_attacked()
     {
         using var d = new SimDriver(

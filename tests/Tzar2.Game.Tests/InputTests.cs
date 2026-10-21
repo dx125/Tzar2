@@ -23,6 +23,7 @@ public sealed class SelectionTests
     internal static EntityInfo Tree(int id) => new(EntityId.Create(id, 1), 20, 0xFF, EntityCategory.Resource, false, 0, 0, 0, false, false, false, false, true, false, false);
 
     [Fact]
+    [Trait("Rule", "CTRL-019")]
     public void Click_replaces_and_shift_click_toggles_own_units()
     {
         var s = new SelectionModel(Me);
@@ -50,6 +51,7 @@ public sealed class SelectionTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-019")]
     public void A_drag_box_prefers_own_units_then_one_own_building()
     {
         var s = new SelectionModel(Me);
@@ -65,6 +67,7 @@ public sealed class SelectionTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-021")]
     public void Double_click_variants_follow_the_original()
     {
         EntityInfo[] screen =
@@ -218,6 +221,7 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "PROD-011")]
     public void Buildings_get_a_rally_point_and_enemies_get_nothing()
     {
         PlannedCommand rally = Assert.Single(OrderResolver.RightClick([SelectionTests.Building(3)], null, 7, 8, KeyMods.Ctrl, Me));

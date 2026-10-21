@@ -30,7 +30,7 @@ public partial class SinglePlayerScreen : ArtScreen
         TextureButton load = Button(new Vector2I(300, rows[3]), size, Image, Label("load", "LOAD GAME"), () => LoadGame?.Invoke());
         load.Disabled = !canLoad;
         load.Modulate = canLoad ? Colors.White : new Color(1, 1, 1, 0.45f);
-        load.TooltipText = canLoad ? string.Empty : "No saved game yet (F5 saves a campaign mission).";
+        load.TooltipText = canLoad ? string.Empty : "No saved game yet (F2 saves a campaign mission).";
         Button(new Vector2I(300, rows[4]), size, Image, Label("back", "BACK"), () => Back?.Invoke());
     }
 

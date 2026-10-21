@@ -1,0 +1,66 @@
+schema: tzar2-rules/1
+prefix: ITEM
+title: Items
+rules:
+  ITEM-001:
+    rule: Items lie on the map; units pick them up with the pick-up order or a right click on them, and carry them in an inventory of pages.
+    source: [manual Items, manual Hints About Gameplay, help ITEMS.TXT HT_USE_ITEMS]
+    status: tested
+    note: The inventory cannot be viewed (HUD-017).
+  ITEM-002:
+    rule: A weapon raises its carrier's attack and armour its defence.
+    source: [manual Items, manual Hints About Gameplay]
+    status: tested
+  ITEM-003:
+    rule: A spell book lets any unit carrying it cast its spell, for a number of charges.
+    source: [manual Items, help ITEMS.TXT WI_SPELLS]
+    status: tested
+  ITEM-004:
+    rule: A scroll holds a text of the story, shown when it is used.
+    source: [manual Items]
+    status: implemented
+  ITEM-005:
+    rule: A potion heals its carrier.
+    source: [manual Items]
+    status: tested
+  ITEM-006:
+    rule: A resource item gives its resources to the kingdom.
+    source: [manual Items]
+    status: tested
+  ITEM-007:
+    rule: Some items must be used at a place; the Fire Rain book makes fire rain where the player clicks, on everyone there, own units included.
+    source: [manual Hints About Gameplay]
+    status: partial
+    note: The simulation does it; the client uses the first item, as there is no inventory to pick from (HUD-017).
+  ITEM-008:
+    rule: Only the Arabians make items, in the magic workshop after Witchcraft; the player picks the kind of item and how much gold to spend, and better items cost more and take longer.
+    source: [manual Producing Items, help ITEMS.TXT HT_CREATE_ITEMS]
+    status: partial
+    note: The simulation crafts items; the card's Build Magic Item order and its dialog are missing (command-card work).
+    work: STATUS work queue 3
+  ITEM-009:
+    rule: Magic books made in the magic workshop cost four times more and take twice as long.
+    source: [patch 1.05 (TZAR110.TXT)]
+    status: missing
+  ITEM-010:
+    rule: A soul item kills a unit or makes it go berserk; a hero is not killed.
+    source: [data ORDERS.INI item_kill item_berserk, community TDD GAME-10]
+    status: partial
+    note: The simulation does it; the card's item_kill and item_berserk orders do nothing yet.
+  ITEM-011:
+    rule: The items of a dead unit fall to the ground.
+    source: [community TDD GAME-10]
+    status: tested
+  ITEM-012:
+    rule: A unit that picks up a magic book has yellow stars floating above it.
+    source: [patch 1.09 (TZAR110.TXT)]
+    status: missing
+  ITEM-013:
+    rule: The Curse spell book works.
+    source: [patch 1.05 (TZAR110.TXT)]
+    status: implemented
+  ITEM-014:
+    rule: Two units reaching an item at once never both get it.
+    source: [community TDD ORIG-11]
+    status: deviation
+    note: Fixes the original's item cloning (TDD §5, ORIG-11).

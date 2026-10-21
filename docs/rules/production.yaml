@@ -11,7 +11,7 @@ rules:
     rule: A right click on an order button takes one unit of that kind off the queue and refunds it.
     source: [owner 2026-10-21 (third play-test)]
     status: unclear
-    note: Tzar2's choice (ADR 0180), from the original's per-button counts; whether the original cancels this way is not confirmed.
+    note: Tzar2's choice (ADR 0180), from the original's per-button counts; whether the original cancels this way is not confirmed. Tzar2 also queues five with Shift+click, likewise unconfirmed.
   PROD-003:
     rule: Each order button shows how many of its kind the selected buildings have queued, and the hourglass stat shows the progress of the one being made.
     source: [owner 2026-10-21 (third play-test; the original's castle panel)]
@@ -27,3 +27,45 @@ rules:
     status: deviation
     note: Fixes a bug of the original, at the owner's request.
     adr: [0180]
+  PROD-006:
+    rule: Most units are made in buildings; making one needs its resources and the technologies it requires, and units differ in what they cost.
+    source: [manual Production Of Units]
+    status: tested
+  PROD-007:
+    rule: Houses raise the population limit; Supply Storage and Seafood raise it further.
+    source: [manual European Buildings (House), manual European technologies (Supply Storage), manual Asian technologies (Seafood)]
+    status: tested
+  PROD-008:
+    rule: A building does not finish a unit while the kingdom is at its population limit; it waits until there is room.
+    source: [guide Economy]
+    status: tested
+  PROD-009:
+    rule: The population limit is set before the game (200 by default).
+    source: [manual Multiplayer Settings Screen, capture capture-20261018-024524]
+    status: tested
+  PROD-010:
+    rule: Mages and priests spawn creatures, each costing mana and gold; some creatures need a technology.
+    source: [manual Production Of Units]
+    status: tested
+  PROD-011:
+    rule: With a building selected, Ctrl+right click sets its rally point, Alt+right click a rally point with the default action (new peasants go to work there) and Ctrl+Alt+right click one with a move-advance.
+    source: [help HK.TXT, manual Hot Keys]
+    status: tested
+  PROD-012:
+    rule: End shows the rally point of the selected building.
+    source: [patch 1.05 (TZAR110.TXT)]
+    status: implemented
+  PROD-013:
+    rule: The castle makes peasants and spies (ninjas for the Asians), the barracks the soldiers, the workshop the siege weapons, the harbor the ships, the market traders and caravans, the farm cows, the church priests, the mage tower mages, and the monastery monks.
+    source: [manual Civilizations]
+    status: implemented
+    note: What each building makes comes from the original's tables.
+  PROD-014:
+    rule: Every unit takes one place of the population, whatever its size.
+    source: [community TDD ORIG-12]
+    status: implemented
+    note: The original's rule, kept in classic; heavy catapults count like peasants.
+  PROD-015:
+    rule: Each house gives room for 10 more units, never beyond the game's population limit.
+    source: [help ITEMS.TXT WI_POP_LIMIT, data OBJECTS HOUSE.INI pop_count]
+    status: implemented

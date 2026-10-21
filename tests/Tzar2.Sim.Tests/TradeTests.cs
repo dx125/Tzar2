@@ -33,6 +33,7 @@ public class TradeTests
     }
 
     [Fact]
+    [Trait("Rule", "TRADE-001")]
     public void A_caravan_carries_goods_both_ways_and_profit_grows_with_distance()
     {
         int wood = Resource("wood");
@@ -58,6 +59,7 @@ public class TradeTests
     }
 
     [Fact]
+    [Trait("Rule", "TRADE-001")]
     public void Close_docks_give_no_profit_routes_need_trade_routes_and_another_order_refunds_the_load()
     {
         int wood = Resource("wood");
@@ -90,6 +92,9 @@ public class TradeTests
     }
 
     [Fact]
+    [Trait("Rule", "TRADE-005")]
+    [Trait("Rule", "TRADE-006")]
+    [Trait("Rule", "TRADE-007")]
     public void The_tavern_converts_ten_to_one_gambles_deterministically_and_lends_more_after_a_repayment()
     {
         using SimDriver d = Markets(20);

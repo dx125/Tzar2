@@ -74,6 +74,7 @@ public class NavalTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-008")]
     public void A_ship_comes_to_its_repairers()
     {
         // Patch notes 1.05-1.10: ship repair behaviour (TDD §5.1).
@@ -93,6 +94,7 @@ public class NavalTests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-010")]
     public void Boats_fish_from_patch_to_patch_and_peasants_never_fish()
     {
         using var d = new SimDriver(
@@ -166,6 +168,7 @@ public class NavalTests
     [Theory]
     [InlineData(CombatStance.StandGround, false)]
     [InlineData(CombatStance.Aggressive, true)]
+    [Trait("Rule", "ORD-017")]
     public void A_ship_on_stand_ground_does_not_sail_after_enemies(CombatStance stance, bool chases)
     {
         // Patch notes: stand-ground/explore for ships (TDD §5.1). The enemy is in sight but out of range.
@@ -186,6 +189,7 @@ public class NavalTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-017")]
     public void Ships_explore_the_water_and_soldiers_the_land()
     {
         // Patch notes: stand-ground/explore for ships (TDD §5.1). A long sea between two shores.
