@@ -86,6 +86,7 @@ public partial class Hud : Control
     private readonly TextureRect _tooltip;
     private readonly TextureRect _status;
     private CardSlot?[] _card = new CardSlot?[HudLayout.CardSlots];
+    private CardDialog? _dialog;
     private int _clockFrame = -1;
     private int _hovered = -1;
 
@@ -276,6 +277,27 @@ public partial class Hud : Control
     public static Color HealthColour(float share)
         => share > 0.5f ? new Color(0.1f, 0.85f, 0.1f) : share > 0.25f ? new Color(0.95f, 0.85f, 0.1f) : new Color(0.9f, 0.1f, 0.1f);
 
+    /// <summary>Shows <paramref name="dialog"/> in the command card's place (null: the card again).</summary>
+    public void ShowDialog(CardDialog? dialog)
+    {
+        _dialog?.QueueFree();
+        _dialog = dialog;
+        bool card = dialog is null;
+        for (int i = 0; i < HudLayout.CardSlots; i++)
+        {
+            _cardIcons[i].Visible = card;
+            _cardShade[i].Visible = card && _card[i] is { Enabled: false };
+            _cardFrames[i].Visible = card && _card[i] is { Active: true };
+        }
+
+        if (dialog is not null)
+        {
+            dialog.Position = _layout.CardSlot(0).Position - CardDialog.FirstCell - new Vector2I(3, 3);
+            AddChild(dialog);
+            _tooltip!.Texture = null;
+        }
+    }
+
     /// <summary>Fills the command card.</summary>
     public void SetCard(IReadOnlyList<CardSlot?> card)
     {
@@ -289,9 +311,9 @@ public partial class Hud : Control
             _cardIcons[i].Texture = slot is { } s
                 ? _ui.Cell(Buttons, s.Button.ImageIndex) ?? _ui.Text(s.Button.Action == CardAction.Page ? s.Button.Argument : s.Button.Hotkey.ToString(), UiAssets.BoldFont)
                 : null;
-            _cardShade[i].Visible = slot is { Enabled: false };
+            _cardShade[i].Visible = _dialog is null && slot is { Enabled: false };
             _cardIcons[i].Modulate = slot is { Enabled: false } ? new Color(0.5f, 0.5f, 0.5f) : Colors.White;
-            _cardFrames[i].Visible = slot is { Active: true };
+            _cardFrames[i].Visible = _dialog is null && slot is { Active: true };
         }
 
         // The tooltip of the slot under the pointer follows the card (resources change while it is shown).

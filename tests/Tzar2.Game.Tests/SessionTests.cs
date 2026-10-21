@@ -236,6 +236,36 @@ public sealed class SessionTests
         Assert.DoesNotContain(session.AcquireFrame(out _)!.Entities.ToArray(), e => e.Burning && e.Id != house);
     }
 
+    [Fact]
+    public void The_frame_carries_the_tavern_offers_of_the_period_with_their_prices()
+    {
+        using var session = new GameSession(Setup() with { ComputerAi = false }, Rules.Value, fog: false);
+        session.Step(1);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        World world = session.Simulation.World;
+        int expected = 0;
+        Span<int> cost = stackalloc int[Ruleset.MaxResourceTypes];
+        for (int slot = 0; slot < TavernOffers.SlotCount(world); slot++)
+        {
+            if (TavernOffers.Offer(world, session.LocalPlayer, slot) is not { } offer)
+            {
+                continue;
+            }
+
+            FrameTavernOffer shown = frame.TavernOffers[expected];
+            Assert.Equal((slot, offer.TypeId, offer.Count, offer.IsHero, false), (shown.Slot, shown.TypeId, shown.Count, shown.IsHero, shown.Taken));
+            TavernOffers.CostOf(world, session.LocalPlayer, offer, cost);
+            for (int r = 0; r < frame.TavernCostStride; r++)
+            {
+                Assert.Equal(cost[r], frame.TavernCosts[(expected * frame.TavernCostStride) + r]);
+            }
+
+            expected++;
+        }
+
+        Assert.Equal(expected, frame.TavernOfferCount);
+    }
+
     [Theory]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Continental)]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Lakes)]

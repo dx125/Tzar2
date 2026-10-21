@@ -208,6 +208,15 @@ public struct FrameEntity
 #pragma warning restore CA1051
 }
 
+/// <summary>A tavern offer of the card's kingdom (GAME-14, ADR 0108): what <c>Hire</c> with its slot would bring now.</summary>
+/// <param name="Slot">The offer slot (the <c>Hire</c> argument).</param>
+/// <param name="TypeId">The unit type.</param>
+/// <param name="Count">Units in it.</param>
+/// <param name="Level">Their experience level.</param>
+/// <param name="IsHero">A hero.</param>
+/// <param name="Taken">Already hired this period.</param>
+public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Count, int Level, bool IsHero, bool Taken);
+
 /// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
 /// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>
 /// <param name="X">X in world units.</param>
@@ -385,6 +394,30 @@ public sealed class GameFrame
     /// sim's research check before cost and queue room); empty without a player.
     /// </summary>
     public byte[] Researchable { get; internal set; } = [];
+
+    /// <summary>The tavern offers of the card's kingdom now (empty without one, or before Mercenaries / Heroes' Quest offers exist).</summary>
+    public ReadOnlySpan<FrameTavernOffer> TavernOffers => _offers.AsSpan(0, TavernOfferCount);
+
+    /// <summary>Number of valid entries in <see cref="TavernOffers"/>.</summary>
+    public int TavernOfferCount { get; internal set; }
+
+    /// <summary>The price of offer i, resource r at [i × <see cref="TavernCostStride"/> + r].</summary>
+    public int[] TavernCosts { get; internal set; } = [];
+
+    /// <summary>Resources per offer in <see cref="TavernCosts"/>.</summary>
+    public int TavernCostStride { get; internal set; }
+
+    private FrameTavernOffer[] _offers = [];
+
+    internal FrameTavernOffer[] OfferBuffer(int count)
+    {
+        if (_offers.Length < count)
+        {
+            _offers = new FrameTavernOffer[count];
+        }
+
+        return _offers;
+    }
 
     /// <summary>Local outcome.</summary>
     public MatchOutcome Outcome { get; internal set; }
