@@ -113,11 +113,11 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 9 | 4 | 0 | 0 | 1 | 1 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 0 | 10 | 10 | 6 | 2 | 0 |
-| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 25 | 1 | 3 | 2 | 0 | 5 |
+| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 26 | 1 | 2 | 2 | 0 | 5 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 333 | 155 | 70 | 43 | 37 | 9 | 19 |
+| **All** | 333 | 156 | 70 | 42 | 37 | 9 | 19 |
 
 ## Not done yet
 
@@ -239,7 +239,6 @@ Missing and partial rules.
 
 ### Technologies and upgrades
 
-* **TECH-019** (partial): Landing Tactics lets ships carry 50 % more troops, once. *Tzar2 adds 4 places (placeholder); the help gives 50 %.*
 * **TECH-028** (partial): Mastery (Asians) lets priests teach kung-fu units and turn mana into experience. *Mastery gates the spell that turns mana into experience (spell_raiseexp), which works; whether priests "teaching kung-fu units" is more than that is not known.*
 * **TECH-029**: Tournaments (Asians) lets kung-fu units share their experience.
 * **TECH-030**: Jewelry (Asians) lets the markets sell and buy items, the same items in every market. *The markets' item menus (market_items, market_sell) are empty in MENU.INI and filled by the game; Tzar2 has no item trade.*

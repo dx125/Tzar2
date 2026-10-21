@@ -113,6 +113,8 @@ the process decisions that have no ADR.
   * Enter is partial: the multiplayer chat line works, but single player has none, so its cheat codes cannot be typed.
   * Still blocked: the diplomacy, tribute and inventory screens, and location messages in the chat.
   * Fixed keys: 28 done, 11 partial, 6 blocked.
+  * First of work queue item 3: Landing Tactics gives ships 50 % more room (help HT_USE_SHIPS: 8, 16 and 24 units
+    become 12, 24 and 36), not a placeholder 4 places (TECH-019). The ruleset hash only.
 
 * **2026-10-21 — Spies impersonate, ninjas uncloak (ADR 0184; work queue item 2).**
   * A spy walks to another kingdom's unit and takes its look (MENU.INI `spy_add`: impersonate, reveal). Other

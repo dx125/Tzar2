@@ -92,8 +92,7 @@ rules:
   TECH-019:
     rule: Landing Tactics lets ships carry 50 % more troops, once.
     source: [manual Researching Technologies, help ITEMS.TXT HT_USE_SHIPS, patch 1.05 (TZAR110.TXT)]
-    status: partial
-    note: Tzar2 adds 4 places (placeholder); the help gives 50 %.
+    status: tested
   TECH-020:
     rule: Fanaticism (Europeans and Arabians) and Buddhism (Asians) raise the resistance of all buildings.
     source: [manual Researching Technologies]

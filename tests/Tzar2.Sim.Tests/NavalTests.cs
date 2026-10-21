@@ -221,6 +221,7 @@ public class NavalTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-019")]
     public void Landing_Tactics_adds_ship_room_once()
     {
         // Patch notes: ship storage double upgrade (TDD §5.1). Two harbors, a ship built before and one after.
@@ -229,11 +230,11 @@ public class NavalTests
         int room = d.World.HolderCapacity(before);
         Grant(d.World, 0, "te_landingtactics");
         EntityId after = d.Spawn(Id("comm.galleon"), 0, 15, 12);
-        Assert.Equal(room + 4, d.World.HolderCapacity(before)); // +4 (UNVERIFIED), not +8
-        Assert.Equal(room + 4, d.World.HolderCapacity(after));
+        Assert.Equal(room * 3 / 2, d.World.HolderCapacity(before)); // 50 % more (help HT_USE_SHIPS), once (1.05)
+        Assert.Equal(room * 3 / 2, d.World.HolderCapacity(after));
         byte[] snapshot = d.Sim.CaptureSnapshot();
         using Simulation restored = Simulation.Restore(snapshot, Classic, d.Sim.World.Map.Data);
-        Assert.Equal(room + 4, restored.World.HolderCapacity(after));
+        Assert.Equal(room * 3 / 2, restored.World.HolderCapacity(after));
     }
 
     [Fact]
