@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Tzar2.Tests.Shared;
 using Tzar2.Tools.Cli.Commands;
 using Tzar2.Tools.Cli.Rules;
 using Xunit;
@@ -30,6 +31,16 @@ public sealed class RulesLedgerTests : IDisposable
 
         Assert.True(ledger.Errors.Count == 0, string.Join(Environment.NewLine, ledger.Errors));
         Assert.NotEmpty(ledger.Chapters);
+        Assert.NotEmpty(ledger.Data!.Files);
+    }
+
+    [OriginFact]
+    public void Every_section_key_and_column_of_the_originals_data_is_accounted_for()
+    {
+        RulesLedger ledger = RulesLedger.Load(OriginPaths.RepositoryRoot);
+        ledger.CheckInstall(OriginPaths.RequireOrigin());
+
+        Assert.True(ledger.Errors.Count == 0, string.Join(Environment.NewLine, ledger.Errors));
     }
 
     [Fact]
@@ -194,10 +205,100 @@ public sealed class RulesLedgerTests : IDisposable
         Assert.True(again.CheckReport());
     }
 
+    [Fact]
+    public void Used_data_names_must_be_quoted_by_the_code_and_todos_must_name_known_rules()
+    {
+        Chapter("hud.yaml", "schema: tzar2-rules/1\nprefix: HUD\ntitle: Screen\nrules:\n  HUD-001:\n    rule: A rule.\n    source: [manual]\n    status: missing\n");
+        Directory.CreateDirectory(Path.Combine(_root, "src", "Some"));
+        File.WriteAllText(Path.Combine(_root, "src", "Some", "Reader.cs"), "var h = ui.ImageInts(entry, \"hotspot\"); // actionrow is only a comment");
+        Usage("""
+            schema: tzar2-data-usage/1
+            files:
+              - path: DATA/IMAGES.INI
+                reader: SpriteIndex
+                account: keys
+                used: [hotspot, actionrow]
+                todo:
+                  startrow: animations that start inside their sheet (HUD-001)
+                  startcol: the same (HUD-999)
+              - path: DATA/* UNITS.TXT
+                reader: LegacyImporter
+                account: columns
+                used: [unit, depend on]
+              - path: DATA/MENU.INI
+                account: whole
+              - path: data/temp.ini
+                account: unused
+                reason: A leftover.
+              - path: DATA/TEMP2.INI
+                account: sometimes
+            """);
+
+        RulesLedger ledger = RulesLedger.Load(_root);
+
+        Assert.Equal(
+            [
+                "docs/rules/data-usage.yaml:14: DATA/MENU.INI: a whole entry needs a 'reason'",
+                "docs/rules/data-usage.yaml:16: 'path' is required, in upper case as in the install",
+                "docs/rules/data-usage.yaml:19: DATA/TEMP2.INI: account 'sometimes' must be one of keys, sections, columns, whole, unused",
+                "docs/rules/data-usage.yaml:3: DATA/IMAGES.INI: 'actionrow' is listed as used but no code quotes it",
+                "docs/rules/data-usage.yaml:3: DATA/IMAGES.INI: 'startcol' names unknown rule HUD-999",
+            ],
+            ledger.Errors);
+    }
+
+    [Fact]
+    public void The_install_check_finds_unaccounted_and_stale_names_and_files_without_an_entry()
+    {
+        Usage("""
+            schema: tzar2-data-usage/1
+            files:
+              - path: DATA/IMAGES.INI
+                reader: SpriteIndex
+                account: keys
+                used: [image]
+                ignored:
+                  old_key: gone from the data
+              - path: DATA/OBJECTS/*.INI
+                account: sections
+                restated:
+                  general: by hand
+              - path: DATA/* UNITS.TXT
+                reader: LegacyImporter
+                account: columns
+                used: [unit, cost]
+            """);
+        Directory.CreateDirectory(Path.Combine(_root, "src"));
+        File.WriteAllText(Path.Combine(_root, "src", "Reader.cs"), "Get(\"image\");");
+        string origin = Path.Combine(_root, "origin");
+        Directory.CreateDirectory(Path.Combine(origin, "DATA", "OBJECTS", "TZAREDIT"));
+        File.WriteAllText(Path.Combine(origin, "DATA", "IMAGES.INI"), "[a]\nimage = x\nhotspot = 1,2\n[b]\nimage = y\n");
+        File.WriteAllText(Path.Combine(origin, "DATA", "OBJECTS", "PEON.INI"), "[general]\nclass = peon\n[euro]\nimage = e_peon\n");
+        File.WriteAllText(Path.Combine(origin, "DATA", "OBJECTS", "TZAREDIT", "UNITS.INI"), "[Euro]\n");
+        File.WriteAllText(Path.Combine(origin, "DATA", "EURO UNITS.TXT"), "UNIT\tCOST\tTIME\n\nPeon\t50f\t8\n");
+        File.WriteAllText(Path.Combine(origin, "Tzar.ini"), "[x]\n");
+
+        DataUsage usage = DataUsage.Load(_root, new System.Collections.Generic.HashSet<string>());
+        usage.CheckInstall(origin, ["DATA/IMAGES.INI", "DATA/OBJECTS/PEON.INI", "DATA/OBJECTS/TZAREDIT/UNITS.INI", "DATA/EURO UNITS.TXT", "Tzar.ini", "DATA/CHANGES.TXT"]);
+
+        Assert.Equal(
+            [
+                "docs/rules/data-usage.yaml: DATA/OBJECTS/TZAREDIT/UNITS.INI has no entry",
+                "docs/rules/data-usage.yaml:3: DATA/IMAGES.INI: 'hotspot' is not accounted for (used, restated, ignored or todo)",
+                "docs/rules/data-usage.yaml:3: DATA/IMAGES.INI: 'old_key' is not in the install",
+                "docs/rules/data-usage.yaml:9: DATA/OBJECTS/*.INI: 'euro' is not accounted for (used, restated, ignored or todo)",
+                "docs/rules/data-usage.yaml:13: DATA/* UNITS.TXT: 'time' is not accounted for (used, restated, ignored or todo)",
+            ],
+            usage.Errors);
+        Assert.Contains("accounts for 3 files or groups of files: 0 read whole, 0 not read, and of the names in the others 3 used, 1 restated by hand, 1 not needed and 0 to do.", RulesLedger.Load(_root).Report(), StringComparison.Ordinal);
+    }
+
     private void Chapter(string name, string yaml) => File.WriteAllText(Path.Combine(_root, "docs", "rules", name), yaml);
 
     // The samples spell the trait RULE(...) so that the scan of this repository does not take them for real links.
     private static string Traits(string code) => code.Replace("RULE(", "Trait(\"Rule\", ", StringComparison.Ordinal);
+
+    private void Usage(string yaml) => File.WriteAllText(Path.Combine(_root, "docs", "rules", "data-usage.yaml"), yaml);
 
     private void Test(string name, string code) => File.WriteAllText(Path.Combine(_root, "tests", "Some.Tests", name), Traits(code));
 }

@@ -58,3 +58,8 @@ rules:
     source: [help ITEMS.TXT WI_SIEGE_WEAPON]
     status: missing
     note: Stones and shells spare the shooter's own units.
+  WAR-014:
+    rule: An attack's blow lands at the frame of its animation that the data marks (the action row), so each unit strikes at its own moment of the swing.
+    source: [data IMAGES.INI actionrow]
+    status: missing
+    note: Tzar2 lands every blow at half the cycle (hitDelayPercent, a placeholder, UNK-07).

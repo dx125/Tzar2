@@ -107,6 +107,9 @@ internal sealed partial class RulesLedger
     /// <summary>Problems found while loading and checking, each with its file and line.</summary>
     public IReadOnlyList<string> Errors => _errors;
 
+    /// <summary>The account of the original's data files (<c>docs/rules/data-usage.yaml</c>).</summary>
+    public DataUsage? Data { get; private set; }
+
     /// <summary>The directory of the chapters.</summary>
     public string RulesDirectory => Path.Combine(Root, "docs", "rules");
 
@@ -121,7 +124,24 @@ internal sealed partial class RulesLedger
         ledger.LoadChapters();
         ledger.ScanTests();
         ledger.CheckLinks();
+        ledger.Data = DataUsage.Load(root, new HashSet<string>(ledger.Chapters.SelectMany(c => c.Rules).Select(r => r.Id), StringComparer.Ordinal));
+        ledger._errors.AddRange(ledger.Data.Errors);
         return ledger;
+    }
+
+    /// <summary>
+    /// Checks the data account against an install (local only): every data file of the reference build has an entry and
+    /// every name is accounted for. Adds the problems to <see cref="Errors"/>.
+    /// </summary>
+    /// <param name="origin">The original install.</param>
+    public void CheckInstall(string origin)
+    {
+        string manifest = Path.Combine(Root, "docs", "original-build", "manifests", "gog-1.10-en.reference.tsv");
+        IEnumerable<string> files = File.ReadLines(manifest).Skip(1).Select(l => l.Split('\t')[0])
+            .Where(f => f.Length > 0 && File.Exists(Path.Combine(origin, f)));
+        int before = Data!.Errors.Count;
+        Data.CheckInstall(origin, files);
+        _errors.AddRange(Data.Errors.Skip(before));
     }
 
     /// <summary>The tests that name <paramref name="ruleId"/>.</summary>
@@ -144,6 +164,11 @@ internal sealed partial class RulesLedger
         Section(o, "Not done yet", "Missing and partial rules.", r => r.Status is RuleStatus.Missing or RuleStatus.Partial);
         Section(o, "Unclear", "The sources disagree or say too little.", r => r.Status == RuleStatus.Unclear);
         Section(o, "Deliberate differences", "Tzar2 does these differently on purpose.", r => r.Status == RuleStatus.Deviation);
+        if (Data is { Files.Count: > 0 })
+        {
+            o.Append(Data.Report());
+        }
+
         o.Append('\n').Append(ReportEnd).Append('\n');
         return o.ToString();
 
@@ -246,6 +271,11 @@ internal sealed partial class RulesLedger
         foreach (string path in Directory.GetFiles(RulesDirectory, "*.yaml").OrderBy(p => p, StringComparer.Ordinal))
         {
             string file = Path.GetFileName(path);
+            if (file == Path.GetFileName(DataUsage.RelativePath))
+            {
+                continue;
+            }
+
             LedgerChapter? chapter = LoadChapter(path, file);
             if (chapter is null)
             {

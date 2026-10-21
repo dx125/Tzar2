@@ -109,7 +109,8 @@ re-run the failed job (`gh run rerun <id> --failed`) and note it on the PR.
 * **The original's rules are in a ledger** ([rules/](rules/README.md), ADR 0181). A feature starts from its chapter;
   a play-test finding about the original becomes a rule there with a test that names it (`[Trait("Rule", "PROD-001")]`)
   in the change that fixes it; `t2 rules check` (CI) keeps the chapters, the tests and the report in step, and
-  `t2 rules report` rewrites the report.
+  `t2 rules report` rewrites the report. Every data file of the original is accounted for in
+  `docs/rules/data-usage.yaml`, checked against the install with `t2 rules check --origin <install>`.
 * **Placeholders are not balance knobs.** A value that is neither in the original's tables nor measured stays in its
   register as UNVERIFIED until a capture fact replaces it; then it is marked VERIFIED with the session that proved it.
 * **A decision gets an ADR** when it shapes code or data others build on, or when it picks between real alternatives.

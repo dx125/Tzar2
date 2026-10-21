@@ -95,8 +95,9 @@ rules:
     note: CD audio and when the menu bar appears are missing; the path depth is dropped on purpose (TDD ORIG-03).
   SHELL-020:
     rule: The credits screen shows the makers of the game.
-    source: [manual Credits Screen]
-    status: implemented
+    source: [manual Credits Screen, data CREDITSFNT.INI]
+    status: missing
+    note: CREDITS prints where the credits file is.
   SHELL-021:
     rule: The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game.
     source: [manual Menu Screen, manual Hot Keys]
@@ -121,3 +122,11 @@ rules:
     source: [patch 1.05 (TZAR110.TXT)]
     status: implemented
     note: Nothing runs while paused; commands wait for the next tick.
+  SHELL-026:
+    rule: The controls of the menu screens explain themselves in a hint line.
+    source: [data LOCAL HELP.INI]
+    status: missing
+  SHELL-027:
+    rule: Quitting, resigning and disconnecting ask for confirmation.
+    source: ['strings STRINGS.INI [q]']
+    status: missing

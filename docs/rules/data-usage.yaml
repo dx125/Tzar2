@@ -1,0 +1,210 @@
+# What Tzar2 does with each data file of the original (ADR 0181, decision 5). Names only, never the original's values.
+#
+# account: keys (each key name over all sections), sections (each section name), columns (each column of a table),
+#          whole (a reader takes the file as a table of names), unused (nothing reads it).
+# used:     names the code reads; each must appear quoted in src/ or in content/ (`t2 rules check`).
+# restated: names whose facts are typed into code or rules by hand, and where.
+# ignored:  names Tzar2 does not need, and why.
+# todo:     names Tzar2 should read, with the rule of docs/rules that will use them or what is missing.
+# `t2 rules check --origin <install>` (or TZAR2_ORIGIN) fails on any name of the reference build that is not listed.
+schema: tzar2-data-usage/1
+files:
+  - path: DATA/AI/AI.INI
+    reader: Tzar2.AI AiIni (the strategy script of each way of play)
+    account: sections
+    used: [scripts]
+  - path: DATA/BONUS.INI
+    account: whole
+    reason: Tzar2.Content LegacyBonuses reads every unit group and its bonuses.
+  - path: DATA/CREDITSFNT.INI
+    account: unused
+    reason: "todo: the font of the credits screen (SHELL-020)."
+  - path: DATA/EQUATIONS.INI
+    account: keys
+    todo:
+      enablequestbutton: when the quest order is on (HUD-029)
+  - path: DATA/GENERAL.INI
+    account: keys
+    ignored:
+      ver: the data's version; the import checks the files against the reference manifest instead
+  - path: DATA/HEROES.INI
+    reader: Tzar2.Content (hero names per civilization, GAME-08)
+    account: sections
+    used: [arab, asia, comm, euro]
+  - path: DATA/ICONS.INI
+    reader: Tzar2.Client PresentationCatalog (portraits and order icons)
+    account: keys
+    used: [image, index]
+  - path: DATA/IMAGES.INI
+    reader: Tzar2.Content SpriteIndex; Tzar2.Client UiAssets and CursorCache
+    account: keys
+    used: [anim_time, anime_time, cols, delay, fps, hotspot, image, object, rows, selection, step]
+    todo:
+      actionrow: the frame of an attack at which the blow lands (WAR-014)
+      move_len: the stride of a walk, for the walking speed of the classes not measured (WORLD-012)
+      startcol: animations that start inside their sheet (PRES-008)
+      startrow: animations that start inside their sheet (PRES-008)
+  - path: DATA/KEYS.INI
+    account: whole
+    reason: Tzar2.Client PresentationCatalog binds Ctrl and each letter to the building class the file names.
+  - path: DATA/LAYOUT.INI
+    reader: Tzar2.Client HudLayout
+    account: sections
+    used: [layout1024h]
+    ignored:
+      layout800h: the 800x600 layouts; Tzar2 scales the 1024 layouts to any window (ADR 0177)
+      layout800l: the 800x600 layouts; Tzar2 scales the 1024 layouts to any window (ADR 0177)
+      layout800r: the 800x600 layouts; Tzar2 scales the 1024 layouts to any window (ADR 0177)
+    todo:
+      layout1024l: the interface down the left side (HUD-009)
+      layout1024r: the interface down the right side (HUD-009)
+  - path: DATA/MENU.INI
+    account: whole
+    reason: Tzar2.Client PresentationCatalog builds every command card from it; the orders Tzar2 cannot carry out yet are rules of the ledger (ORD, MAG, ITEM, TRADE, AI-004, HUD-033).
+  - path: DATA/OBJECTS/*.INI
+    reader: Tzar2.Content LegacyImporter (classes, holders, damage shares); Tzar2.Client PresentationCatalog (pictures, icons, sounds)
+    account: keys
+    used: ['00', '01', '02', class, cost, displayname, fog_range, icon, image, image_attack, image_build, image_carrymeat, image_carrymilk, image_chop, image_die, image_dig, image_idle, image_milk, image_mine, max_damage, max_manna, max_obj_in_holder, menu, min_attack_range, order, pop_count, sound, sound_attack, sound_command, sound_die, sound_select, teren, type]
+    restated:
+      image_c: the building-site overlay is found as the image's name and _c (Tzar2.Content SpriteIndex)
+    todo:
+      buildicon: meaning not decoded
+      icon_hero: the portrait of a hero (PRES-006)
+      image_attack2: other attack swings (PRES-005)
+      image_attack3: other attack swings (PRES-005)
+      image_capture: the peasant's capture animation (PRES-005)
+      image_meat: the peasant's meat collecting animation (PRES-005)
+      image_murder: the ninja's murder animation (PRES-005)
+      image_pray: the priest's prayer animation (PRES-005)
+      image_spell: the casting animation of mages and priests (PRES-005)
+      sound_create: the sound of a unit being made (PRES-007)
+  - path: DATA/OBJECTS/TZAREDIT/*.INI
+    account: unused
+    reason: The original editor's palettes of units and resources; Tzar2's editor lists the ruleset's types (M5).
+  - path: DATA/ORDERS.INI
+    reader: Tzar2.Client PresentationCatalog (the command card's orders)
+    account: keys
+    used: [action, classname, img, place, submenu]
+    todo:
+      enable: an order shown only when its condition holds, the quest order (HUD-029)
+  - path: DATA/ORG  MENU.INI
+    account: unused
+    reason: An older copy of MENU.INI that the game does not read.
+  - path: DATA/RES.INI
+    reader: Tzar2.Content GameplayReader (starting resources, node amounts, resource items)
+    account: sections
+    used: [high, low, medium, others, resitem]
+    todo:
+      armouritem: the strength of the map's random items (ITEM-015)
+      potionitem: the strength of the map's random items (ITEM-015)
+      treasuryitem: the strength of the map's random items (ITEM-015)
+      weaponitem: the strength of the map's random items (ITEM-015)
+  - path: DATA/SOUNDS.INI
+    account: whole
+    reason: Tzar2.Client looks up each object's and order's sounds by their section names.
+  - path: DATA/TAUNTS.INI
+    account: unused
+    reason: Chat taunts left unfinished in the original (placeholder lines such as "proba 3").
+  - path: DATA/TECHNOLOGIES.INI
+    reader: Tzar2.Content LegacyTables (technologies)
+    account: keys
+    used: [displayname, gold, time]
+  - path: DATA/TECHTREE *.INI
+    reader: Tzar2.Content LegacyTables (requirements, unlocks, gated orders)
+    account: sections
+    used: [depend, orders, required]
+  - path: DATA/TEMP.INI
+    account: unused
+    reason: A leftover of the original's tools (rows of the icon and button sheets); Tzar2 reads the sheets' sizes from the pictures.
+  - path: DATA/TREES.INI
+    account: keys
+    todo:
+      bushes: where the bushes are in the tree sheet (PRES-009)
+      chopped: where the stumps are in the tree sheet (PRES-009)
+      img_shadows: the trees' shadow sheet (PRES-009)
+      img_trees: the tree sheet (PRES-009)
+      pos_shadow: where a tree's shadow sits (PRES-009)
+      pos_tree: where a tree sits on its tile (PRES-009)
+  - path: DATA/UPGRADES.INI
+    reader: Tzar2.Content LegacyTables (upgrades)
+    account: keys
+    used: [displayname, stone, time, wood]
+  - path: DATA/* UNITS.TXT
+    reader: Tzar2.Content LegacyImporter (the unit tables, read by column position)
+    account: columns
+    used: [unit, class, cost, time, sight, range, health, attack, defence, rate, special, build, build at, depend on]
+    restated:
+      speed: read, but walking speeds are per class as measured (ADR 0172)
+  - path: DATA/* BUILDINGS.TXT
+    reader: Tzar2.Content LegacyImporter (the building tables, read by column position)
+    account: columns
+    used: [building, class, cost, time, sight, resistance, health, emit (own/other), depends on]
+  - path: HELP/HELP_STR.INI
+    account: unused
+    reason: "todo: the labels of the online help (HUD-020)."
+  - path: IMAGES/TERRAIN/*.IMAGES.INI
+    reader: Tzar2.Content terrain sets; the editor's scenery
+    account: keys
+    used: [displayname, fps, image, object, rows, selection, terrains, z]
+    ignored:
+      detailedname: the editor's long name of a scenery object; Tzar2's editor uses displayname
+    todo:
+      ruinpoints: meaning not decoded
+  - path: IMAGES/TERRAIN/*.TERRAIN.INI
+    reader: Tzar2.Import and Tzar2.Content (terrain sets, tiles, ambient sounds)
+    account: sections
+    used: [sounds, terrain, terrainfiles, terrainname, terrainsize, trees]
+    restated:
+      randomterrainset: the random map's terrain layers (Tzar2.Content TerrainProfile, ADR 0060; semantics unknown)
+      treeterrain: the terrains trees grow on (Tzar2.Content TerrainProfile, ADR 0060)
+    todo:
+      colors: the colour of selection marks (HUD-031)
+      minidatargb: the minimap's colours of terrains, trees and cliffs (HUD-030)
+      randomtreeset: how many trees a random map grows, by map size (WORLD-013)
+      treename: the kinds of trees in the sheet (PRES-009)
+  - path: LOCAL/HELP.INI
+    account: unused
+    reason: "todo: the hints of the menu screens' controls (SHELL-026)."
+  - path: LOCAL/STRINGS.INI
+    reader: Tzar2.Client PresentationCatalog (texts)
+    account: sections
+    used: [campaign, chat, check, diplomacy, edit, endgamedlg, game_scr, general, images, load, mainscr, menu, notify, objects, options, orders_add, orders_names, save, selview, singlescr, sp_choosemap, sp_setupmap, sp_setuprnd, tribute, viewmsg]
+    ignored:
+      dlg_btns: OK and CANCEL; Tzar2's dialogs take theirs from the screens' pictures
+      err: errors of DirectX, video modes and flags that Tzar2 does not have
+      mp_mplayer: the original's IPX and TCP/IP screens; Tzar2's multiplayer is a relay with a lobby (ADR 0168)
+      mp_search: the original's IPX and TCP/IP screens; Tzar2's multiplayer is a relay with a lobby (ADR 0168)
+      mp_setupmap: the original's multiplayer setup; Tzar2's lobby has its own (ADR 0168)
+      spell_names: the cards name spells from orders_names
+      tzaredit: the original editor's texts; Tzar2's editor has its own (M5)
+    todo:
+      adds: messages such as "Build more houses" (HUD-026)
+      defmsg: the hint line's description of orders (HUD-001)
+      msg: the game's messages in the original's words (HUD-026)
+      peons: a working peasant named by its job, woodcutter, farmer, miner, builder (HUD-032)
+      q: the confirmations of quit, resign and disconnect (SHELL-027)
+      wnd_message: the message window's button (HUD-026)
+      wnd_quests: the quest window's texts (HUD-026)
+  - path: LOCAL/STRINGS2.INI
+    reader: Tzar2.Client PresentationCatalog (texts)
+    account: sections
+    used: [endgamedlg, objects, orders_names, sp_setupmap, sp_setuprnd]
+    ignored:
+      err: errors of the original's setup and data checks
+      mp_setupmap: the original's multiplayer setup; Tzar2's lobby has its own (ADR 0168)
+      tzaredit: the original editor's texts; Tzar2's editor has its own (M5)
+    todo:
+      chooseai: the AI script dialog (SHELL-010)
+      vm: messages such as a time limit hit or a location sent (HUD-026)
+  - path: LOCAL/STRINGS3.INI
+    reader: Tzar2.Client PresentationCatalog (texts)
+    account: sections
+    used: [misc, orders_names, system]
+    ignored:
+      err3: errors of the original's game server
+      mp_setupmap: the original's multiplayer setup; Tzar2's lobby has its own (ADR 0168)
+      tzaredit: the original editor's texts; Tzar2's editor has its own (M5)
+    todo:
+      defmsg: the hint line's description of orders (HUD-001)
+      msg: the game's messages in the original's words (HUD-026)
+      vm: messages such as sending results (HUD-026)

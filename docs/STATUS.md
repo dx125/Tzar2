@@ -55,37 +55,36 @@ In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows
 
 Items 1 to 4 are the owner's order of 2026-10-21 (log below), done one after the other.
 
-1. **Maintainer:** the ledger's first fill is done (log below). Next: bring the hotkey checklist up to date (several
-   rows still say "blocked" on features that exist), and keep the ledger current with every change.
-2. **Maintainer:** account for the original's data (ADR 0181, decision 5): a local-only test of which INI sections and
-   keys the import and the client read, against `docs/rules/data-usage.yaml`.
-3. **Maintainer:** the rest of the command card, starting with moving the card's logic out of the Godot client into
+1. **Maintainer:** the ledger's first fill and the data account are done (log below). Next: bring the hotkey
+   checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
+   every change.
+2. **Maintainer:** the rest of the command card, starting with moving the card's logic out of the Godot client into
    `Tzar2.Game` so that it is tested: the Magic Workshop's crafting (`build_item`: which item, how much gold), the
    holders' list of units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and AI-mode
    orders need the sim first.
-4. **Maintainer:** an ADR for the split of the engine, the original's content and a future game on the same core (the
+3. **Maintainer:** an ADR for the split of the engine, the original's content and a future game on the same core (the
    owner's question of 2026-10-21: a new game with new balance, units and races, maybe on a 3D engine).
-5. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
+4. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
    order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
-   (TECH-019), one farmer per field (ECO-021), siege weapons hurting their own side (WAR-013). Then the screens:
-   diplomacy, tribute, inventory, save and load.
-6. **Operator:** a fourth play-test (`tools/play/play.ps1`); the third one's fixes are merged.
-4. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+   (TECH-019), one farmer per field (ECO-021), siege weapons hurting their own side (WAR-013), the attack's hit frame
+   from the data (WAR-014). Then the screens: diplomacy, tribute, inventory, save and load.
+5. **Operator:** a fourth play-test (`tools/play/play.ps1`); the third one's fixes are merged.
+6. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-5. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+7. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
    more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
-6. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+8. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
-7. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-8. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
-   solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
-   diagonal rocks) to reach 19/19.
-9. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
-   (Russian translations, never committed) and find a community map corpus.
-10. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-11. M7 planning: installer, code signing, crash reporting, min-spec hardware.
-12. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
+10. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
+    solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
+    diagonal rocks) to reach 19/19.
+11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+    (Russian translations, never committed) and find a community map corpus.
+12. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+13. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
 
@@ -94,6 +93,27 @@ Items 1 to 4 are the owner's order of 2026-10-21 (log below), done one after the
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-21 — Every data file of the original is accounted for (ADR 0181, decision 5).**
+  * [rules/data-usage.yaml](rules/data-usage.yaml) covers the INI files and unit tables of the reference build, 32
+    files or groups:
+    * 4 are read whole and 7 not at all;
+    * of the names in the others, 142 are used, 4 restated by hand, 18 not needed, and 48 are to do, each pointing at a
+      rule.
+  * `t2 rules check` checks on CI that every used name is quoted in the code. With the install
+    (`--origin` or `TZAR2_ORIGIN`; `RulesLedgerTests` runs locally), every section, key and column must be accounted
+    for.
+  * Found and added to the ledger:
+    * the attack's hit frame (`actionrow`, WAR-014; Tzar2 hits at half the swing);
+    * walking strides (`move_len`, WORLD-012);
+    * animations of capture, meat, murder, prayer and casting, hero portraits and creation sounds (PRES-005..007);
+    * tree positions (PRES-009);
+    * the minimap's terrain colours (HUD-030);
+    * working peasants named by job (HUD-032);
+    * the strength of random items (`RES.INI`, ITEM-015);
+    * menu hints (`HELP.INI`, SHELL-026) and quit confirmations (SHELL-027);
+    * the credits screen (SHELL-020; CREDITS only printed a path);
+    * the player's AI assistance (none, economy, war, full; AI-004) and the kingdom's lists of heroes, spies and items
+      (HUD-033).
 * **2026-10-21 — The ledger's first fill: 309 rules in 21 chapters.**
   * **Sources:**
     * the manual and the strategy guide;

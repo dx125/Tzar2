@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using Tzar2.Tools.Cli.Rules;
@@ -7,7 +8,9 @@ namespace Tzar2.Tools.Cli.Commands;
 /// <summary>
 /// <c>t2 rules</c>: the ledger of the original's rules (ADR 0181).
 /// <list type="bullet">
-/// <item><c>check</c>: validates <c>docs/rules/*.yaml</c>, the tests' rule ids and the README's report.</item>
+/// <item><c>check [--origin &lt;install&gt;]</c>: validates <c>docs/rules/*.yaml</c>, the tests' rule ids, the account of
+/// the original's data and the README's report; with an install (or <c>TZAR2_ORIGIN</c>) also that every section, key
+/// and column of the reference build's data files is accounted for.</item>
 /// <item><c>report</c>: writes the README's generated part.</item>
 /// <item><c>list [status...]</c>: prints the rules, optionally only those with the given statuses.</item>
 /// </list>
@@ -31,6 +34,16 @@ internal static class RulesCommand
         }
 
         RulesLedger ledger = RulesLedger.Load(root);
+        string? origin = null;
+        for (int i = 1; i < args.Length; i++)
+        {
+            if (args[i] == "--origin" && i + 1 < args.Length)
+            {
+                origin = args[++i];
+            }
+        }
+
+        origin ??= Environment.GetEnvironmentVariable("TZAR2_ORIGIN");
         switch (args[0])
         {
             case "report":
@@ -54,6 +67,12 @@ internal static class RulesCommand
                 break;
             default:
                 ledger.CheckReport();
+                if (!string.IsNullOrWhiteSpace(origin) && Directory.Exists(origin))
+                {
+                    ledger.CheckInstall(origin);
+                    stdout.WriteLine($"Checked the data account against {origin}.");
+                }
+
                 break;
         }
 
@@ -70,10 +89,11 @@ internal static class RulesCommand
 
     private static void PrintUsage(TextWriter o)
     {
-        o.WriteLine("Usage: t2 rules check | report | list [status...]");
+        o.WriteLine("Usage: t2 rules check [--origin <install>] | report | list [status...]");
         o.WriteLine();
         o.WriteLine("The ledger of the original's rules (docs/rules, ADR 0181).");
-        o.WriteLine("  check    validate the chapters, the tests' [Trait(\"Rule\", ...)] ids and the README's report");
+        o.WriteLine("  check    validate the chapters, the tests' [Trait(\"Rule\", ...)] ids, the data account and the README's report;");
+        o.WriteLine("           with --origin (or TZAR2_ORIGIN) also that every name of the original's data files is accounted for");
         o.WriteLine("  report   write the README's generated report");
         o.WriteLine("  list     print the rules; give statuses (tested, implemented, partial, missing, deviation, unclear) to filter");
     }
