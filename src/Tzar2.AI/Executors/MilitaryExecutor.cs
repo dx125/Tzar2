@@ -41,7 +41,7 @@ public sealed class MilitaryExecutor : IAiExecutor
     public void Run(AiExecutorContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (!context.Settings.WarAi)
+        if (!context.WarAi)
         {
             return;
         }

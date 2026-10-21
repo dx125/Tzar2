@@ -281,6 +281,9 @@ public struct FramePlayer
     /// <summary>Score (F4; GAME-17, UNK-29 placeholder formula).</summary>
     public long Score;
 
+    /// <summary>AI assistance the kingdom has asked for: bit 1 economy, bit 2 war (ADR 0183).</summary>
+    public byte AiAssist;
+
     /// <summary>Match statistics (F4 and the statistics file; GAME-17).</summary>
     public KingdomStatistics Statistics;
 

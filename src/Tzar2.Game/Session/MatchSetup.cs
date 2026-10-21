@@ -96,6 +96,12 @@ public sealed record MatchSetup
     public bool Ranked { get; init; }
 
     /// <summary>
+    /// AI assistance (the original's lobby option "AI Assist"; ADR 0183): every human kingdom gets a standby AI that runs
+    /// its economy, its war or both when its human asks (<c>SetAiAssist</c>). Part of the match fingerprint when set.
+    /// </summary>
+    public bool AiAssist { get; init; }
+
+    /// <summary>
     /// A multiplayer match (ADR 0162): several human kingdoms, each with a standby AI that takes over when its human
     /// drops (REQ-NET-07; ADR 0163). Part of the match fingerprint.
     /// </summary>

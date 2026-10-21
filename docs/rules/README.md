@@ -96,7 +96,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 
 | Chapter | Rules | Tested | Implemented | Partial | Missing | Deviation | Unclear |
 |---|---|---|---|---|---|---|---|
-| [Computer opponents](ai.yaml) (AI) | 4 | 0 | 0 | 1 | 1 | 1 | 1 |
+| [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 6 | 4 | 0 | 4 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 22 | 14 | 3 | 1 | 1 | 0 | 3 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 333 | 151 | 70 | 44 | 40 | 9 | 19 |
+| **All** | 333 | 152 | 70 | 44 | 39 | 9 | 19 |
 
 ## Not done yet
 
@@ -126,7 +126,6 @@ Missing and partial rules.
 ### Computer opponents
 
 * **AI-001** (partial): Each computer kingdom plays an AI script, chosen per player before the game. *Tzar2 picks the script; it cannot be chosen (SHELL-010, SHELL-016).* (ADR 0178)
-* **AI-004**: A player can put his kingdom under the computer's assistance, none, economy, war or full, from the card with nothing selected. *The simulation can hand a whole kingdom to the computer (SetController); the economy and war halves and the orders are missing.* Work: STATUS work queue 3.
 
 ### Combat
 
@@ -185,7 +184,7 @@ Missing and partial rules.
 * **HUD-029**: An order shows only when its condition holds; the quest order only when there are quests. *The quest order is always there.*
 * **HUD-030** (partial): The minimap paints terrains, trees and cliffs in the colours of the terrain set's data. *Tzar2 takes each tile's colour from its picture.*
 * **HUD-032**: A working peasant is named by its job, woodcutter, farmer, miner or builder.
-* **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The quests and the next idle peasant work; the lists of heroes, spies and items open empty, as the original fills them at run time.*
+* **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The kingdom's card shows with nothing selected; the quests, AI assistance and the next idle peasant work. The lists of heroes, spies and items open empty, as the original fills them at run time.*
 
 ### Items
 

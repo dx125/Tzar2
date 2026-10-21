@@ -112,7 +112,7 @@ public sealed class NavalExecutor : IAiExecutor
             return; // a land map: nothing to do
         }
 
-        if (context.Settings.EconomyAi)
+        if (context.EconomyAi)
         {
             EntityId harbor = Harbor(context, out bool site);
             if (harbor.IsNone && !site && overseas)
@@ -127,7 +127,7 @@ public sealed class NavalExecutor : IAiExecutor
             Fish(context);
         }
 
-        if (context.Settings.WarAi)
+        if (context.WarAi)
         {
             Land(context, landType);
             Patrol(context, landType, overseas);

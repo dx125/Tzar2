@@ -60,12 +60,12 @@ play-test.
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
    every change.
 2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done).
-   The Magic Workshop's crafting and the holders' list of units inside are done (log below). Left:
+   The Magic Workshop's crafting, the holders' list of units inside, the kingdom's card and AI assistance are done
+   (log below). Left:
    * the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013);
-   * AI assistance (none, economy, war, full; AI-004) and the lists of heroes, spies and items with nothing selected
-     (HUD-033).
+   * the lists of heroes, spies and items on the kingdom's card (HUD-033).
 
-   The spy orders and AI assistance need the sim first. `attack_type` is on no card of the original, so it is left
+   The spy orders need the sim first. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
    order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
@@ -110,6 +110,15 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — The kingdom's card and AI assistance (ADR 0183; work queue item 2).**
+  * With nothing selected, the card is now the kingdom's (MENU.INI `ownership`): next idle peasant, quests, the lists
+    and, where the match offers it, AI assistance (`ownership_ai`). Before, it was empty: the ledger said the next-idle
+    and quest buttons worked, but only their keys and hotkeys did.
+  * AI assistance: the human's standby AI runs the economy, the war or both when asked (`SetAiAssist`, two player
+    flags), using the AI's existing economy and war halves. The button in force is lit.
+  * It is the lobby's "AI Assist" option, as in the original, and is always on in single-player skirmishes.
+  * What each half does in the original is unverified; a capture with assistance on would settle it.
 
 * **2026-10-21 — A holder's units inside: the list, Emerge one, and Unload at a place (work queue item 2).**
   * A selected castle, outpost, ship or carpet of the player shows INSIDE (how many units of how many) and the

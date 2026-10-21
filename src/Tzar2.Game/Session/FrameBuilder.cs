@@ -299,6 +299,7 @@ public static class FrameBuilder
             fp.PopulationCap = state.PopulationCap;
             fp.Defeated = (state.Flags & PlayerFlags.Defeated) != 0;
             fp.Victorious = (state.Flags & PlayerFlags.Victorious) != 0;
+            fp.AiAssist = (byte)(((state.Flags & PlayerFlags.AssistEconomy) != 0 ? 1 : 0) | ((state.Flags & PlayerFlags.AssistWar) != 0 ? 2 : 0));
             fp.Statistics = KingdomStatistics.From(world.Kingdoms[p]);
             fp.Score = VictorySystem.Score(world.Ruleset.World, world.Kingdoms[p]);
             for (int w = 0; w < TechnologyRow.Capacity / 64; w++)

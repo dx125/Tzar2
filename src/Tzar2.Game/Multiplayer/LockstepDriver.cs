@@ -200,10 +200,12 @@ internal sealed class LockstepDriver(NetworkMatch match, LockstepClient client) 
 
     private CommandList WithoutControllerChanges(CommandList batch)
     {
+        // AI assistance only in a match that offers it (ADR 0183): every peer drops it alike.
+        bool assist = match.Descriptor?.Settings.AiAssist == true;
         bool any = false;
         for (int i = 0; i < batch.Count; i++)
         {
-            any |= batch[i].Kind == CommandKind.SetController;
+            any |= batch[i].Kind == CommandKind.SetController || (!assist && batch[i].Kind == CommandKind.SetAiAssist);
         }
 
         if (!any)
@@ -215,7 +217,7 @@ internal sealed class LockstepDriver(NetworkMatch match, LockstepClient client) 
         for (int i = 0; i < batch.Count; i++)
         {
             ref readonly Command c = ref batch[i];
-            if (c.Kind != CommandKind.SetController)
+            if (c.Kind != CommandKind.SetController && (assist || c.Kind != CommandKind.SetAiAssist))
             {
                 _filtered.Add(c.Kind, batch.EntitiesOf(c), c.X, c.Y, c.Target, c.Arg0, c.Arg1, c.Flags);
             }

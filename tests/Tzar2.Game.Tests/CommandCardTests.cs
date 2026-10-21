@@ -218,6 +218,35 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "AI-004")]
+    [Trait("Rule", "HUD-033")]
+    public void With_nothing_selected_the_kingdom_card_shows_and_AI_assistance_is_asked_for_and_lit()
+    {
+        _cards.Menus["kingdom"] = [new CardButton("nextidle", 'N', CardAction.NextIdle, string.Empty, 82, "Next idle peasant")];
+        _cards.Menus["kingdom_ai"] = [.. _cards.Menus["kingdom"], new CardButton("view_ai", 'A', CardAction.Submenu, "aiassist", 250, "AI Assistance")];
+        _cards.Menus["aiassist"] = [new CardButton("set_ai_none", 'N', CardAction.AiAssist, "0", 268, "NO Assistance"), new CardButton("set_ai_eco", 'E', CardAction.AiAssist, "1", 267, "ECONOMY Assistance")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = Context([]) with { IsOwn = false };
+
+        Assert.Equal(["nextidle"], card.Build(none).Select(s => s!.Value.Button.Order));
+        Assert.True(card.Press(none, card.Build(none)[0]!.Value).NextIdlePeasant);
+        CardContext assist = none with { AiAssist = true };
+        CardSlot view = card.Build(assist)[1]!.Value;
+        Assert.Equal("view_ai", view.Button.Order);
+        card.Press(assist, view);
+        IReadOnlyList<CardSlot?> modes = card.Build(assist);
+        Assert.True(modes[0]!.Value.Active); // no assistance yet
+
+        Command eco = Single(card.Press(assist, modes[1]!.Value));
+        Assert.Equal((CommandKind.SetAiAssist, 1), (eco.Kind, eco.Arg0));
+        _session.Submit(card.Press(assist, modes[1]!.Value).Commands!);
+        _session.Step(2);
+        Assert.True((_session.Simulation.World.Players[0].Flags & PlayerFlags.AssistEconomy) != 0);
+        CardContext after = Context([]) with { IsOwn = false, AiAssist = true };
+        Assert.Equal((false, true), (card.Build(after)[0]!.Value.Active, card.Build(after)[1]!.Value.Active));
+    }
+
+    [Fact]
     public void An_order_that_needs_a_target_waits_for_it_and_is_highlighted()
     {
         EntityId peasant = Own("euro.peon");
@@ -273,6 +302,8 @@ public sealed class CommandCardTests : IDisposable
         public HashSet<string> Capturing { get; } = [];
 
         public Dictionary<ushort, string> MenuOverride { get; } = [];
+
+        public string? KingdomMenu(bool aiAssist) => aiAssist ? "kingdom_ai" : "kingdom";
 
         public IReadOnlyList<CardButton> Card(string? menu) => menu is not null && Menus.TryGetValue(menu, out List<CardButton>? b) ? b : [];
 

@@ -154,7 +154,7 @@ rules:
     rule: With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help.
     source: ['data MENU.INI [ownership] [ownership_ai]', 'data ORDERS.INI view_heroes view_spys view_items view_ai']
     status: partial
-    note: The quests and the next idle peasant work; the lists of heroes, spies and items open empty, as the original fills them at run time.
+    note: The kingdom's card shows with nothing selected; the quests, AI assistance and the next idle peasant work. The lists of heroes, spies and items open empty, as the original fills them at run time.
   HUD-034:
     rule: The hint of a category of the build menu lists the letters of the buildings in it.
     source: [owner 2026-10-21 (fourth play-test)]

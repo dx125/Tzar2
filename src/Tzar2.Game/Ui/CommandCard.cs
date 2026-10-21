@@ -69,20 +69,36 @@ public sealed class CommandCard
         var card = new List<CardSlot?>();
         var whole = new List<CardSlot>();
         WholeCard = whole;
-        if (context.Placing || !context.IsOwn || Lead(context) is not { } lead)
+        if (context.Placing)
         {
             return card;
         }
 
-        FrameEntity e = context.Frame.Entities[lead];
-        string civ = _source.Civilization(e.TypeId);
-        if (e.ConstructionPermille >= 0)
+        FrameEntity e = default;
+        string civ = string.Empty;
+        string? menu;
+        if (context.Selection.Count == 0)
         {
-            card.Add(new CardSlot(new CardButton("cancel", 'C', CardAction.Cancel, string.Empty, 109, "Cancel construction"), true, false));
+            // Nothing selected: the kingdom's card (HUD-033), with AI assistance where the match offers it (AI-004).
+            menu = OpenMenu ?? _source.KingdomMenu(context.AiAssist);
+        }
+        else if (context.IsOwn && Lead(context) is { } lead)
+        {
+            e = context.Frame.Entities[lead];
+            civ = _source.Civilization(e.TypeId);
+            if (e.ConstructionPermille >= 0)
+            {
+                card.Add(new CardSlot(new CardButton("cancel", 'C', CardAction.Cancel, string.Empty, 109, "Cancel construction"), true, false));
+                return card;
+            }
+
+            menu = OpenMenu ?? _source.Menu(e.TypeId);
+        }
+        else
+        {
             return card;
         }
 
-        string? menu = OpenMenu ?? _source.Menu(e.TypeId);
         var buttons = (TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).Where(b => !Hidden(context, b, e)).ToList();
         if (buttons.Count > Slots)
         {
@@ -293,6 +309,10 @@ public sealed class CommandCard
                 return Commands(CommandKind.ConvertUnit, OwnIds(selected, e => e.IsMobile), arg0: into);
             case CardAction.NextIdle:
                 return new CardPress(NextIdlePeasant: true);
+            case CardAction.AiAssist when context.AiAssist && int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int assist):
+                var help = new CommandList();
+                help.Add(CommandKind.SetAiAssist, [], arg0: assist);
+                return new CardPress(Commands: help);
             case CardAction.Quests when context.HasQuests:
                 return new CardPress(ShowQuests: true);
             case CardAction.Quests:
@@ -749,6 +769,7 @@ public sealed class CommandCard
         CardAction.PickItem => context.Mode == OrderMode.PickItem,
         CardAction.UseItem => context.Mode == OrderMode.UseItem,
         CardAction.Unload => context.Mode == OrderMode.Unload,
+        CardAction.AiAssist => Me(context).AiAssist.ToString(CultureInfo.InvariantCulture) == b.Argument,
         CardAction.Stance => Lead(context) is { } l && b.Argument == context.Frame.Entities[l].Stance.ToString(CultureInfo.InvariantCulture),
         CardAction.Gate => Lead(context) is { } g && GateButtonOn(b.Argument, context.Frame.Entities[g].Gate),
         _ => false,
@@ -766,7 +787,7 @@ public sealed class CommandCard
     // do orders a technology unlocks (TECHTREE [orders]: bribe, spells, loans...) until it is researched.
     private bool Hidden(CardContext context, CardButton b, in FrameEntity lead)
     {
-        int gate = _rules.OrderTechnology(b.Order, _source.Civilization(lead.TypeId));
+        int gate = _rules.OrderTechnology(b.Order, lead.Id.IsNone ? string.Empty : _source.Civilization(lead.TypeId));
         if (gate >= 0 && !Me(context).HasTechnology(gate))
         {
             return true;
@@ -830,6 +851,8 @@ public sealed class CommandCard
                 return selected.Any(e => e.Owner == _me && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null) ? (true, string.Empty) : (false, "needs a trader");
             case CardAction.Unload:
                 return selected.Any(e => e.Owner == _me && InsideCount(context, e.Id) > 0) ? (true, string.Empty) : (false, "nobody inside");
+            case CardAction.AiAssist:
+                return context.AiAssist ? (true, string.Empty) : (false, "this match offers no AI assistance");
             case CardAction.Craft:
                 if (!selected.Any(e => e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is not null))
                 {

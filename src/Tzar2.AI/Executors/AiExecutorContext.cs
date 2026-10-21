@@ -276,6 +276,15 @@ public sealed class AiExecutorContext
     /// <summary>Commands issued this run.</summary>
     public int Issued { get; private set; }
 
+    /// <summary>
+    /// Whether the AI runs the kingdom's economy, construction, production and research this run: the map's "Economy AI",
+    /// or for a human's standby AI the drop takeover or economy assistance (ADR 0163, 0183).
+    /// </summary>
+    public bool EconomyAi { get; private set; }
+
+    /// <summary>Whether the AI defends and attacks this run: the map's "War AI", or the takeover or war assistance.</summary>
+    public bool WarAi { get; private set; }
+
     internal CommandList Output { get; }
 
     internal void Begin(World world, AiBinding binding, AiPlayerState state, AiOptions options)
@@ -286,6 +295,10 @@ public sealed class AiExecutorContext
         Options = options;
         CommandsLeft = options.MaxCommandsPerRun;
         Issued = 0;
+        PlayerFlags flags = world.Players[state.Settings.Slot].Flags;
+        bool whole = !state.Settings.Standby || (flags & PlayerFlags.AiControlled) != 0;
+        EconomyAi = state.Settings.EconomyAi && (whole || (flags & PlayerFlags.AssistEconomy) != 0);
+        WarAi = state.Settings.WarAi && (whole || (flags & PlayerFlags.AssistWar) != 0);
         PlacementSearchesLeft = MaxPlacementSearchesPerRun;
         int classes = Census.Model.ClassCount;
         if (_inProgressDelta.Length != classes)

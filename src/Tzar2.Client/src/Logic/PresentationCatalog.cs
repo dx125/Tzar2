@@ -319,6 +319,13 @@ public sealed class PresentationCatalog : ICardSource
             "attack_ground" => (CardAction.AttackGround, string.Empty),
             "next_idle_peon" => (CardAction.NextIdle, string.Empty),
             "view_quests" => (CardAction.Quests, string.Empty),
+            "set" when argument.ToLowerInvariant() is "ai_none" or "ai_eco" or "ai_war" or "ai_full" => (CardAction.AiAssist, argument.ToLowerInvariant() switch
+            {
+                "ai_eco" => "1",
+                "ai_war" => "2",
+                "ai_full" => "3",
+                _ => "0",
+            }),
             "spell" when argument.Length > 0 => (CardAction.Spell, argument.ToLowerInvariant()),
             "raisedead" or "cloak" or "murder" => (CardAction.Spell, verb),
             "mine" or "dig" or "chop" or "fishing" => (CardAction.Harvest, string.Empty),
@@ -384,6 +391,9 @@ public sealed class PresentationCatalog : ICardSource
 
     /// <inheritdoc/>
     public string Civilization(ushort typeId) => _types[typeId].Civilization;
+
+    /// <inheritdoc/>
+    public string? KingdomMenu(bool aiAssist) => _menus.Section(aiAssist ? "ownership_ai" : "ownership") is null ? null : aiAssist ? "ownership_ai" : "ownership";
 
     /// <inheritdoc/>
     public string Name(ushort typeId) => _types[typeId].Name;

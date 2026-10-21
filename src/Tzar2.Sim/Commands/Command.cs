@@ -126,6 +126,13 @@ public enum CommandKind : ushort
     /// relay's control events, in the same tick on every peer; peers' own batches never carry it (the game drops it).
     /// </summary>
     SetController = 48,
+
+    /// <summary>
+    /// AI assistance (ADR 0183): the issuing kingdom's computer runs its economy (Arg0 bit 1) and its war (bit 2), or
+    /// neither (0). It acts only where the match gave the human a standby AI (the "AI Assist" option); the game layer
+    /// drops the command otherwise.
+    /// </summary>
+    SetAiAssist = 49,
     // GAME-07…11 (ADR 0096): values 20-39.
 
     /// <summary>The listed units walk to own holder <see cref="Command.Target"/> (castle, outpost, ship, carpet) and enter it (GAME-09).</summary>

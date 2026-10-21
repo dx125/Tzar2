@@ -58,6 +58,9 @@ public enum CardAction
     /// <summary>Show the quest log.</summary>
     Quests,
 
+    /// <summary>AI assistance <see cref="CardButton.Argument"/>: 0 none, 1 economy, 2 war, 3 full (ADR 0183).</summary>
+    AiAssist,
+
     /// <summary>The next page of a card with more orders than slots (Tzar2's; <see cref="CardButton.Argument"/> = "2/3").</summary>
     Page,
 
@@ -175,6 +178,12 @@ public interface ICardSource
     /// <summary>The menu of an entity type's card, or null.</summary>
     string? Menu(ushort typeId);
 
+    /// <summary>
+    /// The kingdom's card, shown with nothing selected (lists of heroes, spies and items, quests, the next idle peasant;
+    /// with <paramref name="aiAssist"/> also AI assistance), or null.
+    /// </summary>
+    string? KingdomMenu(bool aiAssist);
+
     /// <summary>The civilization an entity type belongs to (empty for the common ones).</summary>
     string Civilization(ushort typeId);
 
@@ -201,6 +210,7 @@ public interface ICardSource
 /// <param name="ModeArgument">Its argument (a spell).</param>
 /// <param name="HasQuests">Whether the map has a quest log.</param>
 /// <param name="Picked">The unit picked in the list of those inside the selected building (ORD-015), or none.</param>
+/// <param name="AiAssist">Whether the match offers AI assistance (ADR 0183).</param>
 public sealed record CardContext(
     GameFrame Frame,
     IReadOnlyList<EntityId> Selection,
@@ -210,7 +220,8 @@ public sealed record CardContext(
     OrderMode Mode = OrderMode.None,
     int ModeArgument = 0,
     bool HasQuests = false,
-    EntityId Picked = default);
+    EntityId Picked = default,
+    bool AiAssist = false);
 
 /// <summary>A dialog a card button opens in the card's place.</summary>
 public enum CardDialogKind

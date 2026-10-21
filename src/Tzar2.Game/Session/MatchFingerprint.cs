@@ -79,6 +79,12 @@ public sealed record MatchFingerprint(ulong RulesetHash, ulong MapHash, ulong Se
             h.Add(0x4D50).Add(setup.Multiplayer ? 1 : 0).Add(setup.Ranked ? 1 : 0);
         }
 
+        // AI assistance (standby AIs for the humans, ADR 0183); matches without it hash as before.
+        if (setup.AiAssist)
+        {
+            h.Add(0x4141).Add(1);
+        }
+
         // The scenario and the trigger settings are part of the match (ADR 0130); plain skirmishes hash as before.
         if (setup.Scenario is { } scenario)
         {

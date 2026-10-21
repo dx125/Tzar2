@@ -32,7 +32,7 @@ public sealed class ResearchExecutor : IAiExecutor
     public void Run(AiExecutorContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (!context.Settings.EconomyAi || context.World.Ruleset.Technologies.Count == 0)
+        if (!context.EconomyAi || context.World.Ruleset.Technologies.Count == 0)
         {
             return;
         }

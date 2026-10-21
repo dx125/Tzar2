@@ -101,6 +101,9 @@ public sealed record MatchSettings
     /// <summary>Game speed in percent of the classic tick rate (the relay's tick length).</summary>
     public int SpeedPercent { get; init; } = 100;
 
+    /// <summary>AI assistance for the humans (the lobby's "AI Assist"; ADR 0183).</summary>
+    public bool AiAssist { get; init; }
+
     /// <summary>The map source these settings describe.</summary>
     public IMapSource MapSource() => Map == MapSourceKind.TestMap
         ? new SkirmishTestMap(TestMapSize)
@@ -132,7 +135,7 @@ public sealed record MatchSettings
         w.WriteByte((byte)GameType);
         w.WriteVarInt64(ScoreLimit);
         w.WriteVarInt64(TimeLimitMinutes);
-        w.WriteByte((byte)((NoFog ? 1 : 0) | (Explored ? 2 : 0) | (DayNight ? 4 : 0) | (Weather ? 8 : 0) | (CheatsAllowed ? 16 : 0) | (Ranked ? 32 : 0)));
+        w.WriteByte((byte)((NoFog ? 1 : 0) | (Explored ? 2 : 0) | (DayNight ? 4 : 0) | (Weather ? 8 : 0) | (CheatsAllowed ? 16 : 0) | (Ranked ? 32 : 0) | (AiAssist ? 64 : 0)));
         w.WriteUInt64(ResumeSnapshotHash);
         w.WriteVarInt64(SpeedPercent);
     }
@@ -173,7 +176,7 @@ public sealed record MatchSettings
         int speed = (int)Bounded(r.ReadVarInt64(), 25, 400);
         if (map is not (MapSourceKind.TestMap or MapSourceKind.RandomMap) || type > RandomMapType.Dry || terrain > MapTerrainSet.Winter
             || size > RandomMapSize.RealWorld || resources > MapResourceLevel.High || victory > VictoryCondition.NotSpecified
-            || gameType > GameType.Deathmatch || flags > 63 || ruleset.Length == 0)
+            || gameType > GameType.Deathmatch || flags > 127 || ruleset.Length == 0)
         {
             throw new InvalidDataException("Match settings out of range.");
         }
@@ -205,6 +208,7 @@ public sealed record MatchSettings
             Ranked = ranked,
             ResumeSnapshotHash = resume,
             SpeedPercent = speed,
+            AiAssist = (flags & 64) != 0,
         };
     }
 
@@ -350,6 +354,7 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             Teams = Teams,
             CheatsAllowed = s.CheatsAllowed && !s.Ranked,
             Ranked = s.Ranked,
+            AiAssist = s.AiAssist,
             Ai = ai,
             Multiplayer = multiplayer,
             LocalSlot = localSlot,
@@ -393,6 +398,7 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             Weather = setup.Weather,
             CheatsAllowed = setup.CheatsAllowed,
             Ranked = setup.Ranked,
+            AiAssist = setup.AiAssist,
         };
         return new MatchDescriptor(settings, [.. setup.Players.Select(p => new MatchPlayer(
             p.Slot, names?.Invoke(p.Slot) ?? string.Empty, p.Civilization, p.Controller, p.Difficulty, (byte)((setup.Teams >> (p.Slot * 4)) & 0xF)))]);
