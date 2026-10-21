@@ -24,6 +24,7 @@ public class DiplomacyTests
     [InlineData(Kingdoms.Stance.Enemy, true, true)]
     [InlineData(Kingdoms.Stance.Neutral, false, true)]
     [InlineData(Kingdoms.Stance.Ally, false, false)]
+    [Trait("Rule", "DIP-001")]
     public void Stances_decide_what_military_units_attack(Stance stance, bool peasantHit, bool soldierHit)
     {
         // Player 0's footman between player 1's peasant and footman; only player 0's stance changes.
@@ -42,6 +43,7 @@ public class DiplomacyTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-002")]
     public void Stances_are_asymmetric_an_ally_does_not_strike_back_and_allies_cannot_be_attacked_on_order()
     {
         using var d = new SimDriver(TestMap(48, 16, Unit("euro.footman", 0, 20, 8), Unit("euro.footman", 1, 21, 8)), ruleset: Classic);
@@ -61,6 +63,7 @@ public class DiplomacyTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-003")]
     public void Unit_control_and_resources_are_shared_only_when_both_allies_offer_them()
     {
         using var d = new SimDriver(TestMap(48, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 20, 10)), ruleset: Classic);
@@ -90,6 +93,7 @@ public class DiplomacyTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-005")]
     public void Tribute_moves_resources_once_per_interval_and_never_overflows()
     {
         using var d = new SimDriver(TestMap(32, 16), players: 3, ruleset: Classic);
@@ -146,6 +150,7 @@ public class DiplomacyTests
     }
 
     [Fact]
+    [Trait("Rule", "CAP-004")]
     public void Lobby_teams_start_allied_with_shared_vision_and_buildings_of_non_enemies_cannot_be_captured()
     {
         using var d = new SimDriver(
@@ -165,6 +170,7 @@ public class DiplomacyTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    [Trait("Rule", "ORD-013")]
     public void An_open_gate_lets_its_owner_and_allies_through_but_never_enemies(bool allied)
     {
         // A wall across the map with player 0's gate in it; player 0's peasant keeps the automatic gate open.

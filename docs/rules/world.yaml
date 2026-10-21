@@ -1,0 +1,52 @@
+schema: tzar2-rules/1
+prefix: WORLD
+title: Terrain and movement
+rules:
+  WORLD-001:
+    rule: Water (sea, rivers and lakes) can be crossed only by ships and by flying units such as bats, dragons and magic carpets.
+    source: [manual Terrain]
+    status: tested
+  WORLD-002:
+    rule: Trees and bushes cannot be walked through; once a tree is cut down, buildings can be put where it stood.
+    source: [manual Terrain]
+    status: implemented
+  WORLD-003:
+    rule: Rocks, mountains and cliffs cannot be walked through.
+    source: [manual Terrain]
+    status: tested
+  WORLD-004:
+    rule: Units walk and build over scenery such as tufts, bones, pebbles and branches.
+    source: [manual Terrain]
+    status: implemented
+  WORLD-005:
+    rule: There are four terrain sets, Grassland, Summer, Winter and Desert.
+    source: [manual Terrain]
+    status: implemented
+  WORLD-006:
+    rule: A bridge carries land units over water.
+    source: [manual Common Buildings (Bridge)]
+    status: tested
+  WORLD-007:
+    rule: How fast units move depends on the game speed and on the kind of unit.
+    source: [manual Commanding Units, capture capture-20261019-163231]
+    status: tested
+    adr: [0171, 0172]
+  WORLD-008:
+    rule: A group moves at the speed of its slowest member.
+    source: [capture capture-20261019-221300]
+    status: tested
+    adr: [0024]
+  WORLD-009:
+    rule: A chopped tree is never drawn on top of a building or a wall.
+    source: [patch 1.05 (TZAR110.TXT)]
+    status: implemented
+  WORLD-010:
+    rule: The bodies of the dead never block the way (a bug of the original where battlefields became walls).
+    source: [community TDD ORIG-01]
+    status: deviation
+    note: Fixes a bug of the original (TDD §5, ORIG-01).
+  WORLD-011:
+    rule: Units find a way to any place they can reach, however long; there is no path depth to set.
+    source: [manual Preferences Screen (path depth)]
+    status: deviation
+    note: The original limited the search depth (TDD §5, ORIG-03); Tzar2 always finds the way and drops the option.

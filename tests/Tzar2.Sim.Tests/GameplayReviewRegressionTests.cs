@@ -16,6 +16,7 @@ namespace Tzar2.Sim.Tests;
 public class GameplayReviewRegressionTests
 {
     [Fact]
+    [Trait("Rule", "BLD-015")]
     public void R1_building_on_top_of_units_pushes_them_out()
     {
         using var d = new SimDriver(TestMap(40, 24, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 9, 10), Unit("euro.peon", 1, 15, 11), Unit("euro.peon", 0, 16, 12)), ruleset: Classic);
@@ -192,6 +193,7 @@ public class GameplayReviewRegressionTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-008")]
     public void N1_an_armed_building_only_fights_once_completed()
     {
         Ruleset ruleset = ClassicWith("euro.house: { Armament: { attack: 4, range: 5, rate: 3 } }");

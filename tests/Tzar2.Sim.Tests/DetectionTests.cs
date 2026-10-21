@@ -16,6 +16,7 @@ public class DetectionTests
     private static readonly Ruleset Rules = ClassicWith("euro.peon: { Detector: { radius: 6 } }");
 
     [Fact]
+    [Trait("Rule", "FOG-006")]
     public void A_detector_reveals_a_cloaked_unit_but_not_from_inside_a_holder()
     {
         using var d = new SimDriver(

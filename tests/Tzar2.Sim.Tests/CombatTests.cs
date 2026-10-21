@@ -27,6 +27,8 @@ public class CombatTests
         ]);
 
     [Fact]
+    [Trait("Rule", "WAR-001")]
+    [Trait("Rule", "WAR-002")]
     public void Damage_is_attack_times_bonus_minus_defence_with_a_minimum()
     {
         // archer (7) vs footman (defence 2), BONUS.INI arrow_unit vs footman -25%: 7 x 0.75 = 5 - 2 = 3.
@@ -50,6 +52,7 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-003")]
     public void Hits_follow_the_swing_cycle()
     {
         // A footman next to an idle peasant: one hit per 1,000 ms (RATE 6), the first after the 500 ms hit delay.
@@ -73,6 +76,7 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-007")]
     public void Idle_soldiers_acquire_enemies_in_sight_and_peasants_do_not()
     {
         using var d = new SimDriver(
@@ -220,6 +224,7 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-014")]
     public void Soldiers_destroy_a_building_which_frees_its_tiles_and_leaves_a_ruin_not_a_corpse()
     {
         using var d = new SimDriver(

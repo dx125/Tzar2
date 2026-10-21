@@ -1,0 +1,33 @@
+schema: tzar2-rules/1
+prefix: FOG
+title: Exploration and visibility
+rules:
+  FOG-001:
+    rule: Unexplored ground is black; units moving into it reveal it, and nothing can be explored beyond the edge of the map.
+    source: [manual Exploring The Map]
+    status: tested
+  FOG-002:
+    rule: Once explored, ground keeps showing its resources and the enemy's buildings; enemy units, ships and siege weapons show only while one of the kingdom's units or buildings sees them.
+    source: [manual Exploring The Map]
+    status: tested
+  FOG-003:
+    rule: No Fog shows enemy units in every explored part of the map, even where the kingdom has nobody.
+    source: [manual Single Player Setup Screen]
+    status: tested
+  FOG-004:
+    rule: Explore makes the whole map known from the start.
+    source: [manual Single Player Setup Screen]
+    status: tested
+  FOG-005:
+    rule: Invisible units become visible when they attack, use an item or cast a spell.
+    source: [patch 1.09 (TZAR110.TXT)]
+    status: partial
+    note: Attacking and casting reveal them; using an item does not.
+  FOG-006:
+    rule: Spies and ninjas see each other through invisibility.
+    source: [patch 1.05 (TZAR110.TXT)]
+    status: tested
+  FOG-007:
+    rule: Magic Vision lets eagles and other units lift the fog over an area.
+    source: [manual Arabian technologies (Magic Vision)]
+    status: implemented

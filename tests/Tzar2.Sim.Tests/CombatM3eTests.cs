@@ -28,6 +28,7 @@ public class CombatM3eTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-003")]
     public void Arrows_fly_and_hit_after_their_flight_time_with_the_same_damage()
     {
         // archer (7) vs footman (defence 2), arrow_unit vs footman -25%: 7 x 0.75 = 5 - 2 = 3 (CombatTests); the arrow
@@ -61,6 +62,7 @@ public class CombatM3eTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-004")]
     public void Catapult_stones_land_where_the_target_stood_and_splash_its_neighbours()
     {
         // Catapult attack 11 - footman defence 2 = 9; the neighbour 1/4 tile away takes the 50% splash: 4.
@@ -75,6 +77,7 @@ public class CombatM3eTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-004")]
     public void A_unit_that_steps_away_from_a_falling_stone_is_not_hit()
     {
         // Strategy guide: peasants step away "just as the catapult projectiles are about to land".
@@ -123,6 +126,7 @@ public class CombatM3eTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-010")]
     public void Hold_fire_never_starts_a_fight_and_stand_ground_never_chases()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.peon", 1, 7, 4)), ruleset: Classic);
@@ -147,6 +151,7 @@ public class CombatM3eTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-012")]
     public void Attack_ground_hits_what_stands_at_the_point()
     {
         using var d = new SimDriver(TestMap(40, 20, Unit("comm.catapult", 0, 2, 10), Unit("euro.footman", 1, 14, 10), Unit("euro.footman", 1, 14, 10) with { X = (14 * Tile) + 600 }), ruleset: Classic);
@@ -160,6 +165,7 @@ public class CombatM3eTests
     }
 
     [Fact]
+    [Trait("Rule", "HOLD-004")]
     public void A_holder_spreads_its_damage_share_over_the_units_inside()
     {
         // Castle (synthetic): cannon damage 85% taken, 15% spread; a 200-attack catapult: 200 x 1000 / 1700 = 117 ->

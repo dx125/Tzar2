@@ -56,6 +56,7 @@ public class InfrastructureTests
     }
 
     [Fact]
+    [Trait("Rule", "WORLD-003")]
     public void Map_passability_combines_corners_cliffs_and_blockers()
     {
         // 2x2 tiles; corner (2,0) is water, tile (0,1) is a cliff.

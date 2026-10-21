@@ -17,6 +17,7 @@ public class MatchTests
     private static readonly Ruleset ShortDays = ClassicWith("world: { dayLengthMs: 24000, nightSightPercent: 50 }");
 
     [Fact]
+    [Trait("Rule", "NAT-005")]
     public void The_day_clock_turns_to_night_and_back_and_night_can_shorten_sight()
     {
         // 24 s days (test rules): 16.7 ms per clock minute; 10:00 → 19:00 is 9,000 ms = 180 ticks.
@@ -43,6 +44,7 @@ public class MatchTests
     }
 
     [Fact]
+    [Trait("Rule", "NAT-006")]
     public void Weather_follows_the_terrain_set_and_the_seed()
     {
         static ulong RainyPeriods(string? set, ulong seed, bool weather = true)
@@ -72,6 +74,7 @@ public class MatchTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-006")]
     public void Standard_the_last_kingdom_standing_wins_and_walls_do_not_keep_a_kingdom_alive()
     {
         using var d = new SimDriver(
@@ -97,6 +100,7 @@ public class MatchTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-006")]
     public void Destroy_castles_defeats_a_kingdom_without_a_castle_even_with_units_left()
     {
         using var d = new SimDriver(
@@ -114,6 +118,8 @@ public class MatchTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-004")]
+    [Trait("Rule", "DIP-006")]
     public void Score_and_time_limits_and_allied_victory()
     {
         MapData map = TestMap(48, 16, Unit("euro.peon", 0, 5, 5), Unit("euro.peon", 1, 20, 5), Unit("euro.peon", 2, 40, 5));

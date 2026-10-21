@@ -145,6 +145,7 @@ public class M3ReviewRegressionTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-013")]
     public void An_automatic_gate_has_hysteresis()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.footman", 0, 20, 12)), ruleset: Classic);

@@ -1,0 +1,97 @@
+schema: tzar2-rules/1
+prefix: MAG
+title: Magic, religion and spies
+rules:
+  MAG-001:
+    rule: Only mages cast spells; each spell needs its technology and costs mana, which every caster has on its own and which comes back over time.
+    source: [manual Production Of Units, help ITEMS.TXT WI_SPELLS]
+    status: tested
+    note: Mana costs, cooldowns and the regeneration rate are placeholders (UNK-26).
+  MAG-002:
+    rule: European mages cast lightning and freeze, make units invisible and summon bats and stone golems.
+    source: [manual European Units (Mage)]
+    status: tested
+    note: The spells' strength is a placeholder (UNK-26).
+  MAG-003:
+    rule: Asian mages turn units to stone, make whirlpools that destroy ships, cast flame bolts, summon dragons and turn mana into experience.
+    source: [manual Asian Units (Mage)]
+    status: tested
+    note: The spells' strength is a placeholder (UNK-26).
+  MAG-004:
+    rule: Arabian mages summon magic carpets and jinn, raise the dead as skeletons, and cast magic vision and rain of fire.
+    source: [manual Arabian Units (Mage)]
+    status: tested
+    note: The spells' strength is a placeholder (UNK-26).
+  MAG-005:
+    rule: Rain of fire burns everyone under it, the caster's own units included.
+    source: [manual Hints About Gameplay]
+    status: tested
+  MAG-006:
+    rule: Raise the dead works on corpses, never on buildings.
+    source: [patch 1.05 (TZAR110.TXT)]
+    status: implemented
+  MAG-007:
+    rule: Confusion makes the units it hits hostile to everyone for a while.
+    source: [manual Asian technologies (Confusion)]
+    status: tested
+  MAG-008:
+    rule: Hypnotism (Asian, from Concentration) is a spell of the Asian mages.
+    source: [manual Asian Buildings (Mage Tower)]
+    status: unclear
+    note: Neither the manual nor the game's text says what it does; Tzar2 makes it hold the unit like freeze.
+  MAG-009:
+    rule: Priests heal units (with Healing) and bless them (Bless raises their attack for a while); Medicine lets them heal from farther; Arabian priests also exorcise, which Inquisition makes stronger.
+    source: [manual Civilizations (Priest), manual Researching Technologies]
+    status: tested
+  MAG-010:
+    rule: Priests are very good against mages and magic creatures.
+    source: [manual Hints About Gameplay, guide Unit Discussion]
+    status: implemented
+    note: From the bonus table.
+  MAG-011:
+    rule: Asian priests are made from monks.
+    source: [manual Asian Units (Priest)]
+    status: implemented
+  MAG-012:
+    rule: Spies (with Espionage) can impersonate a unit of another kingdom and reveal themselves again.
+    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self]
+    status: missing
+    work: STATUS work queue 3
+  MAG-013:
+    rule: Spies and ninjas see through each other's invisibility, and a spy can uncloak a ninja.
+    source: [patch 1.05 (TZAR110.TXT), data ORDERS.INI uncloak]
+    status: partial
+    note: Detection works; the uncloak order does nothing yet.
+    work: STATUS work queue 3
+  MAG-014:
+    rule: Ninjas (Asians, with Ninjas) cloak themselves and murder units.
+    source: [manual Asian Units (Ninja)]
+    status: tested
+  MAG-015:
+    rule: European and Arabian peasants, with Bribery, bribe enemy units over to their kingdom; peasants and crusaders cannot be bribed.
+    source: [manual Researching Technologies (Bribery), help ITEMS.TXT HT_BRIBE, patch 1.05 (TZAR110.TXT)]
+    status: tested
+    note: The price is a placeholder (UNK-26).
+  MAG-016:
+    rule: With Fanaticism and Crusade the cathedral preaches a crusade; the crusaders appear at an anchor placed no farther than 4 tiles from the cathedral.
+    source: [manual Researching Technologies (Crusade), patch 1.09 (TZAR110.TXT)]
+    status: tested
+    note: The number of crusaders is a placeholder (UNK-26).
+  MAG-017:
+    rule: After all crusaders have died a full crusade needs some time; one preached earlier brings fewer crusaders for the same price.
+    source: [patch 1.09 (TZAR110.TXT)]
+    status: partial
+    note: Tzar2 refuses a crusade during the wait instead of bringing fewer crusaders.
+  MAG-018:
+    rule: A crusader dying in a ship or a building, or impersonated by a spy who then reveals himself, is counted out of the crusade.
+    source: [patch 1.06 (TZAR110.TXT)]
+    status: partial
+    note: Deaths in ships and buildings count; impersonation is missing (MAG-012).
+  MAG-019:
+    rule: With Fanaticism and Jihad, Arabian peasants become Jihad warriors.
+    source: [manual Arabian Units (Jihad Warrior)]
+    status: tested
+  MAG-020:
+    rule: Units under a stone spell take no damage.
+    source: [community TDD GAME-11]
+    status: tested

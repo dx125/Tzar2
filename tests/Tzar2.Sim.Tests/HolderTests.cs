@@ -25,6 +25,7 @@ public class HolderTests
     ];
 
     [Fact]
+    [Trait("Rule", "HOLD-003")]
     public void Units_enter_a_castle_leave_the_map_and_come_out_next_to_it()
     {
         using var d = new SimDriver(TestMap(32, 16, [Structure("euro.castle", 0, 12, 5), .. Enumerable.Range(0, 3).Select(i => Unit("euro.footman", 0, 6, 5 + i))]), ruleset: Classic);
@@ -55,6 +56,7 @@ public class HolderTests
     }
 
     [Fact]
+    [Trait("Rule", "HOLD-001")]
     public void A_full_holder_takes_no_more_and_Landing_Tactics_adds_room()
     {
         Ruleset rules = ClassicWith("comm.galleon: { Holder: { capacity: 2 } }");
@@ -76,6 +78,7 @@ public class HolderTests
     }
 
     [Fact]
+    [Trait("Rule", "HOLD-007")]
     public void A_holder_takes_only_the_units_it_accepts()
     {
         using var d = new SimDriver(TestMap(24, 12, Unit("comm.carpet", 0, 8, 4), Unit("comm.catapult", 0, 5, 4), Unit("comm.galleon", 0, 0, 0) with { TypeKey = "euro.footman", X = 5 * Tile, Y = 8 * Tile }), ruleset: Classic);
@@ -89,6 +92,7 @@ public class HolderTests
     }
 
     [Fact]
+    [Trait("Rule", "HOLD-003")]
     public void Units_heal_inside_a_castle()
     {
         // castle: 120 hit points per minute (UNVERIFIED, UNK-24): 15 s heal 30.
@@ -106,6 +110,8 @@ public class HolderTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-009")]
+    [Trait("Rule", "HOLD-006")]
     public void Units_leave_a_destroyed_building_but_go_down_with_a_ship_at_sea()
     {
         using var d = new SimDriver(
@@ -130,6 +136,7 @@ public class HolderTests
     }
 
     [Fact]
+    [Trait("Rule", "HOLD-002")]
     public void A_galleon_carries_soldiers_across_the_water()
     {
         using var d = new SimDriver(AsciiMap(Strait, [Unit("comm.galleon", 0, 9, 2), .. Enumerable.Range(0, 3).Select(i => Unit("euro.footman", 0, 5, 1 + i))]), ruleset: Classic);
@@ -147,6 +154,7 @@ public class HolderTests
     }
 
     [Fact]
+    [Trait("Rule", "HOLD-009")]
     public void A_garrisoned_soldier_keeps_its_items_across_a_snapshot()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 12, 5), Unit("euro.footman", 0, 8, 7), Unit("comm.item", MapObject.Nature, 9, 7)), ruleset: Classic);
@@ -164,6 +172,7 @@ public class HolderTests
     }
 
     [Fact]
+    [Trait("Rule", "HOLD-005")]
     public void Units_inside_cannot_be_attacked()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 12, 5), Unit("euro.footman", 0, 10, 7), Unit("euro.footman", 1, 6, 7)), ruleset: Classic);

@@ -1,0 +1,60 @@
+schema: tzar2-rules/1
+prefix: WAR
+title: Combat
+rules:
+  WAR-001:
+    rule: Every unit has its own attack, defence and hit points; attack is the damage dealt, defence lowers the damage taken, and resistance lowers the damage a building takes.
+    source: [manual Production Of Units, manual The Selection View]
+    status: tested
+    note: The damage formula and its rounding are placeholders (UNK-08).
+  WAR-002:
+    rule: Some units have bonuses or penalties against others, from the bonus table; catapults are very good against ships, towers, catapults and buildings, pikemen against chariots and mounted units, macemen against catapults and ballistas, arrows bad against pikemen and chariots, priests very good against mages and magic creatures, dwarves excellent against buildings.
+    source: [manual Hints About Gameplay, guide Unit Discussion, data BONUS.INI]
+    status: tested
+  WAR-003:
+    rule: Each unit attacks at its own rate and range; ranged units shoot arrows, bolts, stones, cannon balls or rockets that fly to the target.
+    source: [manual The Selection View, data UNITS.TXT, capture capture-20261018-155421]
+    status: tested
+  WAR-004:
+    rule: Catapult stones land where the target stood and hurt what is near; a peasant who steps away as the stone falls is not hit.
+    source: [guide Economy]
+    status: tested
+  WAR-005:
+    rule: The computer's catapults throw one stone at a time.
+    source: [patch 1.10 (TZAR110.TXT)]
+    status: implemented
+  WAR-006:
+    rule: A ballista bolt flies fast.
+    source: [patch 1.09 (TZAR110.TXT)]
+    status: implemented
+    note: Its speed is a placeholder (UNK-22).
+  WAR-007:
+    rule: Idle soldiers attack enemies that come into sight; peasants do not.
+    source: [manual Diplomacy (Enemy)]
+    status: tested
+  WAR-008:
+    rule: Towers attack enemies in range by themselves once they are finished.
+    source: [manual Common Buildings]
+    status: tested
+  WAR-009:
+    rule: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it.
+    source: [guide Unit Discussion]
+    status: missing
+  WAR-010:
+    rule: The Messiah (campaign) is immune to magic.
+    source: [guide Campaign Discussion (Mission 18)]
+    status: missing
+  WAR-011:
+    rule: Units with a bonus against other kinds, as listed in the guide, (footmen against pikemen, archers and jihad warriors; orcs against hand-to-hand units; ronin against peasants; satraps and samurai against machines; warships against warships; cannon and rocket towers against warships) get it from the bonus table.
+    source: [guide Unit Discussion, data BONUS.INI]
+    status: implemented
+  WAR-012:
+    rule: Hand-to-hand units other than priests fight badly against bats and dragons.
+    source: [guide Unit Discussion]
+    status: implemented
+    note: From the bonus table.
+  WAR-013:
+    rule: Siege weapons hurt every unit where their shots land, their own kingdom's included.
+    source: [help ITEMS.TXT WI_SIEGE_WEAPON]
+    status: missing
+    note: Stones and shells spare the shooter's own units.

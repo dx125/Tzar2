@@ -50,7 +50,7 @@ rules:
     status: tested
     adr: [0179]
   CTRL-011:
-    rule: A right click on the ground moves the selection there; with Shift it adds a waypoint, with Ctrl it is a move-advance (fight on the way) and with Alt the units move without answering attacks.
+    rule: A right click on the ground moves the selection there, and with Ctrl it is a move-advance (fight on the way); Alt makes it a move-sneak and Shift adds a waypoint (ORD-004 and ORD-005).
     source: [manual "Commanding Units" (Move and Move-advance)]
     status: tested
   CTRL-012:
@@ -87,3 +87,48 @@ rules:
     rule: The ghost of a building being placed has no fill and wears the kingdom's colours; only the cells that block it turn red.
     source: [owner 2026-10-20 (first and second play-tests)]
     status: implemented
+  CTRL-019:
+    rule: A left click selects a unit, a box dragged with the left button selects the units inside it, and Shift+click adds a unit to the selection or takes it out.
+    source: [manual Selecting And Grouping Units, manual Hints About Gameplay]
+    status: tested
+  CTRL-020:
+    rule: Ctrl and a digit give the selection that number; the digit selects the group again; the number shows in the corner of the selection.
+    source: [manual Selecting And Grouping Units, manual Hot Keys]
+    status: partial
+    note: The group number is not drawn on the units.
+  CTRL-021:
+    rule: A double click (or a Ctrl+click) on a unit selects all units of its kind on the screen.
+    source: [manual Selecting And Grouping Units]
+    status: tested
+    note: The hot keys list gives Ctrl+double click as "same kind and same state"; Tzar2 follows the hot keys.
+  CTRL-022:
+    rule: A right click cancels the placement of a building or an item and most orders waiting for a target.
+    source: [manual Hints About Gameplay]
+    status: implemented
+  CTRL-023:
+    rule: The image of the building being placed is green where it can be built.
+    source: [manual Constructing A Building, manual Commanding Units (Build)]
+    status: unclear
+    note: After the owner's first play-test the ghost has no fill and only the cells that block it turn red (CTRL-018); whether the original tints the whole image green is to be confirmed by the owner.
+  CTRL-024:
+    rule: Holding Alt or Ctrl while placing a gate turns the direction of the gate to be built.
+    source: [manual Common Buildings (Wood Gate and Stone Gate), help ITEMS.TXT HT_BUILD_WALLS_GATES]
+    status: missing
+    note: The simulation builds turned gates (the editor places them); the client does not turn the ghost.
+  CTRL-025:
+    rule: The waypoints of the selection appear while Shift is held.
+    source: [manual Commanding Units (Move)]
+    status: missing
+  CTRL-026:
+    rule: Shift+right click on several enemies one after another makes the selection attack them in turn; Alt+right click on an object attacks every object of its type.
+    source: [manual Commanding Units (Attack)]
+    status: missing
+  CTRL-027:
+    rule: With Guard, Shift picks several objects to guard one after another and Alt picks every object of the clicked type.
+    source: [manual Commanding Units (Guard)]
+    status: missing
+  CTRL-028:
+    rule: Shift+click on an order button of a building queues five.
+    source: [owner 2026-10-21 (Tzar2's hotkey list)]
+    status: unclear
+    note: Tzar2's assumption from the hotkey checklist; no source of the original says so.

@@ -13,6 +13,7 @@ namespace Tzar2.Sim.Tests;
 public class EconomyTests
 {
     [Fact]
+    [Trait("Rule", "ECO-010")]
     public void A_worker_gathers_wood_and_the_stockpile_grows_by_exactly_what_it_delivers()
     {
         // Castle at tiles 2..6, a tree 4 tiles east of it, one peasant between them.
@@ -71,6 +72,7 @@ public class EconomyTests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-011")]
     public void A_depleted_node_is_removed_frees_its_tile_and_the_worker_moves_on_to_the_next()
     {
         Ruleset ruleset = ClassicWith("comm.tree: { ResourceNode: { amount: 15 } }");
@@ -91,6 +93,7 @@ public class EconomyTests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-013")]
     public void Loads_go_to_the_nearest_completed_drop_off_that_accepts_them()
     {
         // The storage is nearest to the tree but takes only stone/gold/iron; the lumber mill takes wood; the castle

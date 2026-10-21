@@ -32,6 +32,7 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-005")]
     public void Without_Learning_units_gain_no_levels()
     {
         // Strategy guide: "Researching Learning allows your units to gain experience" (combat.baseLevelCap 0).
@@ -43,6 +44,8 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "EXP-001")]
+    [Trait("Rule", "EXP-002")]
     public void Experience_follows_the_damage_dealt_and_levels_cost_more_each_time()
     {
         using SimDriver d = FootmanAtCastle(Strong, "te_learning");
@@ -61,6 +64,7 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-014")]
     public void The_level_cap_holds_until_Heroism()
     {
         using SimDriver d = FootmanAtCastle(Strong, "te_learning");
@@ -71,6 +75,7 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-017")]
     public void Warfare_speeds_up_learning()
     {
         using SimDriver slow = FootmanAtCastle(Strong, "te_learning");
@@ -86,6 +91,7 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "EXP-004")]
     public void Own_units_teach_nothing_but_training_dummies_do_up_to_their_level()
     {
         using var d = new SimDriver(TestMap(24, 12, Structure("comm.dummy", 0, 10, 4), Unit("euro.footman", 0, 8, 4), Unit("euro.peon", 0, 8, 8)), ruleset: Strong);
@@ -103,6 +109,7 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-018")]
     public void Level_twelve_makes_a_named_hero_and_Body_Building_adds_hit_points()
     {
         Ruleset rules = ClassicWith("euro.footman: { Armament: { attack: 100 } }\ncombat: { heroLevel: 2 }");
@@ -120,6 +127,7 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-015")]
     public void Leadership_shares_a_heroes_experience_with_the_units_around_it()
     {
         Ruleset rules = ClassicWith("euro.footman: { Armament: { attack: 100 } }\ncombat: { heroLevel: 1 }");
@@ -137,6 +145,7 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "TECH-027")]
     public void Philosophy_trains_units_at_a_higher_level()
     {
         Ruleset rules = ClassicWith("te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes: [footman] }] } }");
@@ -148,6 +157,7 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "EXP-006")]
     public void Persistent_heroes_round_trip_and_apply_to_a_new_map()
     {
         Ruleset rules = ClassicWith("euro.footman: { Armament: { attack: 100 } }\ncombat: { heroLevel: 2 }");

@@ -41,3 +41,66 @@ rules:
     rule: Units can walk over fields, farmers work on the field's own tiles, and nothing can be built on a field.
     source: [owner 2026-10-20 (before the second play-test)]
     status: tested
+  ECO-009:
+    rule: There are four resources in the stockpile, gold (golden rocks), stone (rocks), wood (trees) and food (fields, cows, fish); mana belongs to each caster.
+    source: [manual Resources]
+    status: implemented
+    note: Iron exists in the data but not on the screen (UNK-14).
+  ECO-010:
+    rule: Peasants cut wood, mine gold and stone, farm fields and tend cows; fishing boats fish at fish patches; peasants never fish.
+    source: [manual Resources]
+    status: tested
+  ECO-011:
+    rule: A rock holds a limited amount of gold or stone, shown in the selection view when it is clicked; a used-up node disappears.
+    source: [manual Resources]
+    status: tested
+  ECO-012:
+    rule: Fields give unlimited food but need constant care; neglected fields disappear.
+    source: [manual Resources]
+    status: tested
+  ECO-013:
+    rule: Loads go to the nearest finished building that takes them; the castle takes everything, the farm food, the lumber mill wood, the harbor fish.
+    source: [manual Civilizations (Castle Farm Lumbermill Harbor)]
+    status: tested
+  ECO-014:
+    rule: The storage takes gold and iron for the Europeans, gold and stone for the Asians, and iron, gold and stone for the Arabians.
+    source: [manual Civilizations (Storage)]
+    status: unclear
+    note: Tzar2 follows the manual, but the European storage researches Stone Mining, which suggests it takes stone too.
+  ECO-015:
+    rule: A peasant carries 10 wood, stone or gold; a load of milk or meat from a cow is 50.
+    source: [capture capture-20261018-222649]
+    status: tested
+    adr: [0170]
+  ECO-016:
+    rule: A peasant gathers one unit of a resource in 0.9 s.
+    source: [capture capture-20261019-232318]
+    status: tested
+    adr: [0175]
+  ECO-017:
+    rule: Cows are made at the farm after Domestication; peasants milk them, and a cow that is killed leaves meat.
+    source: [manual European Buildings (Farm), owner 2026-10-20]
+    status: tested
+  ECO-018:
+    rule: Asian peasants do not tend cows or carry milk.
+    source: [manual Asian Units (Peasant)]
+    status: unclear
+    note: The manual's list of the Asian peasant's work leaves out milk and cows, though the Asian farm makes cows; Tzar2 lets any peasant milk.
+  ECO-019:
+    rule: Arabian peasants with Cow Poaching take enemy cows.
+    source: [manual Arabian technologies (Cow Poaching)]
+    status: tested
+  ECO-020:
+    rule: Cows and fishing boats are the best sources of food, fields the cheapest.
+    source: [guide Economy]
+    status: implemented
+    note: Follows from the gathering rates, which are placeholders for fields and fish (UNK-17).
+  ECO-021:
+    rule: Only one peasant tends each field.
+    source: [help ITEMS.TXT HT_TEND_FIELDS]
+    status: missing
+    note: Tzar2 lets several farmers work one field.
+  ECO-022:
+    rule: A peasant can tend more than one cow, milking them in turn and taking the milk to the farm or the castle.
+    source: [help ITEMS.TXT HT_TEND_COWS]
+    status: implemented

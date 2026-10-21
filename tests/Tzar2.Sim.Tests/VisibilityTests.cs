@@ -20,6 +20,8 @@ namespace Tzar2.Sim.Tests;
 public class VisibilityTests
 {
     [Fact]
+    [Trait("Rule", "FOG-001")]
+    [Trait("Rule", "FOG-002")]
     public void A_unit_reveals_its_sight_explored_tiles_stay_explored_and_enemy_units_hide_beyond_sight()
     {
         using var d = new SimDriver(TestMap(64, 16, Unit("euro.peon", 0, 5, 8), Unit("euro.footman", 1, 40, 8)), ruleset: Classic);
@@ -48,6 +50,7 @@ public class VisibilityTests
     }
 
     [Fact]
+    [Trait("Rule", "FOG-002")]
     public void Enemy_buildings_are_remembered_as_last_seen_until_the_tile_is_seen_again()
     {
         using var d = new SimDriver(TestMap(64, 16, Unit("euro.peon", 0, 14, 5), Structure("euro.house", 1, 20, 4)), ruleset: Classic);
@@ -84,6 +87,8 @@ public class VisibilityTests
     }
 
     [Fact]
+    [Trait("Rule", "FOG-003")]
+    [Trait("Rule", "FOG-004")]
     public void No_fog_shows_explored_areas_and_explore_starts_with_the_whole_map_known()
     {
         MapData map = TestMap(64, 16, Unit("euro.peon", 0, 5, 8), Unit("euro.footman", 1, 40, 8), Structure("euro.house", 1, 50, 4));
@@ -108,6 +113,7 @@ public class VisibilityTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-003")]
     public void Shared_vision_needs_both_kingdoms_to_be_allies_and_to_offer_it()
     {
         using var d = new SimDriver(TestMap(64, 16, Unit("euro.peon", 0, 5, 8), Unit("euro.footman", 1, 40, 8)), ruleset: Classic, configure: c => c with { });
@@ -136,6 +142,7 @@ public class VisibilityTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-004")]
     public void A_temporary_reveal_shows_an_area_until_it_expires()
     {
         using var d = new SimDriver(TestMap(64, 16, Unit("euro.peon", 0, 5, 8)), ruleset: Classic);

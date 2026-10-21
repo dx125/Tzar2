@@ -18,6 +18,7 @@ namespace Tzar2.Sim.Tests;
 public class CaptureAndRallyTests
 {
     [Fact]
+    [Trait("Rule", "CAP-001")]
     public void Peasants_dig_to_capture_an_enemy_house_and_take_it_over()
     {
         using var d = new SimDriver(
@@ -40,6 +41,7 @@ public class CaptureAndRallyTests
     }
 
     [Fact]
+    [Trait("Rule", "CAP-002")]
     public void Influence_makes_buildings_near_their_town_harder_to_capture_and_near_the_enemy_easier()
     {
         using var d = new SimDriver(
@@ -61,6 +63,7 @@ public class CaptureAndRallyTests
     }
 
     [Fact]
+    [Trait("Rule", "CAP-001")]
     public void Capture_progress_is_lost_when_the_diggers_stop_and_sites_and_fields_cannot_be_captured()
     {
         using var d = new SimDriver(
@@ -83,6 +86,7 @@ public class CaptureAndRallyTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-018")]
     public void The_castle_is_deleted_only_with_shift()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4)), ruleset: Classic);
@@ -99,6 +103,7 @@ public class CaptureAndRallyTests
     }
 
     [Fact]
+    [Trait("Rule", "PROD-011")]
     public void Rally_with_default_action_sends_new_peasants_to_harvest_and_move_advance_to_fight()
     {
         using var d = new SimDriver(TestMap(40, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.barrack", 0, 2, 10), Tree(16, 4), Tree(16, 5)), ruleset: Classic);
@@ -120,6 +125,8 @@ public class CaptureAndRallyTests
     }
 
     [Fact]
+    [Trait("Rule", "PROD-007")]
+    [Trait("Rule", "TECH-022")]
     public void Supply_storage_raises_the_population_of_houses()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4), Structure("euro.house", 0, 16, 4)), ruleset: Classic);

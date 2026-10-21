@@ -1,0 +1,21 @@
+schema: tzar2-rules/1
+prefix: AI
+title: Computer opponents
+rules:
+  AI-001:
+    rule: Each computer kingdom plays an AI script, chosen per player before the game.
+    source: [manual Random Map Screen, manual Multiplayer Setup Screen]
+    status: partial
+    note: Tzar2 picks the script; it cannot be chosen (SHELL-010, SHELL-016).
+    adr: [0178]
+  AI-002:
+    rule: The computer's strategy (build order, technologies, army mix) comes from the original's scripts; its tactics are Tzar2's own, smarter with the difficulty.
+    source: [owner 2026-10-20]
+    status: deviation
+    note: Owner decision (2026-10-20, ADR 0178).
+    adr: [0178]
+  AI-003:
+    rule: The computer does not repair its damaged towers.
+    source: [guide Campaign Discussion (Mission 17)]
+    status: unclear
+    note: The guide describes one campaign mission; whether it is the AI's general behaviour is not known.

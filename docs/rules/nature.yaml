@@ -1,0 +1,31 @@
+schema: tzar2-rules/1
+prefix: NAT
+title: Nature, gateways, day and weather
+rules:
+  NAT-001:
+    rule: A magic gateway becomes the kingdom's once one of its military units has found and touched it; it then summons dwarves, orcs, ghosts and skeletons for gold.
+    source: [manual Common Buildings (Magic Gateway), guide Campaign Discussion]
+    status: tested
+  NAT-002:
+    rule: Animals live on the map; wild cows wander and join the kingdom that touches them; birds are never attacked.
+    source: [manual Terrain (Life), community TDD GAME-15]
+    status: tested
+  NAT-003:
+    rule: Bears and other guarding creatures fight near their home and go back when lured away.
+    source: [community TDD GAME-15]
+    status: tested
+  NAT-004:
+    rule: Cows can be slaughtered, and their meat collected by peasants or other units.
+    source: [help ITEMS.TXT HT_TEND_COWS]
+    status: partial
+    note: Peasants collect the meat; other units do not.
+  NAT-005:
+    rule: The clock globe turns through day and night; a day lasts 37.5 minutes and a game starts at 10:00.
+    source: [manual The Clock, capture capture-20261019-195053]
+    status: tested
+    adr: [0173]
+    note: When night begins and ends, and whether night shortens sight, are placeholders (UNK-09, UNK-32).
+  NAT-006:
+    rule: Each terrain set has its weather, rain or snow; the preferences switch the weather effects and the day and night pictures on or off.
+    source: [manual Preferences Screen, data TERRAIN.INI]
+    status: tested

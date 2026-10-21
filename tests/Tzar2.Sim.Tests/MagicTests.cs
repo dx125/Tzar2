@@ -23,6 +23,8 @@ public class MagicTests
     private static int Mana(SimDriver d, EntityId e) => d.World.Manas.Get(e).MilliMana / 1000;
 
     [Fact]
+    [Trait("Rule", "MAG-001")]
+    [Trait("Rule", "MAG-002")]
     public void Lightning_costs_mana_has_a_cooldown_and_needs_enough_mana()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 4, 4), Unit("euro.footman", 1, 10, 4), Unit("euro.footman", 1, 10, 7)), ruleset: NoRegen);
@@ -52,6 +54,8 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-002")]
+    [Trait("Rule", "TECH-033")]
     public void Freeze_needs_its_technology_and_stops_the_target()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 4, 4), Unit("euro.footman", 1, 10, 4)), ruleset: Classic);
@@ -77,6 +81,7 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-009")]
     public void Priests_heal_and_bless()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.priest", 0, 4, 4), Unit("euro.footman", 0, 6, 4), Unit("euro.footman", 1, 8, 4)), ruleset: Classic);
@@ -101,6 +106,8 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-002")]
+    [Trait("Rule", "PROD-010")]
     public void Summons_cost_the_casters_mana_and_population()
     {
         using var d = new SimDriver(TestMap(32, 12, Structure("euro.castle", 0, 20, 4), Unit("euro.mage", 0, 4, 4)), ruleset: NoRegen);
@@ -113,6 +120,7 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-004")]
     public void Raise_dead_turns_corpses_into_skeletons()
     {
         using var d = new SimDriver(TestMap(32, 12, [Unit("euro.mage", 0, 4, 4), .. Enumerable.Range(0, 3).Select(i => Unit("euro.peon", 1, 10, 3 + i))]), ruleset: Classic);
@@ -128,6 +136,9 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-003")]
+    [Trait("Rule", "MAG-004")]
+    [Trait("Rule", "MAG-005")]
     public void Rain_of_fire_burns_everyone_under_it_and_whirlpools_only_ships()
     {
         using var d = new SimDriver(
@@ -153,6 +164,9 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-003")]
+    [Trait("Rule", "MAG-007")]
+    [Trait("Rule", "MAG-020")]
     public void Stone_takes_no_damage_and_confusion_turns_a_unit_on_its_friends()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 0, 4), Unit("euro.footman", 1, 8, 4), Unit("euro.footman", 1, 8, 5), Unit("euro.footman", 0, 10, 8)), ruleset: Classic);
@@ -193,6 +207,7 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-016")]
     public void A_crusade_raises_crusaders_once_and_waits_its_cooldown()
     {
         using var d = new SimDriver(TestMap(40, 20, Structure("euro.cathedral", 0, 4, 4)), ruleset: Classic);
@@ -217,6 +232,7 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-019")]
     public void Peasants_become_Jihad_warriors_for_their_price()
     {
         using var d = new SimDriver(TestMap(24, 12, Unit("arab.peon", 0, 4, 4)), ruleset: Classic);
@@ -236,6 +252,7 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-015")]
     public void Peasants_bribe_enemy_soldiers_but_not_peasants()
     {
         using var d = new SimDriver(TestMap(24, 12, Unit("euro.peon", 0, 4, 4), Unit("euro.footman", 1, 8, 4), Unit("euro.peon", 1, 8, 7)), ruleset: Classic);
@@ -253,6 +270,7 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-014")]
     public void A_soul_kills_a_unit_but_not_a_hero()
     {
         using var d = new SimDriver(

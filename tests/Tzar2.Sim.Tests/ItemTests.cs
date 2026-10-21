@@ -22,6 +22,7 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-002")]
     public void A_weapon_raises_attack_while_carried()
     {
         // footman 9 - defence 2 = 7; with the weapon (+3, UNVERIFIED default) 12 - 2 = 10... minus nothing: 10.
@@ -48,6 +49,7 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-014")]
     public void Two_units_racing_for_one_item_never_duplicate_it()
     {
         using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.footman", 0, 8, 4), Item("comm.item", 6, 4)), ruleset: Classic);
@@ -61,6 +63,7 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-001")]
     public void A_full_inventory_takes_nothing_more()
     {
         Ruleset rules = ClassicWith("euro.footman: { Inventory: { slots: 1 } }");
@@ -73,6 +76,7 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-006")]
     public void Resource_items_go_to_the_stockpile()
     {
         using var d = new SimDriver(TestMap(24, 12, Unit("euro.peon", 0, 4, 4), Item("comm.resitem", 6, 4)), ruleset: Classic);
@@ -84,6 +88,7 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-005")]
     public void Potions_heal_and_level_and_are_used_up()
     {
         using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Item("comm.item_health", 5, 4), Item("comm.item_plusplus", 5, 6)), ruleset: Classic);
@@ -105,6 +110,7 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-003")]
     public void A_spell_book_has_charges_and_a_cooldown()
     {
         // The Fire Rain book (manual): 3 charges, 10 s between uses (UNVERIFIED defaults), no mana needed.
@@ -131,6 +137,7 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-011")]
     public void A_dead_units_items_fall_to_the_ground_and_friends_can_be_given_items()
     {
         using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.archer", 0, 4, 7), Item("comm.item", 5, 4), Item("comm.item_armor", 5, 5)), ruleset: Classic);
