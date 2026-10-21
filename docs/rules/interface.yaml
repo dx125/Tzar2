@@ -104,8 +104,9 @@ rules:
   HUD-022:
     rule: The kingdom of a spy is shown as its true kingdom to its owner.
     source: [patch 1.05 (TZAR110.TXT)]
-    status: missing
-    note: Spies cannot impersonate yet (MAG).
+    status: tested
+    adr: [0184]
+    note: Its owner sees it in the copied look and its own colour; other kingdoms see the copied unit and kingdom.
   HUD-023:
     rule: When a unit picked out of a selection dies, it is no longer picked out.
     source: [patch 1.09 (TZAR110.TXT)]

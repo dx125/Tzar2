@@ -84,6 +84,20 @@ public static class FrameBuilder
 
             e.Burning = world.Burnings.Has(id);
             e.Cloaked = world.IsCloaked(id);
+            e.LooksLike = -1;
+            if (world.Disguises.Count != 0 && world.Disguises.IndexOf(id) is >= 0 and var dg)
+            {
+                Disguise look = world.Disguises.At(dg);
+                if (viewer is { } onlooker && onlooker != identity.Owner)
+                {
+                    e.TypeId = look.TypeId; // other kingdoms see the unit it impersonates (ADR 0184)
+                    e.Owner = look.Owner;
+                }
+                else
+                {
+                    e.LooksLike = look.TypeId;
+                }
+            }
             if (world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool is { } pool)
             {
                 e.MaxMana = world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max);

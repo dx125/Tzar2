@@ -41,9 +41,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // and did nothing) and Gunpowder raises the cannon towers' attack: the ruleset hash only.
     // (crafting on the command card, 2026-10-21) spell books cost four times more and take twice as long to craft (1.05),
     // two new combat settings: the ruleset hash only.
+    // (ADR 0184) the spies' disguise store joins the hashed layout (version 9); behaviour unchanged.
     private const ulong GoldenRulesetHash = 0x1C85E835B06CBF46UL;
-    private const ulong GoldenHashStream = 0xE1E5C587EDB8DF2BUL;
-    private const ulong GoldenFinalFullHash = 0x37E0477EC4C35A38UL;
+    private const ulong GoldenHashStream = 0x2BDE24C6A83538E7UL;
+    private const ulong GoldenFinalFullHash = 0xA1DC4B70F3D37C14UL;
 
     private const int Ticks = 1600;
 

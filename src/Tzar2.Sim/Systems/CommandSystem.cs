@@ -265,6 +265,12 @@ public sealed partial class CommandSystem : ISimSystem
             case CommandKind.Uncloak:
                 return CombatMagicCommands.Uncloak(world, command, entities);
 
+            case CommandKind.Impersonate:
+                return CombatMagicCommands.Impersonate(world, command, entities);
+
+            case CommandKind.RevealSelf:
+                return CombatMagicCommands.RevealSelf(world, command, entities);
+
             case CommandKind.Trade:
                 return KingdomCommands.Trade(world, command, entities);
 

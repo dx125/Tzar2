@@ -107,7 +107,13 @@ public sealed class CommandCard
         }
 
         var buttons = (menu?.StartsWith(ListMenu, StringComparison.Ordinal) == true ? KingdomList(context, menu[ListMenu.Length..])
-            : TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).Where(b => !Hidden(context, b, e)).ToList();
+            : TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).ToList();
+        if (OpenMenu is null && !e.Id.IsNone && (_rules.EntityTypes[e.TypeId].Traits.Abilities & AbilityFlags.Impersonate) != 0)
+        {
+            buttons.AddRange(_source.AbilityButtons("impersonate")); // the spy's impersonate and reveal (MAG-012)
+        }
+
+        buttons = [.. buttons.Where(b => !Hidden(context, b, e))];
         if (buttons.Count > Slots)
         {
             // What this build cannot do yet goes to the last page.
@@ -319,6 +325,10 @@ public sealed class CommandCard
                 return new CardPress(NextIdlePeasant: true);
             case CardAction.Uncloak:
                 return Commands(CommandKind.Uncloak, OwnIds(selected, e => e.IsMobile));
+            case CardAction.Impersonate:
+                return new CardPress(Mode: OrderMode.Impersonate);
+            case CardAction.Reveal:
+                return Commands(CommandKind.RevealSelf, OwnIds(selected, e => e.IsMobile));
             case CardAction.KingdomList:
                 _menus.Push(ListMenu + b.Argument);
                 _page = 0;
@@ -819,6 +829,7 @@ public sealed class CommandCard
         CardAction.PickItem => context.Mode == OrderMode.PickItem,
         CardAction.UseItem => context.Mode == OrderMode.UseItem,
         CardAction.Unload => context.Mode == OrderMode.Unload,
+        CardAction.Impersonate => context.Mode == OrderMode.Impersonate,
         CardAction.AiAssist => Me(context).AiAssist.ToString(CultureInfo.InvariantCulture) == b.Argument,
         CardAction.Stance => Lead(context) is { } l && b.Argument == context.Frame.Entities[l].Stance.ToString(CultureInfo.InvariantCulture),
         CardAction.Gate => Lead(context) is { } g && GateButtonOn(b.Argument, context.Frame.Entities[g].Gate),
@@ -845,6 +856,10 @@ public sealed class CommandCard
 
         switch (b.Action)
         {
+            case CardAction.Impersonate:
+                return lead.LooksLike >= 0; // already disguised: only reveal
+            case CardAction.Reveal:
+                return lead.LooksLike < 0;
             case CardAction.Research:
                 int tech = _rules.TechnologyId(b.Argument);
                 return tech >= 0 && Me(context).HasTechnology(tech);

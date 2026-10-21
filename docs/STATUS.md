@@ -60,9 +60,9 @@ play-test.
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
    every change.
 2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done).
-   The Magic Workshop's crafting, the holders' list of units inside, the kingdom's card with its lists and AI
-   assistance are done (log below). Left: the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013), which
-   need the sim first. `attack_type` is on no card of the original, so it is left
+   Done (log below): the Magic Workshop's crafting, the holders' list of units inside, the kingdom's card with its
+   lists and AI assistance, the ninja's uncloak and the spies' impersonate and reveal. Left: nothing on the card but
+   the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
    order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
@@ -107,6 +107,18 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — Spies impersonate, ninjas uncloak (ADR 0184; work queue item 2).**
+  * A spy walks to another kingdom's unit and takes its look (MENU.INI `spy_add`: impersonate, reveal). Other
+    kingdoms see the copied unit and kingdom; its own kingdom sees it in the look but in its own colour (1.05).
+  * The copied kingdom and its allies leave it alone until it reveals itself or attacks. It keeps the spy's abilities
+    (1.05: impersonating peasants cannot build).
+  * The ledger had MAG-013 wrong: `uncloak` is the cloaked ninja's own order (MENU.INI `ninja_cloaked`), not a
+    spy's. A cloaked unit's card now takes its menu's cloaked variant.
+  * Hashes: the disguise store raises the hashed layout to 9 and the snapshot format to 11. Every golden and bench
+    is re-pinned, with no change in behaviour (the AI's commands are the same); old saves are refused.
+  * Unverified, for the owner: how close the spy must get, which units it can copy, whether the copied kingdom's
+    towers and detectors see through it, and whether attacking ends it.
 
 * **2026-10-21 — The kingdom's card and AI assistance (ADR 0183; work queue item 2).**
   * With nothing selected, the card is now the kingdom's (MENU.INI `ownership`): next idle peasant, quests, the lists

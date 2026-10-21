@@ -292,7 +292,7 @@ public sealed class WorldRenderer : IDisposable
 
     private void DrawEntity(in FrameEntity e, int index, EntityTypeDefinition def, int px, int py, int player, long timeMs, WorldOptions options)
     {
-        TypeVisual visual = _catalog.Type(e.TypeId);
+        TypeVisual visual = _catalog.Type(e.LooksLike >= 0 ? (ushort)e.LooksLike : e.TypeId); // an own spy in its disguise
         uint phase = (uint)e.Id.Index * 7919u;
         if (def.HasFootprint)
         {

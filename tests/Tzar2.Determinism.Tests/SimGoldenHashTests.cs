@@ -35,9 +35,11 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // (M3 stream E, ADRs 0090-0096) the GAME-07…11 stores join the hashed layout; behaviour unchanged ->
     // (naval, ADRs 0140-0143) 430E1DC0BEC256CB / F0A9532388B6ED2C: the docking and explorer stores join the layout ->
     // (ADR 0180) ECB4C7BEBF9D9D91 / 793657126549046E: the production queue holds entries (an item and a count) and the
-    // worker an idle timer, so the hashed layout version is 8; behaviour unchanged.
-    private const ulong GoldenFinalFullHash = 0x793657126549046EUL;
-    private const ulong GoldenHashStream = 0xECB4C7BEBF9D9D91UL;
+    // worker an idle timer, so the hashed layout version is 8; behaviour unchanged ->
+    // (ADR 0184) 6E50902314F85F51 / E5B45D0EB91557CC: the spies' disguise store joins the layout (version 9); behaviour
+    // unchanged.
+    private const ulong GoldenFinalFullHash = 0xE5B45D0EB91557CCUL;
+    private const ulong GoldenHashStream = 0x6E50902314F85F51UL;
 
     private const int Ticks = 300;
 

@@ -293,6 +293,9 @@ public enum AbilityFlags : byte
 
     /// <summary>A hero cannot be killed outright (murder, souls).</summary>
     KillImmune = 16,
+
+    /// <summary>A spy takes the look of another kingdom's unit (order <c>impersonate</c>; MAG-012, ADR 0184).</summary>
+    Impersonate = 32,
 }
 
 /// <summary>Trait <c>ConvertsFrom</c>: a unit made from another in place (Jihad warriors from peasants, priests from monks).</summary>

@@ -70,6 +70,12 @@ public enum CardAction
     /// <summary>Cloaked units become visible again (a ninja's uncloak, MAG-013).</summary>
     Uncloak,
 
+    /// <summary>A spy takes the look of a unit clicked next (MAG-012).</summary>
+    Impersonate,
+
+    /// <summary>A disguised spy shows its true self (order <c>reveal_self</c>).</summary>
+    Reveal,
+
     /// <summary>The next page of a card with more orders than slots (Tzar2's; <see cref="CardButton.Argument"/> = "2/3").</summary>
     Page,
 
@@ -198,6 +204,12 @@ public interface ICardSource
     /// uncloak instead of cloak), or null when it has none.
     /// </summary>
     string? MenuVariant(string? menu, string state);
+
+    /// <summary>
+    /// Buttons added to the card of a unit with an ability (<c>impersonate</c>: a spy's impersonate and reveal, MENU.INI
+    /// <c>spy_add</c>), or none.
+    /// </summary>
+    IReadOnlyList<CardButton> AbilityButtons(string ability);
 
     /// <summary>The civilization an entity type belongs to (empty for the common ones).</summary>
     string Civilization(ushort typeId);

@@ -63,6 +63,9 @@ public enum OrderMode
     /// <summary>Use the default item on the clicked target or point (GAME-10).</summary>
     UseItem,
 
+    /// <summary>Spies take the look of the clicked unit of another kingdom (MAG-012).</summary>
+    Impersonate,
+
     /// <summary>
     /// Holders let their units out at the clicked place (ships and carpets, manual: Unload), or only the unit picked in a
     /// building's list (its <c>EntityId.Value</c> is the mode's argument; manual: Emerge, ORD-015).
@@ -357,6 +360,8 @@ public static class OrderResolver
             OrderMode.Crusade => [new PlannedCommand(CommandKind.PreachCrusade, CommandFlags.None, EntityId.None, x, y, 0, 0, own)],
             OrderMode.PickItem when target is { } item && item.Id != EntityId.None => [new PlannedCommand(CommandKind.PickItem, queue, item.Id, x, y, 0, 0, own)],
             OrderMode.UseItem => [new PlannedCommand(CommandKind.UseItem, CommandFlags.None, target?.Id ?? EntityId.None, x, y, -1, 0, own)],
+            OrderMode.Impersonate when target is { IsMobile: true } m && m.Owner != player && m.Id != EntityId.None
+                => [new PlannedCommand(CommandKind.Impersonate, CommandFlags.None, m.Id, x, y, 0, 0, own)],
             OrderMode.Unload => [new PlannedCommand(CommandKind.Unload, CommandFlags.None, argument != 0 ? EntityId.FromValue(unchecked((uint)argument)) : EntityId.None, x, y, 0, 0, own)],
             _ => [],
         };

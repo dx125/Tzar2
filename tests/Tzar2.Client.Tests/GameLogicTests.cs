@@ -100,7 +100,7 @@ public sealed class PresentationCatalogTests
     [InlineData("gamble", null, CardAction.Gamble, "")]
     [InlineData("trade1", null, CardAction.Exchange, "")]
     [InlineData("trade", null, CardAction.Trade, "")]
-    [InlineData("impersonate", null, CardAction.Unsupported, "impersonate")]
+    [InlineData("impersonate", null, CardAction.Impersonate, "")]
     public void Card_orders_map_onto_the_sims_commands(string action, string? className, CardAction expected, string argument)
         => Assert.Equal((expected, argument), PresentationCatalog.Classify(action, null, className));
 

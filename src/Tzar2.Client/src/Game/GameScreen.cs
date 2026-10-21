@@ -1954,7 +1954,7 @@ public partial class GameScreen : Node
                     OrderMode.Guard => "s_guard",
                     OrderMode.Repair => "s_repair",
                     OrderMode.AttackGround or OrderMode.MoveAdvance => "s_attack",
-                    OrderMode.Capture or OrderMode.Bribe or OrderMode.PickItem => "s_hand",
+                    OrderMode.Capture or OrderMode.Bribe or OrderMode.PickItem or OrderMode.Impersonate => "s_hand",
                     OrderMode.Spell => "s_spell",
                     OrderMode.UseItem => "s_potion",
                     _ => "s_move",

@@ -176,6 +176,9 @@ public sealed class ErrandSystem : ISimSystem
             case ErrandKind.Bribe:
                 CombatMagicCommands.TryBribe(world, unit, target);
                 break;
+            case ErrandKind.Impersonate:
+                CombatMagicCommands.TryImpersonate(world, unit, target);
+                break;
             case ErrandKind.Convert:
                 CombatMagicCommands.FinishConversion(world, unit, (ushort)e.Arg);
                 break;

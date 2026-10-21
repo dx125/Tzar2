@@ -24,6 +24,7 @@ internal sealed partial class EntityCompiler
         ["Spellcaster"] = ["spells"],
         ["Experience"] = [],
         ["Briber"] = [],
+        ["Impersonator"] = [],
         ["BribeImmune"] = [],
         ["CrusadePreacher"] = [],
         ["TrainingDummy"] = [],
@@ -175,7 +176,8 @@ internal sealed partial class EntityCompiler
             | (entry.Find("BribeImmune") is not null ? AbilityFlags.BribeImmune : 0)
             | (entry.Find("CrusadePreacher") is not null ? AbilityFlags.PreachCrusade : 0)
             | (entry.Find("TrainingDummy") is not null ? AbilityFlags.TrainingDummy : 0)
-            | (entry.Find("KillImmune") is not null ? AbilityFlags.KillImmune : 0);
+            | (entry.Find("KillImmune") is not null ? AbilityFlags.KillImmune : 0)
+            | (entry.Find("Impersonator") is not null ? AbilityFlags.Impersonate : 0);
         if (entry.Find("ConvertsFrom") is { } convert)
         {
             string order = StrOf("ConvertsFrom", "order") ?? throw new RulesException(convert.Source, convert.Line, $"{key}.ConvertsFrom needs an order");
