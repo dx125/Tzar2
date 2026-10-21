@@ -133,6 +133,15 @@ public enum CommandKind : ushort
     /// drops the command otherwise.
     /// </summary>
     SetAiAssist = 49,
+
+    /// <summary>The listed own units drop their invisibility at once (a cloaked ninja's <c>uncloak</c>, MAG-013).</summary>
+    Uncloak = 50,
+
+    /// <summary>The listed spies walk to <see cref="Command.Target"/>, another kingdom's unit, and take its look (MAG-012, ADR 0184).</summary>
+    Impersonate = 51,
+
+    /// <summary>The listed disguised spies show their true selves again (order <c>reveal_self</c>).</summary>
+    RevealSelf = 52,
     // GAME-07…11 (ADR 0096): values 20-39.
 
     /// <summary>The listed units walk to own holder <see cref="Command.Target"/> (castle, outpost, ship, carpet) and enter it (GAME-09).</summary>

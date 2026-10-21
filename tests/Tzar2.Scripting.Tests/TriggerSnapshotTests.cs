@@ -108,8 +108,9 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // at SPEED x 10 px/s instead of 12; then (ADR 0172) measured classes walk at their own speed, whatever SPEED;
             // then (ADR 0178) a unit on a move-advance that is hit fights back, and a unit may chase what can hit it; then
             // (owner play-test 2026-10-20) a unit still walking to a structure reaches it only next to it; then (ADR 0180)
-            // queue entries and the workers' idle timer change the hashed layout, and the third play-test's rules the match.
-            Assert.Equal("A029AC3B1A6C937E", d.Hashes[^1].ToString("X16"));
+            // queue entries and the workers' idle timer change the hashed layout, and the third play-test's rules the match;
+            // then (ADR 0184) the spies' disguise store joins the hashed layout.
+            Assert.Equal("97FACDCBD3411D80", d.Hashes[^1].ToString("X16"));
         }
     }
 

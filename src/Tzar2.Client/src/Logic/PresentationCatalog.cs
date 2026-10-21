@@ -325,6 +325,9 @@ public sealed class PresentationCatalog : ICardSource
             "attack_ground" => (CardAction.AttackGround, string.Empty),
             "next_idle_peon" => (CardAction.NextIdle, string.Empty),
             "view_quests" => (CardAction.Quests, string.Empty),
+            "uncloak" => (CardAction.Uncloak, string.Empty),
+            "impersonate" => (CardAction.Impersonate, string.Empty),
+            "reveal_self" => (CardAction.Reveal, string.Empty),
             "set" when argument.ToLowerInvariant() is "ai_none" or "ai_eco" or "ai_war" or "ai_full" => (CardAction.AiAssist, argument.ToLowerInvariant() switch
             {
                 "ai_eco" => "1",
@@ -397,6 +400,13 @@ public sealed class PresentationCatalog : ICardSource
 
     /// <inheritdoc/>
     public string Civilization(ushort typeId) => _types[typeId].Civilization;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<CardButton> AbilityButtons(string ability) => ability == "impersonate" ? Card("spy_add") : [];
+
+    /// <inheritdoc/>
+    public string? MenuVariant(string? menu, string state)
+        => menu is not null && _menus.Section(menu + "_" + state) is not null ? menu + "_" + state : null;
 
     /// <inheritdoc/>
     public string? KingdomMenu(bool aiAssist) => _menus.Section(aiAssist ? "ownership_ai" : "ownership") is null ? null : aiAssist ? "ownership_ai" : "ownership";

@@ -36,9 +36,10 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0180, third play-test) queues of entries (the AI keeps at most 10 items queued, as before), loads but milk
     // appear at once, the next node toward the drop-off, units leave on free tiles, idle peasants find work; layout 8.
     // (fourth play-test 2026-10-21) every load goes to the drop-off nearest to where it was gathered.
+    // (ADR 0184) the spies' disguise store joins the hashed layout (version 9): the hashes only, the commands are the same.
     private const ulong GoldenCommandStream = 0xCD94857D53DBAD5AUL;
-    private const ulong GoldenHashStream = 0x3F570539D75F6617UL;
-    private const ulong GoldenFinalFullHash = 0xC3D5077C366508FBUL;
+    private const ulong GoldenHashStream = 0xE135058973427DFCUL;
+    private const ulong GoldenFinalFullHash = 0x18AFA6984A3B8D9CUL;
 
     private const int Ticks = 9600;
 

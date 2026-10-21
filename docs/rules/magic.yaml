@@ -54,15 +54,15 @@ rules:
     status: implemented
   MAG-012:
     rule: Spies (with Espionage) can impersonate a unit of another kingdom and reveal themselves again.
-    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self]
-    status: missing
-    work: STATUS work queue 3
+    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, patch 1.05 (TZAR110.TXT)]
+    status: tested
+    adr: [0184]
+    note: The spy walks to the unit and takes its look; that kingdom and its allies leave it alone until it reveals itself or attacks. Reach, which units, towers and detectors, and attack ending it are unverified.
   MAG-013:
-    rule: Spies and ninjas see through each other's invisibility, and a spy can uncloak a ninja.
-    source: [patch 1.05 (TZAR110.TXT), data ORDERS.INI uncloak]
-    status: partial
-    note: Detection works; the uncloak order does nothing yet.
-    work: STATUS work queue 3
+    rule: Spies and ninjas see through each other's invisibility, and a cloaked ninja can drop its cloak (uncloak).
+    source: [patch 1.05 (TZAR110.TXT), 'data MENU.INI [ninja_cloaked] uncloak', data ORDERS.INI uncloak]
+    status: tested
+    note: Uncloak is on the cloaked ninja's own card (MENU.INI ninja_cloaked), not a spy's order; the card switches to it while the unit is cloaked.
   MAG-014:
     rule: Ninjas (Asians, with Ninjas) cloak themselves and murder units.
     source: [manual Asian Units (Ninja)]

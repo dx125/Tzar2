@@ -284,6 +284,64 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "MAG-012")]
+    [Trait("Rule", "HUD-022")]
+    public void A_spy_impersonates_a_clicked_enemy_others_see_the_disguise_its_owner_its_true_kingdom_and_it_reveals_itself()
+    {
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions { OverrideTexts = [new("test.yaml", "euro.footman: { Impersonator: {} }")] });
+        const int Tile = Tzar2.Sim.Map.MapState.UnitsPerTile;
+        MapData map = Tzar2.Sim.Scenarios.ScenarioMaps.WithObjects(Tzar2.Sim.Scenarios.ScenarioMaps.Build("spy", 24, 12, new byte[24 * 12], []),
+            [new MapObject("euro.footman", 0, (4 * Tile) + (Tile / 2), (4 * Tile) + (Tile / 2)), new MapObject("euro.footman", 1, (8 * Tile) + (Tile / 2), (4 * Tile) + (Tile / 2))]);
+        using var sim = new Simulation(rules, map, new SimulationConfig { PlayerCount = 2, MatchSeed = 5 });
+        World world = sim.World;
+        EntityId spy = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 0);
+        EntityId look = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 1);
+        var stances = new CommandList();
+        stances.Add(CommandKind.SetStance, [spy], arg0: (int)CombatStance.HoldFire);
+        stances.Add(CommandKind.SetStance, [look], arg0: (int)CombatStance.HoldFire, player: 1);
+        sim.Tick(stances);
+        _cards.Menus["e_footman"] = [new CardButton("stop", 'S', CardAction.Stop, string.Empty, 1, "Stop")];
+        _cards.Menus["spy_add"] = [new CardButton("impersonate", 'I', CardAction.Impersonate, string.Empty, 237, "Impersonate"), new CardButton("reveal_self", 'V', CardAction.Reveal, string.Empty, 236, "Reveal")];
+        var card = new CommandCard(rules, _cards, 0);
+        GameFrame Frame(byte viewer)
+        {
+            var frame = new GameFrame();
+            FrameBuilder.Fill(frame, world, viewer, MatchOutcome.None);
+            return frame;
+        }
+
+        // The spy's card adds impersonate (reveal waits for a disguise); a click on the enemy footman orders it.
+        CardContext context = new(Frame(0), [spy]);
+        Assert.Equal(["stop", "impersonate"], card.Build(context).Select(s => s!.Value.Button.Order));
+        Assert.Equal(OrderMode.Impersonate, card.Press(context, card.Build(context)[1]!.Value).Mode);
+        FrameEntity target = Frame(0).Entities.ToArray().Single(e => e.Id == look);
+        var order = new CommandList();
+        foreach (PlannedCommand c in OrderResolver.WithMode(OrderMode.Impersonate, [CommandCard.Info(rules, context.Frame, context.Frame.Entities.ToArray().Single(e => e.Id == spy), 0)],
+            CommandCard.Info(rules, context.Frame, target, 0), target.X, target.Y, KeyMods.None, 0))
+        {
+            c.AddTo(order);
+        }
+
+        sim.Tick(order);
+        for (int i = 0; i < 400 && !world.Disguises.Has(spy); i++)
+        {
+            sim.Tick(new CommandList());
+        }
+
+        // The enemy sees one of its own footmen; its owner sees the footman's look in its own colour (1.05).
+        FrameEntity seen = Frame(1).Entities.ToArray().Single(e => e.Id == spy);
+        Assert.Equal(((byte)1, world.Identities.Get(look).TypeId, -1), (seen.Owner, seen.TypeId, seen.LooksLike));
+        FrameEntity own = Frame(0).Entities.ToArray().Single(e => e.Id == spy);
+        Assert.Equal(((byte)0, (int)world.Identities.Get(look).TypeId), (own.Owner, own.LooksLike));
+
+        // Disguised: reveal instead of impersonate, and it works.
+        context = new(Frame(0), [spy]);
+        Assert.Equal(["stop", "reveal_self"], card.Build(context).Select(s => s!.Value.Button.Order));
+        sim.Tick(card.Press(context, card.Build(context)[1]!.Value).Commands!);
+        Assert.False(world.Disguises.Has(spy));
+    }
+
+    [Fact]
     public void An_order_that_needs_a_target_waits_for_it_and_is_highlighted()
     {
         EntityId peasant = Own("euro.peon");
@@ -341,6 +399,10 @@ public sealed class CommandCardTests : IDisposable
         public Dictionary<ushort, string> MenuOverride { get; } = [];
 
         public string? KingdomMenu(bool aiAssist) => aiAssist ? "kingdom_ai" : "kingdom";
+
+        public IReadOnlyList<CardButton> AbilityButtons(string ability) => ability == "impersonate" ? Card("spy_add") : [];
+
+        public string? MenuVariant(string? menu, string state) => menu is not null && Menus.ContainsKey(menu + "_" + state) ? menu + "_" + state : null;
 
         public IReadOnlyList<CardButton> Card(string? menu) => menu is not null && Menus.TryGetValue(menu, out List<CardButton>? b) ? b : [];
 

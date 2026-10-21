@@ -90,7 +90,7 @@ public sealed partial class World
                     && conv.From.BinarySearch(Identities.Get(ids[i]).TypeId) >= 0,
                 _ => e.Arg == 0,
             };
-            if (e.Kind is < ErrandKind.Board or > ErrandKind.Convert || !argOk || !Motions.Has(ids[i]) || e.Retries < 0 || e.TimerMs is < 0 or > 3_600_000
+            if (e.Kind is < ErrandKind.Board or > ErrandKind.Impersonate || !argOk || !Motions.Has(ids[i]) || e.Retries < 0 || e.TimerMs is < 0 or > 3_600_000
                 || e.MoveTick < -1 || e.MoveTick > tick || e.Reserved0 != 0 || e.Reserved1 != 0 || e.Reserved2 != 0
                 || (e.Kind != ErrandKind.Convert && e.TimerMs != 0) || (e.Kind == ErrandKind.Convert && e.Target != 0))
             {
@@ -182,6 +182,18 @@ public sealed partial class World
                 || !Map.ContainsPoint(a.X, a.Y) || !IsValidOwner(a.Owner) || a.Reserved != 0)
             {
                 throw Invalid("invalid area effect");
+            }
+        }
+
+        ids = Disguises.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Disguise g = Disguises.Components[i];
+            RequireUnit(ids[i], "disguise");
+            if (g.TypeId >= types || !IsValidOwner(g.Owner) || g.Owner == Identities.Get(ids[i]).Owner || g.Reserved != 0
+                || (TypeOf(ids[i]).Traits.Abilities & AbilityFlags.Impersonate) == 0)
+            {
+                throw Invalid("invalid disguise");
             }
         }
 

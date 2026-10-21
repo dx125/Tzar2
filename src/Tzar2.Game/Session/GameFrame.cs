@@ -188,6 +188,15 @@ public struct FrameEntity
     /// <summary>A named hero (GAME-08).</summary>
     public bool Hero;
 
+    /// <summary>Invisible (a ninja's cloak or the invisibility spell; GAME-11), as its owner and detectors see it.</summary>
+    public bool Cloaked;
+
+    /// <summary>
+    /// For its own kingdom, the type a disguised spy looks like (drawn in its own colour, 1.05), or -1. Other kingdoms get
+    /// the disguise as <see cref="TypeId"/> and <see cref="Owner"/> and never learn the truth (MAG-012, ADR 0184).
+    /// </summary>
+    public int LooksLike;
+
     /// <summary>Upgrades the entity has or has queued (bit = upgrade id; towers, walls, gates, galleons).</summary>
     public uint Upgrades;
 

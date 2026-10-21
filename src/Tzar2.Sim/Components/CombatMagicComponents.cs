@@ -86,6 +86,26 @@ public enum ErrandKind : byte
 
     /// <summary>Turn into type <see cref="Errand.Arg"/> when <see cref="Errand.TimerMs"/> runs out (Jihad warriors from peasants).</summary>
     Convert = 5,
+
+    /// <summary>Walk to <see cref="Errand.Target"/> (another kingdom's unit) and take its look (a spy's impersonate; ADR 0184).</summary>
+    Impersonate = 6,
+}
+
+/// <summary>
+/// A spy's disguise (MAG-012, ADR 0184): other kingdoms see a unit of <see cref="TypeId"/> owned by <see cref="Owner"/>,
+/// and that kingdom's units do not pick it as a target. It keeps its own abilities and stats.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct Disguise : IComponent
+{
+    /// <summary>The type it looks like.</summary>
+    public ushort TypeId;
+
+    /// <summary>The kingdom it seems to belong to.</summary>
+    public byte Owner;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved;
 }
 
 /// <summary>A unit's errand (ADRs 0093-0095).</summary>

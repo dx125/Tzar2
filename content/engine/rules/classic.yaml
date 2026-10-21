@@ -293,7 +293,7 @@ legacy:
 ^class.market: { TradeDock: { access: land } }
 ^class.tavern: { Tavern: {} }
 # Spies and ninjas see cloaked units near them (GAME-12; radius UNVERIFIED).
-^class.spy: { Detector: { radius: 5 }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
+^class.spy: { Detector: { radius: 5 }, Impersonator: {}, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
 ^class.ninja: { Detector: { radius: 5 } }
 
 # Drop-offs (GAME-02; manual §5.4.1.2 and ch. 6: castle stores all resources, farm food, lumbermill wood; storage per

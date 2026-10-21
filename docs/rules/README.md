@@ -105,9 +105,9 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 13 | 5 | 0 | 1 | 0 | 3 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 34 | 1 | 14 | 6 | 10 | 2 | 1 |
+| [The screen](interface.yaml) (HUD) | 34 | 2 | 14 | 6 | 9 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 15 | 8 | 2 | 2 | 2 | 1 | 0 |
-| [Magic, religion and spies](magic.yaml) (MAG) | 20 | 12 | 3 | 3 | 1 | 0 | 1 |
+| [Magic, religion and spies](magic.yaml) (MAG) | 20 | 14 | 3 | 2 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 9 | 4 | 3 | 2 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 333 | 152 | 70 | 44 | 39 | 9 | 19 |
+| **All** | 333 | 155 | 70 | 43 | 37 | 9 | 19 |
 
 ## Not done yet
 
@@ -178,7 +178,6 @@ Missing and partial rules.
 * **HUD-017**: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped. *Use and drop act on the first item; there is no inventory view.*
 * **HUD-018**: In an inventory a left click uses an item, a right click drops it, Ctrl makes either instant, Alt+click makes it the default item, and < and > turn its pages.
 * **HUD-020**: The question mark on the orders bar opens the online help, whose topics explain every unit, building and technology and how to play. *The help's 407 topics are in the original's HELP/ITEMS.TXT.*
-* **HUD-022**: The kingdom of a spy is shown as its true kingdom to its owner. *Spies cannot impersonate yet (MAG).*
 * **HUD-025**: The fish patch a kingdom's boats are fishing is marked with a blue selection.
 * **HUD-028** (partial): The \ key shows the trees translucent so that units under them can be seen. *Trees are drawn at 45 % opacity, not with the original's look.*
 * **HUD-029**: An order shows only when its condition holds; the quest order only when there are quests. *The quest order is always there.*
@@ -195,8 +194,6 @@ Missing and partial rules.
 
 ### Magic, religion and spies
 
-* **MAG-012**: Spies (with Espionage) can impersonate a unit of another kingdom and reveal themselves again. Work: STATUS work queue 3.
-* **MAG-013** (partial): Spies and ninjas see through each other's invisibility, and a spy can uncloak a ninja. *Detection works; the uncloak order does nothing yet.* Work: STATUS work queue 3.
 * **MAG-017** (partial): After all crusaders have died a full crusade needs some time; one preached earlier brings fewer crusaders for the same price. *Tzar2 refuses a crusade during the wait instead of bringing fewer crusaders.*
 * **MAG-018** (partial): A crusader dying in a ship or a building, or impersonated by a spy who then reveals himself, is counted out of the crusade. *Deaths in ships and buildings count; impersonation is missing (MAG-012).*
 

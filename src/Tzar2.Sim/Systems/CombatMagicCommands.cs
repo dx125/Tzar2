@@ -118,6 +118,79 @@ internal static class CombatMagicCommands
         return any ? null : CommandRejection.NoValidEntities;
     }
 
+    /// <summary>The listed own cloaked units become visible again (MAG-013: the ninja's uncloak).</summary>
+    public static CommandRejection? Uncloak(World world, in Command command, ReadOnlySpan<EntityId> entities)
+    {
+        bool any = false;
+        foreach (EntityId unit in entities)
+        {
+            if (IsCommandedUnit(world, unit, command.Player) && world.IsCloaked(unit))
+            {
+                world.Statuses.At(world.Statuses.IndexOf(unit)).CloakUntil = 0;
+                any = true;
+            }
+        }
+
+        return any ? null : CommandRejection.NoValidEntities;
+    }
+
+    /// <summary>The listed spies walk to the target unit of another kingdom and take its look on arrival (MAG-012).</summary>
+    public static CommandRejection? Impersonate(World world, in Command command, ReadOnlySpan<EntityId> entities)
+    {
+        if (!CanBeImpersonated(world, command.Player, command.Target))
+        {
+            return CommandRejection.InvalidArgument;
+        }
+
+        int applied = 0;
+        foreach (EntityId unit in entities)
+        {
+            if (IsCommandedUnit(world, unit, command.Player) && (world.TypeOf(unit).Traits.Abilities & AbilityFlags.Impersonate) != 0)
+            {
+                StartErrand(world, unit, ErrandKind.Impersonate, command.Target, 0);
+                applied++;
+            }
+        }
+
+        return applied > 0 ? null : CommandRejection.NoValidEntities;
+    }
+
+    /// <summary>The listed own disguised spies show their true selves (order <c>reveal_self</c>).</summary>
+    public static CommandRejection? RevealSelf(World world, in Command command, ReadOnlySpan<EntityId> entities)
+    {
+        bool any = false;
+        foreach (EntityId unit in entities)
+        {
+            if (IsCommandedUnit(world, unit, command.Player) && world.Disguises.Has(unit))
+            {
+                world.Disguises.Remove(unit);
+                any = true;
+            }
+        }
+
+        return any ? null : CommandRejection.NoValidEntities;
+    }
+
+    /// <summary>On arrival: the spy takes the look of the target, if it still can (ADR 0184).</summary>
+    public static void TryImpersonate(World world, EntityId spy, EntityId target)
+    {
+        byte owner = world.Identities.Get(spy).Owner;
+        if (!CanBeImpersonated(world, owner, target))
+        {
+            return;
+        }
+
+        Identity look = world.Identities.Get(target);
+        world.Disguises.Set(spy, new Disguise { TypeId = look.TypeId, Owner = look.Owner });
+        world.Events.Emit(new SimEvent(SimEventKind.Impersonated, owner, spy, target.Index, look.Owner, look.TypeId));
+    }
+
+    // Another kingdom's unit on the map, walking or riding on land (not a ship, a flyer or a building).
+    private static bool CanBeImpersonated(World world, byte player, EntityId target)
+        => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var t && !world.IsHeld(target)
+            && world.Identities.At(t).Owner != player && world.HasPlayer(world.Identities.At(t).Owner)
+            && world.TypeOf(target) is { IsMobile: true, Locomotor: Locomotor.Foot or Locomotor.Mounted } type && type.Traits.Category == EntityCategory.Unit;
+
     public static CommandRejection? PickItem(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         EntityId item = command.Target;

@@ -220,6 +220,9 @@ public enum SimEventKind : ushort
 
     /// <summary>A holder's damage was spread over the units inside (Entity = holder, X = units hit, Arg = total damage).</summary>
     DamageShared = 39,
+
+    /// <summary>A spy took another kingdom's unit's look (Entity = spy, X = target index, Y = its owner, Arg = its type id; ADR 0184).</summary>
+    Impersonated = 40,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>

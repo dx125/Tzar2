@@ -25,6 +25,9 @@ public sealed partial class World
     /// <summary>Holders' bookkeeping (hot; GAME-09).</summary>
     public ComponentStore<HolderState> Holders { get; private set; } = null!;
 
+    /// <summary>Spies' disguises (MAG-012, ADR 0184).</summary>
+    public ComponentStore<Disguise> Disguises { get; private set; } = null!;
+
     /// <summary>Units' errands: boarding, pick-up, give, bribe, conversion (hot).</summary>
     public ComponentStore<Errand> Errands { get; private set; } = null!;
 
@@ -75,6 +78,22 @@ public sealed partial class World
         CraftJobs = Components.RegisterHot<CraftJob>("game.craft");
         Crusades = Components.RegisterHot<CrusadeState>("game.crusade");
         CrusaderLinks = Components.RegisterHot<CrusaderOf>("game.crusader");
+        Disguises = Components.RegisterHot<Disguise>("game.disguise");
+    }
+
+    /// <summary>
+    /// Whether <paramref name="entity"/> is a spy disguised as a unit of <paramref name="kingdom"/> or of one of its allies,
+    /// so that kingdom's units leave it alone (ADR 0184).
+    /// </summary>
+    public bool LooksFriendlyTo(EntityId entity, int kingdom)
+    {
+        if (Disguises.Count == 0 || Disguises.IndexOf(entity) is not (>= 0 and var d) || (uint)kingdom >= (uint)Players.Length)
+        {
+            return false;
+        }
+
+        byte seeming = Disguises.At(d).Owner;
+        return seeming == kingdom || Diplomacy.StanceOf(kingdom, seeming) == Tzar2.Sim.Kingdoms.Stance.Ally;
     }
 
     /// <summary>Whether an entity is inside a holder or an inventory (it is then not on the map: no movement, no targeting).</summary>
