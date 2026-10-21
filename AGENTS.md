@@ -20,6 +20,9 @@ Non-negotiable:
   `docs/mechanics/*-placeholders.md`; replace them with capture facts, do not tune them.
 * A decision others will build on gets an ADR (template `docs/decisions/0000-template.md`, then
   `pwsh tools/docs/adr-index.ps1`).
+* Game UI logic (what a card offers, what a press does...) goes into engine-free models in `Tzar2.Game.Ui`, tested
+  there; the Godot client only draws them (ADR 0182). The core never reads the original's formats or names its
+  classes.
 * Branch, PR, green CI, squash merge; no force-pushes to shared branches.
 * Before you finish: `dotnet build Tzar2.sln` and `dotnet test Tzar2.sln -c Release` pass, and **docs/STATUS.md is
   updated** (milestones, work queue, a log line for any decision).

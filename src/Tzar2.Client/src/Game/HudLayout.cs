@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Godot;
 using Tzar2.Client.Logic;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 

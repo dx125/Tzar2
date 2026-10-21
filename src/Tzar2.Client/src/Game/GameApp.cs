@@ -383,12 +383,13 @@ public partial class GameApp : Node
     /// <summary>The loading screen (a match is being built).</summary>
     public void ShowLoading(string what) => Replace(new LoadingScreen(_ui!, _catalog, Screen, _loadings++, what), music: null);
 
-    // Runs `then` once `frames` frames have been drawn: the loading screen is on screen before the heavy work starts.
+    // Runs `then` once `frames` frames have passed, so that the loading screen is on screen before the heavy work starts.
+    // Process frames, not drawn ones: the headless dummy renderer never signals a drawn frame (the smoke tests).
     private async System.Threading.Tasks.Task AfterFrames(int frames, Action then)
     {
-        for (int i = 0; i < frames; i++)
+        for (int i = 0; i <= frames; i++)
         {
-            await ToSignal(RenderingServer.Singleton, RenderingServerInstance.SignalName.FramePostDraw);
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         }
 
         then();

@@ -105,19 +105,19 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 13 | 5 | 0 | 1 | 0 | 3 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 33 | 0 | 14 | 6 | 11 | 1 | 1 |
+| [The screen](interface.yaml) (HUD) | 33 | 1 | 13 | 6 | 11 | 1 | 1 |
 | [Items](items.yaml) (ITEM) | 15 | 6 | 2 | 3 | 3 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 20 | 12 | 3 | 3 | 1 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 8 | 4 | 4 | 2 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
-| [Production and population](production.yaml) (PROD) | 15 | 8 | 5 | 0 | 0 | 1 | 1 |
+| [Production and population](production.yaml) (PROD) | 15 | 9 | 4 | 0 | 0 | 1 | 1 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 27 | 0 | 10 | 10 | 6 | 1 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 12 | 13 | 2 | 5 | 0 | 4 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 13 | 5 | 4 | 2 | 0 | 2 | 0 |
-| **All** | 326 | 131 | 82 | 44 | 45 | 7 | 17 |
+| **All** | 326 | 133 | 80 | 44 | 45 | 7 | 17 |
 
 ## Not done yet
 

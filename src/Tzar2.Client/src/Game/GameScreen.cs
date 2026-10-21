@@ -13,6 +13,7 @@ using Tzar2.Content.Terrain;
 using Tzar2.Core.Ids;
 using Tzar2.Game.Input;
 using Tzar2.Game.Session;
+using Tzar2.Game.Ui;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Events;
 
@@ -60,6 +61,7 @@ public partial class GameScreen : Node
     private double _slowFrameLogged = double.MinValue;
     private readonly Ruleset _rules;
     private readonly PresentationCatalog _catalog;
+    private readonly CommandCard _card;
     private readonly HotkeyTable _hotkeys = new();
     private readonly SelectionModel _selection;
     private readonly FrameInterpolator _interpolator = new();
@@ -70,7 +72,6 @@ public partial class GameScreen : Node
     private readonly List<(string Text, double Until)> _messages = [];
     private readonly List<(int X, int Y, EntityId Id)> _eventHistory = [];
     private readonly List<(int X, int Y)> _locations = [];
-    private readonly Stack<string> _menuStack = new();
     private readonly string _terrainSetId;
     private SpriteBank? _bank;
     private WorldRenderer? _world;
@@ -105,10 +106,8 @@ public partial class GameScreen : Node
     private int _workSoundBudget;
     private Rid _boxItem;
     private bool _faultShown;
-    private readonly List<CardSlot> _wholeCard = [];
     private CanvasLayer? _hudLayer;
     private CanvasLayer? _weatherLayer;
-    private int _cardPage;
     private double _animMs;
     private Vector2? _grabStart;
     private Vector2I _grabPan;
@@ -127,6 +126,7 @@ public partial class GameScreen : Node
         _soundFont = soundFont;
         _selection = new SelectionModel(session.LocalPlayer);
         _catalog = new PresentationCatalog(_rules, path => store.Vfs.Exists(path) ? store.Read(path) : null, store.Vfs.Enumerate(PresentationCatalog.ObjectsFolder));
+        _card = new CommandCard(_rules, _catalog, session.LocalPlayer);
         Stats = new MatchStats();
     }
 
@@ -262,8 +262,7 @@ public partial class GameScreen : Node
         BuildHud(layout);
         _selection.Changed += () =>
         {
-            _cardPage = 0;
-            _menuStack.Clear();
+            _card.Reset();
             _mode = OrderMode.None;
             RefreshCard();
         };
@@ -634,38 +633,7 @@ public partial class GameScreen : Node
         return fog[(ty * _world.MapWidth) + tx] == 2;
     }
 
-    private EntityInfo InfoOf(in FrameEntity e)
-    {
-        EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
-        EntityTraits t = def.Traits;
-        return new EntityInfo(
-            e.Id,
-            e.TypeId,
-            e.Owner,
-            t.Category,
-            t.Armament is not null && t.Harvester is null,
-            (int)e.Activity,
-            e.Health,
-            e.MaxHealth,
-            t.Harvester is not null,
-            t.IsBuilder,
-            t.Armament is not null,
-            t.Producer is not null,
-            t.ResourceNode is not null,
-            e.ConstructionPermille >= 0,
-            def.IsMobile,
-            t.IsRepairable,
-            t.IsCapturer,
-            t.Capturable is { } capture && (capture.RequiredTechnology < 0 || Researched(capture.RequiredTechnology)),
-            t.InventorySlots > 0,
-            t.Item is not null);
-    }
-
-    private bool Researched(int technology)
-    {
-        byte me = _session.LocalPlayer;
-        return _frame is { } f && me < f.Players.Length && f.Players[me].HasTechnology(technology);
-    }
+    private EntityInfo InfoOf(in FrameEntity e) => CommandCard.Info(_rules, _frame!, e, _session.LocalPlayer);
 
     private List<EntityInfo> SelectedInfos()
     {
@@ -974,7 +942,7 @@ public partial class GameScreen : Node
         if (k >= GameKey.A && k <= GameKey.Z && (mods & (KeyMods.Ctrl | KeyMods.Alt)) == 0)
         {
             char letter = (char)('A' + (k - GameKey.A));
-            foreach (CardSlot slot in _wholeCard)
+            foreach (CardSlot slot in _card.WholeCard)
             {
                 if (slot.Button.Hotkey == letter)
                 {
@@ -1041,9 +1009,9 @@ public partial class GameScreen : Node
                     _placing = ushort.MaxValue;
                     _mode = OrderMode.None;
                 }
-                else if (_menuStack.Count > 0)
+                else if (_card.OpenMenu is not null)
                 {
-                    _menuStack.Pop();
+                    _card.Back();
                 }
                 else
                 {
@@ -1302,7 +1270,7 @@ public partial class GameScreen : Node
         if ((mods & KeyMods.Shift) == 0)
         {
             _placing = ushort.MaxValue;
-            _menuStack.Clear();
+            _card.Reset();
             RefreshCard();
         }
     }
@@ -1354,200 +1322,56 @@ public partial class GameScreen : Node
             return;
         }
 
-        if (s.Button.Action == CardAction.Page)
+        CardPress press = _card.Press(CardNow(), s, right, Input.IsKeyPressed(Key.Shift));
+        if (press.Commands is { } commands)
         {
-            _cardPage++;
-            RefreshCard();
-            return;
+            _session.Submit(commands);
         }
 
-        if (!s.Enabled)
+        if (press.Mode is { } mode)
         {
-            Message(s.Detail.Length > 0 ? $"{s.Button.Tooltip}: {s.Detail}" : s.Button.Tooltip + ": not available yet");
-            return;
+            _mode = mode;
+            _modeArgument = press.ModeArgument;
         }
 
-        List<EntityInfo> selected = SelectedInfos();
-        string civ = Lead() is { } lead ? _catalog.Type(_frame.Entities[lead].TypeId).Civilization : string.Empty;
-        switch (s.Button.Action)
+        if (press.Placing is { } type)
         {
-            case CardAction.Move:
-                _mode = OrderMode.Move;
-                break;
-            case CardAction.Attack:
-                _mode = OrderMode.Attack;
-                break;
-            case CardAction.Harvest:
-                _mode = OrderMode.Harvest;
-                break;
-            case CardAction.Patrol:
-                _mode = OrderMode.Patrol;
-                break;
-            case CardAction.Guard:
-                _mode = OrderMode.Guard;
-                break;
-            case CardAction.Repair:
-                _mode = OrderMode.Repair;
-                break;
-            case CardAction.Stop:
-                Send([new PlannedCommand(CommandKind.Stop, CommandFlags.None, EntityId.None, 0, 0, 0, 0, selected.Where(e => e.IsMobile && e.Owner == _session.LocalPlayer).Select(e => e.Id).ToList())]);
-                break;
-            case CardAction.Submenu:
-                _menuStack.Push(s.Button.Argument);
-                _cardPage = 0;
-                break;
-            case CardAction.Build:
-                int building = _catalog.TypeOfClass(civ, s.Button.Argument);
-                if (building >= 0)
-                {
-                    _placing = (ushort)building;
-                }
+            _placing = type;
+        }
 
-                break;
-            case CardAction.Train:
-                int unit = _catalog.TypeOfClass(civ, s.Button.Argument);
-                var producers = selected.Where(e => e.IsProducer && e.Owner == _session.LocalPlayer && !e.UnderConstruction).Select(e => e.Id).ToList();
-                if (unit >= 0 && producers.Count > 0)
-                {
-                    var batch = new CommandList();
-                    if (right)
-                    {
-                        batch.Add(CommandKind.Cancel, producers.ToArray(), arg0: -1, arg1: unit + 1); // one of this unit (ADR 0180)
-                    }
-                    else
-                    {
-                        batch.Add(CommandKind.Train, producers.ToArray(), arg0: unit, arg1: Input.IsKeyPressed(Key.Shift) ? 5 : 1);
-                    }
+        if (press.Message is { } text)
+        {
+            Message(text);
+        }
 
-                    _session.Submit(batch);
-                }
+        if (press.NextIdlePeasant)
+        {
+            SelectNextIdlePeasant();
+        }
 
-                break;
-            case CardAction.Cancel:
-                var sites = selected.Where(e => e.UnderConstruction && e.Owner == _session.LocalPlayer).Select(e => e.Id).ToArray();
-                if (sites.Length > 0)
-                {
-                    var batch = new CommandList();
-                    batch.Add(CommandKind.Cancel, sites);
-                    _session.Submit(batch);
-                }
+        if (press.ShowQuests)
+        {
+            ShowQuests();
+        }
 
-                break;
-            case CardAction.Research when _rules.TechnologyId(s.Button.Argument) is >= 0 and var tech:
-                Submit(CommandKind.Research, OwnIds(selected, e => e.IsProducer && !e.UnderConstruction), arg0: tech);
-                break;
-            case CardAction.Upgrade when _rules.UpgradeId(s.Button.Argument) is >= 0 and var upgrade:
-                Submit(CommandKind.Upgrade, OwnIds(selected, e => !e.UnderConstruction), arg0: upgrade);
-                break;
-            case CardAction.Capture:
-                _mode = OrderMode.Capture;
-                break;
-            case CardAction.MoveAdvance:
-                _mode = OrderMode.MoveAdvance;
-                break;
-            case CardAction.MoveSneak:
-                _mode = OrderMode.MoveSneak;
-                break;
-            case CardAction.AttackGround:
-                _mode = OrderMode.AttackGround;
-                break;
-            case CardAction.Stance when int.TryParse(s.Button.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int stance):
-                Submit(CommandKind.SetStance, OwnIds(selected, e => e.IsArmed), arg0: stance);
-                break;
-            case CardAction.Gate:
-                foreach (EntityInfo gate in selected.Where(e => e.Owner == _session.LocalPlayer))
-                {
-                    FrameGate state = _indexById.TryGetValue(gate.Id.Value, out int gi) ? _frame.Entities[gi].Gate : FrameGate.None;
-                    int mode = s.Button.Argument switch { "open" => 1, "close" => 0, "auto" => 2, _ => (state & FrameGate.Open) != 0 ? 1 : 0 };
-                    if (state != FrameGate.None)
-                    {
-                        Submit(CommandKind.SetGate, [gate.Id], arg0: mode);
-                    }
-                }
+        if (press.DeleteSelected)
+        {
+            DeleteSelected(important: false);
+        }
 
-                break;
-            case CardAction.Explore:
-                Submit(CommandKind.Explore, OwnIds(selected, e => e.IsMobile));
-                break;
-            case CardAction.Delete:
-                DeleteSelected(important: false);
-                break;
-            case CardAction.Unload:
-                foreach (EntityInfo holder in selected.Where(e => e.Owner == _session.LocalPlayer))
-                {
-                    if (_indexById.TryGetValue(holder.Id.Value, out int hi))
-                    {
-                        Submit(CommandKind.Unload, [holder.Id], _frame.Entities[hi].X, _frame.Entities[hi].Y);
-                    }
-                }
-
-                break;
-            case CardAction.Become when _catalog.TypeOfClass(civ, s.Button.Argument) is >= 0 and var into:
-                Submit(CommandKind.ConvertUnit, OwnIds(selected, e => e.IsMobile), arg0: into);
-                break;
-            case CardAction.NextIdle:
-                SelectNextIdlePeasant();
-                break;
-            case CardAction.Quests when _session.Scenario is not null:
-                ShowQuests();
-                break;
-            case CardAction.Quests:
-                Message(_catalog.Text("sp_setupmap", "vcond_0", "Standard") + ": destroy every enemy unit and building.");
-                break;
-            case CardAction.Spell when SpellOf(s.Button) is >= 0 and var spell:
-                if (_rules.Spells[spell].Target == SpellTarget.Self)
-                {
-                    Submit(CommandKind.CastSpell, OwnIds(selected, e => CanCast(e, spell)), arg0: spell);
-                }
-                else
-                {
-                    _mode = OrderMode.Spell;
-                    _modeArgument = spell;
-                }
-
-                break;
-            case CardAction.Loan when s.Button.Argument == "return":
-                Submit(CommandKind.Loan, OwnIds(selected, e => !e.IsMobile && !e.UnderConstruction), arg1: 1);
-                break;
-            case CardAction.Loan when _rules.ResourceId(s.Button.Argument) is >= 0 and var resource:
-                Submit(CommandKind.Loan, OwnIds(selected, e => !e.IsMobile && !e.UnderConstruction), arg0: resource);
-                break;
-            case CardAction.Bribe:
-                _mode = OrderMode.Bribe;
-                break;
-            case CardAction.Crusade:
-                _mode = OrderMode.Crusade;
-                break;
-            case CardAction.PickItem:
-                _mode = OrderMode.PickItem;
-                break;
-            case CardAction.UseItem when s.Button.Argument == "self":
-                foreach (EntityInfo user in selected.Where(e => e.Owner == _session.LocalPlayer && e.IsMobile))
-                {
-                    Submit(CommandKind.UseItem, [user.Id], arg0: -1, target: user.Id);
-                }
-
-                break;
-            case CardAction.UseItem:
-                _mode = OrderMode.UseItem;
-                break;
-            case CardAction.DropItem:
-                Submit(CommandKind.DropItem, OwnIds(selected, e => e.IsMobile), arg0: 0);
-                break;
-            case CardAction.Hire when int.TryParse(s.Button.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int offer):
-                Submit(CommandKind.Hire, Taverns(), arg0: offer);
-                break;
-            case CardAction.Gamble:
+        switch (press.Dialog)
+        {
+            case CardDialogKind.Gamble:
                 var gamble = new GambleDialog(_ui, _rules.World.MaxGambleStake, _rules.World.GambleOdds.Length);
-                gamble.Bet += (resource, odds, stake) => Submit(CommandKind.Gamble, Taverns(), arg0: _rules.ResourceId(resource) | (odds << 8), arg1: stake);
+                gamble.Bet += (resource, odds, stake) => Submit(_card.Gamble(CardNow(), resource, odds, stake));
                 OpenDialog(gamble);
                 break;
-            case CardAction.Exchange:
+            case CardDialogKind.Exchange:
                 var exchange = new ExchangeDialog(_ui, _rules.World.ConvertRatio);
-                exchange.Exchange += (give, get, amount) => Submit(CommandKind.Convert, Taverns(), arg0: _rules.ResourceId(give) | (_rules.ResourceId(get) << 8), arg1: amount);
+                exchange.Exchange += (give, get, amount) => Submit(_card.Exchange(CardNow(), give, get, amount));
                 OpenDialog(exchange);
                 break;
-            case CardAction.Trade:
+            case CardDialogKind.Trade:
                 var trade = new TradeDialog(_ui);
                 trade.Route += (here, there, load) =>
                 {
@@ -1560,6 +1384,18 @@ public partial class GameScreen : Node
         }
 
         RefreshCard();
+    }
+
+    // What the command card is built for now (Tzar2.Game.Ui.CommandCard, ADR 0182).
+    private CardContext CardNow()
+        => new(_frame!, _selection.Selected, _selection.Focus, _selection.IsOwn, _placing != ushort.MaxValue, _mode, _modeArgument, _session.Scenario is not null);
+
+    private void Submit(CommandList? commands)
+    {
+        if (commands is not null)
+        {
+            _session.Submit(commands);
+        }
     }
 
     // A dialog in the card's place, for the building or units selected now (it closes when the selection changes).
@@ -1583,75 +1419,33 @@ public partial class GameScreen : Node
         _hud?.ShowDialog(null);
     }
 
-    private EntityId[] Taverns() => OwnIds(SelectedInfos(), e => !e.IsMobile && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.World.IsTavern);
-
-    private EntityId[] Traders() => OwnIds(SelectedInfos(), e => e.IsMobile && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null);
-
-    // The far market of a trade route: a market or harbor under the pointer. The near one is the own market (of the
-    // traders' kind: land or water) nearest to the first trader.
+    // The far market of a trade route: a market or harbor under the pointer.
     private void PickMarket(Vector2 screen, (int Goods, int Load) route)
     {
-        EntityId[] traders = Traders();
-        if (traders.Length == 0 || _frame is null || !_indexById.TryGetValue(traders[0].Value, out int first))
+        if (_frame is null)
         {
             _route = null;
             return;
         }
 
-        Content.Compiled.DropOffAccess access = _rules.EntityTypes[_frame.Entities[first].TypeId].Traits.World.Trader!.Access;
-        if (PickAt(screen) is not { } far || (_rules.EntityTypes[far.TypeId].Traits.World.TradeDock & access) == 0 || far.UnderConstruction)
+        if (PickAt(screen) is not { } far)
         {
             Message("Trade: that is not a market of this trader's kind.");
             return;
         }
 
-        FrameEntity t = _frame.Entities[first];
-        EntityId near = EntityId.None;
-        long best = long.MaxValue;
-        foreach (FrameEntity m in _frame.Entities)
+        (CommandList? commands, string? message) = _card.Trade(CardNow(), far.Id, route.Goods, route.Load);
+        if (message is not null)
         {
-            if (m.Owner != _session.LocalPlayer || m.Id == far.Id || m.ConstructionPermille >= 0 || (_rules.EntityTypes[m.TypeId].Traits.World.TradeDock & access) == 0)
-            {
-                continue;
-            }
-
-            long d = ((long)(m.X - t.X) * (m.X - t.X)) + ((long)(m.Y - t.Y) * (m.Y - t.Y));
-            if (d < best)
-            {
-                best = d;
-                near = m.Id;
-            }
+            Message(message);
         }
 
-        _route = null;
-        if (near.IsNone)
+        if (commands is not null || message == "Trade: no own market to load at.")
         {
-            Message("Trade: no own market to load at.");
-            return;
+            _route = null;
         }
 
-        (int x, int y) = _indexById.TryGetValue(far.Id.Value, out int fi) ? (_frame.Entities[fi].X, _frame.Entities[fi].Y) : ToWorld(screen);
-        Submit(CommandKind.Trade, traders, x, y, arg0: route.Goods, arg1: route.Load, target: near);
-    }
-
-    // The spell of a card button: its key, or (the ninjas' cloak and murder, raise dead) its order's name.
-    private int SpellOf(CardButton b) => _rules.SpellId(b.Argument) is >= 0 and var id ? id : _rules.SpellId(b.Order);
-
-    private bool CanCast(EntityInfo e, int spell) => spell is >= 0 and <= ushort.MaxValue && _rules.EntityTypes[e.TypeId].Traits.CanCast((ushort)spell);
-
-    private EntityId[] OwnIds(List<EntityInfo> selected, Func<EntityInfo, bool> which)
-        => selected.Where(e => e.Owner == _session.LocalPlayer && which(e)).Select(e => e.Id).ToArray();
-
-    private void Submit(CommandKind kind, EntityId[] entities, int x = 0, int y = 0, int arg0 = 0, int arg1 = 0, EntityId target = default)
-    {
-        if (entities.Length == 0)
-        {
-            return;
-        }
-
-        var batch = new CommandList();
-        batch.Add(kind, entities, x, y, target: target, arg0: arg0, arg1: arg1);
-        _session.Submit(batch);
+        Submit(commands);
     }
 
     // The idle peasant after the current selection (the original's "next idle peasant" button and key).
@@ -1662,17 +1456,11 @@ public partial class GameScreen : Node
             return;
         }
 
-        ReadOnlySpan<FrameEntity> all = _frame.Entities;
-        int start = Lead() is { } lead ? lead + 1 : 0;
-        for (int k = 0; k < all.Length; k++)
+        if (_card.NextIdlePeasant(CardNow()) is { } peasant && _indexById.TryGetValue(peasant.Value, out int i))
         {
-            FrameEntity e = all[(start + k) % all.Length];
-            if (e.Owner == _session.LocalPlayer && e.Activity == UnitActivity.Idle && _rules.EntityTypes[e.TypeId].Traits.Harvester is not null)
-            {
-                _selection.SelectOwn([e.Id]);
-                CenterOn(e.X, e.Y);
-                return;
-            }
+            _selection.SelectOwn([peasant]);
+            CenterOn(_frame.Entities[i].X, _frame.Entities[i].Y);
+            return;
         }
 
         Message("No idle peasants.");
@@ -1690,508 +1478,8 @@ public partial class GameScreen : Node
             CloseDialog(); // the selection changed
         }
 
-        var card = new List<CardSlot?>();
-        _wholeCard.Clear();
-        if (_placing == ushort.MaxValue && _selection.IsOwn && Lead() is { } lead)
-        {
-            FrameEntity e = _frame.Entities[lead];
-            TypeVisual v = _catalog.Type(e.TypeId);
-            if (e.ConstructionPermille >= 0)
-            {
-                card.Add(new CardSlot(new CardButton("cancel", 'C', CardAction.Cancel, string.Empty, 109, "Cancel construction"), true, false));
-            }
-            else
-            {
-                string? menu = _menuStack.Count > 0 ? _menuStack.Peek() : v.Menu;
-                var buttons = (TavernMenu(menu) is { } heroes ? HireButtons(heroes) : _catalog.Card(menu)).Where(b => !Hidden(b, e)).ToList();
-                if (buttons.Count > HudLayout.CardSlots)
-                {
-                    // What this build cannot do yet goes to the last page.
-                    buttons = buttons.Where(b => b.Action != CardAction.Unsupported).Concat(buttons.Where(b => b.Action == CardAction.Unsupported)).ToList();
-                }
-
-                foreach (CardButton b in buttons)
-                {
-                    (bool enabled, string detail) = Availability(b, v.Civilization);
-                    (ImmutableArray<int> cost, int timeMs) = Price(b, v.Civilization);
-                    _wholeCard.Add(new CardSlot(b, enabled, Active(b), detail, Queued(b, v.Civilization), PriceRows(cost, timeMs), _catalog.Text("orders_add", b.Order, string.Empty).Trim()));
-                }
-
-                // More orders than slots (a peasant has nine): pages of seven and a page button; hotkeys reach every page.
-                if (_wholeCard.Count <= HudLayout.CardSlots)
-                {
-                    card.AddRange(_wholeCard.Select(c => (CardSlot?)c));
-                }
-                else
-                {
-                    const int perPage = HudLayout.CardSlots - 1;
-                    int pages = (_wholeCard.Count + perPage - 1) / perPage;
-                    int page = _cardPage % pages;
-                    card.AddRange(_wholeCard.Skip(page * perPage).Take(perPage).Select(c => (CardSlot?)c));
-                    while (card.Count < perPage)
-                    {
-                        card.Add(null);
-                    }
-
-                    var more = new CardButton("page", '\0', CardAction.Page, $"{page + 1}/{pages}", -1, "More orders");
-                    card.Add(new CardSlot(more, true, false, $"page {page + 1} of {pages}"));
-                }
-            }
-        }
-
-        Card = card;
-        _hud.SetCard(card);
-    }
-
-    // How many of the button's item the selected own buildings have queued (ADR 0180).
-    private int Queued(CardButton b, string civ)
-    {
-        if (_frame is null)
-        {
-            return 0;
-        }
-
-        (FrameQueueKind kind, int id) = b.Action switch
-        {
-            CardAction.Train => (FrameQueueKind.Unit, _catalog.TypeOfClass(civ, b.Argument)),
-            CardAction.Research => (FrameQueueKind.Research, _rules.TechnologyId(b.Argument)),
-            CardAction.Upgrade => (FrameQueueKind.Upgrade, _rules.UpgradeId(b.Argument)),
-            _ => (FrameQueueKind.Unit, -1),
-        };
-        if (id < 0)
-        {
-            return 0;
-        }
-
-        int count = 0;
-        foreach (FrameQueueEntry q in _frame.QueueEntries)
-        {
-            if (q.Kind == kind && q.Id == id && _selection.Selected.Contains(EntityId.FromValue(q.Entity)))
-            {
-                count += q.Count;
-            }
-        }
-
-        return count;
-    }
-
-    // What the button's order costs and how long it takes (units: their base cost; research and upgrades: theirs; a
-    // tavern offer: its price now).
-    private (ImmutableArray<int> Cost, int TimeMs) Price(CardButton b, string civ)
-    {
-        switch (b.Action)
-        {
-            case CardAction.Train or CardAction.Build or CardAction.Become:
-                int type = _catalog.TypeOfClass(civ, b.Argument);
-                return type < 0 ? ([], 0) : (_rules.EntityTypes[type].Traits.Cost, _rules.EntityTypes[type].Traits.BuildTimeMs);
-            case CardAction.Research:
-                int tech = _rules.TechnologyId(b.Argument);
-                return tech < 0 ? ([], 0) : (_rules.Technologies[tech].Cost, _rules.Technologies[tech].TimeMs);
-            case CardAction.Upgrade:
-                int up = _rules.UpgradeId(b.Argument);
-                return up < 0 ? ([], 0) : (_rules.Upgrades[up].Cost, _rules.Upgrades[up].TimeMs);
-            case CardAction.Hire when _frame is not null && int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int slot):
-                for (int i = 0; i < _frame.TavernOfferCount; i++)
-                {
-                    if (_frame.TavernOffers[i].Slot == slot)
-                    {
-                        return (ImmutableArray.Create(_frame.TavernCosts, i * _frame.TavernCostStride, _frame.TavernCostStride), 0);
-                    }
-                }
-
-                return ([], 0);
-            default:
-                return ([], 0);
-        }
-    }
-
-    // The tooltip's price: the original's resource icons with the amounts (short ones red), then the hourglass with the
-    // time.
-    private List<PriceItem>? PriceRows(ImmutableArray<int> cost, int timeMs)
-    {
-        List<PriceItem>? rows = null;
-        FramePlayer me = Me();
-        for (int r = 0; r < cost.Length && r < _rules.ResourceTypes.Count; r++)
-        {
-            if (cost[r] > 0)
-            {
-                (rows ??= []).Add(new PriceItem($"art/icons/res{_rules.ResourceTypes[r]}.t2img", HudText.Number(cost[r]), r < 8 && me.Resources[r] < cost[r]));
-            }
-        }
-
-        if (timeMs > 0)
-        {
-            (rows ??= []).Add(new PriceItem("art/icons/time.t2img", string.Create(CultureInfo.InvariantCulture, $"{(timeMs + 500) / 1000} s")));
-        }
-
-        return rows;
-    }
-
-    // The original's "Requires: ..." (STRINGS3.INI req3).
-    private string Requires(string what) => $"{_catalog.Text("misc", "req3", "Requires")}: {what}";
-
-    // The original's tavern menus are empty in MENU.INI: the game lists the period's offers there. True: the heroes' menu.
-    private static bool? TavernMenu(string? menu) => menu switch
-    {
-        _ when string.Equals(menu, "tavern_merc", StringComparison.OrdinalIgnoreCase) => false,
-        _ when string.Equals(menu, "tavern_hero", StringComparison.OrdinalIgnoreCase) => true,
-        _ => null,
-    };
-
-    private List<CardButton> HireButtons(bool heroes)
-    {
-        var buttons = new List<CardButton>();
-        if (_frame is null)
-        {
-            return buttons;
-        }
-
-        foreach (FrameTavernOffer o in _frame.TavernOffers)
-        {
-            if (o.IsHero != heroes)
-            {
-                continue;
-            }
-
-            TypeVisual v = _catalog.Type(o.TypeId);
-            string what = o.IsHero ? $"Hire a hero: {v.Name} (level {o.Level})" : $"Hire {o.Count} x {v.Name} (level {o.Level})";
-            char key = (char)('1' + buttons.Count);
-            buttons.Add(new CardButton(o.IsHero ? "hire_hero" : "hire_merc", key, CardAction.Hire, o.Slot.ToString(CultureInfo.InvariantCulture), _catalog.TrainImage(v.Class), what));
-        }
-
-        return buttons;
-    }
-
-    private bool Active(CardButton b) => b.Action switch
-    {
-        CardAction.Move => _mode == OrderMode.Move,
-        CardAction.Attack => _mode == OrderMode.Attack,
-        CardAction.Harvest => _mode == OrderMode.Harvest,
-        CardAction.Patrol => _mode == OrderMode.Patrol,
-        CardAction.Guard => _mode == OrderMode.Guard,
-        CardAction.Repair => _mode == OrderMode.Repair,
-        CardAction.Capture => _mode == OrderMode.Capture,
-        CardAction.MoveAdvance => _mode == OrderMode.MoveAdvance,
-        CardAction.MoveSneak => _mode == OrderMode.MoveSneak,
-        CardAction.AttackGround => _mode == OrderMode.AttackGround,
-        CardAction.Spell => _mode == OrderMode.Spell && _modeArgument == SpellOf(b),
-        CardAction.Bribe => _mode == OrderMode.Bribe,
-        CardAction.Crusade => _mode == OrderMode.Crusade,
-        CardAction.PickItem => _mode == OrderMode.PickItem,
-        CardAction.UseItem => _mode == OrderMode.UseItem,
-        CardAction.Stance => Lead() is { } l && _frame is not null && b.Argument == _frame.Entities[l].Stance.ToString(CultureInfo.InvariantCulture),
-        CardAction.Gate => Lead() is { } g && _frame is not null && GateButtonOn(b.Argument, _frame.Entities[g].Gate),
-        _ => false,
-    };
-
-    private static bool GateButtonOn(string argument, FrameGate gate) => argument switch
-    {
-        "open" => (gate & (FrameGate.Open | FrameGate.Automatic)) == FrameGate.Open,
-        "close" => gate != FrameGate.None && (gate & (FrameGate.Open | FrameGate.Automatic)) == 0,
-        "auto" => (gate & FrameGate.Automatic) != 0,
-        _ => gate != FrameGate.None && (gate & FrameGate.Automatic) == 0,
-    };
-
-    // Researched technologies and upgrades the entity has (or does not take) leave the card, as in the original, and so
-    // do orders a technology unlocks (TECHTREE [orders]: bribe, spells, loans...) until it is researched.
-    private bool Hidden(CardButton b, in FrameEntity lead)
-    {
-        if (_frame is null)
-        {
-            return false;
-        }
-
-        int gate = _rules.OrderTechnology(b.Order, _catalog.Type(lead.TypeId).Civilization);
-        if (gate >= 0 && !Me().HasTechnology(gate))
-        {
-            return true;
-        }
-
-        switch (b.Action)
-        {
-            case CardAction.Research:
-                int tech = _rules.TechnologyId(b.Argument);
-                return tech >= 0 && _frame.Players.Length > _session.LocalPlayer && _frame.Players[_session.LocalPlayer].HasTechnology(tech);
-            case CardAction.Upgrade:
-                int up = _rules.UpgradeId(b.Argument);
-                if (up < 0)
-                {
-                    return false;
-                }
-
-                UpgradeDefinition u = _rules.Upgrades[up];
-                bool queued = false;
-                foreach (FrameQueueEntry q in _frame.QueueEntries)
-                {
-                    queued |= q.Entity == lead.Id.Value && q.Kind == FrameQueueKind.Upgrade && q.Id == up;
-                }
-
-                return ((lead.Upgrades & (1u << up)) != 0 && !queued) || (u.IsConversion && u.ConvertedType(lead.TypeId) < 0 && !queued);
-            default:
-                return false;
-        }
-    }
-
-    // Whether a card button works now and what its tooltip adds: the cost of what it makes, and why it is greyed out
-    // (missing building or technology, too few resources).
-    private (bool Enabled, string Detail) Availability(CardButton b, string civ)
-    {
-        List<EntityInfo> selected = SelectedInfos();
-        byte me = _session.LocalPlayer;
-        switch (b.Action)
-        {
-            case CardAction.Unsupported:
-                return (false, "not in this build yet");
-            case CardAction.Spell:
-                int spellId = SpellOf(b);
-                if (spellId < 0)
-                {
-                    return (false, "not in this build yet");
-                }
-
-                int manaCost = _rules.Spells[spellId].ManaCost;
-                string mana = manaCost > 0 ? string.Create(CultureInfo.InvariantCulture, $"mana {manaCost}") : string.Empty;
-                return selected.Any(e => e.Owner == me && CanCast(e, spellId)) ? (true, mana) : (false, "needs a caster");
-            case CardAction.Loan or CardAction.Crusade:
-                return selected.Any(e => e.Owner == me && !e.IsMobile && !e.UnderConstruction) ? (true, string.Empty) : (false, "needs the building");
-            case CardAction.Bribe:
-                return selected.Any(e => e.Owner == me && e.CanBuild) ? (true, string.Empty) : (false, "needs a peasant");
-            case CardAction.PickItem or CardAction.UseItem or CardAction.DropItem:
-                return selected.Any(e => e.Owner == me && e.IsMobile) ? (true, string.Empty) : (false, "needs a unit");
-            case CardAction.Gamble or CardAction.Exchange:
-                return selected.Any(e => e.Owner == me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.World.IsTavern) ? (true, string.Empty) : (false, "needs a tavern");
-            case CardAction.Hire:
-                if (_frame is null || !int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int slot))
-                {
-                    return (false, string.Empty);
-                }
-
-                for (int i = 0; i < _frame.TavernOfferCount; i++)
-                {
-                    FrameTavernOffer o = _frame.TavernOffers[i];
-                    if (o.Slot != slot)
-                    {
-                        continue;
-                    }
-
-                    int stride = _frame.TavernCostStride;
-                    ImmutableArray<int> price = ImmutableArray.Create(_frame.TavernCosts, i * stride, stride);
-                    if (o.Taken)
-                    {
-                        return (false, "hired this period");
-                    }
-
-                    string hireTech = o.IsHero ? "te_heroesquest" : "te_mercenaries";
-                    if (_rules.TechnologyId(hireTech) is >= 0 and var hireGate && !Me().HasTechnology(hireGate))
-                    {
-                        return (false, o.IsHero ? "needs Heroes' Quest" : "needs Mercenaries");
-                    }
-
-                    string? shortOf = Shortfall(price);
-                    return shortOf is null ? (true, string.Empty) : (false, $"not enough {shortOf}");
-                }
-
-                return (false, "no offer now");
-            case CardAction.Trade:
-                return selected.Any(e => e.Owner == me && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null) ? (true, string.Empty) : (false, "needs a trader");
-            case CardAction.Repair:
-                return selected.Any(e => e.Owner == me && e.CanBuild) ? (true, string.Empty) : (false, "needs a builder");
-            case CardAction.Capture:
-                return selected.Any(e => e.Owner == me && _rules.EntityTypes[e.TypeId].Traits.IsCapturer) ? (true, string.Empty) : (false, "needs a peasant");
-            case CardAction.Train or CardAction.Build or CardAction.Become:
-                int type = _catalog.TypeOfClass(civ, b.Argument);
-                if (type < 0)
-                {
-                    return (false, "not available to this kingdom");
-                }
-
-                ImmutableArray<int> typeCost = _rules.EntityTypes[type].Traits.Cost;
-                if (MissingRequirement(type, civ) is { } missing)
-                {
-                    return (false, Requires(missing));
-                }
-
-                return Shortfall(typeCost) is { } shortfall ? (false, "not enough " + shortfall) : (true, string.Empty);
-            case CardAction.Research:
-                int tech = _rules.TechnologyId(b.Argument);
-                if (tech < 0)
-                {
-                    return (false, "not in this ruleset");
-                }
-
-                TechnologyDefinition t = _rules.Technologies[tech];
-                if (Me().IsResearching(tech))
-                {
-                    return (false, "being researched");
-                }
-
-                if (_frame!.Researchable.Length > tech && _frame.Researchable[tech] == 0)
-                {
-                    return (false, Requires(MissingIn(t.Requirements, civ) ?? "requirements"));
-                }
-
-                return Shortfall(t.Cost) is { } lacking ? (false, "not enough " + lacking) : (true, string.Empty);
-            case CardAction.Upgrade:
-                int up = _rules.UpgradeId(b.Argument);
-                if (up < 0 || Lead() is not { } lead)
-                {
-                    return (false, "not in this ruleset");
-                }
-
-                UpgradeDefinition u = _rules.Upgrades[up];
-                FrameEntity entity = _frame!.Entities[lead];
-                if (Queued(b, civ) > 0)
-                {
-                    return (false, "being made");
-                }
-
-                foreach (ushort before in u.After)
-                {
-                    if ((entity.Upgrades & (1u << before)) == 0)
-                    {
-                        return (false, Requires(_rules.Upgrades[before].Name));
-                    }
-                }
-
-                if (MissingIn(u.Requirements, _catalog.Type(entity.TypeId).Civilization) is { } prerequisite)
-                {
-                    return (false, Requires(prerequisite));
-                }
-
-                return Shortfall(u.Cost) is { } low ? (false, "not enough " + low) : (true, string.Empty);
-            case CardAction.Submenu when TavernMenu(b.Argument) is { } heroes:
-                // The tavern's offers show (with their prices) once the technology is there, affordable or not.
-                string offersTech = heroes ? "te_heroesquest" : "te_mercenaries";
-                if (_rules.TechnologyId(offersTech) is >= 0 and var offersGate && !Me().HasTechnology(offersGate))
-                {
-                    return (false, heroes ? "needs Heroes' Quest" : "needs Mercenaries");
-                }
-
-                return HireButtons(heroes).Count > 0 ? (true, string.Empty) : (false, "no offer now");
-            case CardAction.Submenu:
-                IEnumerable<CardButton> children = _catalog.Card(b.Argument);
-                foreach (CardButton child in children)
-                {
-                    if (child.Action is CardAction.Build or CardAction.Train or CardAction.Submenu && _catalog.TypeOfClass(civ, child.Argument) >= 0)
-                    {
-                        return (true, string.Empty);
-                    }
-
-                    // Any other order that works now (research, loans, hiring...) opens the menu too.
-                    if (child.Action is not (CardAction.Build or CardAction.Train or CardAction.Back or CardAction.Unsupported) && Availability(child, civ).Enabled)
-                    {
-                        return (true, string.Empty);
-                    }
-                }
-
-                return (false, "nothing to build there yet");
-            default:
-                return (true, string.Empty);
-        }
-    }
-
-    private FramePlayer Me() => _frame is not null && _frame.Players.Length > _session.LocalPlayer ? _frame.Players[_session.LocalPlayer] : default;
-
-
-    // The first resource the player lacks, as "food (150 of 200)", or null when affordable.
-    private string? Shortfall(ImmutableArray<int> cost)
-    {
-        if (_frame is null || _frame.Players.Length <= _session.LocalPlayer)
-        {
-            return "resources";
-        }
-
-        FramePlayer p = _frame.Players[_session.LocalPlayer];
-        for (int r = 0; r < cost.Length && r < 8; r++)
-        {
-            if (p.Resources[r] < cost[r])
-            {
-                return $"{(r < _rules.ResourceTypes.Count ? _rules.ResourceTypes[r] : "resources")} ({p.Resources[r]} of {cost[r]})";
-            }
-        }
-
-        return null;
-    }
-
-    // What the type still needs (a building or a technology), or null when its requirements are met. The sim's verdict
-    // comes with the frame (GameFrame.Makeable); the names come from the type's requirement sets for the civilization.
-    private string? MissingRequirement(int type, string civ)
-    {
-        if (_frame is null)
-        {
-            return "a game";
-        }
-
-        if (_frame.Makeable.Length > type && _frame.Makeable[type] != 0)
-        {
-            return null;
-        }
-
-        EntityTraits t = _rules.EntityTypes[type].Traits;
-        if (MissingIn(t.Requirements, civ) is { } missing)
-        {
-            return missing;
-        }
-
-        foreach (ushort building in t.RequiredTypes)
-        {
-            if (!HasCompleted(building))
-            {
-                return _catalog.Type(building).Name;
-            }
-        }
-
-        // Without the sim's verdict (an old frame) the names above are all there is.
-        return _frame.Makeable.Length > type ? "requirements" : null;
-    }
-
-    // The first unmet prerequisite of the sets for the civilization: a technology or a building, by name.
-    private string? MissingIn(ImmutableArray<RequirementSet> sets, string civ)
-    {
-        FramePlayer me = Me();
-        foreach (RequirementSet set in sets)
-        {
-            if (!set.AppliesTo(civ))
-            {
-                continue;
-            }
-
-            if (set.Unsatisfiable)
-            {
-                return "something this kingdom cannot have";
-            }
-
-            foreach (ushort tech in set.Technologies)
-            {
-                if (!me.HasTechnology(tech))
-                {
-                    return "the technology " + _rules.Technologies[tech].Name;
-                }
-            }
-
-            foreach (ushort building in set.Types)
-            {
-                if (!HasCompleted(building))
-                {
-                    return _catalog.Type(building).Name;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private bool HasCompleted(ushort type)
-    {
-        foreach (FrameEntity e in _frame!.Entities)
-        {
-            if (e.Owner == _session.LocalPlayer && e.TypeId == type && e.ConstructionPermille < 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        Card = _card.Build(CardNow());
+        _hud.SetCard(Card);
     }
 
     private void HandleEvents(GameFrame frame)

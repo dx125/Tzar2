@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Tzar2.Content.Compiled;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Logic;
 
@@ -86,111 +87,12 @@ public sealed record TypeVisual(
         => Images.TryGetValue(anim, out string? name) ? name : Images.TryGetValue(UnitAnim.Base, out string? b) ? b : null;
 }
 
-/// <summary>What a command-card button does.</summary>
-public enum CardAction
-{
-    /// <summary>Not supported by this build (shown disabled).</summary>
-    Unsupported = 0,
-#pragma warning disable CS1591 // Named after ORDERS.INI actions.
-    Move, Attack, Harvest, Patrol, Guard, Repair, Stop, Train, Build, Submenu, Back, Cancel,
-#pragma warning restore CS1591
-
-    /// <summary>Research technology <see cref="CardButton.Argument"/> (its key) in the selected building.</summary>
-    Research,
-
-    /// <summary>Buy upgrade <see cref="CardButton.Argument"/> (its key) for the selected towers, walls, gates or ships.</summary>
-    Upgrade,
-
-    /// <summary>Peasants capture the clicked enemy building.</summary>
-    Capture,
-
-    /// <summary>Move to the clicked point fighting what comes into sight (Ctrl + right click).</summary>
-    MoveAdvance,
-
-    /// <summary>Move to the clicked point without stopping to fight (Alt + right click).</summary>
-    MoveSneak,
-
-    /// <summary>Combat stance <see cref="CardButton.Argument"/>: 0 aggressive, 1 stand ground, 2 hold fire.</summary>
-    Stance,
-
-    /// <summary>Gate control <see cref="CardButton.Argument"/>: open, close, auto, manual.</summary>
-    Gate,
-
-    /// <summary>Explore unexplored ground.</summary>
-    Explore,
-
-    /// <summary>Destroy the selected own units or buildings (Delete).</summary>
-    Delete,
-
-    /// <summary>Let the units out of a castle, outpost or ship.</summary>
-    Unload,
-
-    /// <summary>Turn the selected units into class <see cref="CardButton.Argument"/> (become priest, become Jihad warrior).</summary>
-    Become,
-
-    /// <summary>Siege weapons attack the clicked ground.</summary>
-    AttackGround,
-
-    /// <summary>Select the next idle peasant.</summary>
-    NextIdle,
-
-    /// <summary>Show the quest log.</summary>
-    Quests,
-
-    /// <summary>The next page of a card with more orders than slots (Tzar2's; <see cref="CardButton.Argument"/> = "2/3").</summary>
-    Page,
-
-    /// <summary>Cast spell <see cref="CardButton.Argument"/> (its key; the ninjas' cloak and murder and the necromancers'
-    /// raise dead are spells named by their order): at once on themselves, else on the clicked unit or ground.</summary>
-    Spell,
-
-    /// <summary>A loan of resource <see cref="CardButton.Argument"/> in the selected tavern, or "return" to repay it.</summary>
-    Loan,
-
-    /// <summary>Peasants bribe the clicked enemy unit.</summary>
-    Bribe,
-
-    /// <summary>The selected cathedral preaches a crusade at the clicked point.</summary>
-    Crusade,
-
-    /// <summary>The selected units pick up the clicked item.</summary>
-    PickItem,
-
-    /// <summary>Use the default item: on the clicked target, or "self" at once.</summary>
-    UseItem,
-
-    /// <summary>Drop the first item where the unit stands.</summary>
-    DropItem,
-
-    /// <summary>Gambling in the selected tavern (its dialog in the card's place).</summary>
-    Gamble,
-
-    /// <summary>Exchanging resources in the selected tavern, ten for one (its dialog).</summary>
-    Exchange,
-
-    /// <summary>A trade route of the selected traders between a near and a far market (its dialog, then a click on the far one).</summary>
-    Trade,
-
-    /// <summary>Hire tavern offer <see cref="CardButton.Argument"/> (its slot): a mercenary group or a hero (Tzar2 fills the
-    /// original's empty <c>tavern_merc</c> / <c>tavern_hero</c> menus with the offers of the period).</summary>
-    Hire,
-}
-
-/// <summary>A button of a command card (MENU.INI entry + ORDERS.INI order).</summary>
-/// <param name="Order">ORDERS.INI section name.</param>
-/// <param name="Hotkey">Letter, or '\0'.</param>
-/// <param name="Action">What it does.</param>
-/// <param name="Argument">Class to train or build, or the submenu name.</param>
-/// <param name="ImageIndex">Cell of <c>orders/buttons.bmp</c> (48×48), or −1.</param>
-/// <param name="Tooltip">STRINGS.INI <c>[orders_names]</c> text.</param>
-public sealed record CardButton(string Order, char Hotkey, CardAction Action, string Argument, int ImageIndex, string Tooltip);
-
 /// <summary>
 /// Joins the compiled ruleset with the imported presentation tables (object INIs, IMAGES.INI names, ICONS.INI,
 /// MENU.INI, ORDERS.INI, SOUNDS.INI, KEYS.INI, STRINGS.INI): the client's single source of "what does type X look like,
 /// sound like and offer on its command card" (ADR 0071). Godot-free and unit-tested on synthetic tables.
 /// </summary>
-public sealed class PresentationCatalog
+public sealed class PresentationCatalog : ICardSource
 {
     /// <summary>Folder of the object INIs.</summary>
     public const string ObjectsFolder = "tables/data/objects/";
@@ -466,6 +368,18 @@ public sealed class PresentationCatalog
 
         return -1;
     }
+
+    /// <inheritdoc/>
+    public int TrainImage(ushort typeId) => TrainImage(_types[typeId].Class);
+
+    /// <inheritdoc/>
+    public string? Menu(ushort typeId) => _types[typeId].Menu;
+
+    /// <inheritdoc/>
+    public string Civilization(ushort typeId) => _types[typeId].Civilization;
+
+    /// <inheritdoc/>
+    public string Name(ushort typeId) => _types[typeId].Name;
 
     /// <summary>The ruleset type a card button trains or builds for <paramref name="civilization"/>, or −1.</summary>
     public int TypeOfClass(string civilization, string cls)

@@ -89,7 +89,7 @@ rules:
   HUD-019:
     rule: Arrows by the orders bar reveal further order buttons when there are more than fit.
     source: [manual The Orders Bar]
-    status: implemented
+    status: tested
     note: A card of more than eight orders gets pages of seven and a page button.
   HUD-020:
     rule: The question mark on the orders bar opens the online help, whose topics explain every unit, building and technology and how to play.
