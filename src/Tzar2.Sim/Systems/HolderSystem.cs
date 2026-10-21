@@ -191,14 +191,24 @@ public sealed class ErrandSystem : ISimSystem
     }
 
     // Another kingdom's spy or ninja close to a disguised spy sees through it and ends the disguise (the owner: other
-    // spies unmask it if they come close enough; the reach is the detector's, UNVERIFIED). Allies do not.
+    // spies unmask it if they come close enough; the reach is the detector's, UNVERIFIED). Allies do not. The longer the
+    // spy keeps its look, the fuller its meter and the closer they must come (MAG-021): within (100 − meter) % of the
+    // detector's radius, so a full meter is never seen through (the owner: hardly ever; UNVERIFIED, batch J).
     private void Unmask(World world)
     {
         _unmasked.Clear();
+        int ticksPerPoint = Math.Max(1, world.Ruleset.Gameplay.DisguiseMasteryMs / (100 * world.Config.TickLengthMilliseconds));
+        bool grow = world.Tick.Value % ticksPerPoint == 0;
         ReadOnlySpan<EntityId> spies = world.Disguises.Entities;
         for (int i = 0; i < spies.Length; i++)
         {
             EntityId spy = spies[i];
+            ref Disguise disguise = ref world.Disguises.At(i);
+            if (grow && disguise.Mastery < 100)
+            {
+                disguise.Mastery++;
+            }
+
             if (world.IsHeld(spy) || world.Positions.IndexOf(spy) is not (>= 0 and var p))
             {
                 continue;
@@ -209,7 +219,7 @@ public sealed class ErrandSystem : ISimSystem
             for (int k = 0; k < world.Players.Length; k++)
             {
                 if (k != owner && world.HasPlayer((byte)k) && world.Diplomacy.StanceOf(k, owner) != Kingdoms.Stance.Ally
-                    && Kingdoms.Visibility.IsDetectedBy(world, k, at))
+                    && Kingdoms.Visibility.IsDetectedBy(world, k, at, 100 - disguise.Mastery))
                 {
                     _unmasked.Add(spy);
                     break;

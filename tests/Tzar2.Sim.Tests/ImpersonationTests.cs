@@ -102,4 +102,70 @@ public class ImpersonationTests
         d.RunUntil(() => !w.Disguises.Has(spy), 600);
         Assert.False(w.Disguises.Has(spy));
     }
+
+    [Fact]
+    [Trait("Rule", "MAG-021")]
+    public void The_disguise_meter_fills_while_the_spy_keeps_one_look_and_a_new_look_starts_it_again()
+    {
+        using var d = new SimDriver(TestMap(40, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.footman", 1, 6, 4), Unit("euro.archer", 1, 6, 8)), ruleset: Rules);
+        World w = d.World;
+        EntityId spy = OfType(w, "euro.footman", 0).Single();
+        EntityId look = OfType(w, "euro.footman", 1).Single();
+        EntityId archer = OfType(w, "euro.archer", 1).Single();
+        d.Order(0, CommandKind.SetStance, [spy], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [look, archer], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.Impersonate, [spy], target: look);
+        d.RunUntil(() => w.Disguises.Has(spy), 400);
+        Assert.InRange(w.Disguises.Get(spy).Mastery, 0, 1);
+
+        // Full after DisguiseMasteryMs in the look, and no further.
+        int ticks = w.Ruleset.Gameplay.DisguiseMasteryMs / w.Config.TickLengthMilliseconds;
+        d.RunUntil(() => false, ticks / 2);
+        Assert.InRange(w.Disguises.Get(spy).Mastery, 48, 52);
+        d.RunUntil(() => false, (ticks / 2) + 100);
+        Assert.Equal(100, w.Disguises.Get(spy).Mastery);
+
+        // The same look again keeps the meter; another look starts it from nothing.
+        d.Order(0, CommandKind.Impersonate, [spy], target: look);
+        d.RunUntil(() => false, 40);
+        Assert.Equal(100, w.Disguises.Get(spy).Mastery);
+        d.Order(0, CommandKind.Impersonate, [spy], target: archer);
+        d.RunUntil(() => w.Disguises.Get(spy).TypeId == w.Identities.Get(archer).TypeId, 400);
+        Assert.InRange(w.Disguises.Get(spy).Mastery, 0, 1);
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-021")]
+    public void A_seasoned_disguise_must_be_come_closer_to_and_a_full_meter_is_never_seen_through()
+    {
+        // Player 1's peasant detects within 4 tiles (the fixture); it stands at tile (30, 4).
+        using var d = new SimDriver(TestMap(40, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.footman", 1, 9, 4), Unit("euro.peon", 1, 30, 4)), ruleset: Rules);
+        World w = d.World;
+        EntityId spy = OfType(w, "euro.footman", 0).Single();
+        EntityId look = OfType(w, "euro.footman", 1).Single();
+        d.Order(0, CommandKind.SetStance, [spy], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [look], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.Impersonate, [spy], target: look);
+        d.RunUntil(() => w.Disguises.Has(spy), 400);
+        void Meter(byte value) => w.Disguises.At(w.Disguises.IndexOf(spy)).Mastery = value;
+
+        // Half full: the detector must come within half its radius, 2 tiles, so 3 tiles off it is not enough.
+        Meter(50);
+        d.MoveToTile(0, [spy], 27, 4);
+        d.RunUntil(() => !d.AnyMoving([spy]) || !w.Disguises.Has(spy), 600);
+        d.RunUntil(() => false, 20);
+        Assert.True(w.Disguises.Has(spy));
+
+        // Full: not even next to it.
+        Meter(100);
+        d.MoveToTile(0, [spy], 29, 4);
+        d.RunUntil(() => !d.AnyMoving([spy]) || !w.Disguises.Has(spy), 600);
+        d.RunUntil(() => false, 20);
+        Assert.True(w.Disguises.Has(spy));
+
+        // Empty: unmasked at once.
+        Meter(0);
+        d.RunUntil(() => !w.Disguises.Has(spy), 5);
+        Assert.False(w.Disguises.Has(spy));
+    }
 }

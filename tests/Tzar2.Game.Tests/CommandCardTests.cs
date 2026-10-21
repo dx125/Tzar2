@@ -335,9 +335,10 @@ public sealed class CommandCardTests : IDisposable
 
         // The enemy sees one of its own footmen; its owner sees the footman's look in its own colour (1.05).
         FrameEntity seen = Frame(1).Entities.ToArray().Single(e => e.Id == spy);
-        Assert.Equal(((byte)1, world.Identities.Get(look).TypeId, -1), (seen.Owner, seen.TypeId, seen.LooksLike));
+        Assert.Equal(((byte)1, world.Identities.Get(look).TypeId, -1, -1), (seen.Owner, seen.TypeId, seen.LooksLike, seen.DisguiseMastery));
         FrameEntity own = Frame(0).Entities.ToArray().Single(e => e.Id == spy);
         Assert.Equal(((byte)0, (int)world.Identities.Get(look).TypeId), (own.Owner, own.LooksLike));
+        Assert.InRange(own.DisguiseMastery, 0, 100); // only its owner sees the meter (MAG-021)
 
         // Disguised: reveal instead of impersonate, and it works.
         context = new(Frame(0), [spy]);

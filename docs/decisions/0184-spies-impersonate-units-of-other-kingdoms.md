@@ -74,3 +74,20 @@ The owner settled the unknowns from the original:
     measures it.
 * **1.05's "obsessed by spies peasants cannot build":** a spy in a peasant's look, which keeps the spy's
   abilities.
+
+## Amendment 2: the disguise meter (2026-10-21)
+
+The owner described one more part of the original (MAG-021): by a spy's portrait there is a meter up to 100. The
+longer the spy keeps the look of one unit ("or trains"), the higher it goes, and at 100 the spy can hardly be
+unmasked. The data holds no rate. Batch J's `spy-mastery` captures the panel while a spy waits in a look.
+
+* **State:** `Disguise.Mastery`, 0–100, in the byte that was padding. The hashed layout and the snapshot format do not
+  change: old snapshots hold 0 there.
+* **Growth:** the meter gains one point every `gameplay.disguiseMasteryMs` / 100. It is full after 2 minutes
+  (UNVERIFIED).
+* **A new look** starts the meter from 0; impersonating the same look again keeps it. "Or trains" is not modelled.
+* **Unmasking:** another kingdom's spy must come within (100 − meter) % of its detector radius. That is 5 tiles for a
+  fresh disguise, 2.5 at half, and never at 100. The owner says "hardly ever"; a chance that remains is not modelled.
+* **Who sees it:** only the spy's owner (`FrameEntity.DisguiseMastery`). The selection view draws the meter as a
+  column at the portrait's right edge. Where the original draws it and in which colour is UNVERIFIED.
+* **Hashes:** the gameplay golden's ruleset hash is re-pinned. The state hashes and the CI benches do not change.
