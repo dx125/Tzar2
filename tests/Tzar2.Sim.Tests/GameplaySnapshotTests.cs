@@ -54,10 +54,10 @@ public class GameplaySnapshotTests
         {
             case "worker task": world.Workers.Get(peon).Task = (WorkerTask)9; break;
             case "combat mode": world.Combats.Get(footman).Mode = (CombatMode)7; break;
-            case "queue overflow": world.Productions.Get(castle).Count = 11; break;
+            case "queue overflow": world.Productions.Get(castle).Count = ProducerDefinition.MaxQueueCapacity + 1; break;
             case "queue item":
                 world.Productions.Get(castle).Count = 1;
-                world.Productions.Get(castle).Queue[0] = Id("euro.footman"); // the castle does not train footmen
+                world.Productions.Get(castle).Queue[0] = new QueueRun { Item = Id("euro.footman"), Count = 1 }; // the castle does not train footmen
                 break;
             case "site progress":
                 world.Set(house, new Construction { ProgressMs = 99_999, TotalMs = 15_000 });

@@ -266,6 +266,24 @@ public sealed class SessionTests
         Assert.Equal(expected, frame.TavernOfferCount);
     }
 
+    [Fact]
+    public void The_frame_carries_each_producers_queue_entries_with_their_counts()
+    {
+        // ADR 0180: the card shows on each order button how many of its item are queued.
+        using var session = new GameSession(Setup() with { ComputerAi = false }, Rules.Value, fog: false);
+        World world = session.Simulation.World;
+        EntityId castle = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Traits.LegacyClass == "castle");
+        ushort peon = world.TypeOf(castle).Traits.Producer!.Produces[0];
+        var batch = new CommandList();
+        batch.Add(CommandKind.Train, [castle], arg0: peon, arg1: 3);
+        session.Submit(batch);
+        session.Step(2);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        FrameQueueEntry entry = Assert.Single(frame.QueueEntries.ToArray(), q => q.Entity == castle.Value);
+        Assert.Equal((FrameQueueKind.Unit, peon, 3), (entry.Kind, entry.Id, entry.Count));
+        Assert.Equal(3, frame.Entities.ToArray().Single(e => e.Id == castle).QueueCount);
+    }
+
     [Theory]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Continental)]
     [InlineData(Tzar2.Content.MapGen.RandomMapType.Lakes)]
@@ -280,11 +298,17 @@ public sealed class SessionTests
         Assert.Contains(frame.Entities.ToArray(), e => e.Owner == 1 && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "castle");
     }
 
+    private static readonly Lazy<Ruleset> StayingIdle = new(() => SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+    {
+        OverrideTexts = [new("idle.yaml", "gameplay: { idleWorkAfterMs: 0 }")],
+    }));
+
     [Fact]
     public void A_right_click_on_an_enemy_unit_ends_in_a_kill()
     {
-        // The client's order path end to end: frame entities -> EntityInfo -> OrderResolver -> session -> sim.
-        using var session = new GameSession(Setup() with { ComputerAi = false }, Rules.Value, fog: false);
+        // The client's order path end to end: frame entities -> EntityInfo -> OrderResolver -> session -> sim. The victim
+        // stays where it is: without its AI, an idle peasant would find work by itself (ADR 0180) under its towers.
+        using var session = new GameSession(Setup() with { ComputerAi = false }, StayingIdle.Value, fog: false);
         World world = session.Simulation.World;
         FrameEntity[] all = session.AcquireFrame(out _)!.Entities.ToArray();
         EntityInfo Info(FrameEntity e)

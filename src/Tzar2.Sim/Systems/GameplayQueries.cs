@@ -1,6 +1,7 @@
 using System;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
+using Tzar2.Sim.Components;
 
 namespace Tzar2.Sim.Systems;
 
@@ -40,7 +41,7 @@ public static class GameplayQueries
         }
 
         ProducerDefinition? producer = world.TypeOf(building).Traits.Producer;
-        return producer is not null && producer.CanResearch((ushort)technology) && world.Productions.At(q).Count < producer.QueueCapacity
+        return producer is not null && producer.CanResearch((ushort)technology) && QueueRuns.HasRoom(world.Productions.At(q), QueueItems.Research(technology), default, producer.QueueCapacity)
             && !world.Players[player].HasTechnology(technology) && !ResearchRules.IsResearchPending(world, player, technology)
             && ResearchRules.RequirementsMet(world, player, world.CivilizationOf(building), world.Ruleset.Technologies[technology].Requirements, []);
     }

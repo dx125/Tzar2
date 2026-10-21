@@ -279,7 +279,7 @@ public sealed class ProductionSystem : ISimSystem
                         continue;
                     }
 
-                    EntityId candidate = Interaction.NearestNode(world, owner, r, at.X, at.Y, world.Ruleset.Gameplay.NodeSearchRadiusTiles, world.TypeOf(worker).Locomotor);
+                    EntityId candidate = Interaction.NextNode(world, worker, r, at.X, at.Y, world.Ruleset.Gameplay.NodeSearchRadiusTiles);
                     if (candidate.IsNone)
                     {
                         continue;
@@ -318,7 +318,7 @@ public sealed class ProductionSystem : ISimSystem
             }
 
             EntityId producer = world.Productions.Entities[i];
-            ushort item = q.Queue[0];
+            ushort item = q.Queue[0].Item;
             int timeMs = ItemTime(world, item);
             if (q.ProgressMs < timeMs)
             {
@@ -378,19 +378,12 @@ public sealed class ProductionSystem : ISimSystem
             : QueueItems.IsUpgrade(item) ? world.Ruleset.Upgrades[QueueItems.Id(item)].TimeMs
             : world.Ruleset.EntityTypes[item].Traits.BuildTimeMs;
 
+    // The first item is made: the next one of its entry (or of the next entry) starts from nothing.
     private static void PopFirst(ref Production q)
     {
+        QueueRuns.TakeOne(ref q, 0);
         q.Stall = 0;
         q.ProgressMs = 0;
-        for (int k = 1; k < q.Count; k++)
-        {
-            q.Queue[k - 1] = q.Queue[k];
-            q.Paid[k - 1] = q.Paid[k];
-        }
-
-        q.Count--;
-        q.Queue[q.Count] = 0;
-        q.Paid[q.Count] = default;
     }
 
     // Spawning a unit may add a production queue (a unit type that produces): the caller looks its producer up again.
@@ -417,7 +410,7 @@ public sealed class ProductionSystem : ISimSystem
         (int x0, _, int x1, int y1) = Interaction.Rect(world, producer);
         int towardX = q.HasRally == 1 ? q.RallyX : (x0 + x1) / 2;
         int towardY = q.HasRally == 1 ? q.RallyY : y1 + MapState.UnitsPerTile;
-        if (!Interaction.ApproachPoint(world, producer, towardX, towardY, type.Locomotor, out int x, out int y))
+        if (!Interaction.SpawnPoint(world, producer, towardX, towardY, type, out int x, out int y))
         {
             return ProductionStall.NoExit;
         }
@@ -447,7 +440,7 @@ public sealed class ProductionSystem : ISimSystem
             }
 
             if (identity.Owner == owner && world.Constructions.Has(target) && world.Workers.IndexOf(unit) is >= 0 and var w
-                && world.TypeOf(unit).Traits.CanBuild(identity.TypeId))
+                && world.TypeOf(unit).Traits.IsBuilder)
             {
                 ref Worker worker = ref world.Workers.At(w);
                 worker.Task = WorkerTask.Build;

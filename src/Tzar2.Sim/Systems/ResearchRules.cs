@@ -121,13 +121,9 @@ internal static class ResearchRules
                 continue;
             }
 
-            ref Production q = ref queues[i];
-            for (int k = 0; k < q.Count; k++)
+            if (QueueRuns.Contains(queues[i], item))
             {
-                if (q.Queue[k] == item)
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
@@ -142,16 +138,9 @@ internal static class ResearchRules
             return true;
         }
 
-        if (world.Productions.IndexOf(entity) is >= 0 and var p)
+        if (world.Productions.IndexOf(entity) is >= 0 and var p && QueueRuns.Contains(world.Productions.At(p), QueueItems.Upgrade(upgrade)))
         {
-            ref Production q = ref world.Productions.At(p);
-            for (int k = 0; k < q.Count; k++)
-            {
-                if (q.Queue[k] == QueueItems.Upgrade(upgrade))
-                {
-                    return true;
-                }
-            }
+            return true;
         }
 
         return false;
@@ -290,30 +279,32 @@ internal static class ResearchRules
         int write = 0;
         for (int k = 0; k < q.Count; k++)
         {
-            ushort item = q.Queue[k];
+            QueueRun run = q.Queue[k];
+            ushort item = run.Item;
             if (IsValidQueueItem(world, producer, item))
             {
-                q.Paid[write] = q.Paid[k];
-                q.Queue[write++] = item;
+                q.Queue[write++] = run;
                 continue;
             }
 
             GameplaySettings g = world.Ruleset.Gameplay;
-            if (QueueItems.IsResearch(item) || QueueItems.IsUpgrade(item))
+            for (int n = 0; n < run.Count; n++)
             {
-                ImmutableArray<int> cost = QueueItems.IsResearch(item) ? world.Ruleset.Technologies[QueueItems.Id(item)].Cost : world.Ruleset.Upgrades[QueueItems.Id(item)].Cost;
-                Refund(world, owner, cost, g.ResearchRefundBasisPoints);
-            }
-            else
-            {
-                RefundFor(world, owner, world.Ruleset.EntityTypes[item], q.Paid[k], g.ProductionRefundBasisPoints);
+                if (QueueItems.IsResearch(item) || QueueItems.IsUpgrade(item))
+                {
+                    ImmutableArray<int> cost = QueueItems.IsResearch(item) ? world.Ruleset.Technologies[QueueItems.Id(item)].Cost : world.Ruleset.Upgrades[QueueItems.Id(item)].Cost;
+                    Refund(world, owner, cost, g.ResearchRefundBasisPoints);
+                }
+                else
+                {
+                    RefundFor(world, owner, world.Ruleset.EntityTypes[item], run.Paid, g.ProductionRefundBasisPoints);
+                }
             }
         }
 
         for (int k = write; k < q.Count; k++)
         {
-            q.Queue[k] = 0;
-            q.Paid[k] = default;
+            q.Queue[k] = default;
         }
 
         if (write == 0 || q.Count != write)

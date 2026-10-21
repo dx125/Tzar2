@@ -33,9 +33,11 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (owner play-test 2026-10-20) a unit still walking to a structure works on, fights or boards it only next to it
     // (interactionTouchPx 12, in the ruleset hash).
     // (second play-test log) the gather point and the waves' move-advance goals snap to the nearest reachable ground.
-    private const ulong GoldenCommandStream = 0x8A130FC0A10290BDUL;
-    private const ulong GoldenHashStream = 0x4E6C5663C81EFAEFUL;
-    private const ulong GoldenFinalFullHash = 0xC992D50BE23E1BE6UL;
+    // (ADR 0180, third play-test) queues of entries (the AI keeps at most 10 items queued, as before), loads but milk
+    // appear at once, the next node toward the drop-off, units leave on free tiles, idle peasants find work; layout 8.
+    private const ulong GoldenCommandStream = 0xB8EC8408591460CBUL;
+    private const ulong GoldenHashStream = 0x02D43EB95C04BAD4UL;
+    private const ulong GoldenFinalFullHash = 0x15520328F731E09AUL;
 
     private const int Ticks = 9600;
 

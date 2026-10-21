@@ -68,6 +68,7 @@ First capture (2026-10-18, ADR 0111): no AI scenario yet, nothing here changed. 
 | E18 | Ships | 1 transport from 240 s before the first wave (the cheapest that carries), 2 fishing boats when fish is within 24 tiles of the harbor, then 1 warship (the hardest hitter); the first transport and boat are saved for (the run's other executors leave that stock), the rest bought from spare stock | `NavalOptions` |
 | E19 | Landings | a wave whose target is overseas boards the transports, then unloads at the target after everyone is aboard or 60 s; unload told again after 60 s; the military executor waits meanwhile | `NavalOptions` |
 | E20 | Patrol | idle armed ships not kept for a landing attack the nearest enemy ship within 30 tiles, else the nearest enemy building or unit (of the 8 nearest) in range of their sea, else move-advance off the enemy town | naval executor |
+| E21 | Queue depth | at most 10 items queued per building (the sim's old queue length; the sim queues any number since ADR 0180) | production executor |
 
 ## Tactics (ADR 0178; Tzar2's own, not placeholders: tune them for play)
 

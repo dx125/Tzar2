@@ -88,6 +88,10 @@ public sealed class ProductionExecutor : IAiExecutor
         }
     }
 
+    // Items the AI keeps queued per building at most: the sim's old queue length (ai-placeholders E21; the sim queues any
+    // number since ADR 0180).
+    private const int QueueDepth = 10;
+
     // The own completed producer of typeId with the most free queue slots (ties: lower entity index).
     private static EntityId ShortestQueue(AiExecutorContext context, ushort typeId, out int free)
     {
@@ -102,7 +106,7 @@ public sealed class ProductionExecutor : IAiExecutor
                 continue;
             }
 
-            int slots = producer.QueueCapacity - world.Productions.Get(p).Count;
+            int slots = QueueDepth - QueueRuns.Items(world.Productions.Get(p));
             if (slots > free)
             {
                 free = slots;

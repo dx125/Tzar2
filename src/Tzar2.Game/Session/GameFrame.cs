@@ -158,7 +158,7 @@ public struct FrameEntity
     /// <summary>Construction progress 0-1000, or -1 when the entity is not a construction site.</summary>
     public int ConstructionPermille;
 
-    /// <summary>Queued units of a producer (0 when none).</summary>
+    /// <summary>Items a producer has queued in all (0 when none; per item: <see cref="GameFrame.QueueEntries"/>).</summary>
     public int QueueCount;
 
     /// <summary>
@@ -216,6 +216,13 @@ public struct FrameEntity
 /// <param name="IsHero">A hero.</param>
 /// <param name="Taken">Already hired this period.</param>
 public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Count, int Level, bool IsHero, bool Taken);
+
+/// <summary>An entry of a producer's queue (ADR 0180): how many of one item it has queued, in queue order.</summary>
+/// <param name="Entity">The producer (<c>EntityId.Value</c>).</param>
+/// <param name="Kind">What the item is.</param>
+/// <param name="Id">The unit type, technology or upgrade id.</param>
+/// <param name="Count">How many are queued.</param>
+public readonly record struct FrameQueueEntry(uint Entity, FrameQueueKind Kind, ushort Id, int Count);
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
 /// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>
@@ -408,6 +415,23 @@ public sealed class GameFrame
     public int TavernCostStride { get; internal set; }
 
     private FrameTavernOffer[] _offers = [];
+    private FrameQueueEntry[] _queue = new FrameQueueEntry[16];
+
+    /// <summary>The queue entries of every producer, grouped by producer in entity order (first entry = in progress).</summary>
+    public ReadOnlySpan<FrameQueueEntry> QueueEntries => _queue.AsSpan(0, QueueEntryCount);
+
+    /// <summary>Number of valid entries in <see cref="QueueEntries"/>.</summary>
+    public int QueueEntryCount { get; internal set; }
+
+    internal void SetQueueEntry(int index, FrameQueueEntry entry)
+    {
+        if (_queue.Length <= index)
+        {
+            Array.Resize(ref _queue, Math.Max(index + 1, _queue.Length * 2));
+        }
+
+        _queue[index] = entry;
+    }
 
     internal FrameTavernOffer[] OfferBuffer(int count)
     {

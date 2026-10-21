@@ -16,7 +16,7 @@ internal sealed class GameplayReader
         "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
         "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "wallContinueRadiusTiles", "maxWallSegments",
         "gateOpenReachPx", "manaRegenPerMinute", "gateCloseReachPx", "gateChangeIntervalMs", "maxGateChangesPerTick",
-        "repairCostPercent", "repairerFalloffPercent",
+        "repairCostPercent", "repairerFalloffPercent", "idleWorkAfterMs", "idleWorkRadiusTiles",
     ];
 
     private readonly RulesetCompiler.SectionSet _settings;
@@ -48,7 +48,7 @@ internal sealed class GameplayReader
     public int HitDelayPercent => Range("hitDelayPercent", 50, 0, 100);
 
     /// <summary>Default production queue length (UNK-20).</summary>
-    public int QueueCapacity => Range("queueCapacity", 10, 1, ProducerDefinition.MaxQueueCapacity);
+    public int QueueCapacity => Range("queueCapacity", ProducerDefinition.MaxQueueCapacity, 1, ProducerDefinition.MaxQueueCapacity);
 
     /// <summary>Default mana regeneration of a <c>ManaPool</c> without its own (UNK-26).</summary>
     public int ManaRegenPerMinute => Range("manaRegenPerMinute", 0, 0, 1_000_000);
@@ -89,6 +89,8 @@ internal sealed class GameplayReader
             BurnDamagePerMinute = Range("burnDamagePerMinute", d.BurnDamagePerMinute, 0, 1_000_000),
             WallContinueRadiusTiles = Range("wallContinueRadiusTiles", d.WallContinueRadiusTiles, 0, 64),
             MaxWallSegments = Range("maxWallSegments", d.MaxWallSegments, 1, 256),
+            IdleWorkAfterMs = Range("idleWorkAfterMs", d.IdleWorkAfterMs, 0, 3_600_000),
+            IdleWorkRadiusTiles = Range("idleWorkRadiusTiles", d.IdleWorkRadiusTiles, 0, 64),
             GateOpenReachUnits = Range("gateOpenReachPx", d.GateOpenReachUnits / 64, 0, 256) * 64,
             GateCloseReachUnits = Range("gateCloseReachPx", d.GateCloseReachUnits / 64, 0, 512) * 64,
             GateChangeIntervalMs = Range("gateChangeIntervalMs", d.GateChangeIntervalMs, 0, 600_000),

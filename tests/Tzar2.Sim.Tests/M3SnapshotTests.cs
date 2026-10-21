@@ -110,13 +110,13 @@ public class M3SnapshotTests
             case "lifetime expired": world.Lifetimes.Set(cow, new Lifetime { ExpiresTick = 0 }); break;
             case "research item at the wrong building":
                 world.Productions.Get(castle).Count = 1;
-                world.Productions.Get(castle).Queue[0] = QueueItems.Research(Classic.TechnologyId("te_temperiron"));
+                world.Productions.Get(castle).Queue[0] = new QueueRun { Item = QueueItems.Research(Classic.TechnologyId("te_temperiron")), Count = 1 };
                 break;
             case "regrowth timer": world.ResourceStocks.Get(cow).RegenMs = 999_999; break;
             case "repair state on a cow": world.RepairProgresses.Set(cow, default); break;
             case "mana above the pool": world.Manas.Get(OfType(world, "euro.mage").Single()).MilliMana = 1_000_000; break;
             case "phantom bridge deck": world.Map.AddBridge(3, 11); break;
-            case "paid modifier on an empty slot": world.Productions.Get(castle).Paid[5] = new PaidModifier { Add = 3 }; break;
+            case "paid modifier on an empty slot": world.Productions.Get(castle).Queue[5] = new QueueRun { Paid = new PaidModifier { Add = 3 } }; break;
             case "construction carry":
                 EntityId site = world.PlaceStructure(Id("euro.house"), 0, 26, 9, underConstruction: true);
                 world.Constructions.Get(site).CarryBasisPoints = 10_000;
