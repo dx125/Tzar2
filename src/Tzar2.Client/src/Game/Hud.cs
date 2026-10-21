@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Godot;
 using Tzar2.Client.Logic;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 
@@ -44,54 +45,6 @@ public sealed class SelectionInfo
 /// <param name="Order">Whether the icon is an order button rather than a portrait.</param>
 /// <param name="Count">How many it stands for (selected units of the type, units left to make), shown when above 1.</param>
 public readonly record struct StripItem(int Icon, int Progress, bool Order, int Count = 0);
-
-/// <summary>One item of a card button's price in its tooltip.</summary>
-/// <param name="Icon">The icon asset (a resource's, or the hourglass).</param>
-/// <param name="Value">The amount or the time.</param>
-/// <param name="Short">Whether the kingdom has less of the resource than this (drawn red).</param>
-public readonly record struct PriceItem(string Icon, string Value, bool Short = false);
-
-/// <summary>A command-card slot.</summary>
-/// <param name="Button">The MENU.INI button.</param>
-/// <param name="Enabled">Whether it can be used now.</param>
-/// <param name="Active">Whether its order is pending (highlighted).</param>
-/// <param name="Detail">What the tooltip adds in words: why the button is greyed out, a mana cost, a page.</param>
-/// <param name="Count">How many of its item the selected buildings have queued, shown on the button (ADR 0180).</param>
-/// <param name="Price">The tooltip's price: resource and time icons with their values.</param>
-/// <param name="Description">What the order does (STRINGS.INI <c>orders_add</c>), or empty.</param>
-public readonly record struct CardSlot(CardButton Button, bool Enabled, bool Active, string Detail = "", int Count = 0, IReadOnlyList<PriceItem>? Price = null, string Description = "")
-{
-    /// <summary>Equality by what is shown (the price rows by value).</summary>
-    public bool Equals(CardSlot other)
-        => Button == other.Button && Enabled == other.Enabled && Active == other.Active && Detail == other.Detail && Count == other.Count
-            && Description == other.Description && SamePrice(Price, other.Price);
-
-    /// <inheritdoc/>
-    public override int GetHashCode() => HashCode.Combine(Button, Enabled, Active, Detail, Count, Description);
-
-    private static bool SamePrice(IReadOnlyList<PriceItem>? a, IReadOnlyList<PriceItem>? b)
-    {
-        if (a is null || b is null)
-        {
-            return (a?.Count ?? 0) == (b?.Count ?? 0);
-        }
-
-        if (a.Count != b.Count)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < a.Count; i++)
-        {
-            if (a[i] != b[i])
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-}
 
 /// <summary>
 /// The authentic desktop HUD (REQ-UI-01) on a <c>CanvasLayer</c>: the <c>S_VIEW</c> screen bitmap of the

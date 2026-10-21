@@ -8,6 +8,7 @@ using Tzar2.Content.Rules;
 using Tzar2.Content.Terrain;
 using Tzar2.Content.Vfs;
 using Xunit;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Tests;
 

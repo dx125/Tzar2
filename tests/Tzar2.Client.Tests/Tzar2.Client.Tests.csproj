@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Tzar2.Content/Tzar2.Content.csproj" />
     <ProjectReference Include="../../src/Tzar2.Import/Tzar2.Import.csproj" />
+    <ProjectReference Include="../../src/Tzar2.Game/Tzar2.Game.csproj" />
   </ItemGroup>
 
 </Project>

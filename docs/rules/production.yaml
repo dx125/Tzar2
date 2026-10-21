@@ -15,7 +15,7 @@ rules:
   PROD-003:
     rule: Each order button shows how many of its kind the selected buildings have queued, and the hourglass stat shows the progress of the one being made.
     source: [owner 2026-10-21 (third play-test; the original's castle panel)]
-    status: implemented
+    status: tested
   PROD-004:
     rule: New units appear around the building that made them, each on a free tile, not on top of each other.
     source: [owner 2026-10-20 (third play-test)]

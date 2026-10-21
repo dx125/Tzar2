@@ -53,38 +53,41 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
-Items 1 to 4 are the owner's order of 2026-10-21 (log below), done one after the other.
+Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the other.
 
 1. **Maintainer:** the ledger's first fill and the data account are done (log below). Next: bring the hotkey
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
    every change.
-2. **Maintainer:** the rest of the command card, starting with moving the card's logic out of the Godot client into
-   `Tzar2.Game` so that it is tested: the Magic Workshop's crafting (`build_item`: which item, how much gold), the
-   holders' list of units inside; the spies' impersonate, uncloak and reveal-self and the attack-type and AI-mode
-   orders need the sim first.
-3. **Maintainer:** an ADR for the split of the engine, the original's content and a future game on the same core (the
-   owner's question of 2026-10-21: a new game with new balance, units and races, maybe on a 3D engine).
-4. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
+2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done):
+   * the Magic Workshop's crafting (`build_item`: which item, how much gold);
+   * the holders' list of units inside, to let one out (ORD-015);
+   * the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013);
+   * AI assistance (none, economy, war, full; AI-004) and the lists of heroes, spies and items with nothing selected
+     (HUD-033).
+
+   The spy orders and AI assistance need the sim first. `attack_type` is on no card of the original, so it is left
+   out.
+3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
    order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), Landing Tactics +50 %
    (TECH-019), one farmer per field (ECO-021), siege weapons hurting their own side (WAR-013), the attack's hit frame
    from the data (WAR-014). Then the screens: diplomacy, tribute, inventory, save and load.
-5. **Operator:** a fourth play-test (`tools/play/play.ps1`); the third one's fixes are merged.
-6. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
+4. **Operator:** a fourth play-test (`tools/play/play.ps1`); the third one's fixes are merged.
+5. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-7. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
+6. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
    more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
-8. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
+7. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
-9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
+8. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-10. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
+9. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
     solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
     diagonal rocks) to reach 19/19.
-11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
+10. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
-12. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-13. M7 planning: installer, code signing, crash reporting, min-spec hardware.
-14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
+11. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
+12. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+13. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
 
@@ -93,6 +96,20 @@ Items 1 to 4 are the owner's order of 2026-10-21 (log below), done one after the
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-21 — The core stays free of engines and of the original; UI logic moves into models (ADR 0182).**
+  * **Owner's question:** a new game on the same core, with new balance, units and civilizations, perhaps on a 3D
+    engine.
+  * **Answer:**
+    * The core is ready: it uses no engine, the rules are data, and civilizations are strings.
+    * About a thousand lines of game UI logic lived in the Godot client.
+    * A few paths name the original's classes.
+    * The legacy AI language knows only three civilizations.
+    * The frame is shaped for 2D sprites.
+  * **Done now:** the command card is an engine-free model, `Tzar2.Game.Ui.CommandCard`, tested by `CommandCardTests`.
+    The client only draws it.
+  * **Deferred until a new game starts:** splitting the legacy importer into its own assembly, a trait for the
+    kingdom's seat, AI civilizations as data, the frame's full heading, and the choice of host engine.
+  * The work queue's ADR item is done.
 * **2026-10-21 — Every data file of the original is accounted for (ADR 0181, decision 5).**
   * [rules/data-usage.yaml](rules/data-usage.yaml) covers the INI files and unit tables of the reference build, 32
     files or groups:

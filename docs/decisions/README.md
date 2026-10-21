@@ -123,3 +123,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0179](0179-right-click-default-actions-and-pointers.md) | Give each unit its default action on a right click, and show it with the original's pointers | Accepted | 2026-10-20 |
 | [0180](0180-third-play-test-rules.md) | Queue any number of any items, give loads at once, and let peasants work without being told | Accepted | 2026-10-20 |
 | [0181](0181-a-ledger-of-the-originals-rules-checked-against-tests.md) | Keep a ledger of the original's rules, and check it against the tests | Accepted | 2026-10-21 |
+| [0182](0182-engine-core-original-content-and-a-future-game.md) | Keep the core free of any engine and of the original's content, and move UI logic into engine-free models | Accepted | 2026-10-21 |

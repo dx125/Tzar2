@@ -7,6 +7,7 @@ using Tzar2.Client.Logic;
 using Tzar2.Content.Compiled;
 using Tzar2.Game.Input;
 using Tzar2.Game.Session;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 
