@@ -168,6 +168,31 @@ public class AiTacticsTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void The_gather_point_is_on_reachable_ground()
+    {
+        // Second play-test log: soldiers and peasants sent to a gather point inside a forest reported unreachable goals.
+        // The town at (40, 30) gathers 7 tiles towards the map centre: around (34, 26), here a dense forest.
+        var objects = new List<MapObject> { MapObject.AtTile("euro.castle", 0, 2, 2), MapObject.AtTile("euro.castle", 1, 40, 30), MapObject.AtTile("euro.barrack", 1, 46, 30) };
+        objects.Add(Unit("euro.footman", 1, 44, 36));
+        for (int x = 30; x <= 38; x++)
+        {
+            for (int y = 22; y <= 29; y++)
+            {
+                objects.Add(MapObject.AtTile("comm.tree", MapObject.Nature, x, y));
+            }
+        }
+
+        using Simulation sim = Sim(objects, AiDifficulty.Normal, out _);
+        World world = sim.World;
+        Run(sim, 100);
+        EntityId barracks = All(world, "euro.barrack", 1).Single();
+        Production q = world.Productions.Get(barracks);
+        Assert.Equal(1, q.HasRally);
+        var layer = world.Navigation.ForType((ushort)world.Ruleset.EntityTypeId("euro.footman"))!;
+        Assert.True(layer.IsWalkablePoint(q.RallyX, q.RallyY), $"rally at tile {q.RallyX / Tile},{q.RallyY / Tile}");
+    }
+
+    [Fact]
     public void Power_grows_with_health_and_damage_and_is_zero_unarmed()
     {
         var objects = new List<MapObject>
