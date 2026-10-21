@@ -483,7 +483,11 @@ te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, add: 4, gro
 te_inquisition: { Technology: { effects: [{ stat: attack, percent: 50, classes: [priest] }] } }     # UNVERIFIED (UNK-26): exorcism is the priests' attack
 te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 4, classes: [priest] }] } }        # UNVERIFIED (UNK-26): +4 tiles of spell range
 te_tradetaxes: { Technology: { effects: [{ stat: income, percent: 10, classes: [market] }] } }       # UNVERIFIED (UNK-28)
-te_banking: { Technology: { effects: [{ stat: income, percent: 10, classes: [castle] }] } }          # UNVERIFIED (UNK-28)
+# Banking: "increases trade profit" (STRINGS.INI orders_add); the manual says it adds to the treasury over time (TECH-024).
+# Income is trade profit by the selling market, so it targets the markets: on the castle it did nothing (2026-10-21).
+te_banking: { Technology: { effects: [{ stat: income, percent: 10, classes: [market] }] } }          # UNVERIFIED (UNK-28)
+# Gunpowder (Asian): "increases cannon tower's attack power" (STRINGS.INI orders_add; TECH-013).
+te_gunpowder: { Technology: { effects: [{ stat: attack, percent: 20, classes: [tower_stone2] }] } }  # UNVERIFIED (UNK-21)
 
 # Ship cannon levels (UPGRADES.INI to_ship_level2-6): bought per galleon in order; each adds attack (UNVERIFIED UNK-21).
 comm.galleon:

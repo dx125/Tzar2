@@ -68,4 +68,4 @@ rules:
     rule: A unit cannot stand where another unit stands.
     source: [owner 2026-10-21 (fourth play-test)]
     status: partial
-    note: Units are pushed apart each step with a collision radius of 7 px (UNK-11); in a crowd, at a bridge or a gate, they still overlap.
+    note: Units are pushed apart softly with a collision radius of 7 px (UNK-11); walking or fighting in a crowd they come within 8 px of each other, while the original's units have a 25 px selection box and a 32 px object box (work queue).
