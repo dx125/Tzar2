@@ -554,7 +554,21 @@ public sealed class CommandCard
             t.IsCapturer,
             capturable,
             t.InventorySlots > 0,
-            t.Item is not null);
+            t.Item is not null,
+            t.GainsExperience ? e.Level : -1);
+    }
+
+    /// <summary>Backspace: the selected own units use their default item at once (HK.TXT; GAME-10), or null.</summary>
+    public CommandList? UseDefaultItem(CardContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var use = new CommandList();
+        foreach (EntityInfo user in Selected(context).Where(e => e.Owner == _me && e.IsMobile && e.CanPickItems))
+        {
+            use.Add(CommandKind.UseItem, [user.Id], target: user.Id, arg0: -1);
+        }
+
+        return use.Count > 0 ? use : null;
     }
 
     // ---- the frame ----------------------------------------------------------------------------------------------------

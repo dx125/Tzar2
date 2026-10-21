@@ -122,6 +122,18 @@ public sealed class SelectionTests
     }
 
     [Fact]
+    public void Experience_filters_split_at_the_average_level_and_skip_what_gains_none()
+    {
+        EntityInfo[] screen = [Unit(1) with { Level = 1 }, Unit(2) with { Level = 4 }, Unit(3) with { Level = 7 }, Unit(4), Unit(5, owner: 1) with { Level = 9 }];
+        var s = new SelectionModel(Me);
+        s.SelectByExperience(screen, above: true); // on screen: levels 1, 4 and 7 average 4
+        Assert.Equal([Id(3)], s.Selected);
+        s.Box([screen[0], screen[1], screen[3]], shift: false);
+        s.SelectByExperience(screen, above: false); // of the selection: 1 and 4 (unit 4 gains none) average 2.5
+        Assert.Equal([Id(1)], s.Selected);
+    }
+
+    [Fact]
     public void Tab_cycles_the_focus_and_prune_drops_the_dead()
     {
         var s = new SelectionModel(Me);

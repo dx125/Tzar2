@@ -17,14 +17,15 @@ the feature behind it is not in the simulation yet (the key shows a message nami
 | | Fixed keys | Group keys | Building-class keys |
 |---|---|---|---|
 | Bindings | 45 | 18 | 26 |
-| Done | 24 | 9 (assign) | 26 |
-| Partial | 9 | 9 (select: the double-press centring is assumed) | — |
-| Blocked (needs a sim or multiplayer feature) | 12 | — | — |
+| Done | 28 | 9 (assign) | 26 |
+| Partial | 11 | 9 (select: the double-press centring is assumed) | — |
+| Blocked (waits for a screen: diplomacy, tribute, inventory; or location messages) | 6 | — | — |
 
-Mouse semantics: 16 rows, 11 done, 3 partial, 1 blocked (item clicks), 1 deliberately unbound (wheel zoom).
+Mouse semantics: 16 rows, 11 done, 4 partial, 1 deliberately unbound (wheel zoom).
 
 The checklist is complete: every original key and mouse action is listed, bound and either works or reports what it
-waits for. "Blocked" rows close by themselves when the features land (items, diplomacy, saves, chat, experience).
+waits for. "Blocked" rows close by themselves when the features land (the diplomacy, tribute and inventory screens,
+location messages in the multiplayer chat). Updated 2026-10-21: items, experience and multiplayer chat are in.
 
 ## Function keys
 
@@ -45,10 +46,10 @@ waits for. "Blocked" rows close by themselves when the features land (items, dip
 
 | Id | Keys | What it does | Status | Notes |
 |---|---|---|---|---|
-| `chat` | Enter | Chat dialog | blocked | needs multiplayer (M6) |
-| `send-location` | Ctrl+Enter | Sends the view position to the other players | blocked | needs multiplayer |
+| `chat` | Enter | Chat dialog | partial | multiplayer: the chat line (ADR 0168); single player has none, so its cheat codes cannot be typed yet |
+| `send-location` | Ctrl+Enter | Sends the view position to the other players | blocked | the multiplayer chat has no location messages yet |
 | `center` | Space | Centres the view on the selection | done | |
-| `default-item` | Backspace | Uses the unit's default item at once | blocked | items are not in the sim yet |
+| `default-item` | Backspace | Uses the unit's default item at once | done | the selected units with an inventory use their first item on themselves (GAME-10) |
 | `escape` | Esc | Cancels a pending order or placement, closes a sub-menu, else deselects | done | with nothing selected it opens the game menu (the owner's request, SHELL-028) |
 | `event-last` | Home | Jumps to the latest event (unit trained, building finished) | done | technology events come with research |
 | `event-next` | PgDn | Next event after Home | done | |
@@ -63,15 +64,15 @@ waits for. "Blocked" rows close by themselves when the features land (items, dip
 | `speed-up` | + | Faster game | done | steps 25 … 300 % of the classic tick rate |
 | `speed-down` | − | Slower game | done | |
 | `trees` | `\` | Translucent trees | partial | drawn at 45 % opacity above units, not with the original's stencil look (§13.3) |
-| `inventory` | `/` | Shows the selected object's inventory | blocked | items; the manual and HK.TXT name the two slash keys the other way round, verify in the running game |
-| `inventory-prev` | < | Previous inventory page | blocked | items |
-| `inventory-next` | > | Next inventory page | blocked | items |
+| `inventory` | `/` | Shows the selected object's inventory | blocked | the inventory view is not built yet (HUD-017); the manual and HK.TXT name the two slash keys the other way round, verify in the running game |
+| `inventory-prev` | < | Previous inventory page | blocked | the inventory view (HUD-017) |
+| `inventory-next` | > | Next inventory page | blocked | the inventory view (HUD-017) |
 | `tab` | Tab | Shows one unit of a multiple selection (cycles) | done | |
 | `bars-hold` | `` ` `` (held) | Shows every health bar while held | done | |
 | `bars-toggle` | Ctrl+`` ` `` | Health bars on/off | done | |
 | `group-clear` | Ctrl+0 | Removes the selected units from their group | done | |
-| `xp-above` | Ctrl+] | Selects units with more experience than the average | blocked | experience is not in the sim yet |
-| `xp-below` | Ctrl+[ | Selects units with less experience than the average | blocked | experience is not in the sim yet |
+| `xp-above` | Ctrl+] | Selects units with more experience than the average | done | by level, of the selection or of the own units on screen (GAME-08) |
+| `xp-below` | Ctrl+[ | Selects units with less experience than the average | done | as above |
 | `hp-above` | Alt+] | Selects units healthier than the selection's average (no selection: above 50 %) | done | |
 | `hp-below` | Alt+[ | Selects units weaker than the average (no selection: below 50 %) | done | |
 | `ungrouped` | Alt+`\` | Selects the own units on screen that are in no group | done | |
@@ -97,7 +98,7 @@ waits for. "Blocked" rows close by themselves when the features land (items, dip
 | Card orders move, attack (on ground: move-advance), harvest, patrol, guard (follow), stop | done | |
 | Build menu and its sub-menus, placement ghost with legality, Shift keeps placing | done | right click or Esc cancels (manual ch. 6) |
 | Train / right click on a train button cancels the last queued unit | done | Shift+click queues five |
-| Repair, capture, explore, stand ground, pick items, bribe, spells, technologies, gates | blocked | not in the sim yet; shown dimmed with the reason in the tooltip |
+| Repair, capture, explore, stand ground, pick items, bribe, spells, technologies, gates | done | the command card model (ADR 0182); an order greyed out says why in its tooltip |
 
 ## Mouse
 
@@ -117,5 +118,5 @@ waits for. "Blocked" rows close by themselves when the features land (items, dip
 | Alt / Ctrl+Alt+right click on a building: rally with default action / move-advance | partial | sets a plain rally point until the sim has rally kinds |
 | Right click cancels placement and pending orders | done | |
 | Minimap: left click/drag moves the view, right click orders to that point | done | |
-| Item clicks (use, drop, instant, default item) | blocked | items |
+| Item clicks (use, drop, instant, default item) | partial | the card's use, drop and instant use act on the first item; there is no inventory to pick from (HUD-017) |
 | Mouse wheel zoom | — | off in the Authentic preset (§15.2); not bound |
