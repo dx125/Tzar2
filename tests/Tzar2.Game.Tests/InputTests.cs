@@ -141,6 +141,7 @@ public sealed class OrderTests
     private const byte Me = 0;
 
     [Fact]
+    [Trait("Rule", "CTRL-011")]
     public void Right_click_on_ground_moves_with_the_modifier_flags()
     {
         IReadOnlyList<PlannedCommand> c = OrderResolver.RightClick([SelectionTests.Unit(1), SelectionTests.Unit(2)], null, 100, 200, KeyMods.None, Me);
@@ -154,6 +155,7 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-003")]
     public void Right_click_on_an_enemy_attacks_with_armed_units()
     {
         EntityInfo enemy = SelectionTests.Unit(9, owner: 1);
@@ -164,6 +166,7 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-003")]
     public void Nature_creatures_and_buildings_are_attacked_but_resources_are_not()
     {
         EntityInfo bear = SelectionTests.Unit(9, owner: 0xFF);
@@ -174,6 +177,7 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-004")]
     public void Right_click_on_a_resource_sends_harvesters_and_moves_the_rest()
     {
         IReadOnlyList<PlannedCommand> c = OrderResolver.RightClick([SelectionTests.Unit(1, harvester: true), SelectionTests.Unit(2)], SelectionTests.Tree(7), 5, 5, KeyMods.None, Me);
@@ -185,6 +189,7 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-005")]
     public void Right_click_on_an_own_site_sends_builders()
     {
         PlannedCommand help = OrderResolver.RightClick([SelectionTests.Unit(1, harvester: true)], SelectionTests.Building(4, site: true), 0, 0, KeyMods.None, Me)[0];
@@ -193,6 +198,7 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-006")]
     public void Right_click_on_an_own_damaged_building_sends_builders_to_repair_it()
     {
         EntityInfo damaged = SelectionTests.Building(4) with { Health = 60, IsRepairable = true };
@@ -254,6 +260,8 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-010")]
+    [Trait("Rule", "CTRL-012")]
     public void Right_click_on_an_own_unit_gathers_the_others_round_it_and_the_pointer_says_so()
     {
         // Play-test of 2026-10-20: a herd right-clicked on one of its cows walked on in formation instead.
@@ -268,6 +276,8 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-007")]
+    [Trait("Rule", "CTRL-009")]
     public void Peasants_capture_enemy_buildings_soldiers_attack_them_and_items_are_picked_up()
     {
         EntityInfo peasant = SelectionTests.Unit(1, harvester: true) with { CanCapture = true };
@@ -289,6 +299,8 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-004")]
+    [Trait("Rule", "CTRL-008")]
     public void With_the_rules_harvesters_gather_only_their_resources_and_units_board_holders_that_take_them()
     {
         Ruleset rules = HumanVsAiTests.SyntheticRules;

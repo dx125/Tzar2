@@ -87,6 +87,7 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-003")]
     public void A_move_advance_fights_on_the_way_and_then_reaches_its_destination()
     {
         using var d = new SimDriver(TestMap(40, 12, Unit("euro.footman", 0, 3, 5), Unit("euro.peon", 1, 14, 5)), ruleset: Classic);
@@ -140,6 +141,7 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-001")]
     public void A_guard_fights_on_the_way_and_keeps_guarding_after_the_fight()
     {
         // Owner play-test 2026-10-20: "guard" did nothing. A footman guards a peasant that walks towards an enemy.

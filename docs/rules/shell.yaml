@@ -1,0 +1,13 @@
+schema: tzar2-rules/1
+prefix: SHELL
+title: Menus, setup and pause
+rules:
+  SHELL-001:
+    rule: The pause stops the whole game, animations, weather and sounds included; sounds playing are held and no work sound starts.
+    source: [owner 2026-10-20 (play-tests 1 to 3)]
+    status: implemented
+    adr: [0179]
+  SHELL-002:
+    rule: SINGLE PLAYER opens the menu of campaign, custom map, random map, load game and back.
+    source: [manual "Single Player Screen", data MENU.INI S_SINGLEPLAYER]
+    status: implemented

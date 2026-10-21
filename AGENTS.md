@@ -13,6 +13,9 @@ Non-negotiable:
   manifests and measured numbers only (REQ-LEGAL-01; CI checks).
 * The simulation is deterministic: fixed-point integers, no floats, wall clock, unordered iteration or global
   randomness. Golden and bench hashes change only on purpose, re-pinned in the same PR with the reason.
+* The original's rules live in the ledger **[docs/rules/](docs/rules/README.md)** (ADR 0181): read a feature's chapter
+  before building it; a finding about the original becomes a rule with a test that names it (`[Trait("Rule", "ID")]`);
+  `t2 rules check` must pass.
 * Gameplay values that are neither in the original's tables nor measured are UNVERIFIED placeholders in
   `docs/mechanics/*-placeholders.md`; replace them with capture facts, do not tune them.
 * A decision others will build on gets an ADR (template `docs/decisions/0000-template.md`, then

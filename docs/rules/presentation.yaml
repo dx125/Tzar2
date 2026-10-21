@@ -1,0 +1,21 @@
+schema: tzar2-rules/1
+prefix: PRES
+title: Animations, effects and sounds
+rules:
+  PRES-001:
+    rule: Burning buildings show the original's big and small flames.
+    source: [data IMAGES.INI fire_big fire_small, owner 2026-10-20 (before the second play-test)]
+    status: implemented
+  PRES-002:
+    rule: Arrows, bolts, stones, cannon balls, rockets and spells fly as the original's pictures, and stones, shells, rockets and bolts leave its explosions.
+    source: [data IMAGES.INI, owner 2026-10-20 (before the second play-test)]
+    status: partial
+    note: Which picture goes with which weapon, the flames' spots and the arcs are Tzar2's guesses.
+  PRES-003:
+    rule: Milking has its own animation, and a peasant carrying a load walks with it (logs, gold, stone, food, a pail of milk, meat).
+    source: [data IMAGES.INI image_milk and the carrying sheets, owner 2026-10-20]
+    status: implemented
+  PRES-004:
+    rule: Units and buildings of another civilization that a kingdom owns look as in their own civilization.
+    source: [owner 2026-10-20 (second play-test on the map "There is not enough room for two of us")]
+    status: implemented

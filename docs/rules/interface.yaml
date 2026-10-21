@@ -1,0 +1,37 @@
+schema: tzar2-rules/1
+prefix: HUD
+title: The screen
+rules:
+  HUD-001:
+    rule: An order button's hint gives its name, its hotkey, its price and what it still requires ("Create Knight - 'K' ( Gold:70 Food:120 ) Requires Stable, Plate Armor").
+    source: [owner 2026-10-21 (third play-test; the original's hint), 'strings STRINGS3.INI [misc] req3']
+    status: deviation
+    note: Tzar2 shows a box with the name and a hotkey key cap, the price with the resource icons (what is short in red), the time, the order's description and the requirements; the owner preferred it to the original's single line (2026-10-21).
+  HUD-002:
+    rule: A hint goes away when the pointer leaves its button, when the selection changes or the button empties, and when a dialog opens; it never stays on the screen.
+    source: [owner 2026-10-21 (third play-test)]
+    status: implemented
+  HUD-003:
+    rule: An upgrade (towers, walls, gates, ships) is ordered from the same card as units and keeps its button with its count while being made.
+    source: [owner 2026-10-21 (third play-test)]
+    status: implemented
+  HUD-004:
+    rule: Names too long for the line wrap beside the stats instead of running under them.
+    source: [owner 2026-10-21 (third play-test)]
+    status: implemented
+  HUD-005:
+    rule: A selection of many units shows one icon per type with how many are selected and their average health.
+    source: [owner 2026-10-20 (second play-test)]
+    status: implemented
+  HUD-006:
+    rule: Portraits wear the colour of the unit's kingdom.
+    source: [owner 2026-10-20 (first play-test)]
+    status: implemented
+  HUD-007:
+    rule: A selected unit is marked by the corners of its selection box, like a structure.
+    source: [data IMAGES.INI selection, owner 2026-10-20 (before the second play-test)]
+    status: implemented
+  HUD-008:
+    rule: Researched technologies and owned upgrades leave the card; orders that a technology unlocks appear once it is researched.
+    source: ['data TECHTREE [orders]', owner 2026-10-20 (first play-test)]
+    status: implemented

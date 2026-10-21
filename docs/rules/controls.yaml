@@ -1,0 +1,89 @@
+schema: tzar2-rules/1
+prefix: CTRL
+title: Selection, mouse and pointers
+rules:
+  CTRL-001:
+    rule: A click selects a unit anywhere on its drawn figure, not only at its feet.
+    source: [owner 2026-10-20 (first play-test)]
+    status: implemented
+  CTRL-002:
+    rule: Holding the right or middle mouse button drags the map; a right click gives its order when the button is released.
+    source: [owner 2026-10-20 (first play-test)]
+    status: implemented
+  CTRL-003:
+    rule: A right click on an enemy unit or building makes the selected armed units attack it; creatures of Nature are attacked too, resources never.
+    source: [manual "Commanding Units" (Attack)]
+    status: tested
+    adr: [0179]
+  CTRL-004:
+    rule: A right click on a resource sends the selected units that can gather it to gather it; the others move there.
+    source: [manual "Commanding Units" (Harvest), owner 2026-10-21 (third play-test)]
+    status: tested
+    adr: [0179]
+  CTRL-005:
+    rule: A right click on an own unfinished building sends the selected peasants to help build it.
+    source: [owner 2026-10-20 (third play-test)]
+    status: tested
+    adr: [0179, 0180]
+  CTRL-006:
+    rule: A right click on an own damaged building or vehicle sends the selected peasants to repair it.
+    source: [manual "Commanding Units" (Repair), manual "Repairing A Building"]
+    status: tested
+  CTRL-007:
+    rule: A right click on an enemy building sends the selected peasants to capture it, while armed units attack it.
+    source: [manual "Commanding Units" (Capture building)]
+    status: tested
+    adr: [0179]
+  CTRL-008:
+    rule: A right click on an own ship or other holder that takes them loads the selected units into it.
+    source: [manual "Units" (transporting units across water), manual "Commanding Units" (Load)]
+    status: tested
+    adr: [0179]
+  CTRL-009:
+    rule: Over an item, with units selected, the pointer turns into the hand; a click picks the item up.
+    source: [manual "Commanding Units" (Pick item)]
+    status: tested
+    adr: [0179]
+  CTRL-010:
+    rule: A right click on an own unit makes the selected units follow it; a herd of cows gathers round the clicked cow.
+    source: [owner 2026-10-21 (third play-test)]
+    status: tested
+    adr: [0179]
+  CTRL-011:
+    rule: A right click on the ground moves the selection there; with Shift it adds a waypoint, with Ctrl it is a move-advance (fight on the way) and with Alt the units move without answering attacks.
+    source: [manual "Commanding Units" (Move and Move-advance)]
+    status: tested
+  CTRL-012:
+    rule: Over the world the pointer shows what a right click would do there for the selection, by the strongest action any selected unit has (attack, capture, repair, gather, pick up, move).
+    source: [manual "Commanding Units" (the cursor changes to each order's cursor), owner 2026-10-21 (third play-test)]
+    status: tested
+    adr: [0179]
+  CTRL-013:
+    rule: The hand pointer means capturing or picking up only; it does not show over anything else.
+    source: [manual "Commanding Units" (Pick item), owner 2026-10-21 (third play-test)]
+    status: implemented
+    adr: [0179]
+  CTRL-014:
+    rule: Every pointer clicks at its own hotspot.
+    source: [data IMAGES.INI cs_* hotspot]
+    status: implemented
+    adr: [0179]
+  CTRL-015:
+    rule: The default pointer is the golden spearhead.
+    source: [data IMAGES.INI s_def, owner 2026-10-20 (second play-test)]
+    status: implemented
+  CTRL-016:
+    rule: A move order plays the red cross animation where the ground was clicked.
+    source: ['data IMAGES.INI [cursor]', owner 2026-10-20 (third play-test)]
+    status: implemented
+    adr: [0179]
+  CTRL-017:
+    rule: An order on an object (a building to enter, repair or attack) is confirmed by an animation around the object.
+    source: [owner 2026-10-20 (third play-test)]
+    status: partial
+    note: Tzar2 blinks the object's selection corners three times; which animation the original plays is not identified.
+    adr: [0179]
+  CTRL-018:
+    rule: The ghost of a building being placed has no fill and wears the kingdom's colours; only the cells that block it turn red.
+    source: [owner 2026-10-20 (first and second play-tests)]
+    status: implemented

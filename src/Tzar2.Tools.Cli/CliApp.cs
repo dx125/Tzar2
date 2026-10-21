@@ -90,6 +90,11 @@ internal static class CliApp
             return SoakCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
         }
 
+        if (args[0] == "rules")
+        {
+            return RulesCommand.Run(args.AsSpan(1).ToArray(), stdout, stderr);
+        }
+
         foreach ((string name, string milestone, _) in Planned)
         {
             string[] words = name.Split(' ');
@@ -123,6 +128,7 @@ internal static class CliApp
             ("replay verify|record|info", "verify replays headlessly (every stored hash), record a computer match, show a header"),
             ("desync diff|extract", "component diff of two snapshots or a desync report; extract a report's snapshots"),
             ("soak [options]", "multiplayer soak: matches through a real relay with impaired UDP and disconnects"),
+            ("rules check|report|list", "the ledger of the original's rules: check it against the tests, write its report"),
         };
         lines.AddRange(Planned.Select(p => (p.Name, $"{p.Summary} [not implemented, {p.Milestone}]")));
         int width = lines.Max(l => l.Item1.Length) + 2;
