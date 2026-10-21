@@ -93,7 +93,7 @@ internal sealed class CombatCompiler
     /// <summary>
     /// Resolves the pending unit filters into the types (rebuilt in place) and compiles the settings and spells.
     /// </summary>
-    public CombatRules Compile(List<EntityTypeDefinition> types, List<(int Type, CombatSpecs Specs)> pending, ResearchCompiler research, ResearchIds researchIds, LegacyTables? legacy)
+    public CombatRules Compile(List<EntityTypeDefinition> types, List<(int Type, CombatSpecs Specs)> pending, ResearchCompiler research, ResearchIds researchIds, LegacyTables? legacy, LegacyGroups? groups = null)
     {
         Dictionary<string, LocomotorMask> keywords = UnitKeywords();
         foreach ((int index, CombatSpecs specs) in pending)
@@ -113,6 +113,26 @@ internal sealed class CombatCompiler
             if (specs.ConvertClasses is { } classes && traits.ConvertsFrom is { } convert)
             {
                 traits = traits with { ConvertsFrom = convert with { From = Resolve(types, classes.Specs, classes.At, keywords, t.Traits.Civilization, $"{t.Key}.ConvertsFrom.classes") } };
+            }
+
+            if (specs.ImpersonateNever is { } never)
+            {
+                // Groups of BONUS.INI (machines, ships, magic_creatures) or classes; 'except' gives some back (the mage is a man).
+                var off = new List<ushort>();
+                foreach (string spec in never.Specs)
+                {
+                    (groups ?? LegacyGroups.Empty).Match(spec, types, off);
+                }
+
+                var back = new List<ushort>();
+                foreach (string spec in specs.ImpersonateExcept?.Specs ?? [])
+                {
+                    (groups ?? LegacyGroups.Empty).Match(spec, types, back);
+                }
+
+                var ids = new SortedSet<ushort>(off);
+                ids.ExceptWith(back);
+                traits = traits with { NotImpersonated = [.. ids] };
             }
 
             types[index] = WithTraits(t, traits);

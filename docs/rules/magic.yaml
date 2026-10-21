@@ -53,11 +53,11 @@ rules:
     source: [manual Asian Units (Priest)]
     status: implemented
   MAG-012:
-    rule: Spies (with Espionage) can impersonate a unit of another kingdom and reveal themselves again.
-    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, patch 1.05 (TZAR110.TXT)]
+    rule: Spies (with Espionage) can impersonate any man of another kingdom, of any civilization, from next to him, and reveal themselves again; not machines, flyers or magic creatures. Fighting keeps the disguise; another kingdom's spy close by unmasks it, towers do not.
+    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, 'data BONUS.INI [groups] machines ships magic_creatures', owner 2026-10-21 (answers)]
     status: tested
     adr: [0184]
-    note: The spy walks to the unit and takes its look; that kingdom and its allies leave it alone until it reveals itself or attacks. Reach, which units, towers and detectors, and attack ending it are unverified.
+    note: The data gives no distance for the unmasking; Tzar2 uses the spy's detector radius (5 tiles, UNVERIFIED). The mage is in BONUS.INI's magic_creatures but is a man, so it can be copied.
   MAG-013:
     rule: Spies and ninjas see through each other's invisibility, and a cloaked ninja can drop its cloak (uncloak).
     source: [patch 1.05 (TZAR110.TXT), 'data MENU.INI [ninja_cloaked] uncloak', data ORDERS.INI uncloak]
@@ -85,8 +85,8 @@ rules:
   MAG-018:
     rule: A crusader dying in a ship or a building, or impersonated by a spy who then reveals himself, is counted out of the crusade.
     source: [patch 1.06 (TZAR110.TXT)]
-    status: partial
-    note: Deaths in ships and buildings count; impersonation is missing (MAG-012).
+    status: implemented
+    note: Deaths in ships and buildings count; a spy in a crusader's look never joins a crusade (ADR 0184), so its reveal leaves the count right.
   MAG-019:
     rule: With Fanaticism and Jihad, Arabian peasants become Jihad warriors.
     source: [manual Arabian Units (Jihad Warrior)]

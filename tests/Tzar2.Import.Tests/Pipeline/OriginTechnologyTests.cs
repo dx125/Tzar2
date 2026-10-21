@@ -90,6 +90,24 @@ public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposabl
         }
     }
 
+    [OriginFact]
+    [Trait("Rule", "MAG-012")]
+    public void The_spy_copies_men_but_no_machine_ship_or_magic_creature()
+    {
+        // The owner (2026-10-21) with BONUS.INI's groups: the mage is among the magic creatures there but is a man.
+        Ruleset rules = CompileFromOrigin();
+        var off = rules.EntityTypes.First(t => t.Traits.LegacyClass == "spy").Traits.NotImpersonated.ToHashSet();
+        foreach (string cls in new[] { "catapult", "ballista", "galleon", "xebec", "troll", "dragon", "jinn", "skeleton" })
+        {
+            Assert.All(rules.EntityTypes.Where(t => t.Traits.LegacyClass == cls).ToArray() is { Length: > 0 } types ? types : throw new Xunit.Sdk.XunitException(cls), t => Assert.Contains(t.Id, off));
+        }
+
+        foreach (string cls in new[] { "mage", "footman", "knight", "peon", "archer" })
+        {
+            Assert.All(rules.EntityTypes.Where(t => t.Traits.LegacyClass == cls).ToArray() is { Length: > 0 } types ? types : throw new Xunit.Sdk.XunitException(cls), t => Assert.DoesNotContain(t.Id, off));
+        }
+    }
+
     private Ruleset CompileFromOrigin()
     {
         string origin = OriginPaths.RequireOrigin();

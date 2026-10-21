@@ -64,10 +64,10 @@ rules:
     status: partial
     note: The Unload button waits for a click on the place and the units land there; the pointer does not change colour.
   ORD-015:
-    rule: Emerge lets one chosen unit out of a building at the clicked place.
-    source: [manual Commanding Units (Emerge)]
+    rule: Emerge lets one chosen unit out of a building at the place right-clicked next; with no unit chosen, everyone comes out at once.
+    source: [manual Commanding Units (Emerge), owner 2026-10-21 (answers)]
     status: tested
-    note: The units inside show in the info area; a click picks one, Emerge then waits for a left click on the place (the manual says a right click). Without a pick, everyone comes out next to the building at once, as ORDERS.INI gives emerge no place. A unit cannot be picked out of a ship, which docks first.
+    note: The units inside show in the info area and a click picks one. Tzar2 takes a left click for the place too. A unit cannot be picked out of a ship, which docks first.
   ORD-016:
     rule: Large units such as catapults come out of buildings properly.
     source: [patch 1.05 (TZAR110.TXT)]

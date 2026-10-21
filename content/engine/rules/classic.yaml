@@ -293,7 +293,9 @@ legacy:
 ^class.market: { TradeDock: { access: land } }
 ^class.tavern: { Tavern: {} }
 # Spies and ninjas see cloaked units near them (GAME-12; radius UNVERIFIED).
-^class.spy: { Detector: { radius: 5 }, Impersonator: {}, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
+# The owner (2026-10-21): a spy copies any man of any civilization, from next to him, but no machine, flyer or magic
+# creature; fighting keeps the disguise; another kingdom's spy close by unmasks it (MAG-012, ADR 0184).
+^class.spy: { Detector: { radius: 5 }, Impersonator: { never: [machines, ships, magic_creatures], except: [mage] }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
 ^class.ninja: { Detector: { radius: 5 } }
 
 # Drop-offs (GAME-02; manual §5.4.1.2 and ch. 6: castle stores all resources, farm food, lumbermill wood; storage per
@@ -306,14 +308,10 @@ legacy:
   DropOff: { resources: [food] }
 ^class.lumber:
   DropOff: { resources: [wood], autoGather: true }
+# The owner (2026-10-21): every civilization's storage takes gold and stone, as the lumber mill takes wood (the
+# manual's per-civilization lists and its iron are not the game's; ECO-014).
 ^class.storage:
-  DropOff: { resources: [stone, gold, iron], autoGather: true }
-^euro.storage:
-  DropOff: { resources: [gold, iron] }          # manual ch. 5: "a place for storing iron and gold"
-^asia.storage:
-  DropOff: { resources: [gold, stone] }         # manual ch. 5: "storing gold and stone"
-^arab.storage:
-  DropOff: { resources: [iron, gold, stone] }   # manual ch. 5: "storing iron, gold and stone"
+  DropOff: { resources: [stone, gold], autoGather: true }
 ^class.harbor:
   DropOff: { resources: [food], access: [water] }   # UNVERIFIED: only boats deliver here
   Building: { placement: coast }

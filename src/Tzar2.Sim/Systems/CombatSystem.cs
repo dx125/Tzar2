@@ -245,11 +245,7 @@ public sealed class CombatSystem : ISimSystem
             {
                 c.CooldownMs += arm.CooldownMs;
                 c.HitInMs = arm.HitDelayMs;
-                Uncloak(world, attacker); // attacking reveals an invisible unit (1.10 fix)
-                if (world.Disguises.Count != 0)
-                {
-                    world.Disguises.Remove(attacker); // and a disguised spy (ADR 0184, UNVERIFIED)
-                }
+                Uncloak(world, attacker); // attacking reveals an invisible unit (1.10 fix); a disguise stays (the owner)
                 if (c.HitInMs == 0)
                 {
                     c.HitInMs = -1;

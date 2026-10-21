@@ -99,25 +99,25 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 6 | 4 | 0 | 4 | 0 | 0 |
-| [Construction and repair](construction.yaml) (BLD) | 22 | 14 | 3 | 1 | 1 | 0 | 3 |
-| [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 13 | 8 | 2 | 4 | 0 | 2 |
+| [Construction and repair](construction.yaml) (BLD) | 22 | 14 | 4 | 2 | 1 | 0 | 1 |
+| [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 14 | 9 | 2 | 4 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 6 | 1 | 2 | 0 | 0 | 0 |
-| [Resources and gathering](economy.yaml) (ECO) | 22 | 13 | 5 | 0 | 1 | 0 | 3 |
+| [Resources and gathering](economy.yaml) (ECO) | 22 | 15 | 5 | 0 | 1 | 0 | 1 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 2 | 14 | 6 | 9 | 2 | 1 |
-| [Items](items.yaml) (ITEM) | 15 | 8 | 2 | 2 | 2 | 1 | 0 |
-| [Magic, religion and spies](magic.yaml) (MAG) | 20 | 14 | 3 | 2 | 0 | 0 | 1 |
+| [Items](items.yaml) (ITEM) | 16 | 8 | 2 | 2 | 3 | 1 | 0 |
+| [Magic, religion and spies](magic.yaml) (MAG) | 20 | 14 | 4 | 1 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 9 | 4 | 3 | 2 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
-| [Production and population](production.yaml) (PROD) | 15 | 9 | 4 | 0 | 0 | 1 | 1 |
+| [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 0 | 10 | 10 | 6 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 26 | 1 | 2 | 2 | 0 | 5 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 333 | 156 | 70 | 42 | 37 | 9 | 19 |
+| **All** | 334 | 160 | 73 | 42 | 38 | 9 | 12 |
 
 ## Not done yet
 
@@ -138,6 +138,7 @@ Missing and partial rules.
 
 * **BLD-018** (partial): A wall shows green where it can be laid; a gate can be placed over a wall already built, or anywhere it fits. *A gate cannot replace a piece of wall.*
 * **BLD-019**: Holding Alt while placing a bridge turns it. *The editor turns bridges with Alt; the game's placement does not.*
+* **BLD-022** (partial): A repair restores a set number of hit points with each blow of a repairer, so its time depends on how many hit points the building lacks. *Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). The original's data has no repair value, so the hit points per blow need a capture.*
 
 ### Selection, mouse and pointers
 
@@ -191,11 +192,11 @@ Missing and partial rules.
 * **ITEM-010** (partial): A soul item kills a unit or makes it go berserk; a hero is not killed. *The simulation does it; the card's item_kill and item_berserk orders do nothing yet.*
 * **ITEM-012**: A unit that picks up a magic book has yellow stars floating above it.
 * **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
+* **ITEM-016**: Each kind of item the magic workshop makes has several items, books of different spells, potions of different effects, and weapons for attack or defence (swords, bows, shields). *Tzar2 has one item per kind (a Fire Rain book, a potion, a weapon, a shield, a plus item); several need items with their own spell or effect.* Work: STATUS work queue 3.
 
 ### Magic, religion and spies
 
 * **MAG-017** (partial): After all crusaders have died a full crusade needs some time; one preached earlier brings fewer crusaders for the same price. *Tzar2 refuses a crusade during the wait instead of bringing fewer crusaders.*
-* **MAG-018** (partial): A crusader dying in a ship or a building, or impersonated by a spy who then reveals himself, is counted out of the crusade. *Deaths in ships and buildings count; impersonation is missing (MAG-012).*
 
 ### Nature, gateways, day and weather
 
@@ -269,20 +270,11 @@ The sources disagree or say too little.
 
 ### Construction and repair
 
-* **BLD-013**: Peasants under a spy's spell cannot build. *The patch note says "obsessed by spies"; what it means is not known, and spies cannot impersonate yet (MAG).*
 * **BLD-020**: Deleting a building just after its construction began gives its cost back. *Tzar2 refunds a cancelled site in full at any time (placeholder); "at the beginning" suggests the original refunds only early, or less later.*
-* **BLD-022**: How long a repair takes. *Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). Five peasants mended a bridge from almost nothing in 22 s, which looked instant while they stood still (BLD-021); whether the original repairs more slowly is to be confirmed.*
-
-### Selection, mouse and pointers
-
-* **CTRL-023**: The image of the building being placed is green where it can be built. *After the owner's first play-test the ghost has no fill and only the cells that block it turn red (CTRL-018); whether the original tints the whole image green is to be confirmed by the owner.*
-* **CTRL-028**: Shift+click on an order button of a building queues five. *Tzar2's assumption from the hotkey checklist; no source of the original says so.*
 
 ### Resources and gathering
 
 * **ECO-002**: Gathering broken off before the load is complete gives nothing. *Tzar2 drops the work done (ADR 0180); a capture of an interrupted gather would settle it (UNK-17).*
-* **ECO-014**: The storage takes gold and iron for the Europeans, gold and stone for the Asians, and iron, gold and stone for the Arabians. *Tzar2 follows the manual, but the European storage researches Stone Mining, which suggests it takes stone too.*
-* **ECO-018**: Asian peasants do not tend cows or carry milk. *The manual's list of the Asian peasant's work leaves out milk and cows, though the Asian farm makes cows; Tzar2 lets any peasant milk.*
 
 ### The screen
 
@@ -291,10 +283,6 @@ The sources disagree or say too little.
 ### Magic, religion and spies
 
 * **MAG-008**: Hypnotism (Asian, from Concentration) is a spell of the Asian mages. *Neither the manual nor the game's text says what it does; Tzar2 makes it hold the unit like freeze.*
-
-### Production and population
-
-* **PROD-002**: A right click on an order button takes one unit of that kind off the queue and refunds it. *Tzar2's choice (ADR 0180), from the original's per-button counts; whether the original cancels this way is not confirmed. Tzar2 also queues five with Shift+click, likewise unconfirmed.*
 
 ### Technologies and upgrades
 

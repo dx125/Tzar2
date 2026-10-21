@@ -27,7 +27,7 @@ public sealed class ProductionExecutor : IAiExecutor
     public void Run(AiExecutorContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (!context.EconomyAi)
+        if (!(context.EconomyAi || context.WarAi))
         {
             return;
         }
@@ -50,6 +50,11 @@ public sealed class ProductionExecutor : IAiExecutor
             }
 
             ushort typeId = (ushort)symbol.OwnType;
+            if (!context.Makes(typeId))
+            {
+                continue; // the other adviser's (AI assistance)
+            }
+
             EntityTypeDefinition type = world.Ruleset.EntityTypes[typeId];
             int deficit = context.TargetOf(goal) - player.Completed[symbol.Id] - context.InProgress(symbol.Id);
             int pop = Math.Max(0, type.Traits.PopulationCost);

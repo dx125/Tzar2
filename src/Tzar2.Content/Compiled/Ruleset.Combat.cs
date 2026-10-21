@@ -132,6 +132,7 @@ public sealed partial class Ruleset
             throw new ArgumentException($"{where}: an item has neither speed nor a footprint.");
         }
 
+        CheckAscendingIds(t.NotImpersonated, _entityTypes.Length, $"{where}: not impersonated");
         if (t.ConvertsFrom is { } c)
         {
             CheckAscendingIds(c.From, _entityTypes.Length, $"{where}: converts from");
@@ -211,6 +212,7 @@ public sealed partial class Ruleset
                 .Add(i.NeedsMana).Add(i.PotionLevel).Add(i.PotionAttack).Add(i.PotionDefence).Add(i.PotionHealth).Add(i.PotionMana);
         }
 
+        hasher.AddSpan<ushort>(t.NotImpersonated.AsSpan());
         hasher.Add(t.ConvertsFrom is not null);
         if (t.ConvertsFrom is { } c)
         {

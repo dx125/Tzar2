@@ -9,9 +9,8 @@ rules:
     adr: [0180]
   PROD-002:
     rule: A right click on an order button takes one unit of that kind off the queue and refunds it.
-    source: [owner 2026-10-21 (third play-test)]
-    status: unclear
-    note: Tzar2's choice (ADR 0180), from the original's per-button counts; whether the original cancels this way is not confirmed. Tzar2 also queues five with Shift+click, likewise unconfirmed.
+    source: [owner 2026-10-21 (third play-test), owner 2026-10-21 (answers)]
+    status: tested
   PROD-003:
     rule: Each order button shows how many of its kind the selected buildings have queued, and the hourglass stat shows the progress of the one being made.
     source: [owner 2026-10-21 (third play-test; the original's castle panel)]

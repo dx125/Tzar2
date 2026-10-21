@@ -272,10 +272,20 @@ public sealed class CommandCard
                     return CardPress.Nothing;
                 }
 
-                // A right click takes one of this unit off the queue (ADR 0180).
-                return right
-                    ? Commands(CommandKind.Cancel, producers, arg0: -1, arg1: unit + 1)
-                    : Commands(CommandKind.Train, producers, arg0: unit, arg1: shift ? 5 : 1);
+                // A right click takes one of this unit off the queue, Shift five, as Shift+click queues five (ADR 0180; the
+                // owner, 2026-10-21).
+                if (right)
+                {
+                    var cancel = new CommandList();
+                    for (int n = 0; n < (shift ? 5 : 1); n++)
+                    {
+                        cancel.Add(CommandKind.Cancel, producers, arg0: -1, arg1: unit + 1);
+                    }
+
+                    return new CardPress(Commands: cancel);
+                }
+
+                return Commands(CommandKind.Train, producers, arg0: unit, arg1: shift ? 5 : 1);
             case CardAction.Cancel:
                 return Commands(CommandKind.Cancel, OwnIds(selected, e => e.UnderConstruction));
             case CardAction.Research when _rules.TechnologyId(b.Argument) is >= 0 and var tech:

@@ -176,7 +176,7 @@ public static class RulesetCompiler
         var orderGates = new List<OrderGate>();
         List<TechnologyDefinition> technologies = research.Technologies(technologyEntries, orderGates);
         List<UpgradeDefinition> upgrades = research.Upgrades(upgradeEntries);
-        CombatRules combatRules = combat.Compile(types, context.PendingSpecs, research, researchIds, legacy);
+        CombatRules combatRules = combat.Compile(types, context.PendingSpecs, research, researchIds, legacy, groups);
         var civilizations = new SortedSet<string>(StringComparer.Ordinal);
         foreach (EntityTypeDefinition t in types)
         {

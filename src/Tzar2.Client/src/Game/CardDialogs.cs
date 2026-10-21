@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Godot;
 
 namespace Tzar2.Client.Game;
@@ -350,74 +351,118 @@ public partial class TradeDialog : CardDialog
 
 /// <summary>
 /// Making an item in the Arabian magic workshop (order <c>build_item</c>; GAME-10 <c>CraftItem</c>) on the original's
-/// <c>D_BUILD</c> panel: the kind of item (its picture from <c>items.bmp</c>: bow, book, shield, sword, potion), BUILD; the
-/// gold to spend (more gold, a better item: "More gold increases item properties", STRINGS.INI <c>bu_amount</c>), CANCEL.
-/// The cells' places are measured on the panel; which picture shows which item and the power shown on the left are ours
-/// (⚠ UNVERIFIED).
+/// <c>D_BUILD</c> panel, laid out as the owner's screenshot of the original shows it (2026-10-21):
+/// <list type="bullet">
+/// <item>three toggles for the kind of item: books, potions, and weapons and shields ("power");</item>
+/// <item>the item of that kind (a book shows its spell's picture);</item>
+/// <item>the gold to spend (more gold, a better item: "More gold increases item properties", STRINGS.INI
+/// <c>bu_amount</c>);</item>
+/// <item>CANCEL and BUILD.</item>
+/// </list>
+/// Where the toggles sit on the horizontal panel and the power shown on the right are ours (⚠ UNVERIFIED).
 /// </summary>
 public partial class CraftDialog : CardDialog
 {
-    private readonly IReadOnlyList<(ushort Type, int Picture, string Name)> _items;
+    private static readonly string[] Kinds = ["books", "potions", "power"];
+    private readonly IReadOnlyList<CraftChoice> _items;
     private readonly Func<ushort, int> _pricePerPower;
     private readonly int _maxPower;
     private readonly TextureRect _item;
     private readonly TextureRect _gold;
     private readonly TextureRect _power;
+    private readonly TextureButton[] _toggles = new TextureButton[3];
+    private int _kind;
     private int _index;
     private int _strength = 1;
 
     /// <summary>Creates the dialog.</summary>
     /// <param name="ui">The UI assets.</param>
-    /// <param name="items">The kinds of item the workshop makes, with their pictures and names.</param>
+    /// <param name="items">The items the workshop makes, with their kind (0 books, 1 potions, 2 weapons and shields), picture and name.</param>
     /// <param name="pricePerPower">The gold one point of power costs for an item type.</param>
     /// <param name="maxPower">The most power an item may have.</param>
-    public CraftDialog(UiAssets ui, IReadOnlyList<(ushort Type, int Picture, string Name)> items, Func<ushort, int> pricePerPower, int maxPower)
+    public CraftDialog(UiAssets ui, IReadOnlyList<CraftChoice> items, Func<ushort, int> pricePerPower, int maxPower)
         : base(ui, "d_build")
     {
         ArgumentNullException.ThrowIfNull(items);
         _items = items;
         _pricePerPower = pricePerPower;
         _maxPower = Math.Max(1, maxPower);
+        for (int k = 0; k < Kinds.Length; k++)
+        {
+            int kind = k;
+            var toggle = new TextureButton { Position = new Vector2(22, 11 + (k * 36)), Size = new Vector2(28, 28), IgnoreTextureSize = true, StretchMode = TextureButton.StretchModeEnum.Keep };
+            toggle.Pressed += () =>
+            {
+                _kind = kind;
+                _index = 0;
+                Refresh();
+            };
+            AddChild(toggle);
+            _toggles[k] = toggle;
+        }
+
         _item = Cell(new Rect2I(73, 11, 42, 42), s =>
         {
-            _index = Wrap(_index + s, Math.Max(1, _items.Count));
+            int count = Math.Max(1, OfKind().Count);
+            _index = Wrap(_index + s, count);
             Refresh();
         });
-        Button(new Vector2I(127, 11), "build", () =>
-        {
-            if (_items.Count > 0)
-            {
-                Craft?.Invoke(_items[_index].Type, Gold);
-            }
-        });
-        var coins = Cell(new Rect2I(73, 67, 42, 42), s =>
+        var coins = Cell(new Rect2I(127, 11, 42, 42), s =>
         {
             _strength = Math.Clamp(_strength + s, 1, _maxPower);
             Refresh();
         });
         coins.Texture = Ui.Texture("art/screens/d_build/amount.t2img");
-        _gold = Label(new Rect2I(73, 67, 42, 42));
-        Button(new Vector2I(127, 67), "cancel", Close);
-        _power = Label(new Rect2I(6, 40, 60, 42));
+        _gold = Label(new Rect2I(127, 11, 42, 42));
+        Button(new Vector2I(73, 67), "cancel", Close);
+        Button(new Vector2I(127, 67), "build", () =>
+        {
+            if (Current is { } item)
+            {
+                Craft?.Invoke(item.Type, Gold);
+            }
+        });
+        _power = Label(new Rect2I(176, 40, 60, 42));
+        _kind = Math.Max(0, Array.FindIndex(Kinds, k => _items.Any(i => i.Kind == Array.IndexOf(Kinds, k))));
         Refresh();
     }
 
     /// <summary>BUILD: the item type and the gold to spend.</summary>
     public event Action<ushort, int>? Craft;
 
-    private int Gold => _items.Count == 0 ? 0 : _strength * _pricePerPower(_items[_index].Type);
+    private CraftChoice? Current => OfKind() is { Count: > 0 } kind ? kind[Math.Min(_index, kind.Count - 1)] : null;
+
+    private int Gold => Current is { } item ? _strength * _pricePerPower(item.Type) : 0;
+
+    private List<CraftChoice> OfKind() => [.. _items.Where(i => i.Kind == _kind)];
 
     private void Refresh()
     {
-        if (_items.Count == 0)
+        for (int k = 0; k < _toggles.Length; k++)
         {
+            // books.bmp, potions.bmp, power.bmp: four 28 × 28 frames; the second is the lit one.
+            _toggles[k].TextureNormal = Ui.Region($"art/screens/d_build/{Kinds[k]}.t2img", new Rect2I(k == _kind ? 28 : 0, 0, 28, 28));
+            _toggles[k].Disabled = !_items.Any(i => i.Kind == k);
+        }
+
+        if (Current is not { } item)
+        {
+            _item.Texture = null;
+            SetText(_gold, string.Empty);
+            SetText(_power, string.Empty);
             return;
         }
 
-        (ushort _, int picture, string name) = _items[_index];
-        _item.Texture = Ui.Region("art/screens/d_build/items.t2img", new Rect2I(0, picture * 48, 48, 48));
-        _item.TooltipText = name;
+        _item.Texture = item.Picture;
+        _item.TooltipText = item.Name;
         SetText(_gold, Gold.ToString(CultureInfo.InvariantCulture), UiAssets.TitleFont);
         SetText(_power, "power " + _strength.ToString(CultureInfo.InvariantCulture));
     }
 }
+
+/// <summary>An item the magic workshop makes, as its dialog shows it.</summary>
+/// <param name="Type">The item type.</param>
+/// <param name="Kind">0 books, 1 potions, 2 weapons and shields (the panel's toggles).</param>
+/// <param name="Picture">Its picture: a book's spell, else the panel's items.bmp.</param>
+/// <param name="Name">Its name.</param>
+public readonly record struct CraftChoice(ushort Type, int Kind, Texture2D? Picture, string Name);
