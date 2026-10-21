@@ -37,6 +37,9 @@ public sealed class SelectionInfo
 
     /// <summary>The owner whose colour the portraits wear (0-7), or −1 (Nature, resources).</summary>
     public int Player { get; init; } = -1;
+
+    /// <summary>The health share 0-1 of the units inside a holder, a bar under its own (HUD-021), or −1.</summary>
+    public float InsideHealth { get; init; } = -1;
 }
 
 /// <summary>An icon of the info area: a portrait or order button, a progress 0-1000 (−1: none) and a count (0: none).</summary>
@@ -44,7 +47,8 @@ public sealed class SelectionInfo
 /// <param name="Progress">Health or production progress per mille, or −1.</param>
 /// <param name="Order">Whether the icon is an order button rather than a portrait.</param>
 /// <param name="Count">How many it stands for (selected units of the type, units left to make), shown when above 1.</param>
-public readonly record struct StripItem(int Icon, int Progress, bool Order, int Count = 0);
+/// <param name="Picked">Framed: the unit picked in a holder's list (ORD-015).</param>
+public readonly record struct StripItem(int Icon, int Progress, bool Order, int Count = 0, bool Picked = false);
 
 /// <summary>
 /// The authentic desktop HUD (REQ-UI-01) on a <c>CanvasLayer</c>: the <c>S_VIEW</c> screen bitmap of the
@@ -70,6 +74,9 @@ public partial class Hud : Control
     private readonly List<ColorRect> _stripBars = [];
     private readonly List<ColorRect> _stripBacks = [];
     private readonly List<TextureRect> _stripCounts = [];
+    private readonly List<TextureRect> _stripFrames = [];
+    private readonly ColorRect _insideBar;
+    private int _stripShown;
     private readonly TextureRect[] _messages = new TextureRect[6];
     private readonly TextureRect _portrait;
     private readonly ColorRect _portraitBar;
@@ -121,6 +128,7 @@ public partial class Hud : Control
 
         _portrait = Add(new TextureRect { Position = layout.Portrait.Position, Size = layout.Portrait.Size });
         _portraitBar = Add(new ColorRect { Position = layout.Portrait.Position + new Vector2I(0, 50), Size = new Vector2(48, 3), Color = Colors.Green, Visible = false });
+        _insideBar = Add(new ColorRect { Position = layout.Portrait.Position + new Vector2I(0, 54), Size = new Vector2(48, 2), Color = Colors.Green, Visible = false });
         _nameBox = Add(new Control { Position = new Vector2(layout.Portrait.Position.X - 2, layout.Portrait.Position.Y + 57), MouseFilter = MouseFilterEnum.Ignore });
         for (int i = 0; i < _stats.Length; i++)
         {
@@ -170,6 +178,9 @@ public partial class Hud : Control
     /// <summary>CHAT button.</summary>
     public event Action? ChatPressed;
 
+    /// <summary>Raised when an icon of the info area is clicked (its index; a unit of a holder's list, ORD-015).</summary>
+    public event Action<int>? StripPressed;
+
     /// <summary>Sets the five resource boxes (gold, wood, food, stone, population "used/room").</summary>
     public void SetResources(string gold, string wood, string food, string stone, string population)
     {
@@ -214,6 +225,14 @@ public partial class Hud : Control
             _portraitBar.Color = HealthColour(h.Health);
         }
 
+        // The health of the units inside a castle or outpost, under its own (guide: Important tips; HUD-021).
+        _insideBar.Visible = info is { InsideHealth: >= 0 };
+        if (info is { InsideHealth: >= 0 } inside)
+        {
+            _insideBar.Size = new Vector2(Math.Max(1, MathF.Round(48 * inside.InsideHealth)), 2);
+            _insideBar.Color = HealthColour(inside.InsideHealth);
+        }
+
         SetName(info);
         for (int i = 0; i < _stats.Length; i++)
         {
@@ -229,16 +248,28 @@ public partial class Hud : Control
         {
             int n = _strip.Count;
             var at = new Vector2(area.Position.X + ((n % perRow) * 49), area.Position.Y + ((n / perRow) * 62));
-            _strip.Add(Add(new TextureRect { Position = at, Size = new Vector2(48, 48), MouseFilter = MouseFilterEnum.Ignore }));
+            TextureRect icon = Add(new TextureRect { Position = at, Size = new Vector2(48, 48), MouseFilter = MouseFilterEnum.Stop });
+            icon.GuiInput += e =>
+            {
+                if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } && n < _stripShown)
+                {
+                    StripPressed?.Invoke(n);
+                }
+            };
+            _strip.Add(icon);
             _stripBacks.Add(Add(new ColorRect { Position = at + new Vector2(0, 50), Size = new Vector2(48, 5), Color = new Color(0, 0, 0, 0.85f), MouseFilter = MouseFilterEnum.Ignore }));
             _stripBars.Add(Add(new ColorRect { Position = at + new Vector2(1, 51), Size = new Vector2(46, 3), MouseFilter = MouseFilterEnum.Ignore }));
             _stripCounts.Add(Add(new TextureRect { Position = at, Size = new Vector2(48, 48), MouseFilter = MouseFilterEnum.Ignore }));
+            _stripFrames.Add(Add(new TextureRect { Position = at - new Vector2(3, 3), Texture = _ui.Texture("art/orders/frame.t2img"), MouseFilter = MouseFilterEnum.Ignore, Visible = false }));
         }
+
+        _stripShown = strip.Count;
 
         for (int i = 0; i < _strip.Count; i++)
         {
             bool has = i < strip.Count;
             _strip[i].Texture = !has ? null : strip[i].Order ? _ui.Cell(Buttons, strip[i].Icon) : _ui.PlayerCell(Icons, strip[i].Icon, info!.Player);
+            _stripFrames[i].Visible = has && strip[i].Picked;
             bool bar = has && strip[i].Progress >= 0;
             _stripBars[i].Visible = bar;
             _stripBacks[i].Visible = bar;

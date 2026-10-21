@@ -200,6 +200,7 @@ public interface ICardSource
 /// <param name="Mode">The order waiting for a click on the world.</param>
 /// <param name="ModeArgument">Its argument (a spell).</param>
 /// <param name="HasQuests">Whether the map has a quest log.</param>
+/// <param name="Picked">The unit picked in the list of those inside the selected building (ORD-015), or none.</param>
 public sealed record CardContext(
     GameFrame Frame,
     IReadOnlyList<EntityId> Selection,
@@ -208,7 +209,8 @@ public sealed record CardContext(
     bool Placing = false,
     OrderMode Mode = OrderMode.None,
     int ModeArgument = 0,
-    bool HasQuests = false);
+    bool HasQuests = false,
+    EntityId Picked = default);
 
 /// <summary>A dialog a card button opens in the card's place.</summary>
 public enum CardDialogKind

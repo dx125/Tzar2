@@ -165,6 +165,59 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "ORD-015")]
+    [Trait("Rule", "HUD-016")]
+    public void A_unit_picked_in_the_castle_list_emerges_alone_at_the_clicked_place_and_emerge_alone_lets_all_out()
+    {
+        World world = _session.Simulation.World;
+        EntityId castle = Own("euro.castle");
+        EntityId[] peasants = [.. world.Identities.Entities.ToArray().Where(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Key == "euro.peon").Take(2)];
+        var board = new CommandList();
+        board.Add(CommandKind.Board, peasants, target: castle);
+        _session.Submit(board);
+        for (int i = 0; i < 600 && world.Holders.Get(castle).Count < peasants.Length; i++)
+        {
+            _session.Step(1);
+        }
+
+        _cards.Menus["e_castle"] = [new CardButton("emerge", 'E', CardAction.Unload, string.Empty, 8, "Emerge")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        Assert.Equal(peasants.Order(), card.Inside(Context([castle])).Select(h => h.Unit).Order());
+        GameFrame frame = Context([castle]).Frame;
+        FrameEntity held = frame.Entities.ToArray().Single(e => e.Id == castle);
+        Assert.Equal(2, held.Inside);
+        Assert.True(held.InsideMax >= 2);
+        CardSlot emerge = card.Build(Context([castle]))[0]!.Value;
+        Assert.True(emerge.Enabled);
+
+        // Picked in the list: Emerge waits for the place, and only that unit comes out there.
+        CardPress press = card.Press(Context([castle]) with { Picked = peasants[1] }, emerge);
+        Assert.Equal(OrderMode.Unload, press.Mode);
+        Assert.True(card.Build(Context([castle]) with { Mode = OrderMode.Unload })[0]!.Value.Active);
+        EntityInfo info = CommandCard.Info(Rules.Value, frame, held, 0);
+        var batch = new CommandList();
+        foreach (PlannedCommand c in OrderResolver.WithMode(OrderMode.Unload, [info], null, held.X + 4096, held.Y, KeyMods.None, 0, press.ModeArgument))
+        {
+            c.AddTo(batch);
+        }
+
+        _session.Submit(batch);
+        _session.Step(2);
+        Assert.False(world.IsHeld(peasants[1]));
+        Assert.True(world.IsHeld(peasants[0]));
+
+        // Nothing picked: everyone comes out at once; then the order is greyed out.
+        Command all = Single(card.Press(Context([castle]), emerge));
+        Assert.Equal((CommandKind.Unload, EntityId.None), (all.Kind, all.Target));
+        _session.Submit(card.Press(Context([castle]), emerge).Commands!);
+        _session.Step(2);
+        Assert.False(world.IsHeld(peasants[0]));
+        CardSlot empty = card.Build(Context([castle]))[0]!.Value;
+        Assert.Equal((false, "nobody inside"), (empty.Enabled, empty.Detail));
+        Assert.Empty(card.Inside(Context([castle])));
+    }
+
+    [Fact]
     public void An_order_that_needs_a_target_waits_for_it_and_is_highlighted()
     {
         EntityId peasant = Own("euro.peon");

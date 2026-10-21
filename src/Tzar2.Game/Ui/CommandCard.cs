@@ -271,9 +271,16 @@ public sealed class CommandCard
                 return Commands(CommandKind.Explore, OwnIds(selected, e => e.IsMobile));
             case CardAction.Delete:
                 return new CardPress(DeleteSelected: true);
+            case CardAction.Unload when selected.Any(e => e.Owner == _me && e.IsMobile && InsideCount(context, e.Id) > 0):
+                // Ships and carpets let their units out at the place clicked next (ORDERS.INI unload: PLACE command_unload).
+                return new CardPress(Mode: OrderMode.Unload);
+            case CardAction.Unload when HolderOfPicked(context) is { } pickedFrom && selected.Any(e => e.Owner == _me && e.Id == pickedFrom):
+                // A unit picked in a building's list comes out at the place clicked next (manual: Emerge).
+                return new CardPress(Mode: OrderMode.Unload, ModeArgument: unchecked((int)context.Picked.Value));
             case CardAction.Unload:
+                // Emerge without a pick: everyone comes out next to the building at once (ORDERS.INI emerge has no place).
                 var unload = new CommandList();
-                foreach (EntityInfo holder in selected.Where(e => e.Owner == _me))
+                foreach (EntityInfo holder in selected.Where(e => e.Owner == _me && InsideCount(context, e.Id) > 0))
                 {
                     if (Index(context.Frame).TryGetValue(holder.Id.Value, out int hi))
                     {
@@ -330,6 +337,30 @@ public sealed class CommandCard
     /// <summary>The exchange the tavern dialog asked for (ten given for one), or null without an own tavern selected.</summary>
     public CommandList? Exchange(CardContext context, string give, string get, int amount)
         => List(CommandKind.Convert, Taverns(context), arg0: _rules.ResourceId(give) | (_rules.ResourceId(get) << 8), arg1: amount);
+
+    /// <summary>
+    /// The units inside the focused holder of the selection, if it is the local kingdom's (the selection view's list;
+    /// a click picks one for Emerge, ORD-015); empty otherwise.
+    /// </summary>
+    public IReadOnlyList<FrameHeld> Inside(CardContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (Lead(context) is not { } lead || context.Frame.Entities[lead] is not { Inside: > 0 } holder || holder.Owner != _me)
+        {
+            return [];
+        }
+
+        var list = new List<FrameHeld>();
+        foreach (FrameHeld h in context.Frame.Helds)
+        {
+            if (h.Holder == holder.Id.Value)
+            {
+                list.Add(h);
+            }
+        }
+
+        return list;
+    }
 
     /// <summary>The item types the selected magic workshops make (GAME-10), in the rules' order; empty without one.</summary>
     public IReadOnlyList<ushort> CraftableItems(CardContext context)
@@ -526,6 +557,30 @@ public sealed class CommandCard
         return list;
     }
 
+    private int InsideCount(CardContext context, EntityId holder)
+        => Index(context.Frame).TryGetValue(holder.Value, out int i) ? context.Frame.Entities[i].Inside : 0;
+
+    // The building (not a ship: they dock first) holding the unit picked in the selection view's list, or null.
+    private EntityId? HolderOfPicked(CardContext context)
+    {
+        if (context.Picked.IsNone)
+        {
+            return null;
+        }
+
+        foreach (FrameHeld h in context.Frame.Helds)
+        {
+            if (h.Unit == context.Picked)
+            {
+                return Index(context.Frame).TryGetValue(h.Holder, out int i) && !Info(_rules, context.Frame, context.Frame.Entities[i], _me).IsMobile
+                    ? EntityId.FromValue(h.Holder)
+                    : null;
+            }
+        }
+
+        return null;
+    }
+
     private FramePlayer Me(CardContext context) => context.Frame.Players.Length > _me ? context.Frame.Players[_me] : default;
 
     private EntityId[] OwnIds(List<EntityInfo> selected, Func<EntityInfo, bool> which)
@@ -693,6 +748,7 @@ public sealed class CommandCard
         CardAction.Crusade => context.Mode == OrderMode.Crusade,
         CardAction.PickItem => context.Mode == OrderMode.PickItem,
         CardAction.UseItem => context.Mode == OrderMode.UseItem,
+        CardAction.Unload => context.Mode == OrderMode.Unload,
         CardAction.Stance => Lead(context) is { } l && b.Argument == context.Frame.Entities[l].Stance.ToString(CultureInfo.InvariantCulture),
         CardAction.Gate => Lead(context) is { } g && GateButtonOn(b.Argument, context.Frame.Entities[g].Gate),
         _ => false,
@@ -772,6 +828,8 @@ public sealed class CommandCard
                 return HireAvailability(context, b);
             case CardAction.Trade:
                 return selected.Any(e => e.Owner == _me && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null) ? (true, string.Empty) : (false, "needs a trader");
+            case CardAction.Unload:
+                return selected.Any(e => e.Owner == _me && InsideCount(context, e.Id) > 0) ? (true, string.Empty) : (false, "nobody inside");
             case CardAction.Craft:
                 if (!selected.Any(e => e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is not null))
                 {

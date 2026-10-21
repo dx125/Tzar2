@@ -176,6 +176,12 @@ public struct FrameEntity
     /// <summary>Progress 0-1000 of the item a magic workshop is making, or -1 (GAME-10).</summary>
     public int CraftPermille;
 
+    /// <summary>Units inside this holder of the frame's kingdom (castle, outpost, ship, carpet; GAME-09), else 0.</summary>
+    public int Inside;
+
+    /// <summary>How many units this holder of the frame's kingdom takes, 0 when it is none or another kingdom's.</summary>
+    public int InsideMax;
+
     /// <summary>Upgrades the entity has or has queued (bit = upgrade id; towers, walls, gates, galleons).</summary>
     public uint Upgrades;
 
@@ -226,6 +232,14 @@ public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Coun
 /// <param name="Id">The unit type, technology or upgrade id.</param>
 /// <param name="Count">How many are queued.</param>
 public readonly record struct FrameQueueEntry(uint Entity, FrameQueueKind Kind, ushort Id, int Count);
+
+/// <summary>A unit inside a holder of the frame's kingdom (GAME-09; the selection view's list, ORD-015).</summary>
+/// <param name="Holder">The holder (<c>EntityId.Value</c>).</param>
+/// <param name="Unit">The unit.</param>
+/// <param name="TypeId">Its type.</param>
+/// <param name="Health">Its hit points.</param>
+/// <param name="MaxHealth">Its most hit points.</param>
+public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth);
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
 /// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>
@@ -419,6 +433,13 @@ public sealed class GameFrame
 
     private FrameTavernOffer[] _offers = [];
     private FrameQueueEntry[] _queue = new FrameQueueEntry[16];
+    private FrameHeld[] _held = new FrameHeld[16];
+
+    /// <summary>The units inside the frame's kingdom's holders, grouped by holder in the order they are kept.</summary>
+    public ReadOnlySpan<FrameHeld> Helds => _held.AsSpan(0, HeldCount);
+
+    /// <summary>Number of valid entries in <see cref="Helds"/>.</summary>
+    public int HeldCount { get; internal set; }
 
     /// <summary>The queue entries of every producer, grouped by producer in entity order (first entry = in progress).</summary>
     public ReadOnlySpan<FrameQueueEntry> QueueEntries => _queue.AsSpan(0, QueueEntryCount);
@@ -434,6 +455,33 @@ public sealed class GameFrame
         }
 
         _queue[index] = entry;
+    }
+
+    internal void SetHeld(int index, FrameHeld entry)
+    {
+        if (_held.Length <= index)
+        {
+            Array.Resize(ref _held, Math.Max(index + 1, _held.Length * 2));
+        }
+
+        _held[index] = entry;
+    }
+
+    // Sorts the held units by holder, keeping each holder's own order (insertion sort: a handful of entries).
+    internal void GroupHelds()
+    {
+        for (int i = 1; i < HeldCount; i++)
+        {
+            FrameHeld entry = _held[i];
+            int j = i - 1;
+            while (j >= 0 && _held[j].Holder > entry.Holder)
+            {
+                _held[j + 1] = _held[j];
+                j--;
+            }
+
+            _held[j + 1] = entry;
+        }
     }
 
     internal FrameTavernOffer[] OfferBuffer(int count)

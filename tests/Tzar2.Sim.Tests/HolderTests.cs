@@ -56,6 +56,31 @@ public class HolderTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-015")]
+    public void Emerge_lets_only_the_picked_unit_out_and_sends_it_to_the_place()
+    {
+        using var d = new SimDriver(TestMap(32, 16, [Structure("euro.castle", 0, 12, 5), .. Enumerable.Range(0, 3).Select(i => Unit("euro.footman", 0, 6, 5 + i))]), ruleset: Classic);
+        EntityId castle = OfType(d.World, "euro.castle").Single();
+        EntityId[] footmen = [.. OfType(d.World, "euro.footman")];
+        d.Order(0, CommandKind.Board, footmen, target: castle);
+        d.RunUntil(() => d.World.Holders.Get(castle).Count == 3, 400);
+
+        d.Order(0, CommandKind.Unload, [castle], 22 * Tile, 6 * Tile, target: footmen[1]);
+        d.Step();
+        Assert.Equal(2, d.World.Holders.Get(castle).Count);
+        Assert.False(d.World.IsHeld(footmen[1]));
+        Assert.True(d.World.IsHeld(footmen[0]) && d.World.IsHeld(footmen[2]));
+        d.RunUntil(() => !d.AnyMoving([footmen[1]]), 400);
+        Assert.InRange(d.PositionOf(footmen[1]).X / Tile, 20, 24);
+
+        // A unit that is not inside that holder: nothing comes out.
+        d.Order(0, CommandKind.Unload, [castle], 6 * Tile, 6 * Tile, target: footmen[1]);
+        d.Step();
+        Assert.Contains(CommandRejection.NoValidEntities, d.Rejections());
+        Assert.Equal(2, d.World.Holders.Get(castle).Count);
+    }
+
+    [Fact]
     [Trait("Rule", "HOLD-001")]
     public void A_full_holder_takes_no_more_and_Landing_Tactics_adds_room()
     {

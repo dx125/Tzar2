@@ -87,6 +87,8 @@ public partial class GameScreen : Node
     private Vector2 _mouse;
     private OrderMode _mode;
     private int _modeArgument; // the spell id of OrderMode.Spell
+    private EntityId _picked; // the unit picked in the list of those inside the selected building (ORD-015)
+    private readonly List<EntityId> _insideShown = []; // the units of that list, in the info area's order
     private CardDialog? _dialog;
     private EntityId _dialogFor;
     private (int Goods, int Load)? _route; // a trade route waiting for the far market's click
@@ -263,6 +265,7 @@ public partial class GameScreen : Node
         _selection.Changed += () =>
         {
             _card.Reset();
+            _picked = EntityId.None;
             _mode = OrderMode.None;
             RefreshCard();
         };
@@ -348,6 +351,15 @@ public partial class GameScreen : Node
         _hud = new Hud(_ui, layout, _catalog);
         _hudLayer!.AddChild(_hud);
         _hud.CardPressed += OnCard;
+        _hud.StripPressed += i =>
+        {
+            // A unit of the list of those inside: picked for Emerge, or let go with a second click (manual: Emerge).
+            if (i < _insideShown.Count)
+            {
+                _picked = _picked == _insideShown[i] ? EntityId.None : _insideShown[i];
+                RefreshCard();
+            }
+        };
         _hud.MinimapPressed += (share, right, mods) => OnMinimap(share, right, mods);
         _hud.MenuPressed += () => ShowMenu();
         _hud.DiplomacyPressed += () => Message(_catalog.Text("game_scr", "diplomacy", "DIPLOMACY") + ": not available yet");
@@ -1410,7 +1422,7 @@ public partial class GameScreen : Node
 
     // What the command card is built for now (Tzar2.Game.Ui.CommandCard, ADR 0182).
     private CardContext CardNow()
-        => new(_frame!, _selection.Selected, _selection.Focus, _selection.IsOwn, _placing != ushort.MaxValue, _mode, _modeArgument, _session.Scenario is not null);
+        => new(_frame!, _selection.Selected, _selection.Focus, _selection.IsOwn, _placing != ushort.MaxValue, _mode, _modeArgument, _session.Scenario is not null, _picked);
 
     private void Submit(CommandList? commands)
     {
@@ -1689,6 +1701,7 @@ public partial class GameScreen : Node
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
         string owner = e.Owner < 8 ? SpritePage.PlayerNames[e.Owner] : string.Empty;
         var strip = new List<StripItem>();
+        _insideShown.Clear();
         if (_selection.Selected.Count > 1)
         {
             // Multi-selection shows health only (REQ-UI-01) and one icon per type with how many there are and their
@@ -1781,6 +1794,30 @@ public partial class GameScreen : Node
             stats.Add(("art/icons/time.t2img", $"{e.CraftPermille / 10} %")); // an item being made in a magic workshop
         }
 
+        // A holder of ours: INSIDE, how many units it holds of how many (manual: The Selection View), their portraits in
+        // the info area, where a click picks one for Emerge (ORD-015), and a bar of their health (HUD-021).
+        float insideHealth = -1;
+        if (e.InsideMax > 0)
+        {
+            stats.Add(("art/icons/inside.t2img", string.Create(CultureInfo.InvariantCulture, $"{e.Inside}/{e.InsideMax}")));
+            IReadOnlyList<FrameHeld> inside = _card.Inside(CardNow());
+            long share = 0;
+            foreach (FrameHeld h in inside)
+            {
+                int permille = h.MaxHealth > 0 ? h.Health * 1000 / h.MaxHealth : 1000;
+                share += permille;
+                _insideShown.Add(h.Unit);
+                strip.Add(new StripItem(_catalog.Type(h.TypeId).IconIndex, permille, false, 0, h.Unit == _picked));
+            }
+
+            insideHealth = inside.Count > 0 ? share / (float)inside.Count / 1000f : -1;
+        }
+
+        if (!_picked.IsNone && !_insideShown.Contains(_picked))
+        {
+            _picked = EntityId.None; // it came out, or died
+        }
+
         return new SelectionInfo
         {
             Name = v.Name,
@@ -1789,7 +1826,9 @@ public partial class GameScreen : Node
             Health = e.MaxHealth > 0 && t.Category != EntityCategory.Resource ? e.Health / (float)e.MaxHealth : -1,
             Stats = stats,
             Strip = strip,
+            StripIsHealth = true,
             Player = e.Owner < 8 ? e.Owner : -1,
+            InsideHealth = insideHealth,
         };
     }
 

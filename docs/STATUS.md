@@ -60,8 +60,7 @@ play-test.
    checklist up to date (several rows still say "blocked" on features that exist), and keep the ledger current with
    every change.
 2. **Maintainer:** the rest of the command card, on the card model of ADR 0182 (`Tzar2.Game.Ui.CommandCard`, done).
-   The Magic Workshop's crafting is done (log below). Left:
-   * the holders' list of units inside, to let one out (ORD-015);
+   The Magic Workshop's crafting and the holders' list of units inside are done (log below). Left:
    * the spies' impersonate, uncloak and reveal-self (MAG-012, MAG-013);
    * AI assistance (none, economy, war, full; AI-004) and the lists of heroes, spies and items with nothing selected
      (HUD-033).
@@ -111,6 +110,21 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — A holder's units inside: the list, Emerge one, and Unload at a place (work queue item 2).**
+  * A selected castle, outpost, ship or carpet of the player shows INSIDE (how many units of how many) and the
+    portraits of the units inside, with their health, in the info area. A thin bar under its own health shows their
+    average health (HUD-021, from the guide).
+  * A click on a portrait picks that unit, and a second click lets it go. Emerge then waits for a click on the place,
+    and only that unit comes out there (ORD-015, manual). The simulation's Unload takes the chosen unit as its target.
+  * Without a pick, Emerge lets everyone out next to the building at once, as ORDERS.INI gives emerge no place.
+  * A ship's or carpet's Unload now waits for a click on the drop-off place, as the manual says (ORD-014). It used to
+    unload at once at the nearest shore.
+  * Emerge and Unload are greyed out when nobody is inside.
+  * Kept out: picking one unit out of a ship, which docks first. That would change the docking component and the
+    golden hashes.
+  * The manual says a right click gives the place; ours is a left click, as for every other order that waits for a
+    place.
 
 * **2026-10-21 — The magic workshop makes items from the command card (work queue item 2).**
   * Its Build Item order opens the original's D_BUILD panel: the kind of item (bow, book, shield, sword, potion), the

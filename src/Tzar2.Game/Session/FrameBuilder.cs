@@ -35,6 +35,7 @@ public static class FrameBuilder
         frame.TickMs = tickMs;
         frame.Outcome = outcome;
 
+        byte? card = player ?? viewer; // whose holders show what is inside them
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         Span<Identity> identities = world.Identities.Components;
         // Room for the remembered structures too (at most one per entity slot), so the buffer is not reallocated below.
@@ -93,6 +94,12 @@ public static class FrameBuilder
             e.Activity = moving ? UnitActivity.Walk : UnitActivity.Idle;
 
             e.CraftPermille = -1;
+            if (world.Holders.IndexOf(id) is >= 0 and var ho && (card is null || identity.Owner == card))
+            {
+                e.Inside = world.Holders.At(ho).Count;
+                e.InsideMax = world.HolderCapacity(id);
+            }
+
             if (world.CraftJobs.IndexOf(id) is >= 0 and var cj)
             {
                 CraftJob job = world.CraftJobs.At(cj);
@@ -230,6 +237,7 @@ public static class FrameBuilder
 
         frame.EntityCount = n;
         frame.QueueEntryCount = queued;
+        FillHelds(frame, world, card);
         frame.DayMinute = world.DayMinute;
         frame.IsNight = world.IsNight;
         frame.Weather = world.Weather;
@@ -364,6 +372,27 @@ public static class FrameBuilder
     }
 
     // What the player may build or train now, by the sim's own requirement check (ADR 0040).
+    // The units (not items) inside the holders of the card's kingdom, or of everyone without one, grouped by holder.
+    private static void FillHelds(GameFrame frame, World world, byte? card)
+    {
+        int n = 0;
+        for (int i = 0; i < world.Helds.Count; i++)
+        {
+            EntityId unit = world.Helds.Entities[i];
+            EntityId holder = EntityId.FromValue(world.Helds.Components[i].Holder);
+            if (world.Items.Has(unit) || !world.Holders.Has(holder) || (card is { } k && world.Identities.Get(holder).Owner != k))
+            {
+                continue;
+            }
+
+            Health health = world.Healths.IndexOf(unit) is >= 0 and var h ? world.Healths.At(h) : default;
+            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max));
+        }
+
+        frame.HeldCount = n;
+        frame.GroupHelds();
+    }
+
     private static void FillMakeable(GameFrame frame, World world, byte? player)
     {
         if (player is not { } who || !world.HasPlayer(who))

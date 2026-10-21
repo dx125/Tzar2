@@ -131,7 +131,10 @@ public enum CommandKind : ushort
     /// <summary>The listed units walk to own holder <see cref="Command.Target"/> (castle, outpost, ship, carpet) and enter it (GAME-09).</summary>
     Board = 20,
 
-    /// <summary>The listed holders let their units out next to (X, Y) (orders emerge/unload); Arg0 &gt; 0 = only that many.</summary>
+    /// <summary>
+    /// The listed holders let their units out next to (X, Y) (orders emerge/unload); Arg0 &gt; 0 = only that many;
+    /// <see cref="Command.Target"/> = only that unit, out of a building (emerge, ORD-015).
+    /// </summary>
     Unload = 21,
 
     /// <summary>The listed units walk to item <see cref="Command.Target"/> and pick it up (the first to arrive gets it; GAME-10).</summary>

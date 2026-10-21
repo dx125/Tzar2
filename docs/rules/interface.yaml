@@ -76,7 +76,7 @@ rules:
     rule: The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level.
     source: [manual The Selection View]
     status: partial
-    note: The kingdom, power, the number of units inside and the level are not shown.
+    note: The kingdom's name (only its colour shows), power and the level are not shown; INSIDE shows for the player's own holders only.
   HUD-017:
     rule: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped.
     source: [manual The Inventory, manual Hints About Gameplay]
@@ -99,7 +99,8 @@ rules:
   HUD-021:
     rule: A selected castle or outpost shows, under its own health, a bar of the health of the units inside.
     source: [guide Important tips]
-    status: missing
+    status: implemented
+    note: A thin bar under the holder's health shows the average health of the units inside, for every holder of the player.
   HUD-022:
     rule: The kingdom of a spy is shown as its true kingdom to its owner.
     source: [patch 1.05 (TZAR110.TXT)]
