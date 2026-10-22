@@ -124,7 +124,14 @@ public sealed class DecalIndex
     /// of the others is kept.
     /// </summary>
     /// <returns><c>false</c> when there is none.</returns>
-    public bool TakeCorpse(int x, int y, int radius, out Decal corpse)
+    public bool TakeCorpse(int x, int y, int radius, out Decal corpse) => TakeCorpse(x, y, radius, [], out corpse);
+
+    /// <summary>
+    /// Removes and returns the oldest corpse within <paramref name="radius"/> of a point whose type is in
+    /// <paramref name="types"/> (ascending; empty = any).
+    /// </summary>
+    /// <returns><c>false</c> when there is none.</returns>
+    public bool TakeCorpse(int x, int y, int radius, System.Collections.Immutable.ImmutableArray<ushort> types, out Decal corpse)
     {
         long r2 = (long)radius * radius;
         for (int i = 0; i < _count; i++)
@@ -132,7 +139,7 @@ public sealed class DecalIndex
             ref Decal d = ref _ring[(_head + i) % _ring.Length];
             long dx = d.X - (long)x;
             long dy = d.Y - (long)y;
-            if (d.Kind != DecalKind.Corpse || (dx * dx) + (dy * dy) > r2)
+            if (d.Kind != DecalKind.Corpse || (dx * dx) + (dy * dy) > r2 || (!types.IsDefaultOrEmpty && types.AsSpan().BinarySearch(d.TypeId) < 0))
             {
                 continue;
             }

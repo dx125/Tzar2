@@ -138,3 +138,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0251](0251-cancelled-sites-broken-loads-and-the-computers-repairs.md) | Refund cancelled sites, drop broken-off loads and leave repairs to idle peasants, as the original does | Accepted | 2026-10-22 |
 | [0252](0252-trade-with-any-market-and-asian-peasants-as-traders.md) | Trade with any kingdom's market, and let Asian peasants trade | Accepted | 2026-10-22 |
 | [0253](0253-tournaments-and-mastery-share-experience-as-the-original-does.md) | Share experience through Tournaments and Mastery as the original does | Accepted | 2026-10-22 |
+| [0254](0254-healing-freezing-and-raise-dead-skip-machines.md) | Make healing, freezing and raise dead skip machines and the bodiless | Accepted | 2026-10-22 |
