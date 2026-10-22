@@ -38,8 +38,9 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // worker an idle timer, so the hashed layout version is 8; behaviour unchanged ->
     // (ADR 0184) 6E50902314F85F51 / E5B45D0EB91557CC: the spies' disguise store joins the layout (version 9); behaviour
     // unchanged.
-    private const ulong GoldenFinalFullHash = 0xE5B45D0EB91557CCUL;
-    private const ulong GoldenHashStream = 0x6E50902314F85F51UL;
+    private const ulong GoldenFinalFullHash = 0x3397C9D0CA2C790CUL;
+    // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
+    private const ulong GoldenHashStream = 0xF7FFFA90F1472920UL;
 
     private const int Ticks = 300;
 

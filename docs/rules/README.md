@@ -109,7 +109,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Items](items.yaml) (ITEM) | 16 | 8 | 2 | 2 | 3 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 21 | 15 | 4 | 1 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
-| [Unit orders](orders.yaml) (ORD) | 18 | 10 | 4 | 3 | 1 | 0 | 0 |
+| [Unit orders](orders.yaml) (ORD) | 18 | 11 | 4 | 3 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 0 | 10 | 10 | 6 | 2 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 335 | 165 | 73 | 41 | 35 | 9 | 12 |
+| **All** | 335 | 166 | 73 | 41 | 34 | 9 | 12 |
 
 ## Not done yet
 
@@ -198,7 +198,6 @@ Missing and partial rules.
 
 ### Unit orders
 
-* **ORD-005**: Shift+right click adds waypoints; the units walk them in order. With Ctrl or Alt the waypoints are a move-advance or a move-sneak. *The client sends the Shift flag but the simulation replaces the order instead of queueing it.*
 * **ORD-006** (partial): Patrol walks between the unit's position and the clicked point; with Shift several points make a patrol path. *Patrol between two points works; the path of several points needs the waypoints of ORD-005.*
 * **ORD-007** (partial): Explore sends the unit to the clicked area, which it walks to explore it. *Explore takes no target; the units head for any unexplored ground they can reach.*
 * **ORD-014** (partial): Unload makes a loaded vehicle let its units out at the clicked place; the pointer's colour shows whether they can land there. *The Unload button waits for a click on the place and the units land there; the pointer does not change colour.*

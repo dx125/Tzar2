@@ -173,6 +173,52 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-005")]
+    public void Shift_adds_waypoints_walked_in_order_with_their_own_mode_and_a_plain_order_drops_them()
+    {
+        using var d = new SimDriver(TestMap(40, 16, Unit("euro.footman", 0, 3, 3)), ruleset: Classic);
+        EntityId u = OfType(d.World, "euro.footman").Single();
+        static int C(int tile) => (tile * Tile) + (Tile / 2);
+        d.Order(0, CommandKind.Move, [u], C(12), C(3));
+        d.Order(0, CommandKind.Move, [u], C(12), C(12), flags: CommandFlags.Queue);
+        d.Order(0, CommandKind.Move, [u], C(3), C(12), flags: CommandFlags.Queue | CommandFlags.Alt); // the last leg sneaks
+        d.Step();
+        Assert.Equal(2, d.World.WaypointQueues.Get(u).Count);
+
+        var stops = new List<(int X, int Y, CombatMode Mode)>();
+        int arrived = 0;
+        d.RunUntil(() =>
+        {
+            if (d.Count(SimEventKind.Arrived) > arrived)
+            {
+                arrived = d.Count(SimEventKind.Arrived);
+                Position p = d.PositionOf(u);
+                stops.Add((p.X / Tile, p.Y / Tile, d.World.Combats.Get(u).Mode));
+            }
+
+            return arrived >= 3;
+        }, 4000);
+        Assert.Equal(3, stops.Count);
+        Assert.InRange(stops[0].X, 11, 13);
+        Assert.InRange(stops[0].Y, 2, 4);
+        Assert.InRange(stops[1].X, 11, 13);
+        Assert.InRange(stops[1].Y, 11, 13);
+        Assert.Equal(CombatMode.Sneak, stops[1].Mode); // set when it leaves for the last point
+        Assert.InRange(stops[2].X, 2, 4);
+        Assert.InRange(stops[2].Y, 11, 13);
+        Assert.False(d.World.WaypointQueues.Has(u));
+
+        // A plain order drops what is queued.
+        d.Order(0, CommandKind.Move, [u], C(20), C(12));
+        d.Order(0, CommandKind.Move, [u], C(20), C(3), flags: CommandFlags.Queue);
+        d.Step();
+        Assert.True(d.World.WaypointQueues.Has(u));
+        d.Order(0, CommandKind.Stop, [u]);
+        d.Step();
+        Assert.False(d.World.WaypointQueues.Has(u));
+    }
+
+    [Fact]
     public void A_move_advance_answers_a_tower_that_outranges_its_sight_and_a_plain_move_does_not()
     {
         // A stone tower (range 13 tiles) shoots footmen (sight 6) passing 10 tiles away.

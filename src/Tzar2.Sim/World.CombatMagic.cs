@@ -28,6 +28,9 @@ public sealed partial class World
     /// <summary>Spies' disguises (MAG-012, ADR 0184).</summary>
     public ComponentStore<Disguise> Disguises { get; private set; } = null!;
 
+    /// <summary>The points units walk after their current move (ORD-005).</summary>
+    public ComponentStore<WaypointQueue> WaypointQueues { get; private set; } = null!;
+
     /// <summary>Units' errands: boarding, pick-up, give, bribe, conversion (hot).</summary>
     public ComponentStore<Errand> Errands { get; private set; } = null!;
 
@@ -79,6 +82,7 @@ public sealed partial class World
         Crusades = Components.RegisterHot<CrusadeState>("game.crusade");
         CrusaderLinks = Components.RegisterHot<CrusaderOf>("game.crusader");
         Disguises = Components.RegisterHot<Disguise>("game.disguise");
+        WaypointQueues = Components.RegisterHot<WaypointQueue>("game.waypoints");
     }
 
     /// <summary>

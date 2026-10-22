@@ -723,6 +723,7 @@ public sealed class MovementSystem : ISimSystem
                 else if (m.Order == MotionOrder.Move)
                 {
                     m.Order = MotionOrder.None;
+                    NextWaypoint(world, entity, ref m);
                 }
             }
             else if ((outFlags & OutGiveUp) != 0)
@@ -730,6 +731,7 @@ public sealed class MovementSystem : ISimSystem
                 world.Events.Emit(new SimEvent(SimEventKind.Blocked, owner, entity, nx, ny, 0));
                 MovementOrders.Finish(world, entity, ref m, MotionState.Blocked);
                 m.Order = MotionOrder.None;
+                world.WaypointQueues.Remove(entity); // stuck: the rest of the way is dropped
             }
             else if ((outFlags & OutReplan) != 0)
             {
@@ -737,6 +739,39 @@ public sealed class MovementSystem : ISimSystem
                 Replan(world, entity, ref m);
             }
         }
+    }
+
+    // ORD-005: arrived, the unit walks on to its next waypoint with that leg's combat mode.
+    private static void NextWaypoint(World world, EntityId entity, ref Motion m)
+    {
+        if (world.WaypointQueues.Count == 0 || world.WaypointQueues.IndexOf(entity) is not (>= 0 and var w))
+        {
+            return;
+        }
+
+        ref WaypointQueue q = ref world.WaypointQueues.At(w);
+        Waypoint next = q.Points[0];
+        for (int k = 1; k < q.Count; k++)
+        {
+            q.Points[k - 1] = q.Points[k];
+        }
+
+        q.Points[--q.Count] = default;
+        if (q.Count == 0)
+        {
+            world.WaypointQueues.Remove(entity);
+        }
+
+        if (world.Combats.IndexOf(entity) is >= 0 and var c && world.Combats.At(c).Target == 0)
+        {
+            world.Combats.At(c).Mode = next.Mode;
+        }
+
+        m.Order = MotionOrder.Move;
+        m.OrderX = next.X;
+        m.OrderY = next.Y;
+        m.Replans = 0;
+        MovementOrders.Request(world, entity, ref m, 0, next.X, next.Y);
     }
 
     // ----- shared helpers for the jobs ---------------------------------------------------------------------------

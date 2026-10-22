@@ -185,6 +185,27 @@ public sealed partial class World
             }
         }
 
+        ids = WaypointQueues.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            WaypointQueue q = WaypointQueues.Components[i];
+            if (!Entities.IsAlive(ids[i]) || !Motions.Has(ids[i]) || q.Count is < 1 or > WaypointQueue.Capacity)
+            {
+                throw Invalid("invalid waypoints");
+            }
+
+            for (int k = 0; k < WaypointQueue.Capacity; k++)
+            {
+                Waypoint p = q.Points[k];
+                if (k < q.Count
+                    ? !Map.ContainsPoint(p.X, p.Y) || p.Mode is not (CombatMode.None or CombatMode.AttackMove or CombatMode.Sneak) || (p.Reserved0 | p.Reserved1 | p.Reserved2) != 0
+                    : p.X != 0 || p.Y != 0 || p.Mode != CombatMode.None || (p.Reserved0 | p.Reserved1 | p.Reserved2) != 0)
+                {
+                    throw Invalid("invalid waypoint");
+                }
+            }
+        }
+
         ids = Disguises.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
