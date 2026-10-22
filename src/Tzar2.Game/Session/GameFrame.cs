@@ -192,10 +192,13 @@ public struct FrameEntity
     public bool Cloaked;
 
     /// <summary>
-    /// For its own kingdom, the type a disguised spy looks like (drawn in its own colour, 1.05), or -1. Other kingdoms get
-    /// the disguise as <see cref="TypeId"/> and <see cref="Owner"/> and never learn the truth (MAG-012, ADR 0184).
+    /// For its own kingdom, the spy type a taken-over unit turns back into (its name in the selection view), or -1. Other
+    /// kingdoms see the unit as its old kingdom's (<see cref="Owner"/>) and never learn the truth (MAG-012, ADR 0184).
     /// </summary>
-    public int LooksLike;
+    public int SpyType;
+
+    /// <summary>For its own kingdom, the kingdom whose colours a taken-over unit wears (batch J: even to its owner), or -1.</summary>
+    public int SeemsOwner;
 
     /// <summary>For its own kingdom, a spy's disguise meter 0-100 (MAG-021): 100 when it wears no disguise; -1 for others.</summary>
     public int DisguiseMastery;

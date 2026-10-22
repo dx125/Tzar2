@@ -291,16 +291,17 @@ public sealed class CommandCardTests : IDisposable
     [Fact]
     [Trait("Rule", "MAG-012")]
     [Trait("Rule", "HUD-022")]
-    public void A_spy_impersonates_a_clicked_enemy_others_see_the_disguise_its_owner_its_true_kingdom_and_it_reveals_itself()
+    public void A_spy_takes_a_clicked_enemy_over_others_see_their_own_unit_its_owner_the_spy_and_it_reveals_itself()
     {
         Ruleset rules = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions { OverrideTexts = [new("test.yaml", "euro.footman: { Impersonator: {} }")] });
         const int Tile = Tzar2.Sim.Map.MapState.UnitsPerTile;
         MapData map = Tzar2.Sim.Scenarios.ScenarioMaps.WithObjects(Tzar2.Sim.Scenarios.ScenarioMaps.Build("spy", 24, 12, new byte[24 * 12], []),
-            [new MapObject("euro.footman", 0, (4 * Tile) + (Tile / 2), (4 * Tile) + (Tile / 2)), new MapObject("euro.footman", 1, (8 * Tile) + (Tile / 2), (4 * Tile) + (Tile / 2))]);
+            [new MapObject("euro.footman", 0, (4 * Tile) + (Tile / 2), (4 * Tile) + (Tile / 2)), new MapObject("euro.footman", 1, (8 * Tile) + (Tile / 2), (4 * Tile) + (Tile / 2)),
+             new MapObject("euro.peon", 1, (12 * Tile) + (Tile / 2), (8 * Tile) + (Tile / 2))]); // kingdom 1 keeps eyes on the footman
         using var sim = new Simulation(rules, map, new SimulationConfig { PlayerCount = 2, MatchSeed = 5 });
         World world = sim.World;
         EntityId spy = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 0);
-        EntityId look = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 1);
+        EntityId look = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 1 && world.TypeOf(e).Key == "euro.footman");
         var stances = new CommandList();
         stances.Add(CommandKind.SetStance, [spy], arg0: (int)CombatStance.HoldFire);
         stances.Add(CommandKind.SetStance, [look], arg0: (int)CombatStance.HoldFire, player: 1);
@@ -331,23 +332,27 @@ public sealed class CommandCardTests : IDisposable
         }
 
         sim.Tick(order);
-        for (int i = 0; i < 400 && !world.Disguises.Has(spy); i++)
+        ushort spyType = world.Identities.Get(spy).TypeId;
+        for (int i = 0; i < 400 && !world.Disguises.Has(look); i++)
         {
             sim.Tick(new CommandList());
         }
 
-        // The enemy sees one of its own footmen; its owner sees the footman's look in its own colour (1.05).
-        FrameEntity seen = Frame(1).Entities.ToArray().Single(e => e.Id == spy);
-        Assert.Equal(((byte)1, world.Identities.Get(look).TypeId, -1, -1), (seen.Owner, seen.TypeId, seen.LooksLike, seen.DisguiseMastery));
-        FrameEntity own = Frame(0).Entities.ToArray().Single(e => e.Id == spy);
-        Assert.Equal(((byte)0, (int)world.Identities.Get(look).TypeId), (own.Owner, own.LooksLike));
+        // The spy took the footman over (the owner, batch J): the spy is gone; the enemy still sees one of its own
+        // footmen; its new owner sees it in its old colours, named after the spy, with the meter.
+        Assert.False(world.Entities.IsAlive(spy));
+        FrameEntity seen = Frame(1).Entities.ToArray().Single(e => e.Id == look);
+        Assert.Equal(((byte)1, -1, -1, -1), (seen.Owner, seen.SpyType, seen.SeemsOwner, seen.DisguiseMastery));
+        FrameEntity own = Frame(0).Entities.ToArray().Single(e => e.Id == look);
+        Assert.Equal(((byte)0, (int)spyType, 1), (own.Owner, own.SpyType, own.SeemsOwner));
         Assert.InRange(own.DisguiseMastery, 0, 100); // only its owner sees the meter (MAG-021)
 
-        // Disguised: reveal instead of impersonate, and it works.
-        context = new(Frame(0), [spy]);
+        // Taken over: reveal instead of impersonate, and it turns back into a spy.
+        context = new(Frame(0), [look]);
         Assert.Equal(["stop", "reveal_self"], card.Build(context).Select(s => s!.Value.Button.Order));
         sim.Tick(card.Press(context, card.Build(context)[1]!.Value).Commands!);
-        Assert.False(world.Disguises.Has(spy));
+        Assert.Equal(0, world.Disguises.Count);
+        Assert.False(world.Entities.IsAlive(look));
     }
 
     [Fact]

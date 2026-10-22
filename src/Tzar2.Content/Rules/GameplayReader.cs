@@ -17,7 +17,7 @@ internal sealed class GameplayReader
         "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "wallContinueRadiusTiles", "maxWallSegments",
         "gateOpenReachPx", "manaRegenPerMinute", "gateCloseReachPx", "gateChangeIntervalMs", "maxGateChangesPerTick",
         "repairCostPercent", "repairerFalloffPercent", "idleWorkAfterMs", "idleWorkRadiusTiles", "disguiseMasteryMs",
-        "repairBlowMs",
+        "repairBlowMs", "unmaskReachFreshPercent", "unmaskReachFullPercent",
     ];
 
     private readonly RulesetCompiler.SectionSet _settings;
@@ -100,6 +100,8 @@ internal sealed class GameplayReader
             RepairerFalloffBasisPoints = Range("repairerFalloffPercent", d.RepairerFalloffBasisPoints / 100, 0, 100) * 100,
             DisguiseMasteryMs = Range("disguiseMasteryMs", d.DisguiseMasteryMs, 1, 3_600_000),
             RepairBlowMs = Range("repairBlowMs", d.RepairBlowMs, 1, 60_000),
+            UnmaskReachFreshTilePercent = Range("unmaskReachFreshPercent", d.UnmaskReachFreshTilePercent, 0, 6_400),
+            UnmaskReachFullTilePercent = Range("unmaskReachFullPercent", d.UnmaskReachFullTilePercent, 0, 6_400),
         };
     }
 

@@ -54,11 +54,10 @@ rules:
     status: implemented
   MAG-012:
     rule: Spies (with Espionage) can impersonate any man of another kingdom, of any civilization, from next to him; not machines, flyers or magic creatures. The spy becomes that unit, with all its stats, under its own player's control, and the spy itself is gone; its old kingdom still sees one of its own. Revealing turns it back into a spy. Fighting keeps the disguise; a spy of the copied kingdom unmasks it when it comes close enough in front of it, towers do not.
-    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, 'data BONUS.INI [groups] machines ships magic_creatures', owner 2026-10-21 (answers), owner 2026-10-21 (disguise meter), capture capture-20261021-203846, owner 2026-10-21 (impersonation takes the unit over), owner 2026-10-21 (a spy unmasks only what it faces)]
-    status: partial
+    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, 'data BONUS.INI [groups] machines ships magic_creatures', owner 2026-10-21 (answers), owner 2026-10-21 (disguise meter), capture capture-20261021-203846, owner 2026-10-21 (impersonation takes the unit over), owner 2026-10-21 (a spy unmasks only what it faces), owner 2026-10-22 (unmasked from 4 tiles at a meter of 8), capture capture-20261022-011438]
+    status: tested
     adr: [0184]
-    note: Tzar2 still leaves the copied unit with its kingdom and gives the spy only its look (ADR 0184); taking the unit over is next (STATUS work queue 3). Batch J's first run showed it with the spy's own kingdom's peasant (the peasant's place, portrait, attack and card under the name "Spy (N)"); the owner confirmed it for another kingdom's units. Only the copied kingdom's spies unmask it: in batch J's third run, a spy in its own kingdom's peasant's look was never unmasked by kingdom 2's spy, not even while they fought. The data gives no distance; Tzar2 uses the spy's detector radius (5 tiles, UNVERIFIED) until batch J's fourth run measures it. The mage is in BONUS.INI's magic_creatures but is a man, and the chariot is not among the machines; the owner confirmed that both can be copied.
-    work: STATUS work queue 3
+    note: Batch J (manual.yaml spy-disguise) showed the takeover with a peasant of kingdom 2, a third kingdom's spy never unmasking, and kingdom 2's spies unmasking at about 3.4 tiles with a fresh meter and only right next to it with a full one; Tzar2 uses 4 tiles for an empty meter down to 1 for a full one, in front of the spy (the facing direction or the two next to it). Spies handed over with hmkingdom never unmasked anything, a cheat artefact. The mage is in BONUS.INI's magic_creatures but is a man, and the chariot is not among the machines; the owner confirmed that both can be copied. A revealed spy's meter goes on counting in the original; Tzar2 shows 100.
   MAG-013:
     rule: Spies and ninjas see through each other's invisibility, and a cloaked ninja can drop its cloak (uncloak).
     source: [patch 1.05 (TZAR110.TXT), 'data MENU.INI [ninja_cloaked] uncloak', data ORDERS.INI uncloak]
@@ -97,8 +96,8 @@ rules:
     source: [community TDD GAME-11]
     status: tested
   MAG-021:
-    rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; at 100 the spy can hardly be unmasked.
-    source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846]
+    rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; the fuller it is, the closer the copied kingdom's spies must come to unmask it, right next to it at 100.
+    source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846, capture capture-20261022-011438]
     status: tested
     adr: [0184]
-    note: Measured in batch J's first run (manual.yaml spy-disguise). How the meter weighs against the unmasking spy is not measured yet; Tzar2 lets another kingdom's spy unmask it within (100 - meter) % of its detector radius (UNVERIFIED). The owner's description adds "or trains", which is not modelled.
+    note: Measured in batch J (manual.yaml spy-disguise). Tzar2 lets the copied kingdom's spy unmask within 4 tiles for an empty meter down to 1 for a full one, in proportion (gameplay.unmaskReachFreshPercent, unmaskReachFullPercent). The owner's description adds "or trains", which is not modelled.

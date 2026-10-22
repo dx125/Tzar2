@@ -84,7 +84,8 @@ public static class FrameBuilder
 
             e.Burning = world.Burnings.Has(id);
             e.Cloaked = world.IsCloaked(id);
-            e.LooksLike = -1;
+            e.SpyType = -1;
+            e.SeemsOwner = -1;
             e.DisguiseMastery = -1;
             if (viewer is not { } watcher || watcher == identity.Owner)
             {
@@ -97,12 +98,12 @@ public static class FrameBuilder
                 Disguise look = world.Disguises.At(dg);
                 if (viewer is { } onlooker && onlooker != identity.Owner)
                 {
-                    e.TypeId = look.TypeId; // other kingdoms see the unit it impersonates (ADR 0184)
-                    e.Owner = look.Owner;
+                    e.Owner = look.Owner; // other kingdoms see one of its old kingdom's units (ADR 0184)
                 }
                 else
                 {
-                    e.LooksLike = look.TypeId;
+                    e.SpyType = look.TypeId;
+                    e.SeemsOwner = look.Owner;
                     e.DisguiseMastery = look.Mastery;
                 }
             }

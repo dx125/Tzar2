@@ -164,7 +164,7 @@ internal static class CombatMagicCommands
         return applied > 0 ? null : last;
     }
 
-    /// <summary>The listed own disguised spies show their true selves (order <c>reveal_self</c>).</summary>
+    /// <summary>The listed own taken-over units turn back into spies (order <c>reveal_self</c>).</summary>
     public static CommandRejection? RevealSelf(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         bool any = false;
@@ -172,7 +172,7 @@ internal static class CombatMagicCommands
         {
             if (IsCommandedUnit(world, unit, command.Player) && world.Disguises.Has(unit))
             {
-                world.Disguises.Remove(unit);
+                Unmask(world, unit);
                 any = true;
             }
         }
@@ -180,7 +180,27 @@ internal static class CombatMagicCommands
         return any ? null : CommandRejection.NoValidEntities;
     }
 
-    /// <summary>On arrival: the spy takes the look of the target, if it still can (ADR 0184).</summary>
+    /// <summary>
+    /// A taken-over unit shows its true self, by its order or unmasked: it becomes a spy of its player at its place, with
+    /// its hit points in proportion, level, items and name (MAG-012; batch J: a spy, attack 20, after a reveal).
+    /// </summary>
+    public static void Unmask(World world, EntityId unit)
+    {
+        if (world.Disguises.IndexOf(unit) is not (>= 0 and var d))
+        {
+            return;
+        }
+
+        ushort spy = world.Disguises.At(d).TypeId;
+        world.Disguises.Remove(unit);
+        FinishConversion(world, unit, spy);
+    }
+
+    /// <summary>
+    /// On arrival the spy takes the target over, if it still can (the owner, batch J; ADR 0184 amendment 6): the spy is
+    /// gone, the target becomes its player's with its own type, stats and place, and seems to stay its old kingdom's. Its
+    /// meter starts at 0 (MAG-021).
+    /// </summary>
     public static void TryImpersonate(World world, EntityId spy, EntityId target)
     {
         byte owner = world.Identities.Get(spy).Owner;
@@ -189,13 +209,15 @@ internal static class CombatMagicCommands
             return;
         }
 
-        // A new look starts the meter again; the same look again keeps it (MAG-021).
         Identity look = world.Identities.Get(target);
-        byte mastery = world.Disguises.IndexOf(spy) is >= 0 and var d && world.Disguises.At(d) is var old && old.TypeId == look.TypeId && old.Owner == look.Owner
-            ? old.Mastery
-            : (byte)0;
-        world.Disguises.Set(spy, new Disguise { TypeId = look.TypeId, Owner = look.Owner, Mastery = mastery });
-        world.Events.Emit(new SimEvent(SimEventKind.Impersonated, owner, spy, target.Index, look.Owner, look.TypeId));
+        ushort spyType = world.Identities.Get(spy).TypeId;
+        GameplayCommands.ClearTasks(world, target);
+        world.StopCasting(target);
+        Interaction.Halt(world, target);
+        world.ChangeOwner(target, owner);
+        world.Disguises.Set(target, new Disguise { TypeId = spyType, Owner = look.Owner, Mastery = 0 });
+        world.Destroy(spy);
+        world.Events.Emit(new SimEvent(SimEventKind.Impersonated, owner, target, spy.Index, look.Owner, look.TypeId));
     }
 
     // Another kingdom's unit on the map, walking or riding on land: not a ship, a flyer, a building or an animal kept for

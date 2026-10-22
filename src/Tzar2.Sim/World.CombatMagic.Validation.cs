@@ -191,7 +191,7 @@ public sealed partial class World
             Disguise g = Disguises.Components[i];
             RequireUnit(ids[i], "disguise");
             if (g.TypeId >= types || !IsValidOwner(g.Owner) || g.Owner == Identities.Get(ids[i]).Owner || g.Mastery > 100
-                || (TypeOf(ids[i]).Traits.Abilities & AbilityFlags.Impersonate) == 0)
+                || (Ruleset.EntityTypes[g.TypeId].Traits.Abilities & AbilityFlags.Impersonate) == 0)
             {
                 throw Invalid("invalid disguise");
             }
