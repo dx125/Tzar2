@@ -86,10 +86,10 @@ rules:
     note: Alt turns the ghost; a bridge down takes the cells of bridge_vert (6 x 11) and draws it.
     adr: [0189, 0192]
   BLD-020:
-    rule: Deleting a building just after its construction began gives its cost back.
-    source: [help ITEMS.TXT HT_REMOVE]
-    status: unclear
-    note: Tzar2 refunds a cancelled site in full at any time (placeholder); "at the beginning" suggests the original refunds only early, or less later.
+    rule: Deleting a building just after its construction began gives its cost back. A site removed before any work gives all of it back; after work began, half of the share still to be built (f = (1000 T − 1000 p) / (2 T) per mille of each resource, truncated).
+    source: [help ITEMS.TXT HT_REMOVE, community ReTzar src/gameplay.rs (0x41d6a8)]
+    status: tested
+    adr: [0251]
   BLD-021:
     rule: Peasants repairing are shown at work, with the building animation and its sound.
     source: [owner 2026-10-21 (fourth play-test)]

@@ -96,13 +96,13 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 
 | Chapter | Rules | Tested | Implemented | Partial | Missing | Deviation | Unclear |
 |---|---|---|---|---|---|---|---|
-| [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
+| [Computer opponents](ai.yaml) (AI) | 4 | 2 | 0 | 1 | 0 | 1 | 0 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 10 | 4 | 0 | 0 | 0 | 0 |
-| [Construction and repair](construction.yaml) (BLD) | 22 | 17 | 4 | 0 | 0 | 0 | 1 |
+| [Construction and repair](construction.yaml) (BLD) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 18 | 10 | 1 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 7 | 1 | 1 | 0 | 0 | 0 |
-| [Resources and gathering](economy.yaml) (ECO) | 22 | 16 | 5 | 0 | 0 | 0 | 1 |
+| [Resources and gathering](economy.yaml) (ECO) | 22 | 17 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 1 | 0 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 7 | 14 | 6 | 4 | 2 | 1 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
-| **All** | 335 | 197 | 78 | 26 | 18 | 9 | 7 |
+| **All** | 335 | 200 | 78 | 26 | 18 | 9 | 4 |
 
 ## Not done yet
 
@@ -209,18 +209,6 @@ Missing and partial rules.
 ## Unclear
 
 The sources disagree or say too little.
-
-### Computer opponents
-
-* **AI-003**: The computer does not repair its damaged towers. *The guide describes one campaign mission; whether it is the AI's general behaviour is not known.*
-
-### Construction and repair
-
-* **BLD-020**: Deleting a building just after its construction began gives its cost back. *Tzar2 refunds a cancelled site in full at any time (placeholder); "at the beginning" suggests the original refunds only early, or less later.*
-
-### Resources and gathering
-
-* **ECO-002**: Gathering broken off before the load is complete gives nothing. *Tzar2 drops the work done (ADR 0180); a capture of an interrupted gather would settle it (UNK-17).*
 
 ### The screen
 

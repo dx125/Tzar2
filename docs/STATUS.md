@@ -112,7 +112,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
    order. Next: the fifth play-test (item 5), and the owner's list of 2026-10-22 (log below). Done: the curse,
-   hypnosis, the ghost's banshee scream and the Messiah's immunity (WAR-009, WAR-010, MAG-008; ADR 0250), the controls
+   hypnosis, the ghost's banshee scream and the Messiah's immunity (WAR-009, WAR-010, MAG-008; ADR 0250), cancelled
+   sites, broken-off loads and the computer's repairs (BLD-020, ECO-002, AI-003; ADR 0251), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -216,6 +217,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Cancelled sites, broken-off loads and the computer's repairs (ADR 0251).** From ReTzar: a site gives
+  back all of its cost before any work, then half of what is left to build; a load is whole only at the end of the work
+  cycles; the computer repairs only with idle peasants near the damage. Ledger: 51 open rules before, 48 after.
 
 * **2026-10-22 — The curse, hypnosis, the banshee and the Messiah as ReTzar reads them (ADR 0250).** The curse halves
   attack and takes all defence of enemy non-machines within the caster's sight for 30 s; a ghost's blow curses for free

@@ -9,9 +9,10 @@ rules:
     adr: [0180]
   ECO-002:
     rule: Gathering broken off before the load is complete gives nothing.
-    source: [owner 2026-10-20 (third play-test)]
-    status: unclear
-    note: Tzar2 drops the work done (ADR 0180); a capture of an interrupted gather would settle it (UNK-17).
+    source: [owner 2026-10-20 (third play-test), 'community ReTzar src/gameplay.rs (0x4ad1cc, 0x4ae2a0)']
+    status: tested
+    adr: [0180, 0251]
+    note: The original fills the whole load at the end of the work cycles (six chops for wood, a mine's take at once), so a peasant called away before then carries nothing; milk fills unit by unit (ECO-003).
   ECO-003:
     rule: Milk fills the pail unit by unit.
     source: [owner 2026-10-20 (third play-test)]

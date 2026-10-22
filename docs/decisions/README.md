@@ -135,3 +135,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0191](0191-technology-effects-as-the-original-computes-them.md) | Give technologies the effects the original's research handlers compute | Accepted | 2026-10-22 |
 | [0192](0192-gates-and-bridges-take-the-cells-of-their-pictures.md) | Gates and bridges take the cells of their pictures, either way | Accepted | 2026-10-22 |
 | [0250](0250-the-curse-hypnosis-the-banshee-and-the-messiah.md) | Curse, hypnotize, scream and resist magic as the original's code does | Accepted | 2026-10-22 |
+| [0251](0251-cancelled-sites-broken-loads-and-the-computers-repairs.md) | Refund cancelled sites, drop broken-off loads and leave repairs to idle peasants, as the original does | Accepted | 2026-10-22 |
