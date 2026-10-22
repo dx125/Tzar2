@@ -31,9 +31,9 @@ param(
     [string[]]$Scenarios = @(),
     # A prepared batch of at most 30 minutes (ADR 0112): A = cheats, colours, combat, shadows, production;
     # B = unit speeds (first half) and gathering; C = unit speeds (second half); D = the day clock; E-I: ADR 0113;
-    # J = repair per blow and the spy's disguise (the owner's questions, 2026-10-21).
-    # Overrides -Scenarios.
-    [ValidateSet("A", "B", "C", "D", "E", "F", "G", "H", "I", "J")][string]$Batch = "",
+    # J = repair per blow and the spy's disguise (the owner's questions, 2026-10-21); K = how close units stand, pass and
+    # crowd a fight (WORLD-015). Overrides -Scenarios.
+    [ValidateSet("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K")][string]$Batch = "",
     # Where the session folder and the zip go.
     [string]$Out = (Join-Path ([Environment]::GetFolderPath("UserProfile")) "Tzar2Capture"),
     # cnc-ddraw (default: a pinned, verified DirectDraw wrapper that runs the game in a window),
@@ -61,6 +61,8 @@ $batches = @{
     # J (2026-10-21): how close the copied kingdom's spy unmasks a disguise, and how the disguise meter changes it
     # (the repair scenarios ran in runs 1-3 and are done: -Scenarios repair-mill,repair-barracks,repair-castle).
     "J" = @("smoke", "spy-unmask", "spy-unmask-half", "spy-unmask-full")
+    # K (2026-10-22): how close the original's units stand at rest, pass head on and crowd one target (WORLD-015).
+    "K" = @("smoke", "unit-spacing")
 }
 if ($Batch) { $Scenarios = $batches[$Batch] }
 $repo = Resolve-Path (Join-Path $PSScriptRoot "../..")

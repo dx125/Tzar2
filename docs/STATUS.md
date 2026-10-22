@@ -83,6 +83,8 @@ play-test.
    * What did not work: treating friends walking the same way as hard obstacles jams opposing columns on a narrow
      bridge (ORIG-02). A radius of 12 px alone changes nothing in a crowd and shifts the AI's goldens.
    * The data: the original's units have a 25 × 25 selection box and a 32 × 32 object box, a whole tile.
+   * **Operator:** batch K (`-Batch K`, about 5 minutes, scenario `unit-spacing`) measures the original: nine footmen at
+     rest, two columns passing head on, a crowd around one target.
    * Plan:
      * a body size from the data;
      * hard contact with rules for who gives way: idle units step aside, units coming the other way squeeze past,
