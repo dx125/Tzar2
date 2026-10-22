@@ -268,6 +268,12 @@ public partial class GameScreen : Node
         long before = watch.ElapsedMilliseconds;
         _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, grid, _store.LoadImage, light);
         MinimapFromData(set, grid);
+        if (set.Table is { } treeTable && _store.Vfs.Exists(treeTable))
+        {
+            IniTable terrainIni = IniTable.Parse(_store.Read(treeTable));
+            _world.Trees = TreeLayout.FromIni(terrainIni.Section("trees"), terrainIni.Section("treename"), terrainIni.Section("treeterrain"));
+        }
+
         ClientLog.Info($"match load: world renderer {watch.ElapsedMilliseconds - before} ms (terrain composed {_world.Terrain.ComposeMs} ms, {_world.Terrain.FrameTotal} chunk frames, uploaded {_world.Terrain.UploadMs} ms)");
         _boxItem = RenderingServer.CanvasItemCreate();
         RenderingServer.CanvasItemSetParent(_boxItem, GetViewport().FindWorld2D().Canvas);

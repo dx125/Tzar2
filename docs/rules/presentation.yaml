@@ -41,5 +41,5 @@ rules:
   PRES-009:
     rule: Trees, stumps and bushes are drawn from the tree sheet of the terrain set, at the positions and with the shadows the data gives.
     source: [data TREES.INI, 'data TERRAIN.INI [trees] [treename]']
-    status: partial
-    note: Trees are drawn from the sheet with an assumed position of the trunk; the data's positions and shadows are not read.
+    status: tested
+    note: The tree and its shadow hang from the terrain set's [trees] pos_tree and pos_shadow (ReTzar's reading, 0x43cc84), and a tree takes a picture of a kind [treename] and [treeterrain] let grow on its tile. Tzar2's trees carry no kind, so the picture is picked by the tree's place, not the map's. DATA/TREES.INI (bushes, chopped) is not read.
