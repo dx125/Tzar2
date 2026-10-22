@@ -85,10 +85,11 @@ public sealed class WorkerSystem : ISimSystem
 
                 EntityId node = EntityId.FromValue(w.Target);
                 byte owner = world.Identities.Get(worker).Owner;
-                if (!Interaction.IsHarvestable(world, node, w.NodeResource, owner))
+                if (!Interaction.IsHarvestable(world, node, w.NodeResource, owner) || !Interaction.HasRoom(world, node, worker))
                 {
-                    // Gone or empty: the nearest other node of the resource; a dry cow is waited for when there is none.
-                    EntityId dry = Interaction.IsHarvestable(world, node, w.NodeResource, owner, waitForRegrowth: true) ? node : EntityId.None;
+                    // Gone, empty or taken (one peasant per field, ECO-021): the nearest other node of the resource; a dry
+                    // cow is waited for when there is none.
+                    EntityId dry = Interaction.IsHarvestable(world, node, w.NodeResource, owner, waitForRegrowth: true) && Interaction.HasRoom(world, node, worker) ? node : EntityId.None;
                     node = Interaction.NextNode(world, worker, w.NodeResource, w.NodeX, w.NodeY, world.Ruleset.Gameplay.NodeSearchRadiusTiles);
                     if (node.IsNone)
                     {

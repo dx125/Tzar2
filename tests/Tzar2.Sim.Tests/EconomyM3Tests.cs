@@ -227,4 +227,24 @@ public class EconomyM3Tests
         Assert.Equal(WorkerTask.Harvest, d.World.Workers.Get(peons[1]).Task);
         Assert.Equal(OfType(d.World, "comm.field").Single().Value, d.World.Workers.Get(peons[1]).Target);
     }
+
+    [Fact]
+    [Trait("Rule", "ECO-021")]
+    public void Only_one_peasant_tends_a_field_and_another_goes_to_a_free_one_or_waits()
+    {
+        // The help (HT_TEND_FIELDS): only one peasant can tend each field.
+        using var d = new SimDriver(
+            TestMap(40, 16, Structure("euro.castle", 0, 2, 2), Structure("comm.field", 0, 12, 2), Structure("comm.field", 0, 20, 2), Unit("euro.peon", 0, 13, 6), Unit("euro.peon", 0, 14, 6), Unit("euro.peon", 0, 15, 6)),
+            ruleset: Classic);
+        EntityId[] fields = [.. OfType(d.World, "comm.field")];
+        EntityId[] peons = [.. OfType(d.World, "euro.peon")];
+        Assert.Equal(1, d.World.TypeOf(fields[0]).Traits.ResourceNode!.MaxWorkers);
+        d.Order(0, CommandKind.Harvest, peons, target: fields[0]);
+        d.RunUntil(() => false, 400);
+
+        // One on each field; the third has none left and stands idle.
+        var targets = peons.Where(p => d.World.Workers.Get(p).Task == WorkerTask.Harvest).Select(p => d.World.Workers.Get(p).Target).ToArray();
+        Assert.Equal(fields.Select(f => f.Value).OrderBy(v => v), targets.OrderBy(v => v));
+        Assert.Single(peons, p => d.World.Workers.Get(p).Task == WorkerTask.None);
+    }
 }

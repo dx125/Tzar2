@@ -59,7 +59,11 @@ public sealed partial class CommandSystem : ISimSystem
                 }
 
                 bool patrol = command.Kind == CommandKind.Patrol;
-                CombatMode mode = !patrol && (command.Flags & CommandFlags.Ctrl) != 0 ? CombatMode.AttackMove : CombatMode.None;
+                // Ctrl: move-advance; Alt: move-sneak (ORD-004: "respond to enemies only if attacked").
+                CombatMode mode = patrol ? CombatMode.None
+                    : (command.Flags & CommandFlags.Ctrl) != 0 ? CombatMode.AttackMove
+                    : (command.Flags & CommandFlags.Alt) != 0 ? CombatMode.Sneak
+                    : CombatMode.None;
                 int group = !patrol && CountOwnedMovers(world, command.Player, entities) >= 2 ? world.NextGroupId++ : 0;
                 int applied = 0;
                 foreach (EntityId entity in entities)

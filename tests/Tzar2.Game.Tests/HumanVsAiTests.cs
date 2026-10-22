@@ -94,8 +94,11 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
         Assert.True(a.HumanDelivered > 0, "the human's harvest order did not reach the sim");
     }
 
-    /// <summary>Game minutes per map type: long enough for the Hard AI's first wave (after 4 minutes, ADR 0052) to land.</summary>
-    private const int MapTypeMinutes = 6;
+    /// <summary>
+    /// Game minutes per map type: long enough for the Hard AI's first wave (after 4 minutes, ADR 0052) to land; 6 until
+    /// one peasant tended each field (ECO-021) and the first fields had to be built before the food came in.
+    /// </summary>
+    private const int MapTypeMinutes = 8;
 
     /// <summary>
     /// Game minutes on Archipelagos, where the first wave must also board a transport, cross the sea and land (ADR 0144;

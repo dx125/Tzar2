@@ -98,18 +98,18 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 |---|---|---|---|---|---|---|---|
 | [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
-| [Combat](combat.yaml) (WAR) | 14 | 6 | 4 | 0 | 4 | 0 | 0 |
+| [Combat](combat.yaml) (WAR) | 14 | 7 | 4 | 0 | 3 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 22 | 15 | 4 | 1 | 1 | 0 | 1 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 14 | 9 | 2 | 4 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 6 | 1 | 2 | 0 | 0 | 0 |
-| [Resources and gathering](economy.yaml) (ECO) | 22 | 15 | 5 | 0 | 1 | 0 | 1 |
+| [Resources and gathering](economy.yaml) (ECO) | 22 | 16 | 5 | 0 | 0 | 0 | 1 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 2 | 14 | 6 | 9 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 8 | 2 | 2 | 3 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 21 | 15 | 4 | 1 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
-| [Unit orders](orders.yaml) (ORD) | 18 | 9 | 4 | 3 | 2 | 0 | 0 |
+| [Unit orders](orders.yaml) (ORD) | 18 | 10 | 4 | 3 | 1 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 0 | 10 | 10 | 6 | 2 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 335 | 162 | 73 | 41 | 38 | 9 | 12 |
+| **All** | 335 | 165 | 73 | 41 | 35 | 9 | 12 |
 
 ## Not done yet
 
@@ -131,7 +131,6 @@ Missing and partial rules.
 
 * **WAR-009**: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it.
 * **WAR-010**: The Messiah (campaign) is immune to magic.
-* **WAR-013**: Siege weapons hurt every unit where their shots land, their own kingdom's included. *Stones and shells spare the shooter's own units.*
 * **WAR-014**: An attack's blow lands at the frame of its animation that the data marks (the action row), so each unit strikes at its own moment of the swing. *Tzar2 lands every blow at half the cycle (hitDelayPercent, a placeholder, UNK-07).*
 
 ### Construction and repair
@@ -152,10 +151,6 @@ Missing and partial rules.
 
 * **DIP-008** (partial): F4 shows the scores. *The scores show as messages; there is no score screen.* (ADR 0106)
 * **DIP-009** (partial): Computer kingdoms resign on their own when their AI flag allows it. *The scripts' resign request is recorded but never carried out, and the flag cannot be set (SHELL-013).*
-
-### Resources and gathering
-
-* **ECO-021**: Only one peasant tends each field. *Tzar2 lets several farmers work one field.*
 
 ### Experience and heroes
 
@@ -203,7 +198,6 @@ Missing and partial rules.
 
 ### Unit orders
 
-* **ORD-004**: A move-sneak (Alt+right click) goes to its destination and fights back only when attacked. *The client sends the Alt flag but the simulation moves as on a plain move.*
 * **ORD-005**: Shift+right click adds waypoints; the units walk them in order. With Ctrl or Alt the waypoints are a move-advance or a move-sneak. *The client sends the Shift flag but the simulation replaces the order instead of queueing it.*
 * **ORD-006** (partial): Patrol walks between the unit's position and the clicked point; with Shift several points make a patrol path. *Patrol between two points works; the path of several points needs the waypoints of ORD-005.*
 * **ORD-007** (partial): Explore sends the unit to the clicked area, which it walks to explore it. *Explore takes no target; the units head for any unexplored ground they can reach.*

@@ -65,11 +65,10 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. The ones a source settles come first: waypoints (ORD-005), move-sneak (ORD-004), one farmer per field
-   (ECO-021), siege weapons hurting their own side (WAR-013), the attack's hit frame from the data (WAR-014), and the
+   order. The ones a source settles come first: waypoints (ORD-005), the attack's hit frame from the data (WAR-014), and the
    magic workshop's several items per kind (ITEM-016: books of different spells, potions of different effects,
-   swords, bows and shields). Then the screens: diplomacy, tribute, inventory, save and load. Landing Tactics (TECH-019)
-   is done.
+   swords, bows and shields). Then the screens: diplomacy, tribute, inventory, save and load. Done: Landing Tactics
+   (TECH-019), one farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
      (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
      both. The repairs are measured (run 3, ADR 0185); the distance is left. **Operator:** run 10,
@@ -115,6 +114,17 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Work queue item 3: one peasant per field, move-sneak, siege friendly fire.**
+  * ECO-021 (help HT_TEND_FIELDS): a field takes one worker; a peasant sent to a tended field goes to the nearest free
+    one or stands idle.
+  * ORD-004: Alt + right click moves without picking fights, on the way or after; hit, the unit fights back.
+  * WAR-013 (help WI_SIEGE_WEAPON): catapult stones hurt their own side too.
+  * The AI follows: the wood for the fields its farmers lack counts in its shares, fields have their own limit of
+    sites at once, and an idle worker whose resource has no room left goes to the next one. On land its economy is as
+    before (about 7,300 delivered in 8 minutes); small islands feed fewer farmers, so the naval test allows 20 minutes
+    and one landing, and the tiny land maps 8 minutes for the first hit on a passive human.
+  * The AI golden and the CI AI bench (9D18FEEFCD3376F2) are re-pinned; the gameplay golden's ruleset hash too.
 
 * **2026-10-22 — Spies take units over; the unmasking reach as measured (ADR 0184 amendment 6).**
   * Run 10 (`capture-20261022-011438`): kingdom 2's spies, spawned red, walked up to the disguised peasant. With a

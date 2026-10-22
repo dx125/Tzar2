@@ -30,6 +30,12 @@ public enum CombatMode : byte
     /// matter, so a script can stage a duel between allies; ends like <see cref="Explicit"/>.
     /// </summary>
     Scripted = 5,
+
+    /// <summary>
+    /// Move-sneak (Alt + move, ORD-004): picks no target by itself, on the way or after it, and fights back only when hit;
+    /// until the next order.
+    /// </summary>
+    Sneak = 6,
 }
 
 /// <summary>

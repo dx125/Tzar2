@@ -266,7 +266,7 @@ internal static class Interaction
         for (int i = 0; i < nodes.Length; i++)
         {
             if (stocks[i].Amount == 0 || world.TypeOf(nodes[i]).Traits.ResourceNode!.Resource != resource || world.Constructions.Has(nodes[i])
-                || !MayHarvest(world, owner, nodes[i]) || IsOnWater(world, nodes[i]) != boat)
+                || !MayHarvest(world, owner, nodes[i]) || IsOnWater(world, nodes[i]) != boat || !HasRoom(world, nodes[i], worker))
             {
                 continue;
             }
@@ -498,6 +498,39 @@ internal static class Interaction
 
     /// <summary>The access a worker of <paramref name="type"/> delivers with: boats at water drop-offs, others on land.</summary>
     public static DropOffAccess AccessOf(EntityTypeDefinition type) => type.Locomotor == Locomotor.Ship ? DropOffAccess.Water : DropOffAccess.Land;
+
+    /// <summary>
+    /// Whether <paramref name="worker"/> may work <paramref name="node"/> beside the others already on it (ECO-021: one
+    /// peasant per field). Those gathering on it or carrying from it hold it; of several heading there, the first to
+    /// arrive takes it and the others look for another.
+    /// </summary>
+    public static bool HasRoom(World world, EntityId node, EntityId worker)
+    {
+        int max = world.Ruleset.EntityTypes[world.Identities.Get(node).TypeId].Traits.ResourceNode?.MaxWorkers ?? 0;
+        if (max == 0)
+        {
+            return true;
+        }
+
+        int ahead = 0;
+        ReadOnlySpan<EntityId> workers = world.Workers.Entities;
+        Span<Worker> states = world.Workers.Components;
+        for (int i = 0; i < workers.Length; i++)
+        {
+            ref Worker w = ref states[i];
+            if (workers[i] == worker || w.Task != WorkerTask.Harvest || w.Target != node.Value)
+            {
+                continue;
+            }
+
+            if (w.Phase != WorkerPhase.ToNode)
+            {
+                ahead++;
+            }
+        }
+
+        return ahead < max;
+    }
 
     /// <summary>
     /// Whether <paramref name="node"/> can be gathered now: alive, not empty, not a site, of the resource, allowed. With
