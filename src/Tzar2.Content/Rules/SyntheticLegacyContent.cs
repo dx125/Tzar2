@@ -153,7 +153,7 @@ public static class SyntheticLegacyContent
             ["Dragon", "dragon", "75g,850m", "", "13", "3", "310", "24", "1", "5", "3", "Spawn", "te_dragon"],
             ["Jinn", "jinn", "90g,320m", "", "9", "", "290", "21", "4", "5", "3", "Spawn", "te_jin"],
             ["Carpet", "carpet", "85g,450m", "", "9", "", "95", "", "", "", "", "Spawn", "te_magiccarpet"],
-            ["Messiah", "messiah", "1900g", "", "24", "", "900", "45", "9", "4", "4", "Spawn", "*"],
+            ["Messiah", "messiah", "1900g", "", "24", "", "900", "45", "9", "5", "5", "Spawn", "*"],
         ]));
         source.Add("tables/data/arab units.txt.json", Tsv("DATA/ARAB UNITS.TXT", unitHeader,
         [
@@ -433,7 +433,7 @@ public static class SyntheticLegacyContent
         AddObjectSections(source, "XEBEC", [("general", [("class", "xebec"), ("teren", "2"), ("type", "unit")]), ("comm", [("image", "xebec"), ("max_obj_in_holder", "6")]), ("accept", [("earthunits", string.Empty)])]);
         AddObject(source, "fishing_boat", "unit", "comm", "boat", teren: "2");
         AddObject(source, "cow", "unit, animal", "comm", "cow", teren: "1", extra: [("max_manna", "40")]);
-        AddObjectSections(source, "TRADER", [("general", [("class", "trader"), ("type", "unit, mounted")]), ("euro", [("image", "caravan"), ("max_obj_in_holder", "8")]), ("accept", [("infantryunits", string.Empty)])]);
+        AddObjectSections(source, "TRADER", [("general", [("class", "trader"), ("type", "unit, mounted")]), ("euro", [("image", "caravan"), ("max_obj_in_holder", "9")]), ("accept", [("infantryunits", string.Empty)])]);
         AddObject(source, "bear", "unit, animal", "comm", "bear", teren: "1");
         AddObject(source, "ork", "unit", "comm", "ork");
         AddObject(source, "dwarf", "unit", "comm", "dwarf");
