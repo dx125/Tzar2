@@ -115,7 +115,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    hypnosis, the ghost's banshee scream and the Messiah's immunity (WAR-009, WAR-010, MAG-008; ADR 0250), cancelled
    sites, broken-off loads and the computer's repairs (BLD-020, ECO-002, AI-003; ADR 0251), trade with any market,
    Asian peasants as traders and caravans that load infantry (TRADE-003, TRADE-004, HOLD-008; ADR 0252), Tournaments
-   and Mastery (TECH-028, TECH-029; ADR 0253), spells that skip machines (MAG-022; ADR 0254), soul items bound to a unit (ITEM-010; ADR 0255), the controls
+   and Mastery (TECH-028, TECH-029; ADR 0253), spells that skip machines (MAG-022; ADR 0254), soul items bound to a unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -219,6 +219,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Cows grow meat that falls as food items (ADR 0256).** From ReTzar: a cow's meat starts at 300 and grows 2 a
+  second up to 600; dead, it falls as food items of at most 100. A peasant takes a resource item as its load and carries it
+  home; any other unit brings it in at once. Hashed layout 15, snapshot 17; every golden and the CI benches re-pinned.
+  Ledger: 42 open rules before, 41 after.
+
 
 * **2026-10-22 — Soul items are bound to a unit; the Messiah takes no magic (ADR 0255).** From ReTzar: Soul Bind puts a soul
   bound to its target in the caster's bag; item_kill kills that unit (heroes too), item_berserk sends it berserk for 20

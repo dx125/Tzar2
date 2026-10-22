@@ -77,14 +77,26 @@ public class ItemTests
 
     [Fact]
     [Trait("Rule", "ITEM-006")]
-    public void Resource_items_go_to_the_stockpile()
+    [Trait("Rule", "NAT-004")]
+    public void Resource_items_go_to_the_stockpile_and_a_peasant_carries_them_home()
     {
-        using var d = new SimDriver(TestMap(24, 12, Unit("euro.peon", 0, 4, 4), Item("comm.resitem", 6, 4)), ruleset: Classic);
-        int gold = d.World.Players[0].Resources[Resource("gold")];
-        EntityId item = OfType(d.World, "comm.resitem").Single();
-        Pick(d, OfType(d.World, "euro.peon").Single(), item);
-        Assert.False(d.World.Entities.IsAlive(item));
-        Assert.Equal(gold + 100, d.World.Players[0].Resources[Resource("gold")]); // UNVERIFIED default amount
+        using var d = new SimDriver(
+            TestMap(24, 12, Structure("euro.castle", 0, 14, 2), Unit("euro.footman", 0, 4, 4), Unit("euro.peon", 0, 4, 8), Item("comm.resitem", 6, 4), Item("comm.resitem", 6, 8)),
+            ruleset: Classic);
+        int goldId = Resource("gold");
+        int gold = d.World.Players[0].Resources[goldId];
+        EntityId[] items = [.. OfType(d.World, "comm.resitem").OrderBy(i => d.World.Positions.Get(i).Y)];
+        Pick(d, OfType(d.World, "euro.footman").Single(), items[0]);
+        Assert.False(d.World.Entities.IsAlive(items[0]));
+        Assert.Equal(gold + 100, d.World.Players[0].Resources[goldId]); // at once (UNVERIFIED default amount)
+
+        // A peasant takes it as its load (ReTzar 0x464f60) and delivers it.
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        Pick(d, peon, items[1]);
+        Assert.Equal((100, goldId), (d.World.Workers.Get(peon).CarryAmount, (int)d.World.Workers.Get(peon).CarryResource));
+        Assert.Equal(gold + 100, d.World.Players[0].Resources[goldId]);
+        d.RunUntil(() => d.World.Workers.Get(peon).CarryAmount == 0, 2000);
+        Assert.Equal(gold + 200, d.World.Players[0].Resources[goldId]);
     }
 
     [Fact]

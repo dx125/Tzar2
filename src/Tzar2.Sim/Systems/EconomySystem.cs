@@ -60,6 +60,7 @@ public sealed class EconomySystem : ISimSystem
         }
 
         Regrow(world, tickMs);
+        GrowMeat(world, tickMs);
         Decay(world, tickMs);
     }
 
@@ -201,6 +202,34 @@ public sealed class EconomySystem : ISimSystem
         w.Phase = WorkerPhase.ToNode;
         w.Retries = 0;
         Interaction.Halt(world, worker);
+    }
+
+    // NAT-004 (ReTzar's reading of the original): a living cow that can act grows its meat each second, up to the most.
+    private static void GrowMeat(World world, int tickMs)
+    {
+        ReadOnlySpan<EntityId> animals = world.MeatStocks.Entities;
+        Span<MeatStock> stocks = world.MeatStocks.Components;
+        for (int i = 0; i < animals.Length; i++)
+        {
+            ref MeatStock stock = ref stocks[i];
+            MeatDefinition meat = world.TypeOf(animals[i]).Traits.Meat!;
+            if (stock.Amount >= meat.Max || !world.CanAct(animals[i]))
+            {
+                continue;
+            }
+
+            stock.Ms += tickMs;
+            while (stock.Ms >= 1000 && stock.Amount < meat.Max)
+            {
+                stock.Ms -= 1000;
+                stock.Amount = Math.Min(meat.Max, stock.Amount + meat.PerSecond);
+            }
+
+            if (stock.Amount >= meat.Max)
+            {
+                stock.Ms = 0;
+            }
+        }
     }
 
     // Cows regrow their milk (ResourceNode.regenMs) up to what they hold full.

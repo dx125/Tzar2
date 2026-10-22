@@ -108,7 +108,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [The screen](interface.yaml) (HUD) | 34 | 7 | 14 | 6 | 4 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 11 | 3 | 0 | 1 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
-| [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
+| [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
-| **All** | 336 | 207 | 78 | 23 | 17 | 9 | 2 |
+| **All** | 336 | 208 | 78 | 22 | 17 | 9 | 2 |
 
 ## Not done yet
 
@@ -155,10 +155,6 @@ Missing and partial rules.
 ### Items
 
 * **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
-
-### Nature, gateways, day and weather
-
-* **NAT-004** (partial): Cows can be slaughtered, and their meat collected by peasants or other units. *Peasants collect the meat; other units do not.*
 
 ### Animations, effects and sounds
 

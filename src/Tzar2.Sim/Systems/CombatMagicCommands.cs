@@ -264,6 +264,35 @@ internal static class CombatMagicCommands
         return applied > 0 ? null : last;
     }
 
+    // A peasant takes a resource item as its load and carries it home (NAT-004; ReTzar's reading of the original, 0x464f60,
+    // program 0x1e); any other unit, or a peasant with another load, brings it to the stockpile at once.
+    private static bool TakeAsLoad(World world, EntityId unit, EntityId item, ItemDefinition def, int amount)
+    {
+        if (world.Workers.IndexOf(unit) is not (>= 0 and var w) || world.TypeOf(unit).Traits.Harvester is not { } harvester || !harvester.CanGather(def.Resource))
+        {
+            return false;
+        }
+
+        ref Worker worker = ref world.Workers.At(w);
+        if (worker.CarryAmount > 0 && worker.CarryResource != def.Resource)
+        {
+            return false;
+        }
+
+        Position at = world.Positions.Get(item);
+        worker.CarryAmount = (int)Math.Min((long)worker.CarryAmount + amount, int.MaxValue);
+        worker.CarryResource = (byte)def.Resource;
+        worker.NodeResource = (byte)def.Resource;
+        worker.NodeX = at.X;
+        worker.NodeY = at.Y;
+        worker.Task = WorkerTask.Harvest;
+        worker.Phase = WorkerPhase.ToDropOff;
+        worker.Target = 0;
+        worker.DropTarget = 0;
+        worker.Retries = 0;
+        return true;
+    }
+
     /// <summary>Whether <paramref name="unit"/> can take <paramref name="item"/> into its inventory now.</summary>
     public static bool CanCarry(World world, EntityId unit, EntityId item)
         => world.Entities.IsAlive(unit) && world.Inventories.IndexOf(unit) is >= 0 and var i && world.Items.Has(item)
@@ -289,6 +318,13 @@ internal static class CombatMagicCommands
         }
 
         ushort type = world.Identities.Get(item).TypeId;
+        if (def.Kind == ItemKind.Resource && TakeAsLoad(world, unit, item, def, world.Items.At(s).Power))
+        {
+            world.Events.Emit(new SimEvent(SimEventKind.ItemPicked, owner, item, unit.Index, 0, type));
+            world.Destroy(item);
+            return;
+        }
+
         if (def.Kind == ItemKind.Resource)
         {
             ref PlayerState player = ref world.Players[owner];

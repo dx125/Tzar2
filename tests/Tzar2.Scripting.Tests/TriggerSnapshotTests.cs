@@ -116,7 +116,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // crusaders, and the gathering technologies raise loads; then (ADR 0250) a synthetic Messiah shifts type ids
             // and status effects grow (layout 13).
             // then: (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
-            Assert.Equal("F97361804A925504", d.Hashes[^1].ToString("X16"));
+            // then: (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
+            Assert.Equal("03426F895FDFD06F", d.Hashes[^1].ToString("X16"));
         }
     }
 
