@@ -13,6 +13,7 @@ public sealed record ViewerArgs
     public const string Usage =
         "Tzar2 client (M3: skirmish; asset viewer)\n"
         + "  --package <path>     imported package (.t2pkg from 't2 import', or an unpacked folder)\n"
+        + "  --import <folder>    import the original game from <folder> into the user's data first (first-run import)\n"
         + "  --viewer             open the asset viewer instead of the game\n"
         + "  --skirmish           start a skirmish directly (skips the menus)\n"
         + "  --editor [file]      open the scenario editor (optionally a .t2map)\n"
@@ -38,6 +39,12 @@ public sealed record ViewerArgs
 
     /// <summary>Package path given on the command line, or null.</summary>
     public string? Package { get; init; }
+
+    /// <summary>An original install to import before anything else (<c>--import</c>), or null.</summary>
+    public string? Import { get; init; }
+
+    /// <summary>Whether a scripted run (smoke, capture, autoplay) is the mode: nothing asks the player anything.</summary>
+    public bool IsAutomated => Smoke || CaptureDir is not null || AutoplayDir is not null || GameSmoke || MultiplayerSmoke || EditorSmoke;
 
     /// <summary>SoundFont path given on the command line, or null.</summary>
     public string? SoundFont { get; init; }
@@ -138,6 +145,9 @@ public sealed record ViewerArgs
             {
                 case "--package":
                     result = result with { Package = Value() };
+                    break;
+                case "--import":
+                    result = result with { Import = Value() };
                     break;
                 case "--soundfont":
                     result = result with { SoundFont = Value() };

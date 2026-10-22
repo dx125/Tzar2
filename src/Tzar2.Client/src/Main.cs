@@ -6,6 +6,8 @@ using Tzar2.Client.Game;
 using Tzar2.Client.Logic;
 using Tzar2.Client.Viewer;
 using Tzar2.Game;
+using Tzar2.Game.Diagnostics;
+using Tzar2.Import.Pipeline;
 
 namespace Tzar2.Client;
 
@@ -40,6 +42,17 @@ public partial class Main : Node
         }
 
         _settings = new ViewerSettings(_args.Config);
+        if (!_args.IsAutomated && ClientLog.Reporter is { Settings.Consent: CrashReportConsent.Unasked } reporter)
+        {
+            AskCrashReportConsent(reporter);
+        }
+
+        if (_args.Import is { } origin)
+        {
+            _ = ImportThenOpenAsync(origin);
+            return;
+        }
+
         string? package = _args.Package ?? (_settings.Package.Length > 0 ? _settings.Package : null);
         if (package is null)
         {
@@ -118,7 +131,7 @@ public partial class Main : Node
 
     private void ShowFirstRun(string? error)
     {
-        var screen = new FirstRunScreen(error);
+        var screen = new FirstRunScreen(error, ProjectSettings.GlobalizePath("user://"));
         screen.PackageChosen += path =>
         {
             _settings!.Package = path;
@@ -127,6 +140,86 @@ public partial class Main : Node
         var layer = new CanvasLayer { Layer = 2 };
         layer.AddChild(screen);
         ReplaceScreen(layer);
+    }
+
+    /// <summary>
+    /// <c>--import</c>: the first-run import without the screen (ADR 0241), then the game; with <c>--smoke</c> it prints
+    /// <c>FIRST-RUN IMPORT OK</c> and quits, which is how the packaged build's import is checked on a PC with the game.
+    /// </summary>
+    private async Task ImportThenOpenAsync(string origin)
+    {
+        GD.Print($"Importing {origin} ...");
+        ClientLog.Info("--import " + origin);
+        var started = DateTime.UtcNow;
+        ImportResult? result = null;
+        string summary;
+        try
+        {
+            result = await FirstRunImport.RunAsync(origin, ProjectSettings.GlobalizePath("user://"), line => GD.Print(line));
+            summary = FirstRunImport.Summary(result);
+        }
+        catch (Exception e)
+        {
+            summary = "The import failed: " + e.Message;
+            ClientLog.Error("--import failed: " + e);
+        }
+
+        GD.Print(summary);
+        bool ok = result is { Report.Succeeded: true };
+        if (_args.Smoke)
+        {
+            if (ok)
+            {
+                GD.Print(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"FIRST-RUN IMPORT OK {result!.PackagePath} {(DateTime.UtcNow - started).TotalSeconds:0.0} s"));
+            }
+            else
+            {
+                GD.PrintErr("FIRST-RUN IMPORT FAILED");
+            }
+
+            GetTree().Quit(ok ? 0 : 1);
+            return;
+        }
+
+        if (ok)
+        {
+            _settings!.Package = result!.PackagePath;
+            Open(result.PackagePath, remember: true);
+        }
+        else
+        {
+            ShowFirstRun(summary);
+        }
+    }
+
+    /// <summary>The first start asks whether crash reports may be sent (ADR 0243); closing the question refuses.</summary>
+    private void AskCrashReportConsent(CrashReporter reporter)
+    {
+        var replay = new CheckBox { Text = "Also attach the crashed match's replay (it holds the players' in-game names)" };
+        var box = new VBoxContainer();
+        box.AddChild(new Label { Text = CrashReportSettings.Prompt, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(640, 0) });
+        box.AddChild(replay);
+        var dialog = new ConfirmationDialog
+        {
+            Title = "Crash reports",
+            OkButtonText = "Send reports",
+            CancelButtonText = "Don't send",
+            Exclusive = true,
+        };
+        dialog.AddChild(box);
+        dialog.Confirmed += () =>
+        {
+            reporter.SetConsent(CrashReportConsent.Granted, replay.ButtonPressed);
+            ClientLog.Info("crash reports: granted" + (replay.ButtonPressed ? " with replays" : string.Empty));
+            ClientLog.SendCrashReports();
+        };
+        dialog.Canceled += () =>
+        {
+            reporter.SetConsent(CrashReportConsent.Denied, attachReplay: false);
+            ClientLog.Info("crash reports: denied");
+        };
+        AddChild(dialog);
+        dialog.PopupCentered(new Vector2I(700, 360));
     }
 
     private void ReplaceScreen(Node? screen)

@@ -1,0 +1,253 @@
+name: Windows package
+
+# M7 (ADRs 0240-0243): the Windows x64 export through Godot headless, code signing when its secrets exist, the portable
+# zip and the Inno Setup installer, then checks on the result: the exported game starts headless, the installer installs
+# and uninstalls silently, and the uninstall leaves the player's data alone. Artifacts only: nothing is published.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/windows-package.yml"
+      - "tools/package/**"
+      - "src/Tzar2.Client/export_presets.cfg"
+      - "src/Tzar2.Client/project.godot"
+      - "Directory.Build.props"
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  package:
+    name: Windows package (export, sign, zip, installer)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      # Signing (ADR 0242): either route is skipped when its secrets are missing.
+      WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+      WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
+      AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+      # The default crash-report endpoint baked into the build (ADR 0243); empty keeps reports on the player's PC.
+      CRASH_REPORT_DSN: ${{ vars.CRASH_REPORT_DSN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+
+      - name: Version stamp
+        shell: pwsh
+        run: |
+          $prefix = (dotnet msbuild src/Tzar2.Game/Tzar2.Game.csproj -getProperty:VersionPrefix).Trim()
+          $sha = (git rev-parse --short=12 HEAD).Trim()
+          $version = "$prefix-beta.${{ github.run_number }}+$sha"
+          "TZAR2_VERSION=$version" | Out-File $env:GITHUB_ENV -Append
+          "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" | Out-File $env:GITHUB_ENV -Append
+          Write-Host "Version $version"
+
+      - name: Cache Godot and its export templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/godot-dl
+          key: godot-${{ env.GODOT_VERSION }}-mono-win64-templates
+
+      - name: Download Godot ${{ env.GODOT_VERSION }} (.NET) and the export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $dl = "${{ runner.temp }}/godot-dl"
+          New-Item -ItemType Directory -Force $dl | Out-Null
+          $base = "https://github.com/godotengine/godot/releases/download/${env:GODOT_VERSION}-stable"
+          Invoke-WebRequest "$base/Godot_v${env:GODOT_VERSION}-stable_mono_win64.zip" -OutFile "$dl/godot.zip"
+          Invoke-WebRequest "$base/Godot_v${env:GODOT_VERSION}-stable_mono_export_templates.tpz" -OutFile "$dl/templates.tpz"
+
+      - name: Install Godot and the Windows templates
+        shell: pwsh
+        run: |
+          $dl = "${{ runner.temp }}/godot-dl"
+          $name = "Godot_v${env:GODOT_VERSION}-stable_mono_win64"
+          Expand-Archive "$dl/godot.zip" -DestinationPath "${{ runner.temp }}/godot" -Force
+          "GODOT=${{ runner.temp }}/godot/$name/${name}_console.exe" | Out-File $env:GITHUB_ENV -Append
+          # The .tpz is a zip with a templates/ folder; Godot looks for them in %APPDATA%\Godot\export_templates\<version>.stable.mono.
+          $templates = Join-Path $env:APPDATA "Godot/export_templates/${env:GODOT_VERSION}.stable.mono"
+          Copy-Item "$dl/templates.tpz" "$dl/templates.zip" -Force
+          Expand-Archive "$dl/templates.zip" -DestinationPath "${{ runner.temp }}/templates" -Force
+          New-Item -ItemType Directory -Force $templates | Out-Null
+          Copy-Item "${{ runner.temp }}/templates/templates/windows_*" $templates
+          Copy-Item "${{ runner.temp }}/templates/templates/version.txt" $templates
+          Get-ChildItem $templates | ForEach-Object { Write-Host $_.Name }
+
+      - name: Export (Godot headless)
+        shell: pwsh
+        run: pwsh tools/package/package-windows.ps1 -Stage export -Godot $env:GODOT -Version $env:TZAR2_VERSION
+
+      - name: The exported game starts headless (first-run screen)
+        shell: pwsh
+        run: |
+          $out = & artifacts/windows/Tzar2/Tzar2.console.exe --headless -- --smoke 2>&1 | Out-String
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0 -or $out -notmatch "VIEWER SMOKE FIRST-RUN") { throw "the exported game did not reach the first-run screen (exit $LASTEXITCODE)" }
+          if ($out -notmatch [regex]::Escape(($env:TZAR2_VERSION -split '\+')[0])) { throw "the exported game does not report version $env:TZAR2_VERSION" }
+
+      - name: Crash reporting in the exported game (consent not given, nothing sent; a killed run is reported next start)
+        shell: pwsh
+        run: |
+          $exe = "artifacts/windows/Tzar2/Tzar2.console.exe"
+          $user = Join-Path $env:APPDATA "Godot\app_userdata\Tzar2"
+          $outbox = Join-Path $user "crash-reports\outbox"
+          # A player's run that quits normally: an exited session waits in the outbox (consent is not given here).
+          & $exe --headless --quit-after 120 2>&1 | Out-Null
+          $sessions = @(Get-ChildItem $outbox -Filter "*-session-*.envelope" -ErrorAction SilentlyContinue)
+          if ($sessions.Count -lt 1) { throw "no session envelope after a normal quit" }
+          $log = Get-ChildItem (Join-Path $user "logs") -Directory | Sort-Object Name | Select-Object -Last 1
+          if (-not (Select-String -Path (Join-Path $log.FullName "game.log") -Pattern "crash reports: unasked, endpoint" -Quiet)) { throw "the run did not start the crash reporter" }
+          # A run that is killed (as a native crash ends it) is turned into a report at the next start.
+          $p = Start-Process $exe -ArgumentList "--headless" -PassThru -WindowStyle Hidden
+          Start-Sleep -Seconds 15
+          Get-Process -Name "Tzar2*" -ErrorAction SilentlyContinue | Stop-Process -Force
+          & $exe --headless --quit-after 60 2>&1 | Out-Null
+          $events = @(Get-ChildItem $outbox -Filter "*-event-*.envelope")
+          if ($events.Count -lt 1) { throw "the killed run was not reported" }
+          $text = Get-Content -Raw $events[-1].FullName
+          if ($text -notmatch '"kind":"(abnormal-exit|native-crash)"') { throw "the report is not an abnormal exit: $($text.Substring(0, [Math]::Min(400, $text.Length)))" }
+          Write-Host "outbox: $((Get-ChildItem $outbox).Count) envelopes, none sent (no consent)."
+          Remove-Item $outbox -Recurse -Force
+
+      - name: Reproducibility (export again, compare file hashes; informational)
+        shell: pwsh
+        run: |
+          function Sums($dir) { Get-ChildItem $dir -Recurse -File | Sort-Object FullName | ForEach-Object { "{0} {1}" -f (Get-FileHash $_.FullName).Hash, $_.FullName.Substring((Resolve-Path $dir).Path.Length) } }
+          $first = Sums artifacts/windows/Tzar2
+          Copy-Item artifacts/windows/Tzar2 "${{ runner.temp }}/first-export" -Recurse
+          pwsh tools/package/package-windows.ps1 -Stage export -Godot $env:GODOT -Version $env:TZAR2_VERSION | Out-Null
+          $second = Sums artifacts/windows/Tzar2
+          $diff = Compare-Object $first $second
+          if ($diff) {
+            Write-Host "::warning::the second export differs in $(@($diff).Count / 2) file(s):"
+            $diff | ForEach-Object { Write-Host "$($_.SideIndicator) $($_.InputObject)" }
+          } else {
+            Write-Host "Two exports are byte-identical ($(@($first).Count) files)."
+          }
+          "### Reproducibility`n$(if ($diff) { "differs: $(@($diff).Count / 2) file(s)" } else { "two exports byte-identical ($(@($first).Count) files)" })" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Signing self-test (throw-away certificate, on a copy; never shipped)
+        shell: pwsh
+        run: |
+          Copy-Item artifacts/windows/Tzar2/Tzar2.exe "${{ runner.temp }}/selftest.exe"
+          pwsh tools/package/sign.ps1 -SelfTest -Files "${{ runner.temp }}/selftest.exe"
+
+      - name: Sign the game (PFX; skipped without the secret)
+        shell: pwsh
+        run: |
+          $files = @("artifacts/windows/Tzar2/Tzar2.exe", "artifacts/windows/Tzar2/Tzar2.console.exe") + (Get-ChildItem artifacts/windows/Tzar2/data_*/Tzar2.*.dll | ForEach-Object FullName)
+          pwsh tools/package/sign.ps1 -Files $files
+
+      - name: Sign the game (Azure Trusted Signing; skipped without the secrets)
+        if: env.AZURE_SIGNING_ACCOUNT != ''
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          files-folder: artifacts/windows/Tzar2
+          files-folder-filter: exe,dll
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Install Inno Setup when the image lacks it
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y | Out-Host }
+          if (-not (Test-Path $iscc)) { throw "Inno Setup 6 is missing" }
+          "ISCC=$iscc" | Out-File $env:GITHUB_ENV -Append
+          (Get-Item $iscc).VersionInfo.ProductVersion
+
+      - name: Portable zip and installer
+        shell: pwsh
+        run: pwsh tools/package/package-windows.ps1 -Stage package -Version $env:TZAR2_VERSION -SourceDateEpoch $env:SOURCE_DATE_EPOCH -Iscc $env:ISCC -Dsn "$env:CRASH_REPORT_DSN"
+
+      - name: Sign the installer (PFX; skipped without the secret)
+        shell: pwsh
+        run: pwsh tools/package/sign.ps1 -Files (Get-ChildItem artifacts/windows/*-setup.exe | ForEach-Object FullName)
+
+      - name: Sign the installer (Azure Trusted Signing; skipped without the secrets)
+        if: env.AZURE_SIGNING_ACCOUNT != ''
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          files-folder: artifacts/windows
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Install, start, uninstall; the player's data stays
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem artifacts/windows/*-setup.exe | Select-Object -First 1).FullName
+          $dir = Join-Path $env:RUNNER_TEMP "Tzar2-installed"
+          Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", "/DIR=`"$dir`"", "/LOG=`"$env:RUNNER_TEMP\install.log`"" -Wait
+          if (-not (Test-Path "$dir\Tzar2.exe")) { Get-Content "$env:RUNNER_TEMP\install.log" -Tail 40; throw "the installer did not install Tzar2.exe" }
+          if ((Get-Content "$dir\version.txt" -Raw).Trim() -ne "Tzar2 $env:TZAR2_VERSION") { throw "version.txt does not hold $env:TZAR2_VERSION" }
+
+          $out = & "$dir\Tzar2.console.exe" --headless -- --smoke 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0 -or $out -notmatch "VIEWER SMOKE FIRST-RUN") { Write-Host $out; throw "the installed game did not start" }
+
+          # The player's data: what the game wrote on that start, plus a stand-in for an imported package and a save.
+          $user = Join-Path $env:APPDATA "Godot\app_userdata\Tzar2"
+          if (-not (Test-Path "$user\logs")) { throw "the installed game wrote no logs under $user" }
+          New-Item -ItemType Directory -Force "$user\import", "$user\saves" | Out-Null
+          Set-Content "$user\import\base.original.t2pkg" "stand-in"
+          Set-Content "$user\saves\keep.t2sav" "stand-in"
+          $before = (Get-ChildItem $user -Recurse -File).Count
+
+          $uninstaller = Get-ChildItem $dir -Filter "unins*.exe" | Select-Object -First 1
+          Start-Process $uninstaller.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          # The uninstaller hands over to a copy of itself; wait until the files are gone.
+          $deadline = (Get-Date).AddSeconds(90)
+          while ((Test-Path "$dir\Tzar2.exe") -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 1 }
+          if (Test-Path "$dir\Tzar2.exe") { throw "the uninstaller left Tzar2.exe" }
+          if (-not (Test-Path "$user\import\base.original.t2pkg") -or -not (Test-Path "$user\saves\keep.t2sav")) { throw "the uninstall removed the player's data" }
+          $after = (Get-ChildItem $user -Recurse -File).Count
+          if ($after -lt $before) { throw "the uninstall removed $($before - $after) file(s) of the player's data" }
+          Write-Host "Installed, started, uninstalled; the player's data kept ($after files)."
+
+      - name: The portable zip starts too
+        shell: pwsh
+        run: |
+          $zip = (Get-ChildItem artifacts/windows/*-portable.zip | Select-Object -First 1).FullName
+          Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\portable" -Force
+          $exe = (Get-ChildItem "$env:RUNNER_TEMP\portable" -Recurse -Filter Tzar2.console.exe | Select-Object -First 1).FullName
+          $out = & $exe --headless -- --smoke 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0 -or $out -notmatch "VIEWER SMOKE FIRST-RUN") { Write-Host $out; throw "the portable build did not start" }
+          Get-ChildItem artifacts/windows -File | ForEach-Object { "{0}  {1:N1} MB  {2}" -f (Get-FileHash $_.FullName).Hash.ToLowerInvariant(), ($_.Length / 1MB), $_.Name } | Tee-Object -Variable lines
+          "### Windows package $env:TZAR2_VERSION`n``````n$($lines -join "`n")`n``````" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tzar2-windows-${{ github.run_number }}
+          path: |
+            artifacts/windows/*.zip
+            artifacts/windows/*-setup.exe
+          retention-days: 30
+          if-no-files-found: error

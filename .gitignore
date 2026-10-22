@@ -47,3 +47,6 @@ capture-*.zip
 /tests/fidelity/local-maps/
 *.wmp
 *.wcm
+
+# Windows packages built by tools/package (ADR 0241).
+/artifacts/

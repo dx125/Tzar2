@@ -8,8 +8,8 @@ namespace Tzar2.Client.Game;
 
 /// <summary>
 /// SETTINGS of the main menu (ADR 0177) on the four panels of the campaign art: display (preset, interface scale, window
-/// mode and size), controls (edge scroll, drag scroll, scroll speed), sound (volumes) and game (speed, day/night,
-/// weather). Each row steps its value with the original's arrow buttons; changes are saved and applied at once.
+/// mode and size), controls (edge scroll, drag scroll, scroll speed, and the crash reports of ADR 0243), sound (volumes)
+/// and game (speed, day/night, weather). Each row steps its value with the original's arrow buttons; changes are saved and applied at once.
 /// </summary>
 public partial class SettingsScreen : ArtScreen
 {
@@ -49,6 +49,27 @@ public partial class SettingsScreen : ArtScreen
         Row(Controls, 1, "Drag map with right button", () => OnOff(_settings.DragScroll), _ => _settings.DragScroll = !_settings.DragScroll);
         Row(Controls, 2, T("options", "t_ss", "Scroll Speed"), () => _settings.ScrollSpeed.ToString(CultureInfo.InvariantCulture), step => _settings.ScrollSpeed += step);
         Row(Controls, 3, "Pointer", () => _settings.SystemCursor ? "System" : "Tzar2", _ => _settings.SystemCursor = !_settings.SystemCursor);
+        if (ClientLog.Reporter is { } reporter)
+        {
+            Row(Controls, 4, "Send crash reports", () => reporter.Settings.Consent switch
+            {
+                Tzar2.Game.Diagnostics.CrashReportConsent.Granted => "On",
+                Tzar2.Game.Diagnostics.CrashReportConsent.Denied => "Off",
+                _ => "Not asked",
+            }, _ =>
+            {
+                bool on = reporter.Settings.Consent != Tzar2.Game.Diagnostics.CrashReportConsent.Granted;
+                reporter.SetConsent(on ? Tzar2.Game.Diagnostics.CrashReportConsent.Granted : Tzar2.Game.Diagnostics.CrashReportConsent.Denied, on && reporter.Settings.AttachReplay);
+                ClientLog.SendCrashReports();
+            });
+            Row(Controls, 5, "Attach match replay", () => OnOff(reporter.Settings.AttachReplay), _ =>
+            {
+                if (reporter.Settings.Consent == Tzar2.Game.Diagnostics.CrashReportConsent.Granted)
+                {
+                    reporter.SetConsent(reporter.Settings.Consent, !reporter.Settings.AttachReplay);
+                }
+            });
+        }
 
         Title(Sound, T("options", "t_sopt", "SOUND"));
         Row(Sound, 0, T("options", "t_svol", "Sound Volume"), () => $"{_settings.SoundVolume} %", step => _settings.SoundVolume += step * 10);
