@@ -85,7 +85,11 @@ merge.
 2. **The nightly Benchmarks job fails on main.**
    * 2026-10-22: gameplay p50 is 3.198 ms against a 3.158 ms limit (baseline 2.871), and p99 is 10.38 against 10.32.
    * 10-19 and 10-20: s2's p50 was 4.41 against 3.12, and 2.91 against 2.58.
-   * Being bisected over PRs #64–#131 on one runner; see the section below.
+   * **Bisected, and not a regression.** One EPYC 7763 runner ran 28 main commits (#64–#131), three runs each:
+     * s2 is flat (p50 2.69–2.80 ms), so its failures were slow runners.
+     * gameplay rises only where the scenario's play changed: #66 and #69, the walking speeds of ADRs 0171/0172
+       (kills 1,200 → 1,655; p50 3.01 → 3.28, p99 8.1 → 11.3). It falls again with unit bodies (#126).
+   * The gameplay rows are re-recorded (#156, ADR 0080 history).
 3. **Match load runs entirely on the main thread** (`GameScreen._Ready`): sprite decoding, atlas packing, terrain
    composition (2–4 s on a huge map and 12 s on the real-world map, on the loaded machine) and SoundFont parsing.
    * The window freezes behind the loading screen.
@@ -202,13 +206,16 @@ twelve AI mutators and the client's namespaces. Its gaps:
 
 | PR | What | Measured |
 |---|---|---|
-| (this PR) | `t2 bench --sample`, the client's `--resource-soak`, this report | |
-| ADR 0210 | terrain from a deduplicated tile atlas | video memory 1,304 → 276 MB, managed heap at load 1,372 → 377 MB |
+| #136 (this PR) | `t2 bench --sample`, the client's `--resource-soak`, this report | |
+| #138, ADR 0210 | terrain from a deduplicated tile atlas | video memory 1,304 → 276 MB, managed heap at load 1,372 → 377 MB |
+| #141 | analyzer rule T2C001 (culture-dependent formatting) and the 48 strings it found | Tools.Cli.Tests pass under C.UTF-8 and de_DE |
+| #145 | architecture tests: compiled client on CI, Sim on `Content.Compiled`, more AI mutators, no public mutable statics | |
+| #156 | the nightly's gameplay rows re-recorded after a bisect | 16 probe runs |
+| ADR 0211 | civilizations as an ordered list in the ruleset; `Race` reads the original's numbers | hashes re-pinned, AI commands unchanged |
 
 Next, in order:
 
-1. the nightly Benchmarks regression;
-2. the architecture tests (findings 1, 3, 5 and 6 of the module boundaries);
-3. the `Race` and default-civilization bug with a civilization list (ADR);
-4. the asset caches and the hidden viewports;
-5. the load off the main thread.
+1. the asset caches and the hidden viewports;
+2. the load off the main thread;
+3. the rest of the civilization hard-coding (the scenario enum, the client's lists, map generation);
+4. the rules decided by names in code.
