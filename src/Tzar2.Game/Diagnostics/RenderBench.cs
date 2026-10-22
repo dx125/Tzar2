@@ -233,6 +233,9 @@ public sealed class RenderBenchResult
     /// <summary>Seconds from the start of the match build to its first drawn frame.</summary>
     public double LoadSeconds { get; set; }
 
+    /// <summary>Where the tick time went (<see cref="PhaseTimes.Field"/>).</summary>
+    public string Phases { get; set; } = "phases=none";
+
     /// <summary>Units on the map when the measurement started.</summary>
     public int Units { get; set; }
 
@@ -300,7 +303,7 @@ public sealed class RenderBenchResult
         return string.Create(CultureInfo.InvariantCulture,
             $"{Prefix} S2={S2Verdict} res={Width}x{Height} fps={F(Fps)} low1={F(Low1Fps)} frame_p50={F(FramePercentile(50))}ms frame_p99={F(FramePercentile(99))}ms "
             + $"sim_p50={F(TickPercentile(50))}ms sim_p99={F(TickPercentile(99))}ms ticks={_ticks.Count} frames={_frames.Count} units={Units} load={F(LoadSeconds)}s "
-            + $"ram={Gb(PeakRam)}GB vram={Gb(PeakVram)}GB renderer={Renderer} gpu={Q(Gpu)} cpu={Q(Cpu)} version={Version}");
+            + $"ram={Gb(PeakRam)}GB vram={Gb(PeakVram)}GB {Phases} renderer={Renderer} gpu={Q(Gpu)} cpu={Q(Cpu)} version={Version}");
     }
 
     private static double Percentile(List<double> values, double percentile)

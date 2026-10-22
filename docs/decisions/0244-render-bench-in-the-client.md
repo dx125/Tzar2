@@ -30,7 +30,10 @@ come back as one line he can paste.
 3. **The output:** one line,
    `RENDER-BENCH v1 S2=<PASS|FAIL|n/a> res=… fps=… low1=… frame_p50=… frame_p99=… sim_p50=… sim_p99=… ticks=…
    frames=… units=… load=…s ram=…GB vram=…GB renderer=… gpu="…" cpu="…" version=…`, printed, written to the run's log
-   and appended to `user://bench/render-bench.txt`. `S2=PASS` needs 2560 × 1440, a real renderer, ≥ 60 FPS and
+   and appended to `user://bench/render-bench.txt`. `phases=name:mean/slow,…` splits the tick into its top-level
+   sections (`PhaseTimes`, fed through the sim's `ITickProfiler`): each one's mean and its mean over the slowest 1 % of
+   ticks (what the p99 is made of), largest first, `(outside)` for tick time outside every section, `rest` for the
+   smaller ones. `S2=PASS` needs 2560 × 1440, a real renderer, ≥ 60 FPS and
    sim p99 ≤ 12 ms; other resolutions and headless runs say `n/a`. Exit code 0 when frames were measured.
 4. **Headless** (`--headless`) runs the same match on the dummy renderer: a check that the bench works anywhere (CI,
    the Mac), with `renderer=dummy/headless` and `S2=n/a`.
@@ -46,11 +49,13 @@ come back as one line he can paste.
 
 ## Consequences
 
-* First run on a MacBook (Apple M5, the imported GOG package, client assemblies built Release, 1920 × 1080 windowed,
-  60 s, 2026-10-22): **120 FPS** (frame p99 18.3 ms, 1 % low 48 FPS), **sim p50 3.1 ms, p99 14.8 ms**, load 3.5 s,
-  RAM 2.7 GB, VRAM 3.1 GB (Metal's figure). The real game's sim p99 is above the 12 ms budget that the synthetic proxy
-  meets on the same machine (3.8 ms), and VRAM is above the 1.5 GB of TDD §21; both wait for the owner's Windows
-  numbers. A Debug build is several times slower (sim p99 82 ms): measure only packaged (ExportRelease) builds.
+* First runs on a MacBook (Apple M5, the imported GOG package, client assemblies built Release, 1920 × 1080 windowed,
+  60 s, 2026-10-22), on a machine shared with other agents (load average 30–97 for the first, 4–6 for the second):
+  120 FPS, frame p99 15.8–18.3 ms; sim p50 3.1–4.1 ms, **p99 12.9–14.8 ms**; load 3.5–3.8 s; VRAM 3.1 GB (Metal's
+  figure, before the terrain atlas of PR #138 and the freed pages of PR #161). The phases of the quieter run:
+  `full_hash:0.3/5.4,visibility:1.2/3.6,movement:1.5/2.4,ai:0.6/2.0`: the slowest ticks are the ones that also compute
+  the full-state hash. The owner's Windows numbers decide; a Debug build is several times slower (sim p99 82 ms), so
+  measure only packaged (ExportRelease) builds.
 * The owner's runs come with exact commands (docs/STATUS.md work queue item 13 and the min-spec plan).
 * Follow-ups: a per-system breakdown of the real game's tick (the `t2 bench` sections inside the client), and the
   bench as an optional nightly job once a runner with a GPU exists.

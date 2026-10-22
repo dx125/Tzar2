@@ -59,7 +59,7 @@ public class RenderBenchTests
         Assert.Equal("PASS", result.S2Verdict);
         string line = result.Line();
         Assert.StartsWith("RENDER-BENCH v1 S2=PASS res=2560x1440 fps=96.2 low1=20.0 frame_p50=10.0ms", line, StringComparison.Ordinal);
-        Assert.Contains("sim_p99=11.0ms ticks=5 frames=100 units=4000 load=7.3s ram=2.00GB vram=1.00GB renderer=mobile/vulkan gpu=\"GTX '1060'\" cpu=\"Ryzen 5 3600\"", line, StringComparison.Ordinal);
+        Assert.Contains("sim_p99=11.0ms ticks=5 frames=100 units=4000 load=7.3s ram=2.00GB vram=1.00GB phases=none renderer=mobile/vulkan gpu=\"GTX '1060'\" cpu=\"Ryzen 5 3600\"", line, StringComparison.Ordinal);
         Assert.DoesNotContain('\n', line);
 
         Assert.Equal("n/a", new RenderBenchResult { Width = 1920, Height = 1080 }.S2Verdict);
@@ -69,6 +69,34 @@ public class RenderBenchTests
         var headless = new RenderBenchResult { Width = 2560, Height = 1440, Renderer = "dummy/headless" };
         headless.AddFrame(1);
         Assert.Equal("n/a", headless.S2Verdict);
+    }
+
+    [Fact]
+    public void Phase_times_split_a_tick_into_its_top_level_sections_and_the_rest()
+    {
+        var phases = new PhaseTimes();
+        Assert.Equal("phases=none", phases.Field());
+        for (int tick = 0; tick < 100; tick++)
+        {
+            phases.Begin("ai");
+            phases.Begin("nested"); // counts in "ai"
+            phases.End();
+            phases.End();
+            phases.Begin("movement");
+            phases.End();
+            phases.EndTick(tick == 0 ? 1000 : 1);
+        }
+
+        Assert.Equal(100, phases.TickCount);
+        var rows = phases.Summary();
+        Assert.Equal(["(outside)", "ai", "movement"], rows.Select(r => r.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(PhaseTimes.Outside, rows[0].Name); // the slow tick's 1000 ms are outside both sections
+        Assert.True(rows[0].SlowMean > 900);
+        Assert.StartsWith("phases=(outside):", phases.Field(), StringComparison.Ordinal);
+        Assert.Equal(3, phases.Field().Split(',').Length);
+        Assert.Contains(",rest:", phases.Field(top: 1), StringComparison.Ordinal); // the first section, then the rest
+        phases.Reset();
+        Assert.Equal(0, phases.TickCount);
     }
 
     [Fact]

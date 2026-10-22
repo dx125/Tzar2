@@ -39,6 +39,8 @@ public partial class GameApp
             var load = Stopwatch.StartNew();
             var session = new GameSession(setup, _rules);
             session.SpeedIndex = Array.IndexOf(GameSession.SpeedSteps, 100);
+            var phases = new PhaseTimes();
+            session.Phases = phases;
             var screen = new GameScreen(_store, _ui!, session, "grass", _args.SoundFont, _settings) { KeepSpeed = true };
             Replace(screen, music: null);
             while (screen.Frame is null && load.Elapsed.TotalSeconds < 300 && session.Fault is null)
@@ -60,6 +62,7 @@ public partial class GameApp
             var clock = Stopwatch.StartNew();
             await Run(screen, route, clock, BenchWarmupSeconds, null);
             _ = session.TickTimes.Drain();
+            phases.Reset();
             Vector2I size = DisplayServer.WindowGetSize();
             var result = new RenderBenchResult
             {
@@ -75,6 +78,7 @@ public partial class GameApp
             };
             await Run(screen, route, clock, _args.BenchSeconds, result);
             result.AddTicks(session.TickTimes.Drain());
+            result.Phases = phases.Field();
             if (session.Fault is { } fault)
             {
                 throw new InvalidOperationException("the simulation faulted: " + fault.Message);

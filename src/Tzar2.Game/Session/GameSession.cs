@@ -520,6 +520,22 @@ public sealed class GameSession : IDisposable
     /// <summary>How long each tick took on this machine (ms), for the render bench (ADR 0244); never part of the match.</summary>
     public Diagnostics.SampleRing TickTimes { get; } = new();
 
+    /// <summary>
+    /// Per-section tick times (ADR 0244; null: off). Set it before <see cref="Start"/> or between ticks: the sim thread
+    /// feeds it, and it never changes the match.
+    /// </summary>
+    public Diagnostics.PhaseTimes? Phases
+    {
+        get => _phases;
+        set
+        {
+            _phases = value;
+            Simulation.Profiler = value;
+        }
+    }
+
+    private Diagnostics.PhaseTimes? _phases;
+
     private void TraceSession(LogLevel level, string message)
     {
         ITraceSink trace = Simulation.World.Trace;
@@ -730,7 +746,9 @@ public sealed class GameSession : IDisposable
         bool replied = _replyQueued;
         long started = Stopwatch.GetTimestamp();
         TickResult result = Simulation.Tick(_tickSet);
-        TickTimes.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        double tickMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        TickTimes.Add(tickMs);
+        _phases?.EndTick(tickMs);
         LastTickResult = result;
         _recorder?.RecordTick(_tickSet, result);
         Interlocked.Increment(ref _ticksRun);
