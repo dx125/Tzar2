@@ -17,10 +17,15 @@ on:
 permissions:
   contents: read
 
+# Actions are pinned by commit (the version in the comment); bump both together.
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   GODOT_VERSION: 4.7.2
+  # SHA-256 of the two Godot downloads, as GitHub records them for the 4.7.2-stable release assets; checked on every
+  # run, cached or not. Change them together with GODOT_VERSION.
+  GODOT_ZIP_SHA256: a2a48473a7414c5f19fab690518caebb738c09ef9601f6bd2388676a7f53b3c0
+  GODOT_TEMPLATES_SHA256: 92f8681e349ef1f90891b792da95e3b2b0bd1ed610b78018c58feb2d87e15a9d
 
 jobs:
   package:
@@ -35,10 +40,10 @@ jobs:
       # The default crash-report endpoint baked into the build (ADR 0243); empty keeps reports on the player's PC.
       CRASH_REPORT_DSN: ${{ vars.CRASH_REPORT_DSN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           global-json-file: global.json
           dotnet-version: 8.0.x
@@ -55,10 +60,10 @@ jobs:
 
       - name: Cache Godot and its export templates
         id: godot-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ runner.temp }}/godot-dl
-          key: godot-${{ env.GODOT_VERSION }}-mono-win64-templates
+          key: godot-${{ env.GODOT_VERSION }}-mono-win64-templates-${{ env.GODOT_ZIP_SHA256 }}
 
       - name: Download Godot ${{ env.GODOT_VERSION }} (.NET) and the export templates
         if: steps.godot-cache.outputs.cache-hit != 'true'
@@ -74,6 +79,11 @@ jobs:
         shell: pwsh
         run: |
           $dl = "${{ runner.temp }}/godot-dl"
+          foreach ($check in @(@("godot.zip", $env:GODOT_ZIP_SHA256), @("templates.tpz", $env:GODOT_TEMPLATES_SHA256))) {
+            $actual = (Get-FileHash -Algorithm SHA256 "$dl/$($check[0])").Hash.ToLowerInvariant()
+            if ($actual -ne $check[1]) { throw "$($check[0]): SHA-256 $actual, expected $($check[1])" }
+            Write-Host "$($check[0]): SHA-256 verified"
+          }
           $name = "Godot_v${env:GODOT_VERSION}-stable_mono_win64"
           Expand-Archive "$dl/godot.zip" -DestinationPath "${{ runner.temp }}/godot" -Force
           "GODOT=${{ runner.temp }}/godot/$name/${name}_console.exe" | Out-File $env:GITHUB_ENV -Append
@@ -153,7 +163,7 @@ jobs:
 
       - name: Sign the game (Azure Trusted Signing; skipped without the secrets)
         if: env.AZURE_SIGNING_ACCOUNT != ''
-        uses: azure/trusted-signing-action@v0.5.1
+        uses: azure/trusted-signing-action@0d74250c661747df006298d0fb49944c10f16e03 # v0.5.1
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -188,7 +198,7 @@ jobs:
 
       - name: Sign the installer (Azure Trusted Signing; skipped without the secrets)
         if: env.AZURE_SIGNING_ACCOUNT != ''
-        uses: azure/trusted-signing-action@v0.5.1
+        uses: azure/trusted-signing-action@0d74250c661747df006298d0fb49944c10f16e03 # v0.5.1
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -255,7 +265,7 @@ jobs:
           Get-ChildItem artifacts/windows -File | ForEach-Object { "{0}  {1:N1} MB  {2}" -f (Get-FileHash $_.FullName).Hash.ToLowerInvariant(), ($_.Length / 1MB), $_.Name } | Tee-Object -Variable lines
           "### Windows package $env:TZAR2_VERSION`n``````n$($lines -join "`n")`n``````" | Out-File $env:GITHUB_STEP_SUMMARY -Append
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: tzar2-windows-${{ github.run_number }}
           path: |

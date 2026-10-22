@@ -76,7 +76,7 @@ Optional: `WINDOWS_SIGNING_TIMESTAMP` (an RFC 3161 server; default `http://times
 
 `Tzar2.exe`, `Tzar2.console.exe` and our own assemblies (`data_*/Tzar2.*.dll`) before they are zipped and packed into the
 installer, then the installer itself. The Inno Setup uninstaller is not signed yet (it needs Inno's `SignTool`
-directive; follow-up). The workflow verifies every signature (`signtool verify /pa`) and fails if one is not valid.
+directive; follow-up). The workflow verifies every signature (`signtool verify /pa`) and fails if one is not valid. The PFX password never appears on a command line: the certificate is imported into the runner's user store and picked by thumbprint.
 A tester can check by hand: right-click `Tzar2.exe` → Properties → **Digital Signatures**.
 
 The workflow also runs a **signing self-test** on every package build: a throw-away self-signed certificate signs a

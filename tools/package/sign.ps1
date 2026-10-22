@@ -32,20 +32,25 @@ function Find-SignTool {
     return $found.FullName
 }
 
+# The password never reaches a command line: the PFX is imported into the current user's certificate store (the password
+# goes to Import-PfxCertificate as a SecureString), signtool picks the certificate by its thumbprint, and the
+# certificate is removed from the store afterwards.
+$thumbprint = $null
 $temp = Join-Path ([System.IO.Path]::GetTempPath()) ("tzar2-sign-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory $temp | Out-Null
 try {
     if ($SelfTest) {
-        $password = [guid]::NewGuid().ToString("N")
         $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Tzar2 signing self-test" -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddDays(1)
-        $pfx = Join-Path $temp "selftest.pfx"
-        Export-PfxCertificate -Cert $cert -FilePath $pfx -Password (ConvertTo-SecureString $password -AsPlainText -Force) | Out-Null
-        Remove-Item "Cert:\CurrentUser\My\$($cert.Thumbprint)"
+        $thumbprint = $cert.Thumbprint
     }
     elseif ($env:WINDOWS_SIGNING_PFX_BASE64) {
         $pfx = Join-Path $temp "signing.pfx"
         [System.IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX_BASE64))
-        $password = $env:WINDOWS_SIGNING_PFX_PASSWORD
+        $secure = ConvertTo-SecureString $env:WINDOWS_SIGNING_PFX_PASSWORD -AsPlainText -Force
+        $cert = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $secure
+        Remove-Item $pfx -Force
+        $thumbprint = ($cert | Where-Object { $_.HasPrivateKey } | Select-Object -First 1).Thumbprint
+        if (-not $thumbprint) { throw "The PFX holds no certificate with a private key." }
     }
     else {
         Write-Host "Code signing skipped: WINDOWS_SIGNING_PFX_BASE64 is not set (ADR 0242)."
@@ -56,7 +61,7 @@ try {
     $timestamp = if ($env:WINDOWS_SIGNING_TIMESTAMP) { $env:WINDOWS_SIGNING_TIMESTAMP } else { "http://timestamp.digicert.com" }
     foreach ($file in $Files) {
         if (-not (Test-Path $file)) { throw "No file to sign at $file" }
-        $arguments = @("sign", "/fd", "SHA256", "/f", $pfx, "/p", $password)
+        $arguments = @("sign", "/fd", "SHA256", "/s", "My", "/sha1", $thumbprint)
         if (-not $SelfTest) { $arguments += @("/tr", $timestamp, "/td", "SHA256") }
         $arguments += @("/d", "Tzar2", "/du", "https://github.com/dx125/Tzar2", $file)
         & $signtool @arguments
@@ -76,5 +81,6 @@ try {
     }
 }
 finally {
+    if ($thumbprint) { Remove-Item "Cert:\CurrentUser\My\$thumbprint" -ErrorAction SilentlyContinue }
     Remove-Item $temp -Recurse -Force -ErrorAction SilentlyContinue
 }

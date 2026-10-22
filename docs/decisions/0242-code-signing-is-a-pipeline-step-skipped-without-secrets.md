@@ -21,7 +21,9 @@ contributors' PRs never have secrets: the pipeline must build without them.
      `AZURE_SIGNING_ACCOUNT` is set, with `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`,
      `AZURE_SIGNING_ENDPOINT`, `AZURE_SIGNING_PROFILE`;
    * **a PFX with signtool** (`tools/package/sign.ps1`) when `WINDOWS_SIGNING_PFX_BASE64` and
-     `WINDOWS_SIGNING_PFX_PASSWORD` are set, for certificates that still come as files (private CAs, tests).
+     `WINDOWS_SIGNING_PFX_PASSWORD` are set, for certificates that still come as files (private CAs, tests); the PFX is
+     imported into the runner's user certificate store and signtool picks it by thumbprint, so the password is never on
+     a command line.
 2. **What is signed:** `Tzar2.exe`, `Tzar2.console.exe` and our assemblies `data_*/Tzar2.*.dll` before the zip and the
    installer are made, then the installer. SHA-256 file digests and RFC 3161 timestamps, so signatures outlive the
    certificate. When a route ran, every executable must then verify as `Valid` or the job fails.
@@ -31,6 +33,8 @@ contributors' PRs never have secrets: the pipeline must build without them.
 4. **The owner's part** is in code-signing.md: which certificate to buy, in which order of preference (Azure Trusted
    Signing if he qualifies, otherwise SSL.com OV with eSigner, which needs one more workflow step), and how to add the
    secrets.
+5. **Supply chain:** every action of the workflow is pinned by commit (version in a comment), and the Godot downloads
+   are checked against the SHA-256 GitHub records for the release assets (review of PR #132).
 
 ## Alternatives considered
 
