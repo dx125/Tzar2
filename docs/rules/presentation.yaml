@@ -26,11 +26,13 @@ rules:
   PRES-006:
     rule: A hero shows a hero's portrait.
     source: [data OBJECTS icon_hero]
-    status: missing
+    status: tested
+    note: The selection view shows the type's icon_hero cell for a hero (HERO for every unit but the Asian ninja, whose data names FOOTMAN); the info area's icons of a multi-selection keep the types' own.
   PRES-007:
     rule: A unit plays its creation sound when it is made.
     source: [data OBJECTS sound_create]
-    status: missing
+    status: tested
+    note: Played when a unit is trained or a building completed. In GOG v1.10 the key is empty for every type but the Arab blacksmith (destroy_building), so in practice only that one sounds.
   PRES-008:
     rule: Some animations start inside their sheet, at the row and column the data gives.
     source: [data IMAGES.INI startrow startcol]

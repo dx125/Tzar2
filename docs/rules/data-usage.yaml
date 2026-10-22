@@ -62,12 +62,11 @@ files:
   - path: DATA/OBJECTS/*.INI
     reader: Tzar2.Content LegacyImporter (classes, holders, damage shares); Tzar2.Client PresentationCatalog (pictures, icons, sounds)
     account: keys
-    used: ['00', '01', '02', class, cost, displayname, fog_range, icon, image, image_attack, image_build, image_carrymeat, image_carrymilk, image_chop, image_die, image_dig, image_idle, image_milk, image_mine, max_damage, max_manna, max_obj_in_holder, menu, min_attack_range, order, pop_count, sound, sound_attack, sound_command, sound_die, sound_select, teren, type]
+    used: ['00', '01', '02', class, cost, displayname, fog_range, icon, icon_hero, image, image_attack, image_build, image_carrymeat, image_carrymilk, image_chop, image_die, image_dig, image_idle, image_milk, image_mine, max_damage, max_manna, max_obj_in_holder, menu, min_attack_range, order, pop_count, sound, sound_attack, sound_command, sound_create, sound_die, sound_select, teren, type]
     restated:
       image_c: the building-site overlay is found as the image's name and _c (Tzar2.Content SpriteIndex)
     todo:
       buildicon: meaning not decoded
-      icon_hero: the portrait of a hero (PRES-006)
       image_attack2: other attack swings (PRES-005)
       image_attack3: other attack swings (PRES-005)
       image_capture: the peasant's capture animation (PRES-005)
@@ -75,7 +74,6 @@ files:
       image_murder: the ninja's murder animation (PRES-005)
       image_pray: the priest's prayer animation (PRES-005)
       image_spell: the casting animation of mages and priests (PRES-005)
-      sound_create: the sound of a unit being made (PRES-007)
   - path: DATA/OBJECTS/TZAREDIT/*.INI
     account: unused
     reason: The original editor's palettes of units and resources; Tzar2's editor lists the ruleset's types (M5).

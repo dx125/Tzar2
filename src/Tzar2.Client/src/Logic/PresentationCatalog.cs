@@ -69,6 +69,8 @@ public enum UnitAnim
 /// <param name="SoundCommand">Sound set played when ordered (acknowledgement), or null.</param>
 /// <param name="SoundAttack">Sound set of a hit, or null.</param>
 /// <param name="SoundDie">Sound set of a death, or null.</param>
+/// <param name="HeroIconIndex">Cell of <c>icons.bmp</c> shown when the unit is a hero (<c>icon_hero</c>, PRES-006), or −1.</param>
+/// <param name="SoundCreate">Sound set played when it is made (<c>sound_create</c>, PRES-007), or null.</param>
 public sealed record TypeVisual(
     ushort TypeId,
     string Key,
@@ -81,8 +83,13 @@ public sealed record TypeVisual(
     string? SoundSelect,
     string? SoundCommand,
     string? SoundAttack,
-    string? SoundDie)
+    string? SoundDie,
+    int HeroIconIndex = -1,
+    string? SoundCreate = null)
 {
+    /// <summary>The portrait of a unit: the hero's when it is one and the data has it (PRES-006).</summary>
+    public int Portrait(bool hero) => hero && HeroIconIndex >= 0 ? HeroIconIndex : IconIndex;
+
     /// <summary>The image of <paramref name="anim"/>, falling back to the base image.</summary>
     public string? Image(UnitAnim anim)
         => Images.TryGetValue(anim, out string? name) ? name : Images.TryGetValue(UnitAnim.Base, out string? b) ? b : null;
@@ -440,7 +447,7 @@ public sealed class PresentationCatalog : ICardSource
         }
 
         var images = new Dictionary<UnitAnim, string>();
-        string? menu = null, icon = null, select = null, command = null, attack = null, die = null;
+        string? menu = null, icon = null, select = null, command = null, attack = null, die = null, heroIcon = null, create = null;
         if (byClass.TryGetValue(cls, out IniTable? ini))
         {
             IniSection? section = ini.Section(civ) ?? FirstOtherThanGeneral(ini);
@@ -468,12 +475,14 @@ public sealed class PresentationCatalog : ICardSource
                 command = section.Get("sound_command");
                 attack = section.Get("sound_attack");
                 die = section.Get("sound_die");
+                heroIcon = section.Get("icon_hero");
+                create = section.Get("sound_create");
             }
         }
 
         string suffix = civ switch { "euro" => " e", "asia" => " a", "arab" => " r", _ => string.Empty };
         string name = _strings.Get("objects", cls + suffix) ?? _strings.Get("objects", cls) ?? cls;
-        return new TypeVisual(type.Id, type.Key, cls, civ, name, images, Empty(menu), IconIndex(Empty(icon) ?? (images.TryGetValue(UnitAnim.Base, out string? b) ? b : cls)), Empty(select), Empty(command), Empty(attack), Empty(die));
+        return new TypeVisual(type.Id, type.Key, cls, civ, name, images, Empty(menu), IconIndex(Empty(icon) ?? (images.TryGetValue(UnitAnim.Base, out string? b) ? b : cls)), Empty(select), Empty(command), Empty(attack), Empty(die), Empty(heroIcon) is { } hero ? IconIndex(hero) : -1, Empty(create));
     }
 
     private static string? Empty(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
