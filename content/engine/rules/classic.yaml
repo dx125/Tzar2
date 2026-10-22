@@ -594,6 +594,12 @@ combat:
   bansheeSpell: spell_curse
   bansheeChance: 71
   bansheeOutOf: 1001
+  # TECH-029 (ReTzar's reading of the original, 0x4de900): with Tournaments, every 75 points the kingdom's units learn
+  # teach each of its Asian peasants, monks, ninjas and priests one more; what is over 75 is lost.
+  tournamentTechnology: te_tournaments
+  tournamentEvery: 75
+  tournamentGrant: 1
+  tournamentPupils: { civ: asia, classes: [peon, monk, ninja, priest] }
   # GAME-07 projectiles (speeds, homing and splash are UNVERIFIED, UNK-22; strategy guide: peasants step away from
   # catapult stones "just as the projectiles are about to land", so stones land where the target stood).
   projectiles:
@@ -628,7 +634,9 @@ spell_flamebolt: { new: true, Spell: { effect: damage, amount: 30, mana: 25, ran
 spell_turntostone: { new: true, Spell: { effect: stone, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
 spell_berserk: { new: true, Spell: { effect: confuse, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
 spell_magicvision: { new: true, Spell: { effect: reveal, summon: comm.fog_revealer, mana: 40, range: 30, cooldownMs: 5000, castMs: 500 } }
-spell_raiseexp: { new: true, Spell: { effect: experience, amount: 100, mana: 50, range: 6, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }   # Mastery: mana into experience
+# Mastery (TECH-028; ReTzar's reading of the original, 0x473bf0): an Asian priest teaches an Asian peasant, monk, ninja or
+# priest of a lower level than its own one point of experience (100 here, a level's worth: UNVERIFIED, UNK-23).
+spell_raiseexp: { new: true, Spell: { effect: experience, amount: 100, mana: 50, range: 6, cooldownMs: 3000, castMs: 500, targets: { civ: asia, classes: [peon, monk, ninja, priest] } } }
 # The curse and hypnosis (ReTzar's reading of the original, 0x4e5841, 0x473887): the curse halves the attack and takes the
 # defence of every enemy unit within the caster's sight of the point for 30 s; hypnosis hands the unit to the caster's
 # kingdom for 30 s. The curse leaves out what the original calls machines (0x2719: golems, siege engines, carpets, ships,

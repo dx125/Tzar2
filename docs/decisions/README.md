@@ -137,3 +137,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0250](0250-the-curse-hypnosis-the-banshee-and-the-messiah.md) | Curse, hypnotize, scream and resist magic as the original's code does | Accepted | 2026-10-22 |
 | [0251](0251-cancelled-sites-broken-loads-and-the-computers-repairs.md) | Refund cancelled sites, drop broken-off loads and leave repairs to idle peasants, as the original does | Accepted | 2026-10-22 |
 | [0252](0252-trade-with-any-market-and-asian-peasants-as-traders.md) | Trade with any kingdom's market, and let Asian peasants trade | Accepted | 2026-10-22 |
+| [0253](0253-tournaments-and-mastery-share-experience-as-the-original-does.md) | Share experience through Tournaments and Mastery as the original does | Accepted | 2026-10-22 |

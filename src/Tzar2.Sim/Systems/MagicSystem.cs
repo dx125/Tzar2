@@ -200,7 +200,7 @@ public sealed class MagicSystem : ISimSystem
         EntityId target = EntityId.FromValue(c.Target);
         EntityId book = EntityId.FromValue(c.Book);
         bool bookGone = c.Book != 0 && !(world.Helds.IndexOf(book) is >= 0 and var bh && world.Helds.At(bh).Holder == caster.Value);
-        bool targetGone = s.Target == SpellTarget.Unit && !Affects(world, s, owner, target);
+        bool targetGone = s.Target == SpellTarget.Unit && (!Affects(world, s, owner, target) || !Teachable(world, s, caster, target));
         if (bookGone || targetGone || !world.CanAct(caster))
         {
             world.StopCasting(caster);
@@ -506,6 +506,19 @@ public sealed class MagicSystem : ISimSystem
         {
             deaths.Add(new Death(target, caster, owner));
         }
+    }
+
+    // Teaching (TECH-028; ReTzar's reading of the original, 0x473bf0): mana turns into experience only for a unit of a lower
+    // level than the caster's.
+    private static bool Teachable(World world, SpellDefinition s, EntityId caster, EntityId target)
+    {
+        if (s.Effect != SpellEffect.Experience)
+        {
+            return true;
+        }
+
+        int teacher = world.Experiences.IndexOf(caster) is >= 0 and var c ? world.Experiences.At(c).Level : 0;
+        return world.Experiences.IndexOf(target) is >= 0 and var t && world.Experiences.At(t).Level < teacher;
     }
 
     /// <summary>Whether lasting spells do not take on <paramref name="unit"/> (the Messiah; WAR-010).</summary>

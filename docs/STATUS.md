@@ -114,7 +114,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    order. Next: the fifth play-test (item 5), and the owner's list of 2026-10-22 (log below). Done: the curse,
    hypnosis, the ghost's banshee scream and the Messiah's immunity (WAR-009, WAR-010, MAG-008; ADR 0250), cancelled
    sites, broken-off loads and the computer's repairs (BLD-020, ECO-002, AI-003; ADR 0251), trade with any market,
-   Asian peasants as traders and caravans that load infantry (TRADE-003, TRADE-004, HOLD-008; ADR 0252), the controls
+   Asian peasants as traders and caravans that load infantry (TRADE-003, TRADE-004, HOLD-008; ADR 0252), Tournaments
+   and Mastery (TECH-028, TECH-029; ADR 0253), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -218,6 +219,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Tournaments and Mastery (ADR 0253).** From ReTzar: every 75 points a kingdom's units learn teach each
+  Asian peasant, monk, ninja and priest one more; Mastery's priest teaches only those pupils, of a lower level than its
+  own. The gameplay golden's ruleset hash is re-pinned. Ledger: 45 open rules before, 43 after.
 
 * **2026-10-22 — Trade with any market; Asian peasants trade (ADR 0252).** From ReTzar and the data: a trader uses
   any kingdom's market, enemies' too, for its own profit; caravans carry 500 (European) or 300 (Arabian), Asian peasants

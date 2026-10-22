@@ -26,7 +26,7 @@ internal sealed class CombatCompiler
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
-        "bansheeSpell", "bansheeChance", "bansheeOutOf",
+        "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils",
     ];
 
     private static readonly string[] SpellTraits = ["Legacy", "Spell"];
@@ -145,7 +145,7 @@ internal sealed class CombatCompiler
             spells.Add(CompileSpell((ushort)i, _spellEntries[i], types, research));
         }
 
-        return new CombatRules(Settings(types, researchIds, legacy, spells), spells, _projectiles);
+        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Pupils(research) }, spells, _projectiles);
     }
 
     private static EntityTypeDefinition WithTraits(EntityTypeDefinition t, EntityTraits traits)
@@ -313,6 +313,9 @@ internal sealed class CombatCompiler
             BansheeSpell = bansheeSpell,
             BansheeChance = Range("bansheeChance", d.BansheeChance, 0, bansheeOutOf),
             BansheeOutOf = bansheeOutOf,
+            TournamentTechnology = Technology("tournamentTechnology", research),
+            TournamentEvery = Range("tournamentEvery", d.TournamentEvery, 1, 255),
+            TournamentGrant = Range("tournamentGrant", d.TournamentGrant, 0, 1_000_000),
         };
     }
 
@@ -498,6 +501,18 @@ internal sealed class CombatCompiler
         SpellEffect.AreaDamage => "all",
         _ => "enemy",
     };
+
+    // combat.tournamentPupils: a type filter (classes, civ...) of the units Tournaments teaches.
+    private ImmutableArray<ushort> Pupils(ResearchCompiler research)
+    {
+        if (_settings.Field(Section, "tournamentPupils") is not { } node)
+        {
+            return [];
+        }
+
+        string source = _settings.FieldSource(Section, "tournamentPupils");
+        return research.Filter("combat.tournamentPupils", RulesetCompiler.Map(node, source, "combat.tournamentPupils"), source);
+    }
 
     private int Range(string field, int fallback, int min, int max)
     {
