@@ -86,6 +86,12 @@ public static class FrameBuilder
             e.Cloaked = world.IsCloaked(id);
             e.LooksLike = -1;
             e.DisguiseMastery = -1;
+            if (viewer is not { } watcher || watcher == identity.Owner)
+            {
+                // A spy in its own look shows a full meter (batch J: "Spy (100)").
+                e.DisguiseMastery = (world.Ruleset.EntityTypes[identity.TypeId].Traits.Abilities & AbilityFlags.Impersonate) != 0 ? 100 : -1;
+            }
+
             if (world.Disguises.Count != 0 && world.Disguises.IndexOf(id) is >= 0 and var dg)
             {
                 Disguise look = world.Disguises.At(dg);

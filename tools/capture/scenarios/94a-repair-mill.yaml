@@ -5,7 +5,7 @@ id: repair-mill
 title: Hit points per repair blow, lumber mill (BLD-022, UNK-18)
 resolves: [UNK-18]
 priority: 3
-minutes: 2.5
+minutes: 3
 default: false                      # batch J
 experimental: true
 description: |
@@ -13,8 +13,11 @@ description: |
   repair-castle: 800 / 30, 1400 / 60, 8000 / 120). The owner thinks the amount differs by building (2026-10-21): a
   fixed amount per blow gives equal steps, a share of HEALTH 1 : 1.75 : 10, and a full repair in the construction
   time about 1 : 0.9 : 2.5 hit points per second. In MP2's bottom-left corner (tile (x, y) at screen
-  (150 + 32x, 32y - 1280), ADR 0171) a spawned peasant puts up a lumber mill at once with hmbuildozer on the open
-  rows 51-55 and walks off; three spawned knights (group 1) attack the mill for 8 s and are sent away; then the peasant
+  (150 + 32x, 32y - 1280), ADR 0171) a peasant spawned next to the site puts up a lumber mill at once with
+  hmbuildozer on the open rows 51-55 and walks off. Run 1 of batch J (2026-10-21) found that our knights do not attack
+  our own buildings (the manual: an attack is on "an enemy unit or object"), and that a builder sent away too early
+  leaves only the site: so the builder now waits 6 s at the site, and the mill is given to kingdom 2 (hmkingdom 2 on
+  the selected building) while three spawned knights (group 1) attack it for 8 s, then given back. Then the peasant
   repairs it alone. The mill's hit points are sampled every 100 ms: the repair phase's steps are the hit points per
   blow, their spacing the time between blows. If the mill burns, fire steps show among the repair steps with the other
   sign.
@@ -37,25 +40,31 @@ steps:
   - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
   - wait: 1
   - snapshot: view
-  # The builder and repairer: a spawned peasant at tile (23, 54).
-  - move: [902, 464]
+  # The builder and repairer: a spawned peasant at tile (17, 54), next to the site.
+  - move: [710, 464]
   - chat: "${cheat}spawn peon"
-  - click: [902, 464]               # place
+  - click: [710, 464]               # place
   - wait: 0.5                       # longer than the double-click time
-  - click: [902, 464]               # select
+  - click: [710, 464]               # select
   - key: {key: "2", ctrl: true}     # group 2
   - chat: "${cheat}buildozer"       # build at once
   - key: B
   - key: L
   - click: [630, 448]               # the mill's centre: footprint tiles (14-15, 53-54) on open ground
-  - wait: 2
+  - wait: 6                         # run 1: sent off after 2 s, the builder had not reached the site
+  - snapshot: {name: built, game: false}
   - chat: "${cheat}buildozer"       # off again
   - click: {at: [966, 560], button: right}   # the peasant walks off to tile (25, 57)
+  - wait: 2
+  # The mill changes hands, so that our knights may attack it (run 1: they leave our own buildings alone).
+  - click: [630, 448]               # select the mill
+  - chat: "${cheat}kingdom 2"
+  - wait: 1
+  - snapshot: {name: given, game: false}
   - memscan: {name: hp-all, value: "${max_value}", width: 4}
   - wait: 1
   - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
-  - snapshot: {name: built, game: false}
-  # Three knights east of the mill, at tiles (19, 52), (19, 54) and (20, 53).
+  # Three knights, at tiles (19, 52), (19, 54) and (20, 53), east of the site.
   - move: [774, 400]
   - chat: "${cheat}spawn knight"
   - click: [774, 400]               # place
@@ -67,8 +76,7 @@ steps:
   - click: [806, 432]               # place
   - drag: {from: [750, 375], to: [835, 490]}
   - key: {key: "1", ctrl: true}     # group 1
-  - key: A
-  - click: [630, 448]               # attack the mill
+  - click: {at: [630, 448], button: right}   # attack the mill, now an enemy's
   - wait: 3
   - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
   - memsample: {name: hp-attack, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 8}
@@ -76,8 +84,12 @@ steps:
   - key: "1"
   - key: S
   - click: {at: [454, 592], button: right}   # away, to tile (9, 58)
-  - memsample: {name: hp-pause, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 6}
-  - wait: 6
+  - wait: 2
+  - click: [630, 448]               # select the mill again
+  - chat: "${cheat}kingdom 1"       # ours again
+  - wait: 1
+  - memsample: {name: hp-pause, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 5}
+  - wait: 5
   - snapshot: {name: damaged, game: false}
   - key: "2"
   - key: R

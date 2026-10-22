@@ -5,13 +5,14 @@ id: repair-castle
 title: Hit points per repair blow, castle (BLD-022, UNK-18)
 resolves: [UNK-18]
 priority: 3
-minutes: 2.5
+minutes: 3
 default: false                      # batch J
 experimental: true
 description: |
   As repair-mill, on our own starting castle (HEALTH 8000, TIME 120) in MP2's bottom-left corner: footprint tiles
-  (0-6, 56-62), centre at screen (262, 624). Three spawned knights attack it for 12 s; a spawned peasant repairs it.
-  The memory scan for 8000 also finds our two other castles and the enemy's; only the attacked one decreases.
+  (0-6, 56-62), centre at screen (262, 624). It is given to kingdom 2 while three spawned knights attack it for 12 s,
+  then given back, and a spawned peasant repairs it. The memory scan for 8000 also finds our two other castles and the
+  enemy's; only the attacked one decreases.
 launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: castle
@@ -38,10 +39,15 @@ steps:
   - wait: 0.5                       # longer than the double-click time
   - click: [582, 528]               # select
   - key: {key: "2", ctrl: true}     # group 2
+  # The castle changes hands, so that our knights may attack it (run 1: they leave our own buildings alone).
+  - click: [262, 624]               # select the castle
+  - chat: "${cheat}kingdom 2"
+  - wait: 1
+  - snapshot: {name: given, game: false}
   - memscan: {name: hp-all, value: "${max_value}", width: 4}
   - wait: 1
   - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
-  # Three knights east of the castle, at tiles (8, 58), (8, 60) and (7, 59).
+  # Three knights, at tiles (8, 58), (8, 60) and (7, 59), east of the castle.
   - move: [422, 592]
   - chat: "${cheat}spawn knight"
   - click: [422, 592]               # place
@@ -53,8 +59,7 @@ steps:
   - click: [390, 624]               # place
   - drag: {from: [376, 570], to: [450, 680]}
   - key: {key: "1", ctrl: true}     # group 1
-  - key: A
-  - click: [262, 624]               # attack the castle
+  - click: {at: [262, 624], button: right}   # attack the castle, now an enemy's
   - wait: 3
   - memscan: {name: hp-hit, from: hp-stable, mode: decreased}
   - memsample: {name: hp-attack, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 12}
@@ -62,8 +67,12 @@ steps:
   - key: "1"
   - key: S
   - click: {at: [774, 432], button: right}   # away, to tile (19, 53)
-  - memsample: {name: hp-pause, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 6}
-  - wait: 6
+  - wait: 2
+  - click: [262, 624]               # select the castle again
+  - chat: "${cheat}kingdom 1"       # ours again
+  - wait: 1
+  - memsample: {name: hp-pause, scan: hp-hit, max_addresses: 256, interval_ms: 250, duration_s: 5}
+  - wait: 5
   - snapshot: {name: damaged, game: false}
   - key: "2"
   - key: R

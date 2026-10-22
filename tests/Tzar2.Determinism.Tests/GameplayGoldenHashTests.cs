@@ -46,7 +46,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (the owner's answers, 2026-10-21) every storage takes gold and stone; spies copy no machine, ship or magic
     // creature: the ruleset hash only.
     // (MAG-021, 2026-10-21) the spy's disguise meter fills in gameplay.disguiseMasteryMs: the ruleset hash only.
-    private const ulong GoldenRulesetHash = 0xCFA6CA198CDC460AUL;
+    // (batch J, 2026-10-21) the meter gains a point every 1.25 s as measured (disguiseMasteryMs 125000): the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0xA8C37A599328B3B8UL;
     private const ulong GoldenHashStream = 0x2BDE24C6A83538E7UL;
     private const ulong GoldenFinalFullHash = 0xA1DC4B70F3D37C14UL;
 

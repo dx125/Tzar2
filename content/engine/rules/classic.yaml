@@ -65,8 +65,9 @@ gameplay:
   idleWorkRadiusTiles: 12             # UNVERIFIED: where an idle peasant looks for a site, a repair or a resource
   repairCostPercent: 50               # UNVERIFIED (UNK-18): a full repair costs this share of the construction cost, pro rata (owner decision)
   repairerFalloffPercent: 25          # UNVERIFIED (UNK-18): repairers on one building add 100%, 75%, 50%, 25%, then nothing (owner decision)
-  disguiseMasteryMs: 120000           # UNVERIFIED (MAG-021): a spy's disguise meter fills (0 -> 100) in this long in one look;
-                                      # another kingdom's spy unmasks it within its detector radius x (100 - meter) %
+  disguiseMasteryMs: 125000           # VERIFIED (MAG-021, batch J 2026-10-21: one point per 1.25 s): a spy's disguise meter
+                                      # fills (0 -> 100) in this long in one look; another kingdom's spy unmasks it within its
+                                      # detector radius x (100 - meter) % (UNVERIFIED)
   gateOpenReachPx: 32                 # UNVERIFIED: an automatic gate opens for its owner's units this close
   gateCloseReachPx: 64                # UNVERIFIED: ... and closes when none is this close (hysteresis)
   gateChangeIntervalMs: 1000          # UNVERIFIED: least time between two changes of one gate (owner decision)

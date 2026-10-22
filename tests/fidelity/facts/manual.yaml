@@ -18,3 +18,27 @@ analyses:
       sources:
         population_limit_default: {session: capture-20261018-024524, trial: smoke/plain, frame: window/setup.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-18}
         starting_resources_default: {session: capture-20261018-024524, trial: smoke/plain, frame: window/setup.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-18}
+  spy-disguise:
+    status: ok
+    notes: ["batch J, run 1 (2026-10-21). The install differed from the reference in tzar.ini and Demos/tzar.wdm only, both written by the game when the owner played it (run with -AllowModified).", "hmkingdom 3 did nothing on MP2 (only kingdoms 1 and 2 exist there), so the copied peasant and the detecting spy stayed ours: no unmasking could happen, and the spy copied its own kingdom's peasant."]
+    facts:
+      source: spy-unmask/fresh and spy-mastery/seasoned, the selection view of our spy (the window captures and the panel bursts)
+      meter_shown_as: name  # the number in brackets after the unit's name in the selection view, "Spy (N)"
+      meter_undisguised: 100
+      meter_start_new_look: 0  # 3 about 3 s after the impersonation, 2 one second after a second impersonation
+      meter_seconds_per_point: 1.25  # 8 at 0 s, 99 at 114 s of the burst, every 2 s in between on the line
+      meter_max: 100  # reached at 120 s of the burst and held for the remaining 150 s
+      meter_restarts_with_a_new_look: true  # after reveal and a second impersonation: 2, 3, ... 10 over 10 s
+      copied_own_unit_disappears: true  # population 11 before, 10 after; the copied peasant is gone from the map
+      disguised_panel: copied  # portrait and attack 5 / defence 0 of the copied peasant; the name stays "Spy (N)"
+      disguised_card: [move, build, capture, harvest, pick_item, explore, stop, reveal_self]  # first page; the spy's own card is move, attack, guard, patrol, pick_item, explore, impersonate, stop
+      sources:
+        meter_shown_as: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: window/disguised.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        meter_undisguised: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: window/spy-card.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        meter_start_new_look: {session: capture-20261021-203846, trial: spy-mastery/seasoned, frame: burst/meter-again/0000.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        meter_seconds_per_point: {session: capture-20261021-203846, trial: spy-mastery/seasoned, frame: burst/meter/0000.bmp-0057.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        meter_max: {session: capture-20261021-203846, trial: spy-mastery/seasoned, frame: burst/meter/0060.bmp-0149.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        meter_restarts_with_a_new_look: {session: capture-20261021-203846, trial: spy-mastery/seasoned, frame: burst/meter-again/0000.bmp-0010.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        copied_own_unit_disappears: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: 'window/spy-card.bmp, window/disguised.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        disguised_panel: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: window/disguised.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        disguised_card: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: 'window/disguised.bmp, window/spy-card.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}

@@ -59,8 +59,8 @@ $batches = @{
     "H" = @("smoke", "combat-outcomes")
     "I" = @("smoke", "trade", "gamble")
     # J (2026-10-21): hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise,
-    # and the disguise meter.
-    "J" = @("smoke", "repair-mill", "repair-barracks", "repair-castle", "spy-unmask", "spy-mastery")
+    # and how the disguise meter changes it.
+    "J" = @("smoke", "repair-mill", "repair-barracks", "repair-castle", "spy-unmask", "spy-unmask-half", "spy-unmask-full")
 }
 if ($Batch) { $Scenarios = $batches[$Batch] }
 $repo = Resolve-Path (Join-Path $PSScriptRoot "../..")
