@@ -118,6 +118,15 @@ play-test.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-22 — The UI review's test and findings (work queue 15, ADR 0200).** A headless UI smoke test opens 35
+  screens and dialogs of the shell, the game and the editor at 22 displays (1024 × 768 to 3840 × 2160, Wide at every
+  interface scale and Authentic). It fails when a control leaves the window or covers another. A new CI job
+  (`godot-smoke`, Linux) runs it and the other client smoke tests. Findings per screen and display:
+  [reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md). Six layout findings, among them Authentic in a
+  720-row window cutting off the HUD's bottom. Twenty-one likeness findings: texts not from STRINGS.INI, the
+  multiplayer screens on borrowed art, the scenario dialogs off their boxes. Six requests for the owner's screenshots
+  and one decision (the main menu against its carved slots). Fixes follow in small PRs.
+
 * **2026-10-22 — Technology effects as the original computes them (ADR 0191).** ReTzar's reading of the research
   handlers replaces the UNK-21 placeholders: whole points of attack and defence by weapon and armour (Temper Iron +1,
   Chain Mail +2, Engineering +5, Gunpowder +10...), cost cuts (Feudalism 80 %, Horsemanship 75 %), Architecture 70 %

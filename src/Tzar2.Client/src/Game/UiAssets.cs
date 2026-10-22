@@ -192,6 +192,7 @@ public sealed class UiAssets : IDisposable
         }
 
         var texture = ImageTexture.CreateFromImage(image);
+        texture.ResourceName = UiAudit.TextPrefix + text; // tells the layout audit that this picture is text (ADR 0200)
         if (_texts.Count > 4096)
         {
             ClearTexts();

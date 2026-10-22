@@ -107,6 +107,37 @@ jobs:
           if ($LASTEXITCODE -ne 1) { Write-Host "expected exit code 1, got $LASTEXITCODE"; exit 1 }
           exit 0
 
+  godot-smoke:
+    # ADR 0200: the client's headless smoke tests in the pinned Godot .NET editor: the viewer, a skirmish, the editor, a
+    # LAN match with its replay, and the UI review's every screen and dialog at every display (no control may leave the
+    # window or cover another, except the open findings of docs/reviews/2026-10-ui-review.md).
+    name: Godot client smoke tests - Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GODOT_VERSION: 4.7.2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.x
+      - name: Download Godot ${{ env.GODOT_VERSION }} (.NET)
+        run: |
+          name="Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64"
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/$name.zip"
+          unzip -q godot.zip -d "$RUNNER_TEMP/godot"
+          echo "TZAR2_GODOT=$RUNNER_TEMP/godot/$name/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64" >> "$GITHUB_ENV"
+      - run: dotnet build src/Tzar2.Client/Tzar2.Client.csproj -c Debug
+      - name: Import the Godot project
+        run: '"$TZAR2_GODOT" --headless --path src/Tzar2.Client --import'
+      - run: dotnet test tests/Tzar2.Client.Tests -c Debug --filter "FullyQualifiedName~GodotSmokeTests" --logger "trx;LogFileName=godot-smoke.trx" --logger "console;verbosity=normal" --results-directory TestResults
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-godot-smoke
+          path: TestResults
+
   headless:
     name: Headless core - ${{ matrix.os }}
     strategy:
