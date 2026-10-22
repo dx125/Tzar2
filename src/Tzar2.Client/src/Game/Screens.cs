@@ -183,7 +183,11 @@ public abstract partial class ArtScreen : Control
     }
 }
 
-/// <summary>The main menu (<c>S_MAIN</c>): single player, multiplayer (not yet), credits, asset viewer, quit.</summary>
+/// <summary>
+/// The main menu (<c>S_MAIN</c>; SHELL-003): one column of equal buttons, the original's single player, multiplayer,
+/// preferences (SETTINGS) and credits, then the editor and the asset viewer, then quit. Campaigns are in single player
+/// (the owner, 2026-10-22).
+/// </summary>
 public partial class MainMenuScreen : ArtScreen
 {
     /// <summary>Creates the menu.</summary>
@@ -194,22 +198,25 @@ public partial class MainMenuScreen : ArtScreen
         string Label(string key, string fallback) => catalog?.Text("mainscr", key, fallback) ?? fallback;
         var size = new Vector2I(235, 25);
         const string Image = "art/screens/s_main/btn.t2img";
-        Button(new Vector2I(270, 215), size, Image, Label("campaign", "CAMPAIGN"), () => Campaign?.Invoke());
-        Button(new Vector2I(270, 275), size, Image, Label("single", "SINGLE PLAYER"), () => SinglePlayer?.Invoke());
-        Button(new Vector2I(270, 335), size, Image, Label("multi", "MULTIPLAYER"), () => MultiplayerPressed?.Invoke());
-        Button(new Vector2I(270, 395), size, Image, "ASSET VIEWER", () => Viewer?.Invoke());
-        Button(new Vector2I(520, 395), new Vector2I(120, 25), Image, "EDITOR", () => Editor?.Invoke());
-        Button(new Vector2I(520, 455), new Vector2I(120, 25), Image, "SETTINGS", () => Settings?.Invoke());
-        Button(new Vector2I(270, 455), size, Image, Label("credits", "CREDITS"), () => Credits?.Invoke());
-        Button(new Vector2I(270, 515), size, Image, Label("quit", "QUIT"), () => Quit?.Invoke());
+        (string Label, Action Pressed)[] items =
+        [
+            (Label("single", "SINGLE PLAYER"), () => SinglePlayer?.Invoke()),
+            (Label("multi", "MULTIPLAYER"), () => MultiplayerPressed?.Invoke()),
+            ("SETTINGS", () => Settings?.Invoke()),
+            (Label("credits", "CREDITS"), () => Credits?.Invoke()),
+            ("EDITOR", () => Editor?.Invoke()),
+            ("ASSET VIEWER", () => Viewer?.Invoke()),
+            (Label("quit", "QUIT"), () => Quit?.Invoke()),
+        ];
+        for (int i = 0; i < items.Length; i++)
+        {
+            Button(new Vector2I(270, 215 + (i * 48)), size, Image, items[i].Label, items[i].Pressed);
+        }
         Text(new Vector2I(8, 584), $"{Tzar2.Game.GameInfo.Codename} {Tzar2.Game.GameInfo.Version}", UiAssets.SmallFont, new Color(0.7f, 0.7f, 0.6f));
     }
 
     /// <summary>SINGLE PLAYER.</summary>
     public event Action? SinglePlayer;
-
-    /// <summary>CAMPAIGN (ADR 0133).</summary>
-    public event Action? Campaign;
 
     /// <summary>MULTIPLAYER.</summary>
     public event Action? MultiplayerPressed;

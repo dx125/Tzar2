@@ -226,7 +226,6 @@ public partial class GameApp : Node
     {
         var menu = new MainMenuScreen(_ui!, _catalog, Screen, _ai.Notice);
         menu.SinglePlayer += ShowSinglePlayer;
-        menu.Campaign += ShowCampaigns;
         menu.MultiplayerPressed += ShowMultiplayer;
         menu.Credits += () => GD.Print("Credits: see text/local/credits.txt of your package.");
         menu.Viewer += () => ViewerRequested?.Invoke();

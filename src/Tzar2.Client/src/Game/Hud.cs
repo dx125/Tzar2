@@ -122,7 +122,9 @@ public partial class Hud : Control
             _resources[i] = Add(new TextureRect { Position = layout.Resources[i].Position + new Vector2I(4, 3) });
         }
 
-        _minimap = Add(new TextureRect { Position = layout.Minimap.Position, Size = layout.Minimap.Size, StretchMode = TextureRect.StretchModeEnum.Scale, MouseFilter = MouseFilterEnum.Stop });
+        // IgnoreSize: the texture has a pixel per tile, so a map larger than the box would grow the control over the
+        // selection view (the owner's play-test, 2026-10-22).
+        _minimap = Add(new TextureRect { Position = layout.Minimap.Position, Size = layout.Minimap.Size, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale, MouseFilter = MouseFilterEnum.Stop });
         _minimap.GuiInput += e => MinimapInput(e);
         _minimapFrame = Add(new MinimapFrame { Position = layout.Minimap.Position, Size = layout.Minimap.Size, MouseFilter = MouseFilterEnum.Ignore });
         _clock = Add(new TextureRect { Position = layout.Clock.Position, Size = layout.Clock.Size });
