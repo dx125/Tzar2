@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Godot;
+using Tzar2.Client.Logic;
 using Tzar2.Game.Campaigns;
 using Tzar2.Game.Ui;
 
@@ -196,12 +197,16 @@ public partial class LoadDialog : SaveListDialog
         ArgumentNullException.ThrowIfNull(text);
         _model = model;
         _text = text;
-        Area(new Rect2I(118, 35, 284, 25), () =>
+        // The type selector of the art (UI-A3): both arrows switch between single player and campaign saves.
+        void Switch()
         {
             _model.SwitchType();
             RefreshType();
             RefreshList();
-        });
+        }
+
+        Area(Box(DialogBoxes.LoadTypePrevious), Switch);
+        Area(Box(DialogBoxes.LoadTypeNext), Switch);
         Button(new Vector2I(42, 252), new Vector2I(137, 27), "art/screens/d_load/btn.t2img", text("load", "load", "LOAD"), () =>
         {
             if (_model.Picked is not null)
@@ -234,9 +239,13 @@ public partial class LoadDialog : SaveListDialog
     /// <inheritdoc/>
     protected override void Pick(int index) => _model.Select(index);
 
+    private static Rect2I Box(ArtBox box) => new(box.X, box.Y, box.Width, box.Height);
+
     private void RefreshType()
     {
         _type?.QueueFree();
-        _type = Text(new Vector2I(118, 40), _model.Campaigns ? _text("load", "type_1", "Campaign") : _text("load", "type_0", "Single Player"), UiAssets.BoldFont, null, 284);
+        ArtBox field = DialogBoxes.LoadTypeField;
+        string type = _model.Campaigns ? _text("load", "type_1", "Campaign") : _text("load", "type_0", "Single Player");
+        _type = Text(new Vector2I(field.X, field.Y + 6), Fit(type, field.Width - 6, UiAssets.SmallFont), UiAssets.SmallFont, null, field.Width);
     }
 }

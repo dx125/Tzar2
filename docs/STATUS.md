@@ -228,7 +228,8 @@ the process decisions that have no ADR.
   multiplayer screens on borrowed art, the scenario dialogs off their boxes. Six requests for the owner's screenshots
   and one decision (the main menu against its carved slots). Fixes follow in small PRs. Fixed: UI-L1 (a window
   smaller than the logical screen shrinks the picture), UI-L2 (the lobby's rows), UI-L3 (the editor's windows on 1024-wide screens), UI-L4 and UI-L5 (text wrapped to its box): no open layout
-  finding is left. UI-T1, UI-T2, UI-T3, UI-T5: shell labels from STRINGS.INI.
+  finding is left. UI-T1, UI-T2, UI-T3, UI-T5: shell labels from STRINGS.INI. UI-A3, UI-A10,
+  UI-A11, UI-A12: the load selector and the scenario dialogs in their art's boxes.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the

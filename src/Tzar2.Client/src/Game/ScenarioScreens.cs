@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using Tzar2.Client.Logic;
 using Tzar2.Game.Scenario;
 
 namespace Tzar2.Client.Game;
@@ -61,6 +62,13 @@ public abstract partial class ScenarioDialog : ArtScreen
     /// <summary>Raised when the dialog closes.</summary>
     public event Action? Closed;
 
+    /// <summary>A STRINGS.INI text through <paramref name="text"/>, or <paramref name="fallback"/> without it.</summary>
+    protected static string Label(Func<string, string, string, string>? text, string section, string key, string fallback)
+        => text?.Invoke(section, key, fallback) ?? fallback;
+
+    /// <summary>A box of the art as a rectangle relative to it.</summary>
+    protected static Rect2I ToRect(ArtBox box) => new(box.X, box.Y, box.Width, box.Height);
+
     /// <summary>Closes the dialog.</summary>
     protected void Close() => Closed?.Invoke();
 
@@ -74,53 +82,102 @@ public abstract partial class ScenarioDialog : ArtScreen
     }
 }
 
-/// <summary>Show Message (<c>D_MESSAGE</c>): title, text, optional user image, OK.</summary>
+/// <summary>
+/// Show Message (<c>D_MESSAGE</c>): the user image in the art's picture box, the title and the text in its text box,
+/// CLOSE in its button slot (<see cref="DialogBoxes"/>; UI-A10).
+/// </summary>
 public partial class ScenarioMessageDialog : ScenarioDialog
 {
-    /// <summary>Creates the dialog.</summary>
-    public ScenarioMessageDialog(UiAssets ui, Vector2I screen, ScenarioNotice notice, Texture2D? image)
+    /// <summary>Creates the dialog; <paramref name="text"/> looks up STRINGS.INI (section, key, fallback).</summary>
+    public ScenarioMessageDialog(UiAssets ui, Vector2I screen, ScenarioNotice notice, Texture2D? image, Func<string, string, string, string>? text = null)
         : base(ui, screen, "art/screens/d_message/back.t2img")
     {
         ArgumentNullException.ThrowIfNull(notice);
-        Text(new Vector2I(20, 16), notice.Title, UiAssets.TitleFont, null, 460);
-        int x = 24;
         if (image is not null)
         {
-            AddChild(new TextureRect { Texture = image, Position = Origin + new Vector2I(24, 44), MouseFilter = MouseFilterEnum.Ignore });
-            x += image.GetWidth() + 12;
+            ArtBox box = DialogBoxes.MessageImage;
+            AddChild(new TextureRect { Texture = image, Position = Origin + new Vector2I(box.X, box.Y), Size = new Vector2(box.Width, box.Height), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, MouseFilter = MouseFilterEnum.Ignore });
         }
 
-        Paragraph(new Vector2I(x, 48), notice.Text, 460 - x, 14);
-        Button(new Vector2I(190, 262), new Vector2I(120, 25), "art/screens/d_message/btn.t2img", "OK", Close);
+        ArtBox t = DialogBoxes.MessageText;
+        int y = t.Y;
+        if (notice.Title.Length > 0)
+        {
+            Text(new Vector2I(t.X, y), Fit(notice.Title, t.Width, UiAssets.BoldFont), UiAssets.BoldFont);
+            y += 22;
+        }
+
+        Paragraph(new Vector2I(t.X, y), notice.Text, t.Width, (t.Bottom - y) / 14);
+        ArtBox b = DialogBoxes.MessageButton;
+        Button(new Vector2I(b.X, b.Y), new Vector2I(b.Width, b.Height), "art/screens/d_message/btn.t2img", Label(text, "wnd_message", "close", "CLOSE"), Close);
     }
 }
 
-/// <summary>The quest log (F8, <c>D_QUESTS</c>): the active quests in the order they were added.</summary>
+/// <summary>
+/// The quest log (F8, <c>D_QUESTS</c>): the active quests in the order they were added, two to a page in the art's rows,
+/// the page selector and CLOSE (<see cref="DialogBoxes"/>; UI-A11).
+/// </summary>
 public partial class QuestLogDialog : ScenarioDialog
 {
-    /// <summary>Creates the dialog.</summary>
-    public QuestLogDialog(UiAssets ui, Vector2I screen, IReadOnlyList<QuestEntry> quests)
+    private readonly IReadOnlyList<QuestEntry> _quests;
+    private readonly Func<string, string, string, string>? _text;
+    private readonly List<Control> _shown = [];
+
+    /// <summary>Creates the dialog; <paramref name="text"/> looks up STRINGS.INI (section, key, fallback).</summary>
+    public QuestLogDialog(UiAssets ui, Vector2I screen, IReadOnlyList<QuestEntry> quests, Func<string, string, string, string>? text = null)
         : base(ui, screen, "art/screens/d_quests/back.t2img")
     {
         ArgumentNullException.ThrowIfNull(quests);
-        Text(new Vector2I(20, 16), "QUESTS", UiAssets.TitleFont, null, 460);
-        int y = 50;
-        if (quests.Count == 0)
+        _quests = quests;
+        _text = text;
+        Text(new Vector2I(20, 32), Label(text, "wnd_quests", "curquest", "CURRENT QUESTS"), UiAssets.TitleFont, null, DialogBoxes.Quests.Width - 40);
+        Area(ToRect(DialogBoxes.QuestPagePrevious), () => Turn(-1));
+        Area(ToRect(DialogBoxes.QuestPageNext), () => Turn(+1));
+        ArtBox b = DialogBoxes.QuestButton;
+        Button(new Vector2I(b.X, b.Y), new Vector2I(b.Width, b.Height), "art/screens/d_quests/btn.t2img", Label(text, "wnd_quests", "close", "CLOSE"), Close);
+        ShowPage();
+    }
+
+    /// <summary>The page shown (0-based).</summary>
+    public int Page { get; private set; }
+
+    /// <summary>Turns the page by <paramref name="step"/> (it wraps).</summary>
+    public void Turn(int step)
+    {
+        int pages = DialogBoxes.QuestPages(_quests.Count);
+        Page = (((Page + step) % pages) + pages) % pages;
+        ShowPage();
+    }
+
+    private void ShowPage()
+    {
+        foreach (Control c in _shown)
         {
-            Text(new Vector2I(30, y), "No quests.", UiAssets.SmallFont, Colors.White);
+            c.QueueFree();
         }
 
-        foreach (QuestEntry q in quests)
+        _shown.Clear();
+        if (_quests.Count == 0)
         {
-            Text(new Vector2I(30, y), q.Title, UiAssets.BoldFont);
-            y += 18 + Paragraph(new Vector2I(40, y + 18), q.Text, 420, 6);
-            if (y > 260)
+            ArtBox t0 = DialogBoxes.QuestText(0);
+            _shown.Add(Text(new Vector2I(t0.X, t0.Y + 4), Label(_text, "wnd_quests", "none", "None"), UiAssets.SmallFont, Colors.White));
+        }
+
+        for (int row = 0; row < DialogBoxes.QuestsPerPage && (Page * DialogBoxes.QuestsPerPage) + row < _quests.Count; row++)
+        {
+            QuestEntry q = _quests[(Page * DialogBoxes.QuestsPerPage) + row];
+            ArtBox t = DialogBoxes.QuestText(row);
+            _shown.Add(Text(new Vector2I(t.X + 4, t.Y + 4), Fit(q.Title, t.Width - 8, UiAssets.BoldFont), UiAssets.BoldFont));
+            List<string> lines = Wrap(q.Text, t.Width - 8);
+            for (int i = 0; i < Math.Min(lines.Count, (t.Height - 26) / 14); i++)
             {
-                break;
+                _shown.Add(Text(new Vector2I(t.X + 4, t.Y + 24 + (i * 14)), lines[i], UiAssets.SmallFont, Colors.White));
             }
         }
 
-        Button(new Vector2I(190, 282), new Vector2I(120, 25), "art/screens/d_quests/btn.t2img", "OK", Close);
+        ArtBox f = DialogBoxes.QuestPageField;
+        string page = $"{Label(_text, "wnd_quests", "page", "Page")} {Page + 1}/{DialogBoxes.QuestPages(_quests.Count)}";
+        _shown.Add(Text(new Vector2I(f.X, f.Y + 7), page, UiAssets.SmallFont, Colors.White, f.Width));
     }
 }
 
@@ -198,33 +255,37 @@ public partial class StoryScreen : ScenarioDialog
     private readonly bool _autoClose;
     private double _elapsed;
 
-    /// <summary>Creates the screen.</summary>
-    public StoryScreen(UiAssets ui, Vector2I screen, ScenarioNotice notice, Texture2D? image)
+    /// <summary>Creates the screen: the image in the art's picture box, the text scrolling on the parchment, CLOSE in its slot (UI-A12).</summary>
+    public StoryScreen(UiAssets ui, Vector2I screen, ScenarioNotice notice, Texture2D? image, Func<string, string, string, string>? text = null)
         : base(ui, screen, "art/screens/s_scrplay/back.t2img")
     {
         ArgumentNullException.ThrowIfNull(notice);
         if (image is not null)
         {
-            AddChild(new TextureRect { Texture = image, Position = Origin + new Vector2I(20, 20), MouseFilter = MouseFilterEnum.Ignore });
+            ArtBox box = DialogBoxes.StoryImage;
+            AddChild(new TextureRect { Texture = image, Position = Origin + new Vector2I(box.X, box.Y), Size = new Vector2(box.Width, box.Height), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, MouseFilter = MouseFilterEnum.Ignore });
         }
 
-        _clip = new Control { Position = Origin + new Vector2I(330, 30), Size = new Vector2(420, 480), ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
+        ArtBox t = DialogBoxes.StoryText;
+        _clip = new Control { Position = Origin + new Vector2I(t.X, t.Y), Size = new Vector2(t.Width, t.Height), ClipContents = true, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_clip);
         _text = new Control { MouseFilter = MouseFilterEnum.Ignore };
         _clip.AddChild(_text);
-        List<string> lines = Wrap(notice.Text, 400, UiAssets.BoldFont);
+        List<string> lines = Wrap(notice.Text, t.Width, UiAssets.BoldFont);
+        var ink = new Color(0.25f, 0.16f, 0.08f); // dark ink on the parchment
         for (int i = 0; i < lines.Count; i++)
         {
-            if (ui.Text(lines[i], UiAssets.BoldFont, new Color(1f, 0.92f, 0.65f)) is { } t)
+            if (ui.Text(lines[i], UiAssets.BoldFont, ink) is { } line)
             {
-                _text.AddChild(new TextureRect { Texture = t, Position = new Vector2(0, 480 + (i * 18)), MouseFilter = MouseFilterEnum.Ignore });
+                _text.AddChild(new TextureRect { Texture = line, Position = new Vector2(0, t.Height + (i * 18)), MouseFilter = MouseFilterEnum.Ignore });
             }
         }
 
-        _text.Size = new Vector2(420, 480 + (lines.Count * 18));
+        _text.Size = new Vector2(t.Width, t.Height + (lines.Count * 18));
         _scrollSeconds = Math.Max(1, notice.DurationMs) / 1000.0;
         _autoClose = notice.AutoClose;
-        Button(new Vector2I(660, 540), new Vector2I(100, 30), "art/screens/s_scrplay/ok.t2img", string.Empty, Close);
+        ArtBox b = DialogBoxes.StoryButton;
+        Button(new Vector2I(b.X, b.Y), new Vector2I(b.Width, b.Height), "art/screens/s_scrplay/ok.t2img", Label(text, "wnd_message", "close", "CLOSE"), Close); // the strip covers the label baked in the back
     }
 
     /// <inheritdoc/>

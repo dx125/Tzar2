@@ -72,7 +72,7 @@ public partial class GameScreen
                 ShowModal(new ScenarioNotice(ScenarioNoticeKind.StoryScreen, SampleTitle, SampleText, null, null, null, 20000, false, 0, 0, true));
                 return true;
             case "quests":
-                AddAuditLayer(new QuestLogDialog(_ui, _hud.Layout.Size, [new QuestEntry(SampleTitle, SampleText, null), new QuestEntry("Hold the bridge", "Keep the bridge until dawn.", null)]));
+                AddAuditLayer(new QuestLogDialog(_ui, _hud.Layout.Size, [new QuestEntry(SampleTitle, SampleText, null), new QuestEntry("Hold the bridge", "Keep the bridge until dawn.", null), new QuestEntry("The third quest", "On the second page.", null)], _catalog.Text));
                 return true;
             case "conversation":
                 var view = new ConversationView(1, "Envoy", ImmutableArray.Create(

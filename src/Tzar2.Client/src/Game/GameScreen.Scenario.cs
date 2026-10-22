@@ -197,8 +197,8 @@ public partial class GameScreen
         }
 
         ScenarioDialog dialog = n.Kind == ScenarioNoticeKind.StoryScreen
-            ? new StoryScreen(_ui, _hud.Layout.Size, n, UserImage(n.Image))
-            : new ScenarioMessageDialog(_ui, _hud.Layout.Size, n, UserImage(n.Image));
+            ? new StoryScreen(_ui, _hud.Layout.Size, n, UserImage(n.Image), _catalog.Text)
+            : new ScenarioMessageDialog(_ui, _hud.Layout.Size, n, UserImage(n.Image), _catalog.Text);
         bool story = n.Kind == ScenarioNoticeKind.StoryScreen;
         if (story && !_session.Paused)
         {
@@ -258,7 +258,7 @@ public partial class GameScreen
             return;
         }
 
-        var dialog = new QuestLogDialog(_ui, _hud.Layout.Size, view.Quests);
+        var dialog = new QuestLogDialog(_ui, _hud.Layout.Size, view.Quests, _catalog.Text);
         var layer = new CanvasLayer { Layer = 3, Name = "Quests" };
         layer.AddChild(dialog);
         AddChild(layer);
