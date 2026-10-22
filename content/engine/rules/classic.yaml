@@ -607,6 +607,23 @@ combat:
   # are magic, and the Messiah takes none. ITEM-010: a soul item's berserk order casts this spell's confusion.
   magicAttackers: { classes: [mage, dragon, messiah, priest] }
   soulBerserkSpell: spell_berserk
+  # TECH-030 Jewelry (ReTzar's reading of the original, 0x479c34, 0x479cc0, 0x47a254, 0x47a1e1): a second after a market of
+  # the kingdom stands and then every minute it gets an offer: a book, a power item, a book or a potion, equally likely,
+  # with a random record (0x462380, 0x463610, 0x464d20); the list keeps the newest 8; an offer costs 4 times its value
+  # (vt+0x2c4) in gold; a market buys a carried book, power item or potion for its value.
+  marketTechnology: te_jewelry
+  marketFirstMs: 1000
+  marketEveryMs: 60000
+  marketSize: 8
+  marketBuyPercent: 400
+  marketOffers:
+    - [comm.item_magic spells item_book1]
+    - [comm.item_plusplus attack item_sword1 5-20, comm.item_plusplus attack item_bow1 5-20, comm.item_plusplus defence item_shield1 5-20]
+    - [comm.item_magic spells item_book1]
+    - [comm.item_health attack item_potion6 5-20, comm.item_health defence item_potion7 5-20, comm.item_health health item_potion2 25-100, comm.item_health levels item_potion3 1-1, comm.item_health mana item_potion1 25-100]
+  # The spells of the books on offer, in the original's numbering (ReTzar src/world.rs): soul binding (8) gives lightning and
+  # hypnosis (13) a flame bolt (0x462380).
+  marketBookSpells: [spell_firerain, spell_lightning, spell_heal, spell_spawncarpet, spell_spawnbat, spell_bless, spell_freeze, spell_berserk, spell_lightning, spell_cloak, spell_spawnstonegolem, spell_magicvision, raisedead, spell_flamebolt, spell_turntostone, spell_whirlpool, spell_spawndragon, spell_flamebolt, spell_raiseexp, spell_spawnjin, spell_curse]
   # TECH-029 (ReTzar's reading of the original, 0x4de900): with Tournaments, every 75 points the kingdom's units learn
   # teach each of its Asian peasants, monks, ninjas and priests one more; what is over 75 is lost.
   tournamentTechnology: te_tournaments
@@ -634,25 +651,25 @@ combat:
 # MAG-022 (ReTzar's reading of the original, query 0x2719): healing, freezing, the curse and raise dead skip the machines;
 # raise dead also skips the creatures that leave no body (0x271c: bats, golems, carpets, mages, dwarves, orcs, jinns,
 # ghosts, skeletons, dragons).
-spell_heal: { new: true, Spell: { effect: heal, amount: 40, mana: 10, range: 6, cooldownMs: 1500, castMs: 500, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
-spell_bless: { new: true, Spell: { effect: bless, amount: 25, durationMs: 30000, mana: 30, range: 6, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }
-spell_lightning: { new: true, Spell: { effect: damage, amount: 40, mana: 30, range: 10, cooldownMs: 3000, castMs: 500 } }
-spell_freeze: { new: true, Spell: { effect: freeze, durationMs: 10000, mana: 40, range: 10, cooldownMs: 5000, castMs: 500, projectile: freeze_bolt, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
-spell_cloak: { new: true, Spell: { effect: cloak, durationMs: 30000, mana: 40, range: 6, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
+spell_heal: { new: true, Spell: { bookValue: 5, effect: heal, amount: 40, mana: 10, range: 6, cooldownMs: 1500, castMs: 500, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
+spell_bless: { new: true, Spell: { bookValue: 5, effect: bless, amount: 25, durationMs: 30000, mana: 30, range: 6, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }
+spell_lightning: { new: true, Spell: { bookValue: 20, effect: damage, amount: 40, mana: 30, range: 10, cooldownMs: 3000, castMs: 500 } }
+spell_freeze: { new: true, Spell: { bookValue: 50, effect: freeze, durationMs: 10000, mana: 40, range: 10, cooldownMs: 5000, castMs: 500, projectile: freeze_bolt, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
+spell_cloak: { new: true, Spell: { bookValue: 10, effect: cloak, durationMs: 30000, mana: 40, range: 6, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
 spell_spawnbat: { new: true, Spell: { effect: summon, summon: comm.bat, range: 2, cooldownMs: 2000, castMs: 500 } }
 spell_spawnstonegolem: { new: true, Spell: { effect: summon, summon: comm.troll, range: 2, cooldownMs: 5000, castMs: 1000 } }
 spell_spawndragon: { new: true, Spell: { effect: summon, summon: comm.dragon, range: 2, cooldownMs: 5000, castMs: 1000 } }
 spell_spawncarpet: { new: true, Spell: { effect: summon, summon: comm.carpet, range: 2, cooldownMs: 5000, castMs: 1000 } }
 spell_spawnjin: { new: true, Spell: { effect: summon, summon: comm.jinn, range: 2, cooldownMs: 5000, castMs: 1000 } }
-spell_firerain: { new: true, Spell: { effect: areaDamage, amount: 10, radius: 2, durationMs: 5000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too
-spell_whirlpool: { new: true, Spell: { effect: areaDamage, affects: enemy, amount: 30, radius: 2, durationMs: 6000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"
-spell_flamebolt: { new: true, Spell: { effect: damage, amount: 30, mana: 25, range: 10, cooldownMs: 2000, castMs: 500, projectile: flame_bolt } }
-spell_turntostone: { new: true, Spell: { effect: stone, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
-spell_berserk: { new: true, Spell: { effect: confuse, durationMs: 20000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
-spell_magicvision: { new: true, Spell: { effect: reveal, summon: comm.fog_revealer, mana: 40, range: 30, cooldownMs: 5000, castMs: 500 } }
+spell_firerain: { new: true, Spell: { bookValue: 50, effect: areaDamage, amount: 10, radius: 2, durationMs: 5000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too
+spell_whirlpool: { new: true, Spell: { bookValue: 20, effect: areaDamage, affects: enemy, amount: 30, radius: 2, durationMs: 6000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"
+spell_flamebolt: { new: true, Spell: { bookValue: 30, effect: damage, amount: 30, mana: 25, range: 10, cooldownMs: 2000, castMs: 500, projectile: flame_bolt } }
+spell_turntostone: { new: true, Spell: { bookValue: 10, effect: stone, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
+spell_berserk: { new: true, Spell: { bookValue: 30, effect: confuse, durationMs: 20000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
+spell_magicvision: { new: true, Spell: { bookValue: 5, effect: reveal, summon: comm.fog_revealer, mana: 40, range: 30, cooldownMs: 5000, castMs: 500 } }
 # Mastery (TECH-028; ReTzar's reading of the original, 0x473bf0): an Asian priest teaches an Asian peasant, monk, ninja or
 # priest of a lower level than its own one point of experience; range 1 and mana 10 (0x4721e0, 0x4723e0).
-spell_raiseexp: { new: true, Spell: { effect: experience, amount: 1, mana: 10, range: 1, cooldownMs: 3000, castMs: 500, targets: { civ: asia, classes: [peon, monk, ninja, priest] } } }
+spell_raiseexp: { new: true, Spell: { bookValue: 5, effect: experience, amount: 1, mana: 10, range: 1, cooldownMs: 3000, castMs: 500, targets: { civ: asia, classes: [peon, monk, ninja, priest] } } }
 # The curse and hypnosis (ReTzar's reading of the original, 0x4e5841, 0x473887): the curse halves the attack and takes the
 # defence of every enemy unit within the caster's sight of the point for 30 s; hypnosis hands the unit to the caster's
 # kingdom for 30 s. The curse leaves out what the original calls machines (0x2719: golems, siege engines, carpets, ships,
@@ -660,6 +677,7 @@ spell_raiseexp: { new: true, Spell: { effect: experience, amount: 1, mana: 10, r
 spell_curse:
   new: true
   Spell:
+    bookValue: 30
     effect: curse
     amount: 50
     durationMs: 30000
@@ -668,8 +686,8 @@ spell_curse:
     cooldownMs: 3000
     castMs: 500
     targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] }
-spell_hypnotize: { new: true, Spell: { effect: hypnotize, durationMs: 30000, mana: 40, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # books only
-raisedead: { new: true, Spell: { effect: raiseDead, summon: comm.skeleton, count: 5, radius: 3, mana: 40, range: 8, cooldownMs: 5000, castMs: 1000, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat, bat, mage, dwarf, ork, jinn, dragon] } } }   # targets: the corpses that rise
+spell_hypnotize: { new: true, Spell: { bookValue: 30, effect: hypnotize, durationMs: 30000, mana: 40, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # books only
+raisedead: { new: true, Spell: { bookValue: 10, effect: raiseDead, summon: comm.skeleton, count: 5, radius: 3, mana: 40, range: 8, cooldownMs: 5000, castMs: 1000, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat, bat, mage, dwarf, ork, jinn, dragon] } } }   # targets: the corpses that rise
 cloak: { new: true, Spell: { effect: cloak, target: self, durationMs: 60000, cooldownMs: 1000 } }                       # ninjas (ADR 0095)
 murder: { new: true, Spell: { effect: kill, mana: 50, range: 0, cooldownMs: 10000, castMs: 500, targets: { category: unit } } }   # ninjas; heroes are immune
 
@@ -726,7 +744,7 @@ comm.item_plusplus:
 # A soul item (ITEM-010; ReTzar's reading of the original, 0x473403, 0x465340): made by Soul Bind, bound to its target;
 # item_kill and item_berserk act on the bound unit and the item stays; it goes when the bound unit dies.
 comm.item_soul: { Item: {} }
-spell_soulbind: { new: true, Spell: { effect: soulBind, summon: comm.item_soul, affects: all, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # books only; range and mana from ReTzar (0x4721e0, 0x4723e0)
+spell_soulbind: { new: true, Spell: { bookValue: 10, effect: soulBind, summon: comm.item_soul, affects: all, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # books only; range and mana from ReTzar (0x4721e0, 0x4723e0)
 comm.resitem: { Item: { resource: gold, power: 100 } }                      # UNVERIFIED (UNK-25)
 
 # Magic vision's revealer (OBJECTS FOG_REVEALER, fog_range from the data) lasts a while (UNVERIFIED, UNK-26).

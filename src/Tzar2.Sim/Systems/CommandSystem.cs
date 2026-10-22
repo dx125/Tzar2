@@ -301,6 +301,12 @@ public sealed partial class CommandSystem : ISimSystem
             case CommandKind.RevealSelf:
                 return CombatMagicCommands.RevealSelf(world, command, entities);
 
+            case CommandKind.MarketBuy:
+                return MarketItems.Buy(world, command, entities);
+
+            case CommandKind.MarketSell:
+                return MarketItems.Sell(world, command, entities);
+
             case CommandKind.Trade:
                 return KingdomCommands.Trade(world, command, entities);
 

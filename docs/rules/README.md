@@ -113,11 +113,11 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 2 | 10 | 8 | 6 | 2 | 0 |
-| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 31 | 3 | 0 | 1 | 0 | 1 |
+| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
-| **All** | 336 | 208 | 78 | 22 | 17 | 9 | 2 |
+| **All** | 336 | 209 | 78 | 22 | 16 | 9 | 2 |
 
 ## Not done yet
 
@@ -181,10 +181,6 @@ Missing and partial rules.
 * **SHELL-021** (partial): The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game. *Instructions are missing.* (ADR 0187)
 * **SHELL-026**: The controls of the menu screens explain themselves in a hint line.
 * **SHELL-027**: Quitting, resigning and disconnecting ask for confirmation.
-
-### Technologies and upgrades
-
-* **TECH-030**: Jewelry (Asians) lets the markets sell and buy items, the same items in every market. *The markets' item menus (market_items, market_sell) are empty in MENU.INI and filled by the game; Tzar2 has no item trade.*
 
 ### Trade, tavern and loans
 

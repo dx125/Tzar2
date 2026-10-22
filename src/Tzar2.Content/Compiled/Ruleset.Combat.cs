@@ -173,7 +173,18 @@ public sealed partial class Ruleset
             .Add(c.CrusadeAnchorRadiusUnits).Add(c.BansheeSpell).Add(c.BansheeChance).Add(c.BansheeOutOf)
             .Add(c.TournamentTechnology).Add(c.TournamentEvery).Add(c.TournamentGrant).AddSpan<ushort>(c.TournamentPupils.AsSpan())
             .AddSpan<ushort>(c.MagicAttackers.AsSpan()).Add(c.SoulBerserkSpell)
-            .Add(c.ExperienceSpeeds.Length).Add(c.DummyDamagePerPoint).AddSpan<ushort>(c.LevelCapBuildings.AsSpan()).Add(c.LevelCapPerBuilding).Add(c.HeroNames.Length);
+            .Add(c.ExperienceSpeeds.Length).Add(c.DummyDamagePerPoint)
+            .Add(c.MarketTechnology).Add(c.MarketFirstMs).Add(c.MarketEveryMs).Add(c.MarketSize).Add(c.MarketBuyPercent)
+            .AddSpan<ushort>(c.MarketBookSpells.AsSpan()).Add(c.MarketOffers.Length).AddSpan<ushort>(c.LevelCapBuildings.AsSpan()).Add(c.LevelCapPerBuilding).Add(c.HeroNames.Length);
+        foreach (ImmutableArray<MarketVariant> kind in c.MarketOffers)
+        {
+            hasher.Add(kind.Length);
+            foreach (MarketVariant v in kind)
+            {
+                hasher.Add(v.Item).Add((byte)v.Effect).Add(v.Look).Add(v.Min).Add(v.Max).Add(v.Book);
+            }
+        }
+
         foreach (ExperienceSpeed speed in c.ExperienceSpeeds)
         {
             hasher.Add(speed.Technology).Add(speed.Percent);
@@ -200,7 +211,7 @@ public sealed partial class Ruleset
         {
             hasher.Add(Encoding.UTF8.GetBytes(s.Key)).Add((byte)s.Effect).Add((byte)s.Target).Add((byte)s.Affects).Add(s.ManaCost).Add(s.RangeUnits)
                 .Add(s.CooldownMs).Add(s.CastMs).Add(s.Amount).Add(s.DurationMs).Add(s.RadiusUnits).Add(s.Summon).Add(s.Projectile)
-                .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan());
+                .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan()).Add(s.BookValue);
         }
     }
 

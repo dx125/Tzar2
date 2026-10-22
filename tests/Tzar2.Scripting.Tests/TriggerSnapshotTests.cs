@@ -117,7 +117,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // and status effects grow (layout 13).
             // then: (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
             // then: (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
-            Assert.Equal("03426F895FDFD06F", d.Hashes[^1].ToString("X16"));
+            // then: (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
+            Assert.Equal("A5F361F1289087FD", d.Hashes[^1].ToString("X16"));
         }
     }
 

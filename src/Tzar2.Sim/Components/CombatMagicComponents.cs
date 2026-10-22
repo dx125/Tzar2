@@ -152,6 +152,26 @@ public struct InventorySlots
     private uint _item;
 }
 
+/// <summary>A market's items on offer (Jewelry, TECH-030): slots 0..Count-1 hold item entities, oldest first.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct MarketStock : IComponent
+{
+    /// <summary>The offers (<c>EntityId.Value</c>), first <see cref="Count"/> slots; the rest 0.</summary>
+    public InventorySlots Items;
+
+    /// <summary>Offers.</summary>
+    public byte Count;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved0;
+
+    /// <summary>Padding, always 0.</summary>
+    public short Reserved1;
+
+    /// <summary>The tick of the next offer.</summary>
+    public int NextTick;
+}
+
 /// <summary>The items a unit carries (GAME-10; ADR 0094): slots 0..Count-1 hold item entities.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Inventory : IComponent

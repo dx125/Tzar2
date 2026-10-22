@@ -223,6 +223,9 @@ public enum SimEventKind : ushort
 
     /// <summary>A spy took another kingdom's unit's look (Entity = spy, X = target index, Y = its owner, Arg = its type id; ADR 0184).</summary>
     Impersonated = 40,
+
+    /// <summary>A market offers a new item (TECH-030; Entity = item, X = market index, Arg = item type id).</summary>
+    ItemOffered = 54,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>

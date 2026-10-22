@@ -41,12 +41,13 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // (ADR 0250, 2026-10-22) the curse, hypnosis, the banshee and the Messiah as ReTzar reads them: a synthetic Messiah shifts type ids, status effects grow (hashed layout 13): the hashes only.
     // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage: the hashes.
     // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home: the hashes.
-    private const ulong GoldenFinalFullHash = 0x146FF9BEEF8872E7UL;
+    // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books: the hashes.
+    private const ulong GoldenFinalFullHash = 0x5723FEEA855D81FAUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look, craft jobs their variant (layout 11): the hashes only.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0xA15AA3CD9B080972UL;
+    private const ulong GoldenHashStream = 0xDEA1653307545450UL;
 
     private const int Ticks = 300;
 

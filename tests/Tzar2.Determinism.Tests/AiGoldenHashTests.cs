@@ -51,8 +51,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
     // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
     // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
-    private const ulong GoldenHashStream = 0x07DD3F93A0058F0DUL;
-    private const ulong GoldenFinalFullHash = 0xAF0D41B22A9EFBDDUL;
+    // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
+    private const ulong GoldenHashStream = 0x0D971602A90D6FBAUL;
+    private const ulong GoldenFinalFullHash = 0xE19855031067436EUL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

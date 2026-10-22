@@ -10,6 +10,7 @@ using Tzar2.Game.Ui;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Components;
+using Tzar2.Sim.Systems;
 using Xunit;
 
 namespace Tzar2.Game.Tests;
@@ -95,6 +96,47 @@ public sealed class CommandCardTests : IDisposable
         Assert.Single(card.Build(Context([peasant])));
         card.TurnPage(-5);
         Assert.Equal(8, card.Build(Context([peasant])).Count);
+    }
+
+    [Fact]
+    [Trait("Rule", "TECH-030")]
+    public void The_markets_menus_list_the_offers_with_their_price_and_the_carried_items_with_their_value()
+    {
+        World world = _session.Simulation.World;
+        EntityId footman = Own("euro.footman");
+        Position at = world.Positions.Get(footman);
+        EntityId market = world.PlaceStructure((ushort)Rules.Value.EntityTypeId("euro.market"), 0, (at.X / 2048) + 4, (at.Y / 2048) + 2);
+        world.Players[0].AddTechnology(Rules.Value.TechnologyId("te_jewelry"));
+        EntityId potion = world.Spawn((ushort)Rules.Value.EntityTypeId("comm.item_health"), 255, at.X + 2048, at.Y);
+        var pick = new CommandList();
+        pick.Add(CommandKind.PickItem, [footman], target: potion);
+        _session.Submit(pick);
+        for (int i = 0; i < 400 && (!world.Helds.Has(potion) || world.MarketStocks.Count == 0 || world.MarketStocks.Get(market).Count == 0); i++)
+        {
+            _session.Step(1);
+        }
+
+        _session.Step(1);
+        _cards.Menus["e_market"] = [new CardButton("market_items", 'B', CardAction.Submenu, "market_items", 1, "Buy items"), new CardButton("market_sell", 'S', CardAction.Submenu, "market_sell", 2, "Sell items")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+
+        Assert.Equal(1, world.MarketStocks.Count);
+        Assert.Contains(Context([market]).Frame.Helds.ToArray(), h => h.Holder == market.Value && h.Value > 0 && h.Slot >= 0);
+        CardSlot open = card.Build(Context([market]))[0]!.Value;
+        Assert.True(open.Enabled, open.Detail);
+        card.Press(Context([market]), open);
+        CardSlot offer = card.Build(Context([market]))[0]!.Value;
+        Assert.Equal(CardAction.MarketBuy, offer.Button.Action);
+        EntityId item = EntityId.FromValue(world.MarketStocks.Get(market).Items[0]);
+        Assert.EndsWith($"for {4 * MarketItems.Value(world, item)} gold", offer.Button.Tooltip, StringComparison.Ordinal);
+        Command buy = card.Press(Context([market]), offer).Commands![0];
+        Assert.Equal((CommandKind.MarketBuy, item), (buy.Kind, buy.Target));
+
+        card.Reset();
+        card.Press(Context([market]), card.Build(Context([market]))[1]!.Value);
+        CardSlot sale = card.Build(Context([market])).Select(x => x!.Value).Single(x => x.Button.Argument == potion.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(CardAction.MarketSell, sale.Button.Action);
+        Assert.EndsWith($"for {MarketItems.Value(world, potion)} gold", sale.Button.Tooltip, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -64,7 +64,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
     // (ADR 0257, 2026-10-22) the trade profit as the original computes it (load x tiles x 40 / (map side x 100), none under 12).
     // (ADR 0258, 2026-10-22) experience on the original's scale: a point per kill, none per damage, level n at 1 + n(n-1)/2, dummies a point per 75 up to level 8, academies +10 to the cap.
-    private const ulong GoldenRulesetHash = 0x19396203539B8F8FUL;
+    // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
+    private const ulong GoldenRulesetHash = 0xDE21B1E037156618UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -72,8 +73,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
     // (ADR 0191, 2026-10-22) technology effects as the original computes them (whole points, cost and time cuts): the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0x8516677ECF0DAC3BUL;
-    private const ulong GoldenFinalFullHash = 0x1F3769AB0AE36C7CUL;
+    private const ulong GoldenHashStream = 0xA96E987E34679ED6UL;
+    private const ulong GoldenFinalFullHash = 0xE89F4A51A99DDCB5UL;
 
     private const int Ticks = 1600;
 
