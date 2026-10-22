@@ -134,3 +134,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0190](0190-rules-read-from-the-originals-code-by-retzar.md) | Take the rules ReTzar read from the original's code, never ReTzar's code | Accepted | 2026-10-22 |
 | [0191](0191-technology-effects-as-the-original-computes-them.md) | Give technologies the effects the original's research handlers compute | Accepted | 2026-10-22 |
 | [0192](0192-gates-and-bridges-take-the-cells-of-their-pictures.md) | Gates and bridges take the cells of their pictures, either way | Accepted | 2026-10-22 |
+| [0244](0244-render-bench-in-the-client.md) | Measure S2 in the real client with a render bench that prints one line | Accepted | 2026-10-22 |

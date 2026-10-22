@@ -204,8 +204,8 @@ public sealed record ViewerArgs
                     result = result with { Fullscreen = true };
                     break;
                 case "--resolution":
-                    string? size = Value();
-                    string[] parts = (size ?? string.Empty).Split('x', 'X');
+                    string? resolution = Value();
+                    string[] parts = (resolution ?? string.Empty).Split('x', 'X');
                     if (parts.Length == 2
                         && int.TryParse(parts[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int w)
                         && int.TryParse(parts[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int h)
@@ -213,9 +213,9 @@ public sealed record ViewerArgs
                     {
                         result = result with { Resolution = (w, h) };
                     }
-                    else if (size is not null)
+                    else if (resolution is not null)
                     {
-                        errors.Add($"--resolution needs WIDTHxHEIGHT, not '{size}'");
+                        errors.Add($"--resolution needs WIDTHxHEIGHT, not '{resolution}'");
                     }
 
                     break;

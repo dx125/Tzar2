@@ -51,6 +51,18 @@ public class ClientLogicTests
     }
 
     [Fact]
+    public void The_render_bench_has_its_options()
+    {
+        ViewerArgs bench = ViewerArgs.Parse(["--bench-render", "--bench-seconds", "60", "--resolution", "1920x1080", "--fullscreen"]);
+        Assert.Equal((true, 60, (1920, 1080), true), (bench.BenchRender, bench.BenchSeconds, bench.Resolution, bench.Fullscreen));
+        Assert.Empty(bench.Errors);
+        ViewerArgs defaults = ViewerArgs.Parse(["--bench-render"]);
+        Assert.Equal((120, (2560, 1440), false), (defaults.BenchSeconds, defaults.Resolution, defaults.Fullscreen));
+        Assert.Equal(["--resolution needs WIDTHxHEIGHT, not 'big'"], ViewerArgs.Parse(["--resolution", "big"]).Errors);
+        Assert.Contains("--bench-render", ViewerArgs.Usage, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Sound_font_locator_takes_the_first_existing_candidate()
     {
         Assert.Equal("b", SoundFontLocator.Choose(p => p is "b" or "c", null, " ", "a", "b", "c"));
