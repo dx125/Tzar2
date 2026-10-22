@@ -342,7 +342,10 @@ public sealed partial class LegacyTriggerSystem
             case ReservedVariable.InHolder:
                 return _world.IsHeld(e) ? 1 : 0;
             case ReservedVariable.Cargo:
-                return _world.Workers.Has(e) ? _world.Workers.Get(e).CarryAmount : 0;
+                // A holder's cargo is what it holds ("SomeoneInGalleon: $cargo > 0", "HulksLoaded: $cargo >= 10"); a
+                // worker's is its load (ADR 0220, UNK-64 UNVERIFIED).
+                return _world.Holders.IndexOf(e) is >= 0 and var h ? _world.Holders.At(h).Count
+                    : _world.Workers.Has(e) ? _world.Workers.Get(e).CarryAmount : 0;
             case ReservedVariable.Race:
                 return _world.HasPlayer(identity.Owner) ? _world.Players[identity.Owner].Civilization + 1 : 0;
             case ReservedVariable.UnderFog:

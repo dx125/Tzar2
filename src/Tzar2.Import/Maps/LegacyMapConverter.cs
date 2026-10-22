@@ -320,7 +320,10 @@ public static class LegacyMapConverter
                     ushort w = _map.Tiles[(y * side) + x];
                     if ((w & 0x0400) != 0)
                     {
-                        cliffs[(y * side) + x] = 1;
+                        // UNK-81 candidate (off by default): the left column of a vertical run (shape 6; bit 4 is the
+                        // column in the piece, as the maps place it) is open ground.
+                        bool open = _options.Unk81HalfCliffs && ((w >> 5) & 15) == 6 && (w & 0x10) == 0;
+                        cliffs[(y * side) + x] = open ? (byte)0 : (byte)1;
                         continue;
                     }
 

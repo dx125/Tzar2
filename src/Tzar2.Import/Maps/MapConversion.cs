@@ -19,6 +19,14 @@ public sealed class LegacyConversionOptions
 
     /// <summary>Convert BMP user images to PNG (REQ-EDT-09). On by default.</summary>
     public bool ConvertImages { get; init; } = true;
+
+    /// <summary>
+    /// ⚠ UNVERIFIED candidate for UNK-81 (ADR 0220), off by default: a vertical run of cliff (piece shape 6) blocks only
+    /// its right-hand column, as if the rock of a 2 × 2 piece filled one half of it. Every other cliff tile blocks, as
+    /// before. Only for measuring the campaign map <c>rajba</c>, whose mage plateau no unit can reach while every cliff
+    /// tile blocks; an in-game check of the original settles it.
+    /// </summary>
+    public bool Unk81HalfCliffs { get; init; }
 }
 
 /// <summary>A user resource of a converted map (image, sound, music, AI script).</summary>

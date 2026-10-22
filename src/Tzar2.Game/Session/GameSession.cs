@@ -146,6 +146,10 @@ public sealed class GameSession : IDisposable
                         Civilization = p.Civilization,
                         Difficulty = SkirmishAi.ToAi(p.Difficulty),
                         Standby = p.Controller == ControllerKind.Human,
+
+                        // The resign flag is offered by the random map and multiplayer screens only (1.09, SHELL-013):
+                        // a scenario's computer kingdoms never resign (ADR 0220, UNVERIFIED).
+                        MayResign = setup.Scenario is null,
                     });
                 }
             }

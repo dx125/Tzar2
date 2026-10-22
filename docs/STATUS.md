@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-22 (handover)
+* **Last updated:** 2026-10-22 (main campaign completable, ADR 0220)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below). The product
   owner also operates the Windows PC with the original game for captures and local-only tests.
 * **`main`:** green on CI. Open PRs: none. Open issues: [#62](https://github.com/dx125/Tzar2/issues/62) (flaky
@@ -70,7 +70,7 @@ and it has not been re-run since the handover.
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
 | M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). Three play-tests by the owner are done and their findings fixed (2026-10-20/21). Open before M3 closes: the ledger of the original's rules ([rules/](rules/README.md)) and its missing rules (work queue 1), and a fourth play-test. |
-| M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **14 of 19 measured** (2026-10-20, editor acceptance test on the clean GOG install, scripted solver, ADR 0134; not completed: `alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`), tutorial 7 of 7 (reported). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
+| M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **18 of 19 measured, 19 of 19 with the UNK-81 candidate switch** (2026-10-22, `t2 campaign run --survey` on the clean GOG install, ADRs 0134, 0220; `rajba` needs `--unk81-half-cliffs` until the owner's check), tutorial **7 of 7 measured** (2026-10-22). Earlier counts were inflated by AI resignations (ADR 0220). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
 | M7 Windows beta | Not started | Installer, signing, crash reporting, min-spec tuning, closed beta. |
@@ -148,9 +148,9 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
 9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-10. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
-    solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
-    diagonal rocks) to reach 19/19.
+10. **Maintainer:** decode UNK-70…80, compare random maps with our generator. The main campaign is 18 of 19 (ADR 0220,
+    2026-10-22). `rajba` completes only with the UNVERIFIED cliff switch `--unk81-half-cliffs`. **Operator:** the
+    `rajba` cliff screenshot of ADR 0220 settles UNK-81. Then the switch becomes the rule or goes.
 11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
 12. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
@@ -215,6 +215,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — The main campaign is completable: 18 of 19, 19 with the UNK-81 switch (ADR 0220; work queue 10).**
+  The survey on `main` said 17 of 19, but AI resignation (DIP-009) had won or broken missions, so the real count was
+  15. Scenario kingdoms no longer resign, and scripted orders work for a beaten kingdom. Units aboard count where
+  their ship is, and a holder's `$cargo` is what it holds. In movement, allies are friends and units slide past corners
+  (goldens re-pinned). The solver gains tribute, item pickup, evacuations, sticky ferries and goal protection.
 
 * **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
   * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or

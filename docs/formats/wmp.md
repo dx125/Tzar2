@@ -208,12 +208,13 @@ Custom ambient sounds are editor objects of class `sound_object`. None of the 33
 | 10 | cliff: then bits 0–9 are **not** terrain (below) |
 | 11–15 | tree: 0 none, 1–31 = cell of the set's tree strip (1–3 stumps, 4–5 bushes, 6–10 pines, 11–31 deciduous; `[treename]` counts) |
 
-A **cliff tile** (bit 10) stores a cliff piece instead of terrain in bits 0–9. Pieces are 2 × 2 tiles: bit 0 is the
-column and bit 4 the row inside the piece, bits 1–3 a variant, bits 5–8 the shape (4 corner/end, 5 horizontal run,
-6 vertical run, up to 10), and bit 9 selects the second cliff graphic set. The terrain under a cliff is not stored;
-the converter takes it from the nearest non-cliff corner. Whether every cliff tile blocks movement, or only part of a
-piece, is ⚠ UNVERIFIED (UNK-81): in one campaign map, cliff rings fully enclose a goal area that is presumably
-reached on foot.
+A **cliff tile** (bit 10) stores a cliff piece instead of terrain in bits 0–9. Pieces are 2 × 2 tiles: bit 4 is the
+column and bit 0 the row inside the piece (in `rajba`, bit 4 alternates along x and bit 0 along y; ADR 0220), bits
+1–3 a variant, bits 5–8 the shape (4 corner/end, 5 horizontal run, 6 vertical run, up to 10), and bit 9 selects the
+second cliff graphic set. The terrain under a cliff is not stored; the converter takes it from the nearest non-cliff
+corner. Whether every cliff tile blocks movement, or only part of a piece, is ⚠ UNVERIFIED (UNK-81): in `rajba` the
+cliff rings fully enclose the mage plateau, which the quest says to reach. A candidate rule (vertical runs block only
+their right column) is behind the converter switch `Unk81HalfCliffs`, off by default (ADR 0220).
 
 When a = b the tile is solid. Otherwise its corner mask is `m = s + 1`, with bits TL = 1, TR = 2, BR = 4, BL = 8. A
 set bit means that corner is terrain `a`, a clear bit means `b`. This matches the transition-strip rows of

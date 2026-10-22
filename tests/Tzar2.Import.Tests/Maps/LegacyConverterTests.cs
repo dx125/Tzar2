@@ -102,6 +102,22 @@ public class LegacyConverterTests
     }
 
     [Fact]
+    public void The_unk81_switch_opens_the_left_column_of_vertical_cliff_runs_only()
+    {
+        // ADR 0220 (UNVERIFIED, off by default): a vertical run (shape 6) blocks its right-hand column; bit 4 is the
+        // column inside the piece.
+        SyntheticMap m = FullMap();
+        ushort vertical = 6 << 5 | 0x0400;
+        ushort[] tiles = m.Tiles!;
+        tiles[11] = tiles[19] = vertical;                                // left column
+        tiles[12] = tiles[20] = (ushort)(vertical | 0x10);               // right column
+        MapData strict = LegacyMapConverter.Convert(m.Build(), "v.wmp").Map!;
+        MapData half = LegacyMapConverter.Convert(m.Build(), "v.wmp", new LegacyConversionOptions { Unk81HalfCliffs = true }).Map!;
+        Assert.Equal([1, 1, 1, 1], new[] { strict.CliffTiles[11], strict.CliffTiles[12], strict.CliffTiles[19], strict.CliffTiles[20] });
+        Assert.Equal([0, 1, 0, 1], new[] { half.CliffTiles[11], half.CliffTiles[12], half.CliffTiles[19], half.CliffTiles[20] });
+    }
+
+    [Fact]
     public void Terrain_objects_and_kingdoms_convert()
     {
         MapConversion c = LegacyMapConverter.Convert(FullMap().Build(), "full.wmp");

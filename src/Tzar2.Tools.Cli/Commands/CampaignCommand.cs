@@ -28,6 +28,7 @@ internal static class CampaignCommand
         var options = new AutoplayOptions();
         string? input = null;
         string? report = null;
+        bool unk81 = false;
         string? package = Environment.GetEnvironmentVariable("TZAR2_PACKAGE") is { Length: > 0 } envPackage ? envPackage : null;
         bool demo = false;
         for (int i = 1; i < args.Length; i++)
@@ -58,6 +59,9 @@ internal static class CampaignCommand
                     break;
                 case "--no-cheats":
                     options = options with { CheatAssist = false };
+                    break;
+                case "--unk81-half-cliffs":
+                    unk81 = true;
                     break;
                 case "--report" when i + 1 < args.Length:
                     report = args[++i];
@@ -103,7 +107,7 @@ internal static class CampaignCommand
             }
 
             var problems = new List<string>();
-            sources.AddRange(LegacyCampaigns.Load(input, ruleset, problems));
+            sources.AddRange(LegacyCampaigns.Load(input, ruleset, problems, unk81));
             foreach (string problem in problems)
             {
                 stderr.WriteLine("t2 campaign run: " + problem);
@@ -186,7 +190,7 @@ internal static class CampaignCommand
 
     private static void PrintUsage(TextWriter output)
     {
-        output.WriteLine("Usage: t2 campaign run (--demo | <campaign.wcm|map.wmp|folder> [--package <base.t2pkg>]) [--from <map> | --only <map>] [--max-ticks <n>] [--god] [--survey] [--no-ai] [--no-cheats] [--report <file.json>]");
+        output.WriteLine("Usage: t2 campaign run (--demo | <campaign.wcm|map.wmp|folder> [--package <base.t2pkg>]) [--from <map> | --only <map>] [--max-ticks <n>] [--god] [--survey] [--no-ai] [--no-cheats] [--unk81-half-cliffs] [--report <file.json>]");
         output.WriteLine();
         output.WriteLine("Plays campaigns headless with the scripted solver and reports which missions complete.");
         output.WriteLine("Exit codes: 0 = every campaign completed, 1 = some did not, 2 = usage error.");

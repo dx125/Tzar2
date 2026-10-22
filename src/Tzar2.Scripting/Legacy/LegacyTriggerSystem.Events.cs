@@ -31,7 +31,9 @@ public sealed partial class LegacyTriggerSystem
             case ObjectInAreaEvent e:
             {
                 WorldRect area = Resolve(e.Area);
-                return !area.IsEmpty && Holds(e.Objects, x => !_world.IsHeld(x) && area.Contains(_world.Positions.Get(x)));
+                // A unit inside a holder is where its holder is (it moves with it): heroes aboard a ship are in the harbour
+                // the ship sails into (ADR 0220, UNVERIFIED).
+                return !area.IsEmpty && Holds(e.Objects, x => area.Contains(_world.Positions.Get(x)));
             }
 
             case ObjectDestroyedEvent { Objects: NamedObjects named }:

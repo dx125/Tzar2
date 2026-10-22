@@ -64,8 +64,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
     // (ADR 0191, 2026-10-22) technology effects as the original computes them (whole points, cost and time cuts): the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0x5160323D05FC2BACUL;
-    private const ulong GoldenFinalFullHash = 0xF9F7194383A108C8UL;
+    // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement (kingdoms 0 and 1 are allies here): the
+    // stream and the final hash.
+    private const ulong GoldenHashStream = 0xB5051C65879C4042UL;
+    private const ulong GoldenFinalFullHash = 0x46E4B0A50229D382UL;
 
     private const int Ticks = 1600;
 

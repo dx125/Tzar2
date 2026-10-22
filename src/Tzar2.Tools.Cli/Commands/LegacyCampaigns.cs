@@ -16,10 +16,10 @@ namespace Tzar2.Tools.Cli.Commands;
 internal static class LegacyCampaigns
 {
     /// <summary>The campaigns in a file or folder (sorted by path), with the conversion problems as messages.</summary>
-    public static List<ICampaignSource> Load(string path, Ruleset ruleset, List<string> problems)
+    public static List<ICampaignSource> Load(string path, Ruleset ruleset, List<string> problems, bool unk81HalfCliffs = false)
     {
         ArgumentNullException.ThrowIfNull(problems);
-        var options = new LegacyConversionOptions { Ruleset = ruleset, ConvertImages = false };
+        var options = new LegacyConversionOptions { Ruleset = ruleset, ConvertImages = false, Unk81HalfCliffs = unk81HalfCliffs };
         var files = new List<string>();
         if (Directory.Exists(path))
         {
