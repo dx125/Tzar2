@@ -51,7 +51,7 @@ steps:
   - chat: "${cheat}kingdom 2"
   - wait: 1
   - snapshot: {name: given, game: false}
-  - memscan: {name: hp-all, value: "${max_value}", width: 4}
+  - memscan: {name: hp-all, value: "${max_value}", width: 2}   # run 2: no 4-byte field; 2 bytes find 4-byte ones too
   - wait: 1
   - memscan: {name: hp-stable, from: hp-all, mode: unchanged}
   # Three knights, at tiles (19, 52), (19, 54) and (20, 53), east of the site.
@@ -84,8 +84,10 @@ steps:
   - key: "2"
   - key: R
   - click: [614, 464]               # repair the barracks
-  - move: [70, 400]
   - memsample: {name: hp-repair, scan: hp-hit, max_addresses: 256, interval_ms: 100, duration_s: 45}
-  - wait: 46
+  - click: [614, 464]               # select the barracks: its hit points in the selection view
+  - move: [70, 400]
+  - burst: {name: panel, count: 170, interval_ms: 250, region: [4, 165, 142, 140]}   # "HP/MAX", should the scan fail again
+  - wait: 2
   - snapshot: after
 analysis: [counter-rate]

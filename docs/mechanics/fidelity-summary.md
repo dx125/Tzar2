@@ -120,7 +120,9 @@ Batch J (2026-10-21, `-Batch J`) answers the owner's questions of that day: the 
 lumber mill, a barracks and a castle (`repair-*`, counter-rate), and how close another kingdom's spy must come to
 unmask a disguise at three fillings of the disguise meter (`spy-unmask*`, analysed by hand). Run 1
 (`capture-20261021-203846`, 6/6 trials, 77/77 images) measured the meter: one point per 1.25 s, 100 in the spy's own
-look, shown after its name. The repairs and the unmasking failed for reasons now fixed (STATUS log); run 2 is ready.
+look, shown after its name. The repairs and the unmasking failed for reasons now fixed (STATUS log). Run 2 (`capture-20261021-212542`)
+damaged all three buildings but found their hit points in no 4-byte field, and the spies failed on MP6; run 3 is
+ready.
 
 Still without a scenario before ADR 0113: XP gain, trade profit, technology magnitudes, repair, fire, capture, random maps (RE-10),
 AI experiments (RE-07), and the "one level darker" terrain patches (UNK-32).
