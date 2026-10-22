@@ -145,6 +145,7 @@ public sealed class CommandCardTests : IDisposable
 
     [Fact]
     [Trait("Rule", "ITEM-008")]
+    [Trait("Rule", "ITEM-016")]
     public void The_magic_workshop_makes_an_item_of_the_kind_and_gold_its_dialog_asks_for()
     {
         World world = _session.Simulation.World;
@@ -160,6 +161,16 @@ public sealed class CommandCardTests : IDisposable
         ushort book = (ushort)Rules.Value.EntityTypeId("comm.item_magic");
         Assert.Contains(book, card.CraftableItems(Context([workshop])));
         Assert.Equal(4 * card.CraftPricePerPower((ushort)Rules.Value.EntityTypeId("comm.item")), card.CraftPricePerPower(book));
+
+        // ITEM-016: each of the panel's kinds has several items: books of 20 spells, 5 potions, a sword, a bow and a shield.
+        IReadOnlyList<CraftOption> options = card.CraftOptions(Context([workshop]));
+        Assert.Equal((20, 5, 3), (options.Count(o => o.Kind == CraftKind.Book), options.Count(o => o.Kind == CraftKind.Potion), options.Count(o => o.Kind == CraftKind.Power)));
+        Assert.Contains(options, o => o.Kind == CraftKind.Book && o.Spell == Rules.Value.SpellId("spell_lightning"));
+        Assert.Equal([ItemEffect.Health, ItemEffect.Levels, ItemEffect.Mana, ItemEffect.Attack, ItemEffect.Defence], options.Where(o => o.Kind == CraftKind.Potion).Select(o => o.Effect));
+        CraftOption shield = options.Single(o => o.Kind == CraftKind.Power && o.Effect == ItemEffect.Defence);
+        Assert.Equal("item_shield1", shield.Look);
+        CommandList shieldCraft = card.Craft(Context([workshop]), shield.Item, 100, shield.Variant)!;
+        Assert.Equal((shield.Variant, (int)shield.Item), (shieldCraft[0].X, shieldCraft[0].Arg0));
 
         CommandList craft = card.Craft(Context([workshop]), book, 400)!;
         Assert.Equal((CommandKind.CraftItem, (int)book, 400), (craft[0].Kind, craft[0].Arg0, craft[0].Arg1));

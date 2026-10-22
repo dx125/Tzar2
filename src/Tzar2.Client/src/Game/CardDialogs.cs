@@ -419,7 +419,7 @@ public partial class CraftDialog : CardDialog
         {
             if (Current is { } item)
             {
-                Craft?.Invoke(item.Type, Gold);
+                Craft?.Invoke(item.Type, item.Variant, Gold);
             }
         });
         _power = Label(new Rect2I(176, 40, 60, 42));
@@ -427,8 +427,8 @@ public partial class CraftDialog : CardDialog
         Refresh();
     }
 
-    /// <summary>BUILD: the item type and the gold to spend.</summary>
-    public event Action<ushort, int>? Craft;
+    /// <summary>BUILD: the item type, its variant and the gold to spend.</summary>
+    public event Action<ushort, int, int>? Craft;
 
     private CraftChoice? Current => OfKind() is { Count: > 0 } kind ? kind[Math.Min(_index, kind.Count - 1)] : null;
 
@@ -462,7 +462,8 @@ public partial class CraftDialog : CardDialog
 
 /// <summary>An item the magic workshop makes, as its dialog shows it.</summary>
 /// <param name="Type">The item type.</param>
+/// <param name="Variant">Which of the type's variants (ITEM-016).</param>
 /// <param name="Kind">0 books, 1 potions, 2 weapons and shields (the panel's toggles).</param>
 /// <param name="Picture">Its picture: a book's spell, else the panel's items.bmp.</param>
 /// <param name="Name">Its name.</param>
-public readonly record struct CraftChoice(ushort Type, int Kind, Texture2D? Picture, string Name);
+public readonly record struct CraftChoice(ushort Type, int Variant, int Kind, Texture2D? Picture, string Name);

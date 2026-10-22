@@ -91,11 +91,13 @@ public class ItemTests
     [Trait("Rule", "ITEM-005")]
     public void Potions_heal_and_level_and_are_used_up()
     {
-        using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Item("comm.item_health", 5, 4), Item("comm.item_plusplus", 5, 6)), ruleset: Classic);
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Item("comm.item_health", 5, 4), Item("comm.item_health", 5, 6)), ruleset: Classic);
         Grant(d.World, 0, "te_learning");
         EntityId footman = OfType(d.World, "euro.footman").Single();
-        EntityId potion = OfType(d.World, "comm.item_health").Single();
-        EntityId plus = OfType(d.World, "comm.item_plusplus").Single();
+        EntityId potion = OfType(d.World, "comm.item_health").First();
+        EntityId plus = OfType(d.World, "comm.item_health").Last();
+        d.World.Items.Get(plus).Effect = ItemEffect.Levels; // a potion of one level (ITEM-016)
+        d.World.Items.Get(plus).Power = 1;
         Pick(d, footman, potion);
         Pick(d, footman, plus);
         d.World.Healths.Get(footman).Current = 10;
@@ -165,15 +167,73 @@ public class ItemTests
         using var d = new SimDriver(TestMap(24, 16, Structure("arab.magicworkshop", 0, 8, 4)), ruleset: Classic);
         EntityId workshop = OfType(d.World, "arab.magicworkshop").Single();
         int gold = d.World.Players[0].Resources[Resource("gold")];
-        d.Order(0, CommandKind.CraftItem, [workshop], arg0: Id("comm.item"), arg1: 320);
+        d.Order(0, CommandKind.CraftItem, [workshop], arg0: Id("comm.item_plusplus"), arg1: 320);
         d.Step();
         Assert.Equal(gold - 300, d.World.Players[0].Resources[Resource("gold")]); // 6 power x 50 gold (UNVERIFIED)
-        d.Order(0, CommandKind.CraftItem, [workshop], arg0: Id("comm.item"), arg1: 100);
+        d.Order(0, CommandKind.CraftItem, [workshop], arg0: Id("comm.item_plusplus"), arg1: 100);
         d.Step();
         Assert.Contains(CommandRejection.NoValidEntities, d.Rejections()); // busy
         d.RunUntil(() => d.Count(SimEventKind.ItemCrafted) > 0, 400);
-        EntityId item = OfType(d.World, "comm.item").Single();
-        Assert.Equal(6, d.World.Items.Get(item).Power);
+        EntityId item = OfType(d.World, "comm.item_plusplus").Single();
+        Assert.Equal((6, ItemEffect.Attack), (d.World.Items.Get(item).Power, d.World.Items.Get(item).Effect)); // a sword
+    }
+
+    [Fact]
+    [Trait("Rule", "ITEM-016")]
+    public void The_magic_workshop_makes_books_of_other_spells_potions_of_each_effect_and_shields()
+    {
+        using var d = new SimDriver(TestMap(32, 16, Structure("arab.magicworkshop", 0, 8, 4), Unit("euro.footman", 0, 20, 4), Unit("euro.footman", 1, 26, 4)), ruleset: Classic);
+        Grant(d.World, 0, "te_learning");
+        EntityId workshop = OfType(d.World, "arab.magicworkshop").Single();
+        EntityId footman = OfType(d.World, "euro.footman", 0).Single();
+        d.World.Players[0].Resources[Resource("gold")] = 5000;
+        EntityId enemy = OfType(d.World, "euro.footman", 1).Single();
+        d.Order(0, CommandKind.SetStance, [footman], arg0: (int)CombatStance.HoldFire); // no fight while the workshop works
+        d.Order(1, CommandKind.SetStance, [enemy], arg0: (int)CombatStance.HoldFire);
+        EntityId Make(string type, int variant, int gold)
+        {
+            int before = d.Count(SimEventKind.ItemCrafted);
+            d.Order(0, CommandKind.CraftItem, [workshop], variant, 0, arg0: Id(type), arg1: gold);
+            d.RunUntil(() => d.Count(SimEventKind.ItemCrafted) > before, 2000);
+            Assert.Equal(before + 1, d.Count(SimEventKind.ItemCrafted));
+            return Of(d, SimEventKind.ItemCrafted).Last().Entity;
+        }
+
+        // A shield (power items: sword, bow, shield): defence while carried, in its own look.
+        ItemDefinition power = Classic.EntityTypes[Id("comm.item_plusplus")].Traits.Item!;
+        EntityId shield = Make("comm.item_plusplus", 2, 250);
+        ItemState s = d.World.Items.Get(shield);
+        Assert.Equal((ItemEffect.Defence, 5, "item_shield1"), (s.Effect, s.Power, power.Looks[s.Look - 1]));
+        int defence = Sim.Systems.CombatStats.Defence(d.World, footman, d.World.TypeOf(footman));
+        int attack = Sim.Systems.CombatStats.Attack(d.World, footman, d.World.TypeOf(footman), d.World.TypeOf(footman).Traits.Armament!);
+        Pick(d, footman, shield);
+        Assert.Equal(defence + 5, Sim.Systems.CombatStats.Defence(d.World, footman, d.World.TypeOf(footman)));
+        Assert.Equal(attack, Sim.Systems.CombatStats.Attack(d.World, footman, d.World.TypeOf(footman), d.World.TypeOf(footman).Traits.Armament!));
+
+        // A potion of levels: 10 points of power, 5 per level (UNVERIFIED), so two levels.
+        EntityId potion = Make("comm.item_health", 1, 500);
+        Assert.Equal((ItemEffect.Levels, 2), (d.World.Items.Get(potion).Effect, d.World.Items.Get(potion).Power));
+        int hp = Hp(d, footman);
+        Pick(d, footman, potion);
+        d.Order(0, CommandKind.UseItem, [footman], arg0: 1);
+        d.Step();
+        Assert.False(d.World.Entities.IsAlive(potion));
+        Assert.Equal(2, d.World.Experiences.Get(footman).Level);
+        Assert.True(Hp(d, footman) >= hp); // no hit points from a potion of levels
+
+        // A book of Lightning, not Fire Rain: two uses for 400 gold.
+        EntityId book = Make("comm.item_magic", 1, 400);
+        Assert.Equal(Classic.SpellId("spell_lightning"), d.World.ItemSpell(book));
+        Assert.Equal(2, d.World.Items.Get(book).Charges);
+        Pick(d, footman, book);
+        d.Order(0, CommandKind.UseItem, [footman], target: enemy, arg0: 1);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) > 0, 400);
+        Assert.Equal(1, d.World.Items.Get(book).Charges);
+
+        // Out of range: a variant the type does not have.
+        d.Order(0, CommandKind.CraftItem, [workshop], 3, 0, arg0: Id("comm.item_plusplus"), arg1: 100);
+        d.Step();
+        Assert.Contains(CommandRejection.InvalidArgument, d.Rejections());
     }
 
     [Fact]
@@ -191,7 +251,7 @@ public class ItemTests
             return (job.Power, job.LeftMs);
         }
 
-        (int weaponPower, int weaponMs) = Craft("comm.item");
+        (int weaponPower, int weaponMs) = Craft("comm.item_plusplus");
         (int bookPower, int bookMs) = Craft("comm.item_magic");
         Assert.Equal(8, weaponPower); // 400 gold at 50 per point
         Assert.Equal(2, bookPower); // 400 gold at 200 per point

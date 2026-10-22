@@ -160,6 +160,21 @@ public sealed record PlayerProfile(string Name, ImmutableArray<CampaignProgress>
                         w.WriteString("type", i.TypeKey);
                         w.WriteNumber("power", i.Power);
                         w.WriteNumber("charges", i.Charges);
+                        if (i.SpellKey is not null)
+                        {
+                            w.WriteString("spell", i.SpellKey);
+                        }
+
+                        if (i.Effect != Content.Compiled.ItemEffect.Default)
+                        {
+                            w.WriteNumber("effect", (int)i.Effect);
+                        }
+
+                        if (i.Look != 0)
+                        {
+                            w.WriteNumber("look", i.Look);
+                        }
+
                         w.WriteEndObject();
                     }
 
@@ -234,7 +249,13 @@ public sealed record PlayerProfile(string Name, ImmutableArray<CampaignProgress>
                     var items = ImmutableArray.CreateBuilder<PersistentItem>();
                     foreach (JsonElement i in Elements(h, "items", Content.Compiled.Ruleset.InventoryLimit))
                     {
-                        items.Add(new PersistentItem(Text(i, "type", 256), Number(i, "power", 0, 1_000_000), Number(i, "charges", 0, 1_000_000)));
+                        items.Add(new PersistentItem(
+                            Text(i, "type", 256),
+                            Number(i, "power", 0, 1_000_000),
+                            Number(i, "charges", 0, 1_000_000),
+                            i.TryGetProperty("spell", out _) ? Text(i, "spell", 256) : null,
+                            i.TryGetProperty("effect", out _) ? (Content.Compiled.ItemEffect)Number(i, "effect", 0, (int)Content.Compiled.ItemEffect.Mana) : Content.Compiled.ItemEffect.Default,
+                            i.TryGetProperty("look", out _) ? Number(i, "look", 0, 255) : 0));
                     }
 
                     heroes.Add(new PersistentHero(

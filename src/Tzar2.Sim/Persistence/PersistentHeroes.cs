@@ -13,7 +13,10 @@ namespace Tzar2.Sim.Persistence;
 /// <param name="TypeKey">The item type's stable key (<c>comm.item_magic</c>).</param>
 /// <param name="Power">Its power (weapon attack, armor defence, resource amount).</param>
 /// <param name="Charges">Spell book charges left.</param>
-public sealed record PersistentItem(string TypeKey, int Power, int Charges);
+/// <param name="SpellKey">A book's own spell (ITEM-016), or null for its type's.</param>
+/// <param name="Effect">What it adds (ITEM-016).</param>
+/// <param name="Look">1 + its image in the type's looks, or 0.</param>
+public sealed record PersistentItem(string TypeKey, int Power, int Charges, string? SpellKey = null, ItemEffect Effect = ItemEffect.Default, int Look = 0);
 
 /// <summary>
 /// What a persistent unit carries from one campaign map to the next (editor "Persistent" flag: "the unit properties
@@ -34,7 +37,7 @@ public sealed record PersistentHero(string Name, string TypeKey, int Level, int 
 public static class PersistentHeroes
 {
     /// <summary>Format version of <see cref="Write"/>.</summary>
-    public const int FormatVersion = 1;
+    public const int FormatVersion = 2; // 2: items keep their own spell, effect and look (ITEM-016); 1 is still read
 
     /// <summary>Most records in one list (bounds untrusted input).</summary>
     public const int MaxRecords = 4096;
@@ -64,7 +67,7 @@ public static class PersistentHeroes
                 {
                     EntityId item = EntityId.FromValue(inventory.Items[k]);
                     ItemState s = world.Items.Get(item);
-                    items.Add(new PersistentItem(world.TypeOf(item).Key, s.Power, s.Charges));
+                    items.Add(new PersistentItem(world.TypeOf(item).Key, s.Power, s.Charges, s.Spell > 0 ? world.Ruleset.Spells[s.Spell - 1].Key : null, s.Effect, s.Look));
                 }
             }
 
@@ -115,6 +118,9 @@ public static class PersistentHeroes
             ref ItemState s = ref world.Items.Get(e);
             s.Power = Math.Clamp(item.Power, 0, 1_000_000);
             s.Charges = Math.Clamp(item.Charges, 0, 1_000_000);
+            s.Spell = item.SpellKey is { } spellKey && world.Ruleset.SpellId(spellKey) is >= 0 and var spell ? (ushort)(spell + 1) : (ushort)0;
+            s.Effect = item.Effect <= ItemEffect.Mana ? item.Effect : ItemEffect.Default;
+            s.Look = (byte)(item.Look >= 0 && item.Look <= world.Ruleset.EntityTypes[type].Traits.Item!.Looks.Length ? item.Look : 0);
             if (Systems.CombatMagicCommands.CanCarry(world, unit, e))
             {
                 world.PutInInventory(unit, e);
@@ -144,6 +150,9 @@ public static class PersistentHeroes
                 writer.WriteString(item.TypeKey);
                 writer.WriteVarInt64(item.Power);
                 writer.WriteVarInt64(item.Charges);
+                writer.WriteString(item.SpellKey ?? string.Empty);
+                writer.WriteVarInt64((long)item.Effect);
+                writer.WriteVarInt64(item.Look);
             }
         }
     }
@@ -153,7 +162,8 @@ public static class PersistentHeroes
     public static List<PersistentHero> Read(ReadOnlySpan<byte> data)
     {
         var reader = new BinaryBufferReader(data);
-        if (reader.ReadVarUInt64() != FormatVersion)
+        ulong version = reader.ReadVarUInt64();
+        if (version is not (1 or FormatVersion))
         {
             throw new InvalidDataException("Unsupported persistent hero format.");
         }
@@ -183,7 +193,14 @@ public static class PersistentHeroes
             var carried = ImmutableArray.CreateBuilder<PersistentItem>((int)items);
             for (ulong k = 0; k < items; k++)
             {
-                carried.Add(new PersistentItem(reader.ReadString(MaxNameBytes), Bounded(reader.ReadVarInt64(), 1_000_000), Bounded(reader.ReadVarInt64(), 1_000_000)));
+                var item = new PersistentItem(reader.ReadString(MaxNameBytes), Bounded(reader.ReadVarInt64(), 1_000_000), Bounded(reader.ReadVarInt64(), 1_000_000));
+                if (version >= 2)
+                {
+                    string spell = reader.ReadString(MaxNameBytes);
+                    item = item with { SpellKey = spell.Length > 0 ? spell : null, Effect = (ItemEffect)Bounded(reader.ReadVarInt64(), (int)ItemEffect.Mana), Look = Bounded(reader.ReadVarInt64(), 255) };
+                }
+
+                carried.Add(item);
             }
 
             list.Add(new PersistentHero(name, type, level, xp, hero, attack, defence, carried.MoveToImmutable()));

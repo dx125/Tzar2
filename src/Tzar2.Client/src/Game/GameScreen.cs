@@ -1412,11 +1412,11 @@ public partial class GameScreen : Node
                 OpenDialog(exchange);
                 break;
             case CardDialogKind.Craft:
-                var items = _card.CraftableItems(CardNow()).Select(CraftChoiceOf).ToList();
+                var items = _card.CraftOptions(CardNow()).Select(CraftChoiceOf).ToList();
                 var craft = new CraftDialog(_ui, items, _card.CraftPricePerPower, _card.CraftMaxPower);
-                craft.Craft += (type, gold) =>
+                craft.Craft += (type, variant, gold) =>
                 {
-                    Submit(_card.Craft(CardNow(), type, gold));
+                    Submit(_card.Craft(CardNow(), type, gold, variant));
                     CloseDialog();
                 };
                 OpenDialog(craft);
@@ -1439,19 +1439,38 @@ public partial class GameScreen : Node
     // An item of the magic workshop's dialog: its kind (books, potions, weapons and shields) and picture. A book shows its
     // spell's order picture (the owner's screenshot: Fire Rain's burning buildings), the others D_BUILD's items.bmp (bow,
     // book, shield, sword, potion; which weapon shows the bow and which the sword is ours, ⚠ UNVERIFIED).
-    private CraftChoice CraftChoiceOf(ushort type)
+    private CraftChoice CraftChoiceOf(CraftOption option)
     {
-        ItemDefinition? item = _rules.EntityTypes[type].Traits.Item;
-        int kind = item?.Kind switch { ItemKind.SpellBook => 0, ItemKind.Potion => 1, _ => 2 };
+        ItemDefinition? item = _rules.EntityTypes[option.Item].Traits.Item;
         Texture2D? picture = null;
-        if (item is { Kind: ItemKind.SpellBook, Spell: >= 0 } book && book.Spell < _rules.Spells.Count)
+        string name = _catalog.Type(option.Item).Name;
+        if (option.Kind == CraftKind.Book && option.Spell >= 0 && option.Spell < _rules.Spells.Count)
         {
-            picture = _ui.Cell("art/orders/buttons.t2img", _catalog.OrderImage(_rules.Spells[book.Spell].Key));
+            string spell = _rules.Spells[option.Spell].Key;
+            picture = _ui.Cell("art/orders/buttons.t2img", _catalog.OrderImage(spell));
+            name = _catalog.Text("spell_names", spell, spell);
+        }
+        else if (option.Look is { } look)
+        {
+            name = _catalog.Text("images", look, look);
         }
 
-        int cell = item?.Kind switch { ItemKind.SpellBook => 1, ItemKind.Armor => 2, ItemKind.Potion => 4, _ => _catalog.Type(type).Class == "item_plusplus" ? 3 : 0 };
+        // items.bmp: bow, book, shield, sword, potion; a power item by its look, else by what it adds.
+        int cell = option.Kind switch
+        {
+            CraftKind.Book => 1,
+            CraftKind.Potion => 4,
+            _ when option.Look?.StartsWith("item_bow", StringComparison.Ordinal) == true => 0,
+            _ when option.Effect == ItemEffect.Defence || item?.Kind == ItemKind.Armor => 2,
+            _ => 3,
+        };
+        if (option.Kind == CraftKind.Potion && option.Effect != ItemEffect.Default)
+        {
+            name += " (" + option.Effect.ToString().ToLowerInvariant() + ")";
+        }
+
         picture ??= _ui.Region("art/screens/d_build/items.t2img", new Rect2I(0, cell * 48, 48, 48));
-        return new CraftChoice(type, kind, picture, _catalog.Type(type).Name);
+        return new CraftChoice(option.Item, option.Variant, (int)option.Kind, picture, name);
     }
 
     // What the command card is built for now (Tzar2.Game.Ui.CommandCard, ADR 0182).

@@ -181,8 +181,9 @@ legacy:
   # Civilization prefixes of class names in BONUS.INI.
   bonusCivPrefixes: { e: euro, a: asia, r: arab }
   # GAME-10 (ADR 0094): item object classes -> item kind (OBJECTS/ITEM*.INI; armor shares the generic ITEM class, see
-  # comm.item_armor); who may carry each comes from its [enter] list.
-  items: { item: weapon, item_flag: flag, item_health: potion, item_magic: spellbook, item_plusplus: plusplus, item_scroll: scroll, item_soul: soul, resitem: resource }
+  # comm.item_armor); who may carry each comes from its [enter] list. ITEM_PLUSPLUS is the power item (ADR 0186): the
+  # original's maps give its swords and bows an attack and its shields a defence.
+  items: { item: weapon, item_flag: flag, item_health: potion, item_magic: spellbook, item_plusplus: weapon, item_scroll: scroll, item_soul: soul, resitem: resource }
   # GAME-11: objects outside the tables imported with their cost and fog_range (crusade anchor, magic vision's revealer).
   objects: [CrusadeAnchor, fog_revealer]
   # Hash of what the compiler reads from the tables of the clean reference build; another value means a modified
@@ -191,8 +192,9 @@ legacy:
   # clean GOG v1.10 EN install (2,916/2,916 files identical): the pin had not followed the importer since #24 (TIME in
   # 1.25-s units, #61, among others) because nobody ran the local-only tests. Re-pinned 2026-10-22: the importer gives
   # armaments the hit frame of their attack animation (WAR-014); the pin had drifted again before that (E716BE64DED8009D).
+  # Then (ITEM-016) ITEM_PLUSPLUS is imported as a weapon, the power item.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "399058E1915A63DA"
+  referenceDataHash: "42D6158654D385C7"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
@@ -400,7 +402,8 @@ legacy:
 ^asia.priest:
   ConvertsFrom: { classes: [monk], order: become_priest }   # TDD E.2: Asian priests from monks
 ^class.magicworkshop:
-  ItemCrafter: { items: [comm.item, comm.item_armor, comm.item_health, comm.item_magic, comm.item_plusplus] }   # manual ch. 5 §6.1
+  # manual ch. 5 §6.1; the panel's three kinds (STRINGS3 book_itm, potion_itm, power_itm), each with its items (ITEM-016)
+  ItemCrafter: { items: [comm.item_health, comm.item_magic, comm.item_plusplus] }
 ^Item: {}
 
 # ---- entries not in the unit/building tables ----------------------------------------------------------------------
@@ -535,6 +538,9 @@ combat:
     mountedunits: [mounted]
   # GAME-10 crafting (Arabian Magic Workshop: "better items cost more and take more time", manual ch. 5 §6).
   craftGoldPerPower: 50               # UNVERIFIED (UNK-25)
+  craftHealthPerPower: 10             # UNVERIFIED (UNK-25): a crafted potion's hit points per point of power
+  craftManaPerPower: 5                # UNVERIFIED (UNK-25): its mana per point
+  craftPowerPerLevel: 5               # UNVERIFIED (UNK-25): points per level of a potion of levels
   craftMsPerPower: 2000               # UNVERIFIED (UNK-25)
   craftMaxPower: 20                   # UNVERIFIED (UNK-25)
   craftBookCostPercent: 400           # patch 1.05: magic books in the magic workshop are four times more expensive
@@ -594,9 +600,49 @@ comm.item_armor:
   inherits: [^Item]
   Legacy: { class: item_armor, civ: comm }
   Item: { kind: armor, holders: [infantryunits, mountedunits], power: 2 }   # UNVERIFIED (UNK-25)
-comm.item_health: { Item: { health: 100 } }                                 # potion: UNVERIFIED (UNK-25)
-comm.item_magic: { Item: { spell: spell_firerain, charges: 3, cooldownMs: 10000 } }   # manual: the Fire Rain spell book; UNVERIFIED
-comm.item_plusplus: { Item: { level: 1 } }                                  # ⚠ HYPOTHESIS: one level
+# Potions (ADR 0186): a single potion adds health, levels, mana, attack or defence (the editor's list; the maps' potions:
+# red 46 hit points or 10 levels, green 3 or 4 levels, blue mana). Which colour the workshop gives attack and defence is
+# ours (UNVERIFIED).
+comm.item_health:
+  Item:
+    health: 100                                                             # potion: UNVERIFIED (UNK-25)
+    looks: [item_potion1, item_potion2, item_potion3, item_potion4, item_potion5, item_potion6, item_potion7, item_potion8]
+    crafts: [health item_potion2, levels item_potion3, mana item_potion4, attack item_potion6, defence item_potion5]
+# Books (ADR 0186): a map's book names its own spell; the workshop writes a book of any spell (which ones it offers is
+# UNVERIFIED; STRINGS3 goldreq: "This Magic Book requires at least %d amount of gold" is not modelled).
+comm.item_magic:
+  Item:
+    spell: spell_firerain                                                   # manual: the Fire Rain spell book
+    charges: 3                                                              # UNVERIFIED
+    cooldownMs: 10000                                                       # UNVERIFIED
+    looks: [item_book1, item_book2, item_book3]
+    crafts:
+      - spell_firerain
+      - spell_lightning
+      - spell_heal
+      - spell_spawncarpet
+      - spell_spawnbat
+      - spell_bless
+      - spell_freeze
+      - spell_berserk
+      - spell_cloak
+      - spell_spawnstonegolem
+      - spell_magicvision
+      - raisedead
+      - spell_turntostone
+      - spell_whirlpool
+      - spell_spawndragon
+      - spell_flamebolt
+      - spell_raiseexp
+      - spell_spawnjin
+      - spell_curse
+      - spell_hypnotize
+# Power items (ADR 0186): swords and bows add attack while carried, shields defence (the maps: attack 7-24, defence 5-50).
+comm.item_plusplus:
+  Item:
+    power: 3                                                                # UNVERIFIED (UNK-25)
+    looks: [item_sword, item_sword1, item_sword2, item_sword3, item_bow1, item_bow2, item_bow3, item_shield1, item_shield2, item_shield3]
+    crafts: [attack item_sword, attack item_bow1, defence item_shield1]
 comm.item_soul: { Item: { spell: murder, charges: 1 } }                     # item_kill, used once (UNVERIFIED); item_berserk is not implemented
 comm.resitem: { Item: { resource: gold, power: 100 } }                      # UNVERIFIED (UNK-25)
 

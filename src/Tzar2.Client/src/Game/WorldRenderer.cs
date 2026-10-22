@@ -336,7 +336,7 @@ public sealed class WorldRenderer : IDisposable
             }
             else
             {
-                sheet = _bank.Get(visual.Image(UnitAnim.Base));
+                sheet = (e.ItemLook is { } look ? _bank.Get(look) : null) ?? _bank.Get(visual.Image(UnitAnim.Base)); // an item's own look (ITEM-016)
                 if (sheet is not null)
                 {
                     variant = (int)(phase % (uint)Math.Max(1, sheet.Sheet.Directions));

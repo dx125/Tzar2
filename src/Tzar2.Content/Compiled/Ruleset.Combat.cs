@@ -164,7 +164,7 @@ public sealed partial class Ruleset
         hasher.Add(c.ExperiencePerDamagePercent).Add(c.ExperiencePerKill).Add(c.LevelBaseXp).Add(c.BaseLevelCap).Add(c.AttackPerLevel)
             .Add(c.DefenceHalvesPerLevel).Add(c.HeroLevel).Add(c.LeadershipTechnology).Add(c.LeadershipRadiusUnits).Add(c.LeadershipSharePercent)
             .Add(c.HonorTechnology).Add(c.HonorAttackPercent).Add(c.DummyMaxLevel).Add(c.ExitRadiusTiles).Add(c.CraftGoldPerPower)
-            .Add(c.CraftMsPerPower).Add(c.CraftMaxPower).Add(c.CraftBookCostPercent).Add(c.CraftBookTimePercent).Add(c.BribeCostPercent).Add(c.CrusadeAnchor).Add(c.Crusader).Add(c.CrusadeSize)
+            .Add(c.CraftMsPerPower).Add(c.CraftMaxPower).Add(c.CraftHealthPerPower).Add(c.CraftManaPerPower).Add(c.CraftPowerPerLevel).Add(c.CraftBookCostPercent).Add(c.CraftBookTimePercent).Add(c.BribeCostPercent).Add(c.CrusadeAnchor).Add(c.Crusader).Add(c.CrusadeSize)
             .Add(c.CrusadeAnchorRadiusUnits).Add(c.CrusadeCooldownMs).Add(c.HeroNames.Length);
         foreach (HeroNames h in c.HeroNames)
         {
@@ -209,7 +209,17 @@ public sealed partial class Ruleset
         if (t.Item is { } i)
         {
             hasher.Add((byte)i.Kind).AddSpan<ushort>(i.Holders.AsSpan()).Add(i.Power).Add(i.Resource).Add(i.Spell).Add(i.Charges).Add(i.CooldownMs)
-                .Add(i.NeedsMana).Add(i.PotionLevel).Add(i.PotionAttack).Add(i.PotionDefence).Add(i.PotionHealth).Add(i.PotionMana);
+                .Add(i.NeedsMana).Add(i.PotionLevel).Add(i.PotionAttack).Add(i.PotionDefence).Add(i.PotionHealth).Add(i.PotionMana).Add(i.Looks.Length);
+            foreach (string look in i.Looks)
+            {
+                hasher.Add(Encoding.UTF8.GetBytes(look));
+            }
+
+            hasher.Add(i.Crafts.Length);
+            foreach (CraftVariant v in i.Crafts)
+            {
+                hasher.Add((byte)v.Effect).Add(v.Spell).Add(v.Look);
+            }
         }
 
         hasher.AddSpan<ushort>(t.NotImpersonated.AsSpan());

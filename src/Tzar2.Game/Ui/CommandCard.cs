@@ -433,6 +433,28 @@ public sealed class CommandCard
         return [];
     }
 
+    /// <summary>
+    /// What the selected magic workshops make (ITEM-016): every variant of every item type, by the panel's three kinds
+    /// (books, potions, power items), in the rules' order; empty without one.
+    /// </summary>
+    public IReadOnlyList<CraftOption> CraftOptions(CardContext context)
+    {
+        var options = new List<CraftOption>();
+        foreach (ushort type in CraftableItems(context))
+        {
+            ItemDefinition item = _rules.EntityTypes[type].Traits.Item!;
+            CraftKind kind = item.Kind switch { ItemKind.SpellBook => CraftKind.Book, ItemKind.Potion or ItemKind.PlusPlus => CraftKind.Potion, _ => CraftKind.Power };
+            for (int v = 0; v < item.CraftVariantCount; v++)
+            {
+                CraftVariant what = item.CraftVariantAt(v);
+                int spell = what.Spell >= 0 ? what.Spell : item.Spell;
+                options.Add(new CraftOption(type, v, kind, what.Effect, spell, what.Look > 0 ? item.Looks[what.Look - 1] : null));
+            }
+        }
+
+        return options;
+    }
+
     /// <summary>The gold one point of an item's power costs (books cost more, 1.05).</summary>
     public int CraftPricePerPower(ushort itemType)
     {
@@ -443,8 +465,8 @@ public sealed class CommandCard
     /// <summary>The most power an item may be made with.</summary>
     public int CraftMaxPower => _rules.Combat.CraftMaxPower;
 
-    /// <summary>The item the dialog asked for, made by the first idle selected workshop; null without one.</summary>
-    public CommandList? Craft(CardContext context, ushort itemType, int gold)
+    /// <summary>The item the dialog asked for (its type and variant), made by the first idle selected workshop; null without one.</summary>
+    public CommandList? Craft(CardContext context, ushort itemType, int gold, int variant = 0)
     {
         ArgumentNullException.ThrowIfNull(context);
         Dictionary<uint, int> index = Index(context.Frame);
@@ -453,7 +475,7 @@ public sealed class CommandCard
             if (e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.Crafter is not null
                 && index.TryGetValue(e.Id.Value, out int i) && context.Frame.Entities[i].CraftPermille < 0)
             {
-                return List(CommandKind.CraftItem, [e.Id], arg0: itemType, arg1: gold);
+                return List(CommandKind.CraftItem, [e.Id], x: variant, arg0: itemType, arg1: gold);
             }
         }
 

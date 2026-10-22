@@ -43,8 +43,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (WAR-014, 2026-10-22) footmen and archers strike at the action row of their attack animations: the fights and
     // so the commands change.
     private const ulong GoldenCommandStream = 0x4A0864630CED5C22UL;
-    private const ulong GoldenHashStream = 0x1AB88C15C71B55F5UL;
-    private const ulong GoldenFinalFullHash = 0xBA6B3AC488C22D22UL;
+    // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
+    private const ulong GoldenHashStream = 0x0D5B275892BCB70AUL;
+    private const ulong GoldenFinalFullHash = 0x255CB7D3DEEF93E8UL;
 
     private const int Ticks = 9600;
 

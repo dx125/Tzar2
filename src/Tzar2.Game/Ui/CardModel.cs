@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Game.Input;
 using Tzar2.Game.Session;
@@ -131,6 +132,28 @@ public sealed record CardButton(string Order, char Hotkey, CardAction Action, st
 /// <param name="Icon">The icon asset (a resource's, or the hourglass).</param>
 /// <param name="Value">The amount or the time.</param>
 /// <param name="Short">Whether the kingdom has less of the resource than this (drawn red).</param>
+/// <summary>The magic workshop panel's three kinds (STRINGS3 <c>book_itm</c>, <c>potion_itm</c>, <c>power_itm</c>).</summary>
+public enum CraftKind
+{
+    /// <summary>Book items: spells.</summary>
+    Book = 0,
+
+    /// <summary>Potion items.</summary>
+    Potion = 1,
+
+    /// <summary>Power items: swords, bows and shields.</summary>
+    Power = 2,
+}
+
+/// <summary>An item a magic workshop makes (ITEM-016).</summary>
+/// <param name="Item">The item type.</param>
+/// <param name="Variant">Which of its variants (the craft command's X).</param>
+/// <param name="Kind">The panel's kind.</param>
+/// <param name="Effect">What it adds (<see cref="ItemEffect.Default"/>: its type's).</param>
+/// <param name="Spell">A book's spell id, or -1.</param>
+/// <param name="Look">Its image (IMAGES.INI name), or null for the type's own.</param>
+public readonly record struct CraftOption(ushort Item, int Variant, CraftKind Kind, ItemEffect Effect, int Spell, string? Look);
+
 public readonly record struct PriceItem(string Icon, string Value, bool Short = false);
 
 /// <summary>A command-card slot as the client draws it.</summary>

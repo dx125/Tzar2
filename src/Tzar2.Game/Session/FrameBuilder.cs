@@ -130,6 +130,12 @@ public static class FrameBuilder
                 e.InsideMax = world.HolderCapacity(id);
             }
 
+            if (world.Items.Count != 0 && world.Items.IndexOf(id) is >= 0 and var it && world.Items.At(it).Look is > 0 and var itemLook
+                && world.Ruleset.EntityTypes[identity.TypeId].Traits.Item is { } itemType && itemLook <= itemType.Looks.Length)
+            {
+                e.ItemLook = itemType.Looks[itemLook - 1];
+            }
+
             if (world.CraftJobs.IndexOf(id) is >= 0 and var cj)
             {
                 CraftJob job = world.CraftJobs.At(cj);

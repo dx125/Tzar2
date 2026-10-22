@@ -263,6 +263,8 @@ public class RulesetCompilerTests
     [InlineData("euro.footman: { RevealsShroud: { sight: 2000000 } }", "euro.footman.RevealsShroud.sight: 2000000 is too large")]
     [InlineData("euro.footman: { Armament: { range: 2000000 } }", "euro.footman.Armament.range: 2000000 is too large")]
     [InlineData("euro.footman: { Armament: { hitPermille: 1001 } }", "euro.footman.Armament.hitPermille must be 0..1000")]
+    [InlineData("comm.item_health: { Item: { crafts: [strength] } }", "'strength' is neither an effect")]
+    [InlineData("comm.item_health: { Item: { crafts: [health item_potion9] } }", "look 'item_potion9' is not in looks")]
     [InlineData("arab.jihad_warrior: { Mobile: { speed: 100000000 } }", "arab.jihad_warrior.Mobile.pixelsPerSecond: 1000000000 is too large")]
     [InlineData("euro.footman: { Collision: { radius: 100000000 } }", "euro.footman.Collision.radius: 100000000 is too large")]
     [InlineData("euro.footman: { Health: { max: 99999999999 } }", "is not an integer")]

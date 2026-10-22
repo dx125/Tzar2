@@ -407,12 +407,12 @@ internal static class CombatMagicCommands
                     return null;
                 case ItemKind.SpellBook:
                 case ItemKind.Soul:
-                    if (def.Spell < 0)
+                    if (world.ItemSpell(item) is not (>= 0 and var spell))
                     {
                         return CommandRejection.InvalidArgument;
                     }
 
-                    return StartCast(world, unit, (ushort)def.Spell, item, command.Target, command.X, command.Y);
+                    return StartCast(world, unit, (ushort)spell, item, command.Target, command.X, command.Y);
                 default:
                     return CommandRejection.InvalidArgument; // weapons, armor, flags work while carried
             }
@@ -421,28 +421,33 @@ internal static class CombatMagicCommands
         return CommandRejection.NoValidEntities;
     }
 
-    // A potion (or "plusplus"): levels, attack, defence, health, mana for good; the potion is used up.
+    // A potion (or "plusplus"): levels, attack, defence, health, mana for good; the potion is used up. A potion with its
+    // own effect (ITEM-016) adds its power to that one only.
     private static void Drink(World world, EntityId unit, EntityId item, ItemDefinition def)
     {
+        ItemState state = world.Items.Get(item);
+        int Of(ItemEffect effect, int typeValue) => state.Effect == ItemEffect.Default ? typeValue : state.Effect == effect ? state.Power : 0;
+        int levels = Of(ItemEffect.Levels, def.PotionLevel), attack = Of(ItemEffect.Attack, def.PotionAttack), defence = Of(ItemEffect.Defence, def.PotionDefence);
+        int health = Of(ItemEffect.Health, def.PotionHealth), mana = Of(ItemEffect.Mana, def.PotionMana);
         if (world.Experiences.IndexOf(unit) is >= 0 and var x)
         {
             ref Experience e = ref world.Experiences.At(x);
-            if (def.PotionLevel > 0)
+            if (levels > 0)
             {
-                int wanted = CombatStats.XpForLevel(world.Ruleset.Combat, e.Level + def.PotionLevel);
+                int wanted = CombatStats.XpForLevel(world.Ruleset.Combat, e.Level + Math.Min(levels, 1000));
                 e.PendingXp += Math.Max(0, wanted - e.Xp);
             }
 
-            e.BonusAttack = Math.Min(e.BonusAttack + def.PotionAttack, 100_000);
-            e.BonusDefence = Math.Min(e.BonusDefence + def.PotionDefence, 100_000);
+            e.BonusAttack = Math.Min(e.BonusAttack + attack, 100_000);
+            e.BonusDefence = Math.Min(e.BonusDefence + defence, 100_000);
         }
 
         ref Health h = ref world.Healths.Get(unit);
-        h.Current = (int)Math.Min((long)h.Current + def.PotionHealth, h.Max);
-        if (def.PotionMana > 0 && world.Manas.IndexOf(unit) is >= 0 and var m && world.TypeOf(unit).Traits.ManaPool is { } pool)
+        h.Current = (int)Math.Min((long)h.Current + health, h.Max);
+        if (mana > 0 && world.Manas.IndexOf(unit) is >= 0 and var m && world.TypeOf(unit).Traits.ManaPool is { } pool)
         {
             long max = (long)world.Stats.Apply(world.Identities.Get(unit).Owner, ModifierStat.ManaMax, world.Identities.Get(unit).TypeId, pool.Max) * 1000;
-            world.Manas.At(m).MilliMana = (int)Math.Min(world.Manas.At(m).MilliMana + ((long)def.PotionMana * 1000), max);
+            world.Manas.At(m).MilliMana = (int)Math.Min(world.Manas.At(m).MilliMana + ((long)mana * 1000), max);
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.ItemUsed, world.Identities.Get(unit).Owner, item, unit.Index, 0, world.Identities.Get(item).TypeId));
@@ -821,7 +826,8 @@ internal static class CombatMagicCommands
     {
         CombatSettings settings = world.Ruleset.Combat;
         int gold = GoldId(world);
-        if ((uint)command.Arg0 >= (uint)world.Ruleset.EntityTypes.Count || gold < 0 || command.Arg1 < settings.CraftGoldPerPower)
+        if ((uint)command.Arg0 >= (uint)world.Ruleset.EntityTypes.Count || gold < 0 || command.Arg1 < settings.CraftGoldPerPower
+            || world.Ruleset.EntityTypes[command.Arg0].Traits.Item is not { } made || (uint)command.X >= (uint)made.CraftVariantCount)
         {
             return CommandRejection.InvalidArgument;
         }
@@ -850,7 +856,7 @@ internal static class CombatMagicCommands
             }
 
             world.Players[command.Player].Resources[gold] -= price;
-            world.CraftJobs.Set(workshop, new CraftJob { ItemType = command.Arg0, Power = power, LeftMs = Math.Max(1, settings.CraftMs(book, power)) });
+            world.CraftJobs.Set(workshop, new CraftJob { ItemType = command.Arg0, Power = power, LeftMs = Math.Max(1, settings.CraftMs(book, power)), Variant = command.X });
             return null;
         }
 
