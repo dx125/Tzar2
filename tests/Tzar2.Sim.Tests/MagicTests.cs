@@ -32,9 +32,10 @@ public class MagicTests
         EntityId[] enemies = [.. OfType(d.World, "euro.footman")];
         d.Order(1, CommandKind.SetStance, enemies, arg0: (int)CombatStance.HoldFire);
         d.Order(0, CommandKind.SetStance, [mage], arg0: (int)CombatStance.HoldFire);
+        d.World.Healths.Get(enemies[0]).Current = d.World.Healths.Get(enemies[0]).Max = 400;
         Cast(d, mage, "spell_lightning", enemies[0]);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
-        Assert.Equal(70 - 40, Hp(d, enemies[0]));
+        Assert.Equal(400 - 150, Hp(d, enemies[0])); // 150 damage (ReTzar, 0x472e83)
         Assert.Equal(90 - 50, Mana(d, mage)); // 50 mana (ReTzar, 0x4723e0)
         Cast(d, mage, "spell_lightning", enemies[1]);
         d.Step();
@@ -44,9 +45,9 @@ public class MagicTests
         d.Step();
         Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections()); // 40 left
         d.World.Manas.Get(mage).MilliMana = 90_000;
-        Cast(d, mage, "spell_lightning", enemies[0]);
+        Cast(d, mage, "spell_lightning", enemies[1]);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
-        Assert.False(d.World.Entities.IsAlive(enemies[0]));
+        Assert.False(d.World.Entities.IsAlive(enemies[1]));
     }
 
     [Theory]
@@ -128,14 +129,14 @@ public class MagicTests
         d.World.Healths.Get(footman).Current = 20;
         Cast(d, priest, "spell_heal", footman);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
-        Assert.Equal(60, Hp(d, footman));
+        Assert.Equal(26, Hp(d, footman)); // +6 a cast (ReTzar, 0x472ff1)
 
         d.RunUntil(() => false, 60);
         Cast(d, priest, "spell_bless", footman);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
         d.Order(0, CommandKind.Attack, [footman], target: enemy);
         d.RunUntil(() => d.Count(SimEventKind.Damaged) > 0, 200);
-        Assert.Equal((9 * 125 / 100) - 2, Of(d, SimEventKind.Damaged).First().Arg); // +25% attack (UNVERIFIED)
+        Assert.Equal(9 + 5 - 2, Of(d, SimEventKind.Damaged).First().Arg); // +5 attack (ReTzar, 0x4e5809)
     }
 
     [Fact]
@@ -217,7 +218,7 @@ public class MagicTests
         Assert.Equal(70, Hp(d, enemies[0]));
 
         d.Order(0, CommandKind.DebugKill, [attacker]); // only the confused unit's own friend is left in its sight
-        d.RunUntil(() => !d.World.IsStone(enemies[0]), 400);
+        d.RunUntil(() => !d.World.IsStone(enemies[0]), 6200); // 120 to 300 s (ReTzar, 0x473913)
         d.World.Manas.Get(mage).MilliMana = 90_000; // berserk costs 70 (ReTzar)
         Cast(d, mage, "spell_berserk", enemies[0]);
         d.RunUntil(() => d.World.IsConfused(enemies[0]), 200);

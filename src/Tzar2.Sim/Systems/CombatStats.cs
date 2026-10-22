@@ -75,8 +75,8 @@ internal static class CombatStats
         return (int)Math.Min(sum, 1_000_000);
     }
 
-    // Blessing raises attack; a curse lowers attack by its percent and takes away all defence (GAME-11; ReTzar's reading
-    // of the original, 0x4e5841).
+    // Blessing adds points of attack; freezing and a curse take away all defence, and a curse lowers attack by its percent
+    // (GAME-11; ReTzar's reading of the original, 0x4e5809, 0x432590, 0x4e5841).
     private static long Status(World world, EntityId entity, long value, bool defence)
     {
         if (world.Statuses.Count == 0 || world.Statuses.IndexOf(entity) is not (>= 0 and var s))
@@ -87,9 +87,14 @@ internal static class CombatStats
         StatusEffects st = world.Statuses.At(s);
         int tick = world.Tick.Value;
         int percent = 100;
+        if (defence && st.FrozenUntil > tick)
+        {
+            return 0; // a frozen unit has no defence (ReTzar, 0x432590)
+        }
+
         if (!defence && st.BlessUntil > tick)
         {
-            percent += st.BlessPercent;
+            value += st.BlessPercent; // a blessing adds whole points of attack (ReTzar, 0x4e5809)
         }
 
         if (st.CurseUntil > tick)

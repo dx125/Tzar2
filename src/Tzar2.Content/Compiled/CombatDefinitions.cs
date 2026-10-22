@@ -324,6 +324,9 @@ public sealed record SpellDefinition(
     /// </summary>
     public int BookValue { get; init; }
 
+    /// <summary>When above <see cref="SpellDefinition.DurationMs"/>, a lasting effect lasts a random time up to this (stone: 120-300 s).</summary>
+    public int DurationMaxMs { get; init; }
+
     /// <summary>Whether <paramref name="typeId"/> may be affected (by its type).</summary>
     public bool AffectsType(ushort typeId) => TargetTypes.IsDefaultOrEmpty || TargetTypes.BinarySearch(typeId) >= 0;
 }
