@@ -219,7 +219,8 @@ the process decisions that have no ADR.
 * **2026-10-22 — Custom maps in multiplayer, time and score limits (ADRs 0233, 0234; SHELL-018).** The host
   chooses a random or a custom map; every peer finds the custom map by its content hash among its own (a player
   without it cannot be ready, and the loading barrier stops the match); slot k plays the map's kingdom k; USE MAP
-  SETTINGS keeps the map's own settings. The time and score limits are typed in. ADR 0234 proposes the Noise handshake
+  SETTINGS keeps the map's own settings. Lobbies have eight slots, opened or closed to fit the map. The time and
+  score limits are typed in; the game types stay Standard and Deathmatch. ADR 0234 proposes the Noise handshake
   for a public relay (owner questions in it).
 * **2026-10-22 — The multiplayer setup: colours, AI scripts and every map and game option (ADR 0232; SHELL-016, SHELL-017, SHELL-018).**
   Each player picks his colour and the AI script of his kingdom's computer player (AI.INI's strategies); the host

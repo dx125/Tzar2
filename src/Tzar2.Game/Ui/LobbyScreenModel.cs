@@ -136,6 +136,12 @@ public sealed class LobbyScreenModel
     private static readonly MapTerrainSet[] Terrains = Enum.GetValues<MapTerrainSet>();
     private static readonly VictoryCondition[] Victories = [VictoryCondition.Standard, VictoryCondition.DestroyCastles, VictoryCondition.TimeLimit, VictoryCondition.ScoreLimit];
 
+    /// <summary>Slots of a lobby: the most kingdoms a map has (the original's eight colours).</summary>
+    public const int LobbySlots = 8;
+
+    /// <summary>Slots open when a lobby is created; the others start closed.</summary>
+    public const int DefaultOpenSlots = 4;
+
     /// <summary>Longest time limit in minutes (<see cref="MatchSettings"/> bounds).</summary>
     public const int MaxTimeLimit = 10_000;
 
@@ -234,6 +240,68 @@ public sealed class LobbyScreenModel
     }
 
     private static MapFeatures Feature(MapFeatures features, MapFeatures flag, bool on) => on ? features | flag : features & ~flag;
+
+    /// <summary>
+    /// The slots to open or close for <paramref name="next"/>: a custom map opens closed slots up to its kingdoms and
+    /// closes the open ones beyond; a random map closes open slots beyond the most kingdoms its size takes. Taken slots
+    /// are never touched (a player beyond the map's kingdoms is shown in <see cref="MapNotice"/>).
+    /// </summary>
+    public IReadOnlyList<(byte Slot, SlotKind Kind)> SlotChanges(MatchSettings next)
+    {
+        ArgumentNullException.ThrowIfNull(next);
+        int kingdoms;
+        bool open;
+        if (next.Map == MapSourceKind.CustomMap)
+        {
+            CustomMapEntry? map = Maps.FirstOrDefault(m => m.Hash == next.CustomMapHash);
+            if (map is null)
+            {
+                return [];
+            }
+
+            kingdoms = map.Kingdoms;
+            open = true;
+        }
+        else if (next.Map == MapSourceKind.RandomMap)
+        {
+            kingdoms = MapGenerator.MaxPlayersFor(next.MapSize);
+            open = false;
+        }
+        else
+        {
+            return [];
+        }
+
+        var changes = new List<(byte, SlotKind)>();
+        foreach (LobbySlotView s in _lobby.Slots)
+        {
+            if (s.Slot < kingdoms && open && s.Kind == SlotKind.Closed)
+            {
+                changes.Add((s.Slot, SlotKind.Open));
+            }
+            else if (s.Slot >= kingdoms && s.Kind == SlotKind.Open)
+            {
+                changes.Add((s.Slot, SlotKind.Closed));
+            }
+        }
+
+        return changes;
+    }
+
+    /// <summary>
+    /// Chooses item (or value) <paramref name="value"/> of <paramref name="key"/> as host: sends the new settings and
+    /// opens or closes slots to fit the map (<see cref="SlotChanges"/>). What the settings panel calls.
+    /// </summary>
+    public void Choose(NetworkMatch match, LobbySettingKey key, int value)
+    {
+        ArgumentNullException.ThrowIfNull(match);
+        MatchSettings next = Apply(key, value);
+        match.SetSettings(next);
+        foreach ((byte slot, SlotKind kind) in SlotChanges(next))
+        {
+            match.SetSlot(slot, kind);
+        }
+    }
 
     // Choosing a custom map takes its own No Fog and Explore as the starting point (they stay changeable).
     private static MatchSettings WithMap(MatchSettings s, CustomMapEntry map) => s with

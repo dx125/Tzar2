@@ -6,6 +6,7 @@ using System.IO;
 using Godot;
 using Tzar2.Game.Multiplayer;
 using Tzar2.Game.Session;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 
@@ -44,7 +45,7 @@ public partial class GameApp
         menu.CreateInternet += s =>
         {
             (string host, int port) = s.Endpoint();
-            OpenLobby(() => NetworkMatch.Create(NetworkOptions(host, port), $"{s.Name}'s game", 4, isPublic: true));
+            OpenLobby(() => NetworkMatch.Create(NetworkOptions(host, port), $"{s.Name}'s game", LobbyScreenModel.LobbySlots, isPublic: true, LobbyScreenModel.DefaultOpenSlots));
         };
         menu.JoinCode += (s, code) =>
         {
@@ -55,7 +56,7 @@ public partial class GameApp
         menu.HostLan += s =>
         {
             _lanHost = LanHost.Start(desyncDirectory: UserPath("desync"));
-            OpenLobby(() => NetworkMatch.Create(NetworkOptions("127.0.0.1", _lanHost.Port), $"{s.Name}'s LAN game", 4, isPublic: true));
+            OpenLobby(() => NetworkMatch.Create(NetworkOptions("127.0.0.1", _lanHost.Port), $"{s.Name}'s LAN game", LobbyScreenModel.LobbySlots, isPublic: true, LobbyScreenModel.DefaultOpenSlots));
         };
         menu.Reconnect += (_, ticket) => OpenLobby(() => NetworkMatch.Rejoin(NetworkOptions(ticket.Host, ticket.Port), ticket));
         menu.Replays += ShowReplays;

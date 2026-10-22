@@ -27,7 +27,10 @@ maps; community maps are files that players exchange.
   same message and the loading barrier stops the match. The map hash and the scenario are also in the fingerprint
   (ADR 0162).
 * **Kingdoms:** lobby slot k plays the map's kingdom k. An open or closed slot's kingdom stays on the map, played by
-  nobody (`ControllerKind.Passive`). A player or computer in a slot beyond the map's kingdoms blocks START. The map's
+  nobody (`ControllerKind.Passive`). A player or computer in a slot beyond the map's kingdoms blocks START. Lobbies
+  have eight slots, four open at first. Choosing a map opens closed slots up to its kingdoms and closes open ones
+  beyond, and a random map closes those beyond what its size takes; taken slots are never changed
+  (`LobbyScreenModel.SlotChanges`, `Choose`). The map's
   civilization stands until a player chooses another (SHELL-016). The map's Rescue kingdom is added as in single player
   (ADR 0133).
 * **Settings:** `ScenarioMatch.Multiplayer` builds the match like single player's custom map, with the lobby's

@@ -27,8 +27,8 @@ public sealed class MultiplayerCustomMapTests
         var b = new ScenarioBuilder { Width = 64, Height = 48 };
         for (int k = 0; k < kingdoms; k++)
         {
-            b.Structure("euro.castle", k, 6 + (k * 20), 8 + (k * 10));
-            b.Unit("euro.peon", k, 10 + (k * 20), 12 + (k * 10));
+            b.Structure("euro.castle", k, 6 + (k % 3 * 20), 6 + (k / 3 * 20) + (k % 3 * 6));
+            b.Unit("euro.peon", k, 10 + (k % 3 * 20), 10 + (k / 3 * 20) + (k % 3 * 6));
         }
 
         ScenarioData plain = b.Scenario();
@@ -92,6 +92,43 @@ public sealed class MultiplayerCustomMapTests
         var two = new LobbyScreenModel(Lobby(custom with { CustomMapId = "two", CustomMapHash = maps[1].Hash }, third: SlotKind.Computer), Scripts, maps);
         Assert.NotNull(two.MapNotice);
         Assert.False(two.CanStart);
+    }
+
+    [Fact]
+    [Trait("Rule", "SHELL-018")]
+    public void Lobbies_have_eight_slots_and_the_map_opens_or_closes_them_to_its_kingdoms()
+    {
+        CustomMapEntry five = Map("five", kingdoms: 5);
+        using var h = new MultiplayerHarness { CustomMaps = [five, Map("two", kingdoms: 2)] };
+        NetworkMatch host = NetworkMatch.Create(h.Options("host"), "test", LobbyScreenModel.LobbySlots, isPublic: true, LobbyScreenModel.DefaultOpenSlots);
+        h.Matches.Add(host);
+        h.Pump(() => host.Lobby is { } l && l.Slots.Count(s => s.Kind == SlotKind.Closed) == 4, what: "the extra slots closed");
+        Assert.Equal([SlotKind.Human, SlotKind.Open, SlotKind.Open, SlotKind.Open, SlotKind.Closed, SlotKind.Closed, SlotKind.Closed, SlotKind.Closed], host.Lobby!.Slots.Select(s => s.Kind));
+        NetworkMatch guest = h.Join(host.Code!);
+        h.Pump(() => host.Lobby!.Slots[1].Kind == SlotKind.Human, what: "join");
+        host.SetSlot(2, SlotKind.Computer);
+        h.Pump(() => host.Lobby!.Slots[2].Kind == SlotKind.Computer, what: "computer");
+
+        // The five-kingdom map opens slot 4.
+        new LobbyScreenModel(host.Lobby!, host.AiScripts, host.CustomMaps).Choose(host, LobbySettingKey.MapSource, 1);
+        h.Pump(() => host.Lobby!.Slots[4].Kind == SlotKind.Open && host.Lobby.Settings.Map == MapSourceKind.CustomMap, what: "five kingdoms");
+        Assert.Equal(5, host.Lobby!.Slots.Count(s => s.Kind != SlotKind.Closed));
+
+        // The two-kingdom map closes the open slots beyond, but never a taken one (the computer in slot 3 is reported).
+        var model = new LobbyScreenModel(host.Lobby, host.AiScripts, host.CustomMaps);
+        Assert.Equal([(3, SlotKind.Closed), (4, SlotKind.Closed)], model.SlotChanges(model.Apply(LobbySettingKey.CustomMap, 1)).Select(c => ((int)c.Slot, c.Kind)));
+        model.Choose(host, LobbySettingKey.CustomMap, 1);
+        h.Pump(() => host.Lobby!.Slots[4].Kind == SlotKind.Closed && host.Lobby.Slots[3].Kind == SlotKind.Closed, what: "two kingdoms");
+        Assert.Equal(SlotKind.Computer, host.Lobby!.Slots[2].Kind);
+        Assert.NotNull(new LobbyScreenModel(host.Lobby, host.AiScripts, host.CustomMaps).MapNotice);
+
+        // A tiny random map takes four kingdoms: open slots beyond them close.
+        var six = new LobbyView("ABCDEF", "test", new MatchSettings(), [.. Enumerable.Range(0, 6).Select(i => new LobbySlotView(
+            (byte)i, i == 0 ? SlotKind.Human : SlotKind.Open, string.Empty, false, true, 0, SlotChoice.Default, IsHost: i == 0, IsLocal: i == 0))], true);
+        var random = new LobbyScreenModel(six, Scripts);
+        Assert.Empty(random.SlotChanges(new MatchSettings { MapSize = Content.MapGen.RandomMapSize.Large }));
+        Assert.Equal([(4, SlotKind.Closed), (5, SlotKind.Closed)], random.SlotChanges(random.Apply(LobbySettingKey.MapSize, (int)Content.MapGen.RandomMapSize.Tiny)).Select(c => ((int)c.Slot, c.Kind)));
+        _ = guest;
     }
 
     [Fact]
