@@ -1,0 +1,135 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: unit-spacing
+title: How close units stand, pass each other and crowd a fight (WORLD-015, UNK-11)
+resolves: [UNK-11]
+priority: 3
+minutes: 3
+default: false                      # batch K
+experimental: true
+description: |
+  The owner's fourth play-test (2026-10-21): our units stand on one another (WORLD-015). The original's units have a
+  25 x 25 selection box and a 32 x 32 object box, but how close they really come is not known: our engine keeps them
+  16 px apart at rest and lets them come within 8 px when walking or fighting. In MP2's bottom-left corner (tile (x, y)
+  at screen (150 + 32x, 32y - 1280), ADR 0171), on the open rows 51-56:
+  1. Nine footmen spawned two tiles apart (tiles 10-14, 52-56, group 1) are sent together to one point, tile (22, 54),
+     and then to tile (16, 54). The bursts at rest show how they stand: the distances between neighbours, and whether
+     two ever share a place.
+  2. Nine more footmen (tiles 22-26, 52-56, group 2) and group 1 swap sides at once, so the two columns meet head on.
+     The burst shows how close they pass, and whether they jam.
+  3. A knight spawned at tile (18, 54) is given to kingdom 2 and group 1 attacks it (group 2 joins, being idle and near).
+     The burst shows how the attackers crowd one target: one ring at melee reach, or bodies over bodies.
+  The positions are read off the bursts by hand (the sprites' feet), within about 2 px.
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: footmen
+    vars: {unit: footman, n: "9"}
+steps:
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
+  - wait: 1
+  - snapshot: view
+  # Group 1: nine footmen two tiles apart, tiles (10, 52) ... (14, 56).
+  - move: [470, 384]
+  - chat: "${cheat}spawn footman"
+  - click: [470, 384]
+  - move: [534, 384]
+  - chat: "${cheat}spawn footman"
+  - click: [534, 384]
+  - move: [598, 384]
+  - chat: "${cheat}spawn footman"
+  - click: [598, 384]
+  - move: [470, 448]
+  - chat: "${cheat}spawn footman"
+  - click: [470, 448]
+  - move: [534, 448]
+  - chat: "${cheat}spawn footman"
+  - click: [534, 448]
+  - move: [598, 448]
+  - chat: "${cheat}spawn footman"
+  - click: [598, 448]
+  - move: [470, 512]
+  - chat: "${cheat}spawn footman"
+  - click: [470, 512]
+  - move: [534, 512]
+  - chat: "${cheat}spawn footman"
+  - click: [534, 512]
+  - move: [598, 512]
+  - chat: "${cheat}spawn footman"
+  - click: [598, 512]
+  - snapshot: {name: spawned-1, game: false}
+  - drag: {from: [440, 350], to: [630, 545]}
+  - key: {key: "1", ctrl: true}     # group 1
+  - wait: 0.5
+  # 1. At rest: all nine sent to one point, tile (22, 54), then to tile (16, 54).
+  - click: {at: [854, 448], button: right}
+  - move: [70, 400]                 # the pointer out of the view
+  - wait: 8
+  - burst: {name: rest-a, count: 4, interval_ms: 500, region: [680, 320, 340, 260]}
+  - click: {at: [662, 448], button: right}
+  - move: [70, 400]
+  - wait: 7
+  - burst: {name: rest-b, count: 4, interval_ms: 500, region: [490, 320, 340, 260]}
+  # Group 2: nine more footmen, tiles (22, 52) ... (26, 56).
+  - move: [854, 384]
+  - chat: "${cheat}spawn footman"
+  - click: [854, 384]
+  - move: [918, 384]
+  - chat: "${cheat}spawn footman"
+  - click: [918, 384]
+  - move: [982, 384]
+  - chat: "${cheat}spawn footman"
+  - click: [982, 384]
+  - move: [854, 448]
+  - chat: "${cheat}spawn footman"
+  - click: [854, 448]
+  - move: [918, 448]
+  - chat: "${cheat}spawn footman"
+  - click: [918, 448]
+  - move: [982, 448]
+  - chat: "${cheat}spawn footman"
+  - click: [982, 448]
+  - move: [854, 512]
+  - chat: "${cheat}spawn footman"
+  - click: [854, 512]
+  - move: [918, 512]
+  - chat: "${cheat}spawn footman"
+  - click: [918, 512]
+  - move: [982, 512]
+  - chat: "${cheat}spawn footman"
+  - click: [982, 512]
+  - drag: {from: [825, 350], to: [1000, 545]}
+  - key: {key: "2", ctrl: true}     # group 2
+  - wait: 0.5
+  # 2. Head on: group 1 to tile (25, 54), group 2 to tile (10, 54), at once.
+  - key: "1"
+  - click: {at: [950, 448], button: right}
+  - key: "2"
+  - click: {at: [470, 448], button: right}
+  - move: [70, 400]
+  - burst: {name: crossing, count: 36, interval_ms: 250, region: [420, 320, 600, 260]}
+  - wait: 4
+  - snapshot: crossed
+  # 3. A crowd around one target: a knight at tile (18, 54), given to kingdom 2, attacked by group 1.
+  - move: [726, 448]
+  - chat: "${cheat}spawn knight"
+  - click: [726, 448]               # place
+  - wait: 0.5
+  - click: [726, 448]               # select
+  - chat: "${cheat}kingdom 2"
+  - wait: 0.5
+  - key: "1"
+  - click: {at: [726, 448], button: right}
+  - move: [70, 400]
+  - burst: {name: fight, count: 24, interval_ms: 250, region: [560, 320, 340, 260]}
+  - wait: 3
+  - snapshot: end
