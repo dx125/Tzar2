@@ -7,6 +7,7 @@ using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
 using Tzar2.Sim.Systems;
 using Xunit;
+using static Tzar2.Sim.Tests.CombatMagicFixtures;
 using static Tzar2.Sim.Tests.GameplayFixtures;
 
 namespace Tzar2.Sim.Tests;
@@ -17,6 +18,23 @@ namespace Tzar2.Sim.Tests;
 /// </summary>
 public class EconomyM3Tests
 {
+    [Fact]
+    [Trait("Rule", "TECH-010")]
+    public void Ore_flotation_makes_a_mine_lose_half_of_each_load()
+    {
+        // ReTzar's reading of the original: the mine loses desired x 50 / 100 of a full load.
+        using var d = new SimDriver(TestMap(40, 20, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 14, 6), Structure("comm.res_gold", MapObject.Nature, 18, 6)), ruleset: Classic);
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        EntityId mine = OfType(d.World, "comm.res_gold").Single();
+        Grant(d.World, 0, "te_orefloatation");
+        d.Step();
+        int before = d.World.ResourceStocks.Get(mine).Amount;
+        d.Order(0, CommandKind.Harvest, [peon], target: mine);
+        d.RunUntil(() => d.World.Workers.Get(peon).CarryAmount >= 10, 3000);
+        Assert.Equal(10, d.World.Workers.Get(peon).CarryAmount);
+        Assert.Equal(before - 5, d.World.ResourceStocks.Get(mine).Amount);
+    }
+
     [Fact]
     [Trait("Rule", "TECH-010")]
     [Trait("Rule", "TECH-006")]

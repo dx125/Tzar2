@@ -51,6 +51,7 @@ so they are gains that sum to the same thing: +43 %, then +57 % (+100 % in all),
 
 ## Consequences
 
-* Not done yet: Supply Storage and Seafood raise the population *limit* by a quarter each in the original; Tzar2 still
-  gives houses more room (TECH-022, partial). Ore flotation, Tournaments, Jewelry and Fame are separate changes.
+* Amendment (same day): Supply Storage and Seafood raise the population *limit* by a quarter each (a new kingdom-wide
+  stat, `populationLimit`; TECH-022), and Ore Flotation makes a gold or stone mine lose half of each load (`depletion`).
+  Tournaments, Jewelry and Fame are separate changes.
 * The ruleset hash changes; the goldens and benches are re-pinned.

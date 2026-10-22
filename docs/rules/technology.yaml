@@ -55,8 +55,8 @@ rules:
     rule: Saw, Stone Mining, Gold Mining and Ore Flotation (Arabians) make gathering wood, stone and gold more productive.
     source: [manual Researching Technologies, help ITEMS.TXT HT_CHOP_WOOD, help ITEMS.TXT HT_MINE, community ReTzar src/gameplay.rs (0x4ae720)]
     status: tested
-    note: Each adds 2 to a peasant's load of its resource. Ore Flotation makes mines last longer instead (not done).
-    adr: [0190]
+    note: Each adds 2 to a peasant's load of its resource; Ore Flotation makes a gold or stone mine lose half of each load.
+    adr: [0190, 0191]
   TECH-011:
     rule: Crossbow raises the attack of arrows; Chemistry (Asians) gives flaming arrows with more attack.
     source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
@@ -122,8 +122,9 @@ rules:
   TECH-022:
     rule: Supply Storage and Seafood (Asians) raise the population limit.
     source: [manual Researching Technologies, community ReTzar src/gameplay/cheats.rs (0x4d385a)]
-    status: partial
-    note: The original raises the population limit by a quarter for each (0x4d3819); Tzar2 still gives houses 2 more room.
+    status: tested
+    note: Each raises the kingdom's population limit by a quarter.
+    adr: [0191]
   TECH-023:
     rule: Trade Taxes makes the markets produce resources over time.
     source: [manual Researching Technologies, strings STRINGS.INI orders_add te_tradetaxes, community ReTzar src/gameplay.rs (K+0x11a)]

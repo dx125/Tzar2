@@ -79,19 +79,25 @@ public enum ModifierStat : byte
 
     /// <summary>How often a weapon fires, in percent of its own rate (ship cannon levels, help HT_UPGRADE_SHIPS; TECH-036).</summary>
     FireRate = 21,
+
+    /// <summary>The kingdom's population limit (Supply Storage, Seafood; TECH-022): an effect without a filter.</summary>
+    PopulationLimit = 22,
+
+    /// <summary>What a node loses of each load taken from it, in percent (Ore Flotation: half; TECH-010).</summary>
+    Depletion = 23,
 }
 
 /// <summary>The number of <see cref="ModifierStat"/> values.</summary>
 public static class ModifierStats
 {
     /// <summary>How many stats exist (the last value + 1).</summary>
-    public const int Count = (int)ModifierStat.FireRate + 1;
+    public const int Count = (int)ModifierStat.Depletion + 1;
 
     private static readonly string[] Keys =
     [
         "attack", "defence", "maxHealth", "resistance", "sight", "range", "gatherRate", "carryCapacity", "buildRate", "cost",
         "populationProvided", "manaRegen", "manaMax", "holderCapacity", "experienceGain", "experienceCap", "startingLevel",
-        "healthPerLevel", "abilityPower", "abilityRange", "income", "fireRate",
+        "healthPerLevel", "abilityPower", "abilityRange", "income", "fireRate", "populationLimit", "depletion",
     ];
 
     /// <summary>Parses a rules key (<c>attack</c>, <c>gatherRate</c>...), or returns false.</summary>

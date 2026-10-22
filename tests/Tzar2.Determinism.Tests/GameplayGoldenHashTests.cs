@@ -54,7 +54,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ITEM-016, 2026-10-22) items have looks and craft variants, power items are weapons: the ruleset hash.
     // (WORLD-015, 2026-10-22) units get the original's body (14 px from the 32 px object box; terrain footprints stay):
     // the ruleset, the stream and the final hash.
-    private const ulong GoldenRulesetHash = 0x7BD62A7965F685E0UL;
+    // (ADR 0191 amendment, 2026-10-22) Supply Storage and Seafood raise the population limit, Ore Flotation halves what mines lose: the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0xE817C2506EF840EFUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.

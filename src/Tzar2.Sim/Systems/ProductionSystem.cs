@@ -70,7 +70,9 @@ public sealed class ProductionSystem : ISimSystem
 
         for (int p = 0; p < players.Length; p++)
         {
-            players[p].PopulationCap = Math.Min(players[p].PopulationCap, players[p].PopulationLimit);
+            // Supply Storage and Seafood raise the kingdom's limit by a quarter each (ReTzar, 0x4d3819; TECH-022).
+            int limit = types.Count > 0 ? world.Stats.Apply(p, ModifierStat.PopulationLimit, 0, players[p].PopulationLimit) : players[p].PopulationLimit;
+            players[p].PopulationCap = Math.Min(players[p].PopulationCap, limit);
         }
     }
 

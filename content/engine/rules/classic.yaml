@@ -465,7 +465,7 @@ te_woodplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [
 te_stoneplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [res_stone] }] } }
 te_goldplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [res_gold] }] } }
 te_ironplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [res_iron] }] } }      # UNVERIFIED (UNK-14): no iron rock exists
-te_orefloatation: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_gold, res_stone, res_iron] }] } }   # UNVERIFIED (UNK-21)
+te_orefloatation: { Technology: { effects: [{ stat: depletion, percent: -50, classes: [res_gold, res_stone] }] } }   # ReTzar: a mine loses half of each load (ADR 0191)
 # Technology effects as ReTzar read them from the original's code (ADR 0191; the research handlers at 0x4d33d0):
 # Feudalism and Slavery cut a peasant's food to 80 % (0x4d4159); Horsemanship every cost of horse archers and heavy
 # cavalry, and Meditation the Asian monk's, to 75 %; Architecture a building's TIME to 70 % (0x4d347e, here a 43 % faster
@@ -479,8 +479,9 @@ te_architecture: { Technology: { effects: [{ stat: buildRate, percent: 43, categ
 te_greatwall: { Technology: { effects: [{ stat: maxHealth, percent: 30, classes: [wall_stone, gate_stone, tower_stone, tower_stone2] }] } }
 te_fanaticism: { Technology: { effects: [{ stat: resistance, percent: 50, category: building }] } }
 te_budhism: { Technology: { effects: [{ stat: resistance, percent: 50, category: building }] } }
-te_supplystorage: { Technology: { effects: [{ stat: populationProvided, add: 2, classes: [house] }] } }   # UNVERIFIED (UNK-20/21)
-te_seafood: { Technology: { effects: [{ stat: populationProvided, add: 2, classes: [house] }] } }   # UNVERIFIED (UNK-20/21)
+# Supply Storage and Seafood raise the kingdom's population limit by a quarter each (ReTzar, 0x4d3819, 0x4d385a; ADR 0191).
+te_supplystorage: { Technology: { effects: [{ stat: populationLimit, percent: 25 }] } }
+te_seafood: { Technology: { effects: [{ stat: populationLimit, percent: 25 }] } }
 # Weapons and armour (ReTzar, 0x4de7d0 and 0x4de880): Temper Iron and Scimitar +1 attack to hand-to-hand units, Crossbow
 # and Chemistry +1 to bows (archers, horse archers, ballistas, xebecs, the arrow towers), Engineering +5 to catapults,
 # cannon ships and towers; Kung Fu +1 to peasants; Scale Armor +1 and Chain Mail +2 defence to the units on foot.
