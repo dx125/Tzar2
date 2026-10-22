@@ -24,6 +24,12 @@ steps:
   # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
   # the map. -explore / -nofog reveal nothing, the cheats do.
   - click: [450, 300]
+  # Run 4: kingdom 2's army reached our base within two minutes on Normal; the difficulty's left arrow, twice.
+  - click: [397, 524]
+  - wait: 0.5
+  - click: [397, 524]
+  - wait: 0.5
+  - snapshot: {name: setup, game: false}
   - click: [772, 596]               # PLAY
   - wait: 10                        # map load
   - chat: "${cheat}reveal"
@@ -35,23 +41,26 @@ steps:
   - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
   - wait: 1
   - snapshot: view
-  # P: the look to copy, a peasant at tile (10, 52) given to kingdom 2 (its AI is slow to move what it is given:
-  # run 3's spy stood still for 15 s and more).
+  # A: our spy at tile (12, 53), standing its ground first. Run 4 spawned it next to kingdom 2's peasant: it went for
+  # the peasant at once, so the click meant to select it missed and the impersonation never happened.
+  - move: [550, 432]
+  - chat: "${cheat}spawn spy"
+  - click: [550, 432]               # place
+  - wait: 0.5                       # longer than the double-click time
+  - click: [550, 432]               # select
+  - key: N                          # stand ground: it attacks only what is in reach
+  # P: the look to copy, a peasant at tile (10, 52), out of A's reach, given to kingdom 2 (its AI is slow to move
+  # what it is given: run 3's spy stood still for 15 s and more, run 4's peasant for 5 s).
   - move: [486, 400]
   - chat: "${cheat}spawn peon"
   - click: [486, 400]               # place
-  - wait: 0.5                       # longer than the double-click time
+  - wait: 0.5
   - click: [486, 400]               # select
   - chat: "${cheat}kingdom 2"
-  # A: our spy, next to P; it impersonates P at once and stands its ground.
-  - move: [518, 432]
-  - chat: "${cheat}spawn spy"
-  - click: [518, 432]               # place
-  - wait: 0.5
-  - click: [518, 432]               # select
+  - click: [550, 432]               # A again
   - key: I                          # impersonate (MENU.INI spy_add)
   - click: [486, 400]               # P
-  - wait: 3
+  - wait: 4
   - key: N                          # stand ground
   - snapshot: {name: disguised, game: false}
   # The look kept for 55 s; the selection view every 5 s (the meter, one point per 1.25 s).
