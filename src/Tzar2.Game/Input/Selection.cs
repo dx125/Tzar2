@@ -27,6 +27,8 @@ namespace Tzar2.Game.Input;
 /// <param name="CanPickItems">Carries items (an inventory; GAME-10).</param>
 /// <param name="IsItem">An item lying on the ground (GAME-10).</param>
 /// <param name="Level">Experience level (GAME-08), or -1 for what gains none.</param>
+/// <param name="X">World X.</param>
+/// <param name="Y">World Y.</param>
 public readonly record struct EntityInfo(
     EntityId Id,
     ushort TypeId,
@@ -48,7 +50,9 @@ public readonly record struct EntityInfo(
     bool IsCapturable = false,
     bool CanPickItems = false,
     bool IsItem = false,
-    int Level = -1);
+    int Level = -1,
+    int X = 0,
+    int Y = 0);
 
 /// <summary>
 /// The local selection and control groups with the original's mouse semantics (Appendix E.6, HK.TXT): click, Shift+click
@@ -255,8 +259,8 @@ public sealed class SelectionModel
     }
 
     /// <summary>
-    /// Ctrl+] / Ctrl+[: of the selection (or, with nothing selected, the own units on screen), those with more or less
-    /// experience than their average level (HK.TXT; GAME-08).
+    /// Ctrl+] / Ctrl+[: of the selection, those with more or less experience than its average level; with nothing
+    /// selected, the own units on screen above level 7 or below level 8 (TZAR110.TXT, 1.09; EXP-007).
     /// </summary>
     public void SelectByExperience(IReadOnlyList<EntityInfo> candidates, bool above)
     {
@@ -277,7 +281,8 @@ public sealed class SelectionModel
         foreach (EntityInfo e in pool)
         {
             long scaled = (long)e.Level * pool.Count; // compared with the sum: no rounding of the average
-            if (above ? scaled > sum : scaled < sum)
+            bool pick = fromSelection ? (above ? scaled > sum : scaled < sum) : (above ? e.Level > 7 : e.Level < 8);
+            if (pick)
             {
                 list.Add(e.Id);
             }

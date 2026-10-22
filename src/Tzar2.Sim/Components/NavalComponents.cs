@@ -63,4 +63,7 @@ public struct Exploring : IComponent
 
     /// <summary>Tick of the next look for a goal.</summary>
     public int NextTick;
+
+    /// <summary>The middle of the area it was sent to explore (tile index, ORD-007), -1 = around itself.</summary>
+    public int AreaTile;
 }

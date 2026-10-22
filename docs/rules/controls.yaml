@@ -94,8 +94,8 @@ rules:
   CTRL-020:
     rule: Ctrl and a digit give the selection that number; the digit selects the group again; the number shows in the corner of the selection.
     source: [manual Selecting And Grouping Units, manual Hot Keys]
-    status: partial
-    note: The group number is not drawn on the units.
+    status: implemented
+    note: The group's digit is drawn in the corner of each selected unit's marks.
   CTRL-021:
     rule: A double click (or a Ctrl+click) on a unit selects all units of its kind on the screen.
     source: [manual Selecting And Grouping Units]
@@ -113,20 +113,27 @@ rules:
   CTRL-024:
     rule: Holding Alt or Ctrl while placing a gate turns the direction of the gate to be built.
     source: [manual Common Buildings (Wood Gate and Stone Gate), help ITEMS.TXT HT_BUILD_WALLS_GATES]
-    status: missing
-    note: The simulation builds turned gates (the editor places them); the client does not turn the ghost.
+    status: tested
+    note: Alt or Ctrl turns the ghost by 90°. The original draws four gate directions (gw0 to gw3), Tzar2 turns between two.
+    adr: [0189]
   CTRL-025:
     rule: The waypoints of the selection appear while Shift is held.
     source: [manual Commanding Units (Move)]
-    status: missing
+    status: tested
+    note: While Shift is held the selection's way shows, with a flag (wp_flag) on each point and marks on the objects it attacks or guards in turn.
+    adr: [0189]
   CTRL-026:
     rule: Shift+right click on several enemies one after another makes the selection attack them in turn; Alt+right click on an object attacks every object of its type.
     source: [manual Commanding Units (Attack)]
-    status: missing
+    status: tested
+    note: Shift queues each enemy after the unit's current order; Alt takes every object of the type and owner on the screen, nearest first, up to 17.
+    adr: [0189]
   CTRL-027:
     rule: With Guard, Shift picks several objects to guard one after another and Alt picks every object of the clicked type.
     source: [manual Commanding Units (Guard)]
-    status: missing
+    status: tested
+    note: Tzar2 guards the set in turn, the next object once the guarded one is gone. How the original shares a guard between them is not known.
+    adr: [0189]
   CTRL-028:
     rule: Shift+click on an order button of a building queues five, and Shift+right click takes five off.
     source: [owner 2026-10-21 (answers)]

@@ -195,12 +195,21 @@ public sealed partial class World
                 throw Invalid("invalid waypoints");
             }
 
+            bool path = q.Points[0].Kind == WaypointKind.Patrol;
+            if (path ? q.Count < 2 || q.Cursor < 0 || q.Cursor >= q.Count : q.Cursor != 0)
+            {
+                throw Invalid("invalid waypoints");
+            }
+
             for (int k = 0; k < WaypointQueue.Capacity; k++)
             {
                 Waypoint p = q.Points[k];
+                bool targeted = p.Kind is WaypointKind.Attack or WaypointKind.Guard;
                 if (k < q.Count
-                    ? !Map.ContainsPoint(p.X, p.Y) || p.Mode is not (CombatMode.None or CombatMode.AttackMove or CombatMode.Sneak) || (p.Reserved0 | p.Reserved1 | p.Reserved2) != 0
-                    : p.X != 0 || p.Y != 0 || p.Mode != CombatMode.None || (p.Reserved0 | p.Reserved1 | p.Reserved2) != 0)
+                    ? !Map.ContainsPoint(p.X, p.Y) || p.Kind > WaypointKind.Patrol || (p.Kind == WaypointKind.Patrol) != path || targeted == (p.Target == 0)
+                        || (p.Kind == WaypointKind.Move ? p.Mode is not (CombatMode.None or CombatMode.AttackMove or CombatMode.Sneak) : p.Mode != CombatMode.None)
+                        || (p.Reserved1 | p.Reserved2) != 0
+                    : p.X != 0 || p.Y != 0 || p.Mode != CombatMode.None || p.Kind != WaypointKind.Move || p.Target != 0 || (p.Reserved1 | p.Reserved2) != 0)
                 {
                     throw Invalid("invalid waypoint");
                 }

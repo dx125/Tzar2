@@ -188,6 +188,7 @@ public static class FrameBuilder
                 Footprint footprint = world.Footprints.At(f);
                 e.TileX = footprint.TileX;
                 e.TileY = footprint.TileY;
+                e.Rotated = footprint.Rotated != 0;
             }
 
             int k = world.Constructions.IndexOf(id);
@@ -274,6 +275,7 @@ public static class FrameBuilder
         frame.EntityCount = n;
         frame.QueueEntryCount = queued;
         FillHelds(frame, world, card);
+        FillWaypoints(frame, world, card);
         frame.DayMinute = world.DayMinute;
         frame.IsNight = world.IsNight;
         frame.Weather = world.Weather;
@@ -403,6 +405,7 @@ public static class FrameBuilder
         if (frame.Buildable.Length != tiles)
         {
             frame.Buildable = new byte[tiles];
+            frame.Terrain = new byte[tiles];
             frame.BuildableVersion = -1;
         }
 
@@ -415,14 +418,96 @@ public static class FrameBuilder
         frame.BuildableFieldsVersion = world.WalkableFootprintsVersion;
 
         byte[] buildable = frame.Buildable;
-        int width = world.Map.Width;
-        for (int ty = 0; ty < world.Map.Height; ty++)
+        byte[] terrain = frame.Terrain;
+        MapState map = world.Map;
+        int width = map.Width;
+        for (int ty = 0; ty < map.Height; ty++)
         {
             for (int tx = 0; tx < width; tx++)
             {
-                buildable[(ty * width) + tx] = PlacementQueries.IsBuildableTile(world, tx, ty) ? (byte)1 : (byte)0;
+                int i = (ty * width) + tx;
+                buildable[i] = PlacementQueries.IsBuildableTile(world, tx, ty) ? (byte)1 : (byte)0;
+                terrain[i] = (byte)((map.IsPassable(Locomotor.Ship, tx, ty) ? Input.Placement.Water : 0)
+                    | (map.IsPassable(Locomotor.Foot, tx, ty) ? Input.Placement.Land : 0)
+                    | (map.Data.CliffTiles[i] == 0 && map.Blockers[i] == 0 && map.Bridges[i] == 0 ? Input.Placement.Free : 0));
             }
         }
+
+        // The card kingdom's finished walls, which its gates may replace (BLD-018).
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int s = 0; s < structures.Length && card is { } kingdom; s++)
+        {
+            EntityId e = structures[s];
+            Footprint piece = world.Footprints.Components[s];
+            if (world.TypeOf(e).Traits.IsWall && world.Identities.Get(e).Owner == kingdom && !world.Constructions.Has(e) && map.ContainsTile(piece.TileX, piece.TileY))
+            {
+                terrain[(piece.TileY * width) + piece.TileX] |= Input.Placement.OwnWall;
+            }
+        }
+    }
+
+    // The orders of the card's kingdom's units: what each does now, then what it has queued (CTRL-025).
+    private static void FillWaypoints(GameFrame frame, World world, byte? card)
+    {
+        int n = 0;
+        if (card is { } kingdom)
+        {
+            ReadOnlySpan<EntityId> movers = world.Motions.Entities;
+            for (int i = 0; i < movers.Length; i++)
+            {
+                EntityId unit = movers[i];
+                if (world.IsHeld(unit) || world.Identities.Get(unit).Owner != kingdom)
+                {
+                    continue;
+                }
+
+                Motion m = world.Motions.Components[i];
+                bool queued = world.WaypointQueues.Count > 0 && world.WaypointQueues.Has(unit);
+                if (queued && world.WaypointQueues.Get(unit).Points[0].Kind == WaypointKind.Patrol)
+                {
+                    WaypointQueue path = world.WaypointQueues.Get(unit);
+                    for (int k = 0; k < path.Count; k++)
+                    {
+                        Waypoint p = path.Points[(path.Cursor + k) % path.Count];
+                        frame.SetWaypoint(n++, new FrameWaypoint(unit.Value, FrameOrderKind.Patrol, p.X, p.Y, 0));
+                    }
+
+                    continue;
+                }
+
+                if (world.Combats.IndexOf(unit) is >= 0 and var c && world.Combats.At(c).Mode == CombatMode.Explicit && world.Combats.At(c).Target != 0
+                    && world.Positions.IndexOf(EntityId.FromValue(world.Combats.At(c).Target)) is >= 0 and var t)
+                {
+                    Position at = world.Positions.At(t);
+                    frame.SetWaypoint(n++, new FrameWaypoint(unit.Value, FrameOrderKind.Attack, at.X, at.Y, world.Combats.At(c).Target));
+                }
+                else if (m.Order == MotionOrder.Follow && m.FollowTarget != 0)
+                {
+                    frame.SetWaypoint(n++, new FrameWaypoint(unit.Value, FrameOrderKind.Guard, m.OrderX, m.OrderY, m.FollowTarget));
+                }
+                else if (m.Order == MotionOrder.Patrol)
+                {
+                    frame.SetWaypoint(n++, new FrameWaypoint(unit.Value, FrameOrderKind.Patrol, m.OrderX, m.OrderY, 0));
+                    frame.SetWaypoint(n++, new FrameWaypoint(unit.Value, FrameOrderKind.Patrol, m.PatrolX, m.PatrolY, 0));
+                }
+                else if (m.Order == MotionOrder.Move)
+                {
+                    frame.SetWaypoint(n++, new FrameWaypoint(unit.Value, FrameOrderKind.Move, m.OrderX, m.OrderY, 0));
+                }
+
+                if (queued)
+                {
+                    WaypointQueue q = world.WaypointQueues.Get(unit);
+                    for (int k = 0; k < q.Count; k++)
+                    {
+                        Waypoint p = q.Points[k];
+                        frame.SetWaypoint(n++, new FrameWaypoint(unit.Value, (FrameOrderKind)p.Kind, p.X, p.Y, p.Target));
+                    }
+                }
+            }
+        }
+
+        frame.WaypointCount = n;
     }
 
     // What the player may build or train now, by the sim's own requirement check (ADR 0040).

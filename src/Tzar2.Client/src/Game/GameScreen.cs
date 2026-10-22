@@ -93,6 +93,7 @@ public partial class GameScreen : Node
     private EntityId _dialogFor;
     private (int Goods, int Load)? _route; // a trade route waiting for the far market's click
     private ushort _placing = ushort.MaxValue;
+    private bool _turned; // the placement ghost turned by 90° (gates and bridges; CTRL-024, BLD-019)
     private int _eventCursor = -1;
     private int _locationCursor = -1;
     private int _buildingCursor;
@@ -227,6 +228,10 @@ public partial class GameScreen : Node
             foreach (string image in v.Images.Values)
             {
                 _bank.Add(image);
+                if (Placement.CanTurn(type) && SpriteRules.Turned(image, rotated: true) is { } turned && turned != image)
+                {
+                    _bank.Add(turned); // a turned bridge (BLD-019)
+                }
             }
 
             if (type.HasFootprint && type.Traits.Category == EntityCategory.Building)
@@ -487,6 +492,8 @@ public partial class GameScreen : Node
                 _mouse = button.Position;
                 MouseButtonEvent(button);
                 break;
+            case InputEventKey { Pressed: true, Echo: false } turn when TurnGhost(turn.Keycode):
+                break;
             case InputEventKey { Pressed: true, Echo: false } key:
                 KeyDown(key);
                 break;
@@ -613,6 +620,8 @@ public partial class GameScreen : Node
     private WorldOptions Barred()
     {
         _options.AllHealthBars = _barsToggled || _barsHeld;
+        _options.Waypoints = Input.IsKeyPressed(Key.Shift);
+        _options.GroupOf ??= _selection.GroupOf;
         return _options;
     }
 
@@ -746,7 +755,7 @@ public partial class GameScreen : Node
                 if (_mode != OrderMode.None)
                 {
                     (int x, int y) = ToWorld(e.Position);
-                    SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument), x, y);
+                    SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument, OnScreen()), x, y);
                     if ((mods & KeyMods.Shift) == 0)
                     {
                         _mode = OrderMode.None;
@@ -831,13 +840,18 @@ public partial class GameScreen : Node
 
     private void RightClick(Vector2 position, KeyMods mods)
     {
-        if (_mode == OrderMode.Unload && _placing == ushort.MaxValue && InView(position))
+        if (_mode is OrderMode.Unload or OrderMode.Patrol or OrderMode.Guard or OrderMode.Attack && _placing == ushort.MaxValue && InView(position))
         {
-            // Emerge and unload: a right click gives the place too (the manual, the owner 2026-10-21; ORD-015).
+            // Emerge and unload, patrol, guard and attack: a right click gives the place or the object too, and with Shift
+            // the order waits for more (the manual ch. 5 §2.3, the owner 2026-10-21; ORD-015, ORD-006, CTRL-026, CTRL-027).
             (int ux, int uy) = ToWorld(position);
-            SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument), ux, uy);
-            _mode = OrderMode.None;
-            RefreshCard();
+            SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument, OnScreen()), ux, uy);
+            if ((mods & KeyMods.Shift) == 0 || _mode == OrderMode.Unload)
+            {
+                _mode = OrderMode.None;
+                RefreshCard();
+            }
+
             return;
         }
 
@@ -855,7 +869,20 @@ public partial class GameScreen : Node
         }
 
         (int x, int y) = ToWorld(position);
-        SendAndConfirm(OrderResolver.RightClick(SelectedInfos(), PickAt(position), x, y, mods, _session.LocalPlayer, _rules), x, y);
+        SendAndConfirm(OrderResolver.RightClick(SelectedInfos(), PickAt(position), x, y, mods, _session.LocalPlayer, _rules, (mods & KeyMods.Alt) != 0 ? OnScreen() : null), x, y);
+    }
+
+    // Alt or Ctrl turns a gate to be built, Alt a bridge (CTRL-024, BLD-019; the manual: Alt + Ctrl for gates).
+    private bool TurnGhost(Key key)
+    {
+        if (_placing == ushort.MaxValue || key is not (Key.Alt or Key.Ctrl) || !Placement.CanTurn(_rules.EntityTypes[_placing])
+            || (key == Key.Ctrl && _rules.EntityTypes[_placing].Traits.IsBridge))
+        {
+            return false;
+        }
+
+        _turned = !_turned;
+        return true;
     }
 
     // Drag scrolling: the map follows the pointer while the right (or middle) button is held, after a few pixels of
@@ -1316,7 +1343,7 @@ public partial class GameScreen : Node
         }
 
         var batch = new CommandList();
-        batch.Add(CommandKind.Build, builders.ToArray(), ghost.TileX * 2048, ghost.TileY * 2048, arg0: ghost.TypeId, flags: (mods & KeyMods.Shift) != 0 ? CommandFlags.Queue : CommandFlags.None);
+        batch.Add(CommandKind.Build, builders.ToArray(), ghost.TileX * 2048, ghost.TileY * 2048, arg0: ghost.TypeId, arg1: ghost.Rotated ? 1 : 0, flags: (mods & KeyMods.Shift) != 0 ? CommandFlags.Queue : CommandFlags.None);
         _session.Submit(batch);
         _mixer?.PlaySet("build", SoundCategory.Effects, _catalog.SoundPriority("build"));
         if ((mods & KeyMods.Shift) == 0)
@@ -1335,15 +1362,17 @@ public partial class GameScreen : Node
         }
 
         EntityTypeDefinition type = _rules.EntityTypes[_placing];
+        bool turned = _turned && Placement.CanTurn(type);
         (int x, int y) = ToWorld(_mouse);
-        (int tx, int ty) = Placement.TopLeftFor(type, x, y);
-        List<(int Dx, int Dy)> blocked = Placement.BlockedCells(frame.Buildable, _world.MapWidth, _world.MapHeight, type, tx, ty);
+        (int tx, int ty) = Placement.TopLeftFor(type, x, y, turned);
+        List<(int Dx, int Dy)> blocked = Placement.BlockedCells(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned);
+        (int width, int height) = Placement.Size(type, turned);
         if (frame.Visibility.Length == _world.MapWidth * _world.MapHeight)
         {
             // Not on unexplored ground.
-            for (int dy = 0; dy < type.FootprintHeight; dy++)
+            for (int dy = 0; dy < height; dy++)
             {
-                for (int dx = 0; dx < type.FootprintWidth; dx++)
+                for (int dx = 0; dx < width; dx++)
                 {
                     int cx = tx + dx, cy = ty + dy;
                     bool inside = cx >= 0 && cy >= 0 && cx < _world.MapWidth && cy < _world.MapHeight;
@@ -1355,8 +1384,8 @@ public partial class GameScreen : Node
             }
         }
 
-        bool legal = blocked.Count == 0 && Placement.IsLegal(frame.Buildable, _world.MapWidth, _world.MapHeight, type, tx, ty);
-        return new Ghost(_placing, tx, ty, legal, blocked);
+        bool legal = blocked.Count == 0 && Placement.IsLegal(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned);
+        return new Ghost(_placing, tx, ty, legal, blocked, turned);
     }
 
     private void OnCard(int slot, bool right)
@@ -1389,6 +1418,7 @@ public partial class GameScreen : Node
         if (press.Placing is { } type)
         {
             _placing = type;
+            _turned = false;
         }
 
         if (press.Message is { } text)
@@ -2035,12 +2065,16 @@ public partial class GameScreen : Node
         string name = Settings.SystemCursor ? CursorCache.System : CursorCache.Default;
         if (_placing == ushort.MaxValue && !_grabbing && InView(_mouse))
         {
+            bool shift = Input.IsKeyPressed(Key.Shift), alt = Input.IsKeyPressed(Key.Alt);
             if (_mode != OrderMode.None)
             {
                 name = _mode switch
                 {
+                    OrderMode.Attack when alt => "cs_attacktype", // CTRL-026: every object of the type
+                    OrderMode.Attack when shift => "cs_attackset", // CTRL-026: a set attacked in turn
                     OrderMode.Attack => "s_attack",
                     OrderMode.Harvest => "s_harvest",
+                    OrderMode.Patrol when shift => "s_patrol2", // ORD-006: a patrol path
                     OrderMode.Patrol => "s_patrol",
                     OrderMode.Guard => "s_guard",
                     OrderMode.Repair => "s_repair",
@@ -2048,16 +2082,34 @@ public partial class GameScreen : Node
                     OrderMode.Capture or OrderMode.Bribe or OrderMode.PickItem or OrderMode.Impersonate => "s_hand",
                     OrderMode.Spell => "s_spell",
                     OrderMode.UseItem => "s_potion",
+                    OrderMode.Unload when !LandUnderPointer() => "s_none", // ORD-014: no landing there
                     _ => "s_move",
                 };
             }
             else if (_selection.IsOwn && PickAt(_mouse) is { } hover)
             {
                 name = HoverCursor(hover, SelectedInfos(), name);
+                if (name == "s_attack")
+                {
+                    name = alt ? "cs_attacktype" : shift ? "cs_attackset" : name;
+                }
             }
         }
 
         CursorCache.Apply(_ui, name);
+    }
+
+    // Whether units can be let out on the tile under the pointer (ORD-014: the pointer shows it): walkable land.
+    private bool LandUnderPointer()
+    {
+        if (_frame is null || _world is null || _frame.Terrain.Length != _world.MapWidth * _world.MapHeight)
+        {
+            return true;
+        }
+
+        (int x, int y) = ToWorld(_mouse);
+        int tx = x / MapData.UnitsPerTile, ty = y / MapData.UnitsPerTile;
+        return tx >= 0 && ty >= 0 && tx < _world.MapWidth && ty < _world.MapHeight && (_frame.Terrain[(ty * _world.MapWidth) + tx] & Placement.Land) != 0;
     }
 
     // The cursor of the right click's default action on what the pointer is over (OrderResolver.Hover, the same rules the

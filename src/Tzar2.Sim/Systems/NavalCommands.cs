@@ -27,7 +27,15 @@ internal static class NavalCommands
 
             GameplayCommands.ClearTasks(world, unit);
             Interaction.Halt(world, unit);
-            world.Explorers.Set(unit, new Exploring { GoalTile = -1, NextTick = world.Tick.Value });
+            int area = -1;
+            if (command.Arg0 == 1 && world.Map.ContainsPoint(command.X, command.Y))
+            {
+                // ORD-007: the unit walks to the clicked area first, then explores around it.
+                area = world.Navigation.ForType(world.Identities.At(i).TypeId)!.TileOf(command.X, command.Y);
+                Interaction.MoveTo(world, unit, command.X, command.Y);
+            }
+
+            world.Explorers.Set(unit, new Exploring { GoalTile = -1, NextTick = world.Tick.Value, AreaTile = area });
             applied++;
         }
 

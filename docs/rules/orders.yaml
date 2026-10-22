@@ -27,13 +27,14 @@ rules:
   ORD-006:
     rule: Patrol walks between the unit's position and the clicked point; with Shift several points make a patrol path.
     source: [manual Commanding Units (Patrol)]
-    status: partial
-    note: Patrol between two points works; the path of several points needs the waypoints of ORD-005.
+    status: tested
+    note: The path is walked round in the order the points were given, back to the start.
+    adr: [0189]
   ORD-007:
     rule: Explore sends the unit to the clicked area, which it walks to explore it.
     source: [manual Commanding Units (Explore)]
-    status: partial
-    note: Explore takes no target; the units head for any unexplored ground they can reach.
+    status: tested
+    note: The unit walks to the clicked point, then explores within 12 tiles of it (the area size is a placeholder).
   ORD-008:
     rule: Stop makes the unit stop what it is doing.
     source: [manual Commanding Units (Stop)]
@@ -61,8 +62,8 @@ rules:
   ORD-014:
     rule: Unload makes a loaded vehicle let its units out at the clicked place; the pointer's colour shows whether they can land there.
     source: [manual Commanding Units (Unload)]
-    status: partial
-    note: The Unload button waits for a click on the place and the units land there; the pointer does not change colour.
+    status: implemented
+    note: The pointer is the forbidden one (cs_none) where no land is to let the units out on.
   ORD-015:
     rule: Emerge lets one chosen unit out of a building at the place right-clicked next; with no unit chosen, everyone comes out at once.
     source: [manual Commanding Units (Emerge), owner 2026-10-21 (answers)]

@@ -90,6 +90,26 @@ public sealed class SessionTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-025")]
+    public void The_frame_carries_the_local_units_way_for_the_waypoints_shown_with_shift()
+    {
+        using var session = new GameSession(Setup(), Rules.Value);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        FrameEntity peon = frame.Entities.ToArray().First(e => e.Owner == 0 && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "peon");
+        var batch = new CommandList();
+        batch.Add(CommandKind.Move, [peon.Id], peon.X + 6000, peon.Y);
+        batch.Add(CommandKind.Move, [peon.Id], peon.X + 6000, peon.Y + 6000, flags: CommandFlags.Queue);
+        batch.Add(CommandKind.Move, [peon.Id], peon.X, peon.Y + 6000, flags: CommandFlags.Queue);
+        session.Submit(batch);
+        session.Step(3);
+        frame = session.AcquireFrame(out _)!;
+        FrameWaypoint[] way = [.. frame.Waypoints.ToArray().Where(w => w.Unit == peon.Id.Value)];
+        Assert.Equal([(peon.X + 6000, peon.Y), (peon.X + 6000, peon.Y + 6000), (peon.X, peon.Y + 6000)], way.Select(w => (w.X, w.Y)));
+        Assert.All(way, w => Assert.Equal(FrameOrderKind.Move, w.Kind));
+        Assert.DoesNotContain(frame.Waypoints.ToArray(), w => frame.Entities.ToArray().Any(e => e.Id.Value == w.Unit && e.Owner != 0));
+    }
+
+    [Fact]
     public void Submitted_commands_are_stamped_with_the_local_slot_and_applied()
     {
         using var session = new GameSession(Setup(), Rules.Value);
@@ -142,6 +162,40 @@ public sealed class SessionTests
 
         Assert.True(checkedLegal > 50);
         Assert.Equal(type.FootprintWidth * type.FootprintHeight, Placement.BlockedCells(frame.Buildable, world.Map.Width, world.Map.Height, type, -10, -10).Count);
+    }
+
+    [Theory]
+    [InlineData("euro.harbor", false)]
+    [InlineData("comm.bridge", false)]
+    [InlineData("comm.bridge", true)]
+    [InlineData("comm.gate_wood", true)]
+    [InlineData("comm.gate_wood", false)]
+    [Trait("Rule", "BLD-018")]
+    [Trait("Rule", "BLD-019")]
+    [Trait("Rule", "CTRL-024")]
+    public void Coast_bridge_and_turned_placements_match_the_sim_placement_query(string key, bool rotated)
+    {
+        ushort id = (ushort)Rules.Value.EntityTypeId(key);
+        EntityTypeDefinition type = Rules.Value.EntityTypes[id];
+        int legal = 0;
+        foreach (IMapSource map in new IMapSource[] { new SkirmishTestMap(64), new RiverMap() })
+        {
+            using var session = new GameSession(Setup() with { Map = map }, Rules.Value);
+            session.Step(1);
+            GameFrame frame = session.AcquireFrame(out _)!;
+            World world = session.Simulation.World;
+            for (int ty = 0; ty < world.Map.Height; ty++)
+            {
+                for (int tx = 0; tx < world.Map.Width; tx++)
+                {
+                    bool expected = PlacementQueries.CanPlaceFor(world, 0, id, tx, ty, rotated);
+                    Assert.True(expected == Placement.IsLegal(frame.Buildable, frame.Terrain, world.Map.Width, world.Map.Height, type, tx, ty, rotated), $"{key} at {tx},{ty} on {map.Name}: the sim says {expected}");
+                    legal += expected ? 1 : 0;
+                }
+            }
+        }
+
+        Assert.True(legal > 0, $"{key} fits somewhere");
     }
 
     [Fact]
@@ -524,6 +578,32 @@ public sealed class SessionTests
 
             frame.EntityCount = entities.Length;
             return frame;
+        }
+    }
+
+    // Two rivers three tiles wide across a 40 x 24 map, one down and one across, a castle on two of the banks, and a
+    // wall of kingdom 0 with a gap and one of kingdom 1.
+    private sealed class RiverMap : IMapSource
+    {
+        public string Name => "river";
+
+        public MapData Create(Ruleset ruleset, MatchSetup setup)
+        {
+            var rows = new string[24];
+            for (int y = 0; y < rows.Length; y++)
+            {
+                rows[y] = y is >= 10 and <= 12 ? new string('~', 40) : new string('.', 18) + "~~~" + new string('.', 19);
+            }
+
+            return Tzar2.Sim.Scenarios.ScenarioMaps.WithObjects(
+                Tzar2.Sim.Scenarios.ScenarioMaps.FromAscii("river", rows),
+                [
+                    MapObject.AtTile("euro.castle", 0, 4, 4),
+                    MapObject.AtTile("euro.castle", 1, 30, 16),
+                    .. Enumerable.Range(2, 12).Where(x => x != 7).Select(x => MapObject.AtTile("comm.wall_wood", 0, x, 16)),
+                    .. Enumerable.Range(2, 6).Select(y => MapObject.AtTile("comm.wall_wood", 0, 14, y)),
+                    .. Enumerable.Range(24, 8).Select(x => MapObject.AtTile("comm.wall_wood", 1, x, 4)),
+                ]);
         }
     }
 }

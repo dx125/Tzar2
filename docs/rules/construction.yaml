@@ -78,13 +78,13 @@ rules:
   BLD-018:
     rule: A wall shows green where it can be laid; a gate can be placed over a wall already built, or anywhere it fits.
     source: [help ITEMS.TXT HT_BUILD_WALLS_GATES]
-    status: partial
-    note: A gate cannot replace a piece of wall.
+    status: tested
   BLD-019:
     rule: Holding Alt while placing a bridge turns it.
     source: [help ITEMS.TXT HT_BUILD_BRIDGES]
-    status: missing
-    note: The editor turns bridges with Alt; the game's placement does not.
+    status: tested
+    note: Alt turns the ghost; the vertical bridge draws bridge_vert.
+    adr: [0189]
   BLD-020:
     rule: Deleting a building just after its construction began gives its cost back.
     source: [help ITEMS.TXT HT_REMOVE]

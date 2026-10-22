@@ -59,8 +59,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the stream and the final hash.
-    private const ulong GoldenHashStream = 0x232A1989D9AF20C5UL;
-    private const ulong GoldenFinalFullHash = 0x5AD9D5E860C01907UL;
+    // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
+    private const ulong GoldenHashStream = 0xA98E60C3AED24526UL;
+    private const ulong GoldenFinalFullHash = 0x2D9B4BB18EC82EA5UL;
 
     private const int Ticks = 1600;
 

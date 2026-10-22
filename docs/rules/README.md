@@ -99,17 +99,17 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 8 | 4 | 0 | 2 | 0 | 0 |
-| [Construction and repair](construction.yaml) (BLD) | 22 | 15 | 4 | 1 | 1 | 0 | 1 |
-| [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 14 | 9 | 2 | 4 | 0 | 0 |
+| [Construction and repair](construction.yaml) (BLD) | 22 | 17 | 4 | 0 | 0 | 0 | 1 |
+| [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 18 | 10 | 1 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 6 | 1 | 2 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 16 | 5 | 0 | 0 | 0 | 1 |
-| [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
+| [Experience and heroes](experience.yaml) (EXP) | 7 | 5 | 0 | 2 | 0 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 6 | 14 | 6 | 5 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 9 | 3 | 1 | 2 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 21 | 15 | 4 | 1 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
-| [Unit orders](orders.yaml) (ORD) | 18 | 11 | 4 | 3 | 0 | 0 | 0 |
+| [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 2 | 10 | 8 | 6 | 2 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 6 | 5 | 2 | 0 | 2 | 0 |
-| **All** | 335 | 175 | 74 | 37 | 28 | 9 | 12 |
+| **All** | 335 | 184 | 76 | 32 | 22 | 9 | 12 |
 
 ## Not done yet
 
@@ -132,19 +132,9 @@ Missing and partial rules.
 * **WAR-009**: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it.
 * **WAR-010**: The Messiah (campaign) is immune to magic.
 
-### Construction and repair
-
-* **BLD-018** (partial): A wall shows green where it can be laid; a gate can be placed over a wall already built, or anywhere it fits. *A gate cannot replace a piece of wall.*
-* **BLD-019**: Holding Alt while placing a bridge turns it. *The editor turns bridges with Alt; the game's placement does not.*
-
 ### Selection, mouse and pointers
 
 * **CTRL-017** (partial): An order on an object (a building to enter, repair or attack) is confirmed by an animation around the object. *Tzar2 blinks the object's selection corners three times; which animation the original plays is not identified.* (ADR 0179)
-* **CTRL-020** (partial): Ctrl and a digit give the selection that number; the digit selects the group again; the number shows in the corner of the selection. *The group number is not drawn on the units.*
-* **CTRL-024**: Holding Alt or Ctrl while placing a gate turns the direction of the gate to be built. *The simulation builds turned gates (the editor places them); the client does not turn the ghost.*
-* **CTRL-025**: The waypoints of the selection appear while Shift is held.
-* **CTRL-026**: Shift+right click on several enemies one after another makes the selection attack them in turn; Alt+right click on an object attacks every object of its type.
-* **CTRL-027**: With Guard, Shift picks several objects to guard one after another and Alt picks every object of the clicked type.
 
 ### Diplomacy and victory
 
@@ -155,7 +145,6 @@ Missing and partial rules.
 
 * **EXP-003** (partial): Units gain no experience from fighting allies. *Hits on the own kingdom give nothing, but hits on an ally (under confusion, rain of fire, or a scripted attack) still do.*
 * **EXP-005** (partial): Very experienced units become heroes and can be named. *Units become named heroes at level 12 with Heroism; the player cannot name them.*
-* **EXP-007**: Ctrl+] and Ctrl+[ select the units with more or less experience than the average of the selection (without a selection, those above 7 or below 8 on the screen). *The hotkey checklist still marks them blocked.*
 
 ### Holders and transport
 
@@ -188,12 +177,6 @@ Missing and partial rules.
 ### Nature, gateways, day and weather
 
 * **NAT-004** (partial): Cows can be slaughtered, and their meat collected by peasants or other units. *Peasants collect the meat; other units do not.*
-
-### Unit orders
-
-* **ORD-006** (partial): Patrol walks between the unit's position and the clicked point; with Shift several points make a patrol path. *Patrol between two points works; the path of several points needs the waypoints of ORD-005.*
-* **ORD-007** (partial): Explore sends the unit to the clicked area, which it walks to explore it. *Explore takes no target; the units head for any unexplored ground they can reach.*
-* **ORD-014** (partial): Unload makes a loaded vehicle let its units out at the clicked place; the pointer's colour shows whether they can land there. *The Unload button waits for a click on the place and the units land there; the pointer does not change colour.*
 
 ### Animations, effects and sounds
 

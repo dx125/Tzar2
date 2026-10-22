@@ -221,6 +221,26 @@ public class NavalTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-007")]
+    public void Explore_sends_the_unit_to_the_clicked_area_and_it_explores_there()
+    {
+        // Manual: Explore, then a click on the area to explore. A wide field: the area is the far east.
+        string[] field = [.. Enumerable.Repeat(new string('.', 120), 40)];
+        using var d = new SimDriver(AsciiMap(field, Unit("euro.footman", 0, 4, 20)), ruleset: Classic);
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        d.Order(0, CommandKind.Explore, [footman], (100 * Tile) + (Tile / 2), (20 * Tile) + (Tile / 2), arg0: 1);
+        d.RunUntil(() => d.World.Explorers.Count == 0, 20_000);
+        Assert.Equal(0, d.World.Explorers.Count); // the area is explored: the order is done
+        for (int x = 90; x < 110; x++)
+        {
+            Assert.True(d.World.Visibility.IsExplored(0, x, 20), $"tile {x} of the area unexplored");
+        }
+
+        Assert.False(d.World.Visibility.IsExplored(0, 60, 2), "it went to the area, not around itself");
+        Assert.True(d.PositionOf(footman).X / Tile > 80);
+    }
+
+    [Fact]
     [Trait("Rule", "TECH-019")]
     public void Landing_Tactics_adds_ship_room_once()
     {

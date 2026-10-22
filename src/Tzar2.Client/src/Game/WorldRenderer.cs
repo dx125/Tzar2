@@ -29,6 +29,12 @@ public sealed class WorldOptions
 
     /// <summary>Shadows.</summary>
     public bool Shadows { get; set; } = true;
+
+    /// <summary>The selection's waypoints and the objects it attacks or guards in turn (Shift held; CTRL-025).</summary>
+    public bool Waypoints { get; set; }
+
+    /// <summary>A unit's control group digit, 0 for none: drawn in the corner of its selection marks (CTRL-020).</summary>
+    public Func<EntityId, int>? GroupOf { get; set; }
 }
 
 /// <summary>Something drawn on screen that the mouse can pick.</summary>
@@ -260,6 +266,11 @@ public sealed class WorldRenderer : IDisposable
         _translucent.Commit();
         _glow.Commit();
         DrawMarks(frame, interpolator, alpha, localPlayer, options);
+        if (options.Waypoints)
+        {
+            DrawWaypoints(frame);
+        }
+
         if (ghost is { } g)
         {
             DrawGhost(g);
@@ -306,8 +317,9 @@ public sealed class WorldRenderer : IDisposable
         if (def.HasFootprint)
         {
             int left = e.TileX * TilePixels, top = e.TileY * TilePixels;
-            int foot = top + (def.FootprintHeight * TilePixels);
-            var footprint = new Rect2(left, top, def.FootprintWidth * TilePixels, def.FootprintHeight * TilePixels);
+            (int width, int height) = e.Rotated ? (def.FootprintHeight, def.FootprintWidth) : (def.FootprintWidth, def.FootprintHeight);
+            int foot = top + (height * TilePixels);
+            var footprint = new Rect2(left, top, width * TilePixels, height * TilePixels);
             if (def.Key == "comm.tree" && _bank.Trees is { } trees)
             {
                 // Living trees are cells 8..26 of the strip (stumps and bushes first, dead trees last); ⚠ placement
@@ -336,7 +348,7 @@ public sealed class WorldRenderer : IDisposable
             }
             else
             {
-                sheet = (e.ItemLook is { } look ? _bank.Get(look) : null) ?? _bank.Get(visual.Image(UnitAnim.Base)); // an item's own look (ITEM-016)
+                sheet = (e.ItemLook is { } look ? _bank.Get(look) : null) ?? _bank.Get(SpriteRules.Turned(visual.Image(UnitAnim.Base), e.Rotated)); // an item's own look (ITEM-016)
                 if (sheet is not null)
                 {
                     variant = (int)(phase % (uint)Math.Max(1, sheet.Sheet.Directions));
@@ -620,13 +632,22 @@ public sealed class WorldRenderer : IDisposable
                 if (def.HasFootprint)
                 {
                     // Structures: the footprint outline (⚠ the original's selection look is not measured yet).
-                    var r = new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, def.FootprintWidth) * TilePixels, Math.Max(1, def.FootprintHeight) * TilePixels);
+                    (int w, int h) = e.Rotated ? (def.FootprintHeight, def.FootprintWidth) : (def.FootprintWidth, def.FootprintHeight);
+                    var r = new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, w) * TilePixels, Math.Max(1, h) * TilePixels);
                     Corners(_marksOver, r, mark);
                 }
                 else
                 {
                     // Units: the square of the original's selection box (IMAGES.INI selection), as on structures.
                     Corners(_marksOver, p.Rect, mark);
+                }
+
+                if (options.GroupOf?.Invoke(e.Id) is > 0 and var group)
+                {
+                    // The control group's digit in the corner of the selection (CTRL-020).
+                    var at = new Vector2(p.Rect.End.X - 4, p.Rect.End.Y + 2);
+                    ThemeDB.FallbackFont.DrawString(_marksOver, at + Vector2.One, group.ToString(System.Globalization.CultureInfo.InvariantCulture), HorizontalAlignment.Left, -1, 11, Colors.Black);
+                    ThemeDB.FallbackFont.DrawString(_marksOver, at, group.ToString(System.Globalization.CultureInfo.InvariantCulture), HorizontalAlignment.Left, -1, 11, mark);
                 }
             }
 
@@ -645,6 +666,68 @@ public sealed class WorldRenderer : IDisposable
                     RS.CanvasItemAddRect(_marksOver, new Rect2(progress.Position, new Vector2(MathF.Round(w * e.ConstructionPermille / 1000f), 2)), new Color(0.9f, 0.75f, 0.3f));
                 }
             }
+        }
+    }
+
+    // Shift held: the way of each selected unit, a flag on each point it walks to (the original's wp_flag) and marks on the
+    // objects it attacks (red) or guards (green) in turn (CTRL-025).
+    private void DrawWaypoints(GameFrame frame)
+    {
+        ReadOnlySpan<FrameWaypoint> points = frame.Waypoints;
+        if (points.Length == 0 || _selected.Count == 0)
+        {
+            return;
+        }
+
+        var where = new Dictionary<uint, int>();
+        ReadOnlySpan<FrameEntity> entities = frame.Entities;
+        for (int i = 0; i < entities.Length; i++)
+        {
+            where[entities[i].Id.Value] = i;
+        }
+
+        var boxes = new Dictionary<uint, Rect2>();
+        foreach (Pickable p in _pickables)
+        {
+            boxes[entities[p.Index].Id.Value] = p.Rect;
+        }
+
+        SheetRef? flag = _bank.Get(EffectImages.Waypoint);
+        var line = new Color(1f, 1f, 1f, 0.45f);
+        uint unit = 0;
+        Vector2 from = default;
+        foreach (FrameWaypoint w in points)
+        {
+            if (!_selected.Contains(w.Unit) || !where.TryGetValue(w.Unit, out int u))
+            {
+                continue;
+            }
+
+            if (w.Unit != unit)
+            {
+                unit = w.Unit;
+                from = new Vector2(entities[u].X / UnitsPerPixel, entities[u].Y / UnitsPerPixel);
+            }
+
+            var to = new Vector2(w.X / UnitsPerPixel, w.Y / UnitsPerPixel);
+            if (w.Target != 0 && where.TryGetValue(w.Target, out int t))
+            {
+                to = new Vector2(entities[t].X / UnitsPerPixel, entities[t].Y / UnitsPerPixel);
+            }
+
+            RS.CanvasItemAddLine(_marksOver, from, to, line, 1f);
+            if (w.Kind is FrameOrderKind.Attack or FrameOrderKind.Guard)
+            {
+                Rect2 box = boxes.TryGetValue(w.Target, out Rect2 b) ? b : new Rect2(to - new Vector2(10, 10), new Vector2(20, 20));
+                Corners(_marksOver, box.Grow(3), w.Kind == FrameOrderKind.Attack ? new Color(1f, 0.3f, 0.25f) : new Color(0.25f, 1f, 0.25f));
+            }
+            else if (flag is not null)
+            {
+                var at = new Vector2I((int)to.X, (int)to.Y) - flag.Anchor;
+                Add(_objects, flag, at, 0, flag.Animation.FrameAt(_timeMs), -1, ((uint)((int)to.Y + 4096) << 6) | 2, shadowOnly: false);
+            }
+
+            from = to;
         }
     }
 
@@ -681,8 +764,9 @@ public sealed class WorldRenderer : IDisposable
                 }
 
                 EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
+                (int fw, int fh) = e.Rotated ? (def.FootprintHeight, def.FootprintWidth) : (def.FootprintWidth, def.FootprintHeight);
                 Rect2 r = def.HasFootprint && e.TileX >= 0
-                    ? new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, def.FootprintWidth) * TilePixels, Math.Max(1, def.FootprintHeight) * TilePixels)
+                    ? new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, fw) * TilePixels, Math.Max(1, fh) * TilePixels)
                     : p.Rect;
                 Color mark = e.Owner == localPlayer ? new Color(0.25f, 1f, 0.25f) : e.Owner >= 8 ? new Color(1f, 1f, 0.4f) : new Color(1f, 0.3f, 0.25f);
                 Corners(_marksOver, r.Grow(2), mark);
@@ -706,8 +790,9 @@ public sealed class WorldRenderer : IDisposable
     {
         EntityTypeDefinition def = _rules.EntityTypes[ghost.TypeId];
         int left = ghost.TileX * TilePixels, top = ghost.TileY * TilePixels;
-        var rect = new Rect2(left, top, def.FootprintWidth * TilePixels, def.FootprintHeight * TilePixels);
-        if (_bank.Get(_catalog.Type(ghost.TypeId).Image(UnitAnim.Base)) is { } sheet)
+        (int width, int height) = ghost.Rotated ? (def.FootprintHeight, def.FootprintWidth) : (def.FootprintWidth, def.FootprintHeight);
+        var rect = new Rect2(left, top, width * TilePixels, height * TilePixels);
+        if (_bank.Get(SpriteRules.Turned(_catalog.Type(ghost.TypeId).Image(UnitAnim.Base), ghost.Rotated)) is { } sheet)
         {
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
             // Green and without the kingdom's colours, as in the original (the owner, 2026-10-21; CTRL-023).
@@ -812,4 +897,5 @@ public sealed class WorldRenderer : IDisposable
 /// <param name="TileY">Footprint top-left tile Y.</param>
 /// <param name="Legal">Whether the sim would accept it now.</param>
 /// <param name="Blocked">Footprint cells (offsets from the top-left) that block it.</param>
-public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null);
+/// <param name="Rotated">Turned by 90° (gates and bridges; CTRL-024, BLD-019).</param>
+public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null, bool Rotated = false);

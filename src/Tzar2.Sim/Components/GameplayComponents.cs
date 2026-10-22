@@ -538,27 +538,49 @@ public enum ProductionStall : byte
 
 #pragma warning restore CA1051
 
-/// <summary>A point a unit walks to after its current move (ORD-005), with the leg's combat mode.</summary>
+/// <summary>What a queued order does (<see cref="Waypoint.Kind"/>).</summary>
+public enum WaypointKind : byte
+{
+    /// <summary>Walk to the point (ORD-005).</summary>
+    Move = 0,
+
+    /// <summary>Attack <see cref="Waypoint.Target"/> (CTRL-026).</summary>
+    Attack = 1,
+
+    /// <summary>Guard <see cref="Waypoint.Target"/> (CTRL-027).</summary>
+    Guard = 2,
+
+    /// <summary>A point of a patrol path (ORD-006); a queue holds either these only or none.</summary>
+    Patrol = 3,
+}
+
+/// <summary>
+/// An order a unit carries out after its current one (Shift): a point to walk to with the leg's combat mode (ORD-005), an
+/// enemy to attack (CTRL-026), an object to guard (CTRL-027), or a point of its patrol path (ORD-006).
+/// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Waypoint
 {
-    /// <summary>World X.</summary>
+    /// <summary>World X: the point, or where the target stood when the order was given.</summary>
     public int X;
 
     /// <summary>World Y.</summary>
     public int Y;
 
-    /// <summary>The leg's combat mode: <see cref="CombatMode.None"/>, <see cref="CombatMode.AttackMove"/> or <see cref="CombatMode.Sneak"/>.</summary>
+    /// <summary>A move's combat mode: <see cref="CombatMode.None"/>, <see cref="CombatMode.AttackMove"/> or <see cref="CombatMode.Sneak"/>; none for the other kinds.</summary>
     public CombatMode Mode;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved0;
+    /// <summary>What the order does.</summary>
+    public WaypointKind Kind;
 
     /// <summary>Padding, always 0.</summary>
     public byte Reserved1;
 
     /// <summary>Padding, always 0.</summary>
     public byte Reserved2;
+
+    /// <summary>The attacked or guarded entity (<c>EntityId.Value</c>); 0 for moves and patrol points.</summary>
+    public uint Target;
 }
 
 /// <summary>Waypoint slots (<see cref="WaypointQueue.Capacity"/>).</summary>
@@ -569,18 +591,22 @@ public struct WaypointSlots
 }
 
 /// <summary>
-/// The points a unit walks after its current move, in order (Shift + right click, ORD-005): the first
-/// <see cref="Count"/> slots. Another order without Shift drops them.
+/// The orders a unit carries out after its current one, in order (Shift; ORD-005, CTRL-026, CTRL-027): the first
+/// <see cref="Count"/> slots. Or a patrol path (ORD-006), walked round from <see cref="Cursor"/>. Another order without
+/// Shift drops them.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct WaypointQueue : IComponent
 {
-    /// <summary>Most points queued at once (⚠ UNVERIFIED: the original's limit is not known).</summary>
-    public const int Capacity = 8;
+    /// <summary>Most orders queued at once (⚠ UNVERIFIED: the original's limit is not known).</summary>
+    public const int Capacity = 16;
 
-    /// <summary>The points, first <see cref="Count"/> slots; the rest zero.</summary>
+    /// <summary>The orders, first <see cref="Count"/> slots; the rest zero.</summary>
     public WaypointSlots Points;
 
-    /// <summary>Points queued.</summary>
+    /// <summary>Orders queued.</summary>
     public int Count;
+
+    /// <summary>A patrol path's point the unit walks to now; 0 for other queues.</summary>
+    public int Cursor;
 }

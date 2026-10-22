@@ -74,10 +74,14 @@ public sealed partial class CommandSystem : ISimSystem
                         continue;
                     }
 
-                    // Shift: one more point after the ones the unit already walks to (ORD-005).
-                    if (!patrol && (command.Flags & CommandFlags.Queue) != 0 && world.Motions.At(p).Order == MotionOrder.Move)
+                    // Shift: one more point after what the unit already does (ORD-005), or on its patrol path (ORD-006).
+                    if ((command.Flags & CommandFlags.Queue) != 0
+                        && (patrol ? world.Motions.At(p).Order == MotionOrder.Patrol : OrderQueue.IsBusy(world, entity, guard: false)))
                     {
-                        if (QueueWaypoint(world, entity, command.X, command.Y, mode))
+                        bool queued = patrol
+                            ? OrderQueue.AddPatrolPoint(world, entity, command.X, command.Y)
+                            : OrderQueue.Add(world, entity, new Waypoint { X = command.X, Y = command.Y, Mode = mode });
+                        if (queued)
                         {
                             applied++;
                         }
@@ -117,6 +121,17 @@ public sealed partial class CommandSystem : ISimSystem
                     int p = OwnedMover(world, entity, command.Player);
                     if (p < 0 || entity == command.Target)
                     {
+                        continue;
+                    }
+
+                    // Shift: guard it after what the unit guards or does now (CTRL-027).
+                    if ((command.Flags & CommandFlags.Queue) != 0 && OrderQueue.IsBusy(world, entity, guard: true))
+                    {
+                        if (OrderQueue.Add(world, entity, new Waypoint { X = target.X, Y = target.Y, Kind = WaypointKind.Guard, Target = command.Target.Value }))
+                        {
+                            applied++;
+                        }
+
                         continue;
                     }
 
@@ -403,24 +418,6 @@ public sealed partial class CommandSystem : ISimSystem
 
         int position = world.Motions.IndexOf(entity);
         return position >= 0 && world.Motions.At(position).SpeedPerTick > 0 ? position : -1;
-    }
-
-    // A waypoint at the end of the unit's queue; false when the queue is full.
-    private static bool QueueWaypoint(World world, EntityId entity, int x, int y, CombatMode mode)
-    {
-        if (!world.WaypointQueues.Has(entity))
-        {
-            world.WaypointQueues.Set(entity, default);
-        }
-
-        ref WaypointQueue q = ref world.WaypointQueues.Get(entity);
-        if (q.Count >= WaypointQueue.Capacity)
-        {
-            return false;
-        }
-
-        q.Points[q.Count++] = new Waypoint { X = x, Y = y, Mode = mode };
-        return true;
     }
 
     private static int CountOwnedMovers(World world, byte player, ReadOnlySpan<EntityId> entities)

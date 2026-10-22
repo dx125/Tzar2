@@ -58,7 +58,7 @@ public sealed partial class World
         for (int i = 0; i < ids.Length; i++)
         {
             Exploring x = Explorers.Components[i];
-            if (!Motions.Has(ids[i]) || IsHeld(ids[i]) || TypeOf(ids[i]).Traits.Category != EntityCategory.Unit || x.GoalTile < -1 || x.GoalTile >= tiles
+            if (!Motions.Has(ids[i]) || IsHeld(ids[i]) || TypeOf(ids[i]).Traits.Category != EntityCategory.Unit || x.GoalTile < -1 || x.GoalTile >= tiles || x.AreaTile < -1 || x.AreaTile >= tiles
                 || x.NextTick < 0 || x.NextTick > maxTick + Systems.NavalSystem.ExploreIntervalTicks)
             {
                 throw new System.IO.InvalidDataException("Snapshot violates a world invariant: invalid explorer.");

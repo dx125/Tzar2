@@ -32,5 +32,4 @@ rules:
   EXP-007:
     rule: Ctrl+] and Ctrl+[ select the units with more or less experience than the average of the selection (without a selection, those above 7 or below 8 on the screen).
     source: [patch 1.09 (TZAR110.TXT)]
-    status: missing
-    note: The hotkey checklist still marks them blocked.
+    status: tested

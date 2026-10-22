@@ -27,6 +27,9 @@ public sealed class NavalSystem : ISimSystem
     /// <summary>How far an explorer looks for unexplored ground (tiles).</summary>
     public const int ExploreRadiusTiles = 96;
 
+    /// <summary>How far around the clicked point a unit sent to explore an area looks for unexplored ground (tiles; ⚠ UNVERIFIED, ORD-007).</summary>
+    public const int ExploreAreaRadiusTiles = 12;
+
     private readonly List<EntityId> _finished = [];
 
     /// <inheritdoc />
@@ -202,7 +205,7 @@ public sealed class NavalSystem : ISimSystem
             }
 
             x.NextTick = tick + ExploreIntervalTicks;
-            int goal = NextGoal(world, unit);
+            int goal = NextGoal(world, unit, x.AreaTile);
             if (goal < 0)
             {
                 _finished.Add(unit); // nothing left it can reach: the order is done
@@ -220,8 +223,9 @@ public sealed class NavalSystem : ISimSystem
         }
     }
 
-    // The unexplored tile of the unit's component nearest to it (ring order, then row-major), or -1.
-    private static int NextGoal(World world, EntityId unit)
+    // The unexplored tile of the unit's component nearest to it, or to the middle of the area it was sent to (ring order,
+    // then row-major), or -1.
+    private static int NextGoal(World world, EntityId unit, int area)
     {
         Identity identity = world.Identities.Get(unit);
         NavLayer? layer = world.Navigation.ForType(identity.TypeId);
@@ -238,9 +242,10 @@ public sealed class NavalSystem : ISimSystem
             return -1;
         }
 
-        int cx = start % layer.Width;
-        int cy = start / layer.Width;
-        int radius = Math.Min(ExploreRadiusTiles, Math.Max(layer.Width, layer.Height));
+        int middle = area >= 0 ? area : start;
+        int cx = middle % layer.Width;
+        int cy = middle / layer.Width;
+        int radius = Math.Min(area >= 0 ? ExploreAreaRadiusTiles : ExploreRadiusTiles, Math.Max(layer.Width, layer.Height));
         for (int r = 1; r <= radius; r++)
         {
             for (int ty = cy - r; ty <= cy + r; ty++)

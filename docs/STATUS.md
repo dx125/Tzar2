@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-21 (fourth play-test)
+* **Last updated:** 2026-10-22 (controls)
 * **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
   game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
   2026-10-18; see the log below).
@@ -65,7 +65,9 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. Next: the fifth play-test (item 5). Done: unit bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
+   order. Next: the fifth play-test (item 5), and the owner's list of 2026-10-22 (log below). Done: the controls
+   (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
+   bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
    (ORD-005), the hit frame from the data (WAR-014), several items per kind (ITEM-016, ADR 0186).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
@@ -115,6 +117,23 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — The controls (ADR 0189).** The owner's order, while the fifth play-test runs: first what every game
+  uses (the item-book stars, the crusade's recovery, units revealed by using items, the workers' job names, the whole
+  of the controls), then every gap that changes play on any map, without asking.
+  * Shift queues attacks (CTRL-026), guards (CTRL-027) and patrol points (ORD-006) as it queued moves. Alt takes every
+    object of the clicked type on the screen.
+  * The selection's way shows while Shift is held (CTRL-025), and the group digit in the corner of the marks
+    (CTRL-020).
+  * Alt or Ctrl turns a gate's ghost and Alt a bridge's (CTRL-024, BLD-019). A gate may replace pieces of its own wall
+    (BLD-018).
+  * **Fixed:** the placement ghost judged everything as land, so peasants could never place a bridge, and a harbor far
+    from water looked legal. The frame now carries water and land for the ghost.
+  * Explore takes an area (ORD-007). The unload pointer shows where units can land (ORD-014). Ctrl+] and Ctrl+[
+    without a selection use levels 7 and 8 (EXP-007).
+  * The hashed layout goes to 12 and the snapshot format to 14. Every golden and the CI benches (sim DDD2164E92480AF0,
+    gameplay FE78B491678EEC15, AI 5AB3FD5C248F6814) are re-pinned; no behaviour of theirs changed.
+  * Found, not done: the original's gate is 7 tiles wide with four directions, and Tzar2 does not draw gates.
 
 * **2026-10-22 — Units have the original's body (WORLD-015, ADR 0188; batch K).**
   * Batch K measured the original's footmen. At rest they stand one to a tile, 31–32 px apart. A compact group keeps

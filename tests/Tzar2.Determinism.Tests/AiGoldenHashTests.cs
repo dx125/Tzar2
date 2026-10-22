@@ -46,8 +46,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
-    private const ulong GoldenHashStream = 0x0621999E4A2E29BEUL;
-    private const ulong GoldenFinalFullHash = 0xE34B4596CBE766A3UL;
+    // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
+    private const ulong GoldenHashStream = 0xF8FA9843434CAD8FUL;
+    private const ulong GoldenFinalFullHash = 0x596673C9C2027567UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

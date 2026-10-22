@@ -140,6 +140,16 @@ public sealed class TerrainAndSpriteRuleTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-019")]
+    public void A_turned_bridge_draws_the_vertical_picture()
+    {
+        Assert.Equal("bridge_vert", SpriteRules.Turned("bridge_horz", rotated: true));
+        Assert.Equal("bridge_horz", SpriteRules.Turned("bridge_horz", rotated: false));
+        Assert.Equal("e_castle", SpriteRules.Turned("e_castle", rotated: true));
+        Assert.Null(SpriteRules.Turned(null, rotated: true));
+    }
+
+    [Fact]
     public void Sites_and_rocks_pick_stages()
     {
         Assert.Equal(0, SpriteRules.SiteFrame(0, 4));
