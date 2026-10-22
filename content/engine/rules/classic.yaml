@@ -594,6 +594,10 @@ combat:
   bansheeSpell: spell_curse
   bansheeChance: 71
   bansheeOutOf: 1001
+  # WAR-010 (ReTzar's reading of the original, damage category 3): the attacks of mages, dragons, the Messiah and priests
+  # are magic, and the Messiah takes none. ITEM-010: a soul item's berserk order casts this spell's confusion.
+  magicAttackers: { classes: [mage, dragon, messiah, priest] }
+  soulBerserkSpell: spell_berserk
   # TECH-029 (ReTzar's reading of the original, 0x4de900): with Tournaments, every 75 points the kingdom's units learn
   # teach each of its Asian peasants, monks, ninjas and priests one more; what is over 75 is lost.
   tournamentTechnology: te_tournaments
@@ -635,7 +639,7 @@ spell_firerain: { new: true, Spell: { effect: areaDamage, amount: 10, radius: 2,
 spell_whirlpool: { new: true, Spell: { effect: areaDamage, affects: enemy, amount: 30, radius: 2, durationMs: 6000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"
 spell_flamebolt: { new: true, Spell: { effect: damage, amount: 30, mana: 25, range: 10, cooldownMs: 2000, castMs: 500, projectile: flame_bolt } }
 spell_turntostone: { new: true, Spell: { effect: stone, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
-spell_berserk: { new: true, Spell: { effect: confuse, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
+spell_berserk: { new: true, Spell: { effect: confuse, durationMs: 20000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
 spell_magicvision: { new: true, Spell: { effect: reveal, summon: comm.fog_revealer, mana: 40, range: 30, cooldownMs: 5000, castMs: 500 } }
 # Mastery (TECH-028; ReTzar's reading of the original, 0x473bf0): an Asian priest teaches an Asian peasant, monk, ninja or
 # priest of a lower level than its own one point of experience (100 here, a level's worth: UNVERIFIED, UNK-23).
@@ -710,7 +714,10 @@ comm.item_plusplus:
     power: 3                                                                # UNVERIFIED (UNK-25)
     looks: [item_sword, item_sword1, item_sword2, item_sword3, item_bow1, item_bow2, item_bow3, item_shield1, item_shield2, item_shield3]
     crafts: [attack item_sword, attack item_bow1, defence item_shield1]
-comm.item_soul: { Item: { spell: murder, charges: 1 } }                     # item_kill, used once (UNVERIFIED); item_berserk is not implemented
+# A soul item (ITEM-010; ReTzar's reading of the original, 0x473403, 0x465340): made by Soul Bind, bound to its target;
+# item_kill and item_berserk act on the bound unit and the item stays; it goes when the bound unit dies.
+comm.item_soul: { Item: {} }
+spell_soulbind: { new: true, Spell: { effect: soulBind, summon: comm.item_soul, affects: all, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # books only; range and mana from ReTzar (0x4721e0, 0x4723e0)
 comm.resitem: { Item: { resource: gold, power: 100 } }                      # UNVERIFIED (UNK-25)
 
 # Magic vision's revealer (OBJECTS FOG_REVEALER, fog_range from the data) lasts a while (UNVERIFIED, UNK-26).

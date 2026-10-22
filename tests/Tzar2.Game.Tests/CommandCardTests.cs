@@ -98,6 +98,33 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-010")]
+    public void A_click_on_a_soul_kills_its_bound_unit_and_ctrl_click_sends_it_berserk()
+    {
+        World world = _session.Simulation.World;
+        EntityId footman = Own("euro.footman");
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        Position at = world.Positions.Get(footman);
+        EntityId soul = world.Spawn((ushort)Rules.Value.EntityTypeId("comm.item_soul"), 255, at.X + 2048, at.Y);
+        var pick = new CommandList();
+        pick.Add(CommandKind.PickItem, [footman], target: soul);
+        _session.Submit(pick);
+        for (int i = 0; i < 400 && !world.Helds.Has(soul); i++)
+        {
+            _session.Step(1);
+        }
+
+        _session.Step(1);
+        Assert.True(card.ToggleInventory(Context([footman])));
+        CardSlot slot = card.Build(Context([footman]))[0]!.Value;
+        Assert.StartsWith("Left click: kill the bound unit", slot.Description, StringComparison.Ordinal);
+        Command kill = card.Press(Context([footman]), slot).Commands![0];
+        Command berserk = card.Press(Context([footman]), slot, ctrl: true).Commands![0];
+        Assert.Equal((CommandKind.UseItem, 0, 0), (kill.Kind, kill.Arg0, kill.Arg1));
+        Assert.Equal((CommandKind.UseItem, 0, 1), (berserk.Kind, berserk.Arg0, berserk.Arg1));
+    }
+
+    [Fact]
     [Trait("Rule", "HUD-017")]
     [Trait("Rule", "HUD-018")]
     public void The_eye_opens_the_carriers_inventory_where_clicks_use_drop_or_make_the_default_item()

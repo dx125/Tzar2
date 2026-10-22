@@ -114,7 +114,7 @@ public static class ScenarioSetup
     }
 
     // The spells a map's book names by number (its magic type): their order in STRINGS.INI [spell_names] (⚠ HYPOTHESIS,
-    // ADR 0186: the 33 maps' books fit it). Soul Bind is not built.
+    // ADR 0186: the 33 maps' books fit it).
     private static readonly string[] LegacySpellOrder =
     [
         "spell_firerain", "spell_lightning", "spell_heal", "spell_spawncarpet", "spell_spawnbat", "spell_bless", "spell_freeze",

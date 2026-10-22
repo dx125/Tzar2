@@ -144,6 +144,26 @@ public class CurseHypnosisTests
         Assert.True(d.World.CanAct(messiah));
         int hp = Hp(d, messiah);
         MagicSystem.ApplyEffect(d.World, Spell(d.World.Ruleset, "spell_lightning"), reader, 0, messiah, 0, 0, []);
-        Assert.True(Hp(d, messiah) < hp); // damage still hurts
+        Assert.Equal(hp, Hp(d, messiah)); // spells are magic: no damage either
+    }
+
+    [Fact]
+    [Trait("Rule", "WAR-010")]
+    public void The_messiah_takes_no_damage_from_a_mages_attack_but_does_from_a_sword()
+    {
+        using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 6, 4), Unit("euro.footman", 0, 9, 6), Unit("comm.messiah", 1, 9, 4)), ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId messiah = OfType(d.World, "comm.messiah").Single();
+        d.Order(1, CommandKind.SetStance, [messiah], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.SetStance, [footman], arg0: (int)CombatStance.HoldFire);
+        int hp = Hp(d, messiah);
+        d.Order(0, CommandKind.Attack, [mage], target: messiah);
+        d.RunUntil(() => false, 200);
+        Assert.Equal(hp, Hp(d, messiah)); // magic (ReTzar: damage category 3)
+        d.Order(0, CommandKind.Stop, [mage]);
+        d.Order(0, CommandKind.Attack, [footman], target: messiah);
+        d.RunUntil(() => Hp(d, messiah) < hp, 400);
+        Assert.True(Hp(d, messiah) < hp);
     }
 }

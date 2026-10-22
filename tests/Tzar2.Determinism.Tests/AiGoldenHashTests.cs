@@ -49,8 +49,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // now 10 minutes.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0x70624785C9BA7574UL;
-    private const ulong GoldenFinalFullHash = 0x89D73BFDA103E81BUL;
+    // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
+    private const ulong GoldenHashStream = 0x5F72EE210A7970A0UL;
+    private const ulong GoldenFinalFullHash = 0xE1C68960A2526944UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

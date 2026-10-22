@@ -447,6 +447,26 @@ public sealed partial class World
     // (a ship at sea) they go down with it.
     private void BeforeDestroyCombatMagic(EntityId entity)
     {
+        // The soul items bound to a unit go with it (ITEM-010; ReTzar's reading of the original, 0x4e219f).
+        if (Items.Count != 0 && !Items.Has(entity))
+        {
+            Span<uint> gems = stackalloc uint[16];
+            int found = 0;
+            ReadOnlySpan<EntityId> items = Items.Entities;
+            for (int i = 0; i < items.Length && found < gems.Length; i++)
+            {
+                if (Items.Components[i].Bound == entity.Value)
+                {
+                    gems[found++] = items[i].Value;
+                }
+            }
+
+            for (int k = 0; k < found; k++)
+            {
+                Destroy(EntityId.FromValue(gems[k]));
+            }
+        }
+
         if (Inventories.Count != 0 && Inventories.IndexOf(entity) is >= 0 and var inv && Inventories.At(inv).Count > 0)
         {
             Inventory items = Inventories.At(inv);

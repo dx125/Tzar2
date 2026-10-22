@@ -42,10 +42,10 @@ rules:
     status: tested
     adr: [0250]
   WAR-010:
-    rule: The Messiah (campaign) is immune to magic. Freeze, turn to stone, confusion, hypnosis and the curse do not take on it; damage spells still hurt it.
-    source: [guide Campaign Discussion (Mission 18), community ReTzar src/gameplay.rs (0x4ef200)]
+    rule: The Messiah (campaign) is immune to magic. Freeze, turn to stone, confusion, hypnosis and the curse do not take on it, and magic deals it no damage, spells and souls or the attacks of mages, dragons, priests and the Messiah.
+    source: [guide Campaign Discussion (Mission 18), 'community ReTzar src/gameplay.rs (0x4ef200, apply_damage category 3)']
     status: tested
-    adr: [0250]
+    adr: [0250, 0255]
   WAR-011:
     rule: Units with a bonus against other kinds, as listed in the guide, (footmen against pikemen, archers and jihad warriors; orcs against hand-to-hand units; ronin against peasants; satraps and samurai against machines; warships against warships; cannon and rocket towers against warships) get it from the bonus table.
     source: [guide Unit Discussion, data BONUS.INI]
