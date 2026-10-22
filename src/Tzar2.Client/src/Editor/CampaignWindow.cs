@@ -20,7 +20,7 @@ public partial class CampaignWindow : Window
     private readonly EditorScreen _screen;
     private readonly ItemList _maps = new() { SizeFlagsVertical = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(220, 0) };
     private readonly CampaignGraphView _graph = new();
-    private readonly VBoxContainer _details = new() { CustomMinimumSize = new Vector2(330, 0) };
+    private readonly VBoxContainer _details = new() { CustomMinimumSize = new Vector2(290, 0) }; // narrow enough for a 1024-wide screen (UI-L3)
     private readonly Label _status = new();
     private CampaignDocument _campaign;
     private string? _path;
@@ -41,7 +41,8 @@ public partial class CampaignWindow : Window
         var outer = new VBoxContainer();
         margin.AddChild(outer);
         AddChild(margin);
-        var bar = new HBoxContainer();
+        // The buttons wrap, so the window fits a 1024-wide screen (UI-L3).
+        var bar = new HFlowContainer();
         Forms.Button(bar, "New", () => SetCampaign(CampaignDocument.New("New campaign"), null));
         Forms.Button(bar, "Open…", () => Files.Open(this, ["*.t2camp ; Tzar2 campaign"], paths => OpenFile(paths[0]), many: false));
         Forms.Button(bar, "Save", () => Save(saveAs: false));
@@ -313,7 +314,7 @@ public partial class CampaignWindow : Window
 
     private static Control Scrolled(Control inner)
     {
-        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(340, 0) };
+        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(300, 0) };
         inner.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         scroll.AddChild(inner);
         return scroll;

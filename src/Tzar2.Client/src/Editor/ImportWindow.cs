@@ -104,7 +104,8 @@ public partial class ImportWindow : Window
         VBoxContainer right = Forms.Scroll(split);
         Forms.Heading(right, "Results");
         right.AddChild(_results);
-        var actions = new HBoxContainer();
+        // The buttons wrap, so the window fits a 1024-wide screen (UI-L3).
+        var actions = new HFlowContainer();
         Forms.Button(actions, "Save packages", Save);
         Forms.Button(actions, "Export report…", () => Files.Save(this, "conversion-report.json", path => File.WriteAllBytes(path, _session.ExportReports()), ["*.json ; Report"]));
         Forms.Button(actions, "Open in editor", OpenSelected);

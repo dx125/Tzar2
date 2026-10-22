@@ -33,9 +33,6 @@ internal static class UiFindings
     /// <summary>The open findings.</summary>
     public static readonly Known[] Open =
     [
-        // The editor's import and campaign windows are wider than a 1024-wide screen.
-        new("UI-L3", "1024x768-wide-auto|.*-authentic", "editor-import|editor-campaign", "OffScreen", "ImportWindow|CampaignWindow"),
-
         // The conversation's phrases are not wrapped to its 300 px box.
         new("UI-L4", ".*", "conversation", "TextOverflow", "ConversationDialog"),
 
