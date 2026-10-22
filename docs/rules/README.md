@@ -110,14 +110,14 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Magic, religion and spies](magic.yaml) (MAG) | 21 | 16 | 4 | 0 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 3 | 3 | 2 | 1 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 3 | 3 | 3 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 2 | 10 | 8 | 6 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 29 | 3 | 1 | 2 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
-| **All** | 335 | 198 | 78 | 25 | 17 | 9 | 8 |
+| **All** | 335 | 198 | 78 | 26 | 16 | 9 | 8 |
 
 ## Not done yet
 
@@ -172,7 +172,7 @@ Missing and partial rules.
 ### Animations, effects and sounds
 
 * **PRES-002** (partial): Arrows, bolts, stones, cannon balls, rockets and spells fly as the original's pictures, and stones, shells, rockets and bolts leave its explosions. *Which picture goes with which weapon, the flames' spots and the arcs are Tzar2's guesses.*
-* **PRES-005**: Units have their own animations for capturing and collecting meat (peasants), murder (ninjas), prayer (priests), casting (mages and priests) and other attack swings (footmen, macemen, peasants, bears, ninjas).
+* **PRES-005** (partial): Units have their own animations for capturing and collecting meat (peasants), murder (ninjas), prayer (priests), casting (mages and priests) and other attack swings (footmen, macemen, peasants, bears, ninjas). *Done - capturing and cutting meat (peasants), casting (mages and priests, image_spell; the Asian priest's prayer is the same picture) and the second swing on half the blows (footmen, macemen, peasants, bears, ninjas, priests; the original draws at random, 0x4e5720 by ReTzar's reading). Left - the ninja's murder (the order is not built) and the Asian peasant's third swing under Kung Fu.*
 * **PRES-008** (partial): Some animations start inside their sheet, at the row and column the data gives. *An attack turns its picture by startcol (a knight striking east shows column 4) and a swing starts on its startrow. Walks and idles still start where the shared clock is, because the frame does not carry when a picture was set.*
 
 ### Menus, setup and pause
@@ -273,7 +273,7 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 150 used, 4 restated by hand, 18 not needed and 40 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 155 used, 4 restated by hand, 18 not needed and 35 to do.
 
 To do:
 
@@ -282,13 +282,8 @@ To do:
 * `DATA/LAYOUT.INI` `layout1024l`: the interface down the left side (HUD-009)
 * `DATA/LAYOUT.INI` `layout1024r`: the interface down the right side (HUD-009)
 * `DATA/OBJECTS/*.INI` `buildicon`: meaning not decoded
-* `DATA/OBJECTS/*.INI` `image_attack2`: other attack swings (PRES-005)
-* `DATA/OBJECTS/*.INI` `image_attack3`: other attack swings (PRES-005)
-* `DATA/OBJECTS/*.INI` `image_capture`: the peasant's capture animation (PRES-005)
-* `DATA/OBJECTS/*.INI` `image_meat`: the peasant's meat collecting animation (PRES-005)
 * `DATA/OBJECTS/*.INI` `image_murder`: the ninja's murder animation (PRES-005)
 * `DATA/OBJECTS/*.INI` `image_pray`: the priest's prayer animation (PRES-005)
-* `DATA/OBJECTS/*.INI` `image_spell`: the casting animation of mages and priests (PRES-005)
 * `DATA/ORDERS.INI` `enable`: an order shown only when its condition holds, the quest order (HUD-029)
 * `DATA/RES.INI` `armouritem`: the strength of the map's random items (ITEM-015)
 * `DATA/RES.INI` `potionitem`: the strength of the map's random items (ITEM-015)

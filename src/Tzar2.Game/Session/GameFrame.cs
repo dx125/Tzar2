@@ -30,6 +30,15 @@ public enum UnitActivity : byte
 
     /// <summary>Milking a cow.</summary>
     Milk = 7,
+
+    /// <summary>Digging at an enemy building to capture it (PRES-005).</summary>
+    Capture = 8,
+
+    /// <summary>Cutting meat from a carcass (PRES-005).</summary>
+    Meat = 9,
+
+    /// <summary>Casting a spell (PRES-005).</summary>
+    Cast = 10,
 }
 
 /// <summary>What a worker carries, for its carrying sprite (the original's <c>_tree</c>, <c>_gold</c>, <c>_milk</c>... images).</summary>

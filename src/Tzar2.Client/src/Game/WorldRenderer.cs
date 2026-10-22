@@ -88,6 +88,9 @@ public sealed class WorldRenderer : IDisposable
     private long _timeMs;
     private (int X, int Y, uint Target, long StartMs)? _order;
     private bool _lightsValid;
+
+    // The blows each unit has struck, counted when its swing starts again (PRES-005's alternate swings).
+    private readonly Dictionary<uint, (int LastSwingMs, uint Blows)> _swings = [];
     private readonly TerrainGrid _grid;
 
     /// <summary>Where trees and their shadows are drawn and which pictures grow where (PRES-009; set by the game screen from the terrain set's data).</summary>
@@ -423,8 +426,18 @@ public sealed class WorldRenderer : IDisposable
             UnitActivity.Mine => UnitAnim.Mine,
             UnitActivity.Farm => UnitAnim.Farm,
             UnitActivity.Build => UnitAnim.Build,
+            UnitActivity.Capture when visual.Images.ContainsKey(UnitAnim.Capture) => UnitAnim.Capture,
+            UnitActivity.Capture => UnitAnim.Farm, // digging, without a picture of its own
+            UnitActivity.Meat when visual.Images.ContainsKey(UnitAnim.Meat) => UnitAnim.Meat,
+            UnitActivity.Meat => UnitAnim.Farm,
+            UnitActivity.Cast when visual.Images.ContainsKey(UnitAnim.Spell) => UnitAnim.Spell,
+            UnitActivity.Cast => UnitAnim.Attack,
             _ => UnitAnim.Idle,
         };
+        if (anim == UnitAnim.Attack)
+        {
+            anim = SpriteRules.Swing(visual.Images.ContainsKey(UnitAnim.Attack2), NextSwing(e)); // PRES-005: half the blows swing the other way
+        }
         SheetRef? s = _bank.Get(visual.Image(anim)) ?? _bank.Get(visual.Image(UnitAnim.Base));
         if (s is null)
         {
@@ -438,7 +451,7 @@ public sealed class WorldRenderer : IDisposable
         {
             frame = 0;
         }
-        else if (anim == UnitAnim.Attack && e.SwingMs >= 0)
+        else if (anim is UnitAnim.Attack or UnitAnim.Attack2 && e.SwingMs >= 0)
         {
             frame = SpriteRules.SwingFrame(s.StartRow, e.SwingMs >= s.Animation.CycleMs ? 0 : s.Animation.FrameAt(e.SwingMs), s.Sheet.FramesPerDirection);
         }
@@ -448,7 +461,7 @@ public sealed class WorldRenderer : IDisposable
         }
 
         int dir = SpriteRules.Direction(e.Facing, s.Sheet.Directions);
-        if (anim == UnitAnim.Attack)
+        if (anim is UnitAnim.Attack or UnitAnim.Attack2)
         {
             dir = SpriteRules.TurnedColumn(dir, s.StartCol, s.Sheet.Directions); // PRES-008: the knight's and ships' attack sheets
         }
@@ -489,6 +502,25 @@ public sealed class WorldRenderer : IDisposable
         int f = ((frame % s.FramesPerDirection) + s.FramesPerDirection) % s.FramesPerDirection;
         AtlasCell cell = _bank.Gpu!.Atlas.GetCell(sheet.SheetIndex, (d * s.FramesPerDirection) + f);
         return cell.IsEmpty ? null : new Rect2(origin.X + cell.OffsetX, origin.Y + cell.OffsetY, cell.Width, cell.Height);
+    }
+
+    // The number of the blow a unit is striking: one more each time its swing starts over.
+    private uint NextSwing(in FrameEntity e)
+    {
+        uint key = e.Id.Value;
+        (int last, uint blows) = _swings.TryGetValue(key, out (int, uint) seen) ? seen : (-1, key * 2654435761u);
+        if (e.SwingMs >= 0 && last >= 0 && e.SwingMs < last)
+        {
+            blows++;
+        }
+
+        if (_swings.Count > 4096)
+        {
+            _swings.Clear(); // dead units; a fresh count only shifts the alternation
+        }
+
+        _swings[key] = (e.SwingMs, blows);
+        return blows;
     }
 
     private void AddSheet(SpriteRenderer renderer, SheetRef sheet, Vector2I origin, int direction, int frame, int player, uint key, bool shadows)
