@@ -27,9 +27,10 @@ rules:
     note: The manual says Learning "increases the amount of experience that can be gained"; the guide and the game's own text say it lets units gain experience at all, which Tzar2 follows.
   TECH-006:
     rule: Rotating Fields and Irrigation (Asians) make fields give more food.
-    source: [manual Researching Technologies, help ITEMS.TXT HT_TEND_FIELDS]
-    status: unclear
-    note: The help says they raise the amount of food a peasant carries; Tzar2 makes farming faster instead, by a placeholder (UNK-21).
+    source: [manual Researching Technologies, help ITEMS.TXT HT_TEND_FIELDS, community ReTzar src/gameplay.rs (0x4ae720)]
+    status: tested
+    note: Rotating Fields adds 2 to a peasant's load of food from fields, Irrigation 4.
+    adr: [0190]
   TECH-007:
     rule: Horsemanship (Arabians) makes mounted units cheaper.
     source: [manual Researching Technologies]
@@ -47,9 +48,10 @@ rules:
     note: By how much is a placeholder (UNK-21).
   TECH-010:
     rule: Saw, Stone Mining, Gold Mining and Ore Flotation (Arabians) make gathering wood, stone and gold more productive.
-    source: [manual Researching Technologies, help ITEMS.TXT HT_CHOP_WOOD, help ITEMS.TXT HT_MINE]
-    status: unclear
-    note: The help says they raise the amount a peasant carries; Tzar2 makes gathering faster instead, by a placeholder (UNK-21).
+    source: [manual Researching Technologies, help ITEMS.TXT HT_CHOP_WOOD, help ITEMS.TXT HT_MINE, community ReTzar src/gameplay.rs (0x4ae720)]
+    status: tested
+    note: Each adds 2 to a peasant's load of its resource. Ore Flotation makes mines last longer instead (not done).
+    adr: [0190]
   TECH-011:
     rule: Crossbow raises the attack of arrows; Chemistry (Asians) gives flaming arrows with more attack.
     source: [manual Researching Technologies]
@@ -110,14 +112,16 @@ rules:
     note: By how much is a placeholder (UNK-20).
   TECH-023:
     rule: Trade Taxes makes the markets produce resources over time.
-    source: [manual Researching Technologies, strings STRINGS.INI orders_add te_tradetaxes]
-    status: unclear
-    note: The manual says the markets produce resources for a while; the game's own text says it increases trade profit. Tzar2 adds 10 % to the markets' income (placeholder).
+    source: [manual Researching Technologies, strings STRINGS.INI orders_add te_tradetaxes, community ReTzar src/gameplay.rs (K+0x11a)]
+    status: implemented
+    note: It adds 2 to the base 40 of the trade profit, 5 % more; the manual's "produce resources" is not what the game does.
+    adr: [0190]
   TECH-024:
     rule: Banking (Asians) adds resources to the treasury over time.
-    source: [manual Researching Technologies, strings STRINGS.INI orders_add te_banking]
-    status: unclear
-    note: The manual says it adds to the treasury from time to time; the game's own text says it increases trade profit. Tzar2 adds 10 % to the profit at markets (placeholder); until 2026-10-21 it targeted the castle and did nothing.
+    source: [manual Researching Technologies, strings STRINGS.INI orders_add te_banking, community ReTzar src/gameplay.rs (K+0x11a)]
+    status: implemented
+    note: It adds 3 to the base 40 of the trade profit, 7.5 % more (7 % here).
+    adr: [0190]
   TECH-025:
     rule: Riding Hordes (Arabians) raises the attack and defence of all mounted units.
     source: [manual Researching Technologies]
@@ -171,6 +175,7 @@ rules:
     status: tested
   TECH-036:
     rule: Each cannon level of a ship, up to level six, makes its cannons fire more often.
-    source: [help ITEMS.TXT HT_UPGRADE_SHIPS]
-    status: partial
-    note: Tzar2 adds attack instead (placeholder, UNK-21).
+    source: [help ITEMS.TXT HT_UPGRADE_SHIPS, community ReTzar src/gameplay.rs (0x4e8f00)]
+    status: tested
+    note: The firing period goes 3000, 2400, 1900, 1500, 1200, 800 by the level.
+    adr: [0190]

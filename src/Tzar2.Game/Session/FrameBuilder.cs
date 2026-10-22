@@ -158,6 +158,7 @@ public static class FrameBuilder
                     e.Carry = CarryOf(world.Ruleset, worker.CarryResource, node);
                 }
 
+                e.Job = JobOf(world.Ruleset, worker, node);
                 if (!moving && worker.Phase == WorkerPhase.Gathering)
                 {
                     e.Activity = node is { Traits.Category: EntityCategory.Unit } ? UnitActivity.Milk : GatherActivity(world.Ruleset, worker.NodeResource);
@@ -168,11 +169,39 @@ public static class FrameBuilder
                 }
             }
 
+            if (world.Explorers.Count > 0 && world.Explorers.Has(id))
+            {
+                e.Job = FrameJob.Explore;
+            }
+            else if (world.Errands.Count > 0 && world.Errands.IndexOf(id) is >= 0 and var errand)
+            {
+                e.Job = world.Errands.At(errand).Kind switch
+                {
+                    ErrandKind.Pickup => FrameJob.Collect,
+                    ErrandKind.Board => FrameJob.Transport,
+                    _ => e.Job,
+                };
+            }
+
+            if (world.Inventories.Count > 0 && world.Inventories.IndexOf(id) is >= 0 and var inventory)
+            {
+                Inventory carried = world.Inventories.At(inventory);
+                for (int slot = 0; slot < carried.Count && !e.CarriesBook; slot++)
+                {
+                    EntityId item = EntityId.FromValue(carried.Items[slot]);
+                    e.CarriesBook = world.Entities.IsAlive(item) && world.TypeOf(item).Traits.Item is { Kind: ItemKind.SpellBook };
+                }
+            }
+
             int c = world.Combats.IndexOf(id);
             if (c >= 0)
             {
                 Combat combat = world.Combats.At(c);
                 e.Target = EntityId.FromValue(combat.Target);
+                if (combat.Target != 0 && world.Workers.Has(id) && e.Job == FrameJob.None)
+                {
+                    e.Job = FrameJob.Attack; // a peasant in a fight
+                }
                 ArmamentDefinition? arm = type.Traits.Armament;
                 if (!moving && combat.Target != 0 && arm is not null && combat.CooldownMs > 0)
                 {
@@ -444,6 +473,25 @@ public static class FrameBuilder
                 terrain[(piece.TileY * width) + piece.TileX] |= Input.Placement.OwnWall;
             }
         }
+    }
+
+    /// <summary>A worker's job by its task and the node it works (STRINGS.INI [peons]; HUD-032).</summary>
+    public static FrameJob JobOf(Ruleset rules, in Worker worker, EntityTypeDefinition? node)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        return worker.Task switch
+        {
+            WorkerTask.Build => FrameJob.Build,
+            WorkerTask.Repair => FrameJob.Repair,
+            WorkerTask.Capture => FrameJob.Capture,
+            WorkerTask.Harvest when node is { Traits.Category: EntityCategory.Unit } => FrameJob.TendCows,
+            WorkerTask.Harvest when node is { Traits.WalkableFootprint: true } => FrameJob.Dig,
+            WorkerTask.Harvest when node is { HasFootprint: false } => FrameJob.Collect, // meat on the ground
+            WorkerTask.Harvest when worker.NodeResource < rules.ResourceTypes.Count && rules.ResourceTypes[worker.NodeResource] == "wood" => FrameJob.Chop,
+            WorkerTask.Harvest when worker.NodeResource < rules.ResourceTypes.Count && rules.ResourceTypes[worker.NodeResource] == "food" => FrameJob.Dig,
+            WorkerTask.Harvest => FrameJob.Mine,
+            _ => FrameJob.None,
+        };
     }
 
     // The orders of the card's kingdom's units: what each does now, then what it has queued (CTRL-025).

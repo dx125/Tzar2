@@ -17,6 +17,30 @@ namespace Tzar2.Sim.Tests;
 /// </summary>
 public class EconomyM3Tests
 {
+    [Fact]
+    [Trait("Rule", "TECH-010")]
+    [Trait("Rule", "TECH-006")]
+    public void Gathering_technologies_raise_what_a_peasant_carries_from_their_resource_only()
+    {
+        // 10 + 2 for the resource's "plus" technology, + 4 of Irrigation for food (ReTzar, 0x4ae720).
+        using var d = new SimDriver(TestMap(40, 20, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 14, 6), Tree(20, 12)), ruleset: Classic);
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        EntityTypeDefinition tree = Classic.EntityTypes[Id("comm.tree")], gold = Classic.EntityTypes[Id("comm.res_gold")], field = Classic.EntityTypes[Id("comm.field")];
+        Assert.Equal(10, GameplayCommands.CarryCapacity(d.World, peon, tree));
+        ResearchTests.Grant(d, 0, Classic, "te_woodplus");
+        ResearchTests.Grant(d, 0, Classic, "te_fields");
+        ResearchTests.Grant(d, 0, Classic, "te_irrigation");
+        d.Step();
+        Assert.Equal(12, GameplayCommands.CarryCapacity(d.World, peon, tree));
+        Assert.Equal(10, GameplayCommands.CarryCapacity(d.World, peon, gold));
+        Assert.Equal(16, GameplayCommands.CarryCapacity(d.World, peon, field));
+        Assert.Equal(50, GameplayCommands.CarryCapacity(d.World, peon, Classic.EntityTypes[Id("comm.cow")])); // cows keep theirs
+
+        d.Order(0, CommandKind.Harvest, [peon], target: OfType(d.World, "comm.tree").Single());
+        d.RunUntil(() => d.World.Workers.Get(peon).CarryAmount >= 12, 3000);
+        Assert.Equal(12, d.World.Workers.Get(peon).CarryAmount);
+    }
+
     private static int Food => Resource("food");
 
     private static readonly string[] Coast =

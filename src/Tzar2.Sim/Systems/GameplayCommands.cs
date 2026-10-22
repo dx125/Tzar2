@@ -107,22 +107,33 @@ internal static class GameplayCommands
     /// </summary>
     public static int CarryCapacity(World world, EntityId worker)
     {
-        ResourceNodeDefinition? node = null;
+        EntityTypeDefinition? node = null;
         if (world.Workers.Has(worker) && world.Workers.Get(worker).Target is var target and not 0
             && world.Entities.IsAlive(EntityId.FromValue(target)))
         {
-            node = world.TypeOf(EntityId.FromValue(target)).Traits.ResourceNode;
+            node = world.TypeOf(EntityId.FromValue(target));
         }
 
         return CarryCapacity(world, worker, node);
     }
 
-    /// <summary>The carry capacity of a harvester gathering from <paramref name="node"/> (null: its own capacity).</summary>
-    public static int CarryCapacity(World world, EntityId worker, ResourceNodeDefinition? node)
+    /// <summary>
+    /// The carry capacity of a harvester gathering from a node of type <paramref name="nodeType"/> (null: its own
+    /// capacity): the node's own load where it has one (cows, ADR 0170), else the harvester's capacity plus the
+    /// gathering technologies of that node's resource (TECH-006, TECH-010).
+    /// </summary>
+    public static int CarryCapacity(World world, EntityId worker, EntityTypeDefinition? nodeType)
     {
         EntityTypeDefinition type = world.TypeOf(worker);
-        int load = node is { CarryLoad: > 0 } ? node.CarryLoad : type.Traits.Harvester?.Capacity ?? 0;
-        return Math.Max(1, world.Stats.Apply(world.Identities.Get(worker).Owner, ModifierStat.CarryCapacity, type.Id, load));
+        byte owner = world.Identities.Get(worker).Owner;
+        ResourceNodeDefinition? node = nodeType?.Traits.ResourceNode;
+        if (node is { CarryLoad: > 0 })
+        {
+            return Math.Max(1, world.Stats.Apply(owner, ModifierStat.CarryCapacity, type.Id, node.CarryLoad));
+        }
+
+        int load = world.Stats.Apply(owner, ModifierStat.CarryCapacity, type.Id, type.Traits.Harvester?.Capacity ?? 0);
+        return Math.Max(1, nodeType is null ? load : world.Stats.Apply(owner, ModifierStat.CarryCapacity, nodeType.Id, load));
     }
 
     public static CommandRejection? Build(World world, in Command command, ReadOnlySpan<EntityId> entities)

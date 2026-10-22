@@ -15,11 +15,23 @@ internal sealed partial class EntityCompiler
     private const int UnitsPerTile = 2048;
     private const int UnitsPerPixel = 64;
 
+    /// <summary>
+    /// The speed of a unit whose walk sheet has the stride <paramref name="stride"/> (IMAGES.INI <c>move_len</c>; WORLD-012):
+    /// the original steps one pixel every <c>(32000 / move_len) &gt;&gt; 5</c> of its milliseconds (ReTzar's reading of
+    /// its movement), and its millisecond lasts 1.25 of ours (<see cref="LegacyTime.MsPerTimeUnit"/>, ADR 0169). Stride 50
+    /// walks 40 px/s, 85 72.7, 56 47, 80 66.7 and 32 25.8, as measured (ADR 0172). World units per second.
+    /// </summary>
+    public static int StrideUnitsPerSecond(int stride)
+    {
+        int msPerPixel = Math.Max(1, (32000 / Math.Max(1, stride)) >> 5);
+        return (int)((long)UnitsPerPixel * 1000 * 1000 / ((long)LegacyTime.MsPerTimeUnit * msPerPixel));
+    }
+
     private static readonly Dictionary<string, string[]> Catalogue = new(StringComparer.Ordinal)
     {
         // Lookup only, never iterated (T2D004).
         ["Legacy"] = ["class", "civ", "name"],
-        ["Mobile"] = ["locomotor", "speed", "pixelsPerSecond"],
+        ["Mobile"] = ["locomotor", "speed", "pixelsPerSecond", "stride"],
         ["Collision"] = ["radius", "terrain", "clearance"],
         ["Health"] = ["max"],
         ["Armor"] = ["defence", "resistance"],
@@ -266,8 +278,21 @@ internal sealed partial class EntityCompiler
         if (entry.Find("Mobile") is { } mobile)
         {
             d.Locomotor = mobile.Get("locomotor") is { } loco ? RulesetCompiler.ParseLocomotor(RulesetCompiler.Str(loco.Node, loco.Source, Where("Mobile", "locomotor")), loco.Source, loco.Node.Line) : Locomotor.Foot;
-            int pixels = IntOf("Mobile", "pixelsPerSecond") ?? Scaled("Mobile", "speed", NonNegative("Mobile", "speed", 0), _gameplay.SpeedPixelsPerSecondPerPoint);
-            d.SpeedUnitsPerSecond = Scaled("Mobile", "pixelsPerSecond", Math.Max(0, pixels), UnitsPerPixel);
+            // A measured speed first (ADR 0172), then the original's rule from the walk sheet's stride (WORLD-012), then
+            // SPEED x speedPixelsPerSecondPerPoint (UNVERIFIED) for what has neither.
+            if (IntOf("Mobile", "pixelsPerSecond") is { } measured)
+            {
+                d.SpeedUnitsPerSecond = Scaled("Mobile", "pixelsPerSecond", Math.Max(0, measured), UnitsPerPixel);
+            }
+            else if (IntOf("Mobile", "stride") is > 0 and var stride)
+            {
+                d.SpeedUnitsPerSecond = StrideUnitsPerSecond(stride);
+            }
+            else
+            {
+                int pixels = Scaled("Mobile", "speed", NonNegative("Mobile", "speed", 0), _gameplay.SpeedPixelsPerSecondPerPoint);
+                d.SpeedUnitsPerSecond = Scaled("Mobile", "pixelsPerSecond", Math.Max(0, pixels), UnitsPerPixel);
+            }
         }
 
         d.Radius = Scaled("Collision", "radius", Math.Max(1, NonNegative("Collision", "radius", EntityTypeDefinition.DefaultRadius / UnitsPerPixel)), UnitsPerPixel);

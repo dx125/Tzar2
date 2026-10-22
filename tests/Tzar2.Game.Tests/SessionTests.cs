@@ -110,6 +110,55 @@ public sealed class SessionTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-012")]
+    public void A_unit_that_picks_up_a_spell_book_shows_the_stars()
+    {
+        using var session = new GameSession(Setup(), Rules.Value);
+        World world = session.Simulation.World;
+        GameFrame frame = session.AcquireFrame(out _)!;
+        FrameEntity peon = frame.Entities.ToArray().First(e => e.Owner == 0 && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "peon");
+        EntityId footman = world.Spawn((ushort)Rules.Value.EntityTypeId("euro.footman"), 0, peon.X, peon.Y + 2048);
+        EntityId book = world.Spawn((ushort)Rules.Value.EntityTypeId("comm.item_magic"), MapObject.Nature, peon.X + (5 * 2048), peon.Y + 2048);
+        var batch = new CommandList();
+        batch.Add(CommandKind.PickItem, [footman], target: book);
+        session.Submit(batch);
+        session.Step(1);
+        Assert.False(session.AcquireFrame(out _)!.Entities.ToArray().Single(e => e.Id == footman).CarriesBook);
+        session.Step(200);
+        Assert.True(world.IsHeld(book));
+        Assert.True(session.AcquireFrame(out _)!.Entities.ToArray().Single(e => e.Id == footman).CarriesBook);
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-032")]
+    public void A_working_peasant_is_named_by_its_job()
+    {
+        Ruleset r = Rules.Value;
+        EntityTypeDefinition Type(string key) => r.EntityTypes[r.EntityTypeId(key)];
+        Worker Harvest(string resource) => new() { Task = WorkerTask.Harvest, NodeResource = (byte)r.ResourceId(resource) };
+        Assert.Equal(FrameJob.Chop, FrameBuilder.JobOf(r, Harvest("wood"), Type("comm.tree")));
+        Assert.Equal(FrameJob.Dig, FrameBuilder.JobOf(r, Harvest("food"), Type("comm.field")));
+        Assert.Equal(FrameJob.TendCows, FrameBuilder.JobOf(r, Harvest("food"), Type("comm.cow")));
+        Assert.Equal(FrameJob.Collect, FrameBuilder.JobOf(r, Harvest("food"), Type("comm.meat")));
+        Assert.Equal(FrameJob.Mine, FrameBuilder.JobOf(r, Harvest("gold"), Type("comm.res_gold")));
+        Assert.Equal(FrameJob.Build, FrameBuilder.JobOf(r, new Worker { Task = WorkerTask.Build }, null));
+        Assert.Equal(FrameJob.Repair, FrameBuilder.JobOf(r, new Worker { Task = WorkerTask.Repair }, null));
+        Assert.Equal(FrameJob.None, FrameBuilder.JobOf(r, default, null));
+        Assert.Equal(["chop", "dig", "mine", "build", "tend cows"], new[] { FrameJob.Chop, FrameJob.Dig, FrameJob.Mine, FrameJob.Build, FrameJob.TendCows }.Select(FrameJobs.StringKey));
+
+        // In a match: a peasant sent to a tree is a woodcutter.
+        using var session = new GameSession(Setup(), Rules.Value);
+        GameFrame frame = session.AcquireFrame(out _)!;
+        FrameEntity peon = frame.Entities.ToArray().First(e => e.Owner == 0 && r.EntityTypes[e.TypeId].Traits.LegacyClass == "peon");
+        FrameEntity tree = frame.Entities.ToArray().Where(e => r.EntityTypes[e.TypeId].Key == "comm.tree").MinBy(e => Math.Abs(e.X - peon.X) + Math.Abs(e.Y - peon.Y));
+        var batch = new CommandList();
+        batch.Add(CommandKind.Harvest, [peon.Id], target: tree.Id);
+        session.Submit(batch);
+        session.Step(2);
+        Assert.Equal(FrameJob.Chop, session.AcquireFrame(out _)!.Entities.ToArray().Single(e => e.Id == peon.Id).Job);
+    }
+
+    [Fact]
     public void Submitted_commands_are_stamped_with_the_local_slot_and_applied()
     {
         using var session = new GameSession(Setup(), Rules.Value);

@@ -150,6 +150,21 @@ public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposabl
         Assert.Equal(16, Body("comm.galleon"));
     }
 
+    [OriginFact]
+    [Trait("Rule", "WORLD-012")]
+    public void Unmeasured_units_walk_at_the_speed_of_their_stride_and_measured_ones_keep_theirs()
+    {
+        // IMAGES.INI move_len: horse archers, ninjas and chariots 85 (72.7 px/s), catapults 40 (32), the galleon 50 (40),
+        // the hulk 65 (53.3), the carpet 120 (100); knights keep the 72 px/s measured (ADR 0172).
+        Ruleset rules = CompileFromOrigin();
+        int Speed(string key) => rules.EntityTypes.First(t => t.Key == key).SpeedUnitsPerSecond;
+        Assert.Equal((4654, 4654, 4654), (Speed("arab.horse_archer"), Speed("asia.ninja"), Speed("asia.chariot")));
+        Assert.Equal((2048, 2560, 3413), (Speed("comm.catapult"), Speed("comm.galleon"), Speed("comm.hulk")));
+        Assert.Equal(6400, Speed("comm.carpet"));
+        Assert.Equal(72 * 64, Speed("euro.knight"));
+        Assert.Equal(40 * 64, Speed("euro.footman"));
+    }
+
     private Ruleset CompileFromOrigin()
     {
         string origin = OriginPaths.RequireOrigin();

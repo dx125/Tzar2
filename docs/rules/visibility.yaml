@@ -21,8 +21,7 @@ rules:
   FOG-005:
     rule: Invisible units become visible when they attack, use an item or cast a spell.
     source: [patch 1.09 (TZAR110.TXT)]
-    status: partial
-    note: Attacking and casting reveal them; using an item does not.
+    status: tested
   FOG-006:
     rule: Spies and ninjas see each other through invisibility.
     source: [patch 1.05 (TZAR110.TXT)]

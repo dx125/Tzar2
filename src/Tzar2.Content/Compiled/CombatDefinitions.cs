@@ -452,14 +452,25 @@ public sealed record CombatSettings
     /// <summary>Crusade: the crusader type, or -1.</summary>
     public int Crusader { get; init; } = -1;
 
-    /// <summary>Crusade: crusaders one crusade raises (⚠ HYPOTHESIS UNK-26).</summary>
-    public int CrusadeSize { get; init; } = 5;
+    /// <summary>
+    /// Crusade (MAG-016, MAG-017): the crusaders a kingdom has gathered at the start. Its cathedrals gather more over time
+    /// up to the ceiling, a crusade takes them all, and once its crusaders have all died the kingdom starts again from
+    /// <see cref="CrusadeRestart"/> (ReTzar's reading of the original: 16, 4, ceiling 16 + 4 per full crusade, 36).
+    /// </summary>
+    public int CrusadeStart { get; init; } = 16;
+
+    /// <summary>Crusade: the crusaders gathered again after a crusade's crusaders have all died.</summary>
+    public int CrusadeRestart { get; init; } = 4;
+
+    /// <summary>Crusade: how much each full crusade raises the ceiling of the gathered crusaders (from <see cref="CrusadeStart"/>).</summary>
+    public int CrusadeCeilingStep { get; init; } = 4;
+
+    /// <summary>Crusade: the highest ceiling of the gathered crusaders.</summary>
+    public int CrusadeCeilingMax { get; init; } = 36;
 
     /// <summary>Crusade: the anchor stands at most this far from the cathedral (TDD GAME-11: 4 tiles).</summary>
     public int CrusadeAnchorRadiusUnits { get; init; } = 4 * 2048;
 
-    /// <summary>Crusade: least time after the last crusader died before the next crusade (1.09).</summary>
-    public int CrusadeCooldownMs { get; init; } = 60_000;
 
     /// <summary>Hero names per civilization (<c>HEROES.INI</c>).</summary>
     public ImmutableArray<HeroNames> HeroNames { get; init; } = [];
@@ -505,9 +516,11 @@ public sealed record CombatSettings
         Check(BribeCostPercent, 0, 100_000);
         Check(CrusadeAnchor, -1, typeCount - 1);
         Check(Crusader, -1, typeCount - 1);
-        Check(CrusadeSize, 0, 256);
+        Check(CrusadeStart, 0, 1000);
+        Check(CrusadeRestart, 0, 1000);
+        Check(CrusadeCeilingStep, 0, 1000);
+        Check(CrusadeCeilingMax, 0, 1000);
         Check(CrusadeAnchorRadiusUnits, 0, 64 * 2048);
-        Check(CrusadeCooldownMs, 0, 3_600_000);
         if (HeroNames.IsDefault)
         {
             throw new ArgumentException("combat: hero names must not be default.");

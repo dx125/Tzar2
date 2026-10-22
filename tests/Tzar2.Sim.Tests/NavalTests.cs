@@ -266,6 +266,7 @@ public class NavalTests
         d.World.Players[0].Resources[Resource("food")] = 5000;
         EntityId cathedral = OfType(d.World, "euro.cathedral").Single();
         EntityId ship = OfType(d.World, "comm.galleon").Single();
+        d.World.Players[0].Crusaders = 5; // as many as the ship holds
         d.Order(0, CommandKind.PreachCrusade, [cathedral], 9 * Tile, 8 * Tile);
         d.RunUntil(() => OfType(d.World, "euro.crusader").Count() == 5, 100);
         EntityId[] crusaders = [.. OfType(d.World, "euro.crusader")];
@@ -280,7 +281,8 @@ public class NavalTests
         Assert.All(crusaders, c => Assert.False(d.World.Entities.IsAlive(c)));
         Assert.Equal(0, d.World.CrusaderLinks.Count);
         d.RunUntil(() => d.World.Crusades.Count == 0, 2000);
-        Assert.Equal(0, d.World.Crusades.Count); // the anchor saw them die and ran its cooldown
+        Assert.Equal(0, d.World.Crusades.Count); // the anchor saw them die and went
+        Assert.Equal(4, d.World.Players[0].Crusaders); // the kingdom gathers again from 4
     }
 
     private static int TileCenterOf(int tile) => SimDriver.TileCenter(tile);

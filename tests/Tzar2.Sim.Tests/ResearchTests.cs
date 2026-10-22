@@ -185,7 +185,8 @@ public class ResearchTests
 
     [Fact]
     [Trait("Rule", "TECH-035")]
-    public void Ship_cannon_levels_are_bought_in_order_and_add_attack_to_that_ship()
+    [Trait("Rule", "TECH-036")]
+    public void Ship_cannon_levels_are_bought_in_order_and_make_that_ships_cannons_fire_more_often()
     {
         using var d = new SimDriver(
             AsciiMap(["......~~~~~~~~~~", "......~~~~~~~~~~", "......~~~~~~~~~~", "......~~~~~~~~~~", "......~~~~~~~~~~", "......~~~~~~~~~~", "......~~~~~~~~~~", "......~~~~~~~~~~"], Structure("euro.castle", 0, 0, 0), Unit("comm.galleon", 0, 9, 1), Unit("comm.galleon", 0, 12, 4)),
@@ -199,8 +200,11 @@ public class ResearchTests
         d.RunUntil(() => d.Count(SimEventKind.UpgradeCompleted) == 2, 3000);
         Assert.Equal((1u << UpgradeId("to_ship_level2")) | (1u << UpgradeId("to_ship_level3")), d.World.UpgradeLevels.Get(ships[0]).Mask);
         Assert.False(d.World.UpgradeLevels.Has(ships[1]));
-        Assert.Equal(33 + 10, Systems.ResearchRules.LevelBonus(d.World, ships[0], ModifierStat.Attack, 33));
-        Assert.Equal(33, Systems.ResearchRules.LevelBonus(d.World, ships[1], ModifierStat.Attack, 33));
+        // Help HT_UPGRADE_SHIPS: the cannons "fire more frequently": the period 3000 -> 2400 -> 1900 (ReTzar, 0x4e8f00); the
+        // attack stays.
+        Assert.Equal(158, Systems.ResearchRules.LevelBonus(d.World, ships[0], ModifierStat.FireRate, 100));
+        Assert.Equal(100, Systems.ResearchRules.LevelBonus(d.World, ships[1], ModifierStat.FireRate, 100));
+        Assert.Equal(33, Systems.ResearchRules.LevelBonus(d.World, ships[0], ModifierStat.Attack, 33));
     }
 
     [Fact]

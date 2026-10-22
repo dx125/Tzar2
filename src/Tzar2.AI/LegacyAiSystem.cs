@@ -183,6 +183,14 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
                 }
             }
 
+            if (state.ResignRequested && !state.Settings.Standby && (flags & PlayerFlags.Resigned) == 0)
+            {
+                // The script resigns when its kingdom is beaten (RESIGN.AI) and the lobby lets it (1.09, DIP-009); an AI
+                // assisting a human never resigns for it.
+                _commands.Add(CommandKind.Resign, player: slot);
+                continue;
+            }
+
             int interval = _options.ExecutorIntervalTicks;
             if ((tick + (i * interval / _states.Length)) % interval == 0)
             {

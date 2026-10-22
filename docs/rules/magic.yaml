@@ -74,14 +74,16 @@ rules:
     note: The price is a placeholder (UNK-26).
   MAG-016:
     rule: With Fanaticism and Crusade the cathedral preaches a crusade; the crusaders appear at an anchor placed no farther than 4 tiles from the cathedral.
-    source: [manual Researching Technologies (Crusade), patch 1.09 (TZAR110.TXT)]
+    source: [manual Researching Technologies (Crusade), patch 1.09 (TZAR110.TXT), community ReTzar src/gameplay.rs (0x439760)]
     status: tested
-    note: The number of crusaders is a placeholder (UNK-26).
+    note: A crusade takes every crusader gathered (16 at the start), one arriving every 500 ms.
+    adr: [0190]
   MAG-017:
     rule: After all crusaders have died a full crusade needs some time; one preached earlier brings fewer crusaders for the same price.
-    source: [patch 1.09 (TZAR110.TXT)]
-    status: partial
-    note: Tzar2 refuses a crusade during the wait instead of bringing fewer crusaders.
+    source: [patch 1.09 (TZAR110.TXT), community ReTzar src/gameplay.rs (0x422ca0 and 0x43a010)]
+    status: tested
+    note: Each cathedral gathers a crusader every 12, 8, 4 or 1 s by the time played, up to 16 + 4 per full crusade (36); after the crusaders have died the count starts again from 4.
+    adr: [0190]
   MAG-018:
     rule: A crusader dying in a ship or a building, or impersonated by a spy who then reveals himself, is counted out of the crusade.
     source: [patch 1.06 (TZAR110.TXT)]

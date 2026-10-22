@@ -678,6 +678,7 @@ public sealed partial class World
         {
             ref PlayerState player = ref _players[p];
             player.PopulationLimit = limit;
+            player.Crusaders = (ushort)Ruleset.Combat.CrusadeStart;
             if (g.StartingResources.Length > 0)
             {
                 if (level >= g.StartingResources.Length)
@@ -871,7 +872,7 @@ public sealed partial class World
                 }
             }
 
-            if (player.Reserved != 0 || player.Civilization < 0 || (player.Civilization >= Ruleset.Civilizations.Count && player.Civilization != 0))
+            if (player.Reserved != 0 || player.Crusaders > Ruleset.Combat.CrusadeCeilingMax + Ruleset.Combat.CrusadeStart || player.Civilization < 0 || (player.Civilization >= Ruleset.Civilizations.Count && player.Civilization != 0))
             {
                 throw Invalid("invalid civilization");
             }
@@ -1017,15 +1018,24 @@ public sealed partial class World
         Span<Worker> workers = Workers.Components;
         int resources = Ruleset.ResourceTypes.Count;
         int nodeLoad = 0; // the largest per-node load (cows, ADR 0170): a worker may hold it whatever its own capacity
+        int nodeBonus = 0; // and the most the gathering technologies may add by node (TECH-006, TECH-010)
         foreach (EntityTypeDefinition nodeType in Ruleset.EntityTypes)
         {
             nodeLoad = Math.Max(nodeLoad, nodeType.Traits.ResourceNode?.CarryLoad ?? 0);
+        }
+
+        foreach (TechnologyDefinition technology in Ruleset.Technologies)
+        {
+            foreach (ModifierDefinition m in technology.Effects)
+            {
+                nodeBonus += m.Stat == ModifierStat.CarryCapacity ? Math.Max(0, m.Add) : 0;
+            }
         }
         for (int i = 0; i < ids.Length; i++)
         {
             Worker w = workers[i];
             EntityTraits t = TypeOf(ids[i]).Traits;
-            int capacity = t.Harvester is null ? 0 : Math.Max(t.Harvester.Capacity, nodeLoad);
+            int capacity = t.Harvester is null ? 0 : Math.Max(t.Harvester.Capacity + nodeBonus, nodeLoad);
             if ((t.Harvester is null && !t.IsBuilder && !t.IsCapturer) || w.Task > WorkerTask.Capture
                 || (w.Task == WorkerTask.Harvest && t.Harvester is null) || (w.Task is WorkerTask.Build or WorkerTask.Repair && !t.IsBuilder)
                 || (w.Task == WorkerTask.Capture && !t.IsCapturer)

@@ -179,6 +179,13 @@ internal sealed partial class LegacyImporter
             AddInt(body, "Mobile", "speed", row, ColSpeed, source, key);
         }
 
+        // WORLD-012: the stride of the picture the unit walks with (IMAGES.INI move_len) sets its speed.
+        if (ObjectSection(civ, cls)?.Get("image") is { Length: > 0 } walk && _tables.Sprite(walk) is { } sheet
+            && sheet.TryGetValue("move_len", out string? stride) && int.TryParse(stride, NumberStyles.None, CultureInfo.InvariantCulture, out int moveLen) && moveLen > 0)
+        {
+            body.Trait("Mobile", ("stride", Num(moveLen)));
+        }
+
         string producer = Cell(row, ColProducer);
         if (producer.Length > 0 && producers.Get(producer) is YamlScalar { IsNull: false } producerClass)
         {

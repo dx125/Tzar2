@@ -35,9 +35,9 @@ Shift + Delete; what each technology does (not how much).
 
 | Value | Placeholder | Where | Unknown | How to resolve |
 |---|---|---|---|---|
-| Effect magnitude of every technology | per technology in YAML (e.g. Rotating Fields +25% field gathering, Temper Iron +10% sword attack, Scale/Chain Armor +1 infantry defence, Feudalism −20% peasant cost, Architecture +25% build rate, Fanaticism/Buddhism +20% building resistance, Supply Storage/Seafood +2 per house, Great Wall +25% stone wall/tower HP) | YAML `te_*.Technology.effects` | UNK-21 | per-technology captures (stat before/after) |
+| Effect magnitude of every technology | per technology in YAML (e.g. the gathering technologies +2 to a load and Irrigation +4, Trade Taxes +5 % and Banking +7 % profit, from ReTzar (ADR 0190); Temper Iron +10% sword attack, Scale/Chain Armor +1 infantry defence, Feudalism −20% peasant cost, Architecture +25% build rate, Fanaticism/Buddhism +20% building resistance, Supply Storage/Seafood +2 per house, Great Wall +25% stone wall/tower HP) | YAML `te_*.Technology.effects` | UNK-21 | per-technology captures (stat before/after) |
 | Effects consumed later | Learning +4 / Heroism +1000 experience cap, Warfare/Tactics/Sun Tzu +25% experience, Body Building +5 HP per level, Philosophy +2 starting level, Leadership/Honor ability power, Inquisition, Medicine, Trade Taxes/Banking income (Landing Tactics is +50 %, from the help, 2026-10-21) | YAML | UNK-23/24/26/28 | GAME-08/09/11/14 captures |
-| Ship cannon levels | +5 attack per level | YAML `to_ship_level2..6` | UNK-21 | galleon attack per level |
+| Ship cannon levels | +20 % fire rate per level (the help: "fire more frequently"; TECH-036) | YAML `to_ship_level2..6`, stat `fireRate` | UNK-21 | galleon shots per minute per level |
 | Ship level order | level N needs level N−1 (`after`) | YAML | — | upgrade menus `e_galleon2…` (data) confirm the order; per-ship effects need capture |
 | Iron Mining / Ore Flotation targets | iron rocks (`res_iron`) — no such object exists | YAML | UNK-14 | play: is there any iron source? |
 | Research/upgrade refund on cancel | 100% | YAML `gameplay.researchRefundPercent` | — | cancel captures |
@@ -218,7 +218,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Summon mana above the pool | costs at most the caster's whole pool (golem 600m, dragon 800m vs `max_manna` 100; ⚠ HYPOTHESIS) | code (`MagicSystem.ManaCost`) | UNK-26 | summon captures |
 | Medicine | +4 tiles of spell range for priests | YAML `te_medicine` | UNK-26 | captures |
 | Inquisition | +50% attack of priests (exorcism) | YAML `te_inquisition` | UNK-26 | captures |
-| Crusade | 5 crusaders per crusade, 60 s cooldown after the last died (⚠ HYPOTHESIS: how crusaders are raised) | YAML `combat.crusade*` | UNK-26 | crusade captures |
+| Crusade | **ReTzar's reading of the original (ADR 0190):** 16 gathered at the start, one per cathedral every 12/8/4/1 s by the time played, ceiling 16 + 4 per full crusade (36), one arriving every 500 ms, 4 again after the crusaders died | YAML `combat.crusade*`; `MagicSystem` | UNK-26 | a crusade capture would confirm it |
 | Bribe price | 200% of the unit's cost, in gold | YAML `combat.bribeCostPercent` | UNK-26 | bribe captures |
 | Magic vision | the revealer lasts 30 s | YAML `comm.fog_revealer.Lifetime` | UNK-26 | captures |
 

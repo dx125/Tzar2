@@ -101,23 +101,23 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Combat](combat.yaml) (WAR) | 14 | 8 | 4 | 0 | 2 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 22 | 17 | 4 | 0 | 0 | 0 | 1 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 18 | 10 | 1 | 0 | 0 | 0 |
-| [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 6 | 1 | 2 | 0 | 0 | 0 |
+| [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 7 | 1 | 1 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 16 | 5 | 0 | 0 | 0 | 1 |
-| [Experience and heroes](experience.yaml) (EXP) | 7 | 5 | 0 | 2 | 0 | 0 | 0 |
+| [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 1 | 0 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 34 | 6 | 14 | 6 | 5 | 2 | 1 |
-| [Items](items.yaml) (ITEM) | 16 | 9 | 3 | 1 | 2 | 1 | 0 |
-| [Magic, religion and spies](magic.yaml) (MAG) | 21 | 15 | 4 | 1 | 0 | 0 | 1 |
+| [The screen](interface.yaml) (HUD) | 34 | 7 | 14 | 6 | 4 | 2 | 1 |
+| [Items](items.yaml) (ITEM) | 16 | 10 | 3 | 1 | 1 | 1 | 0 |
+| [Magic, religion and spies](magic.yaml) (MAG) | 21 | 16 | 4 | 0 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 2 | 10 | 8 | 6 | 2 | 0 |
-| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 26 | 1 | 2 | 2 | 0 | 5 |
+| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 29 | 3 | 1 | 2 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
-| [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 15 | 6 | 5 | 2 | 0 | 2 | 0 |
-| **All** | 335 | 184 | 76 | 32 | 22 | 9 | 12 |
+| [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
+| [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
+| **All** | 335 | 194 | 78 | 26 | 20 | 9 | 8 |
 
 ## Not done yet
 
@@ -139,11 +139,9 @@ Missing and partial rules.
 ### Diplomacy and victory
 
 * **DIP-008** (partial): F4 shows the scores. *The scores show as messages; there is no score screen.* (ADR 0106)
-* **DIP-009** (partial): Computer kingdoms resign on their own when their AI flag allows it. *The scripts' resign request is recorded but never carried out, and the flag cannot be set (SHELL-013).*
 
 ### Experience and heroes
 
-* **EXP-003** (partial): Units gain no experience from fighting allies. *Hits on the own kingdom give nothing, but hits on an ally (under confusion, rain of fire, or a scripted attack) still do.*
 * **EXP-005** (partial): Very experienced units become heroes and can be named. *Units become named heroes at level 12 with Heroism; the player cannot name them.*
 
 ### Holders and transport
@@ -161,18 +159,12 @@ Missing and partial rules.
 * **HUD-028** (partial): The \ key shows the trees translucent so that units under them can be seen. *Trees are drawn at 45 % opacity, not with the original's look.*
 * **HUD-029**: An order shows only when its condition holds; the quest order only when there are quests. *The quest order is always there.*
 * **HUD-030** (partial): The minimap paints terrains, trees and cliffs in the colours of the terrain set's data. *Tzar2 takes each tile's colour from its picture.*
-* **HUD-032**: A working peasant is named by its job, woodcutter, farmer, miner or builder.
 * **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. Heroes inside buildings are not listed. The online help is missing.*
 
 ### Items
 
 * **ITEM-010** (partial): A soul item kills a unit or makes it go berserk; a hero is not killed. *The simulation does it; the card's item_kill and item_berserk orders do nothing yet.*
-* **ITEM-012**: A unit that picks up a magic book has yellow stars floating above it.
 * **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
-
-### Magic, religion and spies
-
-* **MAG-017** (partial): After all crusaders have died a full crusade needs some time; one preached earlier brings fewer crusaders for the same price. *Tzar2 refuses a crusade during the wait instead of bringing fewer crusaders.*
 
 ### Nature, gateways, day and weather
 
@@ -209,20 +201,14 @@ Missing and partial rules.
 * **TECH-028** (partial): Mastery (Asians) lets priests teach kung-fu units and turn mana into experience. *Mastery gates the spell that turns mana into experience (spell_raiseexp), which works; whether priests "teaching kung-fu units" is more than that is not known.*
 * **TECH-029**: Tournaments (Asians) lets kung-fu units share their experience.
 * **TECH-030**: Jewelry (Asians) lets the markets sell and buy items, the same items in every market. *The markets' item menus (market_items, market_sell) are empty in MENU.INI and filled by the game; Tzar2 has no item trade.*
-* **TECH-036** (partial): Each cannon level of a ship, up to level six, makes its cannons fire more often. *Tzar2 adds attack instead (placeholder, UNK-21).*
 
 ### Trade, tavern and loans
 
 * **TRADE-002** (partial): A trade is set up by picking the starting market or harbor and its goods, the far one and its goods, and the amount, then START. *The near market is the trader's nearest own one; the far one is clicked (ADR 0103).*
 * **TRADE-008**: The amount the tavern will lend shows in the bottom left corner of the view.
 
-### Exploration and visibility
-
-* **FOG-005** (partial): Invisible units become visible when they attack, use an item or cast a spell. *Attacking and casting reveal them; using an item does not.*
-
 ### Terrain and movement
 
-* **WORLD-012** (partial): Each kind of unit walks at its own speed, which follows the stride of its walking animation. *18 classes are measured; the others use SPEED times 10 px/s, a placeholder, until their strides are read (ADRs 0172, 0174).*
 * **WORLD-013** (partial): A random map grows as many trees as its terrain set's data gives for its size. *Tzar2's generator uses its own forest density (ADR 0060).*
 
 ## Unclear
@@ -251,10 +237,6 @@ The sources disagree or say too little.
 
 ### Technologies and upgrades
 
-* **TECH-006**: Rotating Fields and Irrigation (Asians) make fields give more food. *The help says they raise the amount of food a peasant carries; Tzar2 makes farming faster instead, by a placeholder (UNK-21).*
-* **TECH-010**: Saw, Stone Mining, Gold Mining and Ore Flotation (Arabians) make gathering wood, stone and gold more productive. *The help says they raise the amount a peasant carries; Tzar2 makes gathering faster instead, by a placeholder (UNK-21).*
-* **TECH-023**: Trade Taxes makes the markets produce resources over time. *The manual says the markets produce resources for a while; the game's own text says it increases trade profit. Tzar2 adds 10 % to the markets' income (placeholder).*
-* **TECH-024**: Banking (Asians) adds resources to the treasury over time. *The manual says it adds to the treasury from time to time; the game's own text says it increases trade profit. Tzar2 adds 10 % to the profit at markets (placeholder); until 2026-10-21 it targeted the castle and did nothing.*
 * **TECH-031**: Piracy gives boarding units an attack bonus, and Boarding Ram lets ships board others. *The manual and the game's texts name them, but the original's data has no such technologies: they look cut from the game.*
 
 ### Trade, tavern and loans
@@ -295,13 +277,12 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 143 used, 4 restated by hand, 18 not needed and 47 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 144 used, 4 restated by hand, 18 not needed and 46 to do.
 
 To do:
 
 * `DATA/CREDITSFNT.INI` (the whole file): the font of the credits screen (SHELL-020).
 * `DATA/EQUATIONS.INI` `enablequestbutton`: when the quest order is on (HUD-029)
-* `DATA/IMAGES.INI` `move_len`: the stride of a walk, for the walking speed of the classes not measured (WORLD-012)
 * `DATA/IMAGES.INI` `startcol`: animations that start inside their sheet (PRES-008)
 * `DATA/IMAGES.INI` `startrow`: animations that start inside their sheet (PRES-008)
 * `DATA/LAYOUT.INI` `layout1024l`: the interface down the left side (HUD-009)
