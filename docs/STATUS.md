@@ -45,7 +45,7 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | D | day length, night share (no input) | **Day length done** (ADR 0173): 37.5 min, read from the clock globe; a match starts at 10:00. The game ended after 12 min (the Hard AI), before the night: **night share open**, needs a 35-min run the AI does not end. |
 | E | group speed, research, damage bonuses, capture, far gathering | **Done, one result** (2026-10-19): a mixed group walks at its slowest member's speed (passes). The rest failed: units given to kingdom 2 are taken over by its AI and leave the duel; Feudalism never started; Ctrl+C picked another castle, so the far tree was not the one gathered; the capture analysis saw no colour change. Not repeated: owner decision below. |
 | F–I | fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | deferred (owner decision below) |
-| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Run 1 done** (2026-10-21): the meter measured (one point per 1.25 s). Repairs and unmasking failed: the builder left too early, our knights do not attack our own buildings, MP2 has no kingdom 3. **Run 2 ready** (~22 min). |
+| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Run 1 done** (2026-10-21): the meter measured (one point per 1.25 s). Repairs and unmasking failed: the builder left too early, our knights do not attack our own buildings, MP2 has no kingdom 3. Run 2 (2026-10-21): every building damaged (handed to kingdom 2 for the attack), but no 4-byte memory field held its hit points; the spies failed on MP6 (slow load, every kingdom has an AI). **Run 3 ready** (~22 min). |
 
 Facts live in `tests/fidelity/facts/` (numbers only; captures stay on the operator's PC). A measured fact that disagrees
 with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that makes it pass go in the same PR.
@@ -72,9 +72,11 @@ play-test.
    is done.
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
      (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
-     both. Run 1 measured the disguise meter only (log below). **Operator:** run 2,
+     both. Runs 1 and 2 measured the disguise meter only (log below). **Operator:** run 3,
      `run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch J -AllowModified` (~22 min, hands off).
-   * The spy's disguise meter (MAG-021, the owner's description) is done, with placeholder rates until batch J.
+   * The spy's disguise meter (MAG-021) is done and measured.
+   * Impersonation takes the unit over (MAG-012, the owner, ADR 0184 amendment 4): the unit changes hands and keeps its
+     stats, the spy is gone; revealing turns it into a spy again. Next after batch J's third run.
 4. **Maintainer:** units never stand on one another (WORLD-015).
    * What the probes of 2026-10-21 measured:
      * At rest, units keep 16 px apart.
@@ -114,6 +116,17 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — Batch J, run 2; the owner: a spy takes the unit over (ADR 0184 amendment 4).**
+  * The owner: when a spy impersonates a unit, the unit stays and the spy is gone; the player controls the unit, which
+    keeps all its stats. Tzar2 will change to that next (MAG-012 partial until then).
+  * Run 2 (`capture-20261021-212542`): the buildings stood and were damaged while kingdom 2 held them (mill 440/800,
+    barracks 1016/1400, castle 7760/8000), but the 4-byte memory scan found no hit points. Our idle peasants came to
+    help with the repair.
+  * The spy runs on MP6 failed: the map loads slower than the scenarios wait, so the first cheats were lost; the
+    camera starts in the middle; every kingdom there has an AI.
+  * Run 3: 2-byte scans and the buildings' selection view during the repair; the unmasking on MP2, with kingdom 2's
+    AI driving the detecting spy and the whole view captured every 200 ms while the two close in.
 
 * **2026-10-21 — Batch J, run 1: the disguise meter measured (ADR 0184 amendment 3).**
   * The install differed only in `tzar.ini` and `Demos/tzar.wdm`, which the game wrote when the owner played it; the

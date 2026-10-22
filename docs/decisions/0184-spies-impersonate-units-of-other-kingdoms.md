@@ -107,3 +107,21 @@ The capture (`capture-20261021-203846`, manual.yaml `spy-disguise`) settled the 
   peasants cannot build". Before Tzar2 changes how impersonation works, batch J's second run repeats it with another
   kingdom's peasant on MP6.
 * The unmasking distance is still not measured: the detecting spy stayed ours.
+
+## Amendment 4: the spy takes the unit over (2026-10-21)
+
+The owner confirmed what batch J's first run showed. When a spy impersonates another kingdom's unit, that unit does
+not stay with its kingdom: the spy becomes it. On screen the spy is gone and the unit stays, now under the spy's player,
+with all the unit's stats. Its old kingdom still sees one of its own. This is the alternative the decision above set
+aside ("change the spy's type and owner"), and the patch notes' crusader anchor fits it.
+
+Tzar2 will follow it in the next change: the impersonated unit changes owner and keeps its type, stats and place; it
+carries the disguise (its old kingdom's colours for everyone else, the meter) and remembers that it is a spy, so that
+revealing or being unmasked turns it into a spy again; the spy entity is removed. What a revealed spy's hit points are
+is not known; Tzar2 will keep the share of health. Until then, MAG-012 is partial.
+
+Batch J's second run (`capture-20261021-212542`) damaged all three buildings by handing them to kingdom 2 for the
+attack, but no 4-byte memory field held their hit points. The spy runs on MP6 failed: the map loads slower than the
+10 s wait (the first cheats were lost), the camera starts in the middle, and every kingdom there has an AI. The third
+run scans 2 bytes, captures the buildings' selection view during the repair, and measures the unmasking on MP2 with
+kingdom 2's AI driving the detecting spy.

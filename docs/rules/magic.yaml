@@ -53,11 +53,12 @@ rules:
     source: [manual Asian Units (Priest)]
     status: implemented
   MAG-012:
-    rule: Spies (with Espionage) can impersonate any man of another kingdom, of any civilization, from next to him, and reveal themselves again; not machines, flyers or magic creatures. Fighting keeps the disguise; another kingdom's spy close by unmasks it, towers do not.
-    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, 'data BONUS.INI [groups] machines ships magic_creatures', owner 2026-10-21 (answers), owner 2026-10-21 (disguise meter)]
-    status: tested
+    rule: Spies (with Espionage) can impersonate any man of another kingdom, of any civilization, from next to him; not machines, flyers or magic creatures. The spy becomes that unit, with all its stats, under its own player's control, and the spy itself is gone; its old kingdom still sees one of its own. Revealing turns it back into a spy. Fighting keeps the disguise; another kingdom's spy close by unmasks it, towers do not.
+    source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, 'data BONUS.INI [groups] machines ships magic_creatures', owner 2026-10-21 (answers), owner 2026-10-21 (disguise meter), capture capture-20261021-203846, owner 2026-10-21 (impersonation takes the unit over)]
+    status: partial
     adr: [0184]
-    note: The data gives no distance for the unmasking; Tzar2 uses the spy's detector radius (5 tiles, UNVERIFIED) until batch J (spy-unmask, spy-mastery) measures it. The mage is in BONUS.INI's magic_creatures but is a man, and the chariot is not among the machines; the owner confirmed that both can be copied. Batch J's first run copied the spy's own kingdom's peasant (no other kingdom was at hand): the peasant was gone afterwards, and the selection view showed the peasant's portrait, attack and card (move, build, capture, harvest, pick item, explore, stop, reveal) under the spy's name; whether that holds for another kingdom's unit is batch J's second run.
+    note: Tzar2 still leaves the copied unit with its kingdom and gives the spy only its look (ADR 0184); taking the unit over is next (STATUS work queue 3). Batch J's first run showed it with the spy's own kingdom's peasant (the peasant's place, portrait, attack and card under the name "Spy (N)"); the owner confirmed it for another kingdom's units. The data gives no distance for the unmasking; Tzar2 uses the spy's detector radius (5 tiles, UNVERIFIED) until batch J measures it. The mage is in BONUS.INI's magic_creatures but is a man, and the chariot is not among the machines; the owner confirmed that both can be copied.
+    work: STATUS work queue 3
   MAG-013:
     rule: Spies and ninjas see through each other's invisibility, and a cloaked ninja can drop its cloak (uncloak).
     source: [patch 1.05 (TZAR110.TXT), 'data MENU.INI [ninja_cloaked] uncloak', data ORDERS.INI uncloak]
