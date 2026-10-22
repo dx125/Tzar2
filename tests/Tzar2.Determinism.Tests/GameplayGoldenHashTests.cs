@@ -57,7 +57,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0191 amendment, 2026-10-22) Supply Storage and Seafood raise the population limit, Ore Flotation halves what mines lose: the ruleset hash only.
     // (ADR 0192, 2026-10-22) gates are 7 x 1 or 1 x 6 with a door of three tiles, bridges turn into their own cells: the bot's gate and bridge change, so the ruleset, the stream and the final hash.
     // (ADR 0250, 2026-10-22) the curse, hypnosis, the banshee and the Messiah as ReTzar reads them: a synthetic Messiah shifts type ids, status effects grow (hashed layout 13): the ruleset and the hashes.
-    private const ulong GoldenRulesetHash = 0x7348690BBE5F0511UL;
+    private const ulong GoldenRulesetHash = 0x1E8BBAF1F4DA97B1UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
