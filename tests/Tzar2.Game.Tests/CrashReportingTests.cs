@@ -17,13 +17,18 @@ public sealed class CrashReportingTests : IDisposable
     private const string Dsn = "https://abc123@crash.example.org/sentry/42";
     private readonly string _user = Path.Combine(Path.GetTempPath(), "tzar2-crash-" + Guid.NewGuid().ToString("N"));
     private readonly List<(Uri Endpoint, string Auth, byte[] Body)> _posts = [];
+    private readonly List<CrashReporter> _reporters = [];
     private int _status = 200;
 
     public CrashReportingTests() => Directory.CreateDirectory(Path.Combine(_user, "logs"));
 
     private string Logs => Path.Combine(_user, "logs");
 
-    public void Dispose() => Directory.Delete(_user, recursive: true);
+    public void Dispose()
+    {
+        _reporters.ForEach(r => r.Dispose());
+        Directory.Delete(_user, recursive: true);
+    }
 
     [Fact]
     public void A_dsn_gives_the_envelope_endpoint_and_the_auth_header()
@@ -215,6 +220,20 @@ public sealed class CrashReportingTests : IDisposable
         Assert.Equal(envelopes.Count, next.PendingFiles().Count);
     }
 
+    [Fact]
+    public void Another_copy_of_the_game_that_is_still_running_is_not_reported()
+    {
+        CrashReporter running = Start(dsn: Dsn);
+        CrashReporter second = Start(dsn: Dsn);
+        Assert.True(File.Exists(Path.Combine(running.RunFolder, CrashReporter.RunningMark)));
+        Assert.Empty(second.PendingFiles());
+
+        // Once the first copy is gone without ending its run (as after a crash), the next start reports it.
+        running.Dispose();
+        CrashReporter third = Start(dsn: Dsn);
+        Assert.Contains(third.PendingFiles(), f => f.Contains("-event-", StringComparison.Ordinal));
+    }
+
     private CrashReporter Start(string? dsn)
     {
         CrashReportSettings settings = CrashReportSettings.Load(_user);
@@ -225,6 +244,7 @@ public sealed class CrashReportingTests : IDisposable
         Directory.CreateDirectory(run);
         CrashReporter reporter = CrashReporter.Start(_user, Logs, run, executableDir: null, SystemInfo.Unknown);
         reporter.Transport = Post;
+        _reporters.Add(reporter);
         return reporter;
     }
 

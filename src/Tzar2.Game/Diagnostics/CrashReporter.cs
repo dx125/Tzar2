@@ -29,7 +29,7 @@ public delegate Task<int> CrashTransport(Uri endpoint, string authHeader, byte[]
 /// <c>crash-reports/outbox</c> and are sent only when the player has agreed and an endpoint is configured; refusing
 /// deletes them.
 /// </summary>
-public sealed class CrashReporter
+public sealed class CrashReporter : IDisposable
 {
     /// <summary>The mark of a running session in its log folder (content: session id and start, UTC).</summary>
     public const string RunningMark = "session.running";
@@ -60,6 +60,7 @@ public sealed class CrashReporter
     private readonly DateTime _started;
     private int _errors;
     private bool _crashed;
+    private FileStream? _mark;
 
     private CrashReporter(string userDir, string runFolder, string? executableDir, SystemInfo system, DateTime nowUtc)
     {
@@ -114,7 +115,7 @@ public sealed class CrashReporter
         ArgumentNullException.ThrowIfNull(runFolder);
         var reporter = new CrashReporter(userDir, runFolder, executableDir, system ?? SystemInfo.Unknown, nowUtc ?? DateTime.UtcNow);
         reporter.CollectUnfinishedRuns(logsRoot);
-        Try(() => File.WriteAllText(Path.Combine(runFolder, RunningMark), reporter._sessionId + "\n" + reporter._started.ToString("O", CultureInfo.InvariantCulture)));
+        reporter.HoldMark();
         if (reporter.Settings.Consent == CrashReportConsent.Denied)
         {
             reporter.ClearOutbox();
@@ -191,8 +192,19 @@ public sealed class CrashReporter
         }
 
         QueueSession(_sessionId, _started, nowUtc ?? DateTime.UtcNow, crashed ? "crashed" : "exited", errors + (crashed ? 1 : 0));
+        Dispose();
         Try(() => File.Delete(Path.Combine(RunFolder, RunningMark)));
         Try(() => File.Delete(Path.Combine(RunFolder, CrashedMark)));
+    }
+
+    /// <summary>Lets go of this run's mark without ending the run (the next start then reports it as unfinished).</summary>
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            _mark?.Dispose();
+            _mark = null;
+        }
     }
 
     /// <summary>
@@ -326,9 +338,9 @@ public sealed class CrashReporter
         foreach (string run in runs)
         {
             string mark = Path.Combine(run, RunningMark);
-            if (string.Equals(Path.GetFullPath(run), Path.GetFullPath(RunFolder), StringComparison.OrdinalIgnoreCase) || !File.Exists(mark))
+            if (string.Equals(Path.GetFullPath(run), Path.GetFullPath(RunFolder), StringComparison.OrdinalIgnoreCase) || !File.Exists(mark) || InUse(mark))
             {
-                continue;
+                continue; // this run, a finished one, or another copy of the game still running
             }
 
             (string sessionId, DateTime started) = ReadMark(mark);
@@ -381,6 +393,24 @@ public sealed class CrashReporter
         }
     }
 
+    /// <summary>Whether a running game holds <paramref name="mark"/> (it keeps its own open without sharing).</summary>
+    private static bool InUse(string mark)
+    {
+        try
+        {
+            using var probe = new FileStream(mark, FileMode.Open, FileAccess.Read, FileShare.None);
+            return false;
+        }
+        catch (IOException)
+        {
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     private static (string SessionId, DateTime StartedUtc) ReadMark(string mark)
     {
         try
@@ -406,6 +436,22 @@ public sealed class CrashReporter
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             return DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>Writes this run's mark and keeps it open, unshared, until the run ends: other copies see it in use.</summary>
+    private void HoldMark()
+    {
+        try
+        {
+            _mark = new FileStream(Path.Combine(RunFolder, RunningMark), FileMode.Create, FileAccess.Write, FileShare.None);
+            _mark.Write(Encoding.UTF8.GetBytes(_sessionId + "\n" + _started.ToString("O", CultureInfo.InvariantCulture) + "\n"));
+            _mark.Flush(flushToDisk: true);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            _mark?.Dispose();
+            _mark = null;
         }
     }
 
