@@ -91,3 +91,19 @@ unmasked. The data holds no rate. Batch J's `spy-mastery` captures the panel whi
 * **Who sees it:** only the spy's owner (`FrameEntity.DisguiseMastery`). The selection view draws the meter as a
   column at the portrait's right edge. Where the original draws it and in which colour is UNVERIFIED.
 * **Hashes:** the gameplay golden's ruleset hash is re-pinned. The state hashes and the CI benches do not change.
+
+## Amendment 3: batch J's first run (2026-10-21)
+
+The capture (`capture-20261021-203846`, manual.yaml `spy-disguise`) settled the meter and raised two questions:
+
+* **The meter** is the number after the spy's name in the selection view, "Spy (N)". A spy in its own look shows 100.
+  A new look starts it at 0, and it gains one point every 1.25 s (the original's time unit, ADR 0169) up to 100.
+  `gameplay.disguiseMasteryMs` is 125000. The selection view shows "Spy (N)" in place of amendment 2's column; the
+  frame gives the owner 100 for a spy in its own look.
+* **The copied unit:** no other kingdom was at hand on MP2 (`hmkingdom 3` does nothing there), so the spy copied its
+  own kingdom's peasant. The peasant was gone afterwards, the population one lower. The selection view showed the
+  peasant's portrait, attack and defence, and a card like the peasant's (move, build, capture, harvest, pick item,
+  explore, stop, reveal) under the spy's name. That matches the patch notes' crusader anchor and "obsessed by spies
+  peasants cannot build". Before Tzar2 changes how impersonation works, batch J's second run repeats it with another
+  kingdom's peasant on MP6.
+* The unmasking distance is still not measured: the detecting spy stayed ours.

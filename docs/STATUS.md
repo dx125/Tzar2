@@ -45,7 +45,7 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | D | day length, night share (no input) | **Day length done** (ADR 0173): 37.5 min, read from the clock globe; a match starts at 10:00. The game ended after 12 min (the Hard AI), before the night: **night share open**, needs a 35-min run the AI does not end. |
 | E | group speed, research, damage bonuses, capture, far gathering | **Done, one result** (2026-10-19): a mixed group walks at its slowest member's speed (passes). The rest failed: units given to kingdom 2 are taken over by its AI and leave the duel; Feudalism never started; Ctrl+C picked another castle, so the far tree was not the one gathered; the capture analysis saw no colour change. Not repeated: owner decision below. |
 | F–I | fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | deferred (owner decision below) |
-| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Ready** (2026-10-21, ~21 min): `run-capture.ps1 -Batch J` |
+| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Run 1 done** (2026-10-21): the meter measured (one point per 1.25 s). Repairs and unmasking failed: the builder left too early, our knights do not attack our own buildings, MP2 has no kingdom 3. **Run 2 ready** (~22 min). |
 
 Facts live in `tests/fidelity/facts/` (numbers only; captures stay on the operator's PC). A measured fact that disagrees
 with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that makes it pass go in the same PR.
@@ -72,7 +72,8 @@ play-test.
    is done.
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
      (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
-     both. **Operator:** `pwsh tools/capture/run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch J` (~21 min, hands off).
+     both. Run 1 measured the disguise meter only (log below). **Operator:** run 2,
+     `run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch J -AllowModified` (~22 min, hands off).
    * The spy's disguise meter (MAG-021, the owner's description) is done, with placeholder rates until batch J.
 4. **Maintainer:** units never stand on one another (WORLD-015).
    * What the probes of 2026-10-21 measured:
@@ -113,6 +114,19 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — Batch J, run 1: the disguise meter measured (ADR 0184 amendment 3).**
+  * The install differed only in `tzar.ini` and `Demos/tzar.wdm`, which the game wrote when the owner played it; the
+    run used `-AllowModified`.
+  * The meter is the number after the spy's name, "Spy (N)": 100 in its own look, 0 with a new look, one point per
+    1.25 s. Tzar2 now fills it in 125 s and shows it the same way. Only the ruleset hash changes.
+  * The spy copied its own kingdom's peasant, which was gone afterwards, and the selection view showed the peasant's
+    portrait, stats and card. Run 2 repeats this with another kingdom's peasant before anything changes.
+  * Failed, and fixed for run 2:
+    * the builder was sent off before it reached the site, so no building stood;
+    * our knights do not attack our own castle (the manual: attacks are on enemies), so the building now changes
+      hands to kingdom 2 during the attack;
+    * `hmkingdom 3` does nothing on MP2, so the spies now run on MP6, whose kingdom 3 exists and has no AI.
 
 * **2026-10-21 — The spy's disguise meter (MAG-021, ADR 0184 amendment 2).**
   * The meter fills from 0 to 100 in 2 minutes in one look; a new look starts it again.

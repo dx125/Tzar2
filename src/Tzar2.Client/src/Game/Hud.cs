@@ -41,8 +41,6 @@ public sealed class SelectionInfo
     /// <summary>The health share 0-1 of the units inside a holder, a bar under its own (HUD-021), or −1.</summary>
     public float InsideHealth { get; init; } = -1;
 
-    /// <summary>A disguised spy's meter 0-1, a bar beside the portrait (MAG-021), or −1.</summary>
-    public float Disguise { get; init; } = -1;
 }
 
 /// <summary>An icon of the info area: a portrait or order button, a progress 0-1000 (−1: none) and a count (0: none).</summary>
@@ -79,8 +77,6 @@ public partial class Hud : Control
     private readonly List<TextureRect> _stripCounts = [];
     private readonly List<TextureRect> _stripFrames = [];
     private readonly ColorRect _insideBar;
-    private readonly ColorRect _disguiseBar;
-    private readonly Vector2 _disguiseTop;
     private int _stripShown;
     private readonly TextureRect[] _messages = new TextureRect[6];
     private readonly TextureRect _portrait;
@@ -134,10 +130,6 @@ public partial class Hud : Control
         _portrait = Add(new TextureRect { Position = layout.Portrait.Position, Size = layout.Portrait.Size });
         _portraitBar = Add(new ColorRect { Position = layout.Portrait.Position + new Vector2I(0, 50), Size = new Vector2(48, 3), Color = Colors.Green, Visible = false });
         _insideBar = Add(new ColorRect { Position = layout.Portrait.Position + new Vector2I(0, 54), Size = new Vector2(48, 2), Color = Colors.Green, Visible = false });
-        // The disguise meter "by the portrait" (the owner, MAG-021): a column at its right edge that fills upwards
-        // (where and in which colour the original draws it is ⚠ UNVERIFIED: batch J's spy-mastery captures the panel).
-        _disguiseBar = Add(new ColorRect { Color = new Color(0.55f, 0.75f, 1f), Visible = false, MouseFilter = MouseFilterEnum.Ignore });
-        _disguiseTop = layout.Portrait.Position + new Vector2I(layout.Portrait.Size.X + 2, 0);
         _nameBox = Add(new Control { Position = new Vector2(layout.Portrait.Position.X - 2, layout.Portrait.Position.Y + 57), MouseFilter = MouseFilterEnum.Ignore });
         for (int i = 0; i < _stats.Length; i++)
         {
@@ -232,14 +224,6 @@ public partial class Hud : Control
         {
             _portraitBar.Size = new Vector2(Math.Max(1, MathF.Round(48 * h.Health)), 3);
             _portraitBar.Color = HealthColour(h.Health);
-        }
-
-        _disguiseBar.Visible = info is { Disguise: >= 0 };
-        if (info is { Disguise: >= 0 } spy)
-        {
-            float height = Math.Max(1, MathF.Round(48 * spy.Disguise));
-            _disguiseBar.Position = _disguiseTop + new Vector2(0, 48 - height);
-            _disguiseBar.Size = new Vector2(3, height);
         }
 
         // The health of the units inside a castle or outpost, under its own (guide: Important tips; HUD-021).

@@ -315,6 +315,9 @@ public sealed class CommandCardTests : IDisposable
             return frame;
         }
 
+        // In its own look the spy's meter is full (batch J: "Spy (100)"), and only its owner sees it.
+        Assert.Equal((100, -1), (Frame(0).Entities.ToArray().Single(e => e.Id == spy).DisguiseMastery, Frame(1).Entities.ToArray().Single(e => e.Id == spy).DisguiseMastery));
+
         // The spy's card adds impersonate (reveal waits for a disguise); a click on the enemy footman orders it.
         CardContext context = new(Frame(0), [spy]);
         Assert.Equal(["stop", "impersonate"], card.Build(context).Select(s => s!.Value.Button.Order));

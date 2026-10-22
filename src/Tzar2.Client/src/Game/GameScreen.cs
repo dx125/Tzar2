@@ -1857,9 +1857,10 @@ public partial class GameScreen : Node
             _picked = EntityId.None; // it came out, or died
         }
 
+        // A spy's disguise meter follows its name, as in the original: "Spy (100)" in its own look (MAG-021, batch J).
         return new SelectionInfo
         {
-            Name = v.Name,
+            Name = e.DisguiseMastery >= 0 ? string.Create(CultureInfo.InvariantCulture, $"{v.Name} ({e.DisguiseMastery})") : v.Name,
             Detail = e.MaxHealth > 0 ? $"{e.Health}/{e.MaxHealth} {owner}" : owner,
             Icon = v.IconIndex,
             Health = e.MaxHealth > 0 && t.Category != EntityCategory.Resource ? e.Health / (float)e.MaxHealth : -1,
@@ -1868,7 +1869,6 @@ public partial class GameScreen : Node
             StripIsHealth = true,
             Player = e.Owner < 8 ? e.Owner : -1,
             InsideHealth = insideHealth,
-            Disguise = e.DisguiseMastery >= 0 ? e.DisguiseMastery / 100f : -1,
         };
     }
 

@@ -116,8 +116,8 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Last-seen refresh | every 4 ticks per structure (a glimpse shorter than that may be missed) | YAML `world.memoryRefreshTicks` | — | engine bound |
 | Construction sites reveal | like the finished building | code (`Visibility`) | — | observation |
 | Detector radius (spies, ninjas) | 5 tiles | YAML `^class.spy/ninja.Detector` | — | detection captures (stream E cloaking) |
-| Unmasking a disguised spy | another kingdom's spy within (100 − meter) % of its detector radius, at once; never with a full meter | `ErrandSystem.Unmask` | — | batch J: `spy-unmask`, `spy-mastery` (MAG-012, MAG-021) |
-| Disguise meter | 0 → 100 in 2 minutes in one look; a new look starts it again, the same look keeps it; drawn as a column at the portrait's right edge | YAML `gameplay.disguiseMasteryMs`, `Hud` | — | batch J: `spy-mastery` (the panel every 2 s) |
+| Unmasking a disguised spy | another kingdom's spy within (100 − meter) % of its detector radius, at once; never with a full meter | `ErrandSystem.Unmask` | — | batch J run 2: `spy-unmask`, `spy-unmask-half`, `spy-unmask-full` on MP6 (MAG-012, MAG-021) |
+| Disguise meter | ~~0 → 100 in 2 minutes~~ **VERIFIED: one point per 1.25 s, 0 → 100 in 125 s; 100 in the spy's own look; shown as "Spy (N)"** (capture-20261021-203846, manual.yaml `spy-disguise`); a new look starts it again (verified), the same look keeps it (ours) | YAML `gameplay.disguiseMasteryMs`, `GameScreen` | — | done |
 | Stance change interval | 10 s per pair (anti flip-flop) | YAML `world.diplomacyChangeIntervalMs` | — | engine bound (owner decision welcome) |
 | Tribute | once per second, ≤ 100,000, no fee | YAML `world.tributeIntervalMs`, `maxTributeAmount` | — | tribute dialog captures (fee?) |
 | Stockpile cap | 10⁹ (overflow guard of world-system incomes) | YAML `world.stockpileCap` | — | engine bound |

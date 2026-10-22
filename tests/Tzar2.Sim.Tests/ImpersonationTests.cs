@@ -118,7 +118,8 @@ public class ImpersonationTests
         d.RunUntil(() => w.Disguises.Has(spy), 400);
         Assert.InRange(w.Disguises.Get(spy).Mastery, 0, 1);
 
-        // Full after DisguiseMasteryMs in the look, and no further.
+        // Full after DisguiseMasteryMs in the look, and no further: one point per 1.25 s (batch J, manual.yaml spy-disguise).
+        Assert.Equal(125_000, w.Ruleset.Gameplay.DisguiseMasteryMs);
         int ticks = w.Ruleset.Gameplay.DisguiseMasteryMs / w.Config.TickLengthMilliseconds;
         d.RunUntil(() => false, ticks / 2);
         Assert.InRange(w.Disguises.Get(spy).Mastery, 48, 52);

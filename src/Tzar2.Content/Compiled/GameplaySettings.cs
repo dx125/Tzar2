@@ -135,10 +135,10 @@ public sealed record GameplaySettings
     public int RepairerFalloffBasisPoints { get; init; } = 2_500;
 
     /// <summary>
-    /// How long a spy keeps one look until its disguise meter is full, 0 → 100 (MAG-021). The radius in which another
-    /// kingdom's spy unmasks it shrinks as the meter grows (⚠ UNVERIFIED: batch J).
+    /// How long a spy keeps one look until its disguise meter is full, 0 → 100 (MAG-021; batch J: one point per 1.25 s).
+    /// The radius in which another kingdom's spy unmasks it shrinks as the meter grows (⚠ UNVERIFIED).
     /// </summary>
-    public int DisguiseMasteryMs { get; init; } = 120_000;
+    public int DisguiseMasteryMs { get; init; } = 125_000;
 
     internal void Validate(int resourceTypes)
     {

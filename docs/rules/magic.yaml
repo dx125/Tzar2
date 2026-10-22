@@ -57,7 +57,7 @@ rules:
     source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, 'data BONUS.INI [groups] machines ships magic_creatures', owner 2026-10-21 (answers), owner 2026-10-21 (disguise meter)]
     status: tested
     adr: [0184]
-    note: The data gives no distance for the unmasking; Tzar2 uses the spy's detector radius (5 tiles, UNVERIFIED) until batch J (spy-unmask, spy-mastery) measures it. The mage is in BONUS.INI's magic_creatures but is a man, and the chariot is not among the machines; the owner confirmed that both can be copied.
+    note: The data gives no distance for the unmasking; Tzar2 uses the spy's detector radius (5 tiles, UNVERIFIED) until batch J (spy-unmask, spy-mastery) measures it. The mage is in BONUS.INI's magic_creatures but is a man, and the chariot is not among the machines; the owner confirmed that both can be copied. Batch J's first run copied the spy's own kingdom's peasant (no other kingdom was at hand): the peasant was gone afterwards, and the selection view showed the peasant's portrait, attack and card (move, build, capture, harvest, pick item, explore, stop, reveal) under the spy's name; whether that holds for another kingdom's unit is batch J's second run.
   MAG-013:
     rule: Spies and ninjas see through each other's invisibility, and a cloaked ninja can drop its cloak (uncloak).
     source: [patch 1.05 (TZAR110.TXT), 'data MENU.INI [ninja_cloaked] uncloak', data ORDERS.INI uncloak]
@@ -96,8 +96,8 @@ rules:
     source: [community TDD GAME-11]
     status: tested
   MAG-021:
-    rule: A disguised spy has a meter by its portrait, up to 100, that grows the longer it keeps one look; at 100 it can hardly be unmasked.
-    source: [owner 2026-10-21 (disguise meter)]
+    rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; at 100 the spy can hardly be unmasked.
+    source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846]
     status: tested
     adr: [0184]
-    note: Tzar2 fills it in 2 minutes (gameplay.disguiseMasteryMs) and lets another kingdom's spy unmask it within (100 - meter) % of its detector radius, never at 100; a new look starts it again. All UNVERIFIED until batch J (spy-mastery). The owner's description adds "or trains", which is not modelled.
+    note: Measured in batch J's first run (manual.yaml spy-disguise). How the meter weighs against the unmasking spy is not measured yet; Tzar2 lets another kingdom's spy unmask it within (100 - meter) % of its detector radius (UNVERIFIED). The owner's description adds "or trains", which is not modelled.
