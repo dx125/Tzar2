@@ -32,6 +32,8 @@ public sealed class UiAssets : IDisposable
     private readonly Dictionary<string, (FontAsset Font, Image Strip)?> _fonts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Image> _tintedStrips = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ImageTexture> _texts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, FontFile?> _godotFonts = new(StringComparer.Ordinal);
+    private Theme? _theme;
 
     /// <summary>Creates the cache over <paramref name="store"/>.</summary>
     public UiAssets(ContentStore store) => _store = store;
@@ -200,6 +202,95 @@ public sealed class UiAssets : IDisposable
 
         _texts[key] = texture;
         return texture;
+    }
+
+    /// <summary>
+    /// The original bitmap font <paramref name="font"/> as a Godot font (UI-F1), so that Godot's own controls (text fields,
+    /// lists, chat) write in it: one glyph per character of the strip, at the font's cell height. Null when missing.
+    /// </summary>
+    public FontFile? GodotFont(string font = SmallFont)
+    {
+        if (_godotFonts.TryGetValue(font, out FontFile? cached))
+        {
+            return cached;
+        }
+
+        FontFile? result = null;
+        if (LoadFont(font) is { } loaded)
+        {
+            (FontAsset asset, Image strip) = loaded;
+            int size = asset.CellHeight, ascent = Math.Max(1, asset.CellHeight - 3);
+            var cache = new Vector2I(size, 0);
+            result = new FontFile { FixedSize = size, Antialiasing = TextServer.FontAntialiasing.None, ResourceName = font };
+            result.SetTextureImage(0, cache, 0, strip);
+            result.SetCacheAscent(0, size, ascent);
+            result.SetCacheDescent(0, size, size - ascent);
+            foreach (FontCharacter c in asset.Characters)
+            {
+                int width = Math.Min(c.Width, asset.CellWidth);
+                result.SetGlyphAdvance(0, size, c.Unicode, new Vector2(c.Width, 0));
+                result.SetGlyphOffset(0, cache, c.Unicode, new Vector2(0, -ascent));
+                result.SetGlyphSize(0, cache, c.Unicode, new Vector2(width, asset.CellHeight));
+                result.SetGlyphUVRect(0, cache, c.Unicode, new Rect2(0, c.Glyph * asset.CellHeight, width, asset.CellHeight));
+                result.SetGlyphTextureIdx(0, cache, c.Unicode, 0);
+            }
+        }
+
+        _godotFonts[font] = result;
+        return result;
+    }
+
+    /// <summary>
+    /// A theme for Godot's controls on the original's screens (UI-F1): the original's small font in the screens' light
+    /// gold, no boxes of Godot's own (the fields and lists sit on the art's bevels), a faint gold bar for a selection.
+    /// </summary>
+    public Theme ScreenTheme()
+    {
+        if (_theme is not null)
+        {
+            return _theme;
+        }
+
+        var theme = new Theme();
+        if (GodotFont(SmallFont) is { } font)
+        {
+            theme.DefaultFont = font;
+            theme.DefaultFontSize = font.FixedSize;
+            foreach (string type in new[] { "Label", "LineEdit", "ItemList", "Button" })
+            {
+                theme.SetFontSize("font_size", type, font.FixedSize);
+            }
+
+            theme.SetFontSize("normal_font_size", "RichTextLabel", font.FixedSize);
+            theme.SetConstant("line_spacing", "Label", 1);
+            theme.SetStylebox("normal", "Label", new StyleBoxEmpty());
+        }
+
+        var gold = new Color(1f, 0.92f, 0.65f);
+        var none = new StyleBoxEmpty();
+        var picked = new StyleBoxFlat { BgColor = new Color(1f, 0.85f, 0.4f, 0.25f) };
+        foreach (string type in new[] { "LineEdit", "ItemList", "RichTextLabel", "Label", "Button" })
+        {
+            theme.SetColor("font_color", type, gold);
+        }
+
+        theme.SetColor("default_color", "RichTextLabel", gold);
+        theme.SetColor("font_placeholder_color", "LineEdit", new Color(0.7f, 0.65f, 0.5f));
+        theme.SetColor("caret_color", "LineEdit", gold);
+        theme.SetColor("font_selected_color", "ItemList", Colors.White);
+        theme.SetStylebox("normal", "LineEdit", none);
+        theme.SetStylebox("focus", "LineEdit", none);
+        theme.SetStylebox("read_only", "LineEdit", none);
+        theme.SetStylebox("panel", "ItemList", none);
+        theme.SetStylebox("focus", "ItemList", none);
+        theme.SetStylebox("selected", "ItemList", picked);
+        theme.SetStylebox("selected_focus", "ItemList", picked);
+        theme.SetStylebox("cursor", "ItemList", none);
+        theme.SetStylebox("cursor_unfocused", "ItemList", none);
+        theme.SetStylebox("normal", "RichTextLabel", none);
+        theme.SetStylebox("focus", "RichTextLabel", none);
+        _theme = theme;
+        return theme;
     }
 
     /// <summary>Width of <paramref name="text"/> in <paramref name="font"/>.</summary>

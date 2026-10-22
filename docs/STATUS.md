@@ -231,7 +231,8 @@ the process decisions that have no ADR.
   finding is left. UI-T1, UI-T2, UI-T3, UI-T5: shell labels from STRINGS.INI. UI-A3, UI-A10,
   UI-A11, UI-A12: the load selector and the scenario dialogs in their art's boxes. UI-A2: the credits screen
   (SHELL-020). UI-A4, UI-A9: the end-of-game and
-  options slots as far as the data shows them.
+  options slots as far as the data shows them. UI-A6, UI-A7, UI-F1, UI-T6: the
+  multiplayer menu, lobby and replays rebuilt on the original's art, pieces and font.
 
 * **2026-10-22 — The multiplayer setup: colours, AI scripts and every map and game option (ADR 0232; SHELL-016, SHELL-017, SHELL-018).**
   Each player picks his colour and the AI script of his kingdom's computer player (AI.INI's strategies); the host
