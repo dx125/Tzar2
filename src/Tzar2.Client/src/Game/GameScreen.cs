@@ -362,7 +362,7 @@ public partial class GameScreen : Node
         };
         _hud.MinimapPressed += (share, right, mods) => OnMinimap(share, right, mods);
         _hud.MenuPressed += () => ShowMenu();
-        _hud.DiplomacyPressed += () => Message(_catalog.Text("game_scr", "diplomacy", "DIPLOMACY") + ": not available yet");
+        _hud.DiplomacyPressed += ShowDiplomacy;
         _hud.ChatPressed += () =>
         {
             if (!_session.IsMultiplayer)
@@ -1006,6 +1006,12 @@ public partial class GameScreen : Node
                 break;
             case GameAction.Options:
                 ShowOptions();
+                break;
+            case GameAction.Diplomacy:
+                ShowDiplomacy();
+                break;
+            case GameAction.Tribute:
+                ShowTribute(back: false);
                 break;
             case GameAction.Screenshot:
                 Screenshot();
@@ -2117,6 +2123,82 @@ public partial class GameScreen : Node
             layer.QueueFree();
             _session.Paused = paused;
         };
+    }
+
+    // DIPLOMACY and F5 (HUD-012): the stances, the sharing and shared victory towards every other kingdom.
+    private void ShowDiplomacy()
+    {
+        if (GetNodeOrNull("Diplomacy") is not null || GetNodeOrNull("Tribute") is not null || _hud is null || _frame is null)
+        {
+            return;
+        }
+
+        var dialog = new DiplomacyDialog(_ui, _hud.Layout.Size, new DiplomacyScreen(_frame, _session.LocalPlayer), _catalog.Text, KingdomName, KingdomColour);
+        var layer = new CanvasLayer { Layer = 3, Name = "Diplomacy" };
+        layer.AddChild(dialog);
+        AddChild(layer);
+        dialog.Closed += layer.QueueFree;
+        dialog.Accepted += () =>
+        {
+            Submit(dialog.Model.Accept());
+            layer.QueueFree();
+        };
+        dialog.TributePressed += () =>
+        {
+            layer.QueueFree();
+            ShowTribute(back: true);
+        };
+    }
+
+    // TRIBUTE and F6 (HUD-013): gold, food, wood and stone for the other kingdoms; SEND and CANCEL go back to the
+    // diplomacy screen when it opened this one.
+    private void ShowTribute(bool back)
+    {
+        if (GetNodeOrNull("Tribute") is not null || _hud is null || _frame is null)
+        {
+            return;
+        }
+
+        int[] columns = [.. CardDialog.Resources.Select(r => _rules.ResourceId(r))];
+        var dialog = new TributeDialog(_ui, _hud.Layout.Size, new TributeScreen(_frame, _session.LocalPlayer, columns), _catalog.Text, KingdomName, KingdomColour);
+        var layer = new CanvasLayer { Layer = 3, Name = "Tribute" };
+        layer.AddChild(dialog);
+        AddChild(layer);
+        void Done()
+        {
+            layer.QueueFree();
+            if (back)
+            {
+                Callable.From(ShowDiplomacy).CallDeferred();
+            }
+        }
+
+        dialog.Closed += Done;
+        dialog.Sent += () =>
+        {
+            Submit(dialog.Model.Send());
+            Done();
+        };
+    }
+
+    // The kingdom's name in the match setup, else its colour's.
+    private string KingdomName(int slot)
+    {
+        _kingdomNames ??= MatchDescriptor.Of(_session.Setup)?.Players.ToDictionary(p => (int)p.Slot, p => p.Name) ?? [];
+        return _kingdomNames.TryGetValue(slot, out string? name) && name.Length > 0 ? name : slot < 8 ? SpritePage.PlayerNames[slot] : $"Kingdom {slot + 1}";
+    }
+
+    private Dictionary<int, string>? _kingdomNames;
+
+    private Color KingdomColour(int slot)
+    {
+        if (slot >= 8)
+        {
+            return Colors.Gray;
+        }
+
+        Rgba32 r = _store.Palette.Ramp(slot, 11);
+        return Color.Color8(r.R, r.G, r.B);
     }
 
     private void ShowMenu()

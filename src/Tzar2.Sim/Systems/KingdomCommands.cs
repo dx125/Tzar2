@@ -83,8 +83,10 @@ internal static class KingdomCommands
             return CommandRejection.InvalidArgument;
         }
 
+        // The tribute screen's SEND carries several resources to several kingdoms in one tick (HUD-013): the interval
+        // only holds between ticks.
         ref KingdomState sender = ref world.Kingdoms[command.Player];
-        if ((long)world.Tick.Value - sender.LastTributeTick < Ticks(world, w.TributeIntervalMs))
+        if (sender.LastTributeTick != world.Tick.Value && (long)world.Tick.Value - sender.LastTributeTick < Ticks(world, w.TributeIntervalMs))
         {
             return CommandRejection.TributeBusy;
         }

@@ -105,7 +105,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 16 | 5 | 0 | 0 | 0 | 1 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 34 | 2 | 14 | 6 | 9 | 2 | 1 |
+| [The screen](interface.yaml) (HUD) | 34 | 4 | 14 | 6 | 7 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 9 | 2 | 2 | 2 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 21 | 15 | 4 | 1 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 335 | 168 | 73 | 41 | 32 | 9 | 12 |
+| **All** | 335 | 170 | 73 | 41 | 30 | 9 | 12 |
 
 ## Not done yet
 
@@ -166,8 +166,6 @@ Missing and partial rules.
 * **HUD-009**: The interface can be placed along the bottom, the left or the right of the screen. Work: STATUS work queue 12 (M8, owner decision 2026-10-21).
 * **HUD-010** (partial): The resource bar at the top shows food, wood, stone and gold, the population against its limit, and the CHAT, DIPLOMACY and MENU buttons. *DIPLOMACY says "not available yet" and CHAT works only in multiplayer.*
 * **HUD-011** (partial): The chat screen opens with the CHAT button or Enter; the message goes to the allies, the enemies, everyone, or players picked from a list that shows each one's stance. *Multiplayer only, as a chat line where Tab cycles everyone, allies and enemies; there is no list of players to pick from.* (ADR 0168)
-* **HUD-012**: The diplomacy screen (DIPLOMACY, F5) shows each player's civilization and lets you choose ally, enemy or neutral towards him, offer shared vision, resources and unit control, and set allied victory; each button shows whether the other player agreed. *The simulation has stances, sharing and allied victory (ADR 0102); the screen is not built.*
-* **HUD-013**: The tribute screen (TRIBUTE, F6) sends gold, food, stone or wood to another player; a left click on the amount raises it and a right click lowers it; SEND or CANCEL. *The simulation has tribute (ADR 0102); the screen is not built.*
 * **HUD-016** (partial): The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level. *The kingdom's name (only its colour shows) and power are not shown. INSIDE and LEVEL show for the player's own objects only.*
 * **HUD-017**: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped. *Use and drop act on the first item; there is no inventory view.*
 * **HUD-018**: In an inventory a left click uses an item, a right click drops it, Ctrl makes either instant, Alt+click makes it the default item, and < and > turn its pages.

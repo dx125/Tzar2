@@ -312,6 +312,9 @@ public struct FramePlayer
     /// <summary>AI assistance the kingdom has asked for: bit 1 economy, bit 2 war (ADR 0183).</summary>
     public byte AiAssist;
 
+    /// <summary>The kingdom's civilization key (the diplomacy screen's race icon), or empty.</summary>
+    public string? Civilization;
+
     /// <summary>Match statistics (F4 and the statistics file; GAME-17).</summary>
     public KingdomStatistics Statistics;
 
@@ -422,6 +425,24 @@ public sealed class GameFrame
 
     /// <summary>Per-slot stockpiles.</summary>
     public FramePlayer[] Players { get; internal set; } = [];
+
+    /// <summary>Stances between the kingdoms, <c>[from × Players.Length + to]</c> (GAME-13; the diplomacy screen).</summary>
+    public byte[] Stances { get; internal set; } = [];
+
+    /// <summary>What each kingdom offers each other one (<c>Sharing</c> flags), indexed as <see cref="Stances"/>.</summary>
+    public byte[] Offers { get; internal set; } = [];
+
+    /// <summary>The stance of <paramref name="from"/> towards <paramref name="to"/> (enemy when unknown).</summary>
+    public Tzar2.Sim.Kingdoms.Stance StanceOf(int from, int to)
+        => (uint)from < (uint)Players.Length && (uint)to < (uint)Players.Length && (from * Players.Length) + to < Stances.Length
+            ? (Tzar2.Sim.Kingdoms.Stance)Stances[(from * Players.Length) + to]
+            : Tzar2.Sim.Kingdoms.Stance.Enemy;
+
+    /// <summary>What <paramref name="from"/> offers <paramref name="to"/>.</summary>
+    public Tzar2.Sim.Kingdoms.Sharing OffersOf(int from, int to)
+        => (uint)from < (uint)Players.Length && (uint)to < (uint)Players.Length && (from * Players.Length) + to < Offers.Length
+            ? (Tzar2.Sim.Kingdoms.Sharing)Offers[(from * Players.Length) + to]
+            : Tzar2.Sim.Kingdoms.Sharing.None;
 
     /// <summary>
     /// Local player's visibility per tile (row-major W×H): 0 unexplored, 1 explored, 2 visible. Empty when fog is off.

@@ -65,7 +65,8 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. Next: the screens: diplomacy, tribute, inventory, save and load. Done: Landing Tactics (TECH-019), one
+   order. Next: the owner's interface fixes (the main menu in one column without CAMPAIGN, the HUD's black selection
+   view), then the inventory, save and load screens. Done: the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
    (ORD-005), the hit frame from the data (WAR-014), several items per kind (ITEM-016, ADR 0186).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
@@ -113,6 +114,17 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — The diplomacy and tribute screens (HUD-012, HUD-013).**
+  * DIPLOMACY and F5 open the diplomacy screen, built on the original's `D_DIPLOMACY` art. Each other kingdom has a
+    row: its race, colour and name, the three stances and the three sharing buttons. A stance button is lit lower left
+    for the player's choice and upper right for the other kingdom's. A sharing button glows green when the other
+    kingdom offers it too. The screen also has Shared Victory, TRIBUTE, ACCEPT and CANCEL.
+  * TRIBUTE and F6 open the tribute screen (`D_ADVANCED`): gold, food, wood and stone per kingdom. A left click adds
+    100, a right click takes 100 away (the step is ours).
+  * The models are `Tzar2.Game.Ui.DiplomacyScreen` and `TributeScreen`; the frame now carries the stances and offers.
+  * One SEND may carry several tributes in one tick (the engine's interval holds between ticks). The sim's goldens are
+    unchanged.
 
 * **2026-10-22 — Several items per kind (ITEM-016, ADR 0186).**
   * The original's maps show what items are. `item_plusplus` is the power item: swords and bows carry an attack of

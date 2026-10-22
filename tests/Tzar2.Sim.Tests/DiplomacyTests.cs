@@ -102,11 +102,14 @@ public class DiplomacyTests
         w.Players[0].Resources[gold] = 500;
         w.Players[1].Resources[gold] = w.Ruleset.World.StockpileCap - 10;
         w.Players[2].Resources[gold] = 0;
-        d.Order(0, CommandKind.Tribute, [], x: 2, arg0: gold, arg1: 100);
-        d.Order(0, CommandKind.Tribute, [], x: 2, arg0: gold, arg1: 100); // same tick: too soon
+        d.Order(0, CommandKind.Tribute, [], x: 2, arg0: gold, arg1: 50);
+        d.Order(0, CommandKind.Tribute, [], x: 2, arg0: gold, arg1: 50); // the same tick: one SEND of the tribute screen (HUD-013)
         d.Step();
         Assert.Equal(400, w.Players[0].Resources[gold]);
         Assert.Equal(100, w.Players[2].Resources[gold]);
+        d.Order(0, CommandKind.Tribute, [], x: 2, arg0: gold, arg1: 100); // the next tick: too soon
+        d.Step();
+        Assert.Equal(400, w.Players[0].Resources[gold]);
         Assert.Contains(CommandRejection.TributeBusy, d.Rejections());
 
         for (int t = 0; t < 20; t++)

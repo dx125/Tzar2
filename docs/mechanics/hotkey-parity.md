@@ -17,15 +17,15 @@ the feature behind it is not in the simulation yet (the key shows a message nami
 | | Fixed keys | Group keys | Building-class keys |
 |---|---|---|---|
 | Bindings | 45 | 18 | 26 |
-| Done | 28 | 9 (assign) | 26 |
+| Done | 30 | 9 (assign) | 26 |
 | Partial | 11 | 9 (select: the double-press centring is assumed) | — |
-| Blocked (waits for a screen: diplomacy, tribute, inventory; or location messages) | 6 | — | — |
+| Blocked (waits for a screen: inventory; or location messages) | 4 | — | — |
 
 Mouse semantics: 16 rows, 11 done, 4 partial, 1 deliberately unbound (wheel zoom).
 
 The checklist is complete: every original key and mouse action is listed, bound and either works or reports what it
-waits for. "Blocked" rows close by themselves when the features land (the diplomacy, tribute and inventory screens,
-location messages in the multiplayer chat). Updated 2026-10-21: items, experience and multiplayer chat are in.
+waits for. "Blocked" rows close by themselves when the features land (the inventory screen, location messages in the
+multiplayer chat). Updated 2026-10-22: the diplomacy and tribute screens are in.
 
 ## Function keys
 
@@ -36,8 +36,8 @@ location messages in the multiplayer chat). Updated 2026-10-21: items, experienc
 | `save` | F2 | Save dialog | partial | quick save of campaign missions (ADR 0133); the save dialog and skirmish/MP saves are M6 |
 | `load` | F3 | Load dialog | partial | quick load of campaign missions (ADR 0133); the load dialog is M6 |
 | `scores` | F4 | Scores | partial | every kingdom's sim score and statistics as messages (ADR 0106); the full score screen is the results dialog |
-| `diplomacy` | F5 | Diplomacy screen | blocked | the sim has diplomacy (SetDiplomacy, ADR 0102); the dialog is not built yet |
-| `tribute` | F6 | Tribute dialog | blocked | the sim has tribute (ADR 0102); the dialog is not built yet |
+| `diplomacy` | F5 | Diplomacy screen | done | the diplomacy screen (HUD-012) |
+| `tribute` | F6 | Tribute dialog | done | the tribute screen (HUD-013) |
 | `objectives` | F8 | Current objectives | done | the quest log of scenario maps (ADR 0132); the victory condition in skirmishes |
 | `options` | F9 | Options | partial | toggles day/night (Shift+F9 also rain); a full options dialog follows the dialog set of REQ-UI-02 |
 | `screenshot` | F11 | Saves a snapshot of the screen | done | PNG in the user folder |
