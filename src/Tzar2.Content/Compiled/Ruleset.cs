@@ -518,7 +518,8 @@ public sealed partial class Ruleset
             throw new ArgumentException($"{where}: spawn on death must name an immobile type without a footprint (a resource pile).");
         }
 
-        if (t.Gate is { } gate && (!e.HasFootprint || gate.Passage.IsDefault || gate.Passage.Length != e.FootprintWidth * e.FootprintHeight))
+        if (t.Gate is { } gate && (!e.HasFootprint || gate.Passage.IsDefault || gate.Passage.Length != e.FootprintWidth * e.FootprintHeight
+            || (!gate.TurnedPassage.IsDefaultOrEmpty && gate.TurnedPassage.Length != e.Turned.Width * e.Turned.Height)))
         {
             throw new ArgumentException($"{where}: a gate needs one passage cell per footprint tile.");
         }
@@ -715,7 +716,8 @@ public sealed partial class Ruleset
         foreach (EntityTypeDefinition e in _entityTypes)
         {
             hasher.Add((int)e.Id).Add(Encoding.UTF8.GetBytes(e.Key)).Add((byte)e.Locomotor).Add(e.SpeedUnitsPerSecond).Add(e.MaxHealth)
-                .Add(e.Radius).Add(e.TerrainRadius).Add(e.ClearanceTiles).Add(e.FootprintWidth).Add(e.FootprintHeight).Add(e.Footprint).Add(e.LeavesCorpse);
+                .Add(e.Radius).Add(e.TerrainRadius).Add(e.ClearanceTiles).Add(e.FootprintWidth).Add(e.FootprintHeight).Add(e.Footprint).Add(e.LeavesCorpse)
+                .Add(e.Turned.Width).Add(e.Turned.Height).AddSpan<byte>(e.Turned.Mask.AsSpan());
             AddTraits(hasher, e.Traits);
         }
 
@@ -834,7 +836,7 @@ public sealed partial class Ruleset
         hasher.Add(t.Gate is not null);
         if (t.Gate is { } gate)
         {
-            hasher.AddSpan<byte>(gate.Passage.AsSpan());
+            hasher.AddSpan<byte>(gate.Passage.AsSpan()).AddSpan<byte>(gate.TurnedPassage.AsSpan());
         }
 
         hasher.Add(t.Decay is not null);
