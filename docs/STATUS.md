@@ -45,7 +45,7 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | D | day length, night share (no input) | **Day length done** (ADR 0173): 37.5 min, read from the clock globe; a match starts at 10:00. The game ended after 12 min (the Hard AI), before the night: **night share open**, needs a 35-min run the AI does not end. |
 | E | group speed, research, damage bonuses, capture, far gathering | **Done, one result** (2026-10-19): a mixed group walks at its slowest member's speed (passes). The rest failed: units given to kingdom 2 are taken over by its AI and leave the duel; Feudalism never started; Ctrl+C picked another castle, so the far tree was not the one gathered; the capture analysis saw no colour change. Not repeated: owner decision below. |
 | F–I | fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | deferred (owner decision below) |
-| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Run 1 done** (2026-10-21): the meter measured (one point per 1.25 s). Repairs and unmasking failed: the builder left too early, our knights do not attack our own buildings, MP2 has no kingdom 3. Run 2: buildings damaged, no 4-byte field held their hit points; spies failed on MP6. **Run 3: repairs measured** (ADR 0185: blows of max / (4 × TIME) every 1.25 s, free, no falloff; suite 10 of 30); a third kingdom's spy never unmasks. **Run 4 ready** (~13 min): the unmasking distance with a kingdom-2 look. |
+| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Run 1 done** (2026-10-21): the meter measured (one point per 1.25 s). Repairs and unmasking failed: the builder left too early, our knights do not attack our own buildings, MP2 has no kingdom 3. Run 2: buildings damaged, no 4-byte field held their hit points; spies failed on MP6. **Run 3: repairs measured** (ADR 0185: blows of max / (4 × TIME) every 1.25 s, free, no falloff; suite 10 of 30); a third kingdom's spy never unmasks. Run 4: no impersonation (the spy went for the enemy peasant before it was selected), and kingdom 2's army reached our base. **Run 5 ready** (~13 min, Easy AI). |
 
 Facts live in `tests/fidelity/facts/` (numbers only; captures stay on the operator's PC). A measured fact that disagrees
 with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that makes it pass go in the same PR.
@@ -72,7 +72,7 @@ play-test.
    is done.
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
      (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
-     both. The repairs are measured (run 3, ADR 0185); the distance is left. **Operator:** run 4,
+     both. The repairs are measured (run 3, ADR 0185); the distance is left. **Operator:** run 5,
      `run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch J -AllowModified` (~22 min, hands off).
    * The spy's disguise meter (MAG-021) is done and measured.
    * Impersonation takes the unit over (MAG-012, the owner, ADR 0184 amendment 4): the unit changes hands and keeps its
@@ -116,6 +116,13 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — Batch J, run 4: nothing measured; run 5 prepared.**
+  * The spy, spawned next to kingdom 2's peasant, went for it at once, so the click meant to select it missed and
+    the impersonation never happened.
+  * In the scenarios that waited 55 and 125 s, kingdom 2's army (Normal) reached our base.
+  * Run 5: the spy is spawned first and stands its ground, the peasant two tiles off; the setup screen's difficulty is
+    lowered twice before PLAY.
 
 * **2026-10-21 — Batch J, run 3: repairs measured (ADR 0185); only the copied kingdom's spies unmask (ADR 0184
   amendment 5).**
