@@ -74,7 +74,7 @@ public sealed class CommandCardTests : IDisposable
 
     [Fact]
     [Trait("Rule", "HUD-019")]
-    public void More_orders_than_slots_go_on_pages_of_seven_with_a_page_button_and_hotkeys_reach_them_all()
+    public void More_orders_than_slots_go_on_pages_of_eight_turned_by_the_arrows_and_hotkeys_reach_them_all()
     {
         EntityId peasant = Own("euro.peon");
         _cards.Menus["e_peon"] = [.. Enumerable.Range(0, 9).Select(i => new CardButton($"o{i}", (char)('A' + i), CardAction.Stop, string.Empty, i, $"Order {i}"))];
@@ -82,15 +82,76 @@ public sealed class CommandCardTests : IDisposable
 
         IReadOnlyList<CardSlot?> first = card.Build(Context([peasant]));
         Assert.Equal(CommandCard.Slots, first.Count);
-        Assert.Equal(["o0", "o1", "o2", "o3", "o4", "o5", "o6"], first.Take(7).Select(s => s!.Value.Button.Order));
-        Assert.Equal(CardAction.Page, first[7]!.Value.Button.Action);
+        Assert.Equal(["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7"], first.Select(s => s!.Value.Button.Order));
+        Assert.Equal((0, 2), (card.Page, card.PageCount));
         Assert.Equal(9, card.WholeCard.Count);
+        Assert.Equal('I', card.SlotOfKey(Context([peasant]), 'I')!.Value.Button.Hotkey); // a hotkey on the next page
 
-        Assert.Same(CardPress.Nothing, card.Press(Context([peasant]), first[7]!.Value));
+        card.TurnPage(1);
         IReadOnlyList<CardSlot?> second = card.Build(Context([peasant]));
-        Assert.Equal(["o7", "o8"], second.Take(2).Select(s => s!.Value.Button.Order));
-        Assert.Null(second[2]);
-        Assert.Equal("page 2 of 2", second[7]!.Value.Detail);
+        Assert.Equal(["o8"], second.Select(s => s!.Value.Button.Order));
+        Assert.Equal(1, card.Page);
+        card.TurnPage(1); // no third page
+        Assert.Single(card.Build(Context([peasant])));
+        card.TurnPage(-5);
+        Assert.Equal(8, card.Build(Context([peasant])).Count);
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-017")]
+    [Trait("Rule", "HUD-018")]
+    public void The_eye_opens_the_carriers_inventory_where_clicks_use_drop_or_make_the_default_item()
+    {
+        World world = _session.Simulation.World;
+        EntityId footman = Own("euro.footman");
+        EntityId other = Own("euro.peon");
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        Assert.True(card.Carrier(Context([other, footman])).IsNone); // nothing carried yet
+
+        Position at = world.Positions.Get(footman);
+        EntityId potion = world.Spawn((ushort)Rules.Value.EntityTypeId("comm.item_health"), 255, at.X + 2048, at.Y);
+        EntityId book = world.Spawn((ushort)Rules.Value.EntityTypeId("comm.item_magic"), 255, at.X + 2048, at.Y + 2048);
+        world.Items.Get(book).Look = 2; // item_book2
+        foreach (EntityId item in new[] { potion, book })
+        {
+            var pick = new CommandList();
+            pick.Add(CommandKind.PickItem, [footman], target: item);
+            _session.Submit(pick);
+            for (int i = 0; i < 400 && !world.Helds.Has(item); i++)
+            {
+                _session.Step(1);
+            }
+        }
+
+        _session.Step(1);
+        Assert.Equal(footman, card.Carrier(Context([other, footman])));
+        Assert.True(card.ToggleInventory(Context([other, footman])));
+
+        IReadOnlyList<CardSlot?> items = card.Build(Context([other, footman]));
+        Assert.Equal(2, items.Count);
+        Assert.All(items, s => Assert.Equal(CardAction.InventoryItem, s!.Value.Button.Action));
+        Assert.Equal(("0", 3), (items[0]!.Value.Button.Argument, items[0]!.Value.Button.ImageIndex));
+        Assert.Equal(("1", 4), (items[1]!.Value.Button.Argument, items[1]!.Value.Button.ImageIndex)); // its own look's icon
+        Assert.EndsWith(": spell_firerain", items[1]!.Value.Button.Tooltip, StringComparison.Ordinal);
+
+        // The potion is used at once by its carrier; the Fire Rain book waits for a place, unless Ctrl.
+        CommandList use = card.Press(Context([other, footman]), items[0]!.Value).Commands!;
+        Assert.Equal((CommandKind.UseItem, 0, footman), (use[0].Kind, use[0].Arg0, use[0].Target));
+        CardPress aim = card.Press(Context([other, footman]), items[1]!.Value);
+        Assert.Equal((OrderMode.UseItem, 2), (aim.Mode, aim.ModeArgument));
+        PlannedCommand planned = OrderResolver.WithMode(OrderMode.UseItem, [SelectionTests.Unit(1, owner: 0)], null, 100, 100, KeyMods.None, 0, aim.ModeArgument).Single();
+        Assert.Equal(1, planned.Arg0);
+        Assert.Equal(-1, OrderResolver.WithMode(OrderMode.UseItem, [SelectionTests.Unit(1, owner: 0)], null, 100, 100, KeyMods.None, 0).Single().Arg0); // the card's use: the default item
+        Assert.Equal(CommandKind.UseItem, card.Press(Context([other, footman]), items[1]!.Value, ctrl: true).Commands![0].Kind);
+
+        Assert.Equal((CommandKind.DropItem, 1), (card.Press(Context([other, footman]), items[1]!.Value, right: true).Commands![0].Kind, card.Press(Context([other, footman]), items[1]!.Value, right: true).Commands![0].Arg0));
+        _session.Submit(card.Press(Context([other, footman]), items[1]!.Value, alt: true).Commands!);
+        _session.Step(2);
+        Assert.True(card.Build(Context([other, footman]))[1]!.Value.Active); // the default item is framed
+
+        // Another selection closes it.
+        card.Build(Context([other]));
+        Assert.False(card.InventoryOpen);
     }
 
     [Fact]
@@ -454,5 +515,7 @@ public sealed class CommandCardTests : IDisposable
         public int TrainImage(ushort typeId) => 1;
 
         public string Text(string section, string key, string fallback) => fallback;
+
+        public int ItemIcon(ushort typeId, string? look) => look is null ? 3 : 4;
     }
 }

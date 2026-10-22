@@ -189,6 +189,9 @@ public sealed class PresentationCatalog : ICardSource
     public IReadOnlyList<string> ClassesOfKey(char letter)
         => _keyClasses.TryGetValue(letter.ToString(), out string[]? classes) ? classes : [];
 
+    /// <inheritdoc/>
+    public int ItemIcon(ushort typeId, string? look) => IconIndex(look ?? _types[typeId].Image(UnitAnim.Base));
+
     /// <summary>The icons.bmp cell of an ICONS.INI section, or −1.</summary>
     public int IconIndex(string? name)
         => name is not null && _icons.Get(name, "index") is { } v && int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out int i) ? i : -1;

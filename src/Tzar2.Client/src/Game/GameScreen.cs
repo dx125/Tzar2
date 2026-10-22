@@ -363,6 +363,12 @@ public partial class GameScreen : Node
         _hud.MinimapPressed += (share, right, mods) => OnMinimap(share, right, mods);
         _hud.MenuPressed += () => ShowMenu();
         _hud.DiplomacyPressed += ShowDiplomacy;
+        _hud.PagePressed += delta =>
+        {
+            _card.TurnPage(delta);
+            RefreshCard();
+        };
+        _hud.EyePressed += ToggleInventory;
         _hud.ChatPressed += () =>
         {
             if (!_session.IsMultiplayer)
@@ -740,7 +746,7 @@ public partial class GameScreen : Node
                 if (_mode != OrderMode.None)
                 {
                     (int x, int y) = ToWorld(e.Position);
-                    SendAndConfirm(OrderResolver.WithMode(_mode, SelectedInfos(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument), x, y);
+                    SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument), x, y);
                     if ((mods & KeyMods.Shift) == 0)
                     {
                         _mode = OrderMode.None;
@@ -829,7 +835,7 @@ public partial class GameScreen : Node
         {
             // Emerge and unload: a right click gives the place too (the manual, the owner 2026-10-21; ORD-015).
             (int ux, int uy) = ToWorld(position);
-            SendAndConfirm(OrderResolver.WithMode(_mode, SelectedInfos(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument), ux, uy);
+            SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument), ux, uy);
             _mode = OrderMode.None;
             RefreshCard();
             return;
@@ -1009,6 +1015,13 @@ public partial class GameScreen : Node
                 break;
             case GameAction.Diplomacy:
                 ShowDiplomacy();
+                break;
+            case GameAction.ShowInventory:
+                ToggleInventory();
+                break;
+            case GameAction.InventoryPrevious or GameAction.InventoryNext:
+                _card.TurnPage(binding.Action == GameAction.InventoryNext ? 1 : -1);
+                RefreshCard();
                 break;
             case GameAction.Tribute:
                 ShowTribute(back: false);
@@ -1361,7 +1374,7 @@ public partial class GameScreen : Node
             return;
         }
 
-        CardPress press = _card.Press(CardNow(), s, right, Input.IsKeyPressed(Key.Shift));
+        CardPress press = _card.Press(CardNow(), s, right, Input.IsKeyPressed(Key.Shift), Input.IsKeyPressed(Key.Alt), Input.IsKeyPressed(Key.Ctrl));
         if (press.Commands is { } commands)
         {
             _session.Submit(commands);
@@ -1573,6 +1586,31 @@ public partial class GameScreen : Node
 
         Card = _card.Build(CardNow());
         _hud.SetCard(Card);
+        int eye = _card.InventoryOpen ? 2 : _card.Carrier(CardNow()).IsNone ? 0 : 1;
+        _hud.SetSide(_card.Page > 0, eye, _card.Page < _card.PageCount - 1);
+    }
+
+    // The eye and the slash key (HUD-017): the selected unit's items on the card, or back to its orders.
+    private void ToggleInventory()
+    {
+        if (_frame is null)
+        {
+            return;
+        }
+
+        if (!_card.ToggleInventory(CardNow()) && _card.Carrier(CardNow()).IsNone)
+        {
+            Message("Inventory: the selection carries no items.");
+        }
+
+        RefreshCard();
+    }
+
+    // An item of the inventory waiting for its target is used by its carrier alone (the mode's argument is slot + 1).
+    private List<EntityInfo> ModeSelection()
+    {
+        List<EntityInfo> all = SelectedInfos();
+        return _mode == OrderMode.UseItem && _modeArgument > 0 && _card.InventoryOpen ? [.. all.Where(e => e.Id == _card.InventoryCarrier)] : all;
     }
 
     private void HandleEvents(GameFrame frame)

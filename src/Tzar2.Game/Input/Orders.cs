@@ -359,7 +359,7 @@ public static class OrderResolver
                 => [new PlannedCommand(CommandKind.Bribe, CommandFlags.None, b.Id, x, y, 0, 0, own)],
             OrderMode.Crusade => [new PlannedCommand(CommandKind.PreachCrusade, CommandFlags.None, EntityId.None, x, y, 0, 0, own)],
             OrderMode.PickItem when target is { } item && item.Id != EntityId.None => [new PlannedCommand(CommandKind.PickItem, queue, item.Id, x, y, 0, 0, own)],
-            OrderMode.UseItem => [new PlannedCommand(CommandKind.UseItem, CommandFlags.None, target?.Id ?? EntityId.None, x, y, -1, 0, own)],
+            OrderMode.UseItem => [new PlannedCommand(CommandKind.UseItem, CommandFlags.None, target?.Id ?? EntityId.None, x, y, argument - 1, 0, own)], // 0: the default item
             OrderMode.Impersonate when target is { IsMobile: true } m && m.Owner != player && m.Id != EntityId.None
                 => [new PlannedCommand(CommandKind.Impersonate, CommandFlags.None, m.Id, x, y, 0, 0, own)],
             OrderMode.Unload => [new PlannedCommand(CommandKind.Unload, CommandFlags.None, argument != 0 ? EntityId.FromValue(unchecked((uint)argument)) : EntityId.None, x, y, 0, 0, own)],

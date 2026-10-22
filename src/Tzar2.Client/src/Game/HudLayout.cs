@@ -87,6 +87,12 @@ public sealed class HudLayout
     public Rect2I CardSlot(int slot)
         => new(CardLeft + ((slot % 4) * CardPitchX), Size.Y - (slot < 4 ? CardRow0FromBottom : CardRow1FromBottom), Button, Button);
 
+    /// <summary>
+    /// The three 25 × 25 boxes left of the orders bar (measured on the panel): 0 the left arrow, 1 the inventory's eye,
+    /// 2 the right arrow (ORDERS <c>left</c>, <c>holder</c>, <c>right</c>; which box holds which is ours, ⚠ UNVERIFIED).
+    /// </summary>
+    public Rect2I SideBox(int box) => new(344, Size.Y - 124 + (box * 37), 25, 25);
+
     /// <summary>Portrait slot of the selection view.</summary>
     public Rect2I Portrait => new(201, Size.Y - 132, 48, 48);
 

@@ -80,17 +80,18 @@ rules:
   HUD-017:
     rule: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped.
     source: [manual The Inventory, manual Hints About Gameplay]
-    status: missing
-    note: Use and drop act on the first item; there is no inventory view.
+    status: tested
+    note: The eye (ORDERS holder) sits in the middle of the three boxes left of the orders bar, the arrows above and below it; which box holds which is ours. The focused unit's items show, else the first selected unit's.
   HUD-018:
     rule: In an inventory a left click uses an item, a right click drops it, Ctrl makes either instant, Alt+click makes it the default item, and < and > turn its pages.
     source: [manual Hot Keys]
-    status: missing
+    status: tested
+    note: An item whose spell needs a target waits for a click on the world, as the card's orders do; Ctrl uses it at once. A dropped item falls where its carrier stands.
   HUD-019:
     rule: Arrows by the orders bar reveal further order buttons when there are more than fit.
     source: [manual The Orders Bar]
     status: tested
-    note: A card of more than eight orders gets pages of seven and a page button.
+    note: A card of more than eight orders gets pages of eight, turned by the arrows (ORDERS left, right) above and below the eye.
   HUD-020:
     rule: The question mark on the orders bar opens the online help, whose topics explain every unit, building and technology and how to play.
     source: [manual The Orders Bar, data ORDERS.INI onlinehelp, help ITEMS.TXT]
