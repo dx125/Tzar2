@@ -104,7 +104,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 7 | 1 | 1 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 17 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 1 | 0 | 0 | 0 |
-| [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
+| [Holders and transport](holders.yaml) (HOLD) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 7 | 14 | 6 | 4 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 10 | 3 | 1 | 1 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 21 | 17 | 4 | 0 | 0 | 0 | 0 |
@@ -114,10 +114,10 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 2 | 10 | 8 | 6 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 29 | 3 | 1 | 2 | 0 | 1 |
-| [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
+| [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
-| **All** | 335 | 200 | 78 | 26 | 18 | 9 | 4 |
+| **All** | 335 | 203 | 78 | 25 | 18 | 9 | 2 |
 
 ## Not done yet
 
@@ -138,10 +138,6 @@ Missing and partial rules.
 ### Experience and heroes
 
 * **EXP-005** (partial): Very experienced units become heroes and can be named. *Units become named heroes at level 12 with Heroism; the player cannot name them.*
-
-### Holders and transport
-
-* **HOLD-008** (partial): Ships, magic carpets and traders can load units, but only ships and carpets carry them over water. *Traders do not load units.*
 
 ### The screen
 
@@ -217,11 +213,6 @@ The sources disagree or say too little.
 ### Technologies and upgrades
 
 * **TECH-031**: Piracy gives boarding units an attack bonus, and Boarding Ram lets ships board others. *The manual and the game's texts name them, but the original's data has no such technologies: they look cut from the game.*
-
-### Trade, tavern and loans
-
-* **TRADE-003**: Trade can also be done with other kingdoms' markets. *Whether a trader may use another kingdom's market, and who profits, is not known.*
-* **TRADE-004**: Asian peasants can trade between markets as caravans do. *The help names "a caravan or an Asian peasant"; the manual gives the Asian market caravans. Tzar2 trades with caravans and traders only.*
 
 ## Deliberate differences
 

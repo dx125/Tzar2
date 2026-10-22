@@ -277,7 +277,12 @@ legacy:
 ^class.chariot: { Mobile: { speed: 4 }, Armament: { rate: 3 } }   # UNVERIFIED (UNK-12, UNK-07): the tables give armored chariots no SPEED and no RATE
 ^class.trader:                             # caravans: cycle between two markets (GAME-14, ADR 0103)
   Mobile: { speed: 4 }                     # UNVERIFIED (UNK-12)
-  Trader: { capacity: 100, access: land, technology: te_traderoutes }   # UNVERIFIED (UNK-28): load per trip
+  Trader: { capacity: 100, access: land, technology: te_traderoutes }
+# TRADE-004 (ReTzar's reading of the original, 0x4e8060): the load per trip is 500 for European caravans, 300 for Arabian
+# ones and 100 for Asian peasants, who trade instead of caravans (MENU.INI [a_peon] trade; TECHTREE ASIA trade).
+^euro.trader: { Trader: { capacity: 500 } }
+^arab.trader: { Trader: { capacity: 300 } }
+^asia.peon: { Trader: { capacity: 100, access: land, technology: te_traderoutes } }
 
 ^class.knight: { inherits: [^Cavalry], Mobile: { pixelsPerSecond: 72 } }    # VERIFIED (ADR 0172)
 ^class.heavy_cavalry: { inherits: [^Cavalry] }
