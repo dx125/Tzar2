@@ -174,7 +174,7 @@ public sealed partial class World
             var xp = new Experience { Level = (ushort)Math.Min(start, ushort.MaxValue) };
             if (start > 0)
             {
-                xp.Xp = CombatStats.XpForLevel(Ruleset.Combat, start);
+                xp.Xp = CombatStats.XpForLevel(Ruleset.Combat, start, CombatStats.ExperienceSpeed(this, owner));
             }
 
             Experiences.Set(entity, xp);

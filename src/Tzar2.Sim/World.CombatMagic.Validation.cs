@@ -24,7 +24,7 @@ public sealed partial class World
             Experience x = Experiences.Components[i];
             RequireUnit(ids[i], "experience");
             if (!TypeOf(ids[i]).Traits.GainsExperience || x.Xp < 0 || x.PendingXp != 0 || x.Level > 10_000 || x.BonusAttack is < 0 or > 100_000
-                || x.BonusDefence is < 0 or > 100_000 || x.Flags > ExperienceFlags.Hero || x.Reserved != 0
+                || x.BonusDefence is < 0 or > 100_000 || x.Flags > ExperienceFlags.Hero || x.DummyCarry >= Ruleset.Combat.DummyDamagePerPoint
                 || ((x.Flags & ExperienceFlags.Hero) != 0 && x.Level < settings.HeroLevel))
             {
                 throw Invalid("invalid experience");

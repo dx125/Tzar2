@@ -81,7 +81,7 @@ public class TournamentsMasteryTests
         w.Experiences.Get(priest).Level = 3;
         Teach(peon);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
-        Assert.Equal(100, w.Experiences.Get(peon).Xp); // 100 here (UNVERIFIED, UNK-23)
+        Assert.Equal(1, w.Experiences.Get(peon).Xp); // one point (ReTzar, 0x473bf0)
 
         // Not a pupil of its kind: the footman learns nothing.
         d.RunUntil(() => false, 80);

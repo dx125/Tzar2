@@ -115,7 +115,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    hypnosis, the ghost's banshee scream and the Messiah's immunity (WAR-009, WAR-010, MAG-008; ADR 0250), cancelled
    sites, broken-off loads and the computer's repairs (BLD-020, ECO-002, AI-003; ADR 0251), trade with any market,
    Asian peasants as traders and caravans that load infantry (TRADE-003, TRADE-004, HOLD-008; ADR 0252), Tournaments
-   and Mastery (TECH-028, TECH-029; ADR 0253), spells that skip machines (MAG-022; ADR 0254), soul items bound to a unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257), the controls
+   and Mastery (TECH-028, TECH-029; ADR 0253), spells that skip machines (MAG-022; ADR 0254), soul items bound to a unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257), experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -219,6 +219,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Experience on the original's scale (ADR 0258).** From ReTzar: a kill is one point and damage none; the first
+  point gives level 1 and level k needs k more (Warfare, Tactics, Sun Tzu: 70, 50, 35 %); dummies a point per 75 of
+  damage up to level 8; each academy +10 to the cap; Mastery teaches one point. Replaces UNK-23's scale. The AI
+  skirmish is unchanged (no Learning in 10 minutes); the gameplay golden (level-ups 95 to 269) and bench are re-pinned.
+
 
 * **2026-10-22 — The trade profit as the original computes it (ADR 0257).** From ReTzar: load x tiles x 40 / (map side x 100),
   the tiles on the larger axis between the markets, none under 12; it replaces the UNK-28 placeholder (1 % a tile, at most

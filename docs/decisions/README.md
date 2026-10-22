@@ -142,3 +142,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0255](0255-soul-items-are-bound-to-a-unit.md) | Bind soul items to a unit, and spare the Messiah all magic damage | Accepted | 2026-10-22 |
 | [0256](0256-cows-grow-meat-that-falls-as-food-items.md) | Let cows grow meat that falls as food items | Accepted | 2026-10-22 |
 | [0257](0257-trade-profit-as-the-original-computes-it.md) | Compute the trade profit as the original does | Accepted | 2026-10-22 |
+| [0258](0258-experience-on-the-originals-scale.md) | Count experience on the original's scale: a point per kill | Accepted | 2026-10-22 |

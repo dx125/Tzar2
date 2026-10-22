@@ -477,7 +477,7 @@ internal static class CombatMagicCommands
             ref Experience e = ref world.Experiences.At(x);
             if (levels > 0)
             {
-                int wanted = CombatStats.XpForLevel(world.Ruleset.Combat, e.Level + Math.Min(levels, 1000));
+                int wanted = CombatStats.XpForLevel(world, unit, e.Level + Math.Min(levels, 1000));
                 e.PendingXp += Math.Max(0, wanted - e.Xp);
             }
 

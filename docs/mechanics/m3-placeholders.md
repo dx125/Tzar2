@@ -197,9 +197,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Damage roll | a hit rolls in [attack, `max_damage`] (⚠ HYPOTHESIS: what `max_damage` means) | code (`CombatSystem`) | UNK-08 | tower damage grid |
 | Missing RATE | priests (euro, arab) 2, Jihad warriors 3, armored chariots 3 | YAML | UNK-07 | attack timing captures |
 | Carpet speed / radius | SPEED 5, 12 px (no SPEED in the table) | YAML `^class.carpet` | UNK-12, UNK-11 | captures |
-| Experience per damage | 100% (1 point per point of damage dealt to an enemy) | YAML `combat.experiencePerDamagePercent` | UNK-23 | XP captures |
-| Experience per kill | 0 | YAML `combat.experiencePerKill` | UNK-23 | same |
-| Level curve | level n at 100 × n × (n + 1) / 2 | YAML `combat.levelBaseXp` | UNK-23 | same |
+| Experience | **ReTzar's reading of the original (ADR 0258):** a kill is 1 point, damage 0; level n at 1 + n × (n − 1) / 2 points, each level at Warfare's 70 / Tactics' 50 / Sun Tzu's 35 %; dummies a point per 75 of damage up to level 8; each academy +10 to the cap | YAML `combat.experience*`, `levelBaseXp`, `dummy*`, `levelCap*` | — | an XP capture would confirm it |
 | Level cap | 0 without Learning; Learning +4, Heroism +1,000 (stream A values) | YAML `combat.baseLevelCap`, `te_*` | UNK-23 | same |
 | Defence per level | ½, truncated (1 per 2 levels) | YAML `combat.defenceHalvesPerLevel` | UNK-08 | same |
 | Hero level | 12 (TDD) | YAML `combat.heroLevel` | — | — |

@@ -40,8 +40,8 @@ public struct Experience : IComponent
     /// <summary>Flags.</summary>
     public ExperienceFlags Flags;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved;
+    /// <summary>Damage dealt to training dummies not yet worth a point (below <c>combat.dummyDamagePerPoint</c>).</summary>
+    public byte DummyCarry;
 }
 
 /// <summary>An entity inside a holder (a unit in a castle or ship) or an item in an inventory (GAME-09/10; ADR 0093).</summary>

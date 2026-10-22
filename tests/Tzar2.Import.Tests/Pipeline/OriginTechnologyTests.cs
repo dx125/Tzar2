@@ -21,9 +21,10 @@ namespace Tzar2.Import.Tests.Pipeline;
 public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposable
 {
     // What the simulation does with these technologies is in its code (loans, gambling, the tavern, cow poaching,
-    // Leadership, Honor and Tournaments), not in effects, unlocks or gated orders.
+    // Leadership, Honor, Tournaments and the experience speeds of Warfare, Tactics and Sun Tzu), not in effects, unlocks or
+    // gated orders.
     private static readonly HashSet<string> Mechanics =
-        ["te_usury", "te_gambling", "te_mercenaries", "te_heroesquest", "te_fame", "te_cowpoaching", "te_nobility", "te_honor", "te_tournaments"];
+        ["te_usury", "te_gambling", "te_mercenaries", "te_heroesquest", "te_fame", "te_cowpoaching", "te_nobility", "te_honor", "te_tournaments", "te_warfare", "te_tactics", "te_suntzubook"];
 
     // Technologies of the data that do nothing in Tzar2 yet: each is a rule of the ledger (none today). (Jewelry gates the Asian
     // market's item orders, which are missing too: TECH-030. Piracy and Boarding Ram are in the manual and the texts

@@ -507,6 +507,22 @@ public sealed record CombatSettings
     /// <summary>The spell a soul item's berserk order casts on its bound unit (ITEM-010), or -1.</summary>
     public int SoulBerserkSpell { get; init; } = -1;
 
+    /// <summary>
+    /// The experience speeds (percent of a level's cost) the technologies give (Warfare 70, Tactics 50, Sun Tzu 35;
+    /// ReTzar's reading of the original, 0x4d33d0): a kingdom has the lowest of those it researched (each needs the one
+    /// before), 100 without.
+    /// </summary>
+    public ImmutableArray<ExperienceSpeed> ExperienceSpeeds { get; init; } = [];
+
+    /// <summary>Training dummies teach one point of experience for this much damage they take (75; ReTzar, 0x4481e0).</summary>
+    public int DummyDamagePerPoint { get; init; } = 75;
+
+    /// <summary>Each finished building of these types raises its kingdom's level cap by <see cref="LevelCapPerBuilding"/> (academies), ascending.</summary>
+    public ImmutableArray<ushort> LevelCapBuildings { get; init; } = [];
+
+    /// <summary>Levels each <see cref="LevelCapBuildings"/> building adds to the cap (10; ReTzar, 0x401850).</summary>
+    public int LevelCapPerBuilding { get; init; }
+
     /// <summary>The range of the banshee scream's draw.</summary>
     public int BansheeOutOf { get; init; } = 1001;
 
@@ -591,6 +607,29 @@ public sealed record CombatSettings
             throw new ArgumentException("combat: the magic attackers must not be default.");
         }
 
+        Check(DummyDamagePerPoint, 1, 1_000_000);
+        if (ExperienceSpeeds.IsDefault)
+        {
+            throw new ArgumentException("combat: the experience speeds must not be default.");
+        }
+
+        foreach (ExperienceSpeed speed in ExperienceSpeeds)
+        {
+            Check(speed.Technology, 0, technologies - 1);
+            Check(speed.Percent, 1, 1000);
+        }
+
+        Check(LevelCapPerBuilding, 0, 10_000);
+        if (LevelCapBuildings.IsDefault)
+        {
+            throw new ArgumentException("combat: the level cap buildings must not be default.");
+        }
+
+        foreach (ushort building in LevelCapBuildings)
+        {
+            Check(building, 0, typeCount - 1);
+        }
+
         foreach (ushort attacker in MagicAttackers)
         {
             Check(attacker, 0, typeCount - 1);
@@ -623,3 +662,8 @@ public sealed record CombatSettings
         }
     }
 }
+
+/// <summary>An experience speed a technology gives (<see cref="CombatSettings.ExperienceSpeeds"/>).</summary>
+/// <param name="Technology">The technology id.</param>
+/// <param name="Percent">Percent of a level's cost.</param>
+public sealed record ExperienceSpeed(int Technology, int Percent);

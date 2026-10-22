@@ -533,10 +533,15 @@ public sealed class CombatSystem : ISimSystem
         bool attackerAlive = world.Entities.IsAlive(hit.Attacker) && world.Identities.Has(hit.Attacker);
         if ((targetType.Traits.Abilities & AbilityFlags.TrainingDummy) != 0 && victim.Owner == hit.Owner)
         {
-            // Training (Tactics): no damage; the attacker learns up to the dummies' level.
+            // Training (Tactics): no damage; the attacker learns a point for every dummyDamagePerPoint its blows would deal, up
+            // to the dummies' level (ReTzar's reading of the original, 0x4481e0, 0x4df884: 75 and level 8).
             if (attackerAlive && world.Experiences.IndexOf(hit.Attacker) is >= 0 and var dx && world.Experiences.At(dx).Level < world.Ruleset.Combat.DummyMaxLevel)
             {
-                world.Experiences.At(dx).PendingXp += Math.Max(1, (int)((long)hit.Attack * world.Ruleset.Combat.ExperiencePerDamagePercent / 100));
+                ref Experience trainee = ref world.Experiences.At(dx);
+                long total = trainee.DummyCarry + (long)Damage(world, hit, targetType);
+                int per = world.Ruleset.Combat.DummyDamagePerPoint;
+                trainee.PendingXp += (int)Math.Min(total / per, 1_000_000);
+                trainee.DummyCarry = (byte)Math.Min(total % per, 255);
             }
 
             return;
