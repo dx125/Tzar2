@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Tzar2.Content.MapGen;
+using Tzar2.Game.Campaigns;
 using Tzar2.Game.Multiplayer;
 using Tzar2.Game.Session;
 using Tzar2.Sim;
@@ -21,6 +22,15 @@ public sealed record LobbyRow(byte Slot, SlotKind Kind, int Colour, IReadOnlyLis
 /// <summary>A setting of the multiplayer settings (SHELL-018).</summary>
 public enum LobbySettingKey
 {
+    /// <summary>RANDOM MAP or CUSTOM MAP.</summary>
+    MapSource,
+
+    /// <summary>The custom map.</summary>
+    CustomMap,
+
+    /// <summary>USE MAP SETTINGS: the custom map keeps its own game type, victory, resources and population limit.</summary>
+    UseMapSettings,
+
     /// <summary>Random map type.</summary>
     MapType,
 
@@ -53,6 +63,12 @@ public enum LobbySettingKey
 
     /// <summary>The victory condition.</summary>
     Victory,
+
+    /// <summary>The time limit in minutes (victory Time Limit).</summary>
+    TimeLimit,
+
+    /// <summary>The score limit (victory Score Limit).</summary>
+    ScoreLimit,
 
     /// <summary>The starting resources.</summary>
     StartingResources,
@@ -92,7 +108,13 @@ public enum LobbySettingKey
 /// <param name="Selected">The current choice.</param>
 /// <param name="Enabled">Whether this machine may change it (the host; cheats never in a ranked match).</param>
 /// <param name="IsCheck">Whether it is a check box.</param>
-public sealed record LobbySetting(LobbySettingKey Key, string Caption, IReadOnlyList<string> Items, int Selected, bool Enabled, bool IsCheck);
+/// <param name="Min">With <see cref="IsNumber"/>, the smallest value.</param>
+/// <param name="Max">With <see cref="IsNumber"/>, the largest value (0: not a number).</param>
+public sealed record LobbySetting(LobbySettingKey Key, string Caption, IReadOnlyList<string> Items, int Selected, bool Enabled, bool IsCheck, int Min = 0, int Max = 0)
+{
+    /// <summary>A number typed in (the original's value field): <see cref="LobbySetting.Selected"/> is the value, <see cref="Items"/> is empty.</summary>
+    public bool IsNumber => Max > 0;
+}
 
 /// <summary>
 /// The multiplayer setup and settings screens (SHELL-016, SHELL-017, SHELL-018; manual "Multiplayer Setup Screen" and
@@ -114,18 +136,47 @@ public sealed class LobbyScreenModel
     private static readonly MapTerrainSet[] Terrains = Enum.GetValues<MapTerrainSet>();
     private static readonly VictoryCondition[] Victories = [VictoryCondition.Standard, VictoryCondition.DestroyCastles, VictoryCondition.TimeLimit, VictoryCondition.ScoreLimit];
 
-    private readonly LobbyView _lobby;
+    /// <summary>Longest time limit in minutes (<see cref="MatchSettings"/> bounds).</summary>
+    public const int MaxTimeLimit = 10_000;
 
-    /// <summary>Creates the model of <paramref name="lobby"/> with the strategies of <paramref name="scripts"/>.</summary>
-    public LobbyScreenModel(LobbyView lobby, IReadOnlyList<AiScriptOption> scripts)
+    /// <summary>Highest score limit (<see cref="MatchSettings"/> bounds).</summary>
+    public const int MaxScoreLimit = 100_000_000;
+
+    private readonly LobbyView _lobby;
+    private readonly CustomMapEntry? _map;
+
+    /// <summary>
+    /// Creates the model of <paramref name="lobby"/> with the strategies of <paramref name="scripts"/> and the custom
+    /// maps this machine has (<paramref name="maps"/>; ADR 0233).
+    /// </summary>
+    public LobbyScreenModel(LobbyView lobby, IReadOnlyList<AiScriptOption> scripts, IReadOnlyList<CustomMapEntry>? maps = null)
     {
         ArgumentNullException.ThrowIfNull(lobby);
         ArgumentNullException.ThrowIfNull(scripts);
         _lobby = lobby;
+        Maps = maps ?? [];
         Scripts = scripts.Count > 0 ? scripts : [new AiScriptOption("Default", string.Empty)];
+        _map = lobby.Settings.Map == MapSourceKind.CustomMap ? Maps.FirstOrDefault(m => m.Hash == lobby.Settings.CustomMapHash) : null;
+        MapKingdoms = _map?.Kingdoms ?? 0;
         Rows = BuildRows();
         Settings = BuildSettings();
+        MapNotice = Notice();
     }
+
+    /// <summary>The custom maps this machine has.</summary>
+    public IReadOnlyList<CustomMapEntry> Maps { get; }
+
+    /// <summary>The kingdoms of the chosen custom map (lobby slots 0..n-1 play them), or 0.</summary>
+    public int MapKingdoms { get; }
+
+    /// <summary>Why the match cannot be played as it is (a custom map this machine lacks, players beyond its kingdoms), or null.</summary>
+    public string? MapNotice { get; }
+
+    /// <summary>Whether this machine can play the chosen map (a player without it cannot be ready).</summary>
+    public bool HasMap => _lobby.Settings.Map != MapSourceKind.CustomMap || _map is not null;
+
+    /// <summary>The chosen custom map's description, or null.</summary>
+    public string? MapDescription => _map?.Description;
 
     /// <summary>The strategies a computer player can follow (the first is the default).</summary>
     public IReadOnlyList<AiScriptOption> Scripts { get; }
@@ -137,7 +188,7 @@ public sealed class LobbyScreenModel
     public IReadOnlyList<LobbySetting> Settings { get; }
 
     /// <summary>Whether START is active: this machine hosts and every player is ready (SHELL-016).</summary>
-    public bool CanStart => _lobby.LocalIsHost && _lobby.Slots.All(s => s.Kind != SlotKind.Human || s.Ready || s.IsHost);
+    public bool CanStart => _lobby.LocalIsHost && MapNotice is null && _lobby.Slots.All(s => s.Kind != SlotKind.Human || s.Ready || s.IsHost);
 
     /// <summary>The choice of <paramref name="slot"/> with colour <paramref name="colour"/>.</summary>
     public SlotChoice WithColour(byte slot, int colour) => _lobby.Slots[slot].Choice with { Colour = (byte)colour };
@@ -152,6 +203,11 @@ public sealed class LobbyScreenModel
         bool on = index != 0;
         return key switch
         {
+            LobbySettingKey.MapSource => on && Maps.Count > 0 ? WithMap(s, Maps[0]) : s with { Map = MapSourceKind.RandomMap, CustomMapId = string.Empty, CustomMapHash = 0 },
+            LobbySettingKey.CustomMap => Maps.Count > 0 ? WithMap(s, Maps[Math.Clamp(index, 0, Maps.Count - 1)]) : s,
+            LobbySettingKey.UseMapSettings => s with { UseMapSettings = on },
+            LobbySettingKey.TimeLimit => s with { TimeLimitMinutes = Math.Clamp(index, 1, MaxTimeLimit) },
+            LobbySettingKey.ScoreLimit => s with { ScoreLimit = Math.Clamp(index, 1, MaxScoreLimit) },
             LobbySettingKey.MapType => s with { Map = MapSourceKind.RandomMap, MapType = MapTypes[Math.Clamp(index, 0, MapTypes.Length - 1)] },
             LobbySettingKey.MapSize => s with { MapSize = MapSizes[Math.Clamp(index, 0, MapSizes.Length - 1)] },
             LobbySettingKey.Terrain => s with { Terrain = Terrains[Math.Clamp(index, 0, Terrains.Length - 1)] },
@@ -178,6 +234,33 @@ public sealed class LobbyScreenModel
     }
 
     private static MapFeatures Feature(MapFeatures features, MapFeatures flag, bool on) => on ? features | flag : features & ~flag;
+
+    // Choosing a custom map takes its own No Fog and Explore as the starting point (they stay changeable).
+    private static MatchSettings WithMap(MatchSettings s, CustomMapEntry map) => s with
+    {
+        Map = MapSourceKind.CustomMap,
+        CustomMapId = map.Id.Length <= MatchSettings.MaxMapIdLength ? map.Id : map.Id[..MatchSettings.MaxMapIdLength],
+        CustomMapHash = map.Hash,
+        NoFog = map.Mission.Scenario.Properties.NoFog,
+        Explored = map.Mission.Scenario.Properties.Explore,
+    };
+
+    private string? Notice()
+    {
+        MatchSettings s = _lobby.Settings;
+        if (s.Map != MapSourceKind.CustomMap)
+        {
+            return null;
+        }
+
+        if (_map is null)
+        {
+            return $"This machine does not have the map '{s.CustomMapId}' (or has another version of it).";
+        }
+
+        LobbySlotView? beyond = _lobby.Slots.FirstOrDefault(v => v.Slot >= MapKingdoms && v.Kind is SlotKind.Human or SlotKind.Computer);
+        return beyond is null ? null : $"The map has {MapKingdoms} kingdoms: slot {beyond.Slot + 1} must be open or closed.";
+    }
 
     private List<LobbyRow> BuildRows()
     {
@@ -213,20 +296,36 @@ public sealed class LobbyScreenModel
         void Check(LobbySettingKey key, string caption, bool value, bool enabled = true) =>
             list.Add(new LobbySetting(key, caption, OffOn, value ? 1 : 0, host && enabled, true));
 
-        Option(LobbySettingKey.MapType, "Map", [.. MapTypes.Select(t => t.ToString())], Array.IndexOf(MapTypes, s.MapType));
-        Option(LobbySettingKey.MapSize, "Size", [.. MapSizes.Select(t => t.ToString())], Array.IndexOf(MapSizes, s.MapSize));
-        Option(LobbySettingKey.Terrain, "Terrain", [.. Terrains.Select(t => t.ToString())], Array.IndexOf(Terrains, s.Terrain));
-        Option(LobbySettingKey.MapResources, "Map resources", ["Low", "Normal", "High"], (int)s.Resources);
-        Check(LobbySettingKey.GuardedTown, "Guarded town", s.Features.HasFlag(MapFeatures.GuardedTowns));
-        Check(LobbySettingKey.Animals, "Animals", s.Features.HasFlag(MapFeatures.Animals));
-        Check(LobbySettingKey.Gateways, "Gateways", s.Features.HasFlag(MapFeatures.Gateways));
-        Check(LobbySettingKey.MagicItems, "Magic items", s.Features.HasFlag(MapFeatures.MagicItems));
-        Check(LobbySettingKey.Cliffs, "Cliffs", s.Features.HasFlag(MapFeatures.Cliffs));
-        Option(LobbySettingKey.GameType, "Game type", ["Standard", "Deathmatch"], s.GameType == GameType.Deathmatch ? 1 : 0);
-        Option(LobbySettingKey.Victory, "Victory", ["Standard", "Destroy castles", "Time limit", "Score limit"], Array.IndexOf(Victories, s.Victory));
-        Option(LobbySettingKey.StartingResources, "Starting resources", ["Default", "Low", "Normal", "High"], s.StartingResources + 1);
+        bool custom = s.Map == MapSourceKind.CustomMap;
+        bool own = custom && s.UseMapSettings; // MAP SETTINGS: only No Fog, Explore, day and night and weather change
+        Option(LobbySettingKey.MapSource, "Map", ["Random map", "Custom map"], custom ? 1 : 0, enabled: Maps.Count > 0 || custom);
+        if (custom)
+        {
+            int chosen = _map is null ? -1 : Maps.ToList().IndexOf(_map);
+            IReadOnlyList<string> titles = chosen < 0 ? [s.CustomMapId, .. Maps.Select(m => m.Title)] : [.. Maps.Select(m => m.Title)];
+            list.Add(new LobbySetting(LobbySettingKey.CustomMap, "Custom map", titles, Math.Max(0, chosen), host, false));
+            Check(LobbySettingKey.UseMapSettings, "Use map settings", s.UseMapSettings);
+        }
+        else
+        {
+            Option(LobbySettingKey.MapType, "Map type", [.. MapTypes.Select(t => t.ToString())], Array.IndexOf(MapTypes, s.MapType));
+            Option(LobbySettingKey.MapSize, "Size", [.. MapSizes.Select(t => t.ToString())], Array.IndexOf(MapSizes, s.MapSize));
+            Option(LobbySettingKey.Terrain, "Terrain", [.. Terrains.Select(t => t.ToString())], Array.IndexOf(Terrains, s.Terrain));
+            Option(LobbySettingKey.MapResources, "Map resources", ["Low", "Normal", "High"], (int)s.Resources);
+            Check(LobbySettingKey.GuardedTown, "Guarded town", s.Features.HasFlag(MapFeatures.GuardedTowns));
+            Check(LobbySettingKey.Animals, "Animals", s.Features.HasFlag(MapFeatures.Animals));
+            Check(LobbySettingKey.Gateways, "Gateways", s.Features.HasFlag(MapFeatures.Gateways));
+            Check(LobbySettingKey.MagicItems, "Magic items", s.Features.HasFlag(MapFeatures.MagicItems));
+            Check(LobbySettingKey.Cliffs, "Cliffs", s.Features.HasFlag(MapFeatures.Cliffs));
+        }
+
+        Option(LobbySettingKey.GameType, "Game type", ["Standard", "Deathmatch"], s.GameType == GameType.Deathmatch ? 1 : 0, enabled: !own);
+        Option(LobbySettingKey.Victory, "Victory", ["Standard", "Destroy castles", "Time limit", "Score limit"], Array.IndexOf(Victories, s.Victory), enabled: !own);
+        list.Add(new LobbySetting(LobbySettingKey.TimeLimit, "Time limit (min.)", [], s.TimeLimitMinutes, host && !own && s.Victory == VictoryCondition.TimeLimit, false, 1, MaxTimeLimit));
+        list.Add(new LobbySetting(LobbySettingKey.ScoreLimit, "Score limit", [], s.ScoreLimit, host && !own && s.Victory == VictoryCondition.ScoreLimit, false, 1, MaxScoreLimit));
+        Option(LobbySettingKey.StartingResources, "Starting resources", ["Default", "Low", "Normal", "High"], s.StartingResources + 1, enabled: !own);
         Option(LobbySettingKey.PopulationLimit, "Population limit", ["Default", .. PopulationLimits.Select(p => p.ToString(System.Globalization.CultureInfo.InvariantCulture))],
-            s.PopulationLimit < 0 ? 0 : Array.IndexOf(PopulationLimits, s.PopulationLimit) + 1);
+            s.PopulationLimit < 0 ? 0 : Array.IndexOf(PopulationLimits, s.PopulationLimit) + 1, enabled: !own);
         Check(LobbySettingKey.NoFog, "No fog", s.NoFog);
         Check(LobbySettingKey.Explore, "Explore", s.Explored);
         Check(LobbySettingKey.DayNight, "Day and night", s.DayNight);

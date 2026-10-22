@@ -135,3 +135,5 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0191](0191-technology-effects-as-the-original-computes-them.md) | Give technologies the effects the original's research handlers compute | Accepted | 2026-10-22 |
 | [0192](0192-gates-and-bridges-take-the-cells-of-their-pictures.md) | Gates and bridges take the cells of their pictures, either way | Accepted | 2026-10-22 |
 | [0232](0232-each-kingdom-chooses-its-colour-and-ai-script-in-the-lobby.md) | Each kingdom chooses its colour and AI script in the lobby; the host sets every map and game option | Accepted | 2026-10-22 |
+| [0233](0233-custom-maps-in-multiplayer-are-found-by-hash.md) | Play custom maps in multiplayer from every peer's own copy, found by its content hash | Accepted | 2026-10-22 |
+| [0234](0234-a-noise-handshake-for-the-relay-protocol.md) | Encrypt the relay protocol with a Noise NK or XX handshake carried by LiteNetLib's connect request | Proposed | 2026-10-22 |

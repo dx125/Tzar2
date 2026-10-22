@@ -409,6 +409,12 @@ public sealed partial class NetworkMatch : IDisposable
         }
     }
 
+    /// <summary>The custom maps this machine can play in a lobby (SHELL-018; ADR 0233).</summary>
+    public IReadOnlyList<Campaigns.CustomMapEntry> CustomMaps => _options.CustomMaps;
+
+    // A custom map by its hash: peers look the host's choice up in their own maps (ADR 0233).
+    private Campaigns.MissionContent? FindMap(ulong hash) => _options.CustomMaps.FirstOrDefault(m => m.Hash == hash)?.Mission;
+
     /// <summary>The strategies a kingdom's computer player can follow (AI-001; the first is the default).</summary>
     public IReadOnlyList<AiScriptOption> AiScripts => _options.Ai.Scripts;
 
@@ -436,7 +442,7 @@ public sealed partial class NetworkMatch : IDisposable
 
             _descriptor = Describe(lobby, settings, save);
             byte local = SimSlot(_client.Welcome!.Slot);
-            _setup = _descriptor.ToSetup(_options.Ai, multiplayer: true, localSlot: local == 255 ? null : local);
+            _setup = _descriptor.ToSetup(_options.Ai, multiplayer: true, localSlot: local == 255 ? null : local, _options.Ruleset, FindMap);
             if (_client.Phase == ClientPhase.Resuming)
             {
                 return; // a rejoin: the match comes from a peer's snapshot (OnResume)
@@ -482,7 +488,8 @@ public sealed partial class NetworkMatch : IDisposable
     private MatchDescriptor Describe(LobbyState lobby, MatchSettings settings, MultiplayerSave? save)
     {
         (MatchDescriptor descriptor, byte[] simOf, byte[] lobbyOf) = LobbyDescription.Build(
-            settings, lobby.Slots.Select(s => new LobbySlotData(s.State, s.Name, s.Choice)).ToArray(), _options.Ruleset, save);
+            settings, lobby.Slots.Select(s => new LobbySlotData(s.State, s.Name, s.Choice)).ToArray(), _options.Ruleset, save,
+            settings.Map == MapSourceKind.CustomMap && FindMap(settings.CustomMapHash) is { } map ? Campaigns.ScenarioMatch.KingdomCount(map, _options.Ruleset.MaxPlayers) : 0);
         simOf.CopyTo(_simSlotOf, 0);
         _lobbySlotOf = lobbyOf;
         return descriptor;

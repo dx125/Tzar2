@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Globalization;
 using System.IO;
 using Godot;
@@ -87,7 +89,12 @@ public partial class GameApp
         Ai = _ai,
         SaveDirectory = UserPath(Path.Combine("saves", "multiplayer")),
         DeferLoadReport = true,
+        CustomMaps = MultiplayerMaps(),
     };
+
+    // The original maps a lobby can choose (SHELL-018; ADR 0233), converted once per run like CUSTOM MAP's.
+    private List<Tzar2.Game.Campaigns.CustomMapEntry> MultiplayerMaps() =>
+        [.. (_customMaps ??= OriginalMaps()).Select(m => new Tzar2.Game.Campaigns.CustomMapEntry(m.Id, m.Title, m.Description, m.Mission))];
 
     private void OpenLobby(Func<NetworkMatch> connect)
     {
@@ -210,7 +217,7 @@ public partial class GameApp
 
         try
         {
-            _playback = ReplayPlayback.Open(File.ReadAllBytes(file), _rules, _ai);
+            _playback = ReplayPlayback.Open(File.ReadAllBytes(file), _rules, _ai, MultiplayerMaps());
         }
         catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException)
         {

@@ -40,7 +40,7 @@ public sealed class ReplayPlayback
 
     /// <summary>Opens replay bytes for viewing.</summary>
     /// <exception cref="InvalidDataException">Not a replay, not rebuildable (no setup description), or recorded with another ruleset or AI.</exception>
-    public static ReplayPlayback Open(byte[] replay, Ruleset ruleset, SkirmishAi ai)
+    public static ReplayPlayback Open(byte[] replay, Ruleset ruleset, SkirmishAi ai, IReadOnlyList<Campaigns.CustomMapEntry>? maps = null)
     {
         ArgumentNullException.ThrowIfNull(replay);
         ArgumentNullException.ThrowIfNull(ruleset);
@@ -51,7 +51,7 @@ public sealed class ReplayPlayback
             throw new InvalidDataException("The replay was recorded with another ruleset (another package or game version).");
         }
 
-        MatchSetup setup = SetupOf(file.Header, ai);
+        MatchSetup setup = SetupOf(file.Header, ai, ruleset, maps);
         if (!file.Header.AiPrograms.SequenceEqual(setup.AiPrograms))
         {
             throw new InvalidDataException("The replay's computer kingdoms ran other AI scripts.");
@@ -62,7 +62,11 @@ public sealed class ReplayPlayback
 
     /// <summary>The setup that re-simulates a replay (multiplayer if a human kingdom had a standby AI, ADR 0163).</summary>
     /// <exception cref="InvalidDataException">The replay has no setup description.</exception>
-    public static MatchSetup SetupOf(ReplayHeader header, SkirmishAi ai)
+    public static MatchSetup SetupOf(ReplayHeader header, SkirmishAi ai) => SetupOf(header, ai, null, null);
+
+    /// <summary>The setup that re-simulates a replay, finding a custom map in <paramref name="maps"/> (ADR 0233).</summary>
+    /// <exception cref="InvalidDataException">The replay has no setup description, or its custom map is not in <paramref name="maps"/>.</exception>
+    public static MatchSetup SetupOf(ReplayHeader header, SkirmishAi ai, Ruleset? ruleset, IReadOnlyList<Campaigns.CustomMapEntry>? maps)
     {
         ArgumentNullException.ThrowIfNull(header);
         ArgumentNullException.ThrowIfNull(ai);
@@ -73,7 +77,9 @@ public sealed class ReplayPlayback
 
         MatchDescriptor descriptor = MatchDescriptor.Parse(header.Setup.AsSpan());
         bool multiplayer = header.AiPrograms.Any(p => p.Slot < descriptor.Players.Length && descriptor.Players[p.Slot].Controller == ControllerKind.Human);
-        return descriptor.ToSetup(ai, multiplayer, localSlot: null);
+        return ruleset is null
+            ? descriptor.ToSetup(ai, multiplayer, localSlot: null)
+            : descriptor.ToSetup(ai, multiplayer, localSlot: null, ruleset, hash => maps?.FirstOrDefault(m => m.Hash == hash)?.Mission);
     }
 
     /// <summary>The session being shown (replaced by a backward seek).</summary>

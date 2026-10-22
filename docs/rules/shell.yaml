@@ -87,9 +87,9 @@ rules:
   SHELL-018:
     rule: The multiplayer settings choose a random or a custom map, the random map's options, the game type, the difficulty, the victory condition, the starting resources, No Fog, Explore, the population limit, and day and night and weather; with MAP SETTINGS only No Fog, Explore, day and night and weather can change.
     source: [manual Multiplayer Settings Screen]
-    status: partial
-    note: Custom maps cannot be chosen (multiplayer plays random maps), so neither can MAP SETTINGS; the difficulty is set per computer slot. The time and score limits keep their defaults.
-    adr: [0168, 0232]
+    status: tested
+    note: The difficulty is set per computer slot. A custom map is not sent; every player needs his own copy, found by its content hash (ADR 0233).
+    adr: [0168, 0232, 0233]
   SHELL-019:
     rule: The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears.
     source: [manual Preferences Screen]
