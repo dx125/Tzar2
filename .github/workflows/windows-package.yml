@@ -143,13 +143,13 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item artifacts/windows/Tzar2/Tzar2.exe "${{ runner.temp }}/selftest.exe"
-          pwsh tools/package/sign.ps1 -SelfTest -Files "${{ runner.temp }}/selftest.exe"
+          & ./tools/package/sign.ps1 -SelfTest -Files "${{ runner.temp }}/selftest.exe"
 
       - name: Sign the game (PFX; skipped without the secret)
         shell: pwsh
         run: |
           $files = @("artifacts/windows/Tzar2/Tzar2.exe", "artifacts/windows/Tzar2/Tzar2.console.exe") + (Get-ChildItem artifacts/windows/Tzar2/data_*/Tzar2.*.dll | ForEach-Object FullName)
-          pwsh tools/package/sign.ps1 -Files $files
+          & ./tools/package/sign.ps1 -Files $files
 
       - name: Sign the game (Azure Trusted Signing; skipped without the secrets)
         if: env.AZURE_SIGNING_ACCOUNT != ''
@@ -183,7 +183,8 @@ jobs:
 
       - name: Sign the installer (PFX; skipped without the secret)
         shell: pwsh
-        run: pwsh tools/package/sign.ps1 -Files (Get-ChildItem artifacts/windows/*-setup.exe | ForEach-Object FullName)
+        run: |
+          & ./tools/package/sign.ps1 -Files (Get-ChildItem artifacts/windows/*-setup.exe | ForEach-Object FullName)
 
       - name: Sign the installer (Azure Trusted Signing; skipped without the secrets)
         if: env.AZURE_SIGNING_ACCOUNT != ''
