@@ -144,7 +144,7 @@ public class TradeTests
         using var d = new SimDriver(TestMap(48, 16, Unit("euro.trader", 0, 8, 6), Unit("euro.footman", 0, 6, 6)), ruleset: Classic);
         EntityId trader = OfType(d.World, "euro.trader").Single();
         EntityId footman = OfType(d.World, "euro.footman").Single();
-        Assert.Equal(8, d.World.HolderCapacity(trader)); // TRADER.INI max_obj_in_holder, [accept] infantryunits
+        Assert.Equal(9, d.World.HolderCapacity(trader)); // synthetic TRADER.INI max_obj_in_holder (the original: 8), [accept] infantryunits
         d.Order(0, CommandKind.Board, [footman], target: trader);
         d.RunUntil(() => d.World.IsHeld(footman), 400);
         Assert.True(d.World.IsHeld(footman));

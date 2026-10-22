@@ -63,7 +63,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
     // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
     // (ADR 0257, 2026-10-22) the trade profit as the original computes it (load x tiles x 40 / (map side x 100), none under 12).
-    private const ulong GoldenRulesetHash = 0xC19920172B0293AEUL;
+    private const ulong GoldenRulesetHash = 0xB04114AB73F88421UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
