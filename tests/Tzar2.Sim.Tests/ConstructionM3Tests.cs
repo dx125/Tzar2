@@ -28,8 +28,8 @@ public class ConstructionM3Tests
         d.Order(0, CommandKind.Repair, [peon], target: house);
         int ticks = d.RunUntil(() => d.Count(SimEventKind.Repaired) == 1, 2000);
         Assert.Equal(420, d.World.Healths.Get(house).Current);
-        // A full repair takes the 16 s build time (UNVERIFIED): a quarter takes ~4 s plus the walk.
-        Assert.InRange(ticks, 80, 120);
+        // Blows of 420 / (4 x TIME 16) = 6 hit points every 1.25 s (BLD-022): 18 blows, 22.5 s, plus the walk.
+        Assert.InRange(ticks, 450, 490);
         d.Step();
         Assert.Equal(WorkerTask.None, d.World.Workers.Get(peon).Task);
 

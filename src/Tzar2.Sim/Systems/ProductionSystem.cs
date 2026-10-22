@@ -76,8 +76,7 @@ public sealed class ProductionSystem : ISimSystem
 
     // Builders standing at their site add the tick's time each (linear in the number of builders: UNVERIFIED, UNK-18),
     // sped up by the owner's build rate (Architecture). Health grows with progress from 1 to the maximum; damage taken
-    // meanwhile stays taken. Repairers restore hit points at the same rate a full repair takes repairTimePercent of the
-    // build time (UNK-18).
+    // meanwhile stays taken. Repairers restore hit points in blows (BLD-022, Repair below).
     private void AdvanceConstruction(World world)
     {
         int tickMs = world.Config.TickLengthMilliseconds;
@@ -165,10 +164,12 @@ public sealed class ProductionSystem : ISimSystem
         _repairs.Add((target, 1));
     }
 
-    // Repair (GAME-03, owner decisions; UNVERIFIED UNK-18): one repairer restores max x tick / (build time x
-    // repairTimePercent); further repairers add less each (repairerFalloffPercent: 100%, 75%, 50%, 25%, then nothing).
-    // The hit points cost repairCostPercent of the effective construction cost for a full 0 -> max repair, charged pro
-    // rata as they are restored; if the owner cannot pay, the repair pauses.
+    // Repair (GAME-03, BLD-022; batch J 2026-10-21): every repairer strikes a blow each repairBlowMs, sped up by the
+    // owner's build rate; a blow restores max x blow / (build time x repairTimePercent), rounded down and at least 1 (the
+    // original: max / (4 x TIME), so 6 for the mill, 5 for the barracks, 16 for the castle). Further repairers may add
+    // less (repairerFalloffPercent; the original: no). The hit points cost repairCostPercent of the effective
+    // construction cost for a full 0 -> max repair, charged pro rata (the original: nothing); if the owner cannot pay,
+    // the repair pauses.
     private static void Repair(World world, EntityId target, int repairers, int tickMs)
     {
         ref Health health = ref world.Healths.Get(target);
@@ -188,13 +189,13 @@ public sealed class ProductionSystem : ISimSystem
         }
 
         (_, int bp) = world.Stats.Modifier(identity.Owner, ModifierStat.BuildRate, identity.TypeId);
-        long denominator = Math.Max(1L, (long)Math.Max(type.Traits.BuildTimeMs, 1000) * g.RepairTimeBasisPoints / 10_000);
-        long numerator = ((long)health.Max * tickMs * (10_000 + Math.Max(bp, -9_999)) / 10_000 * crew / 10_000) + progress.Carry;
-        int gain = (int)Math.Min(numerator / denominator, health.Max - health.Current);
-        long carry = numerator % denominator;
+        long work = ((long)tickMs * (10_000 + Math.Max(bp, -9_999)) / 10_000 * crew / 10_000) + progress.Carry;
+        long blows = work / g.RepairBlowMs;
+        long carry = work % g.RepairBlowMs;
+        int gain = (int)Math.Min(blows * g.RepairBlowHp(health.Max, type.Traits.BuildTimeMs), health.Max - health.Current);
         if (gain > 0 && !PayForRepair(world, identity.Owner, type, health.Max, progress.HealedHp, gain))
         {
-            return; // the owner cannot pay: the repair pauses (the carry is kept)
+            return; // the owner cannot pay: the repair pauses (the work done is kept)
         }
 
         progress.Carry = (int)Math.Min(carry, int.MaxValue);

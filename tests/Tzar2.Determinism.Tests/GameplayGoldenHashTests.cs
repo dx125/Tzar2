@@ -47,9 +47,11 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // creature: the ruleset hash only.
     // (MAG-021, 2026-10-21) the spy's disguise meter fills in gameplay.disguiseMasteryMs: the ruleset hash only.
     // (batch J, 2026-10-21) the meter gains a point every 1.25 s as measured (disguiseMasteryMs 125000): the ruleset hash only.
-    private const ulong GoldenRulesetHash = 0xA8C37A599328B3B8UL;
-    private const ulong GoldenHashStream = 0x2BDE24C6A83538E7UL;
-    private const ulong GoldenFinalFullHash = 0xA1DC4B70F3D37C14UL;
+    // (batch J, 2026-10-21) repairs as measured: blows of max / (4 x TIME) every 1.25 s, every repairer at full strength,
+    // free: the scenario's damaged houses are repaired more slowly, so the stream and the final hash change too.
+    private const ulong GoldenRulesetHash = 0x103587F799D0F756UL;
+    private const ulong GoldenHashStream = 0x566479FB32CC3DBEUL;
+    private const ulong GoldenFinalFullHash = 0xF1B9AA07425D36E0UL;
 
     private const int Ticks = 1600;
 

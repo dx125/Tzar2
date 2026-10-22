@@ -83,7 +83,7 @@ public class ImpersonationTests
 
     [Fact]
     [Trait("Rule", "MAG-012")]
-    public void Another_kingdoms_spy_close_by_unmasks_a_disguised_spy_but_an_allys_does_not()
+    public void Only_the_copied_kingdoms_spy_close_by_unmasks_a_disguised_spy()
     {
         using var d = new SimDriver(TestMap(40, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.footman", 1, 9, 4), Unit("euro.peon", 2, 30, 4), Unit("euro.peon", 1, 30, 9)), ruleset: Rules, players: 3);
         World w = d.World;
@@ -91,11 +91,10 @@ public class ImpersonationTests
         EntityId look = OfType(w, "euro.footman", 1).Single();
         d.Order(0, CommandKind.SetStance, [spy], arg0: (int)CombatStance.HoldFire);
         d.Order(1, CommandKind.SetStance, [look], arg0: (int)CombatStance.HoldFire);
-        d.Order(2, CommandKind.SetDiplomacy, [], x: 0, arg0: (int)Kingdoms.Stance.Ally);
         d.Order(0, CommandKind.Impersonate, [spy], target: look);
         d.RunUntil(() => w.Disguises.Has(spy), 400);
 
-        d.MoveToTile(0, [spy], 28, 4); // next to player 2's detector: an ally of player 0
+        d.MoveToTile(0, [spy], 28, 4); // next to player 2's detector: a third kingdom's spy does not see through it (batch J)
         d.RunUntil(() => !d.AnyMoving([spy]), 600);
         Assert.True(w.Disguises.Has(spy));
         d.MoveToTile(0, [spy], 28, 9); // next to player 1's detector

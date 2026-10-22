@@ -56,9 +56,9 @@ Shift + Delete; what each technology does (not how much).
 | Fields are walkable | units cross a field and its farmers work on it, each on a tile of its own; nothing is built on it (play-test 2026-10-20: farmers digging beside the field looked wrong) | YAML `^class.field.WalkableFootprint` | — | order a unit across a field; watch where a farmer stands |
 | Field builder farms it | after completing a field | YAML `^class.field.DropOff.autoGather` | — | observation |
 | Peasants gather iron | 1 s per unit, like other resources | YAML `^class.peon.Harvester.gatherMs.iron` | UNK-14/17 | — |
-| Repair speed | a full repair by one peasant takes the build time | YAML `gameplay.repairTimePercent` | UNK-18 | batch J: `repair-mill`, `repair-barracks`, `repair-castle` (hit points per blow) |
-| Repair crews | each further repairer adds 25 points less (100%, 75%, 50%, 25%, then 0; owner decision) | YAML `gameplay.repairerFalloffPercent` | UNK-18 | repair captures with 1-8 peasants |
-| Repair cost | a full repair costs 50% of the construction cost, pro rata; pauses when unpaid (owner decision; the strategy guide only says repairing under attack works and repairers get hurt) | YAML `gameplay.repairCostPercent` | UNK-18 | stockpile during a repair |
+| Repair speed | ~~a full repair by one peasant takes the build time~~ **VERIFIED: a blow of max / (4 × TIME) every 1.25 s, rounded down** (capture-20261021-220250: mill 6, barracks 5, castle 16; ADR 0185) | YAML `gameplay.repairTimePercent` 400, `repairBlowMs` 1250 | UNK-18 | done |
+| Repair crews | ~~each further repairer adds 25 points less~~ **VERIFIED: every repairer strikes full blows** (seven helpers ~31 HP/s on the mill; ADR 0185) | YAML `gameplay.repairerFalloffPercent` 0 | UNK-18 | done |
+| Repair cost | ~~50% of the construction cost, pro rata~~ **VERIFIED: free** (the stockpiles did not move; ADR 0185) | YAML `gameplay.repairCostPercent` 0 | UNK-18 | done |
 | Fire threshold | below 50% of the hit points | YAML `gameplay.burnThresholdPercent` | UNK-42 | damage a building step by step |
 | Fire damage | 60 HP per minute | YAML `gameplay.burnDamagePerMinute` | UNK-42 | time a burning building |
 | Burning types | every building but fields, walls, gates and bridges | YAML (`Burnable`) | UNK-42 | observation |
@@ -116,7 +116,7 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Last-seen refresh | every 4 ticks per structure (a glimpse shorter than that may be missed) | YAML `world.memoryRefreshTicks` | — | engine bound |
 | Construction sites reveal | like the finished building | code (`Visibility`) | — | observation |
 | Detector radius (spies, ninjas) | 5 tiles | YAML `^class.spy/ninja.Detector` | — | detection captures (stream E cloaking) |
-| Unmasking a disguised spy | another kingdom's spy within (100 − meter) % of its detector radius, at once; never with a full meter | `ErrandSystem.Unmask` | — | batch J run 3: `spy-unmask`, `spy-unmask-half`, `spy-unmask-full` on MP2, kingdom 2's AI driving the detector (MAG-012, MAG-021) |
+| Unmasking a disguised spy | a spy of the copied kingdom (verified: a third kingdom's does not) within (100 − meter) % of its detector radius, at once; never with a full meter | `ErrandSystem.Unmask` | — | batch J run 4: `spy-unmask`, `spy-unmask-half`, `spy-unmask-full` on MP2 with a kingdom-2 look (MAG-012, MAG-021) |
 | Disguise meter | ~~0 → 100 in 2 minutes~~ **VERIFIED: one point per 1.25 s, 0 → 100 in 125 s; 100 in the spy's own look; shown as "Spy (N)"** (capture-20261021-203846, manual.yaml `spy-disguise`); a new look starts it again (verified), the same look keeps it (ours) | YAML `gameplay.disguiseMasteryMs`, `GameScreen` | — | done |
 | Stance change interval | 10 s per pair (anti flip-flop) | YAML `world.diplomacyChangeIntervalMs` | — | engine bound (owner decision welcome) |
 | Tribute | once per second, ≤ 100,000, no fee | YAML `world.tributeIntervalMs`, `maxTributeAmount` | — | tribute dialog captures (fee?) |
