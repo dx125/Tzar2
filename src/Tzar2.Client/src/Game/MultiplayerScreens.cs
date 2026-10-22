@@ -316,7 +316,7 @@ public partial class LobbyScreen : ArtScreen
 
         for (int i = 0; i < lobby.Slots.Count; i++)
         {
-            AddRow(lobby, lobby.Slots[i], 70 + (i * 34));
+            AddRow(lobby, lobby.Slots[i], 70 + (i * RowPitch));
         }
 
         foreach (Node child in _hostPanel.GetChildren())
@@ -348,7 +348,7 @@ public partial class LobbyScreen : ArtScreen
         bool hostOther = lobby.LocalIsHost && !slot.IsHost;
         if (hostOther && slot.Kind != SlotKind.Human)
         {
-            var kind = new OptionButton { Position = Origin + new Vector2I(86, y), Size = new Vector2(170, 24) };
+            var kind = Picker(new Vector2I(86, y), 166, enabled: true);
             foreach (string c in SlotChoices)
             {
                 kind.AddItem(c);
@@ -360,12 +360,12 @@ public partial class LobbyScreen : ArtScreen
         }
         else
         {
-            _rows.AddChild(new Label { Position = Origin + new Vector2I(86, y + 2), Text = who, MouseFilter = MouseFilterEnum.Ignore });
+            _rows.AddChild(Caption(new Vector2I(86, y + 2), who, hostOther ? 120 : 166));
         }
 
         if (hostOther && slot.Kind == SlotKind.Human)
         {
-            var kick = new Button { Position = Origin + new Vector2I(260, y), Size = new Vector2(40, 24), Text = "kick" };
+            var kick = new Button { Position = Origin + new Vector2I(210, y), Size = new Vector2(40, 24), Text = "kick" };
             kick.Pressed += () => _match.SetSlot(slot.Slot, SlotKind.Open);
             _rows.AddChild(kick);
         }
@@ -373,7 +373,7 @@ public partial class LobbyScreen : ArtScreen
         if (slot.Kind is SlotKind.Human or SlotKind.Computer)
         {
             bool editable = mine || (lobby.LocalIsHost && slot.Kind == SlotKind.Computer);
-            var civ = new OptionButton { Position = Origin + new Vector2I(306, y), Size = new Vector2(90, 24), Disabled = !editable };
+            var civ = Picker(new Vector2I(256, y), 82, editable);
             foreach (string c in Civilizations)
             {
                 civ.AddItem(c);
@@ -382,7 +382,7 @@ public partial class LobbyScreen : ArtScreen
             civ.Selected = Math.Max(0, Array.IndexOf(Civilizations, slot.Choice.Civilization));
             civ.ItemSelected += index => SetChoice(slot, slot.Choice with { Civilization = Civilizations[(int)index] });
             _rows.AddChild(civ);
-            var team = new OptionButton { Position = Origin + new Vector2I(400, y), Size = new Vector2(70, 24), Disabled = !editable };
+            var team = Picker(new Vector2I(342, y), 112, editable);
             team.AddItem("no team");
             for (int t = 1; t <= 4; t++)
             {
@@ -392,8 +392,8 @@ public partial class LobbyScreen : ArtScreen
             team.Selected = Math.Clamp((int)slot.Choice.Team, 0, 4);
             team.ItemSelected += index => SetChoice(slot, slot.Choice with { Team = (byte)index });
             _rows.AddChild(team);
-            string state = slot.Kind == SlotKind.Human ? $"{(slot.Ready ? "ready" : "not ready")}  {slot.PingMs} ms" : string.Empty;
-            _rows.AddChild(new Label { Position = Origin + new Vector2I(476, y + 2), Text = state, MouseFilter = MouseFilterEnum.Ignore });
+            string state = slot.Kind == SlotKind.Human ? $"{(slot.Ready ? "ready" : "wait")} {slot.PingMs}ms" : string.Empty;
+            _rows.AddChild(Caption(new Vector2I(458, y + 2), state, 88));
         }
     }
 
@@ -407,7 +407,7 @@ public partial class LobbyScreen : ArtScreen
         Option("Size", Enum.GetNames<Content.MapGen.RandomMapSize>(), (int)s.MapSize, i => _match.SetSettings(s with { MapSize = (Content.MapGen.RandomMapSize)i }), ref y, host);
         Option("Terrain", Enum.GetNames<Content.MapGen.MapTerrainSet>(), (int)s.Terrain, i => _match.SetSettings(s with { Terrain = (Content.MapGen.MapTerrainSet)i }), ref y, host);
         Option("Speed", Speeds.Select(v => v + " %").ToArray(), Math.Max(0, Array.IndexOf(Speeds, s.SpeedPercent)), i => _match.SetSettings(s with { SpeedPercent = Speeds[i] }), ref y, host);
-        Option("Dropped players", ["computer takes over", "neutral", "defeated"], (int)_drop, i => _drop = (DropRule)i, ref y, host);
+        Option("Dropped players", ["computer takes over", "neutral", "defeated"], (int)_drop, i => _drop = (DropRule)i, ref y, host, below: true);
         Check("No fog", s.NoFog, v => _match.SetSettings(s with { NoFog = v }), ref y, host);
         Check("AI Assist", s.AiAssist, v => _match.SetSettings(s with { AiAssist = v }), ref y, host);
         Check("Cheats allowed", s.CheatsAllowed, v => _match.SetSettings(s with { CheatsAllowed = v && !s.Ranked }), ref y, host && !s.Ranked);
@@ -420,10 +420,17 @@ public partial class LobbyScreen : ArtScreen
         }
     }
 
-    private void Option(string caption, string[] items, int selected, Action<int> changed, ref int y, bool enabled)
+    // A caption and its picker in the right panel (x 555-765 of the art): side by side, or the picker on a line of its own
+    // below a long caption (UI-L2).
+    private void Option(string caption, string[] items, int selected, Action<int> changed, ref int y, bool enabled, bool below = false)
     {
-        _hostPanel.AddChild(new Label { Position = Origin + new Vector2I(555, y + 2), Text = caption, MouseFilter = MouseFilterEnum.Ignore });
-        var option = new OptionButton { Position = Origin + new Vector2I(660, y), Size = new Vector2(150, 24), Disabled = !enabled };
+        _hostPanel.AddChild(Caption(new Vector2I(555, y + 2), caption, below ? 210 : 82));
+        if (below)
+        {
+            y += RowPitch;
+        }
+
+        OptionButton option = below ? Picker(new Vector2I(555, y), 210, enabled) : Picker(new Vector2I(639, y), 126, enabled);
         foreach (string item in items)
         {
             option.AddItem(item);
@@ -432,15 +439,26 @@ public partial class LobbyScreen : ArtScreen
         option.Selected = Math.Clamp(selected, 0, items.Length - 1);
         option.ItemSelected += index => changed((int)index);
         _hostPanel.AddChild(option);
-        y += 30;
+        y += RowPitch;
     }
+
+    // Godot's controls are 31 px high with the default theme: rows 32 px apart never touch.
+    private const int RowPitch = 32;
+
+    // A picker of a fixed width: its text is cut rather than widening it over its neighbours (UI-L2).
+    private OptionButton Picker(Vector2I at, int width, bool enabled)
+        => new() { Position = Origin + at, Size = new Vector2(width, 24), CustomMinimumSize = new Vector2(width, 0), FitToLongestItem = false, ClipText = true, Disabled = !enabled };
+
+    // A label cut to its width.
+    private Label Caption(Vector2I at, string text, int width)
+        => new() { Position = Origin + at, Size = new Vector2(width, 23), Text = text, ClipText = true, MouseFilter = MouseFilterEnum.Ignore };
 
     private void Check(string caption, bool value, Action<bool> changed, ref int y, bool enabled)
     {
         var box = new CheckBox { Position = Origin + new Vector2I(555, y), Text = caption, ButtonPressed = value, Disabled = !enabled };
         box.Toggled += changed.Invoke;
         _hostPanel.AddChild(box);
-        y += 28;
+        y += RowPitch;
     }
 
     private void SetSlotKind(LobbySlotView slot, int choice)
