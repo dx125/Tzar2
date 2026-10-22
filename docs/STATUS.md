@@ -65,7 +65,7 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. Next: the inventory, save and load screens. Done: the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
+   order. Next: the save and load screens. Done: the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
    (ORD-005), the hit frame from the data (WAR-014), several items per kind (ITEM-016, ADR 0186).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
@@ -113,6 +113,15 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — The inventory (HUD-017, HUD-018).**
+  * The eye (ORDERS `holder`) and the arrows (`left`, `right`) sit in the three small boxes left of the orders bar.
+  * The eye is lit when the selection carries items. A click on it, or `/`, shows the focused unit's items on the card
+    with their own icons; the default item is framed.
+  * A left click uses an item. A book whose spell needs a target waits for a click on the world; Ctrl uses it at once.
+    A right click drops the item, and Alt + click makes it the default item.
+  * The arrows and `<` `>` turn the pages of the card and of the inventory. Pages hold eight; the page button is gone.
+  * The frame's held items carry their slot, default flag, spell and look.
 
 * **2026-10-22 — The owner's interface fixes.**
   * The main menu is one column of equal buttons: single player, multiplayer, settings, credits, editor, asset

@@ -30,8 +30,8 @@ rules:
   ITEM-007:
     rule: Some items must be used at a place; the Fire Rain book makes fire rain where the player clicks, on everyone there, own units included.
     source: [manual Hints About Gameplay]
-    status: partial
-    note: The simulation does it; the client uses the first item, as there is no inventory to pick from (HUD-017).
+    status: implemented
+    note: The inventory (HUD-017) picks the book; its targeted spell waits for the click.
   ITEM-008:
     rule: Only the Arabians make items, in the magic workshop after Witchcraft; the player picks the kind (books, potions, or weapons and shields) and the item, and how much gold to spend; better items cost more and take longer.
     source: [manual Producing Items, help ITEMS.TXT HT_CREATE_ITEMS, owner 2026-10-21 (answers)]

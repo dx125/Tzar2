@@ -17,15 +17,15 @@ the feature behind it is not in the simulation yet (the key shows a message nami
 | | Fixed keys | Group keys | Building-class keys |
 |---|---|---|---|
 | Bindings | 45 | 18 | 26 |
-| Done | 30 | 9 (assign) | 26 |
-| Partial | 11 | 9 (select: the double-press centring is assumed) | — |
-| Blocked (waits for a screen: inventory; or location messages) | 4 | — | — |
+| Done | 32 | 9 (assign) | 26 |
+| Partial | 12 | 9 (select: the double-press centring is assumed) | — |
+| Blocked (waits for location messages) | 1 | — | — |
 
 Mouse semantics: 16 rows, 11 done, 4 partial, 1 deliberately unbound (wheel zoom).
 
 The checklist is complete: every original key and mouse action is listed, bound and either works or reports what it
-waits for. "Blocked" rows close by themselves when the features land (the inventory screen, location messages in the
-multiplayer chat). Updated 2026-10-22: the diplomacy and tribute screens are in.
+waits for. "Blocked" rows close by themselves when the features land (location messages in the multiplayer chat).
+Updated 2026-10-22: the diplomacy, tribute and inventory screens are in.
 
 ## Function keys
 
@@ -64,9 +64,9 @@ multiplayer chat). Updated 2026-10-22: the diplomacy and tribute screens are in.
 | `speed-up` | + | Faster game | done | steps 25 … 300 % of the classic tick rate |
 | `speed-down` | − | Slower game | done | |
 | `trees` | `\` | Translucent trees | partial | drawn at 45 % opacity above units, not with the original's stencil look (§13.3) |
-| `inventory` | `/` | Shows the selected object's inventory | blocked | the inventory view is not built yet (HUD-017); the manual and HK.TXT name the two slash keys the other way round, verify in the running game |
-| `inventory-prev` | < | Previous inventory page | blocked | the inventory view (HUD-017) |
-| `inventory-next` | > | Next inventory page | blocked | the inventory view (HUD-017) |
+| `inventory` | `/` | Shows the selected object's inventory | partial | opens and closes the inventory on the card (HUD-017); the manual and HK.TXT name the two slash keys the other way round, verify in the running game |
+| `inventory-prev` | < | Previous inventory page | done | the previous page of the inventory or the card (HUD-018) |
+| `inventory-next` | > | Next inventory page | done | the next page of the inventory or the card (HUD-018) |
 | `tab` | Tab | Shows one unit of a multiple selection (cycles) | done | |
 | `bars-hold` | `` ` `` (held) | Shows every health bar while held | done | |
 | `bars-toggle` | Ctrl+`` ` `` | Health bars on/off | done | |
@@ -118,5 +118,5 @@ multiplayer chat). Updated 2026-10-22: the diplomacy and tribute screens are in.
 | Alt / Ctrl+Alt+right click on a building: rally with default action / move-advance | partial | sets a plain rally point until the sim has rally kinds |
 | Right click cancels placement and pending orders | done | |
 | Minimap: left click/drag moves the view, right click orders to that point | done | |
-| Item clicks (use, drop, instant, default item) | partial | the card's use, drop and instant use act on the first item; there is no inventory to pick from (HUD-017) |
+| Item clicks (use, drop, instant, default item) | done | in the inventory: left click uses (a book's targeted spell waits for a click), Ctrl at once, right click drops, Alt + click makes the default item (HUD-018) |
 | Mouse wheel zoom | — | off in the Authentic preset (§15.2); not bound |

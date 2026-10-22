@@ -79,6 +79,8 @@ public partial class Hud : Control
     private readonly ColorRect _insideBar;
     private int _stripShown;
     private readonly TextureRect[] _messages = new TextureRect[6];
+    private readonly TextureRect[] _side = new TextureRect[3];
+    private readonly string[] _sideArt = new string[3];
     private readonly TextureRect _portrait;
     private readonly ColorRect _portraitBar;
     private readonly Control _nameBox;
@@ -151,6 +153,34 @@ public partial class Hud : Control
             _cardIcons[i].GuiInput += e => CardInput(slot, e);
         }
 
+        // The arrows that turn the card's pages and the eye that opens the inventory (HUD-017, HUD-019).
+        string[] sides = ["art/orders/left.t2img", "art/orders/holder.t2img", "art/orders/right.t2img"];
+        for (int i = 0; i < _side.Length; i++)
+        {
+            int box = i;
+            Rect2I r = layout.SideBox(i);
+            _side[i] = Add(new TextureRect { Position = r.Position, Size = r.Size, MouseFilter = MouseFilterEnum.Stop });
+            _sideArt[i] = sides[i];
+            _side[i].GuiInput += e =>
+            {
+                if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
+                {
+                    if (box == 1)
+                    {
+                        EyePressed?.Invoke();
+                    }
+                    else
+                    {
+                        PagePressed?.Invoke(box == 0 ? -1 : 1);
+                    }
+
+                    _side[box].AcceptEvent();
+                }
+            };
+        }
+
+        SetSide(false, 0, false);
+
         for (int i = 0; i < _messages.Length; i++)
         {
             _messages[i] = Add(new TextureRect { Position = new Vector2(layout.View.Position.X + 8, layout.View.Position.Y + 8 + (i * 15)), MouseFilter = MouseFilterEnum.Ignore });
@@ -174,6 +204,25 @@ public partial class Hud : Control
 
     /// <summary>MENU button.</summary>
     public event Action? MenuPressed;
+
+    /// <summary>An arrow by the orders bar: −1 the previous page, +1 the next (HUD-019).</summary>
+    public event Action<int>? PagePressed;
+
+    /// <summary>The inventory's eye (HUD-017).</summary>
+    public event Action? EyePressed;
+
+    /// <summary>
+    /// The arrows and the eye: each arrow lit when there is a page that way (frame 3, grey, otherwise); the eye
+    /// <paramref name="eye"/> 0 closed (nothing to show), 1 open (the selection carries items), 2 lit (the inventory is open).
+    /// </summary>
+    public void SetSide(bool previous, int eye, bool next)
+    {
+        int[] frames = [previous ? 0 : 3, Math.Clamp(eye, 0, 2), next ? 0 : 3];
+        for (int i = 0; i < _side.Length; i++)
+        {
+            _side[i].Texture = _ui.Region(_sideArt[i], new Rect2I(frames[i] * 25, 0, 25, 25));
+        }
+    }
 
     /// <summary>DIPLOMACY button.</summary>
     public event Action? DiplomacyPressed;
@@ -335,7 +384,7 @@ public partial class Hud : Control
             CardSlot? slot = i < card.Count ? card[i] : null;
             _card[i] = slot;
             _cardIcons[i].Texture = slot is { } s
-                ? _ui.Cell(Buttons, s.Button.ImageIndex) ?? _ui.Text(ButtonText(s.Button), UiAssets.BoldFont)
+                ? (s.Button.Action == CardAction.InventoryItem ? _ui.Cell(Icons, s.Button.ImageIndex) : _ui.Cell(Buttons, s.Button.ImageIndex)) ?? _ui.Text(ButtonText(s.Button), UiAssets.BoldFont)
                 : null;
             _cardShade[i].Visible = _dialog is null && slot is { Enabled: false };
             _cardIcons[i].Modulate = slot is { Enabled: false } ? new Color(0.5f, 0.5f, 0.5f) : Colors.White;

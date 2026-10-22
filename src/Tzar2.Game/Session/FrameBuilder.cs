@@ -449,11 +449,11 @@ public static class FrameBuilder
             if (item && world.Inventories.IndexOf(holder) is >= 0 and var inv)
             {
                 Inventory inventory = world.Inventories.At(inv);
-                for (int k = 0; k < inventory.Count; k++)
+                for (int s2 = 0; s2 < inventory.Count; s2++)
                 {
-                    if (inventory.Items[k] == unit.Value)
+                    if (inventory.Items[s2] == unit.Value)
                     {
-                        slot = k;
+                        slot = s2;
                     }
                 }
 
