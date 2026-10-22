@@ -158,7 +158,7 @@ public class ExperienceTests
         d.RunUntil(() => d.World.IsHero(footman), 2000);
         int before = d.World.Experiences.Get(archer).Xp;
         d.RunUntil(() => d.World.Experiences.Get(archer).Xp > before, 200);
-        Assert.Equal(before + 29, d.World.Experiences.Get(archer).Xp); // 50% of 58 (UNVERIFIED share)
+        Assert.InRange(d.World.Experiences.Get(archer).Xp - before, 55, 62); // the whole of a blow of about 58 (ReTzar, ADR 0191), not half
     }
 
     [Fact]
