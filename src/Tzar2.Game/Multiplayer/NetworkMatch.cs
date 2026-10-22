@@ -196,6 +196,13 @@ public sealed partial class NetworkMatch : IDisposable
     public void SetComputerChoice(byte slot, SlotChoice choice)
     {
         ArgumentNullException.ThrowIfNull(choice);
+
+        // The relay refuses anything else (ADR 0160); asking only for what it allows keeps the lobby quiet.
+        if (_lobby is not { LocalIsHost: true } lobby || slot >= lobby.Slots.Count || lobby.Slots[slot].Kind != SlotKind.Computer)
+        {
+            return;
+        }
+
         _client.SetChoice(slot, choice.ToBytes());
     }
 
