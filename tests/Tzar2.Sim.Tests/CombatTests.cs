@@ -239,9 +239,9 @@ public class CombatTests
     public void A_guard_fights_on_the_way_and_keeps_guarding_after_the_fight()
     {
         // Owner play-test 2026-10-20: "guard" did nothing. A footman guards a peasant that walks towards an enemy.
-        using var d = new SimDriver(TestMap(48, 12, Unit("euro.footman", 0, 3, 5), Unit("euro.peon", 0, 5, 5), Unit("euro.peon", 1, 30, 5)), ruleset: Classic);
+        using var d = new SimDriver(TestMap(48, 12, Unit("euro.footman", 0, 3, 5), Unit("euro.peon", 0, 5, 5), Unit("euro.peon", 1, 29, 5)), ruleset: Classic);
         World w = d.World;
-        EntityId guard = OfType(w, "euro.footman").Single();
+        EntityId guard = OfType(w, "euro.footman").Single(); // the enemy within the guard's sight (6 tiles) of where it stops
         EntityId ward = OfType(w, "euro.peon", 0).Single();
         EntityId enemy = OfType(w, "euro.peon", 1).Single();
         d.Order(0, CommandKind.Follow, [guard], 0, 0, target: ward);

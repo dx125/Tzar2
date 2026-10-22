@@ -138,6 +138,18 @@ public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposabl
         Assert.Equal((600, 785, 665, 630), (Permille("euro.footman"), Permille("euro.archer"), Permille("euro.pikeman"), Permille("arab.pikeman")));
     }
 
+    [OriginFact]
+    [Trait("Rule", "WORLD-015")]
+    public void Land_units_get_the_body_of_their_object_box_and_ships_keep_theirs()
+    {
+        // IMAGES.INI object boxes: footmen and knights 32 x 32, catapults 64 x 64 (7/16 of the side: 14 and 28 px).
+        Ruleset rules = CompileFromOrigin();
+        int Body(string key) => rules.EntityTypes.First(t => t.Key == key).Radius / 64;
+        Assert.Equal((14, 14, 28), (Body("euro.footman"), Body("euro.knight"), Body("comm.catapult")));
+        Assert.Equal(7, rules.EntityTypes.First(t => t.Key == "euro.footman").TerrainRadius / 64);
+        Assert.Equal(16, Body("comm.galleon"));
+    }
+
     private Ruleset CompileFromOrigin()
     {
         string origin = OriginPaths.RequireOrigin();

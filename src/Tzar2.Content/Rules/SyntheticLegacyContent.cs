@@ -189,6 +189,28 @@ public static class SyntheticLegacyContent
         AddObjects(source);
         source.Add("manifests/sprite-index.json", SpriteIndex(
         [
+            // Units: their IMAGES.INI object boxes give their bodies (WORLD-015).
+            ("e_peon", @"unit\e_peon.bmp", "object", "0,0,32,32"),
+            ("r_peon", @"unit\r_peon.bmp", "object", "0,0,32,32"),
+            ("e_footman", @"unit\e_footman.bmp", "object", "0,0,32,32"),
+            ("e_archer1", @"unit\e_archer1.bmp", "object", "0,0,32,32"),
+            ("e_maceman", @"unit\e_maceman.bmp", "object", "0,0,32,32"),
+            ("e_knight", @"unit\e_knight.bmp", "object", "0,0,32,32"),
+            ("e_pikeman", @"unit\e_pikeman.bmp", "object", "0,0,32,32"),
+            ("e_mage", @"unit\e_mage.bmp", "object", "0,0,32,32"),
+            ("e_priest", @"unit\e_priest.bmp", "object", "0,0,32,32"),
+            ("e_crusader", @"unit\e_crusader.bmp", "object", "0,0,32,32"),
+            ("troll", @"unit\troll.bmp", "object", "0,0,32,32"),
+            ("jinn", @"unit\jinn.bmp", "object", "0,0,32,32"),
+            ("skeleton", @"unit\skeleton.bmp", "object", "0,0,32,32"),
+            ("r_jihad", @"unit\r_jihad.bmp", "object", "0,0,32,32"),
+            ("cow", @"unit\cow.bmp", "object", "0,0,32,32"),
+            ("caravan", @"unit\caravan.bmp", "object", "0,0,32,32"),
+            ("bear", @"unit\bear.bmp", "object", "0,0,32,32"),
+            ("ork", @"unit\ork.bmp", "object", "0,0,32,32"),
+            ("dwarf", @"unit\dwarf.bmp", "object", "0,0,32,32"),
+            ("e_ghost", @"unit\e_ghost.bmp", "object", "0,0,32,32"),
+            ("catapult", @"unit\catapult.bmp", "object", "0,0,64,64"),
             ("e_castle", @"building\euro castle.bmp", "object", "0,0,160,160"),
             ("e_house", @"building\euro houses.bmp", "object", "0,0,64,64"),
             ("e_barrack", @"building\euro barrack.bmp", "object", "0,0,96,96"),

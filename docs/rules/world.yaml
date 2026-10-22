@@ -66,6 +66,7 @@ rules:
     status: implemented
   WORLD-015:
     rule: A unit cannot stand where another unit stands.
-    source: [owner 2026-10-21 (fourth play-test)]
-    status: partial
-    note: Units are pushed apart softly with a collision radius of 7 px (UNK-11); walking or fighting in a crowd they come within 8 px of each other, while the original's units have a 25 px selection box and a 32 px object box (work queue).
+    source: [owner 2026-10-21 (fourth play-test), 'data IMAGES.INI object', capture capture-20261022-110601]
+    status: tested
+    adr: [0188]
+    note: A land unit's body is 7/16 of its object box (14 px for 32 x 32), so units keep 28 px apart and rest one to a tile, 32 px apart, as batch K measured; a compact group keeps its formation. The terrain keeps the old 7 px footprint, and units coming the other way squeeze past with it. A crowd around one target is not measured.

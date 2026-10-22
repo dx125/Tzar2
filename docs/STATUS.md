@@ -65,7 +65,7 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. Next: work queue item 4 (unit collision, WORLD-015). Done: save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
+   order. Next: the fifth play-test (item 5). Done: unit bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
    (ORD-005), the hit frame from the data (WAR-014), several items per kind (ITEM-016, ADR 0186).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
@@ -74,7 +74,7 @@ play-test.
      `run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch J -AllowModified` (~22 min, hands off).
    * The spy's disguise meter (MAG-021) is done and measured.
    * Impersonation takes the unit over and is unmasked as measured (MAG-012, ADR 0184 amendment 6): done.
-4. **Maintainer:** units never stand on one another (WORLD-015).
+4. **Done (2026-10-22, ADR 0188):** units never stand on one another (WORLD-015).
    * What the probes of 2026-10-21 measured:
      * At rest, units keep 16 px apart.
      * While walking or fighting, units come as close as 8 px, with a collision diameter of 14 px and sprites about
@@ -83,6 +83,8 @@ play-test.
    * What did not work: treating friends walking the same way as hard obstacles jams opposing columns on a narrow
      bridge (ORIG-02). A radius of 12 px alone changes nothing in a crowd and shifts the AI's goldens.
    * The data: the original's units have a 25 × 25 selection box and a 32 × 32 object box, a whole tile.
+   * **Operator:** batch K (`-Batch K`, about 5 minutes, scenario `unit-spacing`) measures the original: nine footmen at
+     rest, two columns passing head on, a crowd around one target.
    * Plan:
      * a body size from the data;
      * hard contact with rules for who gives way: idle units step aside, units coming the other way squeeze past,
@@ -113,6 +115,18 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Units have the original's body (WORLD-015, ADR 0188; batch K).**
+  * Batch K measured the original's footmen. At rest they stand one to a tile, 31–32 px apart. A compact group keeps
+    its formation. Head on, two columns pass 27–35 px apart.
+  * Each land unit's body is now 7/16 of its IMAGES.INI object box (14 px for 32 × 32), so units keep 28 px apart and
+    rest one tile apart.
+  * The terrain keeps the old footprint (7 px), so gaps between trees stay open. Units coming the other way squeeze
+    past, so columns cross a bridge.
+  * The AI's economy is about 8 % slower in crowds and its first waves come later; the AI tests' bounds follow.
+  * Every golden, the gameplay and AI benches (20342682D5E845FC, BE0C28868D8D9F99) and `legacy.referenceDataHash`
+    (4785FC7F3809937A) are re-pinned.
+  * **Operator:** the fifth play-test (work queue item 5) can follow.
 
 * **2026-10-22 — Save and load of every single player game (SHELL-014, SHELL-021, SHELL-022; ADR 0187).**
   * F2, F3, the in-game menu's SAVE GAME and LOAD GAME, and single player's LOAD GAME open the save and load

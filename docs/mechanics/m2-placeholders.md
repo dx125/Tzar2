@@ -62,7 +62,7 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 | Starting resources default | `medium` | YAML `gameplay.defaultStartingResources` | — | lobby default |
 | Refund on cancel | 100% (sites at any progress, and queue items) | YAML `gameplay.*RefundPercent` | — | cancel captures |
 | Destroyed producer | its queue is lost without a refund | code (`World.Destroy`) | — | observation |
-| Collision radius | 7 px (cavalry 10 px) | YAML `^Unit`/`^Cavalry.Collision.radius` | UNK-11 | dense formation captures |
+| Collision radius | **from the data** (ADR 0188): 7/16 of the IMAGES.INI object box, 14 px for 32 x 32 (batch K: 32 px apart at rest, 27+ px head on); the terrain footprint stays 7 px (cavalry 10, siege 12) | importer; YAML `Collision.terrain` | UNK-11 | a crowd around one target |
 | Occupancy cells per tile | 2 × 2 | YAML `ruleset.occupancyCellsPerTileAxis` | UNK-11 | same |
 | Building damage reduction | damage × 1000 / (1000 + RESISTANCE) (owner decision, PR #21: the first placeholder, scale 100, left castles with RESISTANCE 1000 at 1 damage per footman hit — two footmen needed ~80 min; 1000 halves damage to a castle and takes a third off barracks); RESISTANCE from the buildings table; defence 0 (owner decision: follow the manual, manual.pdf ch. 4 "The Interface", § 4 "The Selection View", p. 24: "RESISTANCE - reduces the amount of damage a building suffers when attacked") | YAML `gameplay.resistanceScale`, `^Building.Armor` | UNK-08; RESISTANCE also feeds capture later (GAME-04) | damage grid on buildings |
 | Corpse lifetime | 120 s | YAML `ruleset.corpseTtlMs` | — (REQ-PATH-08 default) | capture |

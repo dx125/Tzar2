@@ -31,7 +31,9 @@ public class AiNavalTests(ITestOutputHelper output)
         World w = scenario.Simulation.World;
         bool fished = false;
         bool ashore = false;
-        for (int t = 0; t < 20 * 60 * 20; t++) // 20 minutes (15 before one peasant per field, ECO-021): a transport sunk while loading makes a second try (ADR 0146)
+        // 30 minutes (15 before one peasant per field, ECO-021; 20 before the original's body size, WORLD-015, whose crowds
+        // slow the economy and the first wave sails at about 25 minutes): a transport sunk while loading makes a second try (ADR 0146)
+        for (int t = 0; t < 30 * 60 * 20; t++)
         {
             scenario.RunTick();
             fished |= w.Workers.Entities.ToArray().Any(e => w.IsShip(e) && w.Workers.Get(e).CarryAmount > 0);
@@ -70,7 +72,7 @@ public class AiNavalTests(ITestOutputHelper output)
     public void A_landing_survives_a_snapshot()
     {
         using AiSkirmishScenario straight = Archipelagos(out _);
-        for (int t = 0; t < 20 * 60 * 20 && !straight.Ai.Players.Any(p => p.Landings == 0 && IsAtSea(straight, p)); t++)
+        for (int t = 0; t < 30 * 60 * 20 && !straight.Ai.Players.Any(p => p.Landings == 0 && IsAtSea(straight, p)); t++)
         {
             straight.RunTick();
         }

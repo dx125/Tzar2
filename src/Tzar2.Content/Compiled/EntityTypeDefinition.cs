@@ -127,8 +127,22 @@ public sealed class EntityTypeDefinition
     /// <summary>Hit points at full health.</summary>
     public int MaxHealth { get; }
 
-    /// <summary>Collision radius in world units (mobile units).</summary>
+    /// <summary>Collision radius in world units (mobile units): the body other units keep off, and combat reach is
+    /// measured from (WORLD-015).</summary>
     public int Radius { get; }
+
+    /// <summary>
+    /// The radius the unit slides along walls, trees and buildings with (world units; 0 = <see cref="Radius"/>). The
+    /// original moves units from tile to tile, so a body never clips the terrain; the old placeholder footprint keeps
+    /// narrow passages open while the body spaces the units (WORLD-015).
+    /// </summary>
+    public int TerrainRadius
+    {
+        get => _terrainRadius > 0 ? Math.Min(_terrainRadius, Radius) : Radius;
+        init => _terrainRadius = value;
+    }
+
+    private readonly int _terrainRadius;
 
     /// <summary>Side in tiles of the passable square the unit needs.</summary>
     public int ClearanceTiles { get; }

@@ -87,8 +87,9 @@ public class CombatM3eTests
         d.Order(1, CommandKind.Stop, [footman]);
         d.Order(0, CommandKind.Attack, [catapult], target: footman);
         d.RunUntil(() => d.World.Projectiles.Count > 0, 600);
+        EntityId stone = d.World.Projectiles.Entities[0]; // this stone; the catapult throws again at the moving footman
         d.MoveToTile(1, [footman], 16, 18);
-        d.RunUntil(() => d.World.Projectiles.Count == 0, 200);
+        d.RunUntil(() => !d.World.Projectiles.Has(stone), 200);
         Assert.DoesNotContain(Of(d, SimEventKind.Damaged), e => e.X == catapult.Index);
     }
 

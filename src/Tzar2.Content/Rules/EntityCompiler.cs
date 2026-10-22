@@ -20,7 +20,7 @@ internal sealed partial class EntityCompiler
         // Lookup only, never iterated (T2D004).
         ["Legacy"] = ["class", "civ", "name"],
         ["Mobile"] = ["locomotor", "speed", "pixelsPerSecond"],
-        ["Collision"] = ["radius", "clearance"],
+        ["Collision"] = ["radius", "terrain", "clearance"],
         ["Health"] = ["max"],
         ["Armor"] = ["defence", "resistance"],
         ["RevealsShroud"] = ["sight"],
@@ -204,7 +204,7 @@ internal sealed partial class EntityCompiler
                     d.FootprintHeight,
                     d.Mask,
                     d.LeavesCorpse,
-                    traits));
+                    traits) { TerrainRadius = d.TerrainRadius });
             }
             catch (ArgumentException ex)
             {
@@ -272,6 +272,7 @@ internal sealed partial class EntityCompiler
 
         d.Radius = Scaled("Collision", "radius", Math.Max(1, NonNegative("Collision", "radius", EntityTypeDefinition.DefaultRadius / UnitsPerPixel)), UnitsPerPixel);
         d.Clearance = Math.Max(1, NonNegative("Collision", "clearance", 1));
+        d.TerrainRadius = IntOf("Collision", "terrain") is { } terrain ? Scaled("Collision", "terrain", Math.Max(1, NonNegative("Collision", "terrain", 1)), UnitsPerPixel) : 0;
 
         if (entry.Find("Cost") is { } cost)
         {
@@ -712,6 +713,7 @@ internal sealed partial class EntityCompiler
         public int MaxHealth = 1;
         public int Radius = EntityTypeDefinition.DefaultRadius;
         public int Clearance = 1;
+        public int TerrainRadius;
         public int FootprintWidth;
         public int FootprintHeight;
         public byte[]? Mask;
