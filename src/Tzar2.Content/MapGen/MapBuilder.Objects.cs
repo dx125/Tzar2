@@ -394,38 +394,52 @@ internal sealed partial class MapBuilder
         }
     }
 
+    // WORLD-013 (ADR 0201): the original's forests. A tile grows a tree by the plasma field and [randomtreeset] of the map's
+    // side when it may hold one, is not in a kingdom's start area and every tile two steps away is land (0x4b2ab0 by
+    // ReTzar's reading).
     private void PlaceForests()
     {
         MapObjectKind tree = _catalog.Kind(MapObjectRole.Tree)!.Value;
-        int n = _s * _s;
-        int[] field = new int[n];
-        int[] values = new int[n];
-        Noise.Fill(field, _s, _s, _rng.NextUInt64(), 12 + (_s / 64), 3);
-        int eligible = 0;
-        for (int t = 0; t < n; t++)
+        Forests.TreeSettings settings = Forests.ForSide(_s);
+        byte[] field = Forests.Field(_rng.NextUInt64(), settings.Roughness, settings.Divisor);
+        var draws = Tzar2.Core.Rng.Xoshiro256StarStar.FromSeed(_rng.NextUInt64());
+        for (int t = 0; t < _s * _s; t++)
         {
-            if (TreeAllowed(t) && _startDist[t] > _startRadius + 3)
+            int x = t % _s, y = t / _s;
+            if (!TreeAllowed(t) || _startDist[t] <= _startRadius + 3 || !LandRing(x, y))
             {
-                values[eligible++] = field[t];
+                continue;
+            }
+
+            if (Forests.Grows(settings, Forests.Sample(field, _s, x, y), _profile.TreePictures, ref draws))
+            {
+                Put(MapObjectRole.Tree, tree, MapObject.Nature, x, y, string.Empty);
+            }
+        }
+    }
+
+    // The eight tiles two steps away are land, or off the map.
+    private bool LandRing(int x, int y)
+    {
+        for (int dy = -2; dy <= 2; dy += 2)
+        {
+            for (int dx = -2; dx <= 2; dx += 2)
+            {
+                int nx = x + dx, ny = y + dy;
+                if ((dx != 0 || dy != 0) && (uint)nx < (uint)_s && (uint)ny < (uint)_s && !LandTile(nx, ny))
+                {
+                    return false;
+                }
             }
         }
 
-        int cover = _o.Resources switch { MapResourceLevel.Low => 100, MapResourceLevel.High => 210, _ => 150 };
-        int keep = (int)((long)eligible * cover / 1000);
-        if (keep == 0)
-        {
-            return;
-        }
+        return true;
+    }
 
-        Array.Sort(values, 0, eligible);
-        int threshold = values[eligible - keep];
-        for (int t = 0; t < n; t++)
-        {
-            if (TreeAllowed(t) && _startDist[t] > _startRadius + 3 && (field[t] >= threshold || _rng.NextInt(1000) < 6))
-            {
-                Put(MapObjectRole.Tree, tree, MapObject.Nature, t % _s, t / _s, string.Empty);
-            }
-        }
+    private bool LandTile(int x, int y)
+    {
+        int cs = _s + 1, c = (y * cs) + x;
+        return _set[c] != TerrainProfile.Water && _set[c + 1] != TerrainProfile.Water && _set[c + cs] != TerrainProfile.Water && _set[c + cs + 1] != TerrainProfile.Water;
     }
 
     private void ScatterRocks(MapObjectRole role, int perRock, List<(int X, int Y)> rocks)

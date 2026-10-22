@@ -216,6 +216,11 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-22 — Random maps grow the original's forests (WORLD-013, ADR 0201).** `[randomtreeset]` drives a plasma
+  field and the chances of a tree as ReTzar reads the original. Forests are tighter, about a fifth of the land instead
+  of a third (Medium Continental 1531 → 1001 trees). The map generator's golden hashes are re-pinned; the bench hashes
+  do not change.
+
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
   UI review (item 15: every modern resolution, likeness to the original's texts, fonts and buttons) and the code
