@@ -130,6 +130,10 @@ merge.
    * the cursor is rebuilt through `Input.SetCustomMouseCursor` on every change;
    * the skirmish setup screen generates the whole map on every option change;
    * `_mission` keeps the finished session of the last mission;
+   * Godot sometimes prints "1 ObjectDB instance was leaked at exit": it is the music's
+     `AudioStreamGeneratorPlayback` (`--verbose`, 3 of 4 runs with a SoundFont). It happens once at quit and never
+     per match. Disposing the playback reference in `MidiPlayer.Stop` and `_ExitTree` did not remove it, so the engine
+     still holds the playback at teardown. Harmless, and left as it is.
    * `SecondSessionAnalysisTests.Construction_time_uses_the_health_bar_rate_and_the_time_unit` fails under a process
      culture other than English (`C.UTF-8` on macOS): the fidelity analysis formats a number with the current
      culture.
