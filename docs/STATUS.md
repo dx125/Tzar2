@@ -65,8 +65,7 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. Next: the owner's interface fixes (the main menu in one column without CAMPAIGN, the HUD's black selection
-   view), then the inventory, save and load screens. Done: the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
+   order. Next: the inventory, save and load screens. Done: the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
    (ORD-005), the hit frame from the data (WAR-014), several items per kind (ITEM-016, ADR 0186).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
@@ -114,6 +113,12 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — The owner's interface fixes.**
+  * The main menu is one column of equal buttons: single player, multiplayer, settings, credits, editor, asset
+    viewer, quit. CAMPAIGN is gone from it; campaigns stay in single player.
+  * The minimap keeps its 128 × 128 box on maps larger than 128 tiles. Its texture has one pixel per tile and had
+    grown the control into a black square over the selection view.
 
 * **2026-10-22 — The diplomacy and tribute screens (HUD-012, HUD-013).**
   * DIPLOMACY and F5 open the diplomacy screen, built on the original's `D_DIPLOMACY` art. Each other kingdom has a

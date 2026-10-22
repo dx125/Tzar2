@@ -15,7 +15,7 @@ rules:
     rule: The main screen offers single player, multiplayer, preferences, credits and quit.
     source: [manual Main Screen]
     status: implemented
-    note: Tzar2 adds the editor, the asset viewer and a campaign shortcut.
+    note: Tzar2 adds the editor and the asset viewer, in the same column; campaigns are in single player.
   SHELL-004:
     rule: The campaign screen lists the campaigns with a description, the chosen campaign's entry missions with a description, and PLAY and BACK.
     source: [manual Campaign Screen]
