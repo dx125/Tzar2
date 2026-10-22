@@ -92,17 +92,18 @@ public enum ErrandKind : byte
 }
 
 /// <summary>
-/// A spy's disguise (MAG-012, ADR 0184): other kingdoms see a unit of <see cref="TypeId"/> owned by <see cref="Owner"/>,
-/// and that kingdom's units do not pick it as a target. It keeps its own abilities and stats. Its meter
-/// (<see cref="Mastery"/>, MAG-021) grows while it keeps the look.
+/// A unit a spy has taken over (MAG-012, ADR 0184 amendment 6): the spy is gone, the unit is its player's, keeps its own
+/// type and stats, and still seems to belong to <see cref="Owner"/> (its old kingdom), whose units do not pick it as a
+/// target. Revealing or being unmasked turns it into a spy of <see cref="TypeId"/>. Its meter (<see cref="Mastery"/>,
+/// MAG-021) grows while it keeps the look.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Disguise : IComponent
 {
-    /// <summary>The type it looks like.</summary>
+    /// <summary>The spy type it turns back into.</summary>
     public ushort TypeId;
 
-    /// <summary>The kingdom it seems to belong to.</summary>
+    /// <summary>The kingdom it seems to belong to (the one it was taken from).</summary>
     public byte Owner;
 
     /// <summary>

@@ -37,7 +37,9 @@ analyses:
       taken_over_peasant_works_when_idle: true  # run 5: left alone, it went to chop wood (10 wood carried after 70 s)
       revealed_takeover_is_a_spy: true  # run 6: after V the taken-over peasant had a spy's look, portrait, attack 20 and 50/50, and its name still counted on, "Spy (51)"
       handed_over_standing_spy_unmasks: false  # run 8: a spy spawned ours, walked a tile west, told to stand its ground and then given to kingdom 2 never unmasked the peasant of kingdom 2's look, from 13 tiles to right in front of it, at meters 12-53, 69-100 and 100; after the reveal it struck at once
-      copied_kingdom_spy_unmasks_fresh_from_tiles: 6  # at least: run 5, meter about 3; kingdom 2's spy appeared 6.2 tiles off and within about 4 s the peasant had a spy's look, portrait and attack 20 (the spy 8.4 tiles off by then); the meter went on counting
+      enemy_spy_unmasks_fresh_at_tiles: 3.4  # run 10: kingdom 2's spies spawned red north of the peasant walked up to it; with the meter at about 10 the look turned into a spy's when the nearest stood about 3.4 tiles off (the owner, by hand: 4 tiles at a meter of 8)
+      enemy_spy_unmasks_full_at_tiles: 1  # run 10: with the meter at 100, unmasked only when a spy stood right next to it
+      copied_kingdom_spy_unmasks_fresh_from_tiles: 6  # NOT a bound after all (run 10: enemy spies walk up first): run 5, meter about 3; kingdom 2's spy appeared 6.2 tiles off and within about 4 s the peasant had a spy's look, portrait and attack 20 (the spy 8.4 tiles off by then); the meter went on counting
       sources:
         meter_shown_as: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: window/disguised.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
         meter_undisguised: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: window/spy-card.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
@@ -52,6 +54,8 @@ analyses:
         taken_over_peasant_works_when_idle: {session: capture-20261021-230259, trial: spy-unmask-full/full, frame: burst/meter/0014.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
         revealed_takeover_is_a_spy: {session: capture-20261021-232712, trial: spy-unmask/fresh, frame: 'window/at-20.bmp, window/revealed.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
         handed_over_standing_spy_unmasks: {session: capture-20261022-002145, trial: 'spy-unmask/fresh, spy-unmask-half/half, spy-unmask-full/full', frame: 'window/start.bmp-at-22.bmp, window/revealed.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-22}
+        enemy_spy_unmasks_fresh_at_tiles: {session: capture-20261022-011438, trial: spy-unmask/fresh, frame: 'window/start.bmp, window/d-10.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-22}
+        enemy_spy_unmasks_full_at_tiles: {session: capture-20261022-011438, trial: spy-unmask-full/full, frame: 'window/d-7.bmp, window/d-6.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-22}
         copied_kingdom_spy_unmasks_fresh_from_tiles: {session: capture-20261021-230259, trial: spy-unmask/fresh, frame: 'window/disguised.bmp, window/start.bmp, window/at-11.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
         third_kingdom_spy_unmasks: {session: capture-20261021-220250, trial: 'spy-unmask/fresh, spy-unmask-half/half, spy-unmask-full/full', frame: 'burst/approach/0000.bmp-0074.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
   repair:

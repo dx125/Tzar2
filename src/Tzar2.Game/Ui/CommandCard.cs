@@ -108,7 +108,7 @@ public sealed class CommandCard
 
         var buttons = (menu?.StartsWith(ListMenu, StringComparison.Ordinal) == true ? KingdomList(context, menu[ListMenu.Length..])
             : TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).ToList();
-        if (OpenMenu is null && !e.Id.IsNone && (_rules.EntityTypes[e.TypeId].Traits.Abilities & AbilityFlags.Impersonate) != 0)
+        if (OpenMenu is null && !e.Id.IsNone && ((_rules.EntityTypes[e.TypeId].Traits.Abilities & AbilityFlags.Impersonate) != 0 || e.SpyType >= 0))
         {
             buttons.AddRange(_source.AbilityButtons("impersonate")); // the spy's impersonate and reveal (MAG-012)
         }
@@ -881,9 +881,13 @@ public sealed class CommandCard
         switch (b.Action)
         {
             case CardAction.Impersonate:
-                return lead.LooksLike >= 0; // already disguised: only reveal
+                return lead.SpyType >= 0; // a taken-over unit only reveals itself
             case CardAction.Reveal:
-                return lead.LooksLike < 0;
+                return lead.SpyType < 0;
+            case CardAction.Build or CardAction.Repair when lead.SpyType >= 0:
+                return true; // 1.05: a spy in a peasant's body cannot build
+            case CardAction.Submenu when lead.SpyType >= 0 && b.Argument.EndsWith("_build", StringComparison.Ordinal):
+                return true;
             case CardAction.Research:
                 int tech = _rules.TechnologyId(b.Argument);
                 return tech >= 0 && Me(context).HasTechnology(tech);

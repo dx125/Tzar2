@@ -244,14 +244,43 @@ public sealed class Visibility
         return world.IsConcealed(entity) && !IsDetectedBy(world, player, at);
     }
 
-    /// <summary>Whether a detector of <paramref name="player"/> is within its detection radius of the point (spies and ninjas see each other).</summary>
-    public static bool IsDetectedBy(World world, int player, Position at) => IsDetectedBy(world, player, at, 100);
-
     /// <summary>
-    /// Whether a detector of <paramref name="player"/> is within <paramref name="radiusPercent"/> % of its detection radius
-    /// of <paramref name="at"/> (a seasoned disguise must be come closer to, MAG-021).
+    /// Whether a detector of <paramref name="player"/> (a spy or ninja, not held) stands within <paramref name="reach"/>
+    /// world units of <paramref name="at"/> and faces it: the point lies in its facing direction or one of the two next to
+    /// it (the owner: a spy sees through a disguise only in front of it; MAG-012).
     /// </summary>
-    public static bool IsDetectedBy(World world, int player, Position at, int radiusPercent)
+    public static bool SeesThrough(World world, int player, Position at, long reach)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        Span<Identity> identities = world.Identities.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (identities[i].Owner != player || world.IsHeld(ids[i]) || world.Ruleset.EntityTypes[identities[i].TypeId].Traits.World.DetectUnits <= 0
+                || world.Positions.IndexOf(ids[i]) is not (>= 0 and var q))
+            {
+                continue;
+            }
+
+            Position d = world.Positions.At(q);
+            if (Core.Numerics.IntMath.DistanceSquared(d.X, d.Y, at.X, at.Y) > reach * reach)
+            {
+                continue;
+            }
+
+            int toward = Core.Numerics.Trig.Atan2(at.Y - d.Y, at.X - d.X).ToDirection8();
+            int off = (toward - identities[i].Facing) & 7;
+            if ((d.X == at.X && d.Y == at.Y) || off is 0 or 1 or 7)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether a detector of <paramref name="player"/> is within its detection radius of the point (spies and ninjas see each other).</summary>
+    public static bool IsDetectedBy(World world, int player, Position at)
     {
         ArgumentNullException.ThrowIfNull(world);
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
@@ -263,7 +292,7 @@ public sealed class Visibility
                 continue; // a detector inside a holder sees nothing (GAME-09)
             }
 
-            int detect = (int)((long)world.Ruleset.EntityTypes[identities[i].TypeId].Traits.World.DetectUnits * radiusPercent / 100);
+            int detect = world.Ruleset.EntityTypes[identities[i].TypeId].Traits.World.DetectUnits;
             if (detect > 0 && world.Positions.IndexOf(ids[i]) is >= 0 and var q)
             {
                 Position d = world.Positions.At(q);

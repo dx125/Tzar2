@@ -147,6 +147,15 @@ public sealed record GameplaySettings
     public int DisguiseMasteryMs { get; init; } = 125_000;
 
     /// <summary>
+    /// How close a spy of the copied kingdom must come, in front of it, to unmask a disguise with an empty meter, in
+    /// percent of a tile (MAG-012; the owner: 4 tiles at a meter of 8).
+    /// </summary>
+    public int UnmaskReachFreshTilePercent { get; init; } = 400;
+
+    /// <summary>The same with a full meter (batch J run 10: right next to it).</summary>
+    public int UnmaskReachFullTilePercent { get; init; } = 100;
+
+    /// <summary>
     /// The hit points one repairer's blow restores on an entity of <paramref name="maxHealth"/> built in
     /// <paramref name="buildTimeMs"/> (BLD-022): max × blow / (build time × repair time), rounded down, at least 1. The
     /// original's is max / (4 × TIME).
@@ -192,6 +201,9 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfLessThan(RepairBlowMs, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairBlowMs, 60_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(DisguiseMasteryMs, 1);
+        ArgumentOutOfRangeException.ThrowIfNegative(UnmaskReachFullTilePercent);
+        ArgumentOutOfRangeException.ThrowIfLessThan(UnmaskReachFreshTilePercent, UnmaskReachFullTilePercent);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(UnmaskReachFreshTilePercent, 6_400);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(DisguiseMasteryMs, 3_600_000);
 
         if (GroupMoveSpeed > GroupMoveSpeed.Own)

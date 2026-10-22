@@ -250,7 +250,7 @@ public sealed class WorldRenderer : IDisposable
                 }
             }
 
-            int player = e.Owner < 8 ? e.Owner : -1;
+            int player = e.SeemsOwner >= 0 ? e.SeemsOwner : e.Owner < 8 ? e.Owner : -1; // a taken-over unit keeps its old colours
             DrawEntity(in e, i, def, px, py, player, timeMs, options);
         }
 
@@ -301,7 +301,7 @@ public sealed class WorldRenderer : IDisposable
 
     private void DrawEntity(in FrameEntity e, int index, EntityTypeDefinition def, int px, int py, int player, long timeMs, WorldOptions options)
     {
-        TypeVisual visual = _catalog.Type(e.LooksLike >= 0 ? (ushort)e.LooksLike : e.TypeId); // an own spy in its disguise
+        TypeVisual visual = _catalog.Type(e.TypeId);
         uint phase = (uint)e.Id.Index * 7919u;
         if (def.HasFootprint)
         {

@@ -134,3 +134,30 @@ Another kingdom's spy does not see through a disguise. What the owner described 
 through one of "their" units; the strategy guide's Zhef fears the spies of the town whose soldiers he copies. Tzar2
 now lets only the seeming kingdom's spies (and ninjas) unmask a disguise, and only when it is not allied with the
 spy's kingdom. The fourth run measures the distance with a kingdom-2 look.
+
+## Amendment 6: the takeover and the unmasking reach (2026-10-22)
+
+Batch J's runs 5–10 and the owner's own test settled the model:
+
+* **Takeover.** Impersonating a unit takes it over (the owner; batch J runs 5–8):
+  * The spy entity is removed.
+  * The target changes owner (`World.ChangeOwner`) and keeps its type, stats, place and level.
+  * The target carries the disguise: `Disguise.TypeId` is now the spy type it turns back into, and `Disguise.Owner` is
+    the kingdom it seems to belong to.
+* **What others see.** Other kingdoms see one of the old kingdom's units (`FrameEntity.Owner`). Its owner sees it in the
+  old kingdom's colours too (`SeemsOwner`; batch J run 5), named after the spy with the meter (`SpyType`, "Spy (N)").
+* **Card.** It has the copied unit's card and reveal. Build and repair are hidden, because 1.05 says a spy in a
+  peasant's body cannot build.
+* **Reveal and unmasking.** Both turn the unit into a spy of its player at its place (`CombatMagicCommands.Unmask`,
+  through the conversion path). Hit points carry over in proportion, and so do level, items and name.
+* **Who unmasks.** Only a spy (or ninja) of the copied kingdom, not allied with the owner, and only when the unit lies
+  in its facing direction or one of the two next to it (the owner).
+* **Reach.** 4 tiles for an empty meter, falling in proportion to 1 tile for a full one
+  (`gameplay.unmaskReachFreshPercent` 400, `unmaskReachFullPercent` 100). The owner unmasked at 4 tiles with a meter of
+  8. In batch J run 10, enemy spies walked up and unmasked a fresh look at about 3.4 tiles and a full one only from the
+  next tile. A third kingdom's spy never unmasks (run 3). Spies handed over with `hmkingdom` never unmasked anything:
+  a cheat artefact.
+* **Not modelled.** After a reveal the original's meter goes on counting from where it was; Tzar2 shows a spy in its
+  own look as 100.
+* **Hashes.** The ruleset hash changes (two settings). States with a disguise change meaning (they are not in any
+  golden).
