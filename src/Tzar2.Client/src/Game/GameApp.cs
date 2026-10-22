@@ -79,7 +79,7 @@ public partial class GameApp : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
-        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke);
+        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke && _args.ResourceSoak is null);
         _ui = new UiAssets(_store);
         try
         {
@@ -116,6 +116,10 @@ public partial class GameApp : Node
             else if (_args.AutoplayDir is { } dir)
             {
                 _ = new AutoplayDriver(this, dir).RunAsync();
+            }
+            else if (_args.ResourceSoak is { } soak)
+            {
+                _ = ResourceSoakAsync(soak);
             }
         }
         else if (_args.Editor)
@@ -385,7 +389,7 @@ public partial class GameApp : Node
             session.SpeedIndex = GameSession.SpeedSteps.Length - 1;
         }
 
-        var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null };
+        var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null || _args.ResourceSoak is not null };
         screen.Finished += (outcome, stats) =>
         {
             SaveReplay(session, "skirmish");
