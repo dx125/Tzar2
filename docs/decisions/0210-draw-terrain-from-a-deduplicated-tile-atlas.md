@@ -30,7 +30,8 @@ tiles (7.5 %).
 * `Tzar2.Content.Terrain.TerrainTileAtlas` (engine-free, tested) stores every distinct 32 × 32 composed tile once.
   * Its pages are 2048² RGB5A1, 4,096 tiles each.
   * `Add` returns, per frame of a window, the slot of each of its tiles.
-  * Slots are 24-bit.
+  * Slots are 24-bit. An atlas holds at most 256 pages (1,048,576 tiles), the smallest array-texture layer limit
+    renderers guarantee.
   * `Add` may run on several threads at once: it hashes outside its lock and compares the bytes on a hash hit.
 * `TerrainLayer` composes the chunks in parallel exactly as before, with the same composer and the same pixels.
   * Each chunk's frames go into the atlas as soon as they are composed, then they are dropped.
@@ -65,6 +66,6 @@ The pixels drawn are unchanged:
 * On the real-world 512² map: 67,220 distinct tiles on 17 pages, and 332 MB of video memory.
 * Composing is still the bulk of the load time: 2–4 s on the huge map and 12 s on the real-world map, on the loaded
   review machine. The load still runs on the main thread. That is a separate finding of the review.
-* A map with more than 16.7 M distinct tiles cannot be drawn; the largest map has about 67 k.
+* A map with more than 1,048,576 distinct tiles (256 pages) cannot be drawn; the largest map has about 67 k.
 * Revisit when the terrain becomes editable per tile beyond the composer's rules, or when a chunk's own texture would
   be cheaper again (a renderer with compressed lossless formats).

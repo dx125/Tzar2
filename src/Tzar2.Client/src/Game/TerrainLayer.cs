@@ -335,7 +335,12 @@ public sealed class TerrainLayer : IDisposable
             _material.SetShaderParameter("tiles", _tiles);
             _material.SetShaderParameter("size", new Vector2(width, height));
             _material.SetShaderParameter("frame", 0);
-            s_white ??= ImageTexture.CreateFromImage(Image.CreateEmpty(1, 1, false, Image.Format.Rgba8));
+            if (s_white is null)
+            {
+                using Image white = Image.CreateEmpty(1, 1, false, Image.Format.Rgba8);
+                s_white = ImageTexture.CreateFromImage(white);
+            }
+
             RS.CanvasItemClear(_item);
             RS.CanvasItemAddTextureRect(_item, new Rect2(position, new Vector2(width, height)), s_white.GetRid());
         }

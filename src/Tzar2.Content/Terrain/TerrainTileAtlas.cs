@@ -13,7 +13,7 @@ namespace Tzar2.Content.Terrain;
 /// </summary>
 /// <remarks>
 /// Pages of <see cref="PageTiles"/>² tiles (<see cref="PageSide"/>² pixels, two bytes each) hold the tiles in the order
-/// they were first seen. Slots are 24-bit, so an atlas holds at most <see cref="MaxTiles"/> tiles. <see cref="Add"/> may be
+/// they were first seen, at most <see cref="MaxPages"/> pages (<see cref="MaxTiles"/> tiles; slots fit in 24 bits). <see cref="Add"/> may be
 /// called from several threads at once (slots then depend on the order, the pixels do not); the rest may not.
 /// </remarks>
 public sealed class TerrainTileAtlas
@@ -30,8 +30,14 @@ public sealed class TerrainTileAtlas
     /// <summary>Tiles per page.</summary>
     public const int TilesPerPage = PageTiles * PageTiles;
 
-    /// <summary>Most tiles an atlas holds (24-bit slots).</summary>
-    public const int MaxTiles = 1 << 24;
+    /// <summary>
+    /// Most pages an atlas holds: the smallest array-texture layer limit renderers guarantee (Vulkan's
+    /// <c>maxImageArrayLayers</c> minimum, also OpenGL ES 3's). The largest map has 17.
+    /// </summary>
+    public const int MaxPages = 256;
+
+    /// <summary>Most tiles an atlas holds.</summary>
+    public const int MaxTiles = MaxPages * TilesPerPage;
 
     // Lookup only, never iterated: hash -> first slot with that hash; collisions chain through _next.
     private readonly Dictionary<ulong, int> _byHash = [];
@@ -144,7 +150,7 @@ public sealed class TerrainTileAtlas
 
         if (Count >= MaxTiles)
         {
-            throw new InvalidOperationException($"The terrain has more than {MaxTiles} distinct tiles.");
+            throw new InvalidOperationException($"The terrain has more than {MaxTiles} distinct tiles ({MaxPages} atlas pages).");
         }
 
         int slot = Count++;
