@@ -2235,8 +2235,8 @@ public partial class GameScreen : Node
     /// <summary>Applies <see cref="Settings"/> (volumes, categories, speed, day/night).</summary>
     public void ApplySettings()
     {
-        SoundMixer.SetVolume(SoundMixer.SfxBus, Settings.SoundVolume);
-        SoundMixer.SetVolume(SoundMixer.MusicBus, Settings.MusicVolume);
+        SoundMixer.SetVolume(SoundMixer.SfxBus, Settings.SoundLevel);
+        SoundMixer.SetVolume(SoundMixer.MusicBus, Settings.MusicLevel);
         _mixer?.SetEnabled(SoundCategory.Speech, Settings.UnitSpeech);
         _mixer?.SetEnabled(SoundCategory.Buildings, Settings.BuildingSounds);
         if (!KeepSpeed)

@@ -29,6 +29,18 @@ public sealed class GameSettings
     /// <summary>Music volume 0-100.</summary>
     public int MusicVolume { get => Get("music_volume", 60); set => Set("music_volume", Math.Clamp(value, 0, 100)); }
 
+    /// <summary>Sound effects on (the options' check by the sound volume, SHELL-019: off silences them, the volume kept).</summary>
+    public bool SoundOn { get => Get("sound_on", 1) != 0; set => Set("sound_on", value ? 1 : 0); }
+
+    /// <summary>Music on (the check by the music volume, SHELL-019).</summary>
+    public bool MusicOn { get => Get("music_on", 1) != 0; set => Set("music_on", value ? 1 : 0); }
+
+    /// <summary>The sound volume to play at: 0 when sound is off.</summary>
+    public int SoundLevel => SoundOn ? SoundVolume : 0;
+
+    /// <summary>The music volume to play at: 0 when music is off.</summary>
+    public int MusicLevel => MusicOn ? MusicVolume : 0;
+
     /// <summary>Unit speech on.</summary>
     public bool UnitSpeech { get => Get("unit_speech", 1) != 0; set => Set("unit_speech", value ? 1 : 0); }
 
@@ -86,12 +98,19 @@ public sealed class GameSettings
     }
 }
 
-/// <summary>The options dialog (<c>D_OPTIONS</c>): sound, music, game and interface preferences.</summary>
+/// <summary>
+/// The options dialog (<c>D_OPTIONS</c>): sound, music, game and interface preferences, in the art's slots as far as the
+/// data shows them (UI review UI-A9): the music panel's second check is CD Audio (<c>options.t_cd</c>; Tzar2 plays MIDI, so
+/// it stays off), the interface panel's check is Hardware Cursor (<c>t_hc</c>, the system's pointer) and its three boxes
+/// the Menu Layout (<c>t_ml</c>, <c>layout1</c>-<c>3</c>; only the original's bottom HUD exists, work queue 14). Weather and
+/// Day/Night (<c>t_we</c>, <c>t_dn</c>, added by patch 1.10) have no slot in the art; Tzar2 puts them under the game
+/// sliders until the owner's screenshot shows where the original does (UI review question 3).
+/// </summary>
 public partial class OptionsScreen : ArtScreen
 {
     private readonly GameSettings _settings;
     private readonly TextureRect[] _values = new TextureRect[4];
-    private readonly TextureRect[] _checks = new TextureRect[6];
+    private readonly TextureRect[] _checks = new TextureRect[8];
 
     /// <summary>Creates the dialog.</summary>
     public OptionsScreen(UiAssets ui, Logic.PresentationCatalog? catalog, Vector2I screen, GameSettings settings)
@@ -111,8 +130,20 @@ public partial class OptionsScreen : ArtScreen
         Check(0, new Vector2I(94, 132), T("t_usp", "Unit Speech"));
         Check(1, new Vector2I(94, 175), T("t_bs", "Building Sounds"));
         Check(2, new Vector2I(94, 221), T("t_ns", "Nature Sounds"));
-        Check(3, new Vector2I(94, 380), T("t_we", "Weather Effects"));
-        Check(4, new Vector2I(464, 332), T("t_dn", "Day/Night Visualize"));
+        Check(3, new Vector2I(464, 175), T("t_we", "Weather Effects"));
+        Check(4, new Vector2I(464, 221), T("t_dn", "Day/Night Visualize"));
+        Check(5, new Vector2I(464, 332), T("t_hc", "Hardware Cursor"));
+        Gem(6, new Vector2I(94, 85)); // sound on, by the sound volume (SHELL-019)
+        Gem(7, new Vector2I(94, 333)); // music on, by the music volume
+        Text(new Vector2I(94 + 36, 380 + 4), T("t_cd", "CD Audio"), UiAssets.SmallFont, new Color(0.6f, 0.6f, 0.55f)); // no CD audio: off
+        AddChild(new TextureRect { Texture = ui.Region("art/screens/d_options/check.t2img", new Rect2I(0, 0, 19, 19)), Position = Origin + new Vector2I(94, 380), MouseFilter = MouseFilterEnum.Ignore });
+        Text(new Vector2I(464, 392), T("t_ml", "Menu Layout"), UiAssets.SmallFont, Colors.White);
+        for (int i = 0; i < 3; i++)
+        {
+            // layout1-3: four 38 x 27 states, the right column lit; the first box is the bottom HUD Tzar2 draws.
+            AddChild(new TextureRect { Texture = ui.Region($"art/screens/d_options/layout{i + 1}.t2img", new Rect2I(i == 0 ? 38 : 0, 0, 38, 27)), Position = Origin + new Vector2I(Logic.DialogBoxes.OptionsLayout(i).X, Logic.DialogBoxes.OptionsLayout(i).Y), MouseFilter = MouseFilterEnum.Ignore });
+        }
+
         Button(new Vector2I(539, 541), new Vector2I(210, 27), "art/screens/d_options/btn.t2img", T("ok", "OK"), () => Closed?.Invoke());
         Refresh();
     }
@@ -145,6 +176,14 @@ public partial class OptionsScreen : ArtScreen
         Area(new Rect2I(at - new Vector2I(4, 4), new Vector2I(28, 28)), () => Toggle(slot));
     }
 
+    // A check without a label of its own (the slider's label names it).
+    private void Gem(int slot, Vector2I at)
+    {
+        _checks[slot] = new TextureRect { Position = Origin + at, MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_checks[slot]);
+        Area(new Rect2I(at - new Vector2I(4, 4), new Vector2I(28, 28)), () => Toggle(slot));
+    }
+
     private void Step(int slot, int step)
     {
         switch (slot)
@@ -168,6 +207,9 @@ public partial class OptionsScreen : ArtScreen
             case 2: _settings.NatureSounds = !_settings.NatureSounds; break;
             case 3: _settings.Weather = !_settings.Weather; break;
             case 4: _settings.DayNight = !_settings.DayNight; break;
+            case 5: _settings.SystemCursor = !_settings.SystemCursor; break;
+            case 6: _settings.SoundOn = !_settings.SoundOn; break;
+            case 7: _settings.MusicOn = !_settings.MusicOn; break;
         }
 
         Refresh();
@@ -191,7 +233,7 @@ public partial class OptionsScreen : ArtScreen
             _values[i].Texture = Ui.Text(values[i], UiAssets.SmallFont, Colors.White);
         }
 
-        bool[] on = [_settings.UnitSpeech, _settings.BuildingSounds, _settings.NatureSounds, _settings.Weather, _settings.DayNight];
+        bool[] on = [_settings.UnitSpeech, _settings.BuildingSounds, _settings.NatureSounds, _settings.Weather, _settings.DayNight, _settings.SystemCursor, _settings.SoundOn, _settings.MusicOn];
         for (int i = 0; i < on.Length; i++)
         {
             _checks[i].Texture = Ui.Region("art/screens/d_options/check.t2img", new Rect2I(0, on[i] ? 19 : 0, 19, 19));

@@ -83,6 +83,18 @@ public static class DialogBoxes
     /// <summary>The story screen's CLOSE slot (a 150 × 25 state of <c>S_SCRPLAY/ok</c>).</summary>
     public static readonly ArtBox StoryButton = new(166, 538, 150, 25);
 
+    /// <summary><c>D_ENDGAME/back2</c>: 500 × 415.</summary>
+    public static readonly (int Width, int Height) Endgame = (500, 415);
+
+    /// <summary>The end-of-game dialog's button slots, top to bottom (a 210 × 27 state of <c>D_ENDGAME/btn</c>; UI-A4).</summary>
+    public static ArtBox EndgameSlot(int slot) => new(233, 113 + (slot * 48), 210, 27);
+
+    /// <summary><c>D_OPTIONS/back</c>: 800 × 600.</summary>
+    public static readonly (int Width, int Height) Options = (800, 600);
+
+    /// <summary>A Menu Layout box of the options' interface panel (a 38 × 27 state of <c>layout1</c>-<c>3</c>; UI-A9).</summary>
+    public static ArtBox OptionsLayout(int box) => new(469 + (box * 54), 417, 38, 27);
+
     /// <summary><c>S_CREDITS/back</c>: 800 × 600.</summary>
     public static readonly (int Width, int Height) Credits = (800, 600);
 

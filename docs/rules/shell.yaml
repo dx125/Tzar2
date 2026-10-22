@@ -93,7 +93,7 @@ rules:
     rule: The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears.
     source: [manual Preferences Screen]
     status: partial
-    note: CD audio and when the menu bar appears are missing; the path depth is dropped on purpose (TDD ORIG-03).
+    note: The checks by the sound and music volumes turn them off, as in the options' art; CD audio is shown and stays off (Tzar2 plays MIDI); the hardware cursor is the system's pointer. When the menu bar appears is missing, the path depth is dropped on purpose (TDD ORIG-03), and where weather and day/night sit waits for the owner's screenshot (UI review question 3).
   SHELL-020:
     rule: The credits screen shows the makers of the game.
     source: [manual Credits Screen, data CREDITSFNT.INI]
