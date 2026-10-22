@@ -104,7 +104,7 @@ public class ExperienceTests
         int a = slow.World.Experiences.Get(OfType(slow.World, "euro.footman").Single()).Xp;
         int b = fast.World.Experiences.Get(OfType(fast.World, "euro.footman").Single()).Xp;
         Assert.Equal(58, a);
-        Assert.Equal(58 * 125 / 100, b);
+        Assert.Equal(58 * 143 / 100, b); // a level needs 70 % (ReTzar, ADR 0191)
     }
 
     [Fact]

@@ -132,3 +132,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0188](0188-units-have-the-original-body.md) | Units have the original's body; terrain keeps the footprint; units coming the other way squeeze past | Accepted | 2026-10-22 |
 | [0189](0189-shift-queues-every-order.md) | Queue every order given with Shift, and take a whole type with Alt | Accepted | 2026-10-22 |
 | [0190](0190-rules-read-from-the-originals-code-by-retzar.md) | Take the rules ReTzar read from the original's code, never ReTzar's code | Accepted | 2026-10-22 |
+| [0191](0191-technology-effects-as-the-original-computes-them.md) | Give technologies the effects the original's research handlers compute | Accepted | 2026-10-22 |

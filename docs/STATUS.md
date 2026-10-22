@@ -118,6 +118,12 @@ play-test.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-22 — Technology effects as the original computes them (ADR 0191).** ReTzar's reading of the research
+  handlers replaces the UNK-21 placeholders: whole points of attack and defence by weapon and armour (Temper Iron +1,
+  Chain Mail +2, Engineering +5, Gunpowder +10...), cost cuts (Feudalism 80 %, Horsemanship 75 %), Architecture 70 %
+  of the TIME, Fanaticism and Buddhism +50 % resistance, Great Wall +30 % hit points, Concentration's mana, the
+  experience speed of Warfare, Tactics and Sun Tzu. Left: Supply Storage and Seafood's population limit (TECH-022).
+
 * **2026-10-22 — Rules read from the original's code by ReTzar (ADR 0190), and the owner's list.**
   * The owner pointed to ReTzar (GPL-3.0, Rust), a remake whose code names the addresses of the original it was read
     from. DEC-09 holds: we read it and write our own code; the ledger names it as a `community` source.

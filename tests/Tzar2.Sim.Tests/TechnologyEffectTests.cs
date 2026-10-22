@@ -22,7 +22,10 @@ public class TechnologyEffectTests
     // Effects whose targets the data does not have: iron rocks (UNK-14). The synthetic tables have no monks either; the
     // local test on the original's data (OriginTechnologyTests) checks those.
     private static readonly HashSet<(string Technology, ModifierStat Stat)> KnownEmpty =
-        [("te_ironplus", ModifierStat.CarryCapacity), ("te_meditation", ModifierStat.Cost), ("te_philosophy", ModifierStat.StartingLevel)];
+        [
+            ("te_ironplus", ModifierStat.CarryCapacity), ("te_meditation", ModifierStat.Cost), ("te_philosophy", ModifierStat.StartingLevel),
+            ("te_horsemanship", ModifierStat.Cost), ("te_ridinghorses", ModifierStat.Attack), ("te_ridinghorses", ModifierStat.Defence), // no horse archers or heavy cavalry in the synthetic tables
+        ];
 
     public static TheoryData<string> EffectTechnologies()
     {
