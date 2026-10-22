@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace Tzar2.Content.Rules;
 
@@ -171,7 +172,7 @@ internal sealed partial class LegacyImporter
         AddInt(body, "RevealsShroud", "sight", row, ColSight, source, key);
         AddInt(body, "Health", "max", row, ColHealth, source, key);
         AddInt(body, "Armor", "defence", row, ColDefence, source, key);
-        AddArmament(body, row, source, key);
+        AddArmament(body, row, civ, cls, source, key);
         if (Cell(row, ColSpeed).Length > 0)
         {
             AddInt(body, "Mobile", "speed", row, ColSpeed, source, key);
@@ -234,7 +235,7 @@ internal sealed partial class LegacyImporter
 
         if (armedRow is not null)
         {
-            AddArmament(body, armedRow, source, key);
+            AddArmament(body, armedRow, civ, cls, source, key);
         }
 
         // EMIT (own/other): "+400,-200" (⚠ HYPOTHESIS UNK-19: capture influence, ADR 0044).
@@ -261,7 +262,7 @@ internal sealed partial class LegacyImporter
         document.ApplyLayer(body.ToEntry(key), source, declared: false);
     }
 
-    private void AddArmament(Body body, IReadOnlyList<string> row, string source, string key)
+    private void AddArmament(Body body, IReadOnlyList<string> row, string civ, string cls, string source, string key)
     {
         int attack = Int(row, ColAttack, source, key, 0);
         int rate = Int(row, ColRate, source, key, 0);
@@ -279,8 +280,47 @@ internal sealed partial class LegacyImporter
                 fields.Add(("range", Num(Int(row, ColRange, source, key, 0))));
             }
 
+            if (HitPermille(civ, cls) is { } hit)
+            {
+                fields.Add(("hitPermille", Num(hit)));
+            }
+
             body.Trait("Armament", [.. fields]);
         }
+    }
+
+    // WAR-014: the blow lands at the frame of the attack animation that IMAGES.INI marks (actionrow, counted from 0), so at
+    // the share of the swing the frames before it take (their delays, or their number when there are none); in thousandths.
+    private int? HitPermille(string civ, string cls)
+    {
+        if (ObjectSection(civ, cls)?.Get("image_attack") is not { Length: > 0 } image || _tables.Sprite(image) is not { } sprite
+            || !sprite.TryGetValue("rows", out string? rowsText) || !int.TryParse(rowsText, NumberStyles.None, CultureInfo.InvariantCulture, out int rows)
+            || !sprite.TryGetValue("actionrow", out string? actionText) || !int.TryParse(actionText, NumberStyles.None, CultureInfo.InvariantCulture, out int action)
+            || rows <= 0 || action >= rows)
+        {
+            return null;
+        }
+
+        long before = action, total = rows;
+        if (sprite.TryGetValue("delay", out string? delays))
+        {
+            string[] parts = delays.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var ms = new long[parts.Length];
+            bool ok = parts.Length == rows;
+            for (int i = 0; ok && i < parts.Length; i++)
+            {
+                ok = int.TryParse(parts[i], NumberStyles.None, CultureInfo.InvariantCulture, out int d);
+                ms[i] = d;
+            }
+
+            if (ok && ms.Sum() > 0)
+            {
+                before = ms.Take(action).Sum();
+                total = ms.Sum();
+            }
+        }
+
+        return (int)(before * 1000 / total);
     }
 
     // OBJECTS/<class>.INI: "type = building, capture" (GAME-04), max_manna (mana pools), and the command card's research.

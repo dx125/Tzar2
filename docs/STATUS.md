@@ -116,6 +116,12 @@ play-test.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-22 — The blow lands at the animation's action row (WAR-014).** The importer reads each unit's attack
+  animation (IMAGES.INI `actionrow` and frame delays) and lands the blow at that share of the swing (`Armament.hitPermille`;
+  footman 60 %, archer 78.5 %, pikeman 66.5 %), not at half of it; the placeholder `hitDelayPercent` stays for types
+  without the data. The synthetic package carries the footman's and the archer's animations: the gameplay and AI goldens
+  and the gameplay bench (8D8069D6C80FFC52) are re-pinned; the sim and AI benches are unchanged.
+
 * **2026-10-22 — Waypoints (ORD-005).** Shift + right click queues up to 8 more points on a unit's way, each with its
   own mode (Ctrl: move-advance, Alt: move-sneak); another order drops them. The new store raises the hashed layout to
   10 and the snapshot format to 12: every golden stream and final hash and the three CI benches are re-pinned

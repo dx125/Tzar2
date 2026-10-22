@@ -39,7 +39,8 @@ gameplay:
   # Only for classes without a measured Mobile.pixelsPerSecond: the original does not scale walking speed by SPEED (ADR 0172).
   speedPixelsPerSecondPerPoint: 10    # UNVERIFIED (UNK-12): px/s per SPEED point
   attackCycleMs: 6000                 # UNVERIFIED (UNK-07): time between hits = attackCycleMs / RATE
-  hitDelayPercent: 50                 # UNVERIFIED (UNK-07): hit frame at this share of the cycle
+  hitDelayPercent: 50                 # UNVERIFIED (UNK-07): hit frame at this share of the cycle, for types whose attack
+                                      # animation does not mark it (IMAGES.INI actionrow gives the others, WAR-014)
   manaRegenPerMinute: 60              # UNVERIFIED (UNK-26): mana a caster regains per minute
   # Combat and work constants.
   minimumDamage: 1                    # UNVERIFIED (UNK-08)

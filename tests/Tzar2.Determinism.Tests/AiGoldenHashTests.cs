@@ -39,10 +39,12 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0184) the spies' disguise store joins the hashed layout (version 9): the hashes only, the commands are the same.
     // (ECO-021, 2026-10-22) one peasant per field: the AI's farmers spread over its fields, it budgets wood for the
     // missing ones and sends idle workers on to the next resource, so its economy and its commands change.
-    private const ulong GoldenCommandStream = 0x9936FA6EEF19C503UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
-    private const ulong GoldenHashStream = 0x3C32E48F6244EF8DUL;
-    private const ulong GoldenFinalFullHash = 0x455D6254CAD77EBBUL;
+    // (WAR-014, 2026-10-22) footmen and archers strike at the action row of their attack animations: the fights and
+    // so the commands change.
+    private const ulong GoldenCommandStream = 0x4A0864630CED5C22UL;
+    private const ulong GoldenHashStream = 0x1AB88C15C71B55F5UL;
+    private const ulong GoldenFinalFullHash = 0xBA6B3AC488C22D22UL;
 
     private const int Ticks = 9600;
 

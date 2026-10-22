@@ -61,5 +61,5 @@ rules:
   WAR-014:
     rule: An attack's blow lands at the frame of its animation that the data marks (the action row), so each unit strikes at its own moment of the swing.
     source: [data IMAGES.INI actionrow]
-    status: missing
-    note: Tzar2 lands every blow at half the cycle (hitDelayPercent, a placeholder, UNK-07).
+    status: tested
+    note: The importer reads the attack animation (OBJECTS image_attack) and lands the blow at the share of the swing that the frames before the action row take, by their delays (footman 840 of 1,398 ms, archer 943 of 1,200); ranged units loose their missile then. The action row is counted from 0, which is not checked against a capture (one frame, about 80-140 ms). Types without the data keep half the cycle (hitDelayPercent, UNK-07).

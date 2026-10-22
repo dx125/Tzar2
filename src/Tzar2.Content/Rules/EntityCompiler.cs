@@ -24,7 +24,7 @@ internal sealed partial class EntityCompiler
         ["Health"] = ["max"],
         ["Armor"] = ["defence", "resistance"],
         ["RevealsShroud"] = ["sight"],
-        ["Armament"] = ["attack", "range", "rate", "cooldownMs", "hitDelayMs", "damage", "autoAcquire", "minRange", "maxAttack", "projectile"],
+        ["Armament"] = ["attack", "range", "rate", "cooldownMs", "hitDelayMs", "hitPermille", "damage", "autoAcquire", "minRange", "maxAttack", "projectile"],
         ["Cost"] = [],
         ["BuildTime"] = ["ms"],
         ["PopulationCost"] = ["amount"],
@@ -306,7 +306,14 @@ internal sealed partial class EntityCompiler
             int rate = IntOf("Armament", "rate") ?? 0;
             int? explicitCooldown = IntOf("Armament", "cooldownMs");
             int cooldown = explicitCooldown ?? Math.Max(1, _gameplay.AttackCycleMs / rate);
-            int hit = IntOf("Armament", "hitDelayMs") ?? (int)((long)cooldown * _gameplay.HitDelayPercent / 100);
+            // The hit: an explicit time, else the share of the swing the attack animation gives (WAR-014), else the placeholder.
+            int? permille = IntOf("Armament", "hitPermille");
+            if (permille is < 0 or > 1000)
+            {
+                throw Error(arm.Get("hitPermille")!.Value, $"{Where("Armament", "hitPermille")} must be 0..1000");
+            }
+
+            int hit = IntOf("Armament", "hitDelayMs") ?? (int)(permille is { } p ? (long)cooldown * p / 1000 : (long)cooldown * _gameplay.HitDelayPercent / 100);
             DamageClass damage = (StrOf("Armament", "damage") ?? (IntOf("Armament", "range") > 0 ? "arrow" : "sword")) switch
             {
                 "sword" => DamageClass.Sword,

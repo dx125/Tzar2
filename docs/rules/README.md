@@ -98,7 +98,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 |---|---|---|---|---|---|---|---|
 | [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
-| [Combat](combat.yaml) (WAR) | 14 | 7 | 4 | 0 | 3 | 0 | 0 |
+| [Combat](combat.yaml) (WAR) | 14 | 8 | 4 | 0 | 2 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 22 | 15 | 4 | 1 | 1 | 0 | 1 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 14 | 9 | 2 | 4 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 6 | 1 | 2 | 0 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 335 | 166 | 73 | 41 | 34 | 9 | 12 |
+| **All** | 335 | 167 | 73 | 41 | 33 | 9 | 12 |
 
 ## Not done yet
 
@@ -131,7 +131,6 @@ Missing and partial rules.
 
 * **WAR-009**: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it.
 * **WAR-010**: The Messiah (campaign) is immune to magic.
-* **WAR-014**: An attack's blow lands at the frame of its animation that the data marks (the action row), so each unit strikes at its own moment of the swing. *Tzar2 lands every blow at half the cycle (hitDelayPercent, a placeholder, UNK-07).*
 
 ### Construction and repair
 
@@ -322,13 +321,12 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 142 used, 4 restated by hand, 18 not needed and 48 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 143 used, 4 restated by hand, 18 not needed and 47 to do.
 
 To do:
 
 * `DATA/CREDITSFNT.INI` (the whole file): the font of the credits screen (SHELL-020).
 * `DATA/EQUATIONS.INI` `enablequestbutton`: when the quest order is on (HUD-029)
-* `DATA/IMAGES.INI` `actionrow`: the frame of an attack at which the blow lands (WAR-014)
 * `DATA/IMAGES.INI` `move_len`: the stride of a walk, for the walking speed of the classes not measured (WORLD-012)
 * `DATA/IMAGES.INI` `startcol`: animations that start inside their sheet (PRES-008)
 * `DATA/IMAGES.INI` `startrow`: animations that start inside their sheet (PRES-008)
