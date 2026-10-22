@@ -98,8 +98,8 @@ public sealed class HotkeyTable
         {
             new("menu", GameKey.F1, KeyMods.None, GameAction.MenuScreen, 0, Done, string.Empty),
             new("menu-f10", GameKey.F10, KeyMods.None, GameAction.MenuScreen, 0, Done, string.Empty),
-            new("save", GameKey.F2, KeyMods.None, GameAction.SaveDialog, 0, Partial, "quick save of campaign missions (ADR 0133); the save dialog and skirmish/MP saves are M6"),
-            new("load", GameKey.F3, KeyMods.None, GameAction.LoadDialog, 0, Partial, "quick load of campaign missions (ADR 0133); the load dialog is M6"),
+            new("save", GameKey.F2, KeyMods.None, GameAction.SaveDialog, 0, Done, "the save dialog of every single player game (ADR 0187); multiplayer matches are not saved"),
+            new("load", GameKey.F3, KeyMods.None, GameAction.LoadDialog, 0, Done, "the load dialog (ADR 0187)"),
             new("scores", GameKey.F4, KeyMods.None, GameAction.Scores, 0, Partial, "every kingdom's sim score and statistics as messages (ADR 0106)"),
             new("diplomacy", GameKey.F5, KeyMods.None, GameAction.Diplomacy, 0, Done, "the diplomacy screen (HUD-012)"),
             new("tribute", GameKey.F6, KeyMods.None, GameAction.Tribute, 0, Done, "the tribute screen (HUD-013)"),

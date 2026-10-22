@@ -985,7 +985,7 @@ public partial class GameScreen : Node
 
     private void Act(HotkeyBinding binding, KeyMods mods)
     {
-        if ((binding.Action == GameAction.SaveDialog && QuickSave()) || (binding.Action == GameAction.LoadDialog && QuickLoad()))
+        if ((binding.Action == GameAction.SaveDialog && ShowSaveDialog()) || (binding.Action == GameAction.LoadDialog && ShowLoadDialog()))
         {
             return;
         }
@@ -2262,6 +2262,20 @@ public partial class GameScreen : Node
                     break;
                 case GameMenuChoice.Options:
                     ShowOptions();
+                    break;
+                case GameMenuChoice.Save:
+                    if (!ShowSaveDialog())
+                    {
+                        Message("This game cannot be saved.");
+                    }
+
+                    break;
+                case GameMenuChoice.Load:
+                    if (!ShowLoadDialog())
+                    {
+                        Message("Saves cannot be loaded here.");
+                    }
+
                     break;
             }
         };

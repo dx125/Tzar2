@@ -458,9 +458,15 @@ public enum GameMenuChoice
 
     /// <summary>Quit to the main menu.</summary>
     Quit,
+
+    /// <summary>SAVE GAME.</summary>
+    Save,
+
+    /// <summary>LOAD GAME.</summary>
+    Load,
 }
 
-/// <summary>The in-game menu (<c>D_MENU</c>; its labels are baked into the bitmap, UNK-15). Load/save are M6.</summary>
+/// <summary>The in-game menu (<c>D_MENU</c>; its labels are baked into the bitmap, UNK-15): load, save, options, restart, quit, back.</summary>
 public partial class GameMenu : ArtScreen
 {
     /// <summary>Creates the menu.</summary>
@@ -468,6 +474,8 @@ public partial class GameMenu : ArtScreen
         : base(ui, screen, "art/screens/d_menu/back.t2img", dim: true)
     {
         var size = new Vector2I(150, 25);
+        Area(new Rect2I(new Vector2I(63, 86), size), () => Closed?.Invoke(GameMenuChoice.Load));
+        Area(new Rect2I(new Vector2I(63, 126), size), () => Closed?.Invoke(GameMenuChoice.Save));
         Area(new Rect2I(new Vector2I(63, 166), size), () => Closed?.Invoke(GameMenuChoice.Options));
         Area(new Rect2I(new Vector2I(63, 206), size), () => Closed?.Invoke(GameMenuChoice.Restart));
         Area(new Rect2I(new Vector2I(63, 246), size), () => Closed?.Invoke(GameMenuChoice.Quit));

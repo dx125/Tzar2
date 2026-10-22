@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using Godot;
+using Tzar2.Game.Campaigns;
 using Tzar2.Game.Scenario;
 using Tzar2.Game.Session;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 
@@ -19,32 +21,88 @@ public partial class GameScreen
     private double _viewLockedUntil;
     private bool _storyPause;
 
-    /// <summary>F2 (quick save) in a campaign mission (ADR 0133).</summary>
-    public event System.Action? SaveRequested;
+    /// <summary>Captures the match for SAVE GAME with a label (set by the app for the games it can continue; null: none, as in multiplayer).</summary>
+    public System.Func<string, SaveGame>? CaptureSave { get; set; }
 
-    /// <summary>F3 (quick load).</summary>
-    public event System.Action? LoadRequested;
+    /// <summary>The player's saves (the save and load dialogs; SHELL-014, SHELL-021, SHELL-022).</summary>
+    public SaveLibrary? Saves { get; set; }
 
-    private bool QuickSave()
+    /// <summary>LOAD GAME: the save picked to continue.</summary>
+    public event System.Action<SaveGame>? LoadRequested;
+
+    // F2 and the menu's SAVE GAME: the save dialog over the paused match.
+    private bool ShowSaveDialog()
     {
-        if (SaveRequested is null)
+        if (CaptureSave is null || Saves is null || _hud is null || GetNodeOrNull("SaveGame") is not null)
         {
             return false;
         }
 
-        SaveRequested.Invoke();
-        Message("Game saved.");
+        bool paused = _session.Paused;
+        _session.Paused = true;
+        var dialog = new SaveDialog(_ui, _hud.Layout.Size, new SaveGameScreen(Saves), _catalog.Text);
+        var layer = new CanvasLayer { Layer = 3, Name = "SaveGame" };
+        layer.AddChild(dialog);
+        AddChild(layer);
+        void Done()
+        {
+            layer.QueueFree();
+            _session.Paused = paused;
+        }
+
+        dialog.Closed += Done;
+        dialog.Saving += model =>
+        {
+            try
+            {
+                model.Save(CaptureSave(System.DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)));
+                Message("Game saved: " + model.Name);
+            }
+            catch (System.Exception e) when (e is System.IO.IOException or System.TimeoutException or System.InvalidOperationException or System.ArgumentException or System.UnauthorizedAccessException)
+            {
+                Message("Save failed: " + e.Message);
+            }
+
+            Done();
+        };
         return true;
     }
 
-    private bool QuickLoad()
+    // F3 and the menu's LOAD GAME: the load dialog; a picked save replaces the match.
+    private bool ShowLoadDialog()
     {
-        if (LoadRequested is null)
+        if (Saves is null || LoadRequested is null || _hud is null || GetNodeOrNull("LoadGame") is not null)
         {
             return false;
         }
 
-        LoadRequested.Invoke();
+        bool paused = _session.Paused;
+        _session.Paused = true;
+        var dialog = new LoadDialog(_ui, _hud.Layout.Size, new LoadGameScreen(Saves, campaigns: _session.Scenario is not null), _catalog.Text);
+        var layer = new CanvasLayer { Layer = 3, Name = "LoadGame" };
+        layer.AddChild(dialog);
+        AddChild(layer);
+        dialog.Closed += () =>
+        {
+            layer.QueueFree();
+            _session.Paused = paused;
+        };
+        dialog.Loading += model =>
+        {
+            SaveGame save;
+            try
+            {
+                save = model.Load()!;
+            }
+            catch (System.Exception e) when (e is System.IO.IOException or System.IO.InvalidDataException or System.UnauthorizedAccessException)
+            {
+                Message("Load failed: " + e.Message);
+                return;
+            }
+
+            layer.QueueFree();
+            LoadRequested?.Invoke(save);
+        };
         return true;
     }
 
