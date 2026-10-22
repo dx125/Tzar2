@@ -31,7 +31,7 @@ public class AiNavalTests(ITestOutputHelper output)
         World w = scenario.Simulation.World;
         bool fished = false;
         bool ashore = false;
-        for (int t = 0; t < 15 * 60 * 20; t++) // 15 minutes: a transport sunk while loading makes a second try (ADR 0146)
+        for (int t = 0; t < 20 * 60 * 20; t++) // 20 minutes (15 before one peasant per field, ECO-021): a transport sunk while loading makes a second try (ADR 0146)
         {
             scenario.RunTick();
             fished |= w.Workers.Entities.ToArray().Any(e => w.IsShip(e) && w.Workers.Get(e).CarryAmount > 0);
@@ -40,9 +40,11 @@ public class AiNavalTests(ITestOutputHelper output)
 
         output.WriteLine(scenario.Describe());
         Assert.True(fished, "fishing boats fish");
+        // Both fight; at least one lands. Since one peasant tends each field (ECO-021) the small islands feed fewer
+        // farmers, and the kingdom landed on first may stay home defending until the other's next wave.
+        Assert.True(scenario.Ai.Players[0].Landings + scenario.Ai.Players[1].Landings >= 1, scenario.Describe());
         for (int p = 0; p < 2; p++)
         {
-            Assert.True(scenario.Ai.Players[p].Landings >= 1, scenario.Describe());
             Assert.True(scenario.DamageDealt(p) > 0, scenario.Describe());
         }
 

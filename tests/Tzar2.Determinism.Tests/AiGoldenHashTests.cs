@@ -37,9 +37,11 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // appear at once, the next node toward the drop-off, units leave on free tiles, idle peasants find work; layout 8.
     // (fourth play-test 2026-10-21) every load goes to the drop-off nearest to where it was gathered.
     // (ADR 0184) the spies' disguise store joins the hashed layout (version 9): the hashes only, the commands are the same.
-    private const ulong GoldenCommandStream = 0xCD94857D53DBAD5AUL;
-    private const ulong GoldenHashStream = 0xE135058973427DFCUL;
-    private const ulong GoldenFinalFullHash = 0x18AFA6984A3B8D9CUL;
+    // (ECO-021, 2026-10-22) one peasant per field: the AI's farmers spread over its fields, it budgets wood for the
+    // missing ones and sends idle workers on to the next resource, so its economy and its commands change.
+    private const ulong GoldenCommandStream = 0x9936FA6EEF19C503UL;
+    private const ulong GoldenHashStream = 0xF8879272B7C6A5DDUL;
+    private const ulong GoldenFinalFullHash = 0x37551D31FDEF7829UL;
 
     private const int Ticks = 9600;
 

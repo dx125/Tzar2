@@ -56,8 +56,8 @@ rules:
   WAR-013:
     rule: Siege weapons hurt every unit where their shots land, their own kingdom's included.
     source: [help ITEMS.TXT WI_SIEGE_WEAPON]
-    status: missing
-    note: Stones and shells spare the shooter's own units.
+    status: tested
+    note: Catapult stones (catapult and heavy catapult) have friendly fire. Ballista bolts strike only their target, and the towers' and ships' cannon shells still spare their own side (they are not siege weapons in the help).
   WAR-014:
     rule: An attack's blow lands at the frame of its animation that the data marks (the action row), so each unit strikes at its own moment of the swing.
     source: [data IMAGES.INI actionrow]

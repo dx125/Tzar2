@@ -285,6 +285,37 @@ public sealed class EconomyExecutor : IAiExecutor
             }
         }
 
+        Distribute(context, gatherers);
+
+        // Fields: one peasant tends each (ECO-021), so the food gatherers just asked for need as many fields. What the
+        // missing ones (up to four) cost is demand too, and the gatherers are shared out again with it: otherwise the
+        // kingdom never has the wood for them.
+        int fieldType = FieldType(context);
+        if (food >= 0 && fieldType >= 0 && _gatherable[food])
+        {
+            int cls = context.Model.ClassOf(fieldType);
+            int missing = Math.Min(4, _desired[food] - (cls < 0 ? 0 : player.Completed[cls] + context.InProgress(cls)));
+            if (missing > 0)
+            {
+                System.Collections.Immutable.ImmutableArray<int> cost = world.Ruleset.EntityTypes[fieldType].Traits.Cost;
+                for (int r = 0; r < cost.Length && r < resources; r++)
+                {
+                    _demand[r] += Math.Max(0, ((long)cost[r] * missing) - world.Players[context.Slot].Resources[r]);
+                }
+
+                Array.Clear(_desired);
+                Array.Clear(_share);
+                Distribute(context, gatherers);
+            }
+        }
+    }
+
+    // The gatherers shared out by the demand and the base shares.
+    private void Distribute(AiExecutorContext context, int gatherers)
+    {
+        World world = context.World;
+        int resources = context.Model.ResourceCount;
+        EconomyOptions options = context.Options.Economy;
         long demandSum = 0;
         for (int r = 0; r < resources; r++)
         {
@@ -344,7 +375,8 @@ public sealed class EconomyExecutor : IAiExecutor
         }
     }
 
-    // One field per run while the food share has more gatherers than the kingdom has fields (UNVERIFIED: one per worker).
+    // One field per run while the food share has more gatherers than the kingdom has fields: one peasant tends each field
+    // (ECO-021). Fields have their own limit of sites at once, so other buildings do not leave farmers waiting.
     private void BuildFields(AiExecutorContext context)
     {
         int field = FieldType(context);
@@ -357,7 +389,8 @@ public sealed class EconomyExecutor : IAiExecutor
         int cls = context.Model.ClassOf(field);
         int fields = cls < 0 ? 0 : context.Player.Completed[cls] + context.InProgress(cls);
         EntityTypeDefinition type = context.World.Ruleset.EntityTypes[field];
-        if (fields >= _desired[food] || context.Player.Sites.Count >= 2 + (context.Player.Workers.Count / 15)
+        int sites = Math.Max(2 + (context.Player.Workers.Count / 15), (_desired[food] - fields + 1) / 2);
+        if (fields >= _desired[food] || (cls >= 0 && context.InProgress(cls) >= sites)
             || !context.CanAfford(type.Traits.Cost, LockedFor(context)) || !Sim.Systems.PlacementQueries.RequirementsMet(context.World, context.Slot, (ushort)field))
         {
             return;
@@ -376,6 +409,7 @@ public sealed class EconomyExecutor : IAiExecutor
     {
         int resources = context.Model.ResourceCount;
         int assigned = 0;
+        Span<bool> tried = stackalloc bool[resources];
         foreach (EntityId w in _idle)
         {
             if (assigned >= context.Options.Economy.AssignmentsPerRun || context.CommandsLeft <= 0)
@@ -388,27 +422,35 @@ public sealed class EconomyExecutor : IAiExecutor
                 continue;
             }
 
-            int best = -1;
-            int bestGap = int.MinValue;
-            for (int r = 0; r < resources; r++)
+            // The resource short of the most gatherers first; one with no room left (every field tended: ECO-021) gives
+            // way to the next.
+            tried.Clear();
+            for (int attempt = 0; attempt < resources; attempt++)
             {
-                int gap = _desired[r] - _current[r];
-                if (_gatherable[r] && _shortlist[r].Count > 0 && gap > bestGap)
+                int best = -1;
+                int bestGap = int.MinValue;
+                for (int r = 0; r < resources; r++)
                 {
-                    bestGap = gap;
-                    best = r;
+                    int gap = _desired[r] - _current[r];
+                    if (!tried[r] && _gatherable[r] && _shortlist[r].Count > 0 && gap > bestGap)
+                    {
+                        bestGap = gap;
+                        best = r;
+                    }
                 }
-            }
 
-            if (best < 0)
-            {
-                return;
-            }
+                if (best < 0)
+                {
+                    break;
+                }
 
-            if (SendTo(context, w, best))
-            {
-                _current[best]++;
-                assigned++;
+                tried[best] = true;
+                if (SendTo(context, w, best))
+                {
+                    _current[best]++;
+                    assigned++;
+                    break;
+                }
             }
         }
     }

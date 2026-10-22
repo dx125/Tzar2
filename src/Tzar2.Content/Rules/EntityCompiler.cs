@@ -35,7 +35,7 @@ internal sealed partial class EntityCompiler
         ["Producer"] = ["queue"],
         ["Producible"] = ["by"],
         ["Researcher"] = ["technologies", "upgrades"],
-        ["ResourceNode"] = ["resource", "amount", "regenMs", "gatherMs", "carry", "keepWhenEmpty"],
+        ["ResourceNode"] = ["resource", "amount", "regenMs", "gatherMs", "carry", "keepWhenEmpty", "workers"],
         ["DropOff"] = ["resources", "access", "autoGather"],
         ["Requires"] = ["buildings", "technology", "technologies"],
         ["TechTree"] = [],
@@ -409,6 +409,7 @@ internal sealed partial class EntityCompiler
                 GatherMs = NonNegative("ResourceNode", "gatherMs", 0),
                 CarryLoad = NonNegative("ResourceNode", "carry", 0),
                 KeepWhenEmpty = node.Get("keepWhenEmpty") is { } keep && RulesetCompiler.Bool(keep.Node, keep.Source, Where("ResourceNode", "keepWhenEmpty")),
+                MaxWorkers = NonNegative("ResourceNode", "workers", 0),
             };
         }
 

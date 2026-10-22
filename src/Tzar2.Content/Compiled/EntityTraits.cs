@@ -142,6 +142,9 @@ public sealed record ResourceNodeDefinition(int Resource, int Amount)
 
     /// <summary>Whether the node stays when empty (cows wait for their milk to regrow) instead of being removed.</summary>
     public bool KeepWhenEmpty { get; init; }
+
+    /// <summary>How many workers may work the node at once; 0 = any number. Fields: 1 (ECO-021).</summary>
+    public int MaxWorkers { get; init; }
 }
 
 /// <summary>Which workers may deliver to a drop-off (trait <c>DropOff.access</c>; harbors take fish from boats).</summary>

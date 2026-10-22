@@ -863,7 +863,7 @@ public sealed partial class Ruleset
         hasher.Add(t.ResourceNode is not null);
         if (t.ResourceNode is { } n)
         {
-            hasher.Add(n.Resource).Add(n.Amount).Add(n.RegenMs).Add(n.GatherMs).Add(n.KeepWhenEmpty).Add(n.CarryLoad);
+            hasher.Add(n.Resource).Add(n.Amount).Add(n.RegenMs).Add(n.GatherMs).Add(n.KeepWhenEmpty).Add(n.CarryLoad).Add(n.MaxWorkers);
         }
 
         AddWorldTraits(hasher, t.World);

@@ -98,8 +98,8 @@ rules:
   ECO-021:
     rule: Only one peasant tends each field.
     source: [help ITEMS.TXT HT_TEND_FIELDS]
-    status: missing
-    note: Tzar2 lets several farmers work one field.
+    status: tested
+    note: A field's ResourceNode takes one worker (workers 1). A peasant sent to a field someone already works goes to the nearest free field, or stands idle; of two sent at once, the one with the lower entity index keeps it.
   ECO-022:
     rule: A peasant can tend more than one cow, milking them in turn and taking the milk to the farm or the castle.
     source: [help ITEMS.TXT HT_TEND_COWS]

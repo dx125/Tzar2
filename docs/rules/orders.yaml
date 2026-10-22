@@ -17,8 +17,8 @@ rules:
   ORD-004:
     rule: A move-sneak (Alt+right click) goes to its destination and fights back only when attacked.
     source: [manual Commanding Units (Move-sneak), help HK.TXT]
-    status: missing
-    note: The client sends the Alt flag but the simulation moves as on a plain move.
+    status: tested
+    note: The combat mode Sneak picks no target on the way or after arriving, until the next order; hit, the unit fights back, and after that fight it is an ordinary idle unit again.
   ORD-005:
     rule: Shift+right click adds waypoints; the units walk them in order. With Ctrl or Alt the waypoints are a move-advance or a move-sneak.
     source: [manual Commanding Units (Move), help HK.TXT]

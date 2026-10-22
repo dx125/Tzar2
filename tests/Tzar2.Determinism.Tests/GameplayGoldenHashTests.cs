@@ -50,7 +50,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (batch J, 2026-10-21) repairs as measured: blows of max / (4 x TIME) every 1.25 s, every repairer at full strength,
     // free: the scenario's damaged houses are repaired more slowly, so the stream and the final hash change too.
     // (ADR 0184 amendment 6, 2026-10-22) the unmasking reach of a taken-over unit, two settings: the ruleset hash only.
-    private const ulong GoldenRulesetHash = 0xBBF5F1C5A15F940CUL;
+    // (2026-10-22) one peasant per field (workers 1), catapult stones hurt their own side: the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0x24CC0E51ADC414ECUL;
     private const ulong GoldenHashStream = 0x566479FB32CC3DBEUL;
     private const ulong GoldenFinalFullHash = 0xF1B9AA07425D36E0UL;
 

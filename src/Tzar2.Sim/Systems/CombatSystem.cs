@@ -558,12 +558,13 @@ public sealed class CombatSystem : ISimSystem
 
         // Retaliation: an idle armed unit that is hit fights back (not on hold fire). So does a unit on a move-advance
         // without a target, which then resumes its way: a tower that outranges its sight would shoot it down unanswered.
+        // A sneaking unit fights back whether it walks or stands (ORD-004).
         int k = world.Combats.IndexOf(hit.Target);
         if (k >= 0 && attackerAlive && world.Identities.Get(hit.Attacker).Owner != victim.Owner)
         {
             ref Combat other = ref world.Combats.At(k);
-            bool idle = other.Mode == CombatMode.None && targetType.Traits.Armament!.AutoAcquire
-                && !Interaction.IsMoving(world, hit.Target) && !HasTask(world, hit.Target);
+            bool idle = (other.Mode == CombatMode.Sneak || (other.Mode == CombatMode.None && !Interaction.IsMoving(world, hit.Target) && !HasTask(world, hit.Target)))
+                && targetType.Traits.Armament!.AutoAcquire;
             bool advancing = other.Mode == CombatMode.AttackMove;
             if (other.Target == 0 && (idle || advancing) && StanceOf(world, hit.Target) != CombatStance.HoldFire && !world.IsHeld(hit.Attacker))
             {

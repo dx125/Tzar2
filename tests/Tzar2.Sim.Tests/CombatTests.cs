@@ -129,6 +129,50 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "ORD-004")]
+    public void A_move_sneak_passes_enemies_and_leaves_them_alone_after_it_arrives_but_fights_back_when_hit()
+    {
+        // An enemy peasant stands where a plain move would end: the footman would pick it once it stands still.
+        foreach (bool sneak in new[] { true, false })
+        {
+            using var d = new SimDriver(TestMap(40, 12, Unit("euro.footman", 0, 3, 5), Unit("euro.peon", 1, 20, 7)), ruleset: Classic);
+            EntityId footman = OfType(d.World, "euro.footman").Single();
+            EntityId peon = OfType(d.World, "euro.peon").Single();
+            d.Order(1, CommandKind.SetStance, [peon], arg0: (int)CombatStance.HoldFire);
+            d.Order(0, CommandKind.Move, [footman], (18 * Tile) + (Tile / 2), (5 * Tile) + (Tile / 2), flags: sneak ? CommandFlags.Alt : CommandFlags.None);
+            d.RunUntil(() => !d.IsMoving(footman), 1500);
+            d.RunUntil(() => false, 100);
+            Assert.Equal(sneak ? 0u : peon.Value, d.World.Combats.Get(footman).Target);
+            if (!sneak)
+            {
+                continue;
+            }
+
+            // Hit by the peasant, it fights back.
+            Assert.Equal(CombatMode.Sneak, d.World.Combats.Get(footman).Mode);
+            d.Order(1, CommandKind.Attack, [peon], target: footman);
+            d.RunUntil(() => d.World.Combats.Get(footman).Target == peon.Value, 400);
+            Assert.Equal(peon.Value, d.World.Combats.Get(footman).Target);
+        }
+    }
+
+    [Fact]
+    [Trait("Rule", "WAR-013")]
+    public void A_catapult_stone_hurts_the_shooters_own_units_where_it_lands()
+    {
+        // The help (WI_SIEGE_WEAPON): siege weapons inflict damage on all units, not only on enemy ones.
+        using var d = new SimDriver(TestMap(40, 12, Unit("comm.catapult", 0, 4, 5), Unit("euro.footman", 1, 14, 5), Unit("euro.footman", 0, 14, 6)), ruleset: Classic);
+        EntityId catapult = OfType(d.World, "comm.catapult").Single();
+        EntityId enemy = OfType(d.World, "euro.footman", 1).Single();
+        EntityId own = OfType(d.World, "euro.footman", 0).Single();
+        d.Order(1, CommandKind.SetStance, [enemy], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.SetStance, [own], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.Attack, [catapult], target: enemy);
+        d.RunUntil(() => d.World.Healths.Get(own).Current < d.World.Healths.Get(own).Max, 1500);
+        Assert.True(d.World.Healths.Get(own).Current < d.World.Healths.Get(own).Max);
+    }
+
+    [Fact]
     public void A_move_advance_answers_a_tower_that_outranges_its_sight_and_a_plain_move_does_not()
     {
         // A stone tower (range 13 tiles) shoots footmen (sight 6) passing 10 tiles away.

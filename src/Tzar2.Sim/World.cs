@@ -1005,7 +1005,7 @@ public sealed partial class World
         {
             Combat c = combats[i];
             ArmamentDefinition? arm = TypeOf(ids[i]).Traits.Armament;
-            if (arm is null || c.Mode > CombatMode.Scripted || c.HitInMs < -1 || c.HitInMs > arm.HitDelayMs
+            if (arm is null || c.Mode > CombatMode.Sneak || c.HitInMs < -1 || c.HitInMs > arm.HitDelayMs
                 || c.CooldownMs < -Config.TickLengthMilliseconds || c.CooldownMs > arm.CooldownMs
                 || c.ChaseTick < -1 || c.ChaseTick > Tick.Value || c.Resume > 1 || c.Reserved0 != 0 || c.Reserved1 != 0)
             {
