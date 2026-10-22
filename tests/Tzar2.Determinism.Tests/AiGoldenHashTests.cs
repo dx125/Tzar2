@@ -48,8 +48,10 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // now 10 minutes.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0x174F7DEFE6953C5CUL;
-    private const ulong GoldenFinalFullHash = 0x8663446EB15E5C7EUL;
+    // (ADR 0211, 2026-10-22) civilizations in the ruleset's order (euro first): the kingdoms' civilization indices, so the
+    // hashes only; the commands are the same.
+    private const ulong GoldenHashStream = 0x71C35AEACD376E6EUL;
+    private const ulong GoldenFinalFullHash = 0x412D16F996004DC7UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

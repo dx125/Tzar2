@@ -216,6 +216,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-22 — Civilizations are an ordered list in the ruleset (ADR 0211; code review, item 16).**
+  * `ruleset.civilizations: [euro, arab, asia]` and `commonCivilization: comm` replace an ordinally sorted list.
+  * This fixes a bug: the trigger variable `Race` read 1 Arabian, 2 Asian and 4 European; it now reads the original's
+    1 European, 2 Arabian, 3 Asian.
+  * A kingdom without objects now defaults to euro instead of arab.
+  * The gameplay, AI and synthetic-mission hashes are re-pinned; the AI's commands are unchanged.
+
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
   UI review (item 15: every modern resolution, likeness to the original's texts, fonts and buttons) and the code

@@ -208,7 +208,7 @@ public partial class GameScreen : Node
         // Sprites of the civilizations in the match (REQ-GFX-05): the kingdoms' and those of every object on the map (the
         // original maps give a kingdom buildings and units of other civilizations).
         _bank = new SpriteBank(_store);
-        var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { "comm", string.Empty };
+        var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { _rules.CommonCivilization, string.Empty };
         foreach (MapObject o in _session.Map.Objects)
         {
             if (_rules.EntityTypeId(o.TypeKey) is >= 0 and var placed)
