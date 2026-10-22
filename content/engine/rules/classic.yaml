@@ -305,7 +305,10 @@ legacy:
   ClaimOnTouch: { by: military }
   -Burnable:
   -RuinOnDeath:
-^class.ghost: { Producible: { by: [comm.magicgateway] }, Mobile: { pixelsPerSecond: 67 } }    # speed VERIFIED (ADR 0172)
+^class.ghost: { Producible: { by: [comm.magicgateway] }, Mobile: { pixelsPerSecond: 67 }, Banshee: {} }    # speed VERIFIED (ADR 0172); WAR-009
+# WAR-010 (ReTzar's reading of the original, 0x4ef200): freeze, stone, confusion, hypnosis and the curse do not take on the
+# campaign's Messiah.
+^class.messiah: { MagicImmune: {} }
 ^class.skeleton: { Producible: { by: [comm.magicgateway] }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
 # Trade docks and the tavern (GAME-14, ADR 0103).
 ^class.market: { TradeDock: { access: land } }
@@ -581,6 +584,11 @@ combat:
   crusadeCeilingStep: 4
   crusadeCeilingMax: 36
   crusadeAnchorRadiusTiles: 4         # TDD GAME-11: anchor <= 4 tiles from the cathedral
+  # WAR-009 (ReTzar's reading of the original, 0x4ee780): after its blow a ghost curses the enemies around it, for free,
+  # in 71 draws of 1001.
+  bansheeSpell: spell_curse
+  bansheeChance: 71
+  bansheeOutOf: 1001
   # GAME-07 projectiles (speeds, homing and splash are UNVERIFIED, UNK-22; strategy guide: peasants step away from
   # catapult stones "just as the projectiles are about to land", so stones land where the target stood).
   projectiles:
@@ -616,8 +624,22 @@ spell_turntostone: { new: true, Spell: { effect: stone, durationMs: 15000, mana:
 spell_berserk: { new: true, Spell: { effect: confuse, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
 spell_magicvision: { new: true, Spell: { effect: reveal, summon: comm.fog_revealer, mana: 40, range: 30, cooldownMs: 5000, castMs: 500 } }
 spell_raiseexp: { new: true, Spell: { effect: experience, amount: 100, mana: 50, range: 6, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }   # Mastery: mana into experience
-spell_curse: { new: true, Spell: { effect: curse, amount: 25, durationMs: 30000, mana: 30, range: 8, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }
-spell_hypnotize: { new: true, Spell: { effect: freeze, durationMs: 10000, mana: 40, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # on no command card
+# The curse and hypnosis (ReTzar's reading of the original, 0x4e5841, 0x473887): the curse halves the attack and takes the
+# defence of every enemy unit within the caster's sight of the point for 30 s; hypnosis hands the unit to the caster's
+# kingdom for 30 s. The curse leaves out what the original calls machines (0x2719: golems, siege engines, carpets, ships,
+# ghosts, skeletons, fishing boats). Their mana, range, cooldown and cast time are UNVERIFIED.
+spell_curse:
+  new: true
+  Spell:
+    effect: curse
+    amount: 50
+    durationMs: 30000
+    mana: 30
+    range: 8
+    cooldownMs: 3000
+    castMs: 500
+    targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] }
+spell_hypnotize: { new: true, Spell: { effect: hypnotize, durationMs: 30000, mana: 40, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # books only
 raisedead: { new: true, Spell: { effect: raiseDead, summon: comm.skeleton, count: 5, radius: 3, mana: 40, range: 8, cooldownMs: 5000, castMs: 1000 } }
 cloak: { new: true, Spell: { effect: cloak, target: self, durationMs: 60000, cooldownMs: 1000 } }                       # ninjas (ADR 0095)
 murder: { new: true, Spell: { effect: kill, mana: 50, range: 0, cooldownMs: 10000, castMs: 500, targets: { category: unit } } }   # ninjas; heroes are immune

@@ -226,11 +226,17 @@ public enum SpellEffect : byte
     /// <summary>Damages everything in the radius around the point, in pulses (rain of fire, whirlpool).</summary>
     AreaDamage = 11,
 
-    /// <summary>Lowers attack and defence for a while (curse; spell books only).</summary>
+    /// <summary>
+    /// Halves the attack and takes away the defence of every enemy unit around the point, within the caster's sight, for a
+    /// while (curse: spell books and the ghost's banshee scream; ReTzar's reading of the original, 0x4e5841).
+    /// </summary>
     Curse = 12,
 
     /// <summary>Kills the target at once (ninja murder, soul item_kill; heroes immune).</summary>
     Kill = 13,
+
+    /// <summary>The target obeys the caster's kingdom for a while, then goes back to its own (hypnosis; MAG-008).</summary>
+    Hypnotize = 14,
 }
 
 /// <summary>What a spell is aimed at.</summary>
@@ -348,6 +354,12 @@ public enum AbilityFlags : byte
 
     /// <summary>A spy takes the look of another kingdom's unit (order <c>impersonate</c>; MAG-012, ADR 0184).</summary>
     Impersonate = 32,
+
+    /// <summary>Lasting spells (freeze, stone, confusion, curse, hypnosis) do not take (the Messiah; WAR-010).</summary>
+    MagicImmune = 64,
+
+    /// <summary>After a blow it may let out a banshee scream, <see cref="CombatSettings.BansheeSpell"/> (the ghost; WAR-009).</summary>
+    Banshee = 128,
 }
 
 /// <summary>Trait <c>ConvertsFrom</c>: a unit made from another in place (Jihad warriors from peasants, priests from monks).</summary>
@@ -471,6 +483,18 @@ public sealed record CombatSettings
     /// <summary>Crusade: the anchor stands at most this far from the cathedral (TDD GAME-11: 4 tiles).</summary>
     public int CrusadeAnchorRadiusUnits { get; init; } = 4 * 2048;
 
+    /// <summary>
+    /// The spell a <see cref="AbilityFlags.Banshee"/> unit casts for free after a blow, or -1 (WAR-009: the ghost curses the
+    /// enemies around it, ReTzar's reading of the original, 0x4ee780).
+    /// </summary>
+    public int BansheeSpell { get; init; } = -1;
+
+    /// <summary>The banshee scream follows a blow when a draw below <see cref="BansheeOutOf"/> is under this (71 of 1001).</summary>
+    public int BansheeChance { get; init; }
+
+    /// <summary>The range of the banshee scream's draw.</summary>
+    public int BansheeOutOf { get; init; } = 1001;
+
 
     /// <summary>Hero names per civilization (<c>HEROES.INI</c>).</summary>
     public ImmutableArray<HeroNames> HeroNames { get; init; } = [];
@@ -521,6 +545,8 @@ public sealed record CombatSettings
         Check(CrusadeCeilingStep, 0, 1000);
         Check(CrusadeCeilingMax, 0, 1000);
         Check(CrusadeAnchorRadiusUnits, 0, 64 * 2048);
+        Check(BansheeOutOf, 1, 1_000_000);
+        Check(BansheeChance, 0, BansheeOutOf);
         if (HeroNames.IsDefault)
         {
             throw new ArgumentException("combat: hero names must not be default.");

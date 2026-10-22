@@ -26,6 +26,7 @@ internal sealed class CombatCompiler
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
+        "bansheeSpell", "bansheeChance", "bansheeOutOf",
     ];
 
     private static readonly string[] SpellTraits = ["Legacy", "Spell"];
@@ -144,7 +145,7 @@ internal sealed class CombatCompiler
             spells.Add(CompileSpell((ushort)i, _spellEntries[i], types, research));
         }
 
-        return new CombatRules(Settings(types, researchIds, legacy), spells, _projectiles);
+        return new CombatRules(Settings(types, researchIds, legacy, spells), spells, _projectiles);
     }
 
     private static EntityTypeDefinition WithTraits(EntityTypeDefinition t, EntityTraits traits)
@@ -262,9 +263,20 @@ internal sealed class CombatCompiler
         }
     }
 
-    private CombatSettings Settings(List<EntityTypeDefinition> types, ResearchIds research, LegacyTables? legacy)
+    private CombatSettings Settings(List<EntityTypeDefinition> types, ResearchIds research, LegacyTables? legacy, List<SpellDefinition> spells)
     {
         CombatSettings d = CombatSettings.Default;
+        int bansheeSpell = -1;
+        if (_settings.Scalar(Section, "bansheeSpell") is { } bansheeKey)
+        {
+            bansheeSpell = spells.FindIndex(s => s.Key == bansheeKey);
+            if (bansheeSpell < 0)
+            {
+                _diagnostics.Add($"combat.bansheeSpell: unknown spell '{bansheeKey}'");
+            }
+        }
+
+        int bansheeOutOf = Range("bansheeOutOf", d.BansheeOutOf, 1, 1_000_000);
         return d with
         {
             ExperiencePerDamagePercent = Range("experiencePerDamagePercent", d.ExperiencePerDamagePercent, 0, 100_000),
@@ -298,6 +310,9 @@ internal sealed class CombatCompiler
             CrusadeCeilingMax = Range("crusadeCeilingMax", d.CrusadeCeilingMax, 0, 1000),
             CrusadeAnchorRadiusUnits = Range("crusadeAnchorRadiusTiles", d.CrusadeAnchorRadiusUnits / UnitsPerTile, 0, 64) * UnitsPerTile,
             HeroNames = HeroNameLists(legacy),
+            BansheeSpell = bansheeSpell,
+            BansheeChance = Range("bansheeChance", d.BansheeChance, 0, bansheeOutOf),
+            BansheeOutOf = bansheeOutOf,
         };
     }
 
@@ -400,6 +415,7 @@ internal sealed class CombatCompiler
             "areaDamage" => SpellEffect.AreaDamage,
             "curse" => SpellEffect.Curse,
             "kill" => SpellEffect.Kill,
+            "hypnotize" => SpellEffect.Hypnotize,
             _ => throw new RulesException(spell.Source, spell.Line, $"{Where("effect")}: unknown effect '{effectText}'"),
         };
         SpellTarget target = (Str("target") ?? DefaultTarget(effect)) switch

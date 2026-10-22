@@ -153,6 +153,7 @@ public static class SyntheticLegacyContent
             ["Dragon", "dragon", "75g,850m", "", "13", "3", "310", "24", "1", "5", "3", "Spawn", "te_dragon"],
             ["Jinn", "jinn", "90g,320m", "", "9", "", "290", "21", "4", "5", "3", "Spawn", "te_jin"],
             ["Carpet", "carpet", "85g,450m", "", "9", "", "95", "", "", "", "", "Spawn", "te_magiccarpet"],
+            ["Messiah", "messiah", "1900g", "", "24", "", "900", "45", "9", "4", "4", "Spawn", "*"],
         ]));
         source.Add("tables/data/arab units.txt.json", Tsv("DATA/ARAB UNITS.TXT", unitHeader,
         [
@@ -210,6 +211,7 @@ public static class SyntheticLegacyContent
             ("ork", @"unit\ork.bmp", "object", "0,0,32,32"),
             ("dwarf", @"unit\dwarf.bmp", "object", "0,0,32,32"),
             ("e_ghost", @"unit\e_ghost.bmp", "object", "0,0,32,32"),
+            ("messiah", @"unit\messiah.bmp", "object", "0,0,32,32"),
             ("catapult", @"unit\catapult.bmp", "object", "0,0,64,64"),
             ("e_castle", @"building\euro castle.bmp", "object", "0,0,160,160"),
             ("e_house", @"building\euro houses.bmp", "object", "0,0,64,64"),
@@ -437,6 +439,7 @@ public static class SyntheticLegacyContent
         AddObject(source, "dwarf", "unit", "comm", "dwarf");
         AddObject(source, "skeleton", "unit", "comm", "skeleton");
         AddObject(source, "ghost", "unit", "comm", "e_ghost");
+        AddObject(source, "messiah", "unit", "comm", "messiah");
         AddObject(source, "magicgateway", "building", "comm", "magic_gateway");
         AddObject(source, "fishpatch", null, "comm", "FISH_1", teren: "2");
         AddObject(source, "res_gold", null, "comm", "res_gold", file: "res gold");

@@ -108,6 +108,7 @@ public sealed class CombatSystem : ISimSystem
         foreach (HitRecord hit in _hits)
         {
             Apply(world, hit, _deaths);
+            Banshee(world, hit, _deaths);
         }
 
         ProcessDeaths(world, _deaths);
@@ -588,6 +589,23 @@ public sealed class CombatSystem : ISimSystem
                 }
             }
         }
+    }
+
+    // WAR-009 (ReTzar's reading of the original, 0x4ee780): after its blow a ghost, in 71 draws of 1001, lets out a banshee
+    // scream, a free curse on the enemies around it.
+    private static void Banshee(World world, in HitRecord hit, List<Death> deaths)
+    {
+        CombatSettings settings = world.Ruleset.Combat;
+        if (settings.BansheeSpell < 0 || hit.Spell != Projectile.NoSpell
+            || (world.Ruleset.EntityTypes[hit.AttackerType].Traits.Abilities & AbilityFlags.Banshee) == 0
+            || !world.Entities.IsAlive(hit.Attacker) || !world.Positions.Has(hit.Attacker)
+            || world.Rng.Combat.NextInt(settings.BansheeOutOf) >= settings.BansheeChance)
+        {
+            return;
+        }
+
+        Position at = world.Positions.Get(hit.Attacker);
+        MagicSystem.ApplyEffect(world, (ushort)settings.BansheeSpell, hit.Attacker, hit.Owner, EntityId.None, at.X, at.Y, deaths);
     }
 
     // The damage formula (UNK-08 placeholder, ADR 0038): attack (rolled up to max_damage), BONUS.INI, Honor, defence,

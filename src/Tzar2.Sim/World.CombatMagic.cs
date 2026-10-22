@@ -134,6 +134,13 @@ public sealed partial class World
     public bool IsConfused(EntityId entity)
         => Statuses.Count != 0 && Statuses.IndexOf(entity) is >= 0 and var s && Statuses.At(s).ConfuseUntil > Tick.Value;
 
+    /// <summary>
+    /// The kingdom a hypnotized unit belongs to and goes back to, or -1 (MAG-008): it keeps that kingdom's colours and
+    /// counts in its population while it obeys the caster's.
+    /// </summary>
+    public int HypnotizedFrom(EntityId entity)
+        => Statuses.Count != 0 && Statuses.IndexOf(entity) is >= 0 and var s && Statuses.At(s).HypnoUntil > Tick.Value ? Statuses.At(s).HypnoOwner : -1;
+
     /// <summary>Whether a unit is a named hero.</summary>
     public bool IsHero(EntityId entity)
         => Experiences.IndexOf(entity) is >= 0 and var x && (Experiences.At(x).Flags & ExperienceFlags.Hero) != 0;

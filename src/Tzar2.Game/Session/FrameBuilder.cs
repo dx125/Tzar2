@@ -93,6 +93,11 @@ public static class FrameBuilder
                 e.DisguiseMastery = (world.Ruleset.EntityTypes[identity.TypeId].Traits.Abilities & AbilityFlags.Impersonate) != 0 ? 100 : -1;
             }
 
+            if (world.HypnotizedFrom(id) is >= 0 and var from)
+            {
+                e.SeemsOwner = from; // a hypnotized unit keeps its kingdom's colours (MAG-008)
+            }
+
             if (world.Disguises.Count != 0 && world.Disguises.IndexOf(id) is >= 0 and var dg)
             {
                 Disguise look = world.Disguises.At(dg);

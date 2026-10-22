@@ -113,8 +113,9 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // (WAR-014) footmen and archers strike at the action row of their attack animations; then (ITEM-016) items keep
             // their own spell, effect and look (layout 11); then (WORLD-015) units get the original's body; then (ADR 0189)
             // queued orders gain kinds and explorers an area (layout 12); then (ADR 0190) the kingdoms keep gathered
-            // crusaders, and the gathering technologies raise loads.
-            Assert.Equal("AF3468A1E2D0B0BC", d.Hashes[^1].ToString("X16"));
+            // crusaders, and the gathering technologies raise loads; then (ADR 0250) a synthetic Messiah shifts type ids
+            // and status effects grow (layout 13).
+            Assert.Equal("D8B3742ADDD32E37", d.Hashes[^1].ToString("X16"));
         }
     }
 
