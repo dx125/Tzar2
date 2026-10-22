@@ -2155,7 +2155,7 @@ public partial class GameScreen : Node
     private void Screenshot()
     {
         Image image = GetViewport().GetTexture().GetImage();
-        string path = ProjectSettings.GlobalizePath($"user://screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png");
+        string path = ProjectSettings.GlobalizePath(string.Create(CultureInfo.InvariantCulture, $"user://screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png"));
         image.SavePng(path);
         Message("Screenshot " + path);
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -188,7 +189,7 @@ public partial class EditorScreen : Control
             File.Move(temp, path, overwrite: true);
             Document.MarkSaved();
             _path = path;
-            Status($"Saved {path} ({bytes.Length:N0} bytes).");
+            Status(string.Create(CultureInfo.InvariantCulture, $"Saved {path} ({bytes.Length:N0} bytes)."));
             UpdateTitle();
             return true;
         }
