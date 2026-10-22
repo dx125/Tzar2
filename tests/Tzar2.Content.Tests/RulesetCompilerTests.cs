@@ -188,6 +188,17 @@ public class RulesetCompilerTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-014")]
+    public void The_blow_lands_at_the_action_row_of_the_attack_animation()
+    {
+        // Footman: 6 frames of 10 before the action row, 840 of 1,398 ms (600 thousandths); archer: 943 of 1,200 ms (785).
+        ArmamentDefinition Arm(string key) => Type(Classic, key).Traits.Armament!;
+        Assert.Equal(Arm("euro.footman").CooldownMs * 600 / 1000, Arm("euro.footman").HitDelayMs);
+        Assert.Equal(Arm("euro.archer").CooldownMs * 785 / 1000, Arm("euro.archer").HitDelayMs);
+        Assert.Equal(Arm("euro.maceman").CooldownMs * 50 / 100, Arm("euro.maceman").HitDelayMs); // no animation data: hitDelayPercent
+    }
+
+    [Fact]
     public void Compilation_is_deterministic_and_rulesets_differ_by_hash()
     {
         Ruleset again = SyntheticLegacyContent.CompileRuleset();
@@ -251,6 +262,7 @@ public class RulesetCompilerTests
     [InlineData("euro.footman: { new: true }", "'new: true' but the entry already exists")]
     [InlineData("euro.footman: { RevealsShroud: { sight: 2000000 } }", "euro.footman.RevealsShroud.sight: 2000000 is too large")]
     [InlineData("euro.footman: { Armament: { range: 2000000 } }", "euro.footman.Armament.range: 2000000 is too large")]
+    [InlineData("euro.footman: { Armament: { hitPermille: 1001 } }", "euro.footman.Armament.hitPermille must be 0..1000")]
     [InlineData("arab.jihad_warrior: { Mobile: { speed: 100000000 } }", "arab.jihad_warrior.Mobile.pixelsPerSecond: 1000000000 is too large")]
     [InlineData("euro.footman: { Collision: { radius: 100000000 } }", "euro.footman.Collision.radius: 100000000 is too large")]
     [InlineData("euro.footman: { Health: { max: 99999999999 } }", "is not an integer")]

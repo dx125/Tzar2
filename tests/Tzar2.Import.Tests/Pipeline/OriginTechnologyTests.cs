@@ -123,6 +123,21 @@ public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposabl
         Assert.Equal((6, 5, 16), (Blow("lumber"), Blow("barrack"), Blow("castle")));
     }
 
+    [OriginFact]
+    [Trait("Rule", "WAR-014")]
+    public void A_blow_lands_at_the_action_row_of_each_attack_animation()
+    {
+        // IMAGES.INI: footman 840 of 1,398 ms, archer 943 of 1,200, pikeman 1,398 of 2,100, Arab spearman (pikeman) 1,325 of 2,100.
+        Ruleset rules = CompileFromOrigin();
+        int Permille(string key)
+        {
+            ArmamentDefinition arm = rules.EntityTypes.First(t => t.Key == key).Traits.Armament!;
+            return (int)(((long)arm.HitDelayMs * 1000 + arm.CooldownMs - 1) / arm.CooldownMs); // back from the rounded-down time
+        }
+
+        Assert.Equal((600, 785, 665, 630), (Permille("euro.footman"), Permille("euro.archer"), Permille("euro.pikeman"), Permille("arab.pikeman")));
+    }
+
     private Ruleset CompileFromOrigin()
     {
         string origin = OriginPaths.RequireOrigin();

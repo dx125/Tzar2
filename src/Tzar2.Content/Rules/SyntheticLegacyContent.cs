@@ -345,8 +345,8 @@ public static class SyntheticLegacyContent
     private static void AddObjects(MemorySource source)
     {
         AddObjectSections(source, "PEON", [("general", [("class", "peon"), ("type", "unit")]), ("euro", [("image", "e_peon"), ("max_obj_in_holder", "6")]), ("arab", [("image", "r_peon"), ("max_obj_in_holder", "6"), ("menu", "r_peon")])]);
-        AddObject(source, "footman", "unit", "euro", "e_footman", extra: [("max_obj_in_holder", "7")]);
-        AddObject(source, "archer", "unit", "euro", "e_archer1", extra: [("max_obj_in_holder", "7")]);
+        AddObject(source, "footman", "unit", "euro", "e_footman", extra: [("image_attack", "e_footman_attack"), ("max_obj_in_holder", "7")]);
+        AddObject(source, "archer", "unit", "euro", "e_archer1", extra: [("image_attack", "e_archer1_attack"), ("max_obj_in_holder", "7")]);
         AddObject(source, "maceman", "unit", "euro", "e_maceman", extra: [("max_obj_in_holder", "7")]);
         AddObject(source, "knight", "unit", "euro", "e_knight", extra: [("max_obj_in_holder", "7")]);
         AddObject(source, "pikeman", "unit", "euro", "e_pikeman", extra: [("max_obj_in_holder", "7")]);
@@ -496,9 +496,35 @@ public static class SyntheticLegacyContent
         w.WriteEndObject();
     });
 
+    // Attack animations: rows, the action row and the frame delays (WAR-014).
+    private static readonly (string Name, string Image, int Rows, int ActionRow, string Delay)[] AttackSprites =
+    [
+        ("e_footman_attack", @"unit\euro footman attack.bmp", 10, 6, "140,140,140,140,140,140,138,140,140,140"),
+        ("e_archer1_attack", @"unit\euro archer1 attack.bmp", 14, 11, "86,86,85,86,86,85,86,86,85,86,86,85,86,86"),
+    ];
+
     private static byte[] SpriteIndex((string Name, string Image, string BoxKey, string Box)[] entries) => Json(w =>
     {
         w.WriteStartArray();
+        foreach ((string name, string image, int rows, int action, string delay) in AttackSprites)
+        {
+            w.WriteStartObject();
+            w.WriteString("name", name);
+            w.WriteString("ini", "data/images.ini");
+            w.WriteString("image", image);
+            w.WriteNull("asset");
+            w.WriteStartObject("properties");
+            foreach ((string k, string v) in new[] { ("image", image), ("rows", rows.ToString(CultureInfo.InvariantCulture)), ("actionrow", action.ToString(CultureInfo.InvariantCulture)), ("delay", delay) })
+            {
+                w.WriteStartArray(k);
+                w.WriteStringValue(v);
+                w.WriteEndArray();
+            }
+
+            w.WriteEndObject();
+            w.WriteEndObject();
+        }
+
         foreach ((string name, string image, string boxKey, string box) in entries)
         {
             w.WriteStartObject();

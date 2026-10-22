@@ -38,9 +38,8 @@ files:
   - path: DATA/IMAGES.INI
     reader: Tzar2.Content SpriteIndex; Tzar2.Client UiAssets and CursorCache
     account: keys
-    used: [anim_time, anime_time, cols, delay, fps, hotspot, image, object, rows, selection, step]
+    used: [actionrow, anim_time, anime_time, cols, delay, fps, hotspot, image, object, rows, selection, step]
     todo:
-      actionrow: the frame of an attack at which the blow lands (WAR-014)
       move_len: the stride of a walk, for the walking speed of the classes not measured (WORLD-012)
       startcol: animations that start inside their sheet (PRES-008)
       startrow: animations that start inside their sheet (PRES-008)
