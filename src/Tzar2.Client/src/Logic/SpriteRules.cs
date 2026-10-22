@@ -14,6 +14,21 @@ public static class SpriteRules
         => directions < 8 ? 0 : (((2 - facing) % 8) + 8) % 8;
 
     /// <summary>
+    /// The column a unit facing <paramref name="column"/> shows in a picture with IMAGES.INI <c>startcol</c>
+    /// (PRES-008): the original turns a unit to its target and adds the column (ReTzar's reading, 0x4fd450 and +0xaa; the
+    /// knight's, the longbowman's and the ships' attack sheets have 2, so a knight striking east shows column 4).
+    /// </summary>
+    public static int TurnedColumn(int column, int startCol, int directions)
+        => directions < 8 || startCol == 0 ? column : (column + startCol) & 7;
+
+    /// <summary>
+    /// The frame of a swing <paramref name="elapsed"/> frames after it began, in a picture starting at IMAGES.INI
+    /// <c>startrow</c> (PRES-008; ReTzar's reading, 0x5017f0: a picture set on row r shows r first, then runs on and wraps).
+    /// </summary>
+    public static int SwingFrame(int startRow, int elapsed, int frames)
+        => frames <= 0 ? 0 : (((startRow + elapsed) % frames) + frames) % frames;
+
+    /// <summary>
     /// The picture of a structure turned by 90° (BLD-019): a bridge's <c>bridge_horz</c> becomes <c>bridge_vert</c>; others
     /// keep theirs.
     /// </summary>

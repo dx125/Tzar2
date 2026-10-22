@@ -427,7 +427,7 @@ public sealed class WorldRenderer : IDisposable
         }
         else if (anim == UnitAnim.Attack && e.SwingMs >= 0)
         {
-            frame = e.SwingMs >= s.Animation.CycleMs ? 0 : s.Animation.FrameAt(e.SwingMs);
+            frame = SpriteRules.SwingFrame(s.StartRow, e.SwingMs >= s.Animation.CycleMs ? 0 : s.Animation.FrameAt(e.SwingMs), s.Sheet.FramesPerDirection);
         }
         else
         {
@@ -435,6 +435,11 @@ public sealed class WorldRenderer : IDisposable
         }
 
         int dir = SpriteRules.Direction(e.Facing, s.Sheet.Directions);
+        if (anim == UnitAnim.Attack)
+        {
+            dir = SpriteRules.TurnedColumn(dir, s.StartCol, s.Sheet.Directions); // PRES-008: the knight's and ships' attack sheets
+        }
+
         var cellOrigin = new Vector2I(px - s.Object.Position.X - (s.Object.Size.X / 2), py - s.Object.Position.Y - (s.Object.Size.Y / 2));
         AddSheet(_objects, s, cellOrigin, dir, frame, player, ((uint)(py + 4096) << 6) | 2, shadows: true);
         var selection = new Rect2(cellOrigin + s.Selection.Position, s.Selection.Size);

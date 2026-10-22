@@ -35,8 +35,9 @@ rules:
     note: Played when a unit is trained or a building completed. In GOG v1.10 the key is empty for every type but the Arab blacksmith (destroy_building), so in practice only that one sounds.
   PRES-008:
     rule: Some animations start inside their sheet, at the row and column the data gives.
-    source: [data IMAGES.INI startrow startcol]
-    status: missing
+    source: [data IMAGES.INI startrow startcol, community ReTzar src/gameplay.rs (0x4fd450) and src/frontend/scene.rs (0x5017f0)]
+    status: partial
+    note: An attack turns its picture by startcol (a knight striking east shows column 4) and a swing starts on its startrow. Walks and idles still start where the shared clock is, because the frame does not carry when a picture was set.
   PRES-009:
     rule: Trees, stumps and bushes are drawn from the tree sheet of the terrain set, at the positions and with the shadows the data gives.
     source: [data TREES.INI, 'data TERRAIN.INI [trees] [treename]']
