@@ -60,7 +60,7 @@ $batches = @{
     "I" = @("smoke", "trade", "gamble")
     # J (2026-10-21): how close the copied kingdom's spy unmasks a disguise, and how the disguise meter changes it
     # (the repair scenarios ran in runs 1-3 and are done: -Scenarios repair-mill,repair-barracks,repair-castle).
-    "J" = @("smoke", "spy-unmask", "spy-unmask-native")
+    "J" = @("smoke", "spy-unmask", "spy-unmask-half", "spy-unmask-full")
 }
 if ($Batch) { $Scenarios = $batches[$Batch] }
 $repo = Resolve-Path (Join-Path $PSScriptRoot "../..")

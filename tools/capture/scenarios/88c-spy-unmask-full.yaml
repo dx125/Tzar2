@@ -1,0 +1,227 @@
+schema: tzar2-capture-scenario/1
+# Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
+# no -explore/-nofog, and a left click after every spawn.
+id: spy-unmask-full
+title: Whether enemy spies unmask a full disguise meter (MAG-012, MAG-021)
+resolves: []
+priority: 3
+minutes: 4.5
+default: false                      # batch J
+experimental: true
+description: |
+  As spy-unmask, after 125 s in the look: the meter is 100 (the owner: at 100 the spy can hardly be unmasked).
+  The owner's own test (2026-10-22): at a meter of 8, a spy spawned as the enemy's unmasked his disguised spy from 4
+  tiles; runs 8-9's detectors, spawned ours and handed over, never did. So the peasant of kingdom 2's look stays at
+  tile (10, 53) of MP2's bottom-left band (tile (x, y) at screen (150 + 32x, 32y - 1280), ADR 0171), and spies of
+  kingdom 2 are spawned red one after another north of it, 10, 8, 7, 6, 5, 4, 3 and 2 tiles off (column 10 is open from
+  row 40 down), each followed by a capture of the peasant's look and meter. The first distance at which the look turns
+  into a spy's bounds the unmasking distance. Analysed by hand (manual.yaml).
+launch: [-nomovies, -map, MP2.wmp]
+trials:
+  - name: full
+steps:
+  # Start (first session, 2026-10-18): an empty-background click absorbs a wrapper cursor grab, if any; PLAY starts
+  # the map. -explore / -nofog reveal nothing, the cheats do.
+  - click: [450, 300]
+  - click: [772, 596]               # PLAY
+  - wait: 10                        # map load
+  - chat: "${cheat}reveal"
+  - wait: 1
+  - chat: "${cheat}nofog"
+  - wait: 1
+  - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
+  - wait: 1
+  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
+  - wait: 1
+  - snapshot: view
+  # A: our spy at tile (12, 53), standing its ground first (run 4: spawned next to an enemy, it went for it).
+  - move: [550, 432]
+  - chat: "${cheat}spawn spy"
+  - click: [550, 432]               # place
+  - wait: 0.5                       # longer than the double-click time
+  - click: [550, 432]               # select
+  - key: N                          # stand ground: it attacks only what is in reach
+  # P: a peasant at tile (10, 52), out of A's reach, given to kingdom 2; A impersonates it (runs 5 and 6: the spy is
+  # gone and the peasant, in kingdom 2's colours, is ours).
+  - move: [486, 400]
+  - chat: "${cheat}spawn peon"
+  - click: [486, 400]               # place
+  - wait: 0.5
+  - click: [486, 400]               # select
+  - chat: "${cheat}kingdom 2"
+  - click: [550, 432]               # A again
+  - key: I                          # impersonate (MENU.INI spy_add)
+  - click: [486, 400]               # P
+  - wait: 4
+  - snapshot: {name: disguised, game: false}
+  - click: {at: [486, 432], button: right}   # to tile (10, 53), the start of the approach
+  - wait: 2
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 5 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 10 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 15 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 20 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 25 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 30 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 35 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 40 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 45 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 50 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 55 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 60 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 65 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 70 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 75 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 80 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 85 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 90 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 95 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 100 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 105 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 110 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 115 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 120 s; run 5's went off to chop wood)
+  - wait: 5
+  - minimap: [0.297, 0.719]          # the view back to the corner, should it have jumped to a fight (run 6)
+  - click: {at: [486, 432], button: right}   # stay (t = 125 s; run 5's went off to chop wood)
+  - wait: 5
+  - drag: {from: [440, 412], to: [532, 468]}
+  - move: [70, 400]
+  - snapshot: {name: start, game: false}
+  # A spy of kingdom 2 (spawned red: after hmkingdom 2 the next spawn is kingdom 2's) 10 tiles north of the peasant.
+  - minimap: [0.297, 0.719]
+  - move: [486, 112]
+  - chat: "${cheat}spawn spy"
+  - click: [486, 112]               # place
+  - wait: 0.5
+  - drag: {from: [440, 412], to: [532, 468]}   # the disguised peasant (a box takes only our own units)
+  - click: {at: [486, 432], button: right}   # stay
+  - move: [70, 400]
+  - wait: 3
+  - snapshot: {name: d-10, game: false, tags: {distance_tiles: "10"}}
+  # A spy of kingdom 2 (spawned red: after hmkingdom 2 the next spawn is kingdom 2's) 8 tiles north of the peasant.
+  - minimap: [0.297, 0.719]
+  - move: [486, 176]
+  - chat: "${cheat}spawn spy"
+  - click: [486, 176]               # place
+  - wait: 0.5
+  - drag: {from: [440, 412], to: [532, 468]}   # the disguised peasant (a box takes only our own units)
+  - click: {at: [486, 432], button: right}   # stay
+  - move: [70, 400]
+  - wait: 3
+  - snapshot: {name: d-8, game: false, tags: {distance_tiles: "8"}}
+  # A spy of kingdom 2 (spawned red: after hmkingdom 2 the next spawn is kingdom 2's) 7 tiles north of the peasant.
+  - minimap: [0.297, 0.719]
+  - move: [486, 208]
+  - chat: "${cheat}spawn spy"
+  - click: [486, 208]               # place
+  - wait: 0.5
+  - drag: {from: [440, 412], to: [532, 468]}   # the disguised peasant (a box takes only our own units)
+  - click: {at: [486, 432], button: right}   # stay
+  - move: [70, 400]
+  - wait: 3
+  - snapshot: {name: d-7, game: false, tags: {distance_tiles: "7"}}
+  # A spy of kingdom 2 (spawned red: after hmkingdom 2 the next spawn is kingdom 2's) 6 tiles north of the peasant.
+  - minimap: [0.297, 0.719]
+  - move: [486, 240]
+  - chat: "${cheat}spawn spy"
+  - click: [486, 240]               # place
+  - wait: 0.5
+  - drag: {from: [440, 412], to: [532, 468]}   # the disguised peasant (a box takes only our own units)
+  - click: {at: [486, 432], button: right}   # stay
+  - move: [70, 400]
+  - wait: 3
+  - snapshot: {name: d-6, game: false, tags: {distance_tiles: "6"}}
+  # A spy of kingdom 2 (spawned red: after hmkingdom 2 the next spawn is kingdom 2's) 5 tiles north of the peasant.
+  - minimap: [0.297, 0.719]
+  - move: [486, 272]
+  - chat: "${cheat}spawn spy"
+  - click: [486, 272]               # place
+  - wait: 0.5
+  - drag: {from: [440, 412], to: [532, 468]}   # the disguised peasant (a box takes only our own units)
+  - click: {at: [486, 432], button: right}   # stay
+  - move: [70, 400]
+  - wait: 3
+  - snapshot: {name: d-5, game: false, tags: {distance_tiles: "5"}}
+  # A spy of kingdom 2 (spawned red: after hmkingdom 2 the next spawn is kingdom 2's) 4 tiles north of the peasant.
+  - minimap: [0.297, 0.719]
+  - move: [486, 304]
+  - chat: "${cheat}spawn spy"
+  - click: [486, 304]               # place
+  - wait: 0.5
+  - drag: {from: [440, 412], to: [532, 468]}   # the disguised peasant (a box takes only our own units)
+  - click: {at: [486, 432], button: right}   # stay
+  - move: [70, 400]
+  - wait: 3
+  - snapshot: {name: d-4, game: false, tags: {distance_tiles: "4"}}
+  # A spy of kingdom 2 (spawned red: after hmkingdom 2 the next spawn is kingdom 2's) 3 tiles north of the peasant.
+  - minimap: [0.297, 0.719]
+  - move: [486, 336]
+  - chat: "${cheat}spawn spy"
+  - click: [486, 336]               # place
+  - wait: 0.5
+  - drag: {from: [440, 412], to: [532, 468]}   # the disguised peasant (a box takes only our own units)
+  - click: {at: [486, 432], button: right}   # stay
+  - move: [70, 400]
+  - wait: 3
+  - snapshot: {name: d-3, game: false, tags: {distance_tiles: "3"}}
+  # A spy of kingdom 2 (spawned red: after hmkingdom 2 the next spawn is kingdom 2's) 2 tiles north of the peasant.
+  - minimap: [0.297, 0.719]
+  - move: [486, 368]
+  - chat: "${cheat}spawn spy"
+  - click: [486, 368]               # place
+  - wait: 0.5
+  - drag: {from: [440, 412], to: [532, 468]}   # the disguised peasant (a box takes only our own units)
+  - click: {at: [486, 432], button: right}   # stay
+  - move: [70, 400]
+  - wait: 3
+  - snapshot: {name: d-2, game: false, tags: {distance_tiles: "2"}}
+  - wait: 3
+  - snapshot: after
+analysis: [capture-quality]

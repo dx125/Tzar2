@@ -45,7 +45,7 @@ pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch I   # ~1
 Batch J answers the owner's questions of 2026-10-21 and can run on its own, at any time:
 
 ```powershell
-pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch J   # ~8 min: spy unmasking
+pwsh tools/capture/run-capture.ps1 -TzarPath "C:\GOG Games\Tzar" -Batch J   # ~12 min: spy unmasking
 ```
 
 Use your own game folder (the one containing `Tzar.exe`). If PowerShell refuses to run scripts:
