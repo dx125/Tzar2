@@ -166,6 +166,11 @@ public partial class Main : Node
 
         GD.Print(summary);
         bool ok = result is { Report.Succeeded: true };
+        if (ok)
+        {
+            _settings!.Package = result!.PackagePath;
+        }
+
         if (_args.Smoke)
         {
             if (ok)
@@ -183,8 +188,7 @@ public partial class Main : Node
 
         if (ok)
         {
-            _settings!.Package = result!.PackagePath;
-            Open(result.PackagePath, remember: true);
+            Open(result!.PackagePath, remember: true);
         }
         else
         {

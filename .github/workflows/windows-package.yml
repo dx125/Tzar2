@@ -201,6 +201,17 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
+      - name: Signatures are valid (when a certificate signed them)
+        if: env.AZURE_SIGNING_ACCOUNT != '' || env.WINDOWS_SIGNING_PFX_BASE64 != ''
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem artifacts/windows/*-setup.exe) + @(Get-ChildItem artifacts/windows/Tzar2 -Filter *.exe)
+          foreach ($f in $files) {
+            $s = Get-AuthenticodeSignature $f.FullName
+            Write-Host "$($f.Name): $($s.Status) $($s.SignerCertificate.Subject)"
+            if ($s.Status -ne "Valid") { throw "$($f.Name) is not validly signed ($($s.Status))" }
+          }
+
       - name: Install, start, uninstall; the player's data stays
         shell: pwsh
         run: |

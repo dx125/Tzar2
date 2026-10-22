@@ -50,3 +50,4 @@ capture-*.zip
 
 # Windows packages built by tools/package (ADR 0241).
 /artifacts/
+/src/Tzar2.Client/Tzar2.Client.sln

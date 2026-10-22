@@ -46,6 +46,15 @@ if ($Stage -eq "export") {
     if (Test-Path $game) { Remove-Item $game -Recurse -Force }
     New-Item -ItemType Directory -Force $game | Out-Null
 
+    # Godot's .NET export insists on <assembly name>.sln next to project.godot; the repository's solution is Tzar2.sln at
+    # the root, so a throw-away one (git-ignored) holds just the client project.
+    $sln = Join-Path $client "Tzar2.Client.sln"
+    if (-not (Test-Path $sln)) {
+        & dotnet new sln --format sln -n Tzar2.Client -o $client | Out-Host
+        & dotnet sln $sln add (Join-Path $client "Tzar2.Client.csproj") | Out-Host
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $sln)) { Fail "could not write $sln" }
+    }
+
     # The version goes into every assembly through MSBuild (VersionSuffix is read from the environment).
     $env:VersionSuffix = (($fileVersion -split '-', 2) + @(""))[1]
     Write-Host "Importing the Godot project ..."
