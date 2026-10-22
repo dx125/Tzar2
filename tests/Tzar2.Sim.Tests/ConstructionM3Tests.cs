@@ -85,12 +85,12 @@ public class ConstructionM3Tests
         ];
         using var d = new SimDriver(TestMap(40, 16, [Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 8), .. walls]), ruleset: Classic);
         EntityId peon = OfType(d.World, "euro.peon").Single();
-        d.Order(0, CommandKind.Build, [peon], 11 * Tile, 6 * Tile, arg0: Id("comm.gate_wood")); // 3 x 1 on tiles 11..13
+        d.Order(0, CommandKind.Build, [peon], 11 * Tile, 6 * Tile, arg0: Id("comm.gate_wood")); // 7 x 1 on tiles 11..17
         d.Step();
         Assert.Empty(d.Rejections());
         Assert.Single(OfType(d.World, "comm.gate_wood"));
-        Assert.Equal(3, OfType(d.World, "comm.wall_wood", 0).Count()); // 10, 14 and 15 are left
-        Assert.DoesNotContain(OfType(d.World, "comm.wall_wood", 0), w => d.World.Footprints.Get(w).TileX is >= 11 and <= 13);
+        Assert.Single(OfType(d.World, "comm.wall_wood", 0)); // 10 is left
+        Assert.DoesNotContain(OfType(d.World, "comm.wall_wood", 0), w => d.World.Footprints.Get(w).TileX is >= 11 and <= 17);
 
         d.Order(0, CommandKind.Build, [peon], 20 * Tile, 6 * Tile, arg0: Id("comm.gate_wood"));
         d.Step();
@@ -128,19 +128,21 @@ public class ConstructionM3Tests
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 10), Unit("euro.footman", 1, 26, 6)), ruleset: Classic);
         EntityId peon = OfType(d.World, "euro.peon").Single();
-        d.Order(0, CommandKind.Build, [peon], 16 * Tile, 5 * Tile, arg0: Id("comm.gate_wood"), arg1: 1); // 1 x 3 when turned
+        d.Order(0, CommandKind.Build, [peon], 16 * Tile, 5 * Tile, arg0: Id("comm.gate_wood"), arg1: 1); // 1 x 6 when turned (gw2_anim)
         d.Step();
         EntityId gate = OfType(d.World, "comm.gate_wood").Single();
-        Assert.Equal((16, 5, 1, 3), d.World.FootprintRect(gate));
+        Assert.Equal((16, 5, 1, 6), d.World.FootprintRect(gate));
         d.RunUntil(() => d.Count(SimEventKind.ConstructionCompleted) == 1, 2000);
         Assert.True(d.World.Gates.Has(gate));
         Assert.Equal(GateMode.Automatic, d.World.Gates.Get(gate).Mode);
 
-        // The peasant is next to the gate: it opens (its middle tile), the posts stay blocked.
+        // The peasant is next to the gate: it opens (its door, the second to fourth tiles down), the rest stays blocked.
         d.Step();
         Assert.Equal(1, d.World.Gates.Get(gate).Open);
         Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 16, 6));
+        Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 16, 8));
         Assert.False(d.World.Map.IsPassable(Locomotor.Foot, 16, 5));
+        Assert.False(d.World.Map.IsPassable(Locomotor.Foot, 16, 9));
 
         // The peasant walks away: it closes; an enemy coming close does not open it.
         d.MoveToTile(0, [peon], 4, 12);

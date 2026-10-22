@@ -133,6 +133,7 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0189](0189-shift-queues-every-order.md) | Queue every order given with Shift, and take a whole type with Alt | Accepted | 2026-10-22 |
 | [0190](0190-rules-read-from-the-originals-code-by-retzar.md) | Take the rules ReTzar read from the original's code, never ReTzar's code | Accepted | 2026-10-22 |
 | [0191](0191-technology-effects-as-the-original-computes-them.md) | Give technologies the effects the original's research handlers compute | Accepted | 2026-10-22 |
+| [0192](0192-gates-and-bridges-take-the-cells-of-their-pictures.md) | Gates and bridges take the cells of their pictures, either way | Accepted | 2026-10-22 |
 | [0240](0240-m7-windows-beta-plan.md) | Plan M7 (Windows beta) as seven deliverables with measured exit criteria | Accepted | 2026-10-22 |
 | [0241](0241-windows-package-inno-setup-and-first-run-import.md) | Package Windows with a Godot headless export, a zip and an Inno Setup installer, and import on first run | Accepted | 2026-10-22 |
 | [0242](0242-code-signing-is-a-pipeline-step-skipped-without-secrets.md) | Sign in the pipeline with Azure Trusted Signing or a PFX, and skip signing without secrets | Accepted (with notes) | 2026-10-22 |

@@ -195,7 +195,7 @@ legacy:
   # Then (ITEM-016) ITEM_PLUSPLUS is imported as a weapon, the power item; then (WORLD-015) land units get a body from
   # their object box.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "3B280CADB6062AEE"
+  referenceDataHash: "D13ECBADA7B58867"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
@@ -361,13 +361,13 @@ legacy:
   Wall: {}
   -Burnable:
   -RuinOnDeath:
+# A gate's cells are those of its drawbridge picture (gw0_anim 7 x 1, gw2_anim 1 x 6); its door is the middle three across
+# and the three below the top down (ReTzar's reading of the original, 0x456210, 0x4576bc; CTRL-024).
 ^class.gate_wood:
-  Building: { width: 3, height: 1 }   # UNVERIFIED (UNK-02): no footprint box in the data
-  Gate: { passage: ["010"] }          # UNVERIFIED: the middle tile opens
+  Gate: { passage: ["0011100"], turnedPassage: ["0", "1", "1", "1", "0", "0"] }
   -Burnable:
 ^class.gate_stone:
-  Building: { width: 3, height: 1 }   # UNVERIFIED (UNK-02)
-  Gate: { passage: ["010"] }
+  Gate: { passage: ["0011100"], turnedPassage: ["0", "1", "1", "1", "0", "0"] }
   -Burnable:
 ^class.bridge:
   Building: { placement: bridge }

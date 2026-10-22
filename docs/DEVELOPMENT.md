@@ -129,6 +129,31 @@ re-run the failed job (`gh run rerun <id> --failed`) and note it on the PR.
 * Windows PowerShell 5.1 pitfalls: piping text into `git commit -F -` adds a BOM to the message (write it to a file
   first); quote `'stash@{0}'`, or PowerShell eats the braces.
 
+## Sources of knowledge about the original
+
+Settle a question about the original in this order, and name the source in the ledger ([rules/](rules/README.md)):
+
+1. **Its data files** (`DATA/*.INI`, the unit and building tables, `IMAGES.INI`, `OBJECTS/`) from the owner's install
+   (`TZAR2_ORIGIN`, a clean GOG v1.10 EN at `E:\Games\Tzar` on the owner's PC). What we take from them:
+   [rules/data-usage.yaml](rules/data-usage.yaml).
+2. **Its documents**: the manual (`manual.pdf`), the strategy guide, the help (`HELP/ITEMS.TXT`, `HK.TXT`), the patch
+   notes (`TZAR110.TXT`), the strings (`LOCAL/STRINGS.INI`). Rules restate them in our own words (REQ-LEGAL-01).
+3. **Measurements**: a capture batch on the owner's PC ([the fidelity loop](#the-fidelity-loop)), or a play-test.
+4. **[ReTzar](https://github.com/ColCarlo/ReTzar)**, a public remake of Tzar in Rust and Bevy. Its code was read from
+   the original's executable and names the addresses it came from, for example `(32000 / move_len) >> 5` at
+   `0x49891b` for the length of a step. Use it when the files and documents say too little and a capture would be
+   costly or impossible: formulas, timings, the effects of technologies, how a rule is computed.
+   * **License:** ReTzar is GPL-3.0 and Tzar2 is MIT. DEC-09 holds: **read it as a reference; never copy, port line by
+     line or link its code.** Take the fact (the rule, the number, the formula) and write our own code.
+   * **Citing:** name it in the ledger as `community ReTzar <file> (<address>)` and give the address in YAML comments
+     and ADRs (ADRs 0190–0192 are the examples).
+   * **Trust:** treat its values as hints. Where it agrees with our measurements, as the stride rule does with all 18
+     measured walking speeds, adopt it. Where it disagrees with a capture, the capture wins.
+   * To search it, clone it shallow into a scratch folder outside the repository. Never into the repository: it holds
+     translations of the original's texts, which must not be committed either.
+   * **Our own improvements stay** (UI, controls, AI tactics; the owner's rule): ReTzar's choices there are not
+     binding.
+
 ## The fidelity loop
 
 The M3 gate is the share of TDD §22.3 checks that pass (ADR 0112); the measurements come from the original game on the

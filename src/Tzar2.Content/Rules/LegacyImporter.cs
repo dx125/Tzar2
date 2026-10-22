@@ -811,6 +811,16 @@ internal sealed partial class LegacyImporter
     private void AddFootprint(Body body, string civ, string cls, string source, string key)
     {
         string? image = ObjectSection(civ, cls)?.Get("image");
+        string? turnedImage = image is not null && image.Contains("_horz", StringComparison.Ordinal) ? image.Replace("_horz", "_vert", StringComparison.Ordinal) : null;
+        if (cls is "gate_wood" or "gate_stone")
+        {
+            // A gate's cells are those of its drawbridge picture, facing 0 and 2 (ReTzar's reading of the original,
+            // 0x498373): 7 x 1 across, 1 x 6 down (CTRL-024).
+            string prefix = cls == "gate_wood" ? "gw" : "gs";
+            image = prefix + "0_anim";
+            turnedImage = prefix + "2_anim";
+        }
+
         IReadOnlyDictionary<string, string>? sprite = image is null ? null : _tables.Sprite(image);
         string? box = sprite is null ? null : sprite.TryGetValue("object", out string? o) ? o : sprite.TryGetValue("selection", out string? s) ? s : null;
         if (sprite is null || box is null)
@@ -830,6 +840,13 @@ internal sealed partial class LegacyImporter
         int w = Math.Max(1, (ParseInt(parts[2], source, key) + 16) / 32);
         int h = Math.Max(1, (ParseInt(parts[3], source, key) + 16) / 32);
         var fields = new List<(string, string)> { ("width", Num(w)), ("height", Num(h)) };
+        if (turnedImage is not null && _tables.Sprite(turnedImage) is { } turned && turned.TryGetValue("object", out string? turnedBox)
+            && turnedBox.Split(',', StringSplitOptions.TrimEntries) is { Length: 4 } t)
+        {
+            // Placed the other way it has the cells of its other picture (bridge_vert, the gate facing 2).
+            fields.Add(("turnedWidth", Num(Math.Max(1, (ParseInt(t[2], source, key) + 16) / 32))));
+            fields.Add(("turnedHeight", Num(Math.Max(1, (ParseInt(t[3], source, key) + 16) / 32))));
+        }
         if (sprite.TryGetValue("image", out string? imagePath) && imagePath.Length > 0)
         {
             string dat = "images/" + ContentPath.ChangeExtension(ContentPath.Normalize(imagePath), ".dat");

@@ -224,6 +224,9 @@ public struct FrameEntity
     /// <summary>A structure turned by 90° (a vertical bridge or gate; CTRL-024, BLD-019).</summary>
     public bool Rotated;
 
+    /// <summary>A gate facing the other way along its axis (the original's facings 1 and 3; CTRL-024).</summary>
+    public bool Mirrored;
+
     /// <summary>Footprint top-left tile X of a structure, or -1.</summary>
     public int TileX;
 

@@ -83,8 +83,8 @@ rules:
     rule: Holding Alt while placing a bridge turns it.
     source: [help ITEMS.TXT HT_BUILD_BRIDGES]
     status: tested
-    note: Alt turns the ghost; the vertical bridge draws bridge_vert.
-    adr: [0189]
+    note: Alt turns the ghost; a bridge down takes the cells of bridge_vert (6 x 11) and draws it.
+    adr: [0189, 0192]
   BLD-020:
     rule: Deleting a building just after its construction began gives its cost back.
     source: [help ITEMS.TXT HT_REMOVE]
