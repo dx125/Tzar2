@@ -517,6 +517,9 @@ public sealed class GameSession : IDisposable
     /// <summary>The result (tick and hashes) of the latest tick; read it on the sim thread in <see cref="AfterTick"/>.</summary>
     public TickResult LastTickResult { get; private set; }
 
+    /// <summary>How long each tick took on this machine (ms), for the render bench (ADR 0244); never part of the match.</summary>
+    public Diagnostics.SampleRing TickTimes { get; } = new();
+
     private void TraceSession(LogLevel level, string message)
     {
         ITraceSink trace = Simulation.World.Trace;
@@ -725,7 +728,9 @@ public sealed class GameSession : IDisposable
         }
 
         bool replied = _replyQueued;
+        long started = Stopwatch.GetTimestamp();
         TickResult result = Simulation.Tick(_tickSet);
+        TickTimes.Add(Stopwatch.GetElapsedTime(started).TotalMilliseconds);
         LastTickResult = result;
         _recorder?.RecordTick(_tickSet, result);
         Interlocked.Increment(ref _ticksRun);
