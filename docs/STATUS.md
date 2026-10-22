@@ -222,6 +222,8 @@ the process decisions that have no ADR.
     1 European, 2 Arabian, 3 Asian.
   * A kingdom without objects now defaults to euro instead of arab.
   * The gameplay, AI and synthetic-mission hashes are re-pinned; the AI's commands are unchanged.
+  * The client's skirmish, custom-map and lobby screens offer the ruleset's playable civilizations instead of three
+    keys written in code.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the

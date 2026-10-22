@@ -104,7 +104,7 @@ public partial class GameApp
         }
 
         _networkGameShown = false;
-        _lobby = new LobbyScreen(_ui!, Screen, _network);
+        _lobby = new LobbyScreen(_ui!, Screen, _network, _rules);
         _lobby.Leave += ShowMultiplayer;
         Replace(_lobby, music: null);
     }
