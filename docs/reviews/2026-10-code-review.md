@@ -215,11 +215,18 @@ twelve AI mutators and the client's namespaces. Its gaps:
 | #141 | analyzer rule T2C001 (culture-dependent formatting) and the 48 strings it found | Tools.Cli.Tests pass under C.UTF-8 and de_DE |
 | #145 | architecture tests: compiled client on CI, Sim on `Content.Compiled`, more AI mutators, no public mutable statics | |
 | #156 | the nightly's gameplay rows re-recorded after a bisect | 16 probe runs |
-| ADR 0211 | civilizations as an ordered list in the ruleset; `Race` reads the original's numbers | hashes re-pinned, AI commands unchanged |
+| #163, ADR 0211 | civilizations as an ordered list in the ruleset; `Race` reads the original's numbers | hashes re-pinned, AI commands unchanged |
+| #161 | hidden shadow viewports stop rendering; atlas pages and upload images freed; caches cleared in the menu | menu heap 272 → 151 MB |
+| #162 | MidiPlayer chunks, UI text cache key | gen0 GCs in a match 7 → 4 |
+| #172 (on #138) | a match loads on a worker thread; the main thread only uploads | main thread 4.2 s → 77 ms (original map) |
+| #174 (on #163) | the client's civilization choices from the ruleset | |
+| #176 | the `Seat` trait and the feature technologies in world settings | ruleset hash only |
 
-Next, in order:
+Still open, for a decision:
 
-1. the asset caches and the hidden viewports;
-2. the load off the main thread;
-3. the rest of the civilization hard-coding (the scenario enum, the client's lists, map generation);
-4. the rules decided by names in code.
+* `GameSession` exposes `Simulation` and `Ai`, and `GameFrame` names `Sim.Kingdoms` types (module boundaries 2–3).
+* `World`'s writable spans (module boundaries 3).
+* The worker pool's late-helper stalls (performance 8).
+* The scenario model's `Civilization` enum and map generation's civilization list (fork 2). Changing the list changes
+  random maps.
+* The formula constants of fork finding 4.
