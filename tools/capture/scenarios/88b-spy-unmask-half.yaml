@@ -5,20 +5,20 @@ id: spy-unmask-half
 title: How close the copied kingdom's spy must come to unmask a half-full disguise meter (MAG-012, MAG-021)
 resolves: []
 priority: 3
-minutes: 3.5
+minutes: 4
 default: false                      # batch J
 experimental: true
 description: |
   As spy-unmask, but the look is kept for 55 s before B comes, so the meter is about 50 to 75 during the approach.
-  Run 5 (2026-10-21): A copied a peasant of kingdom 2 and took it over (the peasant stays, in kingdom 2's colours, and
-  is ours, with its own attack); kingdom 2's spy, spawned about 6 tiles off, turned it back into a spy's look within
-  seconds while its meter was about 3, and its meter went on counting. That bounds the distance from below only. Here
-  the disguised peasant is moved to tile (8, 53) and kept there with a move order every 5 s (run 5's went off to chop
-  wood by itself), kingdom 2's spy B is spawned 14 tiles off, beyond a spy's sight, and the peasant walks to it one tile
-  at a time, the whole window captured after each step. The step at which its look turns into a spy's, with B's
-  position in that capture, gives the distance; the meter is in the selection view. MP2's bottom-left corner: tile
-  (x, y) at screen (150 + 32x, 32y - 1280), ADR 0171. Analysed by hand (manual.yaml).
-launch: [-nomovies, -map, MP2.wmp]
+  Runs 4-6 on MP2 never gave the clean case: our base, its cows and kingdom 2's army kept getting in the way (run 6's
+  camera jumped to a fight at our castle), and the detecting spy spawned in kingdom 2's colours and walked off (the
+  owner: after hmkingdom 2 the next spawn is kingdom 2's). The owner also saw that a spy unmasks only what is in front
+  of it: run 6's peasant stood right next to the detector's back, meter 45, and was not unmasked. So this runs on MP1,
+  on the open row 36 between the river and our base (16 rows from our peasants, kingdom 2 in the far corner, no
+  castles on the map), the detector is set up facing west, and the disguised peasant comes from the west, one tile at
+  a time, into its face. The step at which the peasant's look turns into a spy's, with B's position in that capture,
+  gives the distance; the meter is in the selection view. Analysed by hand (manual.yaml).
+launch: [-nomovies, -map, MP1.wmp]
 trials:
   - name: half
 steps:
@@ -33,17 +33,19 @@ steps:
   - wait: 1
   - chat: "${cheat}nopop"             # lifts the population limit; without it hmspawn fails ("Not enough houses")
   - wait: 1
-  - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
+  # MP1 (64 x 64, drawn like MP2 in the middle of the minimap): map tile (10, 36), so the view is clamped to the left
+  # edge (columns 0-27) and centred on row 36, open ground between the river and our base.
+  - minimap: [0.328, 0.531]
   - wait: 1
   - snapshot: view
-  # A: our spy at tile (12, 53), standing its ground first (run 4: spawned next to an enemy, it went for it).
-  - move: [550, 432]
+  # A: our spy at tile (12, 36), standing its ground first (run 4: spawned next to an enemy, it went for it).
+  - move: [550, 400]
   - chat: "${cheat}spawn spy"
-  - click: [550, 432]               # place
+  - click: [550, 400]               # place
   - wait: 0.5                       # longer than the double-click time
-  - click: [550, 432]               # select
+  - click: [550, 400]               # select
   - key: N                          # stand ground: it attacks only what is in reach
-  # P: a peasant at tile (10, 52), out of A's reach, given to kingdom 2; A impersonates it (run 5: A is gone, P stays
+  # P: a peasant at tile (10, 36), out of A's reach, given to kingdom 2; A impersonates it (run 5: A is gone, P stays
   # in kingdom 2's colours and is ours).
   - move: [486, 400]
   - chat: "${cheat}spawn peon"
@@ -51,99 +53,112 @@ steps:
   - wait: 0.5
   - click: [486, 400]               # select
   - chat: "${cheat}kingdom 2"
-  - click: [550, 432]               # A again
+  - click: [550, 400]               # A again
   - key: I                          # impersonate (MENU.INI spy_add)
   - click: [486, 400]               # P
   - wait: 4
   - snapshot: {name: disguised, game: false}
-  # The disguised peasant to tile (8, 53), and kept there: run 5's went off to chop wood by itself while it waited.
-  - click: {at: [422, 432], button: right}
-  - wait: 3
-  - click: {at: [422, 432], button: right}   # stay (t = 5 s)
+  - click: {at: [486, 400], button: right}   # stay at tile (10, 36)
+  - wait: 2
+  - click: {at: [486, 400], button: right}   # stay (t = 5 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 10 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 10 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 15 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 15 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 20 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 20 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 25 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 25 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 30 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 30 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 35 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 35 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 40 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 40 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 45 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 45 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 50 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 50 s; run 5's went off to chop wood)
   - wait: 5
-  - click: {at: [422, 432], button: right}   # stay (t = 55 s)
+  - click: {at: [486, 400], button: right}   # stay (t = 55 s; run 5's went off to chop wood)
   - wait: 5
-  # B: kingdom 2's own spy, 14 tiles off at tile (22, 53), beyond the 12 tiles a spy sees.
-  - move: [902, 432]
+  # B: kingdom 2's own spy, set up as the owner advised (2026-10-21): with nothing selected, hmkingdom 1 first (run 6's
+  # spawned red and wandered off under kingdom 2's AI); spawned ours at tile (26, 36), walked one tile west so that it
+  # faces the way A will come (the owner: a spy unmasks only what is in front of it), told to stand its ground, and
+  # only then given to kingdom 2.
+  - click: [742, 400]               # nothing selected: open ground at tile (18, 36)
+  - chat: "${cheat}kingdom 1"
+  - move: [998, 400]
   - chat: "${cheat}spawn spy"
-  - click: [902, 432]               # place
+  - click: [998, 400]               # place
   - wait: 0.5
-  - click: [902, 432]               # select
+  - click: [998, 400]               # select
+  - click: {at: [966, 400], button: right}   # one tile west: it now faces west
+  - wait: 2
+  - key: N                          # stand ground
   - chat: "${cheat}kingdom 2"
-  - drag: {from: [380, 390], to: [470, 470]}   # the disguised peasant again (a box takes only our own units)
+  - wait: 1
+  - snapshot: {name: b-ready, game: false}
+  - drag: {from: [440, 360], to: [532, 436]}   # the disguised peasant again (a box takes only our own units)
   - move: [70, 400]
-  - snapshot: {name: start, game: false, tags: {a_tile: "8", b_tile: "22"}}
-  # The approach: one tile at a time, the whole window captured after each step (B may walk: its AI moves it).
-  - click: {at: [454, 432], button: right}
+  - snapshot: {name: start, game: false, tags: {a_tile: "10", b_tile: "25"}}
+  # The approach from the west, into B's face, one tile at a time, the window captured after each step.
+  - click: {at: [518, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-9, game: false, tags: {a_tile: "9", b_tile: "22"}}
-  - click: {at: [486, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-11, game: false, tags: {a_tile: "11", b_tile: "25"}}
+  - click: {at: [550, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-10, game: false, tags: {a_tile: "10", b_tile: "22"}}
-  - click: {at: [518, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-12, game: false, tags: {a_tile: "12", b_tile: "25"}}
+  - click: {at: [582, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-11, game: false, tags: {a_tile: "11", b_tile: "22"}}
-  - click: {at: [550, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-13, game: false, tags: {a_tile: "13", b_tile: "25"}}
+  - click: {at: [614, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-12, game: false, tags: {a_tile: "12", b_tile: "22"}}
-  - click: {at: [582, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-14, game: false, tags: {a_tile: "14", b_tile: "25"}}
+  - click: {at: [646, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-13, game: false, tags: {a_tile: "13", b_tile: "22"}}
-  - click: {at: [614, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-15, game: false, tags: {a_tile: "15", b_tile: "25"}}
+  - click: {at: [678, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-14, game: false, tags: {a_tile: "14", b_tile: "22"}}
-  - click: {at: [646, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-16, game: false, tags: {a_tile: "16", b_tile: "25"}}
+  - click: {at: [710, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-15, game: false, tags: {a_tile: "15", b_tile: "22"}}
-  - click: {at: [678, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-17, game: false, tags: {a_tile: "17", b_tile: "25"}}
+  - click: {at: [742, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-16, game: false, tags: {a_tile: "16", b_tile: "22"}}
-  - click: {at: [710, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-18, game: false, tags: {a_tile: "18", b_tile: "25"}}
+  - click: {at: [774, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-17, game: false, tags: {a_tile: "17", b_tile: "22"}}
-  - click: {at: [742, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-19, game: false, tags: {a_tile: "19", b_tile: "25"}}
+  - click: {at: [806, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-18, game: false, tags: {a_tile: "18", b_tile: "22"}}
-  - click: {at: [774, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-20, game: false, tags: {a_tile: "20", b_tile: "25"}}
+  - click: {at: [838, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-19, game: false, tags: {a_tile: "19", b_tile: "22"}}
-  - click: {at: [806, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-21, game: false, tags: {a_tile: "21", b_tile: "25"}}
+  - click: {at: [870, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-20, game: false, tags: {a_tile: "20", b_tile: "22"}}
-  - click: {at: [838, 432], button: right}
+  - wait: 2
+  - snapshot: {name: at-22, game: false, tags: {a_tile: "22", b_tile: "25"}}
+  - click: {at: [902, 400], button: right}
   - move: [70, 400]
-  - wait: 2.5
-  - snapshot: {name: at-21, game: false, tags: {a_tile: "21", b_tile: "22"}}
+  - wait: 2
+  - snapshot: {name: at-23, game: false, tags: {a_tile: "23", b_tile: "25"}}
+  - click: {at: [934, 400], button: right}
+  - move: [70, 400]
+  - wait: 2
+  - snapshot: {name: at-24, game: false, tags: {a_tile: "24", b_tile: "25"}}
   - wait: 3
   - snapshot: after
 analysis: [capture-quality]

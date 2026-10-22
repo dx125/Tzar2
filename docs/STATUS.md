@@ -45,7 +45,7 @@ Each capture batch is a ~15–25 min unattended run on the operator's PC (`tools
 | D | day length, night share (no input) | **Day length done** (ADR 0173): 37.5 min, read from the clock globe; a match starts at 10:00. The game ended after 12 min (the Hard AI), before the night: **night share open**, needs a 35-min run the AI does not end. |
 | E | group speed, research, damage bonuses, capture, far gathering | **Done, one result** (2026-10-19): a mixed group walks at its slowest member's speed (passes). The rest failed: units given to kingdom 2 are taken over by its AI and leave the duel; Feudalism never started; Ctrl+C picked another castle, so the far tree was not the one gathered; the capture analysis saw no colour change. Not repeated: owner decision below. |
 | F–I | fire, repair, healing, fields, experience; lightning, mana, loans, score; 12 × 8 duels; trade and gambling | deferred (owner decision below) |
-| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Run 1 done** (2026-10-21): the meter measured (one point per 1.25 s). Repairs and unmasking failed: the builder left too early, our knights do not attack our own buildings, MP2 has no kingdom 3. Run 2: buildings damaged, no 4-byte field held their hit points; spies failed on MP6. **Run 3: repairs measured** (ADR 0185: blows of max / (4 × TIME) every 1.25 s, free, no falloff; suite 10 of 30); a third kingdom's spy never unmasks. Run 4: no impersonation. Run 5: the takeover seen with an enemy peasant; a fresh disguise unmasked by the copied kingdom's spy from 6 tiles or more. **Run 6 ready** (~14 min). |
+| J | hit points per repair blow on three buildings; how close another kingdom's spy unmasks a disguise; the disguise meter | **Run 1 done** (2026-10-21): the meter measured (one point per 1.25 s). Repairs and unmasking failed: the builder left too early, our knights do not attack our own buildings, MP2 has no kingdom 3. Run 2: buildings damaged, no 4-byte field held their hit points; spies failed on MP6. **Run 3: repairs measured** (ADR 0185: blows of max / (4 × TIME) every 1.25 s, free, no falloff; suite 10 of 30); a third kingdom's spy never unmasks. Run 4: no impersonation. Run 5: the takeover seen with an enemy peasant; a fresh disguise unmasked by the copied kingdom's spy from 6 tiles or more. Run 6: confounded (the detector spawned red and wandered, the camera jumped to a fight). **Run 7 ready** (~15 min, MP1, the detector facing the approach). |
 
 Facts live in `tests/fidelity/facts/` (numbers only; captures stay on the operator's PC). A measured fact that disagrees
 with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that makes it pass go in the same PR.
@@ -72,7 +72,7 @@ play-test.
    is done.
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
      (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
-     both. The repairs are measured (run 3, ADR 0185); the distance is left. **Operator:** run 6,
+     both. The repairs are measured (run 3, ADR 0185); the distance is left. **Operator:** run 7,
      `run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch J -AllowModified` (~22 min, hands off).
    * The spy's disguise meter (MAG-021) is done and measured.
    * Impersonation takes the unit over (MAG-012, the owner, ADR 0184 amendment 4): the unit changes hands and keeps its
@@ -116,6 +116,16 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-21 — Batch J, run 6; the owner on what spoils the spy runs.**
+  * Run 6 (`capture-20261021-232712`): at a meter of 45 the disguised peasant stood right next to kingdom 2's spy and
+    was not unmasked. Revealing turned it into a spy (attack 20, 50/50), its name still counting ("Spy (51)"). The
+    camera jumped to a fight at our right-hand castle, and the scenario's later clicks landed elsewhere.
+  * The owner: use a map or a part of it without distractions; after `hmkingdom 2` the next spawn is kingdom 2's, so
+    deselect and type `hmkingdom 1` before spawning the detector, tell it to stand its ground, then give it to kingdom
+    2; and **a spy unmasks only what is in front of it**: right next to its back, nothing happens (MAG-012).
+  * Run 7 runs on MP1's open row 36, between the river and our base, with no castles on the map. The detector faces
+    west after a one-tile walk, and the disguised peasant comes into its face from the west.
 
 * **2026-10-21 — Batch J, run 5: the takeover seen; the distance bounded from below.**
   * The spy copied a peasant of kingdom 2 and took it over, as the owner said. The peasant stayed, in kingdom 2's
