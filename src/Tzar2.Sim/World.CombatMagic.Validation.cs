@@ -154,7 +154,8 @@ public sealed partial class World
         for (int i = 0; i < ids.Length; i++)
         {
             ItemState s = Items.Components[i];
-            if (!Identities.Has(ids[i]) || TypeOf(ids[i]).Traits.Item is null || s.Power is < 0 or > 1_000_000 || s.Charges is < 0 or > 1_000_000 || s.ReadyTick > maxFuture
+            if (!Identities.Has(ids[i]) || TypeOf(ids[i]).Traits.Item is not { } itemDef || s.Power is < 0 or > 1_000_000 || s.Charges is < 0 or > 1_000_000 || s.ReadyTick > maxFuture
+                || s.Spell > Ruleset.Spells.Count || s.Effect > ItemEffect.Mana || s.Look > itemDef.Looks.Length
                 || Combats.Has(ids[i]) || Motions.Has(ids[i]))
             {
                 throw Invalid("invalid item");
@@ -261,7 +262,7 @@ public sealed partial class World
         {
             CraftJob j = CraftJobs.Components[i];
             if (TypeOf(ids[i]).Traits.Crafter is not { } crafter || Constructions.Has(ids[i]) || (uint)j.ItemType >= (uint)types
-                || crafter.Items.BinarySearch((ushort)j.ItemType) < 0 || j.Power < 1 || j.Power > settings.CraftMaxPower || j.LeftMs < 0
+                || crafter.Items.BinarySearch((ushort)j.ItemType) < 0 || (uint)j.Variant >= (uint)Ruleset.EntityTypes[j.ItemType].Traits.Item!.CraftVariantCount || j.Power < 1 || j.Power > settings.CraftMaxPower || j.LeftMs < 0
                 || j.LeftMs > (long)j.Power * settings.CraftMsPerPower || !HasPlayer(Identities.Get(ids[i]).Owner))
             {
                 throw Invalid("invalid craft job");
@@ -302,7 +303,7 @@ public sealed partial class World
     {
         EntityId item = EntityId.FromValue(book);
         return Inventories.IndexOf(caster) is >= 0 and var inv && Helds.IndexOf(item) is >= 0 and var h && Helds.At(h).Holder == caster.Value
-            && Inventories.At(inv).Count > 0 && TypeOf(item).Traits.Item is { } def && def.Spell == spell;
+            && Inventories.At(inv).Count > 0 && Items.Has(item) && ItemSpell(item) == spell;
     }
 
     private void RequireUnit(EntityId e, string what)

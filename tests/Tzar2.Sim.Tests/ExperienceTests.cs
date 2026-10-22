@@ -178,6 +178,10 @@ public class ExperienceTests
         Assert.Equal(hero.Name, back.Name);
         Assert.Equal(hero.Level, back.Level);
         Assert.Equal(hero.Items.Select(i => i.TypeKey), back.Items.Select(i => i.TypeKey));
+        PersistentHero bookHero = hero with { Items = [new PersistentItem("comm.item_magic", 0, 2, "spell_lightning", ItemEffect.Default, 2)] };
+        var bookWriter = new BinaryBufferWriter();
+        PersistentHeroes.Write(bookWriter, [bookHero]);
+        Assert.Equal(bookHero.Items[0], Assert.Single(PersistentHeroes.Read(bookWriter.WrittenSpan)).Items[0]); // ITEM-016: its own spell and look
         Assert.Throws<System.IO.InvalidDataException>(() => PersistentHeroes.Read(writer.WrittenSpan[..^1]));
 
         // The next map: a unit of the same name takes the record (applied at match setup).

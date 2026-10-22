@@ -209,8 +209,10 @@ when the building is hit; catapult stones can be stepped away from.
 | Hero names when the list is used up | "<first name> 2", "… 3" | code (`ExperienceSystem`) | — | observation |
 | Holder healing | castle, outpost 120 HP per minute per unit | YAML `^class.castle/outpost.Holder.healPerMinute` | UNK-24 | garrison captures |
 | Exit radius | 3 tiles | YAML `combat.exitRadiusTiles` | — | observation |
-| Item defaults | weapon +3, armor +2, potion 100 HP, plusplus +1 level (⚠ HYPOTHESIS), fire-rain book 3 charges / 10 s, soul (murder, once), gold item 100 | YAML `comm.item*` | UNK-25 | editor defaults, captures |
-| Crafting | 50 gold per power point, 2 s per point, at most 20 | YAML `combat.craft*` | UNK-25 | workshop captures |
+| Item defaults | weapon +3, armor +2, potion 100 HP, power item (plusplus) +3 attack (ADR 0186: the maps' power items carry their own attack or defence), fire-rain book 3 charges / 10 s, soul (murder, once), gold item 100 | YAML `comm.item*` | UNK-25 | editor defaults, captures |
+| Crafting | 50 gold per power point, 2 s per point, at most 20; a potion 10 HP or 5 mana per point, a level per 5 points; a book's uses = its points (ADR 0186) | YAML `combat.craft*` | UNK-25 | workshop captures |
+| Workshop items | books of 20 spells, potions of health (red), levels (green), mana (blue), attack (yellow), defence (grey), sword, bow, shield | YAML `Item.crafts` | ITEM-016 | an owner session in the workshop |
+| A map book's spell | magic type = index in STRINGS.INI `[spell_names]` (⚠ HYPOTHESIS) | `ScenarioSetup.LegacySpellOrder` | ITEM-016 | the editor shows a book's spell |
 | Spell magnitudes | per spell (amount, mana, range, cooldown, cast time, duration, radius, pulse) | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
 | Spell damage | no defence, no bonus | code (`MagicSystem`) | UNK-26 | captures |
 | Summon mana above the pool | costs at most the caster's whole pool (golem 600m, dragon 800m vs `max_manna` 100; ⚠ HYPOTHESIS) | code (`MagicSystem.ManaCost`) | UNK-26 | summon captures |

@@ -187,6 +187,15 @@ public struct ItemState : IComponent
 
     /// <summary>Tick from which a spell book may be used again.</summary>
     public int ReadyTick;
+
+    /// <summary>1 + the spell id of a book with its own spell; 0: the type's spell (ITEM-016).</summary>
+    public ushort Spell;
+
+    /// <summary>What this item adds; <see cref="ItemEffect.Default"/>: the type's (ITEM-016).</summary>
+    public ItemEffect Effect;
+
+    /// <summary>1 + the index of its image in <see cref="ItemDefinition.Looks"/>; 0: the type's own (ITEM-016).</summary>
+    public byte Look;
 }
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091): an entity with this component only (no identity, never a target).</summary>
@@ -378,6 +387,9 @@ public struct CraftJob : IComponent
 
     /// <summary>Time left.</summary>
     public int LeftMs;
+
+    /// <summary>Which of the item type's craft variants (ITEM-016).</summary>
+    public int Variant;
 }
 
 /// <summary>A crusade anchor's state (GAME-11; ADR 0095): its crusaders and the cooldown after they die.</summary>

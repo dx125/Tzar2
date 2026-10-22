@@ -23,7 +23,7 @@ internal static class CombatStats
             attack += ((long)e.Level * world.Ruleset.Combat.AttackPerLevel) + e.BonusAttack;
         }
 
-        attack += ItemPower(world, entity, ItemKind.Weapon);
+        attack += ItemPower(world, entity, ItemEffect.Attack);
         attack = Status(world, entity, attack, defence: false);
         return (int)Math.Clamp(attack, 0, 1_000_000);
     }
@@ -39,13 +39,16 @@ internal static class CombatStats
             defence += ((long)e.Level * world.Ruleset.Combat.DefenceHalvesPerLevel / 2) + e.BonusDefence;
         }
 
-        defence += ItemPower(world, entity, ItemKind.Armor);
+        defence += ItemPower(world, entity, ItemEffect.Defence);
         defence = Status(world, entity, defence, defence: true);
         return (int)Math.Clamp(defence, 0, 1_000_000);
     }
 
-    /// <summary>The summed power of the carried items of one kind (weapons: attack, armor: defence).</summary>
-    public static int ItemPower(World world, EntityId entity, ItemKind kind)
+    /// <summary>
+    /// The summed power of the carried weapons and armor that add <paramref name="stat"/>: an item's own effect (a shield
+    /// among the power items, ITEM-016), else its kind's (weapons attack, armor defence).
+    /// </summary>
+    public static int ItemPower(World world, EntityId entity, ItemEffect stat)
     {
         if (world.Inventories.Count == 0 || world.Inventories.IndexOf(entity) is not (>= 0 and var i) || world.Inventories.At(i).Count == 0)
         {
@@ -57,9 +60,15 @@ internal static class CombatStats
         for (int k = 0; k < inventory.Count; k++)
         {
             EntityId item = EntityId.FromValue(inventory.Items[k]);
-            if (world.Items.IndexOf(item) is >= 0 and var s && world.TypeOf(item).Traits.Item!.Kind == kind)
+            ItemKind kind = world.TypeOf(item).Traits.Item!.Kind;
+            if (kind is ItemKind.Weapon or ItemKind.Armor && world.Items.IndexOf(item) is >= 0 and var s)
             {
-                sum += world.Items.At(s).Power;
+                ItemState state = world.Items.At(s);
+                ItemEffect adds = state.Effect != ItemEffect.Default ? state.Effect : kind == ItemKind.Weapon ? ItemEffect.Attack : ItemEffect.Defence;
+                if (adds == stat)
+                {
+                    sum += state.Power;
+                }
             }
         }
 

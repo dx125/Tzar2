@@ -23,7 +23,7 @@ internal sealed class CombatCompiler
     [
         "experiencePerDamagePercent", "experiencePerKill", "levelBaseXp", "baseLevelCap", "attackPerLevel", "defenceHalvesPerLevel",
         "heroLevel", "leadershipTechnology", "leadershipRadiusTiles", "leadershipSharePercent", "honorTechnology", "honorAttackPercent",
-        "dummyMaxLevel", "exitRadiusTiles", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
+        "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
         "crusader", "crusadeSize", "crusadeAnchorRadiusTiles", "crusadeCooldownMs", "heroNames", "projectiles", "unitKeywords",
     ];
@@ -281,6 +281,9 @@ internal sealed class CombatCompiler
             HonorAttackPercent = Range("honorAttackPercent", d.HonorAttackPercent, 0, 10_000),
             DummyMaxLevel = Range("dummyMaxLevel", d.DummyMaxLevel, 0, 10_000),
             ExitRadiusTiles = Range("exitRadiusTiles", d.ExitRadiusTiles, 1, 16),
+            CraftHealthPerPower = Range("craftHealthPerPower", d.CraftHealthPerPower, 0, 100_000),
+            CraftManaPerPower = Range("craftManaPerPower", d.CraftManaPerPower, 0, 100_000),
+            CraftPowerPerLevel = Range("craftPowerPerLevel", d.CraftPowerPerLevel, 1, 10_000),
             CraftGoldPerPower = Range("craftGoldPerPower", d.CraftGoldPerPower, 1, 1_000_000),
             CraftMsPerPower = Range("craftMsPerPower", d.CraftMsPerPower, 0, 600_000),
             CraftMaxPower = Range("craftMaxPower", d.CraftMaxPower, 1, 10_000),

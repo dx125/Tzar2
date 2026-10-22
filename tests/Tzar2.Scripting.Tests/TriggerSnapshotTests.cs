@@ -110,8 +110,9 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // (owner play-test 2026-10-20) a unit still walking to a structure reaches it only next to it; then (ADR 0180)
             // queue entries and the workers' idle timer change the hashed layout, and the third play-test's rules the match;
             // then (ADR 0184) the spies' disguise store joins the hashed layout; then (ORD-005) the waypoint store; then
-            // (WAR-014) footmen and archers strike at the action row of their attack animations.
-            Assert.Equal("59FB73E2AE6CFB25", d.Hashes[^1].ToString("X16"));
+            // (WAR-014) footmen and archers strike at the action row of their attack animations; then (ITEM-016) items keep
+            // their own spell, effect and look (layout 11).
+            Assert.Equal("5CB5A6A7C14B925A", d.Hashes[^1].ToString("X16"));
         }
     }
 

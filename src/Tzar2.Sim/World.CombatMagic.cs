@@ -28,6 +28,13 @@ public sealed partial class World
     /// <summary>Spies' disguises (MAG-012, ADR 0184).</summary>
     public ComponentStore<Disguise> Disguises { get; private set; } = null!;
 
+    /// <summary>The spell of a book <paramref name="item"/>: its own (ITEM-016), else its type's; -1 when none.</summary>
+    public int ItemSpell(EntityId item)
+    {
+        int own = Items.IndexOf(item) is >= 0 and var i ? Items.At(i).Spell : 0;
+        return own > 0 ? own - 1 : TypeOf(item).Traits.Item?.Spell ?? -1;
+    }
+
     /// <summary>The points units walk after their current move (ORD-005).</summary>
     public ComponentStore<WaypointQueue> WaypointQueues { get; private set; } = null!;
 

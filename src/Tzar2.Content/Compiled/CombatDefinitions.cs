@@ -87,6 +87,37 @@ public enum ItemKind : byte
     PlusPlus = 8,
 }
 
+/// <summary>
+/// What one item adds, set per item (ITEM-016, ADR 0186): the original's power items raise attack (swords, bows) or
+/// defence (shields), its potions health, levels, mana, attack or defence. Values are hash format: append only.
+/// </summary>
+public enum ItemEffect : byte
+{
+    /// <summary>The type's own (<see cref="ItemDefinition.Kind"/> and potion values).</summary>
+    Default = 0,
+
+    /// <summary>Attack: while carried (a power item), or for good (a potion).</summary>
+    Attack = 1,
+
+    /// <summary>Defence: while carried (a power item), or for good (a potion).</summary>
+    Defence = 2,
+
+    /// <summary>Hit points restored (a potion).</summary>
+    Health = 3,
+
+    /// <summary>Experience levels gained (a potion).</summary>
+    Levels = 4,
+
+    /// <summary>Mana restored (a potion).</summary>
+    Mana = 5,
+}
+
+/// <summary>One item a crafter can make of a type (ITEM-016): its effect or spell and its look.</summary>
+/// <param name="Effect">What it adds (<see cref="ItemEffect.Default"/>: the type's).</param>
+/// <param name="Spell">A book's spell id, or -1 for the type's.</param>
+/// <param name="Look">1 + the index in <see cref="ItemDefinition.Looks"/>, or 0 for the type's own image.</param>
+public readonly record struct CraftVariant(ItemEffect Effect, int Spell, int Look);
+
 /// <summary>Trait <c>Item</c> (GAME-10; ADR 0094): an object that lies on the ground and can be carried.</summary>
 /// <param name="Kind">What it does.</param>
 /// <param name="Holders">Unit type ids that may carry it (OBJECTS <c>[enter]</c>), ascending.</param>
@@ -113,6 +144,18 @@ public sealed record ItemDefinition(ItemKind Kind, ImmutableArray<ushort> Holder
     /// <summary>Mana a potion restores.</summary>
     public int PotionMana { get; init; }
 
+    /// <summary>Other images a single item of the type may wear (IMAGES.INI names; ITEM-016), in order.</summary>
+    public ImmutableArray<string> Looks { get; init; } = [];
+
+    /// <summary>The items a crafter makes of the type (ITEM-016); empty: one, the type as it is.</summary>
+    public ImmutableArray<CraftVariant> Crafts { get; init; } = [];
+
+    /// <summary>The variants a crafter offers: <see cref="Crafts"/>, or the type as it is.</summary>
+    public int CraftVariantCount => Crafts.IsDefaultOrEmpty ? 1 : Crafts.Length;
+
+    /// <summary>Variant <paramref name="index"/> (<see cref="CraftVariantCount"/>), or the type as it is.</summary>
+    public CraftVariant CraftVariantAt(int index) => Crafts.IsDefaultOrEmpty ? new CraftVariant(ItemEffect.Default, -1, 0) : Crafts[index];
+
     /// <summary>Whether a unit of <paramref name="typeId"/> may carry it.</summary>
     public bool CanBeHeldBy(ushort typeId) => !Holders.IsDefault && Holders.BinarySearch(typeId) >= 0;
 
@@ -128,9 +171,18 @@ public sealed record ItemDefinition(ItemKind Kind, ImmutableArray<ushort> Holder
             || Resource < -1 || Resource >= resources || (Kind == ItemKind.Resource) != (Resource >= 0)
             || Spell < -1 || Spell >= spells || (Kind == ItemKind.SpellBook && Spell < 0)
             || PotionLevel is < 0 or > 1000 || PotionAttack is < 0 or > 100_000 || PotionDefence is < 0 or > 100_000
-            || PotionHealth is < 0 or > 1_000_000 || PotionMana is < 0 or > 1_000_000)
+            || PotionHealth is < 0 or > 1_000_000 || PotionMana is < 0 or > 1_000_000 || Looks.Length > 250)
         {
             throw new ArgumentException($"{where}: invalid item.");
+        }
+
+        foreach (CraftVariant v in Crafts)
+        {
+            if (v.Effect > ItemEffect.Mana || v.Spell < -1 || v.Spell >= spells || v.Look < 0 || v.Look > Looks.Length
+                || (v.Spell >= 0) != (Kind == ItemKind.SpellBook && v.Effect == ItemEffect.Default))
+            {
+                throw new ArgumentException($"{where}: invalid craft variant.");
+            }
         }
     }
 }
@@ -363,6 +415,15 @@ public sealed record CombatSettings
     /// <summary>Tiles around a holder searched for room when units leave it.</summary>
     public int ExitRadiusTiles { get; init; } = 3;
 
+    /// <summary>Hit points a crafted potion of health restores per point of power (UNK-25).</summary>
+    public int CraftHealthPerPower { get; init; } = 10;
+
+    /// <summary>Mana a crafted potion of mana restores per point of power (UNK-25).</summary>
+    public int CraftManaPerPower { get; init; } = 5;
+
+    /// <summary>Points of power a crafted potion needs per experience level (UNK-25).</summary>
+    public int CraftPowerPerLevel { get; init; } = 5;
+
     /// <summary>Gold per point of power of a crafted item (UNK-25).</summary>
     public int CraftGoldPerPower { get; init; } = 50;
 
@@ -434,6 +495,9 @@ public sealed record CombatSettings
         Check(DummyMaxLevel, 0, 10_000);
         Check(ExitRadiusTiles, 1, 16);
         Check(CraftGoldPerPower, 1, 1_000_000);
+        Check(CraftHealthPerPower, 0, 100_000);
+        Check(CraftManaPerPower, 0, 100_000);
+        Check(CraftPowerPerLevel, 1, 10_000);
         Check(CraftMsPerPower, 0, 600_000);
         Check(CraftMaxPower, 1, 10_000);
         Check(CraftBookCostPercent, 1, 10_000);

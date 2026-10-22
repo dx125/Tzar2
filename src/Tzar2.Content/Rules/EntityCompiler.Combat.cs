@@ -20,7 +20,7 @@ internal sealed partial class EntityCompiler
         // Lookup only, never iterated (T2D004).
         ["Holder"] = ["capacity", "accepts", "damage", "healPerMinute"],
         ["Inventory"] = ["slots"],
-        ["Item"] = ["kind", "holders", "power", "resource", "spell", "charges", "cooldownMs", "needsMana", "level", "attack", "defence", "health", "mana"],
+        ["Item"] = ["kind", "holders", "power", "resource", "spell", "charges", "cooldownMs", "needsMana", "level", "attack", "defence", "health", "mana", "looks", "crafts"],
         ["Spellcaster"] = ["spells"],
         ["Experience"] = [],
         ["Briber"] = [],
@@ -146,6 +146,49 @@ internal sealed partial class EntityCompiler
                 PotionHealth = NonNegative("Item", "health", 0, 1_000_000),
                 PotionMana = NonNegative("Item", "mana", 0, 1_000_000),
             };
+            if (item.Get("looks") is { } looks)
+            {
+                d.Item = d.Item with { Looks = [.. RulesDocument.StringList(looks.Node, looks.Source, Where("Item", "looks"))] };
+            }
+
+            // crafts: "effect [look]" or "spell [look]" (ITEM-016): what a crafter makes of the type.
+            if (item.Get("crafts") is { } craftList)
+            {
+                var variants = ImmutableArray.CreateBuilder<CraftVariant>();
+                foreach (string text in RulesDocument.StringList(craftList.Node, craftList.Source, Where("Item", "crafts")))
+                {
+                    string[] parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length is < 1 or > 2)
+                    {
+                        throw Error(craftList, $"{Where("Item", "crafts")}: '{text}' is not 'effect [look]' or 'spell [look]'");
+                    }
+
+                    ItemEffect effect = parts[0] switch
+                    {
+                        "attack" => ItemEffect.Attack,
+                        "defence" => ItemEffect.Defence,
+                        "health" => ItemEffect.Health,
+                        "levels" => ItemEffect.Levels,
+                        "mana" => ItemEffect.Mana,
+                        _ => ItemEffect.Default,
+                    };
+                    int craftSpell = -1;
+                    if (effect == ItemEffect.Default)
+                    {
+                        craftSpell = SpellIds(parts[0]) ?? throw Error(craftList, $"{Where("Item", "crafts")}: '{parts[0]}' is neither an effect (attack, defence, health, levels, mana) nor a spell");
+                    }
+
+                    int look = parts.Length < 2 ? 0 : d.Item.Looks.IndexOf(parts[1]) + 1;
+                    if (look == 0 && parts.Length == 2)
+                    {
+                        throw Error(craftList, $"{Where("Item", "crafts")}: look '{parts[1]}' is not in looks");
+                    }
+
+                    variants.Add(new CraftVariant(effect, craftSpell, look));
+                }
+
+                d.Item = d.Item with { Crafts = variants.ToImmutable() };
+            }
             if (item.Get("holders") is { } holders)
             {
                 specs.ItemHolders = (RulesDocument.StringList(holders.Node, holders.Source, Where("Item", "holders")), holders);

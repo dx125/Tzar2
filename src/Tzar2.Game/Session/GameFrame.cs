@@ -176,6 +176,9 @@ public struct FrameEntity
     /// <summary>Progress 0-1000 of the item a magic workshop is making, or -1 (GAME-10).</summary>
     public int CraftPermille;
 
+    /// <summary>An item's image (IMAGES.INI name) when it wears one of its type's looks (ITEM-016), else null.</summary>
+    public string? ItemLook;
+
     /// <summary>Units inside this holder of the frame's kingdom (castle, outpost, ship, carpet; GAME-09), else 0.</summary>
     public int Inside;
 

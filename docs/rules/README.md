@@ -106,7 +106,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 4 | 0 | 2 | 1 | 0 | 0 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 2 | 14 | 6 | 9 | 2 | 1 |
-| [Items](items.yaml) (ITEM) | 16 | 8 | 2 | 2 | 3 | 1 | 0 |
+| [Items](items.yaml) (ITEM) | 16 | 9 | 2 | 2 | 2 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 21 | 15 | 4 | 1 | 0 | 0 | 1 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 11 | 4 | 3 | 0 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 335 | 167 | 73 | 41 | 33 | 9 | 12 |
+| **All** | 335 | 168 | 73 | 41 | 32 | 9 | 12 |
 
 ## Not done yet
 
@@ -185,7 +185,6 @@ Missing and partial rules.
 * **ITEM-010** (partial): A soul item kills a unit or makes it go berserk; a hero is not killed. *The simulation does it; the card's item_kill and item_berserk orders do nothing yet.*
 * **ITEM-012**: A unit that picks up a magic book has yellow stars floating above it.
 * **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
-* **ITEM-016**: Each kind of item the magic workshop makes has several items, books of different spells, potions of different effects, and weapons for attack or defence (swords, bows, shields). *Tzar2 has one item per kind (a Fire Rain book, a potion, a weapon, a shield, a plus item); several need items with their own spell or effect.* Work: STATUS work queue 3.
 
 ### Magic, religion and spies
 

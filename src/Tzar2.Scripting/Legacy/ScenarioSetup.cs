@@ -1,4 +1,5 @@
 using System;
+using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Core.Ids;
 using Tzar2.Sim;
@@ -66,12 +67,27 @@ public static class ScenarioSetup
             }
         }
 
-        // Item properties (Appendix C.2 "Items"): the magnitude (weapon attack, armor defence, resource amount) and a
-        // spell book's charges. Scroll texts, potions' other deltas and spell-book cooldowns are not applied yet (UNK-67).
+        // Item properties (Appendix C.2 "Items"; ADR 0186): a power item's attack or defence and a potion's one effect
+        // come from the object's own stats, a book's spell from its magic type, the look from the item's name; else the
+        // magnitude (resource amount) and a spell book's charges. Scroll texts and spell-book cooldowns are not applied
+        // yet (UNK-67).
         if (info.Item is { } item && world.Items.Has(entity))
         {
             ref ItemState state = ref world.Items.Get(entity);
-            if ((item.Amount ?? item.Value) is { } power)
+            ItemDefinition def = world.TypeOf(entity).Traits.Item!;
+            if (def.Kind is ItemKind.Weapon or ItemKind.Armor && (info.Attack is > 0 || info.Defence is > 0))
+            {
+                // The value word: 1 attack (swords, bows), 2 defence (shields).
+                bool defence = item.Value == 2 || info.Attack is not > 0;
+                state.Effect = defence ? ItemEffect.Defence : ItemEffect.Attack;
+                state.Power = Math.Clamp((defence ? info.Defence : info.Attack) ?? 0, 0, 1_000_000);
+            }
+            else if (def.Kind == ItemKind.Potion && PotionEffect(info) is ({ } effect, var amount))
+            {
+                state.Effect = effect;
+                state.Power = Math.Clamp(amount, 0, 1_000_000);
+            }
+            else if ((item.Amount ?? item.Value) is { } power)
             {
                 state.Power = Math.Clamp(power, 0, 1_000_000);
             }
@@ -80,6 +96,14 @@ public static class ScenarioSetup
             {
                 state.Charges = Math.Clamp(charges, 0, 1_000_000);
             }
+
+            if (def.Kind == ItemKind.SpellBook && item.MagicType is >= 0 and var magic && magic < LegacySpellOrder.Length
+                && world.Ruleset.SpellId(LegacySpellOrder[magic]) is >= 0 and var spell)
+            {
+                state.Spell = (ushort)(spell + 1);
+            }
+
+            state.Look = (byte)(def.Looks.IndexOf(item.Definition) + 1);
         }
 
         if (info.Mana is { } mana && world.Manas.Has(entity))
@@ -88,4 +112,23 @@ public static class ScenarioSetup
             world.Manas.Get(entity).MilliMana = (int)Math.Clamp((long)mana * 1000, 0, (long)maxMana * 1000);
         }
     }
+
+    // The spells a map's book names by number (its magic type): their order in STRINGS.INI [spell_names] (⚠ HYPOTHESIS,
+    // ADR 0186: the 33 maps' books fit it). Soul Bind is not built.
+    private static readonly string[] LegacySpellOrder =
+    [
+        "spell_firerain", "spell_lightning", "spell_heal", "spell_spawncarpet", "spell_spawnbat", "spell_bless", "spell_freeze",
+        "spell_berserk", "spell_soulbind", "spell_cloak", "spell_spawnstonegolem", "spell_magicvision", "raisedead",
+        "spell_turntostone", "spell_whirlpool", "spell_spawndragon", "spell_flamebolt", "spell_raiseexp", "spell_spawnjin",
+        "spell_curse", "spell_hypnotize",
+    ];
+
+    // A potion's effect: the first of its stats the map sets (health, level, mana, attack, defence).
+    private static (ItemEffect? Effect, int Amount) PotionEffect(ObjectInfo info)
+        => info.Health is > 0 and var h ? (ItemEffect.Health, h)
+            : info.Level is > 0 and var l ? (ItemEffect.Levels, l)
+            : info.Mana is > 0 and var m ? (ItemEffect.Mana, m)
+            : info.Attack is > 0 and var a ? (ItemEffect.Attack, a)
+            : info.Defence is > 0 and var d ? (ItemEffect.Defence, d)
+            : (null, 0);
 }

@@ -65,11 +65,9 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. The ones a source settles come first: the attack's hit frame from the data (WAR-014), and the
-   magic workshop's several items per kind (ITEM-016: books of different spells, potions of different effects,
-   swords, bows and shields). Then the screens: diplomacy, tribute, inventory, save and load. Done: Landing Tactics
-   (TECH-019), one farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013),
-   waypoints (ORD-005).
+   order. Next: the screens: diplomacy, tribute, inventory, save and load. Done: Landing Tactics (TECH-019), one
+   farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
+   (ORD-005), the hit frame from the data (WAR-014), several items per kind (ITEM-016, ADR 0186).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
      (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
      both. The repairs are measured (run 3, ADR 0185); the distance is left. **Operator:** run 10,
@@ -115,6 +113,20 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Several items per kind (ITEM-016, ADR 0186).**
+  * The original's maps show what items are. `item_plusplus` is the power item: swords and bows carry an attack of
+    7–24, shields a defence of 5–50. Each potion sets one of health, levels or mana. A book names its spell by number,
+    read here as the order of STRINGS.INI `[spell_names]` (a hypothesis).
+  * Items keep their own effect, spell and look (hashed layout 11, snapshot format 13). The workshop's three kinds
+    make a book of any of 20 spells, five potions, and a sword, bow or shield. The order `CraftItem` carries the
+    variant in X.
+  * The goldens and the three CI benches are re-pinned (sim C24DD5082C0A543E, gameplay 3EB268D2FFC87ECA, AI
+    240D80C953319E76); the AI's commands are unchanged. `legacy.referenceDataHash` is 42D6158654D385C7.
+  * **Operator, when convenient:**
+    * In the original's magic workshop: which spells the book list offers, its gold minimum, and what a potion and a
+      shield of some gold give.
+    * In TzarEdit: the spell a book with magic type 1 shows.
 
 * **2026-10-22 — The blow lands at the animation's action row (WAR-014).** The importer reads each unit's attack
   animation (IMAGES.INI `actionrow` and frame delays) and lands the blow at that share of the swing (`Armament.hitPermille`;

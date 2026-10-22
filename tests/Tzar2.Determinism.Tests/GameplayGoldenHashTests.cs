@@ -51,12 +51,14 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // free: the scenario's damaged houses are repaired more slowly, so the stream and the final hash change too.
     // (ADR 0184 amendment 6, 2026-10-22) the unmasking reach of a taken-over unit, two settings: the ruleset hash only.
     // (2026-10-22) one peasant per field (workers 1), catapult stones hurt their own side: the ruleset hash only.
-    private const ulong GoldenRulesetHash = 0xFD3771F3D0351EE7UL;
+    // (ITEM-016, 2026-10-22) items have looks and craft variants, power items are weapons: the ruleset hash.
+    private const ulong GoldenRulesetHash = 0xA2F7D206DE7E0182UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
-    private const ulong GoldenHashStream = 0x7FF3568CD8996530UL;
-    private const ulong GoldenFinalFullHash = 0x9451BA78AD548519UL;
+    // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the stream and the final hash.
+    private const ulong GoldenHashStream = 0x01E7BFC104705AE7UL;
+    private const ulong GoldenFinalFullHash = 0xFFB31CD499D15A41UL;
 
     private const int Ticks = 1600;
 
