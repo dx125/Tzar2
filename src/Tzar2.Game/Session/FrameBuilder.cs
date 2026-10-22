@@ -336,12 +336,29 @@ public static class FrameBuilder
             fp.Defeated = (state.Flags & PlayerFlags.Defeated) != 0;
             fp.Victorious = (state.Flags & PlayerFlags.Victorious) != 0;
             fp.AiAssist = (byte)(((state.Flags & PlayerFlags.AssistEconomy) != 0 ? 1 : 0) | ((state.Flags & PlayerFlags.AssistWar) != 0 ? 2 : 0));
+            fp.Civilization = world.PlayerCivilization(p);
             fp.Statistics = KingdomStatistics.From(world.Kingdoms[p]);
             fp.Score = VictorySystem.Score(world.Ruleset.World, world.Kingdoms[p]);
             for (int w = 0; w < TechnologyRow.Capacity / 64; w++)
             {
                 fp.Technologies[w] = state.Technologies[w];
                 fp.Researching[w] = 0;
+            }
+        }
+
+        // Diplomacy between the kingdoms (the diplomacy screen, HUD-012).
+        if (frame.Stances.Length != players * players)
+        {
+            frame.Stances = new byte[players * players];
+            frame.Offers = new byte[players * players];
+        }
+
+        for (int a = 0; a < players; a++)
+        {
+            for (int b = 0; b < players; b++)
+            {
+                frame.Stances[(a * players) + b] = (byte)world.Diplomacy.StanceOf(a, b);
+                frame.Offers[(a * players) + b] = (byte)world.Diplomacy.OffersOf(a, b);
             }
         }
 
