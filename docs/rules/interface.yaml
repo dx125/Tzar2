@@ -132,7 +132,8 @@ rules:
     rule: The \ key shows the trees translucent so that units under them can be seen.
     source: [manual Hot Keys]
     status: partial
-    note: Trees are drawn at 45 % opacity, not with the original's look.
+    note: Trees are drawn at 45 % opacity, not with the original's look; neither the data nor ReTzar says how the original does it.
+    work: UI review screenshot 8 (docs/reviews/2026-10-ui-review.md)
   HUD-029:
     rule: An order shows only when its condition holds; the quest order only when there are quests.
     source: [data ORDERS.INI enable, data EQUATIONS.INI]
@@ -148,6 +149,7 @@ rules:
     source: ['data TERRAIN.INI [colors]']
     status: unclear
     note: Tzar2 draws own units green, enemies red and Nature yellow, and the box green; whether the original colours them by owner is to be confirmed.
+    work: UI review screenshot 9 (docs/reviews/2026-10-ui-review.md)
   HUD-032:
     rule: A working peasant is named by its job, woodcutter, farmer, miner or builder.
     source: ['strings STRINGS.INI [peons]']

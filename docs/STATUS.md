@@ -225,7 +225,7 @@ the process decisions that have no ADR.
   (`godot-smoke`, Linux) runs it and the other client smoke tests. Findings per screen and display:
   [reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md). Six layout findings, among them Authentic in a
   720-row window cutting off the HUD's bottom. Twenty-one likeness findings: texts not from STRINGS.INI, the
-  multiplayer screens on borrowed art, the scenario dialogs off their boxes. Six requests for the owner's screenshots
+  multiplayer screens on borrowed art, the scenario dialogs off their boxes. Eight requests for the owner's screenshots (two added for HUD-028 and HUD-031)
   and one decision (the main menu against its carved slots). Fixes follow in small PRs. Fixed: UI-L1 (a window
   smaller than the logical screen shrinks the picture), UI-L2 (the lobby's rows), UI-L3 (the editor's windows on 1024-wide screens), UI-L4 and UI-L5 (text wrapped to its box): no open layout
   finding is left. UI-T1, UI-T2, UI-T3, UI-T5: shell labels from STRINGS.INI. UI-A3, UI-A10,
