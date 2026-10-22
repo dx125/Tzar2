@@ -134,3 +134,5 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0190](0190-rules-read-from-the-originals-code-by-retzar.md) | Take the rules ReTzar read from the original's code, never ReTzar's code | Accepted | 2026-10-22 |
 | [0191](0191-technology-effects-as-the-original-computes-them.md) | Give technologies the effects the original's research handlers compute | Accepted | 2026-10-22 |
 | [0192](0192-gates-and-bridges-take-the-cells-of-their-pictures.md) | Gates and bridges take the cells of their pictures, either way | Accepted | 2026-10-22 |
+| [0230](0230-rotate-the-session-token-on-every-rejoin.md) | Rotate the session token on every rejoin; encrypt the handshake with Noise later | Accepted | 2026-10-22 |
+| [0231](0231-keep-alive-pings-five-times-per-disconnect-timeout.md) | Ping five times per disconnect timeout on LiteNetLib's thread, so a busy game thread does not drop a peer | Accepted | 2026-10-22 |

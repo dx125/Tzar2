@@ -84,8 +84,9 @@ reason in the commit message and in the history comment above the constants:
 `ci.yml` come from the same `t2 bench …` command run locally. All OSes and worker counts must agree; if they do not,
 it is a determinism bug, not a re-pin.
 
-**Known flaky:** `Tzar2.Net.Tests.RelayTests` time out now and then on loaded CI runners (issue #62). If only they fail,
-re-run the failed job (`gh run rerun <id> --failed`) and note it on the PR.
+**Relay tests and short timeouts:** `RelayTests` once timed out on loaded runners because peers were dropped while the
+test thread was busy (issue #62, fixed by ADR 0231). A relay test that fails with `member.drop … Timeout` in its log is
+a bug, not a flake: report it with the run id.
 
 ## How changes land
 
