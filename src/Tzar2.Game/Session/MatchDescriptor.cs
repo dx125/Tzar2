@@ -219,22 +219,39 @@ public sealed record MatchSettings
         value >= min && value <= max ? value : throw new InvalidDataException($"Value {value} outside [{min}, {max}].");
 }
 
-/// <summary>A lobby slot's own choices (the relay's per-slot choice blob): civilization, team and, for computers, difficulty.</summary>
+/// <summary>
+/// A lobby slot's own choices (the relay's per-slot choice blob): civilization, team, for computers the difficulty, the
+/// colour and the strategy of its computer player (SHELL-016, SHELL-017).
+/// </summary>
 /// <param name="Civilization">Civilization key of the ruleset.</param>
 /// <param name="Team">Team 0 (none) to 8.</param>
 /// <param name="Difficulty">Computer difficulty.</param>
-public sealed record SlotChoice(string Civilization, byte Team, Difficulty Difficulty)
+/// <param name="AiScript">The strategy of the kingdom's computer player (<see cref="AiScriptOption.Script"/>; <c>""</c>: the default).</param>
+/// <param name="Colour">The wanted colour 0-7, or 255 for the first free one.</param>
+public sealed record SlotChoice(string Civilization, byte Team, Difficulty Difficulty, string AiScript = "", byte Colour = SlotChoice.AnyColour)
 {
+    /// <summary>No colour wanted: the first free one.</summary>
+    public const byte AnyColour = 255;
+
+    /// <summary>Longest script name kept.</summary>
+    public const int MaxScriptLength = 32;
+
     /// <summary>The default choice for a fresh slot.</summary>
     public static SlotChoice Default { get; } = new("euro", 0, Difficulty.Normal);
 
-    /// <summary>The encoded choice.</summary>
+    /// <summary>The encoded choice (the colour and the script only when set, so older choices keep their bytes).</summary>
     public byte[] ToBytes()
     {
-        var w = new BinaryBufferWriter(24);
+        var w = new BinaryBufferWriter(64);
         w.WriteString(Civilization.Length <= 16 ? Civilization : Civilization[..16]);
         w.WriteByte(Team);
         w.WriteByte((byte)Difficulty);
+        if (AiScript.Length > 0 || Colour != AnyColour)
+        {
+            w.WriteByte(Colour);
+            w.WriteString(AiScript.Length <= MaxScriptLength ? AiScript : AiScript[..MaxScriptLength]);
+        }
+
         return w.ToArray();
     }
 
@@ -252,8 +269,16 @@ public sealed record SlotChoice(string Civilization, byte Team, Difficulty Diffi
             string civ = r.ReadString(16);
             byte team = r.ReadByte();
             byte difficulty = r.ReadByte();
-            return team <= 8 && difficulty <= (byte)Difficulty.Hard && civ.Length > 0 && r.IsAtEnd
-                ? new SlotChoice(civ, team, (Difficulty)difficulty)
+            byte colour = AnyColour;
+            string script = string.Empty;
+            if (!r.IsAtEnd)
+            {
+                colour = r.ReadByte();
+                script = r.ReadString(MaxScriptLength * 4);
+            }
+
+            return team <= 8 && difficulty <= (byte)Difficulty.Hard && civ.Length > 0 && r.IsAtEnd && (colour < 8 || colour == AnyColour) && script.Length <= MaxScriptLength
+                ? new SlotChoice(civ, team, (Difficulty)difficulty, script, colour)
                 : Default;
         }
         catch (InvalidDataException)
@@ -264,7 +289,9 @@ public sealed record SlotChoice(string Civilization, byte Team, Difficulty Diffi
 }
 
 /// <summary>One kingdom of a <see cref="MatchDescriptor"/>.</summary>
-public sealed record MatchPlayer(byte Slot, string Name, string Civilization, ControllerKind Controller, Difficulty Difficulty, byte Team);
+/// <param name="AiScript">The strategy of its computer player (<c>""</c>: the match's).</param>
+/// <param name="Colour">Its colour 0-7, or 255 for its slot's.</param>
+public sealed record MatchPlayer(byte Slot, string Name, string Civilization, ControllerKind Controller, Difficulty Difficulty, byte Team, string AiScript = "", byte Colour = 255);
 
 /// <summary>
 /// Everything needed to rebuild a match's <see cref="MatchSetup"/> on another machine (ADR 0162, 0164): the settings
@@ -289,8 +316,22 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             w.WriteByte(p.Team);
         }
 
+        // Colours and strategies (SHELL-016, SHELL-017) follow the kingdoms only when one is set, so descriptions
+        // (and replay headers) without them keep their bytes.
+        if (Players.Any(p => p.AiScript.Length > 0 || p.Colour != 255))
+        {
+            w.WriteByte(ChoicesMarker);
+            foreach (MatchPlayer p in Players)
+            {
+                w.WriteByte(p.Colour);
+                w.WriteString(p.AiScript.Length <= SlotChoice.MaxScriptLength ? p.AiScript : p.AiScript[..SlotChoice.MaxScriptLength]);
+            }
+        }
+
         return w.ToArray();
     }
+
+    private const byte ChoicesMarker = 0xC5;
 
     /// <summary>Decodes a description.</summary>
     /// <exception cref="InvalidDataException">Malformed.</exception>
@@ -321,6 +362,26 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             players.Add(new MatchPlayer(slot, name, civ, (ControllerKind)controller, (Difficulty)difficulty, team));
         }
 
+        if (!r.IsAtEnd)
+        {
+            if (r.ReadByte() != ChoicesMarker)
+            {
+                throw new InvalidDataException("Trailing bytes.");
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                byte colour = r.ReadByte();
+                string script = r.ReadString(SlotChoice.MaxScriptLength * 4);
+                if (colour is >= 8 and not 255)
+                {
+                    throw new InvalidDataException("Invalid colour in the match description.");
+                }
+
+                players[i] = players[i] with { Colour = colour, AiScript = script };
+            }
+        }
+
         return r.IsAtEnd ? new MatchDescriptor(settings, players.MoveToImmutable()) : throw new InvalidDataException("Trailing bytes.");
     }
 
@@ -339,7 +400,7 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
         {
             Ruleset = s.Ruleset,
             Map = s.MapSource(),
-            Players = [.. Players.Select(p => new PlayerSetup(p.Slot, p.Civilization, p.Controller, p.Difficulty))],
+            Players = [.. Players.Select(p => new PlayerSetup(p.Slot, p.Civilization, p.Controller, p.Difficulty, p.AiScript, p.Colour))],
             Seed = s.Seed,
             StartingResources = s.StartingResources,
             PopulationLimit = s.PopulationLimit,
@@ -401,6 +462,6 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             AiAssist = setup.AiAssist,
         };
         return new MatchDescriptor(settings, [.. setup.Players.Select(p => new MatchPlayer(
-            p.Slot, names?.Invoke(p.Slot) ?? string.Empty, p.Civilization, p.Controller, p.Difficulty, (byte)((setup.Teams >> (p.Slot * 4)) & 0xF)))]);
+            p.Slot, names?.Invoke(p.Slot) ?? string.Empty, p.Civilization, p.Controller, p.Difficulty, (byte)((setup.Teams >> (p.Slot * 4)) & 0xF), p.AiScript, p.Colour))]);
     }
 }

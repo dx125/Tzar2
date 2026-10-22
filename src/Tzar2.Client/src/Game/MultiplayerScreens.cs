@@ -5,6 +5,7 @@ using System.Linq;
 using Godot;
 using Tzar2.Game.Multiplayer;
 using Tzar2.Game.Session;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 
@@ -211,17 +212,18 @@ public partial class MultiplayerMenuScreen : ArtScreen
 }
 
 /// <summary>
-/// The multiplayer lobby (REQ-NET-08, ADR 0168): slots with player, civilization, team, ready flag and ping; the host
-/// opens, closes and fills slots with computers and sets the map and options (settings are locked while ready, and
-/// changing them clears everyone's ready flag); lobby chat; READY, START (host) and LEAVE.
+/// The multiplayer lobby (REQ-NET-08, ADR 0168): slots with colour, player, strategy, civilization, team, ready flag and
+/// ping; the host opens, closes and fills slots with computers and sets the match settings (settings are locked while
+/// ready, and changing them clears everyone's ready flag); lobby chat; READY, START (host) and LEAVE. What is offered
+/// comes from <see cref="LobbyScreenModel"/> (SHELL-016, SHELL-017, SHELL-018).
 /// </summary>
 public partial class LobbyScreen : ArtScreen
 {
     private static readonly string[] Civilizations = ["euro", "arab", "asia"];
     private static readonly string[] SlotChoices = ["Open", "Closed", "Computer (Easy)", "Computer (Normal)", "Computer (Hard)"];
-    private static readonly int[] Speeds = [50, 75, 100, 150, 200, 300];
 
     private readonly NetworkMatch _match;
+    private readonly Func<int, Color> _colour;
     private readonly Control _rows = new() { MouseFilter = MouseFilterEnum.Pass };
     private readonly Control _hostPanel = new() { MouseFilter = MouseFilterEnum.Pass };
     private readonly RichTextLabel _chatLog;
@@ -234,15 +236,19 @@ public partial class LobbyScreen : ArtScreen
     private LobbyView? _shown;
     private DropRule _drop = DropRule.AiTakeover;
 
-    /// <summary>Creates the lobby screen for <paramref name="match"/>.</summary>
-    public LobbyScreen(UiAssets ui, Vector2I screen, NetworkMatch match)
+    /// <summary>Creates the lobby screen for <paramref name="match"/>; <paramref name="colour"/> gives a colour ramp's swatch.</summary>
+    public LobbyScreen(UiAssets ui, Vector2I screen, NetworkMatch match, Func<int, Color> colour)
         : base(ui, screen, "art/screens/s_singlesetup/back.t2img")
     {
         _match = match;
+        _colour = colour;
         _title = new Label { Position = Origin + new Vector2I(66, 36), Text = "Connecting...", MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_title);
         AddChild(_rows);
-        AddChild(_hostPanel);
+        var hostScroll = new ScrollContainer { Position = Origin + new Vector2I(555, 36), Size = new Vector2(240, 430), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        _hostPanel.CustomMinimumSize = new Vector2(220, 0);
+        hostScroll.AddChild(_hostPanel);
+        AddChild(hostScroll);
         _chatLog = new RichTextLabel { Position = Origin + new Vector2I(66, 380), Size = new Vector2(460, 140), ScrollFollowing = true, BbcodeEnabled = false };
         AddChild(_chatLog);
         _chatLine = new LineEdit { Position = Origin + new Vector2I(66, 524), Size = new Vector2(460, 26), PlaceholderText = "Chat (Enter to send)", MaxLength = 200 };
@@ -308,6 +314,7 @@ public partial class LobbyScreen : ArtScreen
 
     private void Rebuild(LobbyView lobby)
     {
+        var model = new LobbyScreenModel(lobby, _match.AiScripts);
         _title.Text = $"{lobby.Name}   —   code {lobby.Code}{(lobby.LocalIsHost ? "   (you host)" : string.Empty)}";
         foreach (Node child in _rows.GetChildren())
         {
@@ -316,7 +323,7 @@ public partial class LobbyScreen : ArtScreen
 
         for (int i = 0; i < lobby.Slots.Count; i++)
         {
-            AddRow(lobby, lobby.Slots[i], 70 + (i * 34));
+            AddRow(lobby, lobby.Slots[i], model.Rows[i], model, 70 + (i * 34));
         }
 
         foreach (Node child in _hostPanel.GetChildren())
@@ -324,19 +331,34 @@ public partial class LobbyScreen : ArtScreen
             child.QueueFree();
         }
 
-        AddSettings(lobby);
+        AddSettings(lobby, model);
         LobbySlotView? me = lobby.Slots.FirstOrDefault(s => s.IsLocal);
         _ready.Visible = !lobby.LocalIsHost;
         _ready.Disabled = me is null;
         _start.Visible = lobby.LocalIsHost;
-        _start.Disabled = lobby.Slots.Any(s => s.Kind == SlotKind.Human && !s.Ready);
+        _start.Disabled = !model.CanStart;
         _status.Text = me is { Ready: true } && !lobby.LocalIsHost ? "You are ready (your choices are locked)." : string.Empty;
     }
 
-    private void AddRow(LobbyView lobby, LobbySlotView slot, int y)
+    private void AddRow(LobbyView lobby, LobbySlotView slot, LobbyRow row, LobbyScreenModel model, int y)
     {
-        Color colour = Palette(slot.Slot);
-        _rows.AddChild(new ColorRect { Position = Origin + new Vector2I(66, y + 4), Size = new Vector2(14, 14), Color = colour, MouseFilter = MouseFilterEnum.Ignore });
+        if (row.Colour >= 0 && row.CanChoose)
+        {
+            var colour = new OptionButton { Position = Origin + new Vector2I(20, y), Size = new Vector2(62, 24), TooltipText = "Colour" };
+            foreach (int c in row.Colours)
+            {
+                colour.AddIconItem(Swatch(c), Viewer.SpritePage.PlayerNames[c]);
+            }
+
+            colour.Selected = Math.Max(0, row.Colours.ToList().IndexOf(row.Colour));
+            colour.ItemSelected += index => SetChoice(slot, model.WithColour(slot.Slot, row.Colours[(int)index]));
+            _rows.AddChild(colour);
+        }
+        else if (row.Colour >= 0)
+        {
+            _rows.AddChild(new ColorRect { Position = Origin + new Vector2I(66, y + 4), Size = new Vector2(14, 14), Color = _colour(row.Colour), MouseFilter = MouseFilterEnum.Ignore });
+        }
+
         string who = slot.Kind switch
         {
             SlotKind.Human => $"{slot.Name}{(slot.IsHost ? " (host)" : string.Empty)}{(slot.Connected ? string.Empty : " (dropped)")}",
@@ -344,11 +366,10 @@ public partial class LobbyScreen : ArtScreen
             SlotKind.Closed => "Closed",
             _ => "Open",
         };
-        bool mine = slot.IsLocal && !slot.Ready;
         bool hostOther = lobby.LocalIsHost && !slot.IsHost;
         if (hostOther && slot.Kind != SlotKind.Human)
         {
-            var kind = new OptionButton { Position = Origin + new Vector2I(86, y), Size = new Vector2(170, 24) };
+            var kind = new OptionButton { Position = Origin + new Vector2I(86, y), Size = new Vector2(150, 24) };
             foreach (string c in SlotChoices)
             {
                 kind.AddItem(c);
@@ -365,15 +386,24 @@ public partial class LobbyScreen : ArtScreen
 
         if (hostOther && slot.Kind == SlotKind.Human)
         {
-            var kick = new Button { Position = Origin + new Vector2I(260, y), Size = new Vector2(40, 24), Text = "kick" };
+            var kick = new Button { Position = Origin + new Vector2I(196, y), Size = new Vector2(40, 24), Text = "kick" };
             kick.Pressed += () => _match.SetSlot(slot.Slot, SlotKind.Open);
             _rows.AddChild(kick);
         }
 
         if (slot.Kind is SlotKind.Human or SlotKind.Computer)
         {
-            bool editable = mine || (lobby.LocalIsHost && slot.Kind == SlotKind.Computer);
-            var civ = new OptionButton { Position = Origin + new Vector2I(306, y), Size = new Vector2(90, 24), Disabled = !editable };
+            // The strategy of the kingdom's computer player (SHELL-016); a player chooses his own (SHELL-017).
+            var script = new OptionButton { Position = Origin + new Vector2I(240, y), Size = new Vector2(100, 24), Disabled = !row.CanChoose, TooltipText = "AI script" };
+            foreach (AiScriptOption o in model.Scripts)
+            {
+                script.AddItem(o.Name);
+            }
+
+            script.Selected = row.Script;
+            script.ItemSelected += index => SetChoice(slot, model.WithScript(slot.Slot, (int)index));
+            _rows.AddChild(script);
+            var civ = new OptionButton { Position = Origin + new Vector2I(344, y), Size = new Vector2(70, 24), Disabled = !row.CanChoose };
             foreach (string c in Civilizations)
             {
                 civ.AddItem(c);
@@ -382,7 +412,7 @@ public partial class LobbyScreen : ArtScreen
             civ.Selected = Math.Max(0, Array.IndexOf(Civilizations, slot.Choice.Civilization));
             civ.ItemSelected += index => SetChoice(slot, slot.Choice with { Civilization = Civilizations[(int)index] });
             _rows.AddChild(civ);
-            var team = new OptionButton { Position = Origin + new Vector2I(400, y), Size = new Vector2(70, 24), Disabled = !editable };
+            var team = new OptionButton { Position = Origin + new Vector2I(418, y), Size = new Vector2(64, 24), Disabled = !row.CanChoose };
             team.AddItem("no team");
             for (int t = 1; t <= 4; t++)
             {
@@ -393,54 +423,62 @@ public partial class LobbyScreen : ArtScreen
             team.ItemSelected += index => SetChoice(slot, slot.Choice with { Team = (byte)index });
             _rows.AddChild(team);
             string state = slot.Kind == SlotKind.Human ? $"{(slot.Ready ? "ready" : "not ready")}  {slot.PingMs} ms" : string.Empty;
-            _rows.AddChild(new Label { Position = Origin + new Vector2I(476, y + 2), Text = state, MouseFilter = MouseFilterEnum.Ignore });
+            _rows.AddChild(new Label { Position = Origin + new Vector2I(486, y + 2), Text = state, MouseFilter = MouseFilterEnum.Ignore });
         }
     }
 
-    private void AddSettings(LobbyView lobby)
+    private void AddSettings(LobbyView lobby, LobbyScreenModel model)
     {
-        MatchSettings s = lobby.Settings;
-        bool host = lobby.LocalIsHost;
-        _hostPanel.AddChild(new Label { Position = Origin + new Vector2I(555, 40), Text = "MATCH SETTINGS", MouseFilter = MouseFilterEnum.Ignore });
-        int y = 66;
-        Option("Map", Enum.GetNames<Content.MapGen.RandomMapType>(), (int)s.MapType, i => _match.SetSettings(s with { Map = MapSourceKind.RandomMap, MapType = (Content.MapGen.RandomMapType)i }), ref y, host);
-        Option("Size", Enum.GetNames<Content.MapGen.RandomMapSize>(), (int)s.MapSize, i => _match.SetSettings(s with { MapSize = (Content.MapGen.RandomMapSize)i }), ref y, host);
-        Option("Terrain", Enum.GetNames<Content.MapGen.MapTerrainSet>(), (int)s.Terrain, i => _match.SetSettings(s with { Terrain = (Content.MapGen.MapTerrainSet)i }), ref y, host);
-        Option("Speed", Speeds.Select(v => v + " %").ToArray(), Math.Max(0, Array.IndexOf(Speeds, s.SpeedPercent)), i => _match.SetSettings(s with { SpeedPercent = Speeds[i] }), ref y, host);
-        Option("Dropped players", ["computer takes over", "neutral", "defeated"], (int)_drop, i => _drop = (DropRule)i, ref y, host);
-        Check("No fog", s.NoFog, v => _match.SetSettings(s with { NoFog = v }), ref y, host);
-        Check("AI Assist", s.AiAssist, v => _match.SetSettings(s with { AiAssist = v }), ref y, host);
-        Check("Cheats allowed", s.CheatsAllowed, v => _match.SetSettings(s with { CheatsAllowed = v && !s.Ranked }), ref y, host && !s.Ranked);
-        Check("Ranked (never cheats)", s.Ranked, v => _match.SetSettings(s with { Ranked = v, CheatsAllowed = false }), ref y, host);
-        if (host)
+        _hostPanel.AddChild(new Label { Position = Vector2.Zero, Text = "MATCH SETTINGS", MouseFilter = MouseFilterEnum.Ignore });
+        int y = 26;
+        foreach (LobbySetting setting in model.Settings)
         {
-            var reseed = new Button { Position = Origin + new Vector2I(555, y), Size = new Vector2(210, 24), Text = $"New map seed ({s.Seed % 100000})" };
+            LobbySettingKey key = setting.Key;
+            if (setting.IsCheck)
+            {
+                var box = new CheckBox { Position = new Vector2(0, y), Text = setting.Caption, ButtonPressed = setting.Selected == 1, Disabled = !setting.Enabled };
+                box.Toggled += v => _match.SetSettings(model.Apply(key, v ? 1 : 0));
+                _hostPanel.AddChild(box);
+                y += 28;
+                continue;
+            }
+
+            Option(setting.Caption, setting.Items, setting.Selected, setting.Enabled, i => _match.SetSettings(model.Apply(key, i)), ref y);
+        }
+
+        Option("Dropped players", ["computer takes over", "neutral", "defeated"], (int)_drop, lobby.LocalIsHost, i => _drop = (DropRule)i, ref y);
+        if (lobby.LocalIsHost)
+        {
+            MatchSettings s = lobby.Settings;
+            var reseed = new Button { Position = new Vector2(0, y), Size = new Vector2(214, 24), Text = $"New map seed ({s.Seed % 100000})" };
             reseed.Pressed += () => _match.SetSettings(s with { Seed = (ulong)Random.Shared.NextInt64() });
             _hostPanel.AddChild(reseed);
+            y += 30;
         }
+
+        _hostPanel.CustomMinimumSize = new Vector2(220, y);
     }
 
-    private void Option(string caption, string[] items, int selected, Action<int> changed, ref int y, bool enabled)
+    private void Option(string caption, IReadOnlyList<string> items, int selected, bool enabled, Action<int> changed, ref int y)
     {
-        _hostPanel.AddChild(new Label { Position = Origin + new Vector2I(555, y + 2), Text = caption, MouseFilter = MouseFilterEnum.Ignore });
-        var option = new OptionButton { Position = Origin + new Vector2I(660, y), Size = new Vector2(150, 24), Disabled = !enabled };
+        _hostPanel.AddChild(new Label { Position = new Vector2(0, y + 2), Text = caption, MouseFilter = MouseFilterEnum.Ignore });
+        var option = new OptionButton { Position = new Vector2(104, y), Size = new Vector2(110, 24), Disabled = !enabled };
         foreach (string item in items)
         {
             option.AddItem(item);
         }
 
-        option.Selected = Math.Clamp(selected, 0, items.Length - 1);
+        option.Selected = Math.Clamp(selected, 0, items.Count - 1);
         option.ItemSelected += index => changed((int)index);
         _hostPanel.AddChild(option);
         y += 30;
     }
 
-    private void Check(string caption, bool value, Action<bool> changed, ref int y, bool enabled)
+    private ImageTexture Swatch(int colour)
     {
-        var box = new CheckBox { Position = Origin + new Vector2I(555, y), Text = caption, ButtonPressed = value, Disabled = !enabled };
-        box.Toggled += changed.Invoke;
-        _hostPanel.AddChild(box);
-        y += 28;
+        Image image = Image.CreateEmpty(14, 14, false, Image.Format.Rgba8);
+        image.Fill(_colour(colour));
+        return ImageTexture.CreateFromImage(image);
     }
 
     private void SetSlotKind(LobbySlotView slot, int choice)
@@ -464,18 +502,6 @@ public partial class LobbyScreen : ArtScreen
             _match.SetComputerChoice(slot.Slot, choice);
         }
     }
-
-    private static Color Palette(int slot) => slot switch
-    {
-        0 => new Color(0.85f, 0.15f, 0.1f),
-        1 => new Color(0.1f, 0.3f, 0.9f),
-        2 => new Color(0.1f, 0.7f, 0.2f),
-        3 => new Color(0.9f, 0.85f, 0.1f),
-        4 => new Color(0.6f, 0.2f, 0.8f),
-        5 => new Color(0.95f, 0.5f, 0.1f),
-        6 => new Color(0.1f, 0.8f, 0.8f),
-        _ => new Color(0.9f, 0.9f, 0.9f),
-    };
 }
 
 /// <summary>The replay browser: the recorded matches in <c>user://replays</c> (REQ-NET-09), newest first.</summary>

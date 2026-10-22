@@ -42,12 +42,20 @@ internal static class LobbyDescription
             {
                 MatchPlayer old = sim < save.Descriptor.Players.Length ? save.Descriptor.Players[sim]
                     : throw new InvalidDataException("The lobby has more kingdoms than the saved game.");
-                choice = new SlotChoice(old.Civilization, old.Team, old.Difficulty);
+                choice = new SlotChoice(old.Civilization, old.Team, old.Difficulty, old.AiScript, old.Colour);
             }
 
             string civ = ruleset.EntityTypeId(choice.Civilization + ".castle") >= 0 ? choice.Civilization : FirstCivilization(ruleset);
             ControllerKind controller = s.State == SlotState.Human ? ControllerKind.Human : ControllerKind.Computer;
-            players.Add(new MatchPlayer(sim, s.State == SlotState.Human ? s.Name : string.Empty, civ, controller, choice.Difficulty, choice.Team));
+            players.Add(new MatchPlayer(sim, s.State == SlotState.Human ? s.Name : string.Empty, civ, controller, choice.Difficulty, choice.Team, choice.AiScript, choice.Colour));
+        }
+
+        // Colours (SHELL-016): wanted ones first, in slot order (the first slot keeps a colour two slots want), then
+        // the rest take the free ones in order, so a lobby without wishes keeps the kingdom-index colours.
+        byte[] colours = Colours(players.Select(p => p.Colour).ToArray());
+        for (int k = 0; k < players.Count; k++)
+        {
+            players[k] = players[k] with { Colour = colours[k] == k ? (byte)255 : colours[k] };
         }
 
         if (players.Count == 0)
@@ -64,6 +72,43 @@ internal static class LobbyDescription
             ? settings
             : save.Descriptor.Settings with { ResumeSnapshotHash = settings.ResumeSnapshotHash, SpeedPercent = settings.SpeedPercent };
         return (new MatchDescriptor(effective, players.ToImmutable()), simOf, [.. lobbyOf]);
+    }
+
+    /// <summary>
+    /// The colour of each of <paramref name="wanted"/>'s kingdoms (0-7; <see cref="SlotChoice.AnyColour"/> = no wish):
+    /// a wish is granted unless an earlier kingdom has that colour; the others take the free colours in order.
+    /// </summary>
+    public static byte[] Colours(IReadOnlyList<byte> wanted)
+    {
+        ArgumentNullException.ThrowIfNull(wanted);
+        var result = new byte[wanted.Count];
+        var taken = new bool[Math.Max(8, wanted.Count)];
+        for (int k = 0; k < wanted.Count; k++)
+        {
+            result[k] = SlotChoice.AnyColour;
+            if (wanted[k] < 8 && !taken[wanted[k]])
+            {
+                result[k] = wanted[k];
+                taken[wanted[k]] = true;
+            }
+        }
+
+        int next = 0;
+        for (int k = 0; k < wanted.Count; k++)
+        {
+            if (result[k] == SlotChoice.AnyColour)
+            {
+                while (taken[next])
+                {
+                    next++;
+                }
+
+                result[k] = (byte)next;
+                taken[next] = true;
+            }
+        }
+
+        return result;
     }
 
     private static string FirstCivilization(Ruleset ruleset)

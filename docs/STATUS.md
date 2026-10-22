@@ -216,6 +216,11 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-22 — The multiplayer setup: colours, AI scripts and every map and game option (ADR 0232; SHELL-016, SHELL-017, SHELL-018).**
+  Each player picks his colour and the AI script of his kingdom's computer player (AI.INI's strategies); the host
+  does the same for computers, and everyone is told when he changes one. The host sets the map's resources and options,
+  the game type, the victory, the starting resources, the population limit, Explore, day and night and weather. The
+  lobby screen draws an engine-free `LobbyScreenModel`. Custom maps in multiplayer remain open (SHELL-018 partial).
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
   UI review (item 15: every modern resolution, likeness to the original's texts, fonts and buttons) and the code

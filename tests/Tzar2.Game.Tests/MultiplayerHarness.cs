@@ -28,6 +28,9 @@ internal sealed class MultiplayerHarness : IDisposable
 
     public List<NetworkMatch> Matches { get; } = [];
 
+    /// <summary>The computer players' scripts every peer uses.</summary>
+    public SkirmishAi Ai { get; init; } = SkirmishAi.EngineDefault;
+
     /// <summary>When false, the relay is not updated (no new ticks close; peers converge on the last closed tick).</summary>
     public bool RelayRunning { get; set; } = true;
 
@@ -37,6 +40,7 @@ internal sealed class MultiplayerHarness : IDisposable
         Port = Relay.Port,
         PlayerName = name,
         Ruleset = HumanVsAiTests.SyntheticRules,
+        Ai = Ai,
         GameVersion = "test",
         SaveDirectory = saveDirectory ?? SaveDirectory,
         AutoAcceptSaves = true,
