@@ -42,6 +42,7 @@ internal static class SyntheticUi
         ("art/screens/lose.t2img", 155, 225),
         ("art/screens/s_campaign/back.t2img", 800, 600),
         ("art/screens/s_campaign/btn.t2img", 470, 25),
+        ("art/screens/s_credits/back.t2img", 800, 600),
         ("art/screens/s_main/back.t2img", 800, 600),
         ("art/screens/s_main/btn.t2img", 470, 25),
         ("art/screens/s_scrplay/back.t2img", 800, 600),
