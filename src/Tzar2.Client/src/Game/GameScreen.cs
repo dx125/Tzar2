@@ -211,7 +211,7 @@ public partial class GameScreen : Node
 
         // Sprites of the civilizations in the match (REQ-GFX-05): the kingdoms' and those of every object on the map (the
         // original maps give a kingdom buildings and units of other civilizations).
-        _bank = new SpriteBank(_store);
+        _bank = new SpriteBank(_store, [.. Enumerable.Range(0, 8).Select(ColourOf)]);
         var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { "comm", string.Empty };
         foreach (MapObject o in _session.Map.Objects)
         {
@@ -1847,7 +1847,7 @@ public partial class GameScreen : Node
         FrameEntity e = frame.Entities[lead];
         TypeVisual v = _catalog.Type(e.TypeId);
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
-        string owner = e.Owner < 8 ? SpritePage.PlayerNames[e.Owner] : string.Empty;
+        string owner = e.Owner < 8 ? SpritePage.PlayerNames[ColourOf(e.Owner)] : string.Empty;
         var strip = new List<StripItem>();
         _insideShown.Clear();
         if (_selection.Selected.Count > 1)
@@ -2071,7 +2071,7 @@ public partial class GameScreen : Node
             Color c;
             if (e.Owner < 8)
             {
-                Rgba32 r = palette.Ramp(e.Owner, 11);
+                Rgba32 r = palette.Ramp(ColourOf(e.Owner), 11);
                 c = Color.Color8(r.R, r.G, r.B);
             }
             else if (def.Traits.ResourceNode is { } node)
@@ -2328,7 +2328,7 @@ public partial class GameScreen : Node
     private string KingdomName(int slot)
     {
         _kingdomNames ??= MatchDescriptor.Of(_session.Setup)?.Players.ToDictionary(p => (int)p.Slot, p => p.Name) ?? [];
-        return _kingdomNames.TryGetValue(slot, out string? name) && name.Length > 0 ? name : slot < 8 ? SpritePage.PlayerNames[slot] : $"Kingdom {slot + 1}";
+        return _kingdomNames.TryGetValue(slot, out string? name) && name.Length > 0 ? name : slot < 8 ? SpritePage.PlayerNames[ColourOf(slot)] : $"Kingdom {slot + 1}";
     }
 
     private Dictionary<int, string>? _kingdomNames;
@@ -2340,9 +2340,12 @@ public partial class GameScreen : Node
             return Colors.Gray;
         }
 
-        Rgba32 r = _store.Palette.Ramp(slot, 11);
+        Rgba32 r = _store.Palette.Ramp(ColourOf(slot), 11);
         return Color.Color8(r.R, r.G, r.B);
     }
+
+    // The colour a kingdom plays with (SHELL-016: chosen in the multiplayer setup, else its slot's).
+    private int ColourOf(int kingdom) => kingdom < _session.Setup.Players.Count ? _session.Setup.Players[kingdom].ColourIndex : kingdom;
 
     private void ShowMenu()
     {

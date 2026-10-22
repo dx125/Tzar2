@@ -51,12 +51,13 @@ public sealed class ReplayPlayback
             throw new InvalidDataException("The replay was recorded with another ruleset (another package or game version).");
         }
 
-        if (file.Header.AiPrograms.Any(p => p.ProgramHash != ai.ContentHash))
+        MatchSetup setup = SetupOf(file.Header, ai);
+        if (!file.Header.AiPrograms.SequenceEqual(setup.AiPrograms))
         {
             throw new InvalidDataException("The replay's computer kingdoms ran other AI scripts.");
         }
 
-        return new ReplayPlayback(file, SetupOf(file.Header, ai), ruleset);
+        return new ReplayPlayback(file, setup, ruleset);
     }
 
     /// <summary>The setup that re-simulates a replay (multiplayer if a human kingdom had a standby AI, ADR 0163).</summary>

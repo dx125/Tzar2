@@ -20,8 +20,11 @@ public sealed class GpuSpriteAtlas : IDisposable
     private readonly int[] _sheetBase;
     private readonly List<Resource> _owned = [];
 
-    /// <summary>Uploads <paramref name="atlas"/> with the player ramps of <paramref name="palette"/>.</summary>
-    public GpuSpriteAtlas(SpriteAtlas atlas, PlayerPalette palette)
+    /// <summary>
+    /// Uploads <paramref name="atlas"/> with the player ramps of <paramref name="palette"/>; kingdom p is drawn with
+    /// colour <c>colourOf[p]</c> (SHELL-016; null: its own).
+    /// </summary>
+    public GpuSpriteAtlas(SpriteAtlas atlas, PlayerPalette palette, IReadOnlyList<int>? colourOf = null)
     {
         ArgumentNullException.ThrowIfNull(atlas);
         ArgumentNullException.ThrowIfNull(palette);
@@ -31,7 +34,7 @@ public sealed class GpuSpriteAtlas : IDisposable
         RgbaPages = Own(Array(atlas, PixelFormat.Rgba8, Image.Format.Rgba8));
         MaskPages = Own(Array(atlas, PixelFormat.R8, Image.Format.R8));
         Palettes = Own(ImageTexture.CreateFromImage(Image.CreateFromData(256, atlas.PaletteRows, false, Image.Format.Rgba8, atlas.PaletteTexture)));
-        Ramps = Own(ImageTexture.CreateFromImage(Image.CreateFromData(PlayerPalette.RampLength, PlayerPalette.Players, false, Image.Format.Rgba8, palette.ToRampTexture())));
+        Ramps = Own(ImageTexture.CreateFromImage(Image.CreateFromData(PlayerPalette.RampLength, PlayerPalette.Players, false, Image.Format.Rgba8, palette.ToRampTexture(colourOf))));
 
         _sheetBase = new int[atlas.SheetCount];
         int total = 0;

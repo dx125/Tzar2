@@ -56,15 +56,19 @@ public sealed class PlayerPalette
         return ramp;
     }
 
-    /// <summary>The ramps as a 16 × 8 RGBA8 image (x = step, y = player), the shader's ramp texture.</summary>
-    public byte[] ToRampTexture()
+    /// <summary>
+    /// The ramps as a 16 × 8 RGBA8 image (x = step, y = player), the shader's ramp texture; with
+    /// <paramref name="colourOf"/>, row p is the ramp of colour <c>colourOf[p]</c> (kingdoms that chose a colour).
+    /// </summary>
+    public byte[] ToRampTexture(IReadOnlyList<int>? colourOf = null)
     {
         byte[] rgba = new byte[RampLength * Players * 4];
         for (int p = 0; p < Players; p++)
         {
+            int colour = colourOf is not null && p < colourOf.Count && colourOf[p] is >= 0 and < Players ? colourOf[p] : p;
             for (int k = 0; k < RampLength; k++)
             {
-                Rgba32 c = Ramp(p, k);
+                Rgba32 c = Ramp(colour, k);
                 int o = ((p * RampLength) + k) * 4;
                 rgba[o] = c.R;
                 rgba[o + 1] = c.G;
