@@ -218,6 +218,7 @@ public static class FrameBuilder
                 e.TileX = footprint.TileX;
                 e.TileY = footprint.TileY;
                 e.Rotated = footprint.Rotated != 0;
+                e.Mirrored = footprint.Mirrored != 0;
             }
 
             int k = world.Constructions.IndexOf(id);

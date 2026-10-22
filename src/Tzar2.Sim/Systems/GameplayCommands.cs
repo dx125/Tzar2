@@ -181,7 +181,8 @@ internal static class GameplayCommands
 
         int tileX = command.X / MapState.UnitsPerTile;
         int tileY = command.Y / MapState.UnitsPerTile;
-        bool rotated = command.Arg1 == 1;
+        bool rotated = (command.Arg1 & 1) != 0; // Arg1 bit 0: turned; bit 1: a gate facing the other way (CTRL-024)
+        bool mirrored = (command.Arg1 & 2) != 0;
         List<EntityId>? walls = null;
         if (!CanPlace(world, type, tileX, tileY, rotated) && (walls = WallsUnderGate(world, command.Player, type, tileX, tileY, rotated)) is null)
         {
@@ -206,7 +207,7 @@ internal static class GameplayCommands
             }
         }
 
-        site = world.PlaceStructure(typeId, command.Player, tileX, tileY, underConstruction: true, rotated: rotated);
+        site = world.PlaceStructure(typeId, command.Player, tileX, tileY, underConstruction: true, rotated: rotated, mirrored: mirrored);
         world.Constructions.Get(site).Paid = paid;
         Position p = world.Positions.Get(site);
         world.Events.Emit(new SimEvent(SimEventKind.ConstructionStarted, command.Player, site, p.X, p.Y, typeId));
@@ -751,9 +752,9 @@ internal static class GameplayCommands
     /// </summary>
     internal static bool CanPlace(World world, EntityTypeDefinition type, int tileX, int tileY, bool rotated = false)
     {
-        var f = new Footprint { TileX = tileX, TileY = tileY, Rotated = rotated && type.FootprintWidth != type.FootprintHeight ? (byte)1 : (byte)0 };
-        int w = f.Width(type.FootprintWidth, type.FootprintHeight);
-        int h = f.Height(type.FootprintWidth, type.FootprintHeight);
+        var f = new Footprint { TileX = tileX, TileY = tileY, Rotated = rotated && type.CanTurn ? (byte)1 : (byte)0 };
+        int w = f.Width(type);
+        int h = f.Height(type);
         MapState map = world.Map;
         if (!map.ContainsTile(tileX, tileY) || !map.ContainsTile(tileX + w - 1, tileY + h - 1))
         {
@@ -765,13 +766,13 @@ internal static class GameplayCommands
             return CanPlaceBridge(map, tileX, tileY, w, h);
         }
 
-        ReadOnlySpan<byte> mask = type.Footprint;
+        ReadOnlySpan<byte> mask = f.Mask(type);
         for (int dy = 0; dy < h; dy++)
         {
             for (int dx = 0; dx < w; dx++)
             {
                 // Free mask cells (cut corners) may hold anything; blocked ones need walkable land without a structure.
-                if (mask[f.MaskIndex(dx, dy, type.FootprintWidth)] != 0
+                if (mask[(dy * w) + dx] != 0
                     && (!map.IsPassable(Locomotor.Foot, tileX + dx, tileY + dy) || map.Bridges[((tileY + dy) * map.Width) + tileX + dx] != 0
                         || world.IsUnderWalkableFootprint(tileX + dx, tileY + dy)))
                 {
@@ -812,9 +813,9 @@ internal static class GameplayCommands
             return null;
         }
 
-        var f = new Footprint { TileX = tileX, TileY = tileY, Rotated = rotated && type.FootprintWidth != type.FootprintHeight ? (byte)1 : (byte)0 };
-        int w = f.Width(type.FootprintWidth, type.FootprintHeight);
-        int h = f.Height(type.FootprintWidth, type.FootprintHeight);
+        var f = new Footprint { TileX = tileX, TileY = tileY, Rotated = rotated && type.CanTurn ? (byte)1 : (byte)0 };
+        int w = f.Width(type);
+        int h = f.Height(type);
         if (!world.Map.ContainsTile(tileX, tileY) || !world.Map.ContainsTile(tileX + w - 1, tileY + h - 1))
         {
             return null;
@@ -841,12 +842,12 @@ internal static class GameplayCommands
             covered[((piece.TileY - tileY) * w) + piece.TileX - tileX] = true;
         }
 
-        ReadOnlySpan<byte> mask = type.Footprint;
+        ReadOnlySpan<byte> mask = f.Mask(type);
         for (int dy = 0; dy < h; dy++)
         {
             for (int dx = 0; dx < w; dx++)
             {
-                if (mask[f.MaskIndex(dx, dy, type.FootprintWidth)] != 0 && !covered[(dy * w) + dx]
+                if (mask[(dy * w) + dx] != 0 && !covered[(dy * w) + dx]
                     && !PlacementQueries.IsBuildableTile(world, tileX + dx, tileY + dy))
                 {
                     return null;

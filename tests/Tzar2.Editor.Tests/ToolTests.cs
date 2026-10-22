@@ -243,7 +243,7 @@ public class ToolTests
         MapDocument doc = Map();
         int gate = 0, peon = 0, gold = 0;
         doc.Apply("Place", s => s
-            .Add(PlaceTools.Placement(Fixtures.Classic, "comm.gate_stone", 0, 4, 4, ctrl: true, alt: true) with { Flags = MapObjectFlags.Open | MapObjectFlags.Rotated }, null, out gate)
+            .Add(PlaceTools.Placement(Fixtures.Classic, "comm.gate_stone", 0, 4, 4, ctrl: true, alt: true) with { Flags = MapObjectFlags.Open | MapObjectFlags.Rotated | MapObjectFlags.Mirrored }, null, out gate)
             .Add(PlaceTools.Placement(Fixtures.Classic, "euro.peon", 0, 10, 10, facing: 3), null, out peon)
             .Add(MapObject.AtTile("comm.res_gold", MapObject.Nature, 20, 20) with { Amount = 1234 }, null, out gold));
         doc.Apply("Turn", s => s.Rotate([peon], counterClockwise: false));
@@ -256,7 +256,8 @@ public class ToolTests
         World w = sim.World;
         EntityId g = w.MapObjectEntities[0], p = w.MapObjectEntities[1], r = w.MapObjectEntities[2];
         (int _, int _, int gw, int gh) = w.FootprintRect(g);
-        Assert.Equal((1, 3), (gw, gh));
+        Assert.Equal((1, 6), (gw, gh)); // a gate down (gs2_anim, CTRL-024)
+        Assert.Equal(1, w.Footprints.Get(g).Mirrored); // and facing the other way
         Assert.Equal(1, w.Gates.Get(g).Open);
         Assert.Equal(4, w.Identities.Get(p).Facing);
         Assert.Equal(1234, w.ResourceStocks.Get(r).Amount);

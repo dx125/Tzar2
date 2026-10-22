@@ -179,8 +179,10 @@ public class ResearchCompilerTests
         Assert.True(Type("comm.galleon").Traits.IsRepairable);
         Assert.False(Type("comm.galleon").LeavesCorpse);
         EntityTypeDefinition gate = Type("comm.gate_wood");
-        Assert.Equal((3, 1), (gate.FootprintWidth, gate.FootprintHeight));
-        Assert.Equal(new byte[] { 0, 1, 0 }, gate.Traits.Gate!.Passage.ToArray());
+        Assert.Equal((7, 1), (gate.FootprintWidth, gate.FootprintHeight)); // gw0_anim's cells (CTRL-024)
+        Assert.Equal((1, 6), (gate.Turned.Width, gate.Turned.Height)); // gw2_anim's
+        Assert.Equal(new byte[] { 0, 0, 1, 1, 1, 0, 0 }, gate.Traits.Gate!.Passage.ToArray()); // the door, the middle three
+        Assert.Equal(new byte[] { 0, 1, 1, 1, 0, 0 }, gate.Traits.Gate!.TurnedPassage.ToArray());
         Assert.True(Type("comm.bridge").Traits.IsBridge);
         Assert.Equal(PlacementKind.Bridge, Type("comm.bridge").Traits.Placement);
 

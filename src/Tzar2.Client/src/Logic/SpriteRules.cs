@@ -20,6 +20,25 @@ public static class SpriteRules
     public static string? Turned(string? image, bool rotated)
         => rotated && image is not null && image.Contains("_horz", StringComparison.Ordinal) ? image.Replace("_horz", "_vert", StringComparison.Ordinal) : image;
 
+    /// <summary>
+    /// A gate's drawbridge picture for its facing (0 and 1 across, 2 and 3 down; CTRL-024): IMAGES.INI <c>gw0_anim</c> …
+    /// <c>gw3_anim</c> for wooden gates, <c>gs…</c> for stone ones, <c>…_build</c> for sites; null for what is no gate.
+    /// </summary>
+    public static string? GateImage(EntityTypeDefinition type, int facing, bool site)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        string? material = type.Traits.LegacyClass switch
+        {
+            "gate_wood" => "gw",
+            "gate_stone" => "gs",
+            _ => null,
+        };
+        return material is null ? null : $"{material}{facing & 3}_{(site ? "build" : "anim")}";
+    }
+
+    /// <summary>The drawbridge's frame: raised (closed) on row 0, lowered (open) on row 6 (ReTzar's reading, 0x456080).</summary>
+    public static int GateFrame(bool open) => open ? 6 : 0;
+
     /// <summary>The construction-site sheet for a footprint (<c>build1x1</c> … <c>build8x8</c> of IMAGES.INI).</summary>
     public static string BuildSiteName(EntityTypeDefinition type)
     {

@@ -41,7 +41,7 @@ internal sealed partial class EntityCompiler
         ["BuildTime"] = ["ms"],
         ["PopulationCost"] = ["amount"],
         ["PopulationProvider"] = ["amount"],
-        ["Building"] = ["width", "height", "mask", "placement"],
+        ["Building"] = ["width", "height", "mask", "placement", "turnedWidth", "turnedHeight", "turnedMask"],
         ["Harvester"] = ["capacity", "gatherMs"],
         ["Builder"] = ["builds", "civilizations"],
         ["Producer"] = ["queue"],
@@ -60,7 +60,7 @@ internal sealed partial class EntityCompiler
         ["RuinOnDeath"] = [],
         ["ManaPool"] = ["max", "regenPerMinute"],
         ["Wall"] = [],
-        ["Gate"] = ["passage"],
+        ["Gate"] = ["passage", "turnedPassage"],
         ["Bridge"] = [],
         ["ProtectedDelete"] = [],
         ["WalkableFootprint"] = [],
@@ -216,7 +216,11 @@ internal sealed partial class EntityCompiler
                     d.FootprintHeight,
                     d.Mask,
                     d.LeavesCorpse,
-                    traits) { TerrainRadius = d.TerrainRadius });
+                    traits)
+                {
+                    TerrainRadius = d.TerrainRadius,
+                    Turned = d.Turned ?? TurnedFootprint.Transposed(d.FootprintWidth, d.FootprintHeight, d.Mask ?? []),
+                });
             }
             catch (ArgumentException ex)
             {
@@ -364,6 +368,13 @@ internal sealed partial class EntityCompiler
             if (building.Get("mask") is { } mask)
             {
                 d.Mask = ReadMask(mask, d.FootprintWidth, d.FootprintHeight, Where("Building", "mask"));
+            }
+
+            // A footprint of its own when turned (the original's gates, 7 x 1 and 1 x 6; its bridges, 11 x 7 and 6 x 11).
+            if (IntOf("Building", "turnedWidth") is > 0 and var tw && IntOf("Building", "turnedHeight") is > 0 and var th)
+            {
+                byte[] cells = building.Get("turnedMask") is { } turnedMask ? ReadMask(turnedMask, tw, th, Where("Building", "turnedMask")) : [.. System.Linq.Enumerable.Repeat((byte)1, tw * th)];
+                d.Turned = new TurnedFootprint(tw, th, [.. cells]);
             }
 
             d.Placement = (StrOf("Building", "placement") ?? "land") switch
@@ -604,6 +615,7 @@ internal sealed partial class EntityCompiler
         if (entry.Find("Gate") is { } gate)
         {
             d.GateRows = gate.Get("passage");
+            d.GateTurnedRows = gate.Get("turnedPassage");
         }
 
         if (entry.Find("Decay") is not null)
@@ -627,7 +639,17 @@ internal sealed partial class EntityCompiler
         d.LifetimeMs = NonNegative("Lifetime", "ms", 0);
         if (d.GateRows is { } passage)
         {
-            d.Gate = new GateDefinition([.. ReadMask(passage, d.FootprintWidth, d.FootprintHeight, Where("Gate", "passage"))]);
+            byte[] cells = ReadMask(passage, d.FootprintWidth, d.FootprintHeight, Where("Gate", "passage"));
+            TurnedFootprint turned = d.Turned ?? TurnedFootprint.Transposed(d.FootprintWidth, d.FootprintHeight, cells);
+            byte[] turnedCells = d.GateTurnedRows is { } turnedRows
+                ? ReadMask(turnedRows, turned.Width, turned.Height, Where("Gate", "turnedPassage"))
+                : [.. TurnedFootprint.Transposed(d.FootprintWidth, d.FootprintHeight, cells).Mask];
+            if (turnedCells.Length != turned.Width * turned.Height)
+            {
+                throw Error(passage, $"{Where("Gate", "turnedPassage")} needs the turned footprint's {turned.Width} x {turned.Height} cells");
+            }
+
+            d.Gate = new GateDefinition([.. cells]) { TurnedPassage = [.. turnedCells] };
         }
 
         d.World = ReadWorldTraits(entry, key);
@@ -742,6 +764,8 @@ internal sealed partial class EntityCompiler
         public int FootprintWidth;
         public int FootprintHeight;
         public byte[]? Mask;
+        public TurnedFootprint? Turned;
+        public RuleValue? GateTurnedRows;
         public bool LeavesCorpse;
         public ImmutableArray<int> Cost = [];
         public int BuildTimeMs;
