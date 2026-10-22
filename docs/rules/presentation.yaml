@@ -8,9 +8,9 @@ rules:
     status: implemented
   PRES-002:
     rule: Arrows, bolts, stones, cannon balls, rockets and spells fly as the original's pictures, and stones, shells, rockets and bolts leave its explosions.
-    source: [data IMAGES.INI, owner 2026-10-20 (before the second play-test)]
-    status: partial
-    note: Which picture goes with which weapon, the flames' spots and the arcs are Tzar2's guesses.
+    source: [data IMAGES.INI, owner 2026-10-20 (before the second play-test), 'community ReTzar src/frontend/effects.rs and src/gameplay.rs (0x431340, 0x4335e7, 0x43392a, 0x4e8dd3)']
+    status: tested
+    note: Pictures by kind and shooter, the arcs and shadows, the holes, splashes and blasts and the ships' muzzle flash follow ReTzar's reading. Still Tzar2's - the trails behind stones, shells and rockets are not drawn, and the flames of burning buildings keep their spots (PRES-002 does not cover them).
   PRES-003:
     rule: Milking has its own animation, and a peasant carrying a load walks with it (logs, gold, stone, food, a pail of milk, meat).
     source: [data IMAGES.INI image_milk and the carrying sheets, owner 2026-10-20]

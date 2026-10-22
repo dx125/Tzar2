@@ -390,7 +390,8 @@ public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeI
 /// <param name="TargetY">Where it flies.</param>
 /// <param name="Kind">The projectile kind (<c>Ruleset.Projectiles</c>).</param>
 /// <param name="Spell">The spell it carries, or 0xFFFF.</param>
-public readonly record struct FrameProjectile(uint Id, int X, int Y, int TargetX, int TargetY, byte Kind, ushort Spell);
+/// <param name="ShooterType">The shooter's type (how the shot looks, PRES-002), or <see cref="ushort.MaxValue"/>.</param>
+public readonly record struct FrameProjectile(uint Id, int X, int Y, int TargetX, int TargetY, byte Kind, ushort Spell, ushort ShooterType = ushort.MaxValue);
 
 /// <summary>A corpse on the ground (decal).</summary>
 /// <param name="X">X in world units.</param>

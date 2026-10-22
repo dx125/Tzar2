@@ -353,7 +353,7 @@ public static class FrameBuilder
                 continue;
             }
 
-            projectiles[np++] = new FrameProjectile(shots[i].Value, s.X, s.Y, s.TargetX, s.TargetY, s.Kind, s.Spell);
+            projectiles[np++] = new FrameProjectile(shots[i].Value, s.X, s.Y, s.TargetX, s.TargetY, s.Kind, s.Spell, s.AttackerType);
         }
 
         frame.ProjectileCount = np;
