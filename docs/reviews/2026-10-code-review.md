@@ -222,11 +222,25 @@ twelve AI mutators and the client's namespaces. Its gaps:
 | #174 (on #163) | the client's civilization choices from the ruleset | |
 | #176 | the `Seat` trait and the feature technologies in world settings | ruleset hash only |
 
-Still open, for a decision:
+## Remaining findings and plan
 
-* `GameSession` exposes `Simulation` and `Ai`, and `GameFrame` names `Sim.Kingdoms` types (module boundaries 2–3).
-* `World`'s writable spans (module boundaries 3).
-* The worker pool's late-helper stalls (performance 8).
-* The scenario model's `Civilization` enum and map generation's civilization list (fork 2). Changing the list changes
-  random maps.
-* The formula constants of fork finding 4.
+Agreed with the coordinator (2026-10-22). Each item gets its own PR once the open ones merge.
+
+1. **The client's view of the match (module boundaries 2–3).** `GameSession` stops handing out `Simulation` and `Ai`,
+   and `GameFrame` stops naming `Sim.Kingdoms` types. The client reads only frames, UI models and commands. This gets an
+   ADR, and the architecture test checks the public surface the client sees.
+2. **Civilizations everywhere (fork 2).**
+   * The scenario model's `Civilization` enum gives way to keys or indices into the ruleset's list (ADR 0211).
+   * Map generation takes the ruleset's list. Random maps change, so the mapgen goldens are re-pinned with the reason.
+3. **The AI's read-only world (module boundaries 3).** `World.Players`, `World.Kingdoms` and
+   `ComponentStore.Components` get read-only views for the AI, and the writable spans stay with the systems.
+4. **The worker pool's late helpers (performance 8).** First an ADR and a stress test on CI runners. The primitive
+   changes only if the test shows real stalls there.
+
+Not planned yet:
+
+* the formula constants in code (fork 4);
+* the AI's tuning in C# options;
+* the diplomacy icon and name-suffix maps of the original's art;
+* the replay recording's in-memory keyframes;
+* the cursor and setup-screen costs (performance 7 and 9).
