@@ -33,11 +33,6 @@ internal static class UiFindings
     /// <summary>The open findings.</summary>
     public static readonly Known[] Open =
     [
-        // The conversation's phrases are not wrapped to its 300 px box.
-        new("UI-L4", ".*", "conversation", "TextOverflow", "ConversationDialog"),
-
-        // Without the original AI scripts, the notice on the random map setup runs over the map rows.
-        new("UI-L5", ".*", "random-map", "Overlap", "SkirmishSetupScreen"),
     ];
 
     /// <summary>The issues in the smoke test's output.</summary>

@@ -227,7 +227,8 @@ the process decisions that have no ADR.
   720-row window cutting off the HUD's bottom. Twenty-one likeness findings: texts not from STRINGS.INI, the
   multiplayer screens on borrowed art, the scenario dialogs off their boxes. Six requests for the owner's screenshots
   and one decision (the main menu against its carved slots). Fixes follow in small PRs. Fixed: UI-L1 (a window
-  smaller than the logical screen shrinks the picture), UI-L2 (the lobby's rows), UI-L3 (the editor's windows on 1024-wide screens).
+  smaller than the logical screen shrinks the picture), UI-L2 (the lobby's rows), UI-L3 (the editor's windows on 1024-wide screens), UI-L4 and UI-L5 (text wrapped to its box): no open layout
+  finding is left.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the

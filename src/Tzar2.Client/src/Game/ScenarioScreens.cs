@@ -138,21 +138,26 @@ public partial class ConversationDialog : ScenarioDialog
         ArgumentNullException.ThrowIfNull(image);
         View = view;
         string speaker = view.Choices.Length > 0 ? view.Choices[0].Speaker : string.Empty;
-        if (image(view.Choices.Length > 0 ? view.Choices[0].Icon : null) is { } portrait)
+        Texture2D? portrait = image(view.Choices.Length > 0 ? view.Choices[0].Icon : null);
+        if (portrait is not null)
         {
             AddChild(new TextureRect { Texture = portrait, Position = Origin + new Vector2I(20, 20), MouseFilter = MouseFilterEnum.Ignore });
         }
 
-        Text(new Vector2I(130, 20), speaker, UiAssets.BoldFont);
-        int y = 48;
+        // The phrases are wrapped to the box (D_SAY, 300 px wide; UI-L4): right of the portrait when there is one.
+        int x = portrait is null ? 16 : 130;
+        int width = ArtSize.X - x - 16;
+        Text(new Vector2I(x, 16), speaker, UiAssets.BoldFont);
+        int y = 38;
         foreach (PhraseChoice choice in view.Choices)
         {
-            List<string> lines = Wrap(choice.Text, 330);
-            int height = Math.Max(16, Math.Min(lines.Count, 6) * 14);
+            string phrase = (view.Choices.Length > 1 ? $"{choice.Position + 1}. " : string.Empty) + choice.Text;
+            List<string> lines = Wrap(phrase, width);
+            int height = Math.Max(14, Math.Min(lines.Count, 6) * 14);
             int position = choice.Position;
-            Area(new Rect2I(new Vector2I(126, y - 2), new Vector2I(340, height + 4)), () => Chosen?.Invoke(position));
-            Paragraph(new Vector2I(130, y), (view.Choices.Length > 1 ? $"{position + 1}. " : string.Empty) + choice.Text, 330, 6, UiAssets.SmallFont, new Color(1f, 0.92f, 0.65f));
-            y += height + 10;
+            Area(new Rect2I(new Vector2I(x - 4, y - 2), new Vector2I(width + 8, height + 4)), () => Chosen?.Invoke(position));
+            Paragraph(new Vector2I(x, y), phrase, width, 6, UiAssets.SmallFont, new Color(1f, 0.92f, 0.65f));
+            y += height + 6;
         }
     }
 
