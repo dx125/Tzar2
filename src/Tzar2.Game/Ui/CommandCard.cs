@@ -18,7 +18,7 @@ namespace Tzar2.Game.Ui;
 /// </summary>
 public sealed class CommandCard
 {
-    /// <summary>The slots of a card; with more orders a card gets pages of <c>Slots − 1</c> and a page button.</summary>
+    /// <summary>The slots of a card; with more orders the arrows by the orders bar turn pages of this many (HUD-019).</summary>
     public const int Slots = 8;
 
     private readonly Ruleset _rules;
@@ -31,6 +31,7 @@ public sealed class CommandCard
     private readonly Dictionary<uint, int> _index = [];
     private GameFrame? _indexed;
     private int _page;
+    private EntityId _carrier;
 
     /// <summary>Creates the card of a kingdom.</summary>
     /// <param name="rules">The ruleset of the match.</param>
@@ -51,10 +52,28 @@ public sealed class CommandCard
     /// <summary>Every button of the current card, before paging (hotkeys reach every page).</summary>
     public IReadOnlyList<CardSlot> WholeCard { get; private set; } = [];
 
-    /// <summary>Goes back to the previous menu (Esc, the card's Back); false when the entity's own card is open.</summary>
+    /// <summary>The page of the card shown (HUD-019).</summary>
+    public int Page { get; private set; }
+
+    /// <summary>How many pages the card has.</summary>
+    public int PageCount { get; private set; } = 1;
+
+    /// <summary>Whether the inventory of <see cref="InventoryCarrier"/> fills the card (the eye, HUD-017).</summary>
+    public bool InventoryOpen => !_carrier.IsNone;
+
+    /// <summary>The unit whose inventory is open, or none.</summary>
+    public EntityId InventoryCarrier => _carrier;
+
+    /// <summary>Goes back to the previous menu (Esc, the card's Back) or closes the inventory; false when the entity's own card is open.</summary>
     public bool Back()
     {
         _page = 0;
+        if (InventoryOpen)
+        {
+            _carrier = EntityId.None;
+            return true;
+        }
+
         return _menus.TryPop(out _);
     }
 
@@ -63,6 +82,97 @@ public sealed class CommandCard
     {
         _menus.Clear();
         _page = 0;
+        _carrier = EntityId.None;
+    }
+
+    /// <summary>The arrows by the orders bar (HUD-019): <paramref name="delta"/> pages on, within the card.</summary>
+    public void TurnPage(int delta) => _page = Math.Clamp(_page + delta, 0, Math.Max(0, PageCount - 1));
+
+    /// <summary>
+    /// The own unit whose items the eye shows (HUD-017): the focused unit when it carries items, else the first selected
+    /// one that does; none when no selected unit of the kingdom carries anything.
+    /// </summary>
+    public EntityId Carrier(CardContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (!context.IsOwn || context.Selection.Count == 0)
+        {
+            return EntityId.None;
+        }
+
+        EntityId focus = context.Selection[Math.Clamp(context.Focus, 0, context.Selection.Count - 1)];
+        if (Carries(context, focus))
+        {
+            return focus;
+        }
+
+        foreach (EntityId id in context.Selection)
+        {
+            if (Carries(context, id))
+            {
+                return id;
+            }
+        }
+
+        return EntityId.None;
+    }
+
+    /// <summary>The eye: opens the carrier's inventory on the card, or closes it; true when it is open after.</summary>
+    public bool ToggleInventory(CardContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        _page = 0;
+        _carrier = InventoryOpen ? EntityId.None : Carrier(context);
+        return InventoryOpen;
+    }
+
+    private bool Carries(CardContext context, EntityId unit)
+    {
+        Dictionary<uint, int> index = Index(context.Frame);
+        if (!index.TryGetValue(unit.Value, out int i) || context.Frame.Entities[i].Owner != _me)
+        {
+            return false;
+        }
+
+        foreach (FrameHeld h in context.Frame.Helds)
+        {
+            if (h.IsItem && h.Holder == unit.Value)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // The open inventory: the carrier's items by slot, the default item framed (HUD-017/018).
+    private List<CardSlot> InventorySlots(CardContext context)
+    {
+        var items = new List<FrameHeld>();
+        foreach (FrameHeld h in context.Frame.Helds)
+        {
+            if (h.IsItem && h.Holder == _carrier.Value)
+            {
+                items.Add(h);
+            }
+        }
+
+        items.Sort((a, b) => a.Slot.CompareTo(b.Slot));
+        var slots = new List<CardSlot>(items.Count);
+        foreach (FrameHeld h in items)
+        {
+            string name = h.Look is { } look ? _source.Text("images", look, _source.Name(h.TypeId)) : _source.Name(h.TypeId);
+            if (h.Spell >= 0 && h.Spell < _rules.Spells.Count)
+            {
+                string spell = _rules.Spells[h.Spell].Key;
+                name += ": " + _source.Text("spell_names", spell, spell);
+            }
+
+            var button = new CardButton("item", '\0', CardAction.InventoryItem, h.Slot.ToString(CultureInfo.InvariantCulture), _source.ItemIcon(h.TypeId, h.Look), name);
+            slots.Add(new CardSlot(button, true, h.IsDefault, string.Empty, Description: "Left click: use (Ctrl: at once); right click: drop; Alt + click: the default item"));
+        }
+
+        return slots;
     }
 
     /// <summary>The slots to draw: the focused own entity's card (or the current submenu), paged; empty otherwise.</summary>
@@ -75,6 +185,20 @@ public sealed class CommandCard
         if (context.Placing)
         {
             return card;
+        }
+
+        if (InventoryOpen)
+        {
+            if (!context.Selection.Contains(_carrier) || !Carries(context, _carrier))
+            {
+                _carrier = EntityId.None; // the carrier is no longer selected or carries nothing
+                _page = 0;
+            }
+            else
+            {
+                whole.AddRange(InventorySlots(context));
+                return Paged(card, whole);
+            }
         }
 
         FrameEntity e = default;
@@ -136,24 +260,16 @@ public sealed class CommandCard
             whole.Add(new CardSlot(b, enabled, Active(context, b), detail, Queued(context, b, civ), PriceRows(context, cost, timeMs), description));
         }
 
-        // More orders than slots (a peasant has nine): pages of seven and a page button.
-        if (whole.Count <= Slots)
-        {
-            card.AddRange(whole.Select(c => (CardSlot?)c));
-            return card;
-        }
+        return Paged(card, whole);
+    }
 
-        const int perPage = Slots - 1;
-        int pages = (whole.Count + perPage - 1) / perPage;
-        int page = _page % pages;
-        card.AddRange(whole.Skip(page * perPage).Take(perPage).Select(c => (CardSlot?)c));
-        while (card.Count < perPage)
-        {
-            card.Add(null);
-        }
-
-        var more = new CardButton("page", '\0', CardAction.Page, $"{page + 1}/{pages}", -1, "More orders");
-        card.Add(new CardSlot(more, true, false, $"page {page + 1} of {pages}"));
+    // More orders than slots (a peasant has nine): pages of eight, turned by the arrows (HUD-019).
+    private List<CardSlot?> Paged(List<CardSlot?> card, List<CardSlot> whole)
+    {
+        PageCount = Math.Max(1, (whole.Count + Slots - 1) / Slots);
+        _page = Math.Clamp(_page, 0, PageCount - 1);
+        Page = _page;
+        card.AddRange(whole.Skip(_page * Slots).Take(Slots).Select(c => (CardSlot?)c));
         return card;
     }
 
@@ -205,10 +321,17 @@ public sealed class CommandCard
     /// <param name="slot">The slot pressed.</param>
     /// <param name="right">A right click.</param>
     /// <param name="shift">Shift held (five of a unit).</param>
-    public CardPress Press(CardContext context, CardSlot slot, bool right = false, bool shift = false)
+    /// <param name="alt">Alt held (an item: make it the default item).</param>
+    /// <param name="ctrl">Ctrl held (an item: use it at once, without a target).</param>
+    public CardPress Press(CardContext context, CardSlot slot, bool right = false, bool shift = false, bool alt = false, bool ctrl = false)
     {
         ArgumentNullException.ThrowIfNull(context);
         CardButton b = slot.Button;
+        if (b.Action == CardAction.InventoryItem && int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int itemSlot) && InventoryOpen)
+        {
+            return PressItem(context, itemSlot, right, alt, ctrl);
+        }
+
         if (b.Action == CardAction.Page)
         {
             _page++;
@@ -588,6 +711,42 @@ public sealed class CommandCard
             t.InventorySlots > 0,
             t.Item is not null,
             t.GainsExperience ? e.Level : -1);
+    }
+
+    // An item of the open inventory (HUD-018): right click drops it, Alt + click makes it the default item, a click uses
+    // it: an item whose spell needs a target waits for a click on the world (the mode's argument is slot + 1), unless
+    // Ctrl makes it instant.
+    private CardPress PressItem(CardContext context, int slot, bool right, bool alt, bool ctrl)
+    {
+        var list = new CommandList();
+        if (right)
+        {
+            list.Add(CommandKind.DropItem, [_carrier], arg0: slot);
+            return new CardPress(Commands: list);
+        }
+
+        if (alt)
+        {
+            list.Add(CommandKind.SetDefaultItem, [_carrier], arg0: slot);
+            return new CardPress(Commands: list);
+        }
+
+        int spell = -1;
+        foreach (FrameHeld h in context.Frame.Helds)
+        {
+            if (h.IsItem && h.Holder == _carrier.Value && h.Slot == slot)
+            {
+                spell = h.Spell;
+            }
+        }
+
+        if (!ctrl && spell >= 0 && spell < _rules.Spells.Count && _rules.Spells[spell].Target != SpellTarget.Self)
+        {
+            return new CardPress(Mode: OrderMode.UseItem, ModeArgument: slot + 1);
+        }
+
+        list.Add(CommandKind.UseItem, [_carrier], target: _carrier, arg0: slot);
+        return new CardPress(Commands: list);
     }
 
     /// <summary>Backspace: the selected own units use their default item at once (HK.TXT; GAME-10), or null.</summary>

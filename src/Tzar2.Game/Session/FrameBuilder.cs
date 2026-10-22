@@ -442,7 +442,28 @@ public static class FrameBuilder
             }
 
             Health health = world.Healths.IndexOf(unit) is >= 0 and var h ? world.Healths.At(h) : default;
-            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item));
+            int slot = -1;
+            bool isDefault = false;
+            int spell = -1;
+            string? look = null;
+            if (item && world.Inventories.IndexOf(holder) is >= 0 and var inv)
+            {
+                Inventory inventory = world.Inventories.At(inv);
+                for (int k = 0; k < inventory.Count; k++)
+                {
+                    if (inventory.Items[k] == unit.Value)
+                    {
+                        slot = k;
+                    }
+                }
+
+                isDefault = slot >= 0 && inventory.Default == slot;
+                spell = world.ItemSpell(unit);
+                ItemDefinition def = world.TypeOf(unit).Traits.Item!;
+                look = world.Items.Get(unit).Look is > 0 and var l && l <= def.Looks.Length ? def.Looks[l - 1] : null;
+            }
+
+            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item, slot, isDefault, spell, look));
         }
 
         frame.HeldCount = n;

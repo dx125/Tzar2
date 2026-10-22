@@ -20,6 +20,9 @@ public enum CardAction
     /// <summary>Research technology <see cref="CardButton.Argument"/> (its key) in the selected building.</summary>
     Research,
 
+    /// <summary>An item of the open inventory (HUD-017/018), in slot <see cref="CardButton.Argument"/>; its image is an ICONS.INI cell.</summary>
+    InventoryItem,
+
     /// <summary>Buy upgrade <see cref="CardButton.Argument"/> (its key) for the selected towers, walls, gates or ships.</summary>
     Upgrade,
 
@@ -248,6 +251,9 @@ public interface ICardSource
 
     /// <summary>A text of the game (STRINGS.INI), or <paramref name="fallback"/>.</summary>
     string Text(string section, string key, string fallback);
+
+    /// <summary>The ICONS.INI picture of an item of type <paramref name="typeId"/> in <paramref name="look"/> (its own image, or null), or −1.</summary>
+    int ItemIcon(ushort typeId, string? look);
 }
 
 /// <summary>What the command card is built for: the frame, the selection and the order waiting for a target.</summary>
