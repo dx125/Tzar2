@@ -123,7 +123,12 @@ public class ResearchCompilerTests
         Assert.False(temper.AppliesTo(Type("comm.tower_wood").Id)); // category unit
 
         ModifierDefinition armor = Assert.Single(Classic.Technologies[Tech("te_scalearmor")].Effects);
-        Assert.Equal(new[] { "euro.archer", "euro.footman", "euro.maceman", "euro.pikeman" }, armor.Types.Select(id => Classic.EntityTypes[id].Key));
+        // The units on foot (ReTzar, 0x4de880): not the knights, not the siege weapons (ADR 0191).
+        Assert.Equal(1, armor.Add);
+        Assert.Contains(Type("euro.footman").Id, armor.Types.ToArray());
+        Assert.Contains(Type("euro.mage").Id, armor.Types.ToArray());
+        Assert.DoesNotContain(Type("euro.knight").Id, armor.Types.ToArray());
+        Assert.DoesNotContain(Type("comm.catapult").Id, armor.Types.ToArray());
 
         ModifierDefinition supply = Assert.Single(Classic.Technologies[Tech("te_supplystorage")].Effects);
         Assert.Equal((ModifierStat.PopulationProvided, 2), (supply.Stat, supply.Add));

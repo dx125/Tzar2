@@ -54,15 +54,16 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ITEM-016, 2026-10-22) items have looks and craft variants, power items are weapons: the ruleset hash.
     // (WORLD-015, 2026-10-22) units get the original's body (14 px from the 32 px object box; terrain footprints stay):
     // the ruleset, the stream and the final hash.
-    private const ulong GoldenRulesetHash = 0xDDED0854CEE906D1UL;
+    private const ulong GoldenRulesetHash = 0x7BD62A7965F685E0UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the stream and the final hash.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0xA1D932EBC8716045UL;
-    private const ulong GoldenFinalFullHash = 0x18D96B5792F7DE56UL;
+    // (ADR 0191, 2026-10-22) technology effects as the original computes them (whole points, cost and time cuts): the ruleset and the hashes.
+    private const ulong GoldenHashStream = 0x8682D598A0954478UL;
+    private const ulong GoldenFinalFullHash = 0x82E7C3EE3591F8EFUL;
 
     private const int Ticks = 1600;
 

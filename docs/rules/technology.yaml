@@ -12,14 +12,16 @@ rules:
     status: tested
   TECH-003:
     rule: Feudalism (Europeans and Asians) and Slavery (Arabians) make peasants cheaper.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: Each cuts a peasant's food to 80 % (0x4d4159).
+    adr: [0191]
   TECH-004:
     rule: Architecture makes building faster and allows stone walls, gates and bridges.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: A building's TIME goes to 70 % (0x4d347e), here a 43 % faster rate.
+    adr: [0191]
   TECH-005:
     rule: Learning lets units gain experience and allows the warriors' guild.
     source: [manual Researching Technologies, guide Important tips, strings STRINGS.INI orders_add te_learning]
@@ -33,19 +35,22 @@ rules:
     adr: [0190]
   TECH-007:
     rule: Horsemanship (Arabians) makes mounted units cheaper.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: Only horse archers and heavy cavalry, every cost to 75 % (0x4d3a2d).
+    adr: [0191]
   TECH-008:
     rule: Temper Iron raises sword attack; Scimitar (Arabians) raises it again and allows satraps.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: Each adds 1 to the attack of hand-to-hand units (0x4de7d0).
+    adr: [0191]
   TECH-009:
     rule: Scale Armor and then Chain Mail raise the defence of infantry.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: Scale Armor adds 1 and Chain Mail 2 to the defence of the units on foot (0x4de880).
+    adr: [0191]
   TECH-010:
     rule: Saw, Stone Mining, Gold Mining and Ore Flotation (Arabians) make gathering wood, stone and gold more productive.
     source: [manual Researching Technologies, help ITEMS.TXT HT_CHOP_WOOD, help ITEMS.TXT HT_MINE, community ReTzar src/gameplay.rs (0x4ae720)]
@@ -54,62 +59,71 @@ rules:
     adr: [0190]
   TECH-011:
     rule: Crossbow raises the attack of arrows; Chemistry (Asians) gives flaming arrows with more attack.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: Each adds 1 to the attack of bows, ballistas, xebecs and the arrow towers (0x4de7d0).
+    adr: [0191]
   TECH-012:
     rule: Engineering raises the attack of catapults and heavy catapults.
-    source: [manual Researching Technologies, patch 1.09 (TZAR110.TXT)]
+    source: [manual Researching Technologies, patch 1.09 (TZAR110.TXT), community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: It adds 5 to catapults, cannon ships and cannon and rocket towers (0x4de7d0).
+    adr: [0191]
   TECH-013:
     rule: Gunpowder (Asians) raises the attack of cannon towers.
-    source: [strings STRINGS.INI orders_add te_gunpowder]
+    source: [strings STRINGS.INI orders_add te_gunpowder, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21); added after the owner's check of 2026-10-21 found Gunpowder did nothing.
+    note: It adds 10.
+    adr: [0191]
   TECH-014:
     rule: Heroism lets units gain unlimited experience and become heroes.
     source: [manual Researching Technologies]
     status: tested
   TECH-015:
     rule: Leadership makes the units around a hero gain experience along with him.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: Radius and share are placeholders (UNK-23).
+    note: The original shares the whole of it with the units below level 11 within the hero's sight; here within 4 tiles (UNK-23).
+    adr: [0191]
   TECH-016:
     rule: Honor raises the attack of heroes fighting other heroes.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-23).
+    note: Hero against hero, 50 % more.
+    adr: [0191]
   TECH-017:
     rule: Warfare, Tactics and Sun Tzu's Book (Asians) make units learn faster.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-23).
+    note: A level needs 70, 50 and 35 % of the experience (here as gains of 43, 57 and 86 % that add up).
+    adr: [0191]
   TECH-018:
     rule: Body Building makes hit points grow as a unit gains experience.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-23).
+    note: Five hit points a level.
+    adr: [0191]
   TECH-019:
     rule: Landing Tactics lets ships carry 50 % more troops, once.
     source: [manual Researching Technologies, help ITEMS.TXT HT_USE_SHIPS, patch 1.05 (TZAR110.TXT)]
     status: tested
   TECH-020:
     rule: Fanaticism (Europeans and Arabians) and Buddhism (Asians) raise the resistance of all buildings.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-19, UNK-21).
+    note: Each adds half to the resistance (0x4d4064).
+    adr: [0191]
   TECH-021:
     rule: Inquisition makes the priests' exorcism stronger; Medicine lets priests heal from farther away.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-26).
+    note: Inquisition adds 5 to the priests' attack; Medicine's reach is a placeholder (UNK-26).
+    adr: [0191]
   TECH-022:
     rule: Supply Storage and Seafood (Asians) raise the population limit.
-    source: [manual Researching Technologies]
-    status: tested
-    note: By how much is a placeholder (UNK-20).
+    source: [manual Researching Technologies, community ReTzar src/gameplay/cheats.rs (0x4d385a)]
+    status: partial
+    note: The original raises the population limit by a quarter for each (0x4d3819); Tzar2 still gives houses 2 more room.
   TECH-023:
     rule: Trade Taxes makes the markets produce resources over time.
     source: [manual Researching Technologies, strings STRINGS.INI orders_add te_tradetaxes, community ReTzar src/gameplay.rs (K+0x11a)]
@@ -124,19 +138,22 @@ rules:
     adr: [0190]
   TECH-025:
     rule: Riding Hordes (Arabians) raises the attack and defence of all mounted units.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: Only horse archers and heavy cavalry, +2 attack and +1 defence.
+    adr: [0191]
   TECH-026:
     rule: Kung-Fu (Asians) raises the attack of peasants, monks and priests.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21).
+    note: The original gives peasants +1 attack, not monks or priests.
+    adr: [0191]
   TECH-027:
     rule: Meditation (Asians) makes monks cheaper, and Philosophy makes new monks start at a higher level.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-21, UNK-23).
+    note: Meditation cuts the Asian monk's costs to 75 %; Philosophy makes monks and priests start at level 2.
+    adr: [0191]
   TECH-028:
     rule: Mastery (Asians) lets priests teach kung-fu units and turn mana into experience.
     source: [manual Researching Technologies]
@@ -158,9 +175,10 @@ rules:
     note: The manual and the game's texts name them, but the original's data has no such technologies: they look cut from the game.
   TECH-032:
     rule: Concentration (Asians) makes mana come back faster.
-    source: [manual Researching Technologies]
+    source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: By how much is a placeholder (UNK-26).
+    note: Mana comes back 2 a second, 4 more with Concentration (0x502ea2).
+    adr: [0191]
   TECH-033:
     rule: Technologies of spells and summons (Bat, Stone Golem, Invisibility, Lightning, Freeze, Whirlpool, Flame Bolt, Dragon, Turn To Stone, Confusion, Magic Carpet, Jinn, Rain of Fire, Magic Vision, Necromancy, Healing, Bless) make their spell possible.
     source: [manual Researching Technologies, 'data TECHTREE [orders]']

@@ -466,41 +466,51 @@ te_stoneplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: 
 te_goldplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [res_gold] }] } }
 te_ironplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [res_iron] }] } }      # UNVERIFIED (UNK-14): no iron rock exists
 te_orefloatation: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_gold, res_stone, res_iron] }] } }   # UNVERIFIED (UNK-21)
-te_feudalism: { Technology: { effects: [{ stat: cost, percent: -20, classes: [peon] }] } }          # UNVERIFIED (UNK-21)
-te_slavery: { Technology: { effects: [{ stat: cost, percent: -20, classes: [peon] }] } }            # UNVERIFIED (UNK-21)
-te_horsemanship: { Technology: { effects: [{ stat: cost, percent: -20, groups: [mounted] }] } }     # UNVERIFIED (UNK-21)
-te_meditation: { Technology: { effects: [{ stat: cost, percent: -20, classes: [monk] }] } }         # UNVERIFIED (UNK-21)
-te_architecture: { Technology: { effects: [{ stat: buildRate, percent: 25, category: building }] } } # UNVERIFIED (UNK-21)
-te_greatwall: { Technology: { effects: [{ stat: maxHealth, percent: 25, classes: [wall_stone, gate_stone, tower_stone, tower_stone2] }] } }   # UNVERIFIED (UNK-21)
-te_fanaticism: { Technology: { effects: [{ stat: resistance, percent: 20, category: building }] } } # UNVERIFIED (UNK-19/21)
-te_budhism: { Technology: { effects: [{ stat: resistance, percent: 20, category: building }] } }    # UNVERIFIED (UNK-19/21)
+# Technology effects as ReTzar read them from the original's code (ADR 0191; the research handlers at 0x4d33d0):
+# Feudalism and Slavery cut a peasant's food to 80 % (0x4d4159); Horsemanship every cost of horse archers and heavy
+# cavalry, and Meditation the Asian monk's, to 75 %; Architecture a building's TIME to 70 % (0x4d347e, here a 43 % faster
+# rate); Great Wall adds 30 % to the hit points of stone towers, walls and gates; Fanaticism and Buddhism add half to a
+# building's resistance (0x4d4064).
+te_feudalism: { Technology: { effects: [{ stat: cost, percent: -20, classes: [peon] }] } }
+te_slavery: { Technology: { effects: [{ stat: cost, percent: -20, classes: [peon] }] } }
+te_horsemanship: { Technology: { effects: [{ stat: cost, percent: -25, classes: [horse_archer, heavy_cavalry] }] } }
+te_meditation: { Technology: { effects: [{ stat: cost, percent: -25, classes: [monk], civ: asia }] } }
+te_architecture: { Technology: { effects: [{ stat: buildRate, percent: 43, category: building }] } }
+te_greatwall: { Technology: { effects: [{ stat: maxHealth, percent: 30, classes: [wall_stone, gate_stone, tower_stone, tower_stone2] }] } }
+te_fanaticism: { Technology: { effects: [{ stat: resistance, percent: 50, category: building }] } }
+te_budhism: { Technology: { effects: [{ stat: resistance, percent: 50, category: building }] } }
 te_supplystorage: { Technology: { effects: [{ stat: populationProvided, add: 2, classes: [house] }] } }   # UNVERIFIED (UNK-20/21)
 te_seafood: { Technology: { effects: [{ stat: populationProvided, add: 2, classes: [house] }] } }   # UNVERIFIED (UNK-20/21)
-te_temperiron: { Technology: { effects: [{ stat: attack, percent: 10, damage: sword, category: unit }] } }   # UNVERIFIED (UNK-21)
-te_scimitar: { Technology: { effects: [{ stat: attack, percent: 10, damage: sword, category: unit }] } }     # UNVERIFIED (UNK-21)
-te_crossbow: { Technology: { effects: [{ stat: attack, percent: 10, damage: arrow }] } }             # UNVERIFIED (UNK-21)
-te_chemistry: { Technology: { effects: [{ stat: attack, percent: 20, damage: arrow }] } }            # UNVERIFIED (UNK-21)
-te_engineering: { Technology: { effects: [{ stat: attack, percent: 20, groups: [siege] }] } }        # UNVERIFIED (UNK-21)
-te_kungfu: { Technology: { effects: [{ stat: attack, percent: 20, classes: [peon, monk, priest] }] } }   # UNVERIFIED (UNK-21)
-te_scalearmor: { Technology: { effects: [{ stat: defence, add: 1, groups: [infantry_units] }] } }    # UNVERIFIED (UNK-21)
-te_chainmail: { Technology: { effects: [{ stat: defence, add: 1, groups: [infantry_units] }] } }     # UNVERIFIED (UNK-21)
+# Weapons and armour (ReTzar, 0x4de7d0 and 0x4de880): Temper Iron and Scimitar +1 attack to hand-to-hand units, Crossbow
+# and Chemistry +1 to bows (archers, horse archers, ballistas, xebecs, the arrow towers), Engineering +5 to catapults,
+# cannon ships and towers; Kung Fu +1 to peasants; Scale Armor +1 and Chain Mail +2 defence to the units on foot.
+te_temperiron: { Technology: { effects: [{ stat: attack, add: 1, damage: sword, category: unit }] } }
+te_scimitar: { Technology: { effects: [{ stat: attack, add: 1, damage: sword, category: unit }] } }
+te_crossbow: { Technology: { effects: [{ stat: attack, add: 1, damage: arrow }] } }
+te_chemistry: { Technology: { effects: [{ stat: attack, add: 1, damage: arrow }] } }
+te_engineering: { Technology: { effects: [{ stat: attack, add: 5, classes: [catapult, hcatapult, galleon, hulk, tower_stone2, tower_rocket] }] } }
+te_kungfu: { Technology: { effects: [{ stat: attack, add: 1, classes: [peon] }] } }
+te_scalearmor: { Technology: { effects: [{ stat: defence, add: 1, classes: [peon, footman, archer, maceman, longbowman, pikeman, monk, ninja, spy, mage, priest, dwarf, ork, enichar, jinn, ghost, jihad_warrior, skeleton] }] } }
+te_chainmail: { Technology: { effects: [{ stat: defence, add: 2, classes: [peon, footman, archer, maceman, longbowman, pikeman, monk, ninja, spy, mage, priest, dwarf, ork, enichar, jinn, ghost, jihad_warrior, skeleton] }] } }
 te_ridinghorses:
   Technology:
     effects:
-      - { stat: attack, percent: 10, groups: [mounted] }        # UNVERIFIED (UNK-21)
-      - { stat: defence, add: 1, groups: [mounted] }            # UNVERIFIED (UNK-21)
-te_concentration: { Technology: { effects: [{ stat: manaRegen, percent: 50, category: unit }] } }   # UNVERIFIED (UNK-26)
+      - { stat: attack, add: 2, classes: [horse_archer, heavy_cavalry] }   # ReTzar (ADR 0191)
+      - { stat: defence, add: 1, classes: [horse_archer, heavy_cavalry] }
+te_concentration: { Technology: { effects: [{ stat: manaRegen, percent: 200, category: unit }] } }   # ReTzar (0x502ea2): 2 a second, +4 (ADR 0191)
 # Consumed by GAME-08 (experience), GAME-09 (holders), GAME-11 (spells), GAME-14 (trade/tavern).
 te_learning: { Technology: { effects: [{ stat: experienceCap, add: 4, category: unit }] } }          # UNVERIFIED (UNK-23)
 te_heroism: { Technology: { effects: [{ stat: experienceCap, add: 1000, category: unit }] } }        # UNVERIFIED (UNK-23): "unlimited"
 # te_nobility (Leadership) and te_honor act through combat.leadership* / combat.honor* (GAME-08, ADR 0092).
-te_warfare: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }     # UNVERIFIED (UNK-23)
-te_tactics: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }     # UNVERIFIED (UNK-23)
-te_suntzubook: { Technology: { effects: [{ stat: experienceGain, percent: 25, category: unit }] } }  # UNVERIFIED (UNK-23)
+# Warfare, Tactics and Sun Tzu set the experience a level needs to 70, 50 and 35 % (ReTzar, 0x4d33d0); they come in
+# that order, so as gains they add up to 1/0.7, 1/0.5 and 1/0.35 (ADR 0191).
+te_warfare: { Technology: { effects: [{ stat: experienceGain, percent: 43, category: unit }] } }
+te_tactics: { Technology: { effects: [{ stat: experienceGain, percent: 57, category: unit }] } }
+te_suntzubook: { Technology: { effects: [{ stat: experienceGain, percent: 86, category: unit }] } }
 te_bodybuilding: { Technology: { effects: [{ stat: healthPerLevel, add: 5, category: unit }] } }     # UNVERIFIED (UNK-23)
-te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes: [monk] }] } }       # UNVERIFIED (UNK-23)
+te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes: [monk, priest] }] } }   # ReTzar: monks and priests start at level 2 (ADR 0191)
 te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, percent: 50, groups: [ships] }] } } # help HT_USE_SHIPS: 50 % more units
-te_inquisition: { Technology: { effects: [{ stat: attack, percent: 50, classes: [priest] }] } }     # UNVERIFIED (UNK-26): exorcism is the priests' attack
+te_inquisition: { Technology: { effects: [{ stat: attack, add: 5, classes: [priest] }] } }     # ReTzar: +5 (ADR 0191); exorcism is the priests' attack
 te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 4, classes: [priest] }] } }        # UNVERIFIED (UNK-26): +4 tiles of spell range
 # TECH-023, TECH-024: Trade Taxes and Banking add 2 and 3 to the base 40 of the trade profit (ReTzar's reading of the
 # original, K+0x11a): 5 % and 7.5 % more profit (7 here: whole percents).
@@ -509,7 +519,7 @@ te_tradetaxes: { Technology: { effects: [{ stat: income, percent: 5, classes: [m
 # Income is trade profit by the selling market, so it targets the markets: on the castle it did nothing (2026-10-21).
 te_banking: { Technology: { effects: [{ stat: income, percent: 7, classes: [market] }] } }
 # Gunpowder (Asian): "increases cannon tower's attack power" (STRINGS.INI orders_add; TECH-013).
-te_gunpowder: { Technology: { effects: [{ stat: attack, percent: 20, classes: [tower_stone2] }] } }  # UNVERIFIED (UNK-21)
+te_gunpowder: { Technology: { effects: [{ stat: attack, add: 10, classes: [tower_stone2] }] } }  # ReTzar: +10 (ADR 0191)
 
 # Ship cannon levels (UPGRADES.INI to_ship_level2-6): bought per galleon in order; "the cannons fire more frequently"
 # (help HT_UPGRADE_SHIPS; TECH-036): the firing period goes 3000, 2400, 1900, 1500, 1200, 800 (ReTzar's reading of the
@@ -536,9 +546,9 @@ combat:
   heroLevel: 12                       # TDD GAME-08: level 12 = named hero
   leadershipTechnology: te_nobility   # manual: Leadership "makes the units around a hero gain experience along with him"
   leadershipRadiusTiles: 4            # UNVERIFIED (UNK-23)
-  leadershipSharePercent: 50          # UNVERIFIED (UNK-23)
+  leadershipSharePercent: 100         # ReTzar: the whole of it (ADR 0191)
   honorTechnology: te_honor           # manual: Honor "increases the attack damage of heroes, when fighting other heroes"
-  honorAttackPercent: 25              # UNVERIFIED (UNK-23)
+  honorAttackPercent: 50              # ReTzar: +50 % hero against hero (ADR 0191)
   dummyMaxLevel: 3                    # UNVERIFIED (UNK-23): training dummies teach the first levels only
   heroNames: legacy                   # DATA/HEROES.INI
   # GAME-09 holders.
