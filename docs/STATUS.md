@@ -6,12 +6,58 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-22 (controls)
-* **Maintainer:** Claude (AI), working with the product owner, who also operates the Windows PC with the original
-  game for captures and local-only tests. The implementation agent that built M0–M6 is no longer available (handover
-  2026-10-18; see the log below).
+* **Last updated:** 2026-10-22 (handover)
+* **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below). The product
+  owner also operates the Windows PC with the original game for captures and local-only tests.
 * **`main`:** green on CI. Open PRs: none. Open issues: [#62](https://github.com/dx125/Tzar2/issues/62) (flaky
   `RelayTests`).
+
+## Handover (2026-10-22)
+
+The owner hands the work to another agent. Read [AGENTS.md](../AGENTS.md), then [DEVELOPMENT.md](DEVELOPMENT.md) (tools,
+how changes land, the rules that keep the project correct, the sources of knowledge, the fidelity loop), then the work
+queue below.
+
+**Scope, in order:**
+
+1. The results of the owner's fifth play-test, when they come (work queue item 5): fix what it finds.
+2. The UI review (item 15): every screen at every modern resolution, and alike to the original.
+3. The codebase review (item 16): performance, resources and memory; modules loose enough for a fork.
+4. The rest of the work queue, and the ledger's open rules (`t2 rules list missing partial unclear`).
+
+**Where to look:**
+
+* **State:** the milestones and the work queue below; the decision log (newest first) says what changed and why.
+* **The original's rules and what is still open:** [rules/](rules/README.md) and its report.
+* **Gameplay values still placeholders:** [mechanics/](mechanics/) (`UNVERIFIED`).
+* **Why the code is as it is:** the ADRs, [decisions/README.md](decisions/README.md). The last ones are 0186–0192:
+  items, save/load, unit bodies, Shift/Alt orders, ReTzar's rules, technology effects, gates.
+* **Questions the original's files cannot settle:**
+  [DEVELOPMENT.md § Sources of knowledge](DEVELOPMENT.md#sources-of-knowledge-about-the-original). ReTzar, read but
+  never copied.
+
+**The owner's PC** (Windows 11; the repository at `D:\Code\Tzar2`):
+
+* The original is a clean GOG v1.10 EN at `E:\Games\Tzar`. Point `TZAR2_ORIGIN` at it for the local-only tests.
+  `OriginImportTests.Reference_build_imports_without_errors_and_deterministically` fails there on purpose: the
+  install's `tzar.ini` and a demo file are modified.
+* The tools are portable:
+  * .NET SDK in `D:\tmp\s1bench\dotnet` (set `DOTNET_ROOT` and put it first on `PATH`);
+  * PowerShell 7 at `D:\tmp\s1bench\pwsh\pwsh.exe`;
+  * Godot 4.7.2 .NET in `D:\tmp\s1bench\godot\` (`TZAR2_GODOT`: the `_console.exe` for the smoke tests);
+  * GitHub CLI at `C:\Program Files\GitHub CLI\gh.exe`.
+* **Play:** `tools/play/play.ps1 -TzarPath "E:\Games\Tzar" -Godot <Godot exe> -Reimport` (after importer changes).
+* **Capture:** `tools/capture/run-capture.ps1 -TzarPath "E:\Games\Tzar" -Batch <X> -AllowModified`. Batches A–K exist;
+  the owner must not touch the PC while one runs, so do not run anything on it then.
+* **Language:** the owner writes in Russian; answer in Russian. Docs, code and commits are in English.
+
+**Lessons of this period:**
+
+* Facts from ReTzar unblocked much that captures could not. Check each against our measurements first.
+* Re-pin hashes in the same PR with the reason (`tests/Tzar2.Determinism.Tests`, the three benches in
+  `.github/workflows/ci.yml`, the trigger mission, `legacy.referenceDataHash`).
+* A play-test is the best source of bugs: two of them hid in plain sight (bridges could not be placed, gates were not
+  drawn).
 
 ## Milestones
 
@@ -55,7 +101,7 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
 Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the other; item 4 comes from the fourth
-play-test.
+play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 1. **Maintainer:** the ledger's first fill, the data account and the hotkey checklist's update are done (log below).
    Keep the ledger current with every change.
@@ -112,6 +158,61 @@ play-test.
 14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
+15. **Maintainer (owner's order of 2026-10-22): a full UI review, for every modern resolution and for likeness to the
+    original.** Many texts and buttons differ from the original's today.
+    * **Resolutions.** Every screen and dialog has to work at 1280 × 720, 1366 × 768, 1600 × 900, 1920 × 1080,
+      1920 × 1200, 2560 × 1440, 3440 × 1440 and 3840 × 2160, plus 4:3 (1024 × 768) and Windows scaling of 100–200 %.
+      That covers:
+      * the shell: main menu, single player, campaign, random and custom map setup, multiplayer, options, credits,
+        save and load;
+      * in the game: HUD, command card, selection view, minimap, chat, diplomacy, tribute, inventory, quests, the game
+        menu, victory and defeat;
+      * the editor.
+
+      Nothing may be clipped or overlapping, text must stay readable, and the play area must scale the original's way
+      (the 1024 layout of LAYOUT.INI, ADR 0182) without stretching the art.
+    * **Likeness.** Compare each screen with the original side by side (the owner's screenshots, or a capture):
+      * the fonts (the original's bitmap fonts, `LOCAL/FONTS`, CREDITSFNT.INI);
+      * the texts, from STRINGS.INI rather than our own wording;
+      * the button art and states (MENU art, ORDERS buttons), layouts and colours.
+
+      Our improvements may stay where the owner chose them (main menu in one column, ADR 0182). Everything else
+      follows the original.
+    * **Deliverables:**
+      * a findings list per screen and resolution;
+      * fixes in PRs;
+      * a Godot smoke test that opens every screen at each resolution and checks that no control leaves the window;
+      * a STATUS log line.
+
+      Ask the owner for screenshots of the original's screens that are not in the art yet.
+    * **Progress:** the test (`--ui-smoke`, CI job `godot-smoke`, ADR 0200) and the findings
+      ([reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md)) are done. Fixes are in progress, and the
+      screenshots are asked of the owner.
+16. **Maintainer (owner's order of 2026-10-22): a full code review for performance, resources and memory, and for a
+    fork.**
+    * **Performance and resources:**
+      * the sim tick budget (the B3/B4 benches, `AllocationTests`), allocations and GC on the hot paths;
+      * asset loading: package import, sprite decoding, atlas packing at match start, textures loaded and never used,
+        load times;
+      * GPU and texture memory, audio streaming and MIDI;
+      * leaks: Godot RIDs, nodes and canvas items freed, event handlers detached, caches bounded (frame buffers, sprite
+        banks, save lists), threads ended.
+
+      Measure with the existing benches and a long match (an hour, 4 AIs, a huge map), and record before and after.
+    * **For a fork.** The owner will fork the finished remake into a game with other rules, another design (perhaps
+      another engine), more races and more unit progression. So:
+      * rules and maths in data or in one place each (the YAML ruleset, `ModifierStat`s, the combat and economy
+        formulas), never scattered constants;
+      * modules loosely coupled: Sim, Content, Game, Client, AI, Scripting, Net. The architecture tests
+        (`Tzar2.Architecture.Tests`) guard the boundaries; extend them where the review finds leaks;
+      * civilizations and classes not hard-coded (look for `"euro"`, `"asia"`, class-name switches, fixed lists of
+        three races);
+      * the client replaceable behind the frame (`GameFrame`) and the UI models (`Tzar2.Game.Ui`, ADR 0182);
+      * replacing a rule, a formula or a picture as a small, safe change, caught by tests and hashes.
+    * **Deliverables:**
+      * a review report (`docs/reviews/2026-…-code-review.md`) with findings ranked by impact;
+      * ADRs for the structural changes;
+      * the fixes in small PRs, each with its measurements.
 
 ## Decision and event log
 
@@ -128,13 +229,23 @@ the process decisions that have no ADR.
   and one decision (the main menu against its carved slots). Fixes follow in small PRs. Fixed: UI-L1 (a window
   smaller than the logical screen shrinks the picture), UI-L2 (the lobby's rows).
 
+* **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
+  [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
+  UI review (item 15: every modern resolution, likeness to the original's texts, fonts and buttons) and the code
+  review (item 16: performance, resources and memory; loose modules and editable rules for a fork with other rules,
+  design, races and progression). DEVELOPMENT.md gains the sources of knowledge about the original, ReTzar among them.
+
+* **2026-10-22 — Gates and bridges take the cells of their pictures (ADR 0192).** As ReTzar reads the original: a gate
+  is 7 × 1 across and 1 × 6 down (`gw0_anim`, `gw2_anim`), its door the three tiles in the middle, with four facings
+  (the map's shape bits); a bridge down is 6 × 11 (`bridge_vert`). Gates are drawn now, raised when closed and lowered
+  when open. A type may have a turned footprint of its own. Left: the passage in front of a gate.
+
 * **2026-10-22 — Technology effects as the original computes them (ADR 0191).** ReTzar's reading of the research
   handlers replaces the UNK-21 placeholders: whole points of attack and defence by weapon and armour (Temper Iron +1,
   Chain Mail +2, Engineering +5, Gunpowder +10...), cost cuts (Feudalism 80 %, Horsemanship 75 %), Architecture 70 %
   of the TIME, Fanaticism and Buddhism +50 % resistance, Great Wall +30 % hit points, Concentration's mana, the
   experience speed of Warfare, Tactics and Sun Tzu. Then Supply Storage and Seafood's +25 % population limit
-  (TECH-022) and Ore Flotation's mines that lose half of each load. Next: gates as the original builds them (7 by 1
-  or 1 by 6, four directions, the passage in front), which ReTzar reads (0x456b50, 0x457980).
+  (TECH-022) and Ore Flotation's mines that lose half of each load.
 
 * **2026-10-22 — Rules read from the original's code by ReTzar (ADR 0190), and the owner's list.**
   * The owner pointed to ReTzar (GPL-3.0, Rust), a remake whose code names the addresses of the original it was read

@@ -93,7 +93,7 @@ public partial class GameScreen : Node
     private EntityId _dialogFor;
     private (int Goods, int Load)? _route; // a trade route waiting for the far market's click
     private ushort _placing = ushort.MaxValue;
-    private bool _turned; // the placement ghost turned by 90° (gates and bridges; CTRL-024, BLD-019)
+    private int _facing; // the placement ghost's facing: 0, 2 turned by 90° (gates and bridges); 1, 3 a gate facing the other way (CTRL-024, BLD-019)
     private int _eventCursor = -1;
     private int _locationCursor = -1;
     private int _buildingCursor;
@@ -232,6 +232,12 @@ public partial class GameScreen : Node
                 {
                     _bank.Add(turned); // a turned bridge (BLD-019)
                 }
+            }
+
+            for (int facing = 0; facing < 4 && type.Traits.Gate is not null; facing++)
+            {
+                _bank.Add(SpriteRules.GateImage(type, facing, site: false)); // the drawbridges (CTRL-024)
+                _bank.Add(SpriteRules.GateImage(type, facing, site: true));
             }
 
             if (type.HasFootprint && type.Traits.Category == EntityCategory.Building)
@@ -872,7 +878,8 @@ public partial class GameScreen : Node
         SendAndConfirm(OrderResolver.RightClick(SelectedInfos(), PickAt(position), x, y, mods, _session.LocalPlayer, _rules, (mods & KeyMods.Alt) != 0 ? OnScreen() : null), x, y);
     }
 
-    // Alt or Ctrl turns a gate to be built, Alt a bridge (CTRL-024, BLD-019; the manual: Alt + Ctrl for gates).
+    // Alt or Ctrl turns a gate to be built through its four facings, Alt a bridge across or down (CTRL-024, BLD-019; the
+    // manual: Alt + Ctrl for gates).
     private bool TurnGhost(Key key)
     {
         if (_placing == ushort.MaxValue || key is not (Key.Alt or Key.Ctrl) || !Placement.CanTurn(_rules.EntityTypes[_placing])
@@ -881,7 +888,7 @@ public partial class GameScreen : Node
             return false;
         }
 
-        _turned = !_turned;
+        _facing = _rules.EntityTypes[_placing].Traits.Gate is not null ? (_facing + 1) % 4 : (_facing == 0 ? 2 : 0);
         return true;
     }
 
@@ -1343,7 +1350,7 @@ public partial class GameScreen : Node
         }
 
         var batch = new CommandList();
-        batch.Add(CommandKind.Build, builders.ToArray(), ghost.TileX * 2048, ghost.TileY * 2048, arg0: ghost.TypeId, arg1: ghost.Rotated ? 1 : 0, flags: (mods & KeyMods.Shift) != 0 ? CommandFlags.Queue : CommandFlags.None);
+        batch.Add(CommandKind.Build, builders.ToArray(), ghost.TileX * 2048, ghost.TileY * 2048, arg0: ghost.TypeId, arg1: (ghost.Rotated ? 1 : 0) | (ghost.Mirrored ? 2 : 0), flags: (mods & KeyMods.Shift) != 0 ? CommandFlags.Queue : CommandFlags.None);
         _session.Submit(batch);
         _mixer?.PlaySet("build", SoundCategory.Effects, _catalog.SoundPriority("build"));
         if ((mods & KeyMods.Shift) == 0)
@@ -1362,7 +1369,8 @@ public partial class GameScreen : Node
         }
 
         EntityTypeDefinition type = _rules.EntityTypes[_placing];
-        bool turned = _turned && Placement.CanTurn(type);
+        bool turned = _facing >= 2 && Placement.CanTurn(type);
+        bool mirrored = (_facing & 1) != 0 && type.Traits.Gate is not null;
         (int x, int y) = ToWorld(_mouse);
         (int tx, int ty) = Placement.TopLeftFor(type, x, y, turned);
         List<(int Dx, int Dy)> blocked = Placement.BlockedCells(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned);
@@ -1385,7 +1393,7 @@ public partial class GameScreen : Node
         }
 
         bool legal = blocked.Count == 0 && Placement.IsLegal(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned);
-        return new Ghost(_placing, tx, ty, legal, blocked, turned);
+        return new Ghost(_placing, tx, ty, legal, blocked, turned, mirrored);
     }
 
     private void OnCard(int slot, bool right)
@@ -1418,7 +1426,7 @@ public partial class GameScreen : Node
         if (press.Placing is { } type)
         {
             _placing = type;
-            _turned = false;
+            _facing = 0;
         }
 
         if (press.Message is { } text)

@@ -195,7 +195,14 @@ public sealed record ManaPoolDefinition(int Max, int RegenPerMinute);
 
 /// <summary>Trait <c>Gate</c> (GAME-03): the footprint tiles that open (row-major, same size as the footprint).</summary>
 /// <param name="Passage">1 = the tile is the gate's passage (blocked while closed), 0 = a post.</param>
-public sealed record GateDefinition(ImmutableArray<byte> Passage);
+public sealed record GateDefinition(ImmutableArray<byte> Passage)
+{
+    /// <summary>The passage of the gate turned (row-major over <see cref="EntityTypeDefinition.Turned"/>).</summary>
+    public ImmutableArray<byte> TurnedPassage { get; init; } = [];
+
+    /// <summary>The passage as placed, turned or not.</summary>
+    public ReadOnlySpan<byte> PassageOf(bool turned) => turned && !TurnedPassage.IsDefaultOrEmpty ? TurnedPassage.AsSpan() : Passage.AsSpan();
+}
 
 /// <summary>Trait <c>Decay</c> (GAME-02: neglected fields decay and disappear, manual ch. 5; UNK-17).</summary>
 /// <param name="AfterMs">Untended time before the decay starts.</param>

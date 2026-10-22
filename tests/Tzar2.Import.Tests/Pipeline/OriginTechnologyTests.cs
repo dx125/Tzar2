@@ -165,6 +165,19 @@ public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposabl
         Assert.Equal(40 * 64, Speed("euro.footman"));
     }
 
+    [OriginFact]
+    [Trait("Rule", "CTRL-024")]
+    [Trait("Rule", "BLD-019")]
+    public void Gates_and_bridges_take_the_cells_of_their_pictures_either_way()
+    {
+        // gw0_anim 224 x 32 and gw2_anim 32 x 192; bridge_horz 352 x 224 and bridge_vert 192 x 352 (IMAGES.INI object).
+        Ruleset rules = CompileFromOrigin();
+        EntityTypeDefinition Type(string key) => rules.EntityTypes.First(t => t.Key == key);
+        Assert.Equal((7, 1, 1, 6), (Type("comm.gate_wood").FootprintWidth, Type("comm.gate_wood").FootprintHeight, Type("comm.gate_wood").Turned.Width, Type("comm.gate_wood").Turned.Height));
+        Assert.Equal((7, 1, 1, 6), (Type("comm.gate_stone").FootprintWidth, Type("comm.gate_stone").FootprintHeight, Type("comm.gate_stone").Turned.Width, Type("comm.gate_stone").Turned.Height));
+        Assert.Equal((11, 7, 6, 11), (Type("comm.bridge").FootprintWidth, Type("comm.bridge").FootprintHeight, Type("comm.bridge").Turned.Width, Type("comm.bridge").Turned.Height));
+    }
+
     private Ruleset CompileFromOrigin()
     {
         string origin = OriginPaths.RequireOrigin();
