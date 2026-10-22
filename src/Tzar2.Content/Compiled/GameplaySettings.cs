@@ -135,10 +135,24 @@ public sealed record GameplaySettings
     public int RepairerFalloffBasisPoints { get; init; } = 2_500;
 
     /// <summary>
+    /// Repairers work in blows, one every this many ms each (BLD-022; batch J: one per 1.25 s). A blow restores
+    /// max × blow / (build time × <see cref="RepairTimeBasisPoints"/>), rounded down, at least 1.
+    /// </summary>
+    public int RepairBlowMs { get; init; } = 1_250;
+
+    /// <summary>
     /// How long a spy keeps one look until its disguise meter is full, 0 → 100 (MAG-021; batch J: one point per 1.25 s).
     /// The radius in which another kingdom's spy unmasks it shrinks as the meter grows (⚠ UNVERIFIED).
     /// </summary>
     public int DisguiseMasteryMs { get; init; } = 125_000;
+
+    /// <summary>
+    /// The hit points one repairer's blow restores on an entity of <paramref name="maxHealth"/> built in
+    /// <paramref name="buildTimeMs"/> (BLD-022): max × blow / (build time × repair time), rounded down, at least 1. The
+    /// original's is max / (4 × TIME).
+    /// </summary>
+    public int RepairBlowHp(int maxHealth, int buildTimeMs)
+        => (int)Math.Max(1L, (long)maxHealth * RepairBlowMs * 10_000 / ((long)Math.Max(buildTimeMs, 1000) * RepairTimeBasisPoints));
 
     internal void Validate(int resourceTypes)
     {
@@ -175,6 +189,8 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairCostBasisPoints, 100_000);
         ArgumentOutOfRangeException.ThrowIfNegative(RepairerFalloffBasisPoints);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairerFalloffBasisPoints, 10_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(RepairBlowMs, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairBlowMs, 60_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(DisguiseMasteryMs, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(DisguiseMasteryMs, 3_600_000);
 

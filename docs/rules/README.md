@@ -99,7 +99,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 6 | 4 | 0 | 4 | 0 | 0 |
-| [Construction and repair](construction.yaml) (BLD) | 22 | 14 | 4 | 2 | 1 | 0 | 1 |
+| [Construction and repair](construction.yaml) (BLD) | 22 | 15 | 4 | 1 | 1 | 0 | 1 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 14 | 9 | 2 | 4 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 6 | 1 | 2 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 15 | 5 | 0 | 1 | 0 | 1 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 335 | 160 | 73 | 43 | 38 | 9 | 12 |
+| **All** | 335 | 161 | 73 | 42 | 38 | 9 | 12 |
 
 ## Not done yet
 
@@ -138,7 +138,6 @@ Missing and partial rules.
 
 * **BLD-018** (partial): A wall shows green where it can be laid; a gate can be placed over a wall already built, or anywhere it fits. *A gate cannot replace a piece of wall.*
 * **BLD-019**: Holding Alt while placing a bridge turns it. *The editor turns bridges with Alt; the game's placement does not.*
-* **BLD-022** (partial): A repair restores hit points with each blow of a repairer, so its time depends on how many hit points the building lacks; the amount may differ by building. *Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). The original's data has no repair value. The owner thinks the amount differs by building, a share of its hit points or its own number; batch J (repair-mill, repair-barracks, repair-castle; HEALTH 800, 1400 and 8000) tells a fixed amount, a share and the construction rate apart.*
 
 ### Selection, mouse and pointers
 
@@ -196,7 +195,7 @@ Missing and partial rules.
 
 ### Magic, religion and spies
 
-* **MAG-012** (partial): Spies (with Espionage) can impersonate any man of another kingdom, of any civilization, from next to him; not machines, flyers or magic creatures. The spy becomes that unit, with all its stats, under its own player's control, and the spy itself is gone; its old kingdom still sees one of its own. Revealing turns it back into a spy. Fighting keeps the disguise; another kingdom's spy close by unmasks it, towers do not. *Tzar2 still leaves the copied unit with its kingdom and gives the spy only its look (ADR 0184); taking the unit over is next (STATUS work queue 3). Batch J's first run showed it with the spy's own kingdom's peasant (the peasant's place, portrait, attack and card under the name "Spy (N)"); the owner confirmed it for another kingdom's units. The data gives no distance for the unmasking; Tzar2 uses the spy's detector radius (5 tiles, UNVERIFIED) until batch J measures it. The mage is in BONUS.INI's magic_creatures but is a man, and the chariot is not among the machines; the owner confirmed that both can be copied.* (ADR 0184) Work: STATUS work queue 3.
+* **MAG-012** (partial): Spies (with Espionage) can impersonate any man of another kingdom, of any civilization, from next to him; not machines, flyers or magic creatures. The spy becomes that unit, with all its stats, under its own player's control, and the spy itself is gone; its old kingdom still sees one of its own. Revealing turns it back into a spy. Fighting keeps the disguise; another kingdom's spy close by unmasks it, towers do not. *Tzar2 still leaves the copied unit with its kingdom and gives the spy only its look (ADR 0184); taking the unit over is next (STATUS work queue 3). Batch J's first run showed it with the spy's own kingdom's peasant (the peasant's place, portrait, attack and card under the name "Spy (N)"); the owner confirmed it for another kingdom's units. Only the copied kingdom's spies unmask it: in batch J's third run, a spy in its own kingdom's peasant's look was never unmasked by kingdom 2's spy, not even while they fought. The data gives no distance; Tzar2 uses the spy's detector radius (5 tiles, UNVERIFIED) until batch J's fourth run measures it. The mage is in BONUS.INI's magic_creatures but is a man, and the chariot is not among the machines; the owner confirmed that both can be copied.* (ADR 0184) Work: STATUS work queue 3.
 * **MAG-017** (partial): After all crusaders have died a full crusade needs some time; one preached earlier brings fewer crusaders for the same price. *Tzar2 refuses a crusade during the wait instead of bringing fewer crusaders.*
 
 ### Nature, gateways, day and weather

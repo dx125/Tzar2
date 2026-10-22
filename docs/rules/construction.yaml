@@ -95,7 +95,8 @@ rules:
     source: [owner 2026-10-21 (fourth play-test)]
     status: tested
   BLD-022:
-    rule: A repair restores hit points with each blow of a repairer, so its time depends on how many hit points the building lacks; the amount may differ by building.
-    source: [owner 2026-10-21 (fourth play-test), owner 2026-10-21 (answers), owner 2026-10-21 (repair per building)]
-    status: partial
-    note: Tzar2 lets one peasant repair a building fully in its construction time, and each further peasant adds less (100, 75, 50, 25 %; UNK-18). The original's data has no repair value. The owner thinks the amount differs by building, a share of its hit points or its own number; batch J (repair-mill, repair-barracks, repair-castle; HEALTH 800, 1400 and 8000) tells a fixed amount, a share and the construction rate apart.
+    rule: Each repairer strikes a blow every 1.25 s that restores the building's maximum hit points / (4 x its TIME), rounded down (lumber mill 6, barracks 5, castle 16); every repairer strikes full blows, and repairs cost nothing.
+    source: [owner 2026-10-21 (fourth play-test), owner 2026-10-21 (answers), owner 2026-10-21 (repair per building), capture capture-20261021-220250]
+    status: tested
+    adr: [0185]
+    note: Batch J's third run (repair-mill, repair-barracks, repair-castle; manual.yaml repair). Our idle peasants came to help unasked. Whether Architecture speeds repairs, and how ships and siege weapons are repaired, are not measured; Tzar2 applies the same rule to them.

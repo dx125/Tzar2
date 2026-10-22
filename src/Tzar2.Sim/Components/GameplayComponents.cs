@@ -464,7 +464,7 @@ public struct RepairProgress : IComponent
     /// <summary>Hit points restored by repairs so far.</summary>
     public int HealedHp;
 
-    /// <summary>Remainder of the repair rate (numerator units, below the denominator of the rate).</summary>
+    /// <summary>Repairers' work towards the next blow, in ms (below <c>RepairBlowMs</c>).</summary>
     public int Carry;
 }
 

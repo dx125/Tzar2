@@ -108,6 +108,21 @@ public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposabl
         }
     }
 
+    [OriginFact]
+    [Trait("Rule", "BLD-022")]
+    public void A_repair_blow_restores_what_batch_J_measured_on_the_mill_the_barracks_and_the_castle()
+    {
+        // capture-20261021-220250: 6, 5 and 16 hit points per blow, the original's max / (4 x TIME) rounded down.
+        Ruleset rules = CompileFromOrigin();
+        int Blow(string cls)
+        {
+            EntityTypeDefinition type = rules.EntityTypes.First(t => t.Traits.LegacyClass == cls && t.Key.StartsWith("euro.", StringComparison.Ordinal));
+            return rules.Gameplay.RepairBlowHp(type.MaxHealth, type.Traits.BuildTimeMs);
+        }
+
+        Assert.Equal((6, 5, 16), (Blow("lumber"), Blow("barrack"), Blow("castle")));
+    }
+
     private Ruleset CompileFromOrigin()
     {
         string origin = OriginPaths.RequireOrigin();

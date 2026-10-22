@@ -2,7 +2,7 @@ schema: tzar2-capture-scenario/1
 # Invariants (ScenarioLoaderTests.The_repository_scenarios_and_session_are_valid): -map <name>.wmp, a PLAY click,
 # no -explore/-nofog, and a left click after every spawn.
 id: spy-unmask-full
-title: Whether another kingdom's spy unmasks a full disguise meter (MAG-012, MAG-021)
+title: Whether the copied kingdom's spy unmasks a full disguise meter (MAG-012, MAG-021)
 resolves: []
 priority: 3
 minutes: 4.5
@@ -11,15 +11,13 @@ experimental: true
 description: |
   As spy-unmask, but A keeps its look for 125 s before B comes, so its meter is 100 (the owner: at 100 the spy can
   hardly be unmasked).
-  Run 2 tried MP6 for a kingdom without an AI: the map loads slower (the first cheats were lost), the camera starts in
-  the middle, and every kingdom there has an AI. So this runs on MP2 again, in the bottom-left corner (tile (x, y) at
-  screen (150 + 32x, 32y - 1280), ADR 0171), with kingdom 2's AI driving the detector:
-  * our spy A impersonates one of our own peasants (run 1: it takes the peasant's place and look); any other
-    kingdom's spy may unmask that disguise;
-  * a spy B is spawned 8 tiles away and given to kingdom 2; A is the enemy nearest to it;
-  * A attacks B, so the two close in whatever B's AI does, and the whole view is captured every 200 ms. The frame in
-    which A's look turns from a peasant's into a spy's gives the distance; A's meter is in the selection view.
-  Analysed by hand (manual.yaml).
+  Run 3 showed that a spy in its own kingdom's peasant's look is never unmasked by another kingdom's spy, even while
+  they fight: what the owner described is the copied kingdom's spies seeing through one of "their" units (the
+  strategy guide's Zhef fears the spies of the town whose soldiers he copies). So A now copies a peasant of
+  kingdom 2 and walks up to kingdom 2's own spy B, one tile at a time with move-sneak, in MP2's bottom-left corner
+  (tile (x, y) at screen (150 + 32x, 32y - 1280), ADR 0171). The owner (2026-10-21): the spy becomes the copied unit
+  and its player controls it. The step at which A's look turns into a spy's gives the distance; A's meter is in the
+  selection view of each capture. Analysed by hand (manual.yaml).
 launch: [-nomovies, -map, MP2.wmp]
 trials:
   - name: full
@@ -38,39 +36,67 @@ steps:
   - minimap: [0.297, 0.719]          # map tile (6, 60): the view clamped to the bottom-left corner
   - wait: 1
   - snapshot: view
-  # P: the look to copy, one of our own peasants at tile (10, 52) (run 1: the spy takes its place).
+  # P: the look to copy, a peasant at tile (10, 52) given to kingdom 2 (its AI is slow to move what it is given:
+  # run 3's spy stood still for 15 s and more).
   - move: [486, 400]
   - chat: "${cheat}spawn peon"
   - click: [486, 400]               # place
   - wait: 0.5                       # longer than the double-click time
-  # A: our spy, two tiles off; it impersonates P and stands its ground.
-  - move: [550, 432]
+  - click: [486, 400]               # select
+  - chat: "${cheat}kingdom 2"
+  # A: our spy, next to P; it impersonates P at once and stands its ground.
+  - move: [518, 432]
   - chat: "${cheat}spawn spy"
-  - click: [550, 432]               # place
+  - click: [518, 432]               # place
   - wait: 0.5
-  - click: [550, 432]               # select
+  - click: [518, 432]               # select
   - key: I                          # impersonate (MENU.INI spy_add)
   - click: [486, 400]               # P
-  - wait: 4
-  - key: N                          # stand ground: no walking off to fight while it waits
+  - wait: 3
+  - key: N                          # stand ground
   - snapshot: {name: disguised, game: false}
   # The look kept for 125 s; the selection view every 5 s (the meter, one point per 1.25 s).
   - move: [70, 400]
   - burst: {name: meter, count: 25, interval_ms: 5000, region: [4, 165, 142, 140]}
-  # B: the detector, spawned 8 tiles from A at tile (18, 53) and given to kingdom 2. Its AI takes it over (batch E);
-  # A, in a peasant's look of ours, is the enemy nearest to it (our cows and peasants are 9 tiles or more away).
+  # B: the detector, kingdom 2's own spy, 8 tiles off at tile (18, 53). To it, A is one of its kingdom's peasants.
   - move: [742, 432]
   - chat: "${cheat}spawn spy"
   - click: [742, 432]               # place
   - wait: 0.5
   - click: [742, 432]               # select
   - chat: "${cheat}kingdom 2"
-  - drag: {from: [430, 350], to: [620, 470]}   # A again (a box takes only our own units)
-  - click: {at: [742, 432], button: right}   # A attacks B: the two close in (fighting keeps the disguise, the owner)
+  - drag: {from: [420, 350], to: [620, 470]}   # A again (a box takes only our own units)
   - move: [70, 400]
-  # The whole view every 200 ms: the frame in which A's look turns from a peasant's into a spy's gives the distance.
-  - burst: {name: approach, count: 75, interval_ms: 200, region: [150, 30, 874, 738]}
-  - snapshot: {name: closed, game: false}
+  - snapshot: {name: start, game: false, tags: {a_tile: "10", b_tile: "18"}}
+  # The approach: one tile at a time with move-sneak; after each step five captures of the two, 0.4 s apart.
+  - click: {at: [518, 432], button: right, alt: true}
+  - move: [70, 400]
+  - burst: {name: near-11, count: 5, interval_ms: 400, region: [400, 300, 420, 200], tags: {a_tile: "11", b_tile: "18"}}
+  - snapshot: {name: at-11, game: false, tags: {a_tile: "11", b_tile: "18"}}
+  - click: {at: [550, 432], button: right, alt: true}
+  - move: [70, 400]
+  - burst: {name: near-12, count: 5, interval_ms: 400, region: [400, 300, 420, 200], tags: {a_tile: "12", b_tile: "18"}}
+  - snapshot: {name: at-12, game: false, tags: {a_tile: "12", b_tile: "18"}}
+  - click: {at: [582, 432], button: right, alt: true}
+  - move: [70, 400]
+  - burst: {name: near-13, count: 5, interval_ms: 400, region: [400, 300, 420, 200], tags: {a_tile: "13", b_tile: "18"}}
+  - snapshot: {name: at-13, game: false, tags: {a_tile: "13", b_tile: "18"}}
+  - click: {at: [614, 432], button: right, alt: true}
+  - move: [70, 400]
+  - burst: {name: near-14, count: 5, interval_ms: 400, region: [400, 300, 420, 200], tags: {a_tile: "14", b_tile: "18"}}
+  - snapshot: {name: at-14, game: false, tags: {a_tile: "14", b_tile: "18"}}
+  - click: {at: [646, 432], button: right, alt: true}
+  - move: [70, 400]
+  - burst: {name: near-15, count: 5, interval_ms: 400, region: [400, 300, 420, 200], tags: {a_tile: "15", b_tile: "18"}}
+  - snapshot: {name: at-15, game: false, tags: {a_tile: "15", b_tile: "18"}}
+  - click: {at: [678, 432], button: right, alt: true}
+  - move: [70, 400]
+  - burst: {name: near-16, count: 5, interval_ms: 400, region: [400, 300, 420, 200], tags: {a_tile: "16", b_tile: "18"}}
+  - snapshot: {name: at-16, game: false, tags: {a_tile: "16", b_tile: "18"}}
+  - click: {at: [710, 432], button: right, alt: true}
+  - move: [70, 400]
+  - burst: {name: near-17, count: 5, interval_ms: 400, region: [400, 300, 420, 200], tags: {a_tile: "17", b_tile: "18"}}
+  - snapshot: {name: at-17, game: false, tags: {a_tile: "17", b_tile: "18"}}
   - wait: 3
   - snapshot: after
 analysis: [capture-quality]

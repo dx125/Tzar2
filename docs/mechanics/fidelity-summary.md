@@ -1,4 +1,23 @@
-# Fidelity summary (after batch E)
+# Fidelity summary (after batch J, run 3)
+
+## Batch J (sessions `capture-20261021-203846`, `-212542`, `-220250`; ADRs 0184, 0185)
+
+The owner's questions of 2026-10-21, in three runs:
+* **The disguise meter** is the number after a spy's name in the selection view, "Spy (N)". It is 100 in the spy's
+  own look, 0 with a new look, and gains a point every 1.25 s (run 1).
+* **Repairs** come in blows of max / (4 × TIME), rounded down, one every 1.25 s per repairer: 6 on the lumber mill,
+  5 on the barracks, 16 on the castle. Every repairer strikes full blows, and repairs cost nothing (run 3).
+  `m2.repair-rate` passes: **10 of 30 = 33.3 %**.
+* **Unmasking:** a spy in its own kingdom's peasant's look was never unmasked by another kingdom's spy (run 3). Run 4
+  measures the copied kingdom's spy.
+* **On the way:**
+  * a spy that copies its own kingdom's peasant takes the peasant's place (run 1; the owner confirmed it for other
+    kingdoms' units);
+  * our knights do not attack our own buildings;
+  * `hmkingdom N` only works for kingdoms that own something on the map;
+  * idle peasants come to help with a repair;
+  * buildings' hit points sit in 2-byte fields.
+
 
 ## Batch E (session `capture-20261019-221300`)
 
@@ -96,7 +115,7 @@ Overall, 3 of the 6 rendering items above are verified (50 %). For the four plac
 
 `t2 fidelity report` compares every committed fact with the engine; `Tzar2.Fidelity.Tests` fails on a measured
 check that disagrees. The catalogue is the whole TDD §22.3 scope (30 checks); the **M3 gate is passing / all 30**,
-pending counting as not passing. Today: **6 of 30 = 20 %** (secondary: 6 of 6 measured pass). The 5 rendering
+pending counting as not passing. Today: **10 of 30 = 33.3 %** (secondary: 10 of 10 measured pass). The 5 rendering
 checks are §22.4 / S5 and reported apart: 3 of 5 pass. Batches A–D can measure at most 9 of the 30 (gate ≤ 30 %);
 the other 21 need scenarios that do not exist yet (combat outcomes over 100 trials, research, XP, capture, trade,
 loans, spells and the rest, each listed in the report with what would measure it).
@@ -121,8 +140,10 @@ lumber mill, a barracks and a castle (`repair-*`, counter-rate), and how close a
 unmask a disguise at three fillings of the disguise meter (`spy-unmask*`, analysed by hand). Run 1
 (`capture-20261021-203846`, 6/6 trials, 77/77 images) measured the meter: one point per 1.25 s, 100 in the spy's own
 look, shown after its name. The repairs and the unmasking failed for reasons now fixed (STATUS log). Run 2 (`capture-20261021-212542`)
-damaged all three buildings but found their hit points in no 4-byte field, and the spies failed on MP6; run 3 is
-ready.
+damaged all three buildings but found their hit points in no 4-byte field, and the spies failed on MP6. Run 3
+(`capture-20261021-220250`, 7/7 trials) measured the repairs: a blow of max / (4 × TIME) every 1.25 s, free, every
+repairer at full strength (ADR 0185); `m2.repair-rate` passes, so the suite is at **10 of 30 = 33.3 %**. It also
+showed that a third kingdom's spy never unmasks a disguise. Run 4 measures the distance with a kingdom-2 look.
 
 Still without a scenario before ADR 0113: XP gain, trade profit, technology magnitudes, repair, fire, capture, random maps (RE-10),
 AI experiments (RE-07), and the "one level darker" terrain patches (UNK-32).

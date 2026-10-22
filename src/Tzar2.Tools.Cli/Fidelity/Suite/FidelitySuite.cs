@@ -233,7 +233,7 @@ internal static class FidelitySuite
         new("m2.group-move-speed", "22.3", "m2-gameplay", "UNK-12", "A mixed group moves at its slowest member's speed", GroupMoveSpeed),
         new("m2.gather-time", "22.3", "m2-gameplay", "UNK-17", "Gathering time per unit (trip minus the measured walk)", GatherTime),
         new("m2.research-time", "22.3", "m2-gameplay", "UNK-21", "Research time = TIME (TECHNOLOGIES.INI)", ResearchTime),
-        new("m2.repair-rate", "22.3", "m2-gameplay", "UNK-18", "Repair by one peasant: maximum hit points per build time", RepairRate),
+        new("m2.repair-rate", "22.3", "m2-gameplay", "UNK-18", "Repair: hit points per blow of a repairer (BLD-022)", RepairRate),
         new("m2.xp-gain", "22.3", "m2-gameplay", "UNK-23", "Experience per kill (read from the selection panel)", XpGain),
         new("m2.level-effects", "22.3", "m2-gameplay", "UNK-23", "Attack and defence per experience level (selection panel)", LevelEffects),
         new("m2.healing", "22.3", "m2-gameplay", "UNK-24", "Healing inside the castle = Holder.healPerMinute", Healing),
@@ -752,17 +752,53 @@ internal static class FidelitySuite
 
     private static CheckResult RepairRate(FactsIndex f, EngineModel e)
     {
-        var rates = Counters(f, "lumber").Select(c => PhaseOf(c, "hp-repair")).OfType<YamlMapping>().Where(p => Num(p, "rate_per_min") > 0).Select(p => Num(p, "rate_per_min")).ToList();
-        if (rates.Count == 0)
+        // The commonest rising step of a repair phase is one blow; larger ones are blows of several repairers landing in
+        // one sample (batch J: our idle peasants come to help), a smaller last one stops at the maximum. HEALTH and TIME
+        // are the reference build's.
+        var buildings = new (string Subject, string Name, int Health, int Time)[] { ("lumber", "lumber mill", 800, 30), ("barrack", "barracks", 1400, 60), ("castle", "castle", 8000, 120) };
+        var found = new List<string>();
+        var off = new List<string>();
+        foreach ((string subject, string name, int health, int time) in buildings)
         {
-            return Pending("no repair phase with rising hit points yet (repair-mill, batch J; fire-repair, batch F)");
+            int? blow = Counters(f, subject).Select(c => PhaseOf(c, "hp-repair")).OfType<YamlMapping>().Select(CommonestRise).OfType<int>().Cast<int?>().FirstOrDefault();
+            if (blow is not { } measured)
+            {
+                continue;
+            }
+
+            int engine = e.Ruleset.Gameplay.RepairBlowHp(health, time * 1250);
+            found.Add($"{name} {measured} (engine {engine})");
+            if (measured != engine)
+            {
+                off.Add($"{name}: {measured} HP per blow measured, engine {engine}");
+            }
         }
 
-        // Engine: one peasant repairs the full HEALTH (800) in the build time (TIME 30 s) x repairTimePercent.
-        double repairPercent = e.Rule("gameplay", "repairTimePercent") ?? 100;
-        double expected = 800 / (30 * repairPercent / 100) * 60;
-        double measured = AttackTiming.Median([.. rates]);
-        return Verdict(Within(measured, expected, 0.15), $"{measured:0} HP/min by one peasant, engine {expected:0} HP/min (lumber mill, 800 HP, 30 s)");
+        return found.Count == 0
+            ? Pending("no repair phase with rising hit points yet (repair-mill, batch J)")
+            : Verdict(off.Count == 0, off.Count == 0 ? "hit points per blow: " + string.Join(", ", found) : string.Join("; ", off));
+    }
+
+    // ["6x24", "12x18"] -> 6: the positive step of a phase's step_values that occurs most often.
+    private static int? CommonestRise(YamlMapping phase)
+    {
+        if (phase.Get("step_values") is not YamlSequence steps)
+        {
+            return null;
+        }
+
+        (int Size, int Count)? best = null;
+        foreach (string text in steps.Items.Select(i => FactsIndex.Text(i) ?? string.Empty))
+        {
+            string[] parts = text.Split('x');
+            if (parts.Length == 2 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int size) && size > 0
+                && int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) && (best is null || count > best.Value.Count))
+            {
+                best = (size, count);
+            }
+        }
+
+        return best?.Size;
     }
 
     /// <summary>A hand-read block of <c>manual.yaml</c>, only when every value in it has full provenance.</summary>

@@ -125,3 +125,12 @@ attack, but no 4-byte memory field held their hit points. The spy runs on MP6 fa
 10 s wait (the first cheats were lost), the camera starts in the middle, and every kingdom there has an AI. The third
 run scans 2 bytes, captures the buildings' selection view during the repair, and measures the unmasking on MP2 with
 kingdom 2's AI driving the detecting spy.
+
+## Amendment 5: only the copied kingdom's spies unmask (2026-10-21)
+
+Batch J's third run (`capture-20261021-220250`) disguised our spy as one of our own peasants and gave a spy to kingdom
+2. Our spy walked up to it, fought it and died, still in the peasant's look, with its meter at about 10, 55 and 100.
+Another kingdom's spy does not see through a disguise. What the owner described is the copied kingdom's spies seeing
+through one of "their" units; the strategy guide's Zhef fears the spies of the town whose soldiers he copies. Tzar2
+now lets only the seeming kingdom's spies (and ninjas) unmask a disguise, and only when it is not allied with the
+spy's kingdom. The fourth run measures the distance with a kingdom-2 look.

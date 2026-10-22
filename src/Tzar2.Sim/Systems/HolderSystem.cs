@@ -190,10 +190,11 @@ public sealed class ErrandSystem : ISimSystem
         }
     }
 
-    // Another kingdom's spy or ninja close to a disguised spy sees through it and ends the disguise (the owner: other
-    // spies unmask it if they come close enough; the reach is the detector's, UNVERIFIED). Allies do not. The longer the
-    // spy keeps its look, the fuller its meter and the closer they must come (MAG-021): within (100 − meter) % of the
-    // detector's radius, so a full meter is never seen through (the owner: hardly ever; UNVERIFIED, batch J).
+    // A spy or ninja of the kingdom whose unit a disguised spy seems to be sees through it when close and ends the
+    // disguise (the owner: that kingdom's spies unmask it if they come close enough; batch J: a third kingdom's spy, even
+    // fighting it, does not). The longer the spy keeps its look, the fuller its meter and the closer they must come
+    // (MAG-021): within (100 − meter) % of the detector's radius, so a full meter is never seen through (the owner:
+    // hardly ever). The reach is the detector's (UNVERIFIED).
     private void Unmask(World world)
     {
         _unmasked.Clear();
@@ -216,14 +217,11 @@ public sealed class ErrandSystem : ISimSystem
 
             byte owner = world.Identities.Get(spy).Owner;
             Position at = world.Positions.At(p);
-            for (int k = 0; k < world.Players.Length; k++)
+            int seeming = disguise.Owner;
+            if (seeming != owner && world.HasPlayer((byte)seeming) && world.Diplomacy.StanceOf(seeming, owner) != Kingdoms.Stance.Ally
+                && Kingdoms.Visibility.IsDetectedBy(world, seeming, at, 100 - disguise.Mastery))
             {
-                if (k != owner && world.HasPlayer((byte)k) && world.Diplomacy.StanceOf(k, owner) != Kingdoms.Stance.Ally
-                    && Kingdoms.Visibility.IsDetectedBy(world, k, at, 100 - disguise.Mastery))
-                {
-                    _unmasked.Add(spy);
-                    break;
-                }
+                _unmasked.Add(spy);
             }
         }
 

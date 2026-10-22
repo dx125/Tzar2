@@ -56,15 +56,19 @@ gameplay:
   productionRefundPercent: 100        # UNVERIFIED: refund of a cancelled queued unit
   researchRefundPercent: 100          # UNVERIFIED: refund of a cancelled research or upgrade
   # GAME-03: repair, fire, ruins, walls, gates (ADR 0043).
-  repairTimePercent: 100              # UNVERIFIED (UNK-18): a full repair by one peasant takes this share of the build time
+  repairTimePercent: 400              # VERIFIED (BLD-022, batch J 2026-10-21): a repairer's blow restores max x blow /
+                                      # (build time x 4), rounded down: 6 for the mill (800 / TIME 30), 5 for the barracks
+                                      # (1400 / 60), 16 for the castle (8000 / 120); one repairer takes ~4x the build time
+  repairBlowMs: 1250                  # VERIFIED (BLD-022, batch J): one blow per repairer every 1.25 s (the time unit)
   burnThresholdPercent: 50            # UNVERIFIED (UNK-42): buildings below this share of their hit points burn
   burnDamagePerMinute: 60             # UNVERIFIED (UNK-42): hit points a burning building loses per minute
   wallContinueRadiusTiles: 6          # UNVERIFIED: builders move on to the next segment of a dragged wall within this
   maxWallSegments: 64                 # UNVERIFIED: most segments one dragged wall places
   idleWorkAfterMs: 10000              # UNVERIFIED: an idle peasant finds work by itself after this (owner: the original's did)
   idleWorkRadiusTiles: 12             # UNVERIFIED: where an idle peasant looks for a site, a repair or a resource
-  repairCostPercent: 50               # UNVERIFIED (UNK-18): a full repair costs this share of the construction cost, pro rata (owner decision)
-  repairerFalloffPercent: 25          # UNVERIFIED (UNK-18): repairers on one building add 100%, 75%, 50%, 25%, then nothing (owner decision)
+  repairCostPercent: 0                # VERIFIED (BLD-022, batch J): repairs cost nothing (the stockpiles did not move)
+  repairerFalloffPercent: 0           # VERIFIED (BLD-022, batch J): every repairer strikes full blows (seven helpers
+                                      # restored ~31 HP/s on the mill, 6 HP per blow each)
   disguiseMasteryMs: 125000           # VERIFIED (MAG-021, batch J 2026-10-21: one point per 1.25 s): a spy's disguise meter
                                       # fills (0 -> 100) in this long in one look; another kingdom's spy unmasks it within its
                                       # detector radius x (100 - meter) % (UNVERIFIED)

@@ -59,40 +59,62 @@ public class M3ReviewRegressionTests
     }
 
     [Fact]
-    public void Repairers_can_no_longer_keep_a_house_alive_against_ten_footmen()
+    [Trait("Rule", "BLD-022")]
+    public void Repairers_slow_ten_footmen_down_but_never_for_long_and_cost_nothing()
     {
+        // Measured repairs (batch J) are a quarter of the build rate per repairer, so even eight cannot outlast ten
+        // footmen; every further repairer still helps (no falloff), and the wood is never touched.
         (bool alive0, int ticks0, _) = HouseUnderAttack(0);
         (bool alive4, int ticks4, int spent) = HouseUnderAttack(4);
         (bool alive8, int ticks8, _) = HouseUnderAttack(8);
         Assert.False(alive0);
-        Assert.False(alive4); // falls in bounded time (it lived forever with free, linear repair)
-        Assert.False(alive8); // more than four repairers add nothing (UNVERIFIED falloff)
-        Assert.InRange(ticks4, ticks0, 3_000);
-        Assert.InRange(ticks8, ticks4 - 40, ticks4 + 40);
-        Assert.True(spent > 0, "repair costs wood"); // 50% of the cost for a full repair, pro rata (UNVERIFIED)
+        Assert.False(alive4);
+        Assert.False(alive8);
+        Assert.True(ticks4 > ticks0 && ticks8 > ticks4, $"{ticks0} < {ticks4} < {ticks8}");
+        Assert.InRange(ticks8, ticks0, 3_000);
+        Assert.Equal(0, spent);
     }
 
     [Fact]
-    public void Repair_costs_half_the_construction_cost_pro_rata_and_pauses_when_unpaid()
+    [Trait("Rule", "BLD-022")]
+    public void A_repair_comes_in_blows_of_a_quarter_of_the_build_rate_from_each_repairer_and_costs_nothing()
     {
-        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4), Unit("euro.peon", 0, 11, 7)), ruleset: Classic);
+        // Batch J (2026-10-21): a blow restores max / (4 x TIME) hit points every 1.25 s, rounded down (mill 6, barracks
+        // 5, castle 16); seven repairers each struck full blows; the stockpiles did not move.
+        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4), Unit("euro.peon", 0, 11, 7), Unit("euro.peon", 0, 16, 7)), ruleset: Classic);
         EntityId house = OfType(d.World, "euro.house").Single();
-        EntityId peon = OfType(d.World, "euro.peon").Single();
-        d.World.Healths.Get(house).Current = 220; // 200 of 420 missing
-        int wood = Resource("wood");
-        d.Order(0, CommandKind.Repair, [peon], target: house);
-        d.RunUntil(() => d.Count(SimEventKind.Repaired) == 1, 2000);
-        // 55 wood x 50% x 200 / 420 = 13.1, billed upward as hit points come back: 14.
-        Assert.Equal(500 - 14, d.World.Players[0].Resources[wood]);
+        EntityId[] peons = [.. OfType(d.World, "euro.peon")];
+        Assert.Equal(6, d.World.Ruleset.Gameplay.RepairBlowHp(420, d.World.TypeOf(house).Traits.BuildTimeMs)); // 420 / (4 x TIME 16)
+        d.World.Healths.Get(house).Current = 220;
+        int[] stock = [.. Enumerable.Range(0, Ruleset.MaxResourceTypes).Select(r => d.World.Players[0].Resources[r])];
+        d.Order(0, CommandKind.Repair, [peons[0]], target: house);
 
-        // Without wood the repair pauses.
-        d.World.Healths.Get(house).Current = 300;
-        d.World.Players[0].Resources[wood] = 0;
-        d.Order(0, CommandKind.Repair, [peon], target: house);
-        d.RunUntil(() => false, 200);
-        // At most the hit points one wood still covers (the bill is cumulative; ~15 HP per wood here).
-        Assert.InRange(d.World.Healths.Get(house).Current, 300, 316);
-        Assert.Equal(0, d.World.Players[0].Resources[wood]);
+        // One repairer: steps of 6, one every 25 ticks of 50 ms once it is there.
+        var steps = new List<(int Tick, int Gain)>();
+        int last = 220;
+        for (int t = 0; t < 200; t++)
+        {
+            d.Step();
+            int now = d.World.Healths.Get(house).Current;
+            if (now != last)
+            {
+                steps.Add((d.World.Tick.Value, now - last));
+                last = now;
+            }
+        }
+
+        Assert.True(steps.Count >= 4, $"{steps.Count} blows");
+        Assert.All(steps, s => Assert.Equal(6, s.Gain));
+        Assert.All(steps.Zip(steps.Skip(1)), p => Assert.Equal(25, p.Second.Tick - p.First.Tick));
+
+        // A second repairer strikes as hard: twice the rate.
+        int before = d.World.Healths.Get(house).Current;
+        d.Order(0, CommandKind.Repair, [peons[1]], target: house);
+        d.RunUntil(() => false, 100); // it walks there
+        before = d.World.Healths.Get(house).Current;
+        d.RunUntil(() => false, 100);
+        Assert.Equal(48, d.World.Healths.Get(house).Current - before); // 2 x 4 blows of 6 in 5 s
+        Assert.Equal(stock, Enumerable.Range(0, Ruleset.MaxResourceTypes).Select(r => d.World.Players[0].Resources[r]));
     }
 
     [Fact]

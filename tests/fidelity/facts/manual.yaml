@@ -32,6 +32,7 @@ analyses:
       copied_own_unit_disappears: true  # population 11 before, 10 after; the copied peasant is gone from the map
       disguised_panel: copied  # portrait and attack 5 / defence 0 of the copied peasant; the name stays "Spy (N)"
       disguised_card: [move, build, capture, harvest, pick_item, explore, stop, reveal_self]  # first page; the spy's own card is move, attack, guard, patrol, pick_item, explore, impersonate, stop
+      third_kingdom_spy_unmasks: false  # run 3: in our own peasant's look, kingdom 2's spy never unmasked it, not even while they fought, at meters of about 10, 55 and 100
       sources:
         meter_shown_as: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: window/disguised.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
         meter_undisguised: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: window/spy-card.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
@@ -42,3 +43,18 @@ analyses:
         copied_own_unit_disappears: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: 'window/spy-card.bmp, window/disguised.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
         disguised_panel: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: window/disguised.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
         disguised_card: {session: capture-20261021-203846, trial: spy-unmask/fresh, frame: 'window/disguised.bmp, window/spy-card.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        third_kingdom_spy_unmasks: {session: capture-20261021-220250, trial: 'spy-unmask/fresh, spy-unmask-half/half, spy-unmask-full/full', frame: 'burst/approach/0000.bmp-0074.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
+  repair:
+    status: ok
+    notes: ["batch J, run 3 (2026-10-21), install as in run 1 (-AllowModified). The hit points per blow are in repair-mill.yaml, repair-barracks.yaml and repair-castle.yaml (counter-rate): 6, 5 and 16, the original's max / (4 x TIME) rounded down."]
+    facts:
+      source: repair-mill, repair-barracks and repair-castle, the resource bar and the view around the mill
+      repair_costs_resources: false  # gold, wood, food and stone the same before and after each repair
+      idle_peasants_join: true  # our base peasants came to repair the damaged mill unasked; about seven stood around it
+      repairers_full_strength: true  # about seven repairers restored ~31 HP/s on the mill, 6 HP per blow each about every 1.3 s
+      blow_interval_s: 1.25  # one repairer alone: blows 1.2-1.3 s apart (mill 7.8, 9.0, 10.2 s; barracks 6.9, 8.2, 9.4 s)
+      sources:
+        repair_costs_resources: {session: capture-20261021-220250, trial: 'repair-mill/lumber-mill, repair-barracks/barracks, repair-castle/castle', frame: 'window/damaged.bmp, window/after.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        idle_peasants_join: {session: capture-20261021-220250, trial: repair-mill/lumber-mill, frame: window/after.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        repairers_full_strength: {session: capture-20261021-220250, trial: repair-mill/lumber-mill, frame: 'mem/hp-repair.bin, window/after.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
+        blow_interval_s: {session: capture-20261021-220250, trial: 'repair-mill/lumber-mill, repair-barracks/barracks', frame: mem/hp-repair.bin, read_by: implementation agent (Claude), read_utc: 2026-10-21}
