@@ -343,7 +343,7 @@ public partial class GameApp : Node
     public void StartSkirmish(SkirmishOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        ShowLoading(options.TestMapSize > 0 ? "the test map" : Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapSizes[options.MapSize]) + " map");
+        ShowLoading(options.TestMapSize > 0 ? LoadingStage.NewGame : LoadingStage.RandomMap);
         _ = AfterFrames(2, () => BuildSkirmish(options, null));
     }
 
@@ -431,7 +431,7 @@ public partial class GameApp : Node
     }
 
     /// <summary>The loading screen (a match is being built).</summary>
-    public void ShowLoading(string what) => Replace(new LoadingScreen(_ui!, _catalog, Screen, _loadings++, what), music: null);
+    public void ShowLoading(LoadingStage stage, string? title = null) => Replace(new LoadingScreen(_ui!, _catalog, Screen, _loadings++, stage, title), music: null);
 
     // Runs `then` once `frames` frames have passed, so that the loading screen is on screen before the heavy work starts.
     // Process frames, not drawn ones: the headless dummy renderer never signals a drawn frame (the smoke tests).

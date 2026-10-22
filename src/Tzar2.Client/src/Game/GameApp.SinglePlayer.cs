@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Godot;
+using Tzar2.Client.Logic;
 using Tzar2.Game.Campaigns;
 using Tzar2.Game.Session;
 using Tzar2.Game.Ui;
@@ -38,7 +39,7 @@ public partial class GameApp
     {
         if (_customMaps is null)
         {
-            ShowLoading("the maps");
+            ShowLoading(LoadingStage.Load);
             _ = AfterFrames(2, () =>
             {
                 _customMaps = OriginalMaps();
@@ -70,7 +71,7 @@ public partial class GameApp
     {
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(options);
-        ShowLoading(map.Title);
+        ShowLoading(LoadingStage.NewGame, map.Title);
         _ = AfterFrames(2, () => BuildCustomMap(map, options, null));
     }
 

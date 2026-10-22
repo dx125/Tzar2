@@ -208,7 +208,7 @@ public partial class MainMenuScreen : ArtScreen
         [
             (Label("single", "SINGLE PLAYER"), () => SinglePlayer?.Invoke()),
             (Label("multi", "MULTIPLAYER"), () => MultiplayerPressed?.Invoke()),
-            ("SETTINGS", () => Settings?.Invoke()),
+            (ShellTexts.Preferences.In(catalog is null ? null : catalog.Text), () => Settings?.Invoke()),
             (Label("credits", "CREDITS"), () => Credits?.Invoke()),
             ("EDITOR", () => Editor?.Invoke()),
             ("ASSET VIEWER", () => Viewer?.Invoke()),
@@ -324,7 +324,6 @@ public partial class SkirmishSetupScreen : ArtScreen
         _map = new TextureRect { Position = Origin + new Vector2I(566, 272), Size = new Vector2(180, 172), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_map);
         Text(new Vector2I(66, 40), catalog?.Text("singlescr", "random", "RANDOM MAP") ?? "RANDOM MAP", UiAssets.TitleFont);
-        Text(new Vector2I(66, 70), "A new map from the options on the right", UiAssets.SmallFont, new Color(0.8f, 0.8f, 0.7f));
         string[] titles =
         [
             "Kingdom",
@@ -384,6 +383,8 @@ public partial class SkirmishSetupScreen : ArtScreen
 
     private string T(string key, string fallback) => _catalog?.Text("sp_setuprnd", key, fallback) ?? fallback;
 
+    private Func<string, string, string, string>? Lookup => _catalog is null ? null : _catalog.Text;
+
     private void Refresh()
     {
         string[] values =
@@ -392,11 +393,11 @@ public partial class SkirmishSetupScreen : ArtScreen
             T($"difflvl_{(int)_options.Difficulty}", _options.Difficulty.ToString()),
             T($"resurcs_{_options.StartingResources}", _options.StartingResources.ToString(CultureInfo.InvariantCulture)),
             SkirmishOptions.PopulationLimits[_options.PopulationLimit].ToString(CultureInfo.InvariantCulture),
-            _options.NoFog ? "Yes" : "No",
-            _options.Explore ? "Yes" : "No",
-            Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapTypes[_options.MapType]),
-            Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapSizes[_options.MapSize]),
-            Content.MapGen.RandomMapNames.Name(SkirmishOptions.TerrainSets[_options.Terrain]),
+            ShellTexts.YesNo(_options.NoFog).In(Lookup),
+            ShellTexts.YesNo(_options.Explore).In(Lookup),
+            ShellTexts.MapType(SkirmishOptions.MapTypes[_options.MapType]).In(Lookup),
+            ShellTexts.MapSize(SkirmishOptions.MapSizes[_options.MapSize]).In(Lookup),
+            ShellTexts.Terrain(SkirmishOptions.TerrainSets[_options.Terrain]).In(Lookup),
             _options.Players.ToString(CultureInfo.InvariantCulture),
         ];
         for (int i = 0; i < Slots; i++)
