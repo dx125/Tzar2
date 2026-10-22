@@ -103,6 +103,12 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x2719, 0x271c)']
     status: tested
     adr: [0254]
+  MAG-023:
+    rule: Each spell has the original's range and mana. Ranges in tiles - fire rain 14; lightning, freeze and confusion 12; heal 3 (5 with Medicine); the golem, carpet, dragon and jinn summons 4; bats and whirlpool 16; magic vision anywhere; stone 20; flame bolt 18; Mastery 1; the rest 8. Mana - fire rain 100, heal 4, freeze 60, confusion and raise dead 70, magic vision 30, Mastery 10, the rest 50; summons cost their creature's mana.
+    source: ['community ReTzar src/gameplay.rs (0x4721e0, 0x4723e0)']
+    status: tested
+    adr: [0260]
+    note: The ranges are counted edge to edge here; how the original measures them (cells between centres or edges) is not settled.
   MAG-021:
     rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; the fuller it is, the closer the copied kingdom's spies must come to unmask it, right next to it at 100.
     source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846, capture capture-20261022-011438]

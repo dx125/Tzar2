@@ -522,7 +522,7 @@ te_bodybuilding: { Technology: { effects: [{ stat: healthPerLevel, add: 5, categ
 te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes: [monk, priest] }] } }   # ReTzar: monks and priests start at level 2 (ADR 0191)
 te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, percent: 50, groups: [ships] }] } } # help HT_USE_SHIPS: 50 % more units
 te_inquisition: { Technology: { effects: [{ stat: attack, add: 5, classes: [priest] }] } }     # ReTzar: +5 (ADR 0191); exorcism is the priests' attack
-te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 4, classes: [priest] }] } }        # UNVERIFIED (UNK-26): +4 tiles of spell range
+te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 2, classes: [priest] }] } }        # ReTzar (0x4721e0): healing reaches 5 tiles instead of 3
 # TECH-023, TECH-024: Trade Taxes and Banking add 2 and 3 to the base 40 of the trade profit (ReTzar's reading of the
 # original, K+0x11a): 5 % and 7.5 % more profit (7 here: whole percents).
 te_tradetaxes: { Technology: { effects: [{ stat: income, percent: 5, classes: [market] }] } }
@@ -646,27 +646,28 @@ combat:
 # ---- spells (GAME-11, ADR 0095) -----------------------------------------------------------------------------------
 # Which caster has which spell and which technology unlocks it come from the data (command cards, TECHTREE [orders]);
 # the spells themselves are rules entries keyed by their order (the data only names them).
-# Every magnitude below is UNVERIFIED (UNK-26). Ranges and radii in tiles; amounts by effect (damage / healing / bonus
+# The ranges (tiles) and mana come from ReTzar's reading of the original's spell dispatch (0x4721e0 ranges, 0x4723e0 mana;
+# summons pay their creature's mana); every other magnitude below is UNVERIFIED (UNK-26). Ranges and radii in tiles; amounts by effect (damage / healing / bonus
 # percent / experience); summons pay the summoned type's mana and resource cost on top of the spell's mana.
 # MAG-022 (ReTzar's reading of the original, query 0x2719): healing, freezing, the curse and raise dead skip the machines;
 # raise dead also skips the creatures that leave no body (0x271c: bats, golems, carpets, mages, dwarves, orcs, jinns,
 # ghosts, skeletons, dragons).
-spell_heal: { new: true, Spell: { bookValue: 5, effect: heal, amount: 40, mana: 10, range: 6, cooldownMs: 1500, castMs: 500, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
-spell_bless: { new: true, Spell: { bookValue: 5, effect: bless, amount: 25, durationMs: 30000, mana: 30, range: 6, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }
-spell_lightning: { new: true, Spell: { bookValue: 20, effect: damage, amount: 40, mana: 30, range: 10, cooldownMs: 3000, castMs: 500 } }
-spell_freeze: { new: true, Spell: { bookValue: 50, effect: freeze, durationMs: 10000, mana: 40, range: 10, cooldownMs: 5000, castMs: 500, projectile: freeze_bolt, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
-spell_cloak: { new: true, Spell: { bookValue: 10, effect: cloak, durationMs: 30000, mana: 40, range: 6, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
-spell_spawnbat: { new: true, Spell: { effect: summon, summon: comm.bat, range: 2, cooldownMs: 2000, castMs: 500 } }
-spell_spawnstonegolem: { new: true, Spell: { effect: summon, summon: comm.troll, range: 2, cooldownMs: 5000, castMs: 1000 } }
-spell_spawndragon: { new: true, Spell: { effect: summon, summon: comm.dragon, range: 2, cooldownMs: 5000, castMs: 1000 } }
-spell_spawncarpet: { new: true, Spell: { effect: summon, summon: comm.carpet, range: 2, cooldownMs: 5000, castMs: 1000 } }
-spell_spawnjin: { new: true, Spell: { effect: summon, summon: comm.jinn, range: 2, cooldownMs: 5000, castMs: 1000 } }
-spell_firerain: { new: true, Spell: { bookValue: 50, effect: areaDamage, amount: 10, radius: 2, durationMs: 5000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too
-spell_whirlpool: { new: true, Spell: { bookValue: 20, effect: areaDamage, affects: enemy, amount: 30, radius: 2, durationMs: 6000, pulseMs: 1000, mana: 50, range: 12, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"
-spell_flamebolt: { new: true, Spell: { bookValue: 30, effect: damage, amount: 30, mana: 25, range: 10, cooldownMs: 2000, castMs: 500, projectile: flame_bolt } }
-spell_turntostone: { new: true, Spell: { bookValue: 10, effect: stone, durationMs: 15000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
-spell_berserk: { new: true, Spell: { bookValue: 30, effect: confuse, durationMs: 20000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
-spell_magicvision: { new: true, Spell: { bookValue: 5, effect: reveal, summon: comm.fog_revealer, mana: 40, range: 30, cooldownMs: 5000, castMs: 500 } }
+spell_heal: { new: true, Spell: { bookValue: 5, effect: heal, amount: 40, mana: 4, range: 3, cooldownMs: 1500, castMs: 500, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
+spell_bless: { new: true, Spell: { bookValue: 5, effect: bless, amount: 25, durationMs: 30000, mana: 50, range: 8, cooldownMs: 3000, castMs: 500, targets: { category: unit } } }
+spell_lightning: { new: true, Spell: { bookValue: 20, effect: damage, amount: 40, mana: 50, range: 12, cooldownMs: 3000, castMs: 500 } }
+spell_freeze: { new: true, Spell: { bookValue: 50, effect: freeze, durationMs: 10000, mana: 60, range: 12, cooldownMs: 5000, castMs: 500, projectile: freeze_bolt, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
+spell_cloak: { new: true, Spell: { bookValue: 10, effect: cloak, durationMs: 30000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
+spell_spawnbat: { new: true, Spell: { effect: summon, summon: comm.bat, range: 16, cooldownMs: 2000, castMs: 500 } }
+spell_spawnstonegolem: { new: true, Spell: { effect: summon, summon: comm.troll, range: 4, cooldownMs: 5000, castMs: 1000 } }
+spell_spawndragon: { new: true, Spell: { effect: summon, summon: comm.dragon, range: 4, cooldownMs: 5000, castMs: 1000 } }
+spell_spawncarpet: { new: true, Spell: { effect: summon, summon: comm.carpet, range: 4, cooldownMs: 5000, castMs: 1000 } }
+spell_spawnjin: { new: true, Spell: { effect: summon, summon: comm.jinn, range: 4, cooldownMs: 5000, castMs: 1000 } }
+spell_firerain: { new: true, Spell: { bookValue: 50, effect: areaDamage, amount: 10, radius: 2, durationMs: 5000, pulseMs: 1000, mana: 100, range: 14, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too
+spell_whirlpool: { new: true, Spell: { bookValue: 20, effect: areaDamage, affects: enemy, amount: 30, radius: 2, durationMs: 6000, pulseMs: 1000, mana: 50, range: 16, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"
+spell_flamebolt: { new: true, Spell: { bookValue: 30, effect: damage, amount: 30, mana: 50, range: 18, cooldownMs: 2000, castMs: 500, projectile: flame_bolt } }
+spell_turntostone: { new: true, Spell: { bookValue: 10, effect: stone, durationMs: 15000, mana: 50, range: 20, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
+spell_berserk: { new: true, Spell: { bookValue: 30, effect: confuse, durationMs: 20000, mana: 70, range: 12, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
+spell_magicvision: { new: true, Spell: { bookValue: 5, effect: reveal, summon: comm.fog_revealer, mana: 30, range: 1024, cooldownMs: 5000, castMs: 500 } }
 # Mastery (TECH-028; ReTzar's reading of the original, 0x473bf0): an Asian priest teaches an Asian peasant, monk, ninja or
 # priest of a lower level than its own one point of experience; range 1 and mana 10 (0x4721e0, 0x4723e0).
 spell_raiseexp: { new: true, Spell: { bookValue: 5, effect: experience, amount: 1, mana: 10, range: 1, cooldownMs: 3000, castMs: 500, targets: { civ: asia, classes: [peon, monk, ninja, priest] } } }
@@ -681,13 +682,13 @@ spell_curse:
     effect: curse
     amount: 50
     durationMs: 30000
-    mana: 30
+    mana: 50
     range: 8
     cooldownMs: 3000
     castMs: 500
     targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] }
-spell_hypnotize: { new: true, Spell: { bookValue: 30, effect: hypnotize, durationMs: 30000, mana: 40, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # books only
-raisedead: { new: true, Spell: { bookValue: 10, effect: raiseDead, summon: comm.skeleton, count: 5, radius: 3, mana: 40, range: 8, cooldownMs: 5000, castMs: 1000, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat, bat, mage, dwarf, ork, jinn, dragon] } } }   # targets: the corpses that rise
+spell_hypnotize: { new: true, Spell: { bookValue: 30, effect: hypnotize, durationMs: 30000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # books only
+raisedead: { new: true, Spell: { bookValue: 10, effect: raiseDead, summon: comm.skeleton, count: 5, radius: 3, mana: 70, range: 8, cooldownMs: 5000, castMs: 1000, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat, bat, mage, dwarf, ork, jinn, dragon] } } }   # targets: the corpses that rise
 cloak: { new: true, Spell: { effect: cloak, target: self, durationMs: 60000, cooldownMs: 1000 } }                       # ninjas (ADR 0095)
 murder: { new: true, Spell: { effect: kill, mana: 50, range: 0, cooldownMs: 10000, castMs: 500, targets: { category: unit } } }   # ninjas; heroes are immune
 

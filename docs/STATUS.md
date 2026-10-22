@@ -115,7 +115,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    hypnosis, the ghost's banshee scream and the Messiah's immunity (WAR-009, WAR-010, MAG-008; ADR 0250), cancelled
    sites, broken-off loads and the computer's repairs (BLD-020, ECO-002, AI-003; ADR 0251), trade with any market,
    Asian peasants as traders and caravans that load infantry (TRADE-003, TRADE-004, HOLD-008; ADR 0252), Tournaments
-   and Mastery (TECH-028, TECH-029; ADR 0253), spells that skip machines (MAG-022; ADR 0254), soul items bound to a unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257), experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR 0259), the controls
+   and Mastery (TECH-028, TECH-029; ADR 0253), spells that skip machines (MAG-022; ADR 0254), soul items bound to a unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257), experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR 0259), the spells' ranges and mana (MAG-023; ADR 0260), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -219,6 +219,11 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Spell ranges and mana as the original dispatches them (ADR 0260).** From ReTzar: fire rain 14 tiles and 100 mana,
+  lightning 12 and 50, freeze 12 and 60, heal 3 (5 with Medicine) and 4, confusion 12 and 70, the rest 8 and 50, summons
+  their creature's mana. New rule MAG-023. The gameplay golden and bench are re-pinned; the other magnitudes stay UNVERIFIED.
+
 
 * **2026-10-22 — Jewelry: the markets sell and buy items (ADR 0259).** From ReTzar: with Jewelry one market of the kingdom gets
   an offer (book, power item, book or potion with a random record) a second after it stands and then every minute, the

@@ -211,10 +211,10 @@ when the building is hit; catapult stones can be stepped away from.
 | Crafting | 50 gold per power point, 2 s per point, at most 20; a potion 10 HP or 5 mana per point, a level per 5 points; a book's uses = its points (ADR 0186) | YAML `combat.craft*` | UNK-25 | workshop captures |
 | Workshop items | books of 20 spells, potions of health (red), levels (green), mana (blue), attack (yellow), defence (grey), sword, bow, shield | YAML `Item.crafts` | ITEM-016 | an owner session in the workshop |
 | A map book's spell | magic type = index in STRINGS.INI `[spell_names]` (⚠ HYPOTHESIS) | `ScenarioSetup.LegacySpellOrder` | ITEM-016 | the editor shows a book's spell |
-| Spell magnitudes | per spell (amount, mana, range, cooldown, cast time, duration, radius, pulse) | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
+| Spell magnitudes | per spell (amount, cooldown, cast time, duration, radius, pulse); **range and mana from ReTzar (ADR 0260)** | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
 | Spell damage | no defence, no bonus | code (`MagicSystem`) | UNK-26 | captures |
 | Summon mana above the pool | costs at most the caster's whole pool (golem 600m, dragon 800m vs `max_manna` 100; ⚠ HYPOTHESIS) | code (`MagicSystem.ManaCost`) | UNK-26 | summon captures |
-| Medicine | +4 tiles of spell range for priests | YAML `te_medicine` | UNK-26 | captures |
+| Medicine | **+2 tiles of healing range (ReTzar, ADR 0260)** | YAML `te_medicine` | — | captures |
 | Inquisition | +50% attack of priests (exorcism) | YAML `te_inquisition` | UNK-26 | captures |
 | Crusade | **ReTzar's reading of the original (ADR 0190):** 16 gathered at the start, one per cathedral every 12/8/4/1 s by the time played, ceiling 16 + 4 per full crusade (36), one arriving every 500 ms, 4 again after the crusaders died | YAML `combat.crusade*`; `MagicSystem` | UNK-26 | a crusade capture would confirm it |
 | Curse, hypnosis, banshee, Messiah | **ReTzar's reading of the original (ADR 0250):** the curse halves attack and zeroes defence of enemy non-machines within the caster's sight for 30 s; hypnosis hands the unit over for 30 s; a ghost's blow curses in 71 of 1001; the Messiah refuses lasting spells. Mana, range, cooldown and cast time stay UNVERIFIED | YAML `spell_curse`, `spell_hypnotize`, `combat.banshee*`; `MagicSystem` | UNK-26 | a capture would confirm it |

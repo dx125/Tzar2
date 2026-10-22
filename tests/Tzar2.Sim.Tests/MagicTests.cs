@@ -35,22 +35,55 @@ public class MagicTests
         Cast(d, mage, "spell_lightning", enemies[0]);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
         Assert.Equal(70 - 40, Hp(d, enemies[0]));
-        Assert.Equal(90 - 30, Mana(d, mage));
+        Assert.Equal(90 - 50, Mana(d, mage)); // 50 mana (ReTzar, 0x4723e0)
         Cast(d, mage, "spell_lightning", enemies[1]);
         d.Step();
         Assert.Contains(CommandRejection.SpellNotReady, d.Rejections());
         d.RunUntil(() => false, 60);
         Cast(d, mage, "spell_lightning", enemies[1]);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
-        d.RunUntil(() => false, 60);
-        Cast(d, mage, "spell_lightning", enemies[0]);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 3, 200);
-        Assert.False(d.World.Entities.IsAlive(enemies[0]));
-        Assert.Equal(0, Mana(d, mage));
-        d.RunUntil(() => false, 60);
-        Cast(d, mage, "spell_lightning", enemies[1]);
         d.Step();
-        Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections());
+        Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections()); // 40 left
+        d.World.Manas.Get(mage).MilliMana = 90_000;
+        Cast(d, mage, "spell_lightning", enemies[0]);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
+        Assert.False(d.World.Entities.IsAlive(enemies[0]));
+    }
+
+    [Theory]
+    [InlineData("spell_firerain", 14, 100)]
+    [InlineData("spell_lightning", 12, 50)]
+    [InlineData("spell_freeze", 12, 60)]
+    [InlineData("spell_berserk", 12, 70)]
+    [InlineData("spell_heal", 3, 4)]
+    [InlineData("spell_spawnbat", 16, 0)]
+    [InlineData("spell_spawndragon", 4, 0)]
+    [InlineData("spell_whirlpool", 16, 50)]
+    [InlineData("spell_magicvision", 1024, 30)]
+    [InlineData("spell_turntostone", 20, 50)]
+    [InlineData("spell_flamebolt", 18, 50)]
+    [InlineData("spell_raiseexp", 1, 10)]
+    [InlineData("raisedead", 8, 70)]
+    [InlineData("spell_bless", 8, 50)]
+    [InlineData("spell_curse", 8, 50)]
+    [Trait("Rule", "MAG-023")]
+    public void Each_spell_has_the_originals_range_and_mana(string key, int rangeTiles, int mana)
+    {
+        // ReTzar's reading of the original's spell dispatch (0x4721e0, 0x4723e0); summons pay their creature's mana.
+        SpellDefinition s = Classic.Spells[Classic.SpellId(key)];
+        Assert.Equal((rangeTiles * Tile, mana), (s.RangeUnits, s.ManaCost));
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-023")]
+    [Trait("Rule", "MAG-009")]
+    public void Medicine_lets_priests_heal_from_five_tiles_instead_of_three()
+    {
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.priest", 0, 4, 4)), ruleset: Classic);
+        EntityId priest = OfType(d.World, "euro.priest").Single();
+        SpellDefinition heal = d.World.Ruleset.Spells[Spell(d.World.Ruleset, "spell_heal")];
+        Assert.Equal(3 * Tile, MagicSystem.RangeOf(d.World, priest, heal));
+        Grant(d.World, 0, "te_medicine");
+        Assert.Equal(5 * Tile, MagicSystem.RangeOf(d.World, priest, heal));
     }
 
     [Fact]
@@ -144,11 +177,12 @@ public class MagicTests
         using var d = new SimDriver(
             AsciiMap(["..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~"],
                 Unit("euro.mage", 0, 1, 1), Unit("euro.footman", 0, 6, 2), Unit("euro.footman", 1, 6, 3), Unit("comm.galleon", 1, 12, 3), Unit("euro.footman", 1, 9, 3)),
-            ruleset: Classic);
+            ruleset: ClassicWith("euro.mage: { ManaPool: { max: 200 } }")); // fire rain costs 100 (ReTzar), above the synthetic mage's 90
         EntityId mage = OfType(d.World, "euro.mage").Single();
         EntityId own = OfType(d.World, "euro.footman", 0).Single();
         d.Order(0, CommandKind.SetStance, [mage, own], arg0: (int)CombatStance.HoldFire);
         d.Order(1, CommandKind.SetStance, [.. OfType(d.World, "euro.footman", 1), .. OfType(d.World, "comm.galleon")], arg0: (int)CombatStance.HoldFire);
+        d.World.Manas.Get(mage).MilliMana = 200_000;
         Cast(d, mage, "spell_firerain", default, (6 * Tile) + 1024, 3 * Tile);
         d.RunUntil(() => d.World.AreaEffects.Count == 0 && d.Count(SimEventKind.SpellCast) == 1, 400);
         Assert.True(Hp(d, own) < 70); // the manual: "including your own"
@@ -157,6 +191,7 @@ public class MagicTests
         EntityId ship = OfType(d.World, "comm.galleon").Single();
         EntityId shore = OfType(d.World, "euro.footman", 1).Single(f => d.PositionOf(f).X / Tile == 9);
         d.RunUntil(() => false, 120);
+        d.World.Manas.Get(mage).MilliMana = 90_000;
         Cast(d, mage, "spell_whirlpool", default, 11 * Tile, (3 * Tile) + 1024);
         d.RunUntil(() => d.World.AreaEffects.Count == 0 && d.Count(SimEventKind.SpellCast) == 2, 600);
         Assert.True(Hp(d, ship) < 1150);
@@ -183,6 +218,7 @@ public class MagicTests
 
         d.Order(0, CommandKind.DebugKill, [attacker]); // only the confused unit's own friend is left in its sight
         d.RunUntil(() => !d.World.IsStone(enemies[0]), 400);
+        d.World.Manas.Get(mage).MilliMana = 90_000; // berserk costs 70 (ReTzar)
         Cast(d, mage, "spell_berserk", enemies[0]);
         d.RunUntil(() => d.World.IsConfused(enemies[0]), 200);
         d.RunUntil(() => Of(d, SimEventKind.Damaged).Any(e => e.Entity == enemies[1] && e.X == enemies[0].Index), 300);

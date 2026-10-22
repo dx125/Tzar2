@@ -484,7 +484,7 @@ internal sealed class CombatCompiler
             target,
             affects,
             Int("mana", 0, 1_000_000),
-            Int("range", 0, 64) * UnitsPerTile,
+            Int("range", 0, 1024) * UnitsPerTile, // magic vision reaches anywhere (1024 tiles)
             Int("cooldownMs", 0, 3_600_000),
             Int("castMs", 0, 60_000),
             Int("amount", 0, 1_000_000),

@@ -190,7 +190,7 @@ public sealed class MagicSystem : ISimSystem
         Identity identity = world.Identities.Get(caster);
         int extraTiles = world.Stats.Apply(identity.Owner, ModifierStat.AbilityRange, identity.TypeId, 0);
         long range = Math.Max(s.RangeUnits, world.Ruleset.Gameplay.MeleeReachUnits) + ((long)extraTiles * MapState.UnitsPerTile); // range 0 = touch
-        return (int)Math.Min(range, 64L * MapState.UnitsPerTile);
+        return (int)Math.Min(range, 1024L * MapState.UnitsPerTile);
     }
 
     private void Cast(World world, EntityId caster, int index, int tick, int tickMs)
