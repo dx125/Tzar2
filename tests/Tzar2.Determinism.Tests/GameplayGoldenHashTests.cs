@@ -61,7 +61,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0253, 2026-10-22) Tournaments pools experience for the Asian pupils, Mastery teaches only lower levels: the ruleset hash only.
     // (ADR 0254, 2026-10-22) healing, freezing and raise dead skip machines and the bodiless: the ruleset hash only.
     // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
-    private const ulong GoldenRulesetHash = 0x97B83AAF9275B9ACUL;
+    private const ulong GoldenRulesetHash = 0x70EA5E504802D9DEUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.

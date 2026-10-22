@@ -193,9 +193,9 @@ legacy:
   # 1.25-s units, #61, among others) because nobody ran the local-only tests. Re-pinned 2026-10-22: the importer gives
   # armaments the hit frame of their attack animation (WAR-014); the pin had drifted again before that (E716BE64DED8009D).
   # Then (ITEM-016) ITEM_PLUSPLUS is imported as a weapon, the power item; then (WORLD-015) land units get a body from
-  # their object box.
+  # their object box. Then (ADR 0250) the ^class.messiah and ^class.ghost templates take the Messiah and the ghost; then (ADR 0252) ^euro.trader, ^arab.trader and ^asia.peon.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "D13ECBADA7B58867"
+  referenceDataHash: "8EB08346ED82C438"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
