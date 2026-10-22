@@ -812,7 +812,7 @@ public sealed partial class Ruleset
             .Add(t.DropOffMask).Add(t.PopulationCost).Add(t.PopulationProvided)
             .AddSpan<ushort>(t.Builds.AsSpan()).AddSpan<ushort>(t.RequiredTypes.AsSpan())
             .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology)).Add(t.ManaCost).Add((byte)t.DropOffAccess).Add(t.AutoGather).Add((byte)t.Placement)
-            .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete)
+            .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete).Add(t.IsSeat)
             .Add(t.SpawnOnDeath).Add(t.LifetimeMs).Add(t.WalkableFootprint);
         AddRequirements(hasher, t.Requirements);
         hasher.Add(t.ManaPool is not null);

@@ -18,7 +18,8 @@ internal static class WorldReader
         "weatherChancePercent", "weather", "scoreGatherDivisor", "scoreKillDivisor", "scoreBuildDivisor", "scorePerTechnology",
         "victoryIntervalTicks", "deathmatchStartingResources", "cheatSmallResources", "cheatLargeResources", "tavernRefreshMs",
         "mercenaryOffers", "heroOffers", "mercenaryGroupMin", "mercenaryGroupMax", "mercenaryCostPercent", "heroCostPercent",
-        "mercenaryLevel", "fameGroupBonus", "fameLevelBonus", "fameCostPercent",
+        "mercenaryLevel", "fameGroupBonus", "fameLevelBonus", "fameCostPercent", "mercenariesTechnology", "heroesTechnology",
+        "fameTechnology", "gamblingTechnology", "loanTechnology",
     ];
 
     public static WorldSettings Build(RulesetCompiler.SectionSet settings, GameplaySettings gameplay)
@@ -93,6 +94,11 @@ internal static class WorldReader
             FameGroupBonus = Range(settings, "fameGroupBonus", d.FameGroupBonus, 0, 16),
             FameLevelBonus = Range(settings, "fameLevelBonus", d.FameLevelBonus, 0, 1_000),
             FameCostPercent = Range(settings, "fameCostPercent", d.FameCostPercent, 0, 1_000),
+            MercenariesTechnology = settings.Scalar("world", "mercenariesTechnology") ?? d.MercenariesTechnology,
+            HeroesTechnology = settings.Scalar("world", "heroesTechnology") ?? d.HeroesTechnology,
+            FameTechnology = settings.Scalar("world", "fameTechnology") ?? d.FameTechnology,
+            GamblingTechnology = settings.Scalar("world", "gamblingTechnology") ?? d.GamblingTechnology,
+            LoanTechnology = settings.Scalar("world", "loanTechnology") ?? d.LoanTechnology,
         };
     }
 

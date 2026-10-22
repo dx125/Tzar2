@@ -150,6 +150,12 @@ world:
   fameGroupBonus: 1                   # UNVERIFIED (UNK-28): Fame "more"
   fameLevelBonus: 2                   # UNVERIFIED (UNK-23): Fame "more experienced"
   fameCostPercent: 75                 # UNVERIFIED (UNK-28): Fame "cheaper"
+  # The technologies these features need (the original's research names; a fork names its own or none).
+  mercenariesTechnology: te_mercenaries
+  heroesTechnology: te_heroesquest
+  fameTechnology: te_fame
+  gamblingTechnology: te_gambling
+  loanTechnology: te_usury
 
 # Terrain types of the M2 test maps (the terrain-set conversion of §9.1 replaces this list with the original sets).
 terrain:
@@ -321,6 +327,7 @@ legacy:
 ^class.castle:
   DropOff: { resources: [food, wood, stone, gold, iron] }
   ProtectedDelete: {}                 # GAME-04: Shift + Del
+  Seat: {}                            # GAME-17: the "destroy the castles" victory counts it
   Holder: { healPerMinute: 120 }      # UNVERIFIED (UNK-24): garrisoned units "heal themselves quickly" (strategy guide)
 ^class.farm:
   DropOff: { resources: [food] }

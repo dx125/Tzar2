@@ -283,6 +283,27 @@ public class RulesetCompilerTests
     }
 
     [Fact]
+    public void The_seat_and_the_feature_technologies_are_data()
+    {
+        // Code review 2026-10 (item 16): the castles victory counts the Seat trait, not the class name "castle"; the
+        // tavern, gambling and loans name their technologies in world settings, not in code. A fork changes them in YAML.
+        Ruleset classic = SyntheticLegacyContent.CompileRuleset();
+        Assert.True(classic.EntityTypes[classic.EntityTypeId("euro.castle")].Traits.IsSeat);
+        Assert.False(classic.EntityTypes[classic.EntityTypeId("euro.house")].Traits.IsSeat);
+        Assert.Equal(
+            ("te_mercenaries", "te_heroesquest", "te_fame", "te_gambling", "te_usury"),
+            (classic.World.MercenariesTechnology, classic.World.HeroesTechnology, classic.World.FameTechnology, classic.World.GamblingTechnology, classic.World.LoanTechnology));
+
+        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        {
+            OverrideTexts = [new("fork.yaml", "world: { loanTechnology: te_banking, gamblingTechnology: '' }\neuro.house: { Seat: {} }")],
+        });
+        Assert.Equal(("te_banking", string.Empty), (fork.World.LoanTechnology, fork.World.GamblingTechnology));
+        Assert.True(fork.EntityTypes[fork.EntityTypeId("euro.house")].Traits.IsSeat);
+        Assert.NotEqual(classic.ContentHash, fork.ContentHash);
+    }
+
+    [Fact]
     [Trait("Rule", "WORLD-012")]
     public void A_unit_walks_at_the_speed_of_its_walk_sheets_stride_unless_measured()
     {

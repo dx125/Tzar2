@@ -1178,7 +1178,7 @@ public sealed class CommandCard
                 return UpgradeAvailability(context, b, civ);
             case CardAction.Submenu when TavernMenu(b.Argument) is { } heroes:
                 // The tavern's offers show (with their prices) once the technology is there, affordable or not.
-                string offersTech = heroes ? "te_heroesquest" : "te_mercenaries";
+                string offersTech = heroes ? _rules.World.HeroesTechnology : _rules.World.MercenariesTechnology;
                 if (_rules.TechnologyId(offersTech) is >= 0 and var offersGate && !Me(context).HasTechnology(offersGate))
                 {
                     return (false, heroes ? "needs Heroes' Quest" : "needs Mercenaries");
@@ -1227,7 +1227,7 @@ public sealed class CommandCard
                 return (false, "hired this period");
             }
 
-            string hireTech = o.IsHero ? "te_heroesquest" : "te_mercenaries";
+            string hireTech = o.IsHero ? _rules.World.HeroesTechnology : _rules.World.MercenariesTechnology;
             if (_rules.TechnologyId(hireTech) is >= 0 and var hireGate && !Me(context).HasTechnology(hireGate))
             {
                 return (false, o.IsHero ? "needs Heroes' Quest" : "needs Mercenaries");

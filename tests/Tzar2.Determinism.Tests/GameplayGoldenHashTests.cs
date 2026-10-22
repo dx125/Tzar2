@@ -56,7 +56,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // the ruleset, the stream and the final hash.
     // (ADR 0191 amendment, 2026-10-22) Supply Storage and Seafood raise the population limit, Ore Flotation halves what mines lose: the ruleset hash only.
     // (ADR 0192, 2026-10-22) gates are 7 x 1 or 1 x 6 with a door of three tiles, bridges turn into their own cells: the bot's gate and bridge change, so the ruleset, the stream and the final hash.
-    private const ulong GoldenRulesetHash = 0xF786A7ED2EA081CFUL;
+    // (code review, 2026-10-22) the castle's Seat trait and the tavern, gambling and loan technologies named in the
+    // world settings instead of in code: the ruleset hash only, the match is the same.
+    private const ulong GoldenRulesetHash = 0x5965D53247EE8BF1UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
