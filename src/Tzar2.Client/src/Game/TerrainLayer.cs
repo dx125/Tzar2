@@ -25,36 +25,69 @@ public sealed class TerrainLayer : IDisposable
 
     private readonly List<(Chunk Chunk, Rect2I Pixels)> _chunks = [];
     private readonly TerrainComposer _composer;
-    private readonly TerrainTileAtlas _atlas = new();
+    private readonly TerrainTileAtlas _atlas;
     private Texture2DArray? _atlasTexture;
 
     /// <summary>
-    /// Composes and uploads the terrain of <paramref name="grid"/>. The chunks are composed in parallel (one composer per
-    /// thread; <paramref name="load"/> must be thread-safe) and their tiles go into the atlas; the textures are made on
-    /// the calling thread.
+    /// Composes and uploads the terrain of <paramref name="grid"/> (<see cref="Compose"/>, then the textures, on the calling
+    /// thread).
     /// </summary>
     public TerrainLayer(Rid parent, int drawIndex, TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load)
+        : this(parent, drawIndex, Compose(set, grid, load))
+    {
+    }
+
+    /// <summary>Uploads terrain composed by <see cref="Compose"/> (main thread).</summary>
+    public TerrainLayer(Rid parent, int drawIndex, ComposedTerrain composed)
+    {
+        ArgumentNullException.ThrowIfNull(composed);
+        _composer = new TerrainComposer(composed.Set, composed.Load);
+        _atlas = composed.Atlas;
+        Width = composed.Width;
+        Height = composed.Height;
+        TileColours = composed.TileColours;
+        ComposeMs = composed.ComposeMs;
+        IndexMs = composed.IndexMs;
+        FrameTotal = composed.FrameTotal;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < composed.Chunks.Length; i++)
+        {
+            (int cx, int cy, int width, int height, int[][] slots, int issues) = composed.Chunks[i];
+            _chunks.Add((new Chunk(parent, drawIndex), new Rect2I(cx * TerrainComposer.TileSize, cy * TerrainComposer.TileSize, 0, 0)));
+            Apply(i, width, height, slots, cx, cy);
+            Issues += issues;
+        }
+
+        UploadAtlas();
+        UploadMs = watch.ElapsedMilliseconds;
+    }
+
+    /// <summary>
+    /// Composes the terrain of <paramref name="grid"/> into a tile atlas and the chunks' slots: CPU only, so it may run
+    /// off the main thread (match load, code review 2026-10). The chunks are composed in parallel (one composer per
+    /// thread; <paramref name="load"/> must be thread-safe); each chunk's frames go into the atlas as soon as they are
+    /// composed, so only the chunks in flight hold their frames. Slots depend on the order chunks arrive, the pixels
+    /// drawn do not.
+    /// </summary>
+    public static ComposedTerrain Compose(TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load)
     {
         ArgumentNullException.ThrowIfNull(set);
         ArgumentNullException.ThrowIfNull(grid);
-        _composer = new TerrainComposer(set, load);
-        Width = grid.Width;
-        Height = grid.Height;
-        TileColours = new Color[Width * Height];
+        ArgumentNullException.ThrowIfNull(load);
+        int width = grid.Width, height = grid.Height;
+        var colours = new Color[width * height];
         var origins = new List<(int X, int Y)>();
-        for (int cy = 0; cy < Height; cy += ChunkTiles)
+        for (int cy = 0; cy < height; cy += ChunkTiles)
         {
-            for (int cx = 0; cx < Width; cx += ChunkTiles)
+            for (int cx = 0; cx < width; cx += ChunkTiles)
             {
                 origins.Add((cx, cy));
-                _chunks.Add((new Chunk(parent, drawIndex), new Rect2I(cx * TerrainComposer.TileSize, cy * TerrainComposer.TileSize, 0, 0)));
             }
         }
 
-        // Composed in parallel; each chunk's frames go into the atlas (thread-safe) as soon as they are composed, so only
-        // the chunks in flight hold their frames. Slots depend on the order chunks arrive, the pixels drawn do not.
+        var atlas = new TerrainTileAtlas();
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var indexed = new (int Width, int Height, int[][] Slots, int Issues)[origins.Count];
+        var chunks = new (int X, int Y, int Width, int Height, int[][] Slots, int Issues)[origins.Count];
         int frameTotal = 0;
         long indexTicks = 0;
         System.Threading.Tasks.Parallel.For(
@@ -64,29 +97,22 @@ public sealed class TerrainLayer : IDisposable
             (i, _, composer) =>
             {
                 (int cx, int cy) = origins[i];
-                (TerrainImage first, List<byte[]> frames) = ComposeChunk(composer, grid, cx, cy);
-                Average(first, cx, cy, Math.Min(ChunkTiles, Width - cx), Math.Min(ChunkTiles, Height - cy));
+                (TerrainImage first, List<byte[]> frames) = ComposeChunk(composer, grid, width, height, cx, cy);
+                Average(first, colours, width, cx, cy, Math.Min(ChunkTiles, width - cx), Math.Min(ChunkTiles, height - cy));
                 long start = System.Diagnostics.Stopwatch.GetTimestamp();
-                int[][] slots = _atlas.Add(first.Width, first.Height, frames);
-
+                int[][] slots = atlas.Add(first.Width, first.Height, frames);
                 System.Threading.Interlocked.Add(ref indexTicks, System.Diagnostics.Stopwatch.GetTimestamp() - start);
                 System.Threading.Interlocked.Add(ref frameTotal, frames.Count);
-                indexed[i] = (first.Width, first.Height, slots, first.Issues.Count);
+                chunks[i] = (cx, cy, first.Width, first.Height, slots, first.Issues.Count);
                 return composer;
             },
             _ => { });
-        ComposeMs = watch.ElapsedMilliseconds;
-        IndexMs = (long)System.Diagnostics.Stopwatch.GetElapsedTime(0, indexTicks).TotalMilliseconds;
-        FrameTotal = frameTotal;
-        watch.Restart();
-        for (int i = 0; i < origins.Count; i++)
+        return new ComposedTerrain(set, load, width, height, atlas, chunks, colours)
         {
-            Apply(i, indexed[i].Width, indexed[i].Height, indexed[i].Slots, origins[i].X, origins[i].Y);
-            Issues += indexed[i].Issues;
-        }
-
-        UploadAtlas();
-        UploadMs = watch.ElapsedMilliseconds;
+            ComposeMs = watch.ElapsedMilliseconds,
+            IndexMs = (long)System.Diagnostics.Stopwatch.GetElapsedTime(0, indexTicks).TotalMilliseconds,
+            FrameTotal = frameTotal,
+        };
     }
 
     /// <summary>Time spent composing chunk pixels (diagnostics).</summary>
@@ -131,7 +157,7 @@ public sealed class TerrainLayer : IDisposable
         {
             for (int cx = Math.Max(0, (left - 1) / ChunkTiles); cx <= Math.Min((Width - 1) / ChunkTiles, (right + 1) / ChunkTiles); cx++)
             {
-                (TerrainImage first, List<byte[]> frames) = ComposeChunk(_composer, grid, cx * ChunkTiles, cy * ChunkTiles);
+                (TerrainImage first, List<byte[]> frames) = ComposeChunk(_composer, grid, Width, Height, cx * ChunkTiles, cy * ChunkTiles);
                 Store((cy * perRow) + cx, first, frames, cx * ChunkTiles, cy * ChunkTiles);
             }
         }
@@ -169,9 +195,9 @@ public sealed class TerrainLayer : IDisposable
     }
 
     // Every animation frame of the chunk whose top-left tile is (cx, cy); later frames redraw only the tiles that move.
-    private (TerrainImage First, List<byte[]> Frames) ComposeChunk(TerrainComposer composer, TerrainGrid grid, int cx, int cy)
+    private static (TerrainImage First, List<byte[]> Frames) ComposeChunk(TerrainComposer composer, TerrainGrid grid, int width, int height, int cx, int cy)
     {
-        int w = Math.Min(ChunkTiles, Width - cx), h = Math.Min(ChunkTiles, Height - cy);
+        int w = Math.Min(ChunkTiles, width - cx), h = Math.Min(ChunkTiles, height - cy);
         var sub = new TerrainGrid(w, h, 0);
         for (int y = 0; y <= h; y++)
         {
@@ -199,7 +225,7 @@ public sealed class TerrainLayer : IDisposable
         int[][] slots = _atlas.Add(first.Width, first.Height, frames);
 
         Apply(chunk, first.Width, first.Height, slots, cx, cy);
-        Average(first, cx, cy, Math.Min(ChunkTiles, Width - cx), Math.Min(ChunkTiles, Height - cy));
+        Average(first, TileColours, Width, cx, cy, Math.Min(ChunkTiles, Width - cx), Math.Min(ChunkTiles, Height - cy));
     }
 
     // The chunk's slots to the GPU.
@@ -253,7 +279,7 @@ public sealed class TerrainLayer : IDisposable
         }
     }
 
-    private void Average(TerrainImage image, int cx, int cy, int w, int h)
+    private static void Average(TerrainImage image, Color[] colours, int mapWidth, int cx, int cy, int w, int h)
     {
         int t = TerrainComposer.TileSize;
         for (int ty = 0; ty < h; ty++)
@@ -274,12 +300,47 @@ public sealed class TerrainLayer : IDisposable
                 }
 
                 const int n = 64;
-                TileColours[((cy + ty) * Width) + cx + tx] = Color.Color8((byte)(r / n), (byte)(g / n), (byte)(b / n));
+                colours[((cy + ty) * mapWidth) + cx + tx] = Color.Color8((byte)(r / n), (byte)(g / n), (byte)(b / n));
             }
         }
     }
 
     private static int Expand(int c5) => (c5 << 3) | (c5 >> 2);
+
+    /// <summary>Terrain composed off the main thread, ready for <see cref="TerrainLayer(Rid, int, ComposedTerrain)"/>.</summary>
+    public sealed class ComposedTerrain
+    {
+        internal ComposedTerrain(TerrainSet set, Func<string, ImageAsset?> load, int width, int height, TerrainTileAtlas atlas, (int X, int Y, int Width, int Height, int[][] Slots, int Issues)[] chunks, Color[] tileColours)
+        {
+            Set = set;
+            Load = load;
+            Width = width;
+            Height = height;
+            Atlas = atlas;
+            Chunks = chunks;
+            TileColours = tileColours;
+        }
+
+        internal TerrainSet Set { get; }
+
+        internal Func<string, ImageAsset?> Load { get; }
+
+        internal int Width { get; }
+
+        internal int Height { get; }
+
+        internal TerrainTileAtlas Atlas { get; }
+
+        internal (int X, int Y, int Width, int Height, int[][] Slots, int Issues)[] Chunks { get; }
+
+        internal Color[] TileColours { get; }
+
+        internal long ComposeMs { get; init; }
+
+        internal long IndexMs { get; init; }
+
+        internal int FrameTotal { get; init; }
+    }
 
     // One chunk: a canvas item drawn from the atlas through the chunk's slots (one RGBA8 layer of 24-bit slots per frame).
     private sealed class Chunk : IDisposable

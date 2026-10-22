@@ -216,6 +216,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-22 — A match loads on a worker thread (code review, item 16).**
+  * Sprite decoding and packing, the terrain's layout and its composition into the tile atlas now run on a worker
+    thread. The loading screen stays up and responsive meanwhile.
+  * The main thread only uploads, which takes 60–80 ms. Before, it froze for the whole load: 4 s for an original map
+    on the review machine, 12 s for a real-world map.
+
 * **2026-10-22 — Terrain from a deduplicated tile atlas (ADR 0210; code review, item 16).**
   * Every distinct 32 × 32 composed tile is stored once. A chunk keeps a slot per tile and frame instead of a
     512 × 512 texture per animation frame.
