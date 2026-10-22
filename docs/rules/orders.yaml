@@ -22,8 +22,8 @@ rules:
   ORD-005:
     rule: Shift+right click adds waypoints; the units walk them in order. With Ctrl or Alt the waypoints are a move-advance or a move-sneak.
     source: [manual Commanding Units (Move), help HK.TXT]
-    status: missing
-    note: The client sends the Shift flag but the simulation replaces the order instead of queueing it.
+    status: tested
+    note: A unit on its way keeps up to 8 more points (the original's limit is not known), each with its own mode; a unit standing still starts at once. Any order without Shift drops the rest, and so does getting stuck. Waypoints are not drawn yet.
   ORD-006:
     rule: Patrol walks between the unit's position and the clicked point; with Shift several points make a patrol path.
     source: [manual Commanding Units (Patrol)]

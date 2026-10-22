@@ -537,3 +537,50 @@ public enum ProductionStall : byte
 }
 
 #pragma warning restore CA1051
+
+/// <summary>A point a unit walks to after its current move (ORD-005), with the leg's combat mode.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct Waypoint
+{
+    /// <summary>World X.</summary>
+    public int X;
+
+    /// <summary>World Y.</summary>
+    public int Y;
+
+    /// <summary>The leg's combat mode: <see cref="CombatMode.None"/>, <see cref="CombatMode.AttackMove"/> or <see cref="CombatMode.Sneak"/>.</summary>
+    public CombatMode Mode;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved0;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved1;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved2;
+}
+
+/// <summary>Waypoint slots (<see cref="WaypointQueue.Capacity"/>).</summary>
+[InlineArray(WaypointQueue.Capacity)]
+public struct WaypointSlots
+{
+    private Waypoint _point;
+}
+
+/// <summary>
+/// The points a unit walks after its current move, in order (Shift + right click, ORD-005): the first
+/// <see cref="Count"/> slots. Another order without Shift drops them.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct WaypointQueue : IComponent
+{
+    /// <summary>Most points queued at once (⚠ UNVERIFIED: the original's limit is not known).</summary>
+    public const int Capacity = 8;
+
+    /// <summary>The points, first <see cref="Count"/> slots; the rest zero.</summary>
+    public WaypointSlots Points;
+
+    /// <summary>Points queued.</summary>
+    public int Count;
+}

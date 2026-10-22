@@ -52,8 +52,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0184 amendment 6, 2026-10-22) the unmasking reach of a taken-over unit, two settings: the ruleset hash only.
     // (2026-10-22) one peasant per field (workers 1), catapult stones hurt their own side: the ruleset hash only.
     private const ulong GoldenRulesetHash = 0x24CC0E51ADC414ECUL;
-    private const ulong GoldenHashStream = 0x566479FB32CC3DBEUL;
-    private const ulong GoldenFinalFullHash = 0xF1B9AA07425D36E0UL;
+    // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
+    private const ulong GoldenHashStream = 0x17E22E059DF0E02FUL;
+    private const ulong GoldenFinalFullHash = 0x429BCC08FA77CB03UL;
 
     private const int Ticks = 1600;
 

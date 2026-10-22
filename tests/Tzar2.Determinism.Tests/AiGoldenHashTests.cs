@@ -40,8 +40,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ECO-021, 2026-10-22) one peasant per field: the AI's farmers spread over its fields, it budgets wood for the
     // missing ones and sends idle workers on to the next resource, so its economy and its commands change.
     private const ulong GoldenCommandStream = 0x9936FA6EEF19C503UL;
-    private const ulong GoldenHashStream = 0xF8879272B7C6A5DDUL;
-    private const ulong GoldenFinalFullHash = 0x37551D31FDEF7829UL;
+    // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
+    private const ulong GoldenHashStream = 0x3C32E48F6244EF8DUL;
+    private const ulong GoldenFinalFullHash = 0x455D6254CAD77EBBUL;
 
     private const int Ticks = 9600;
 

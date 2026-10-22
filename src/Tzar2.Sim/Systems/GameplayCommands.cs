@@ -29,6 +29,7 @@ internal static class GameplayCommands
         world.CancelErrandAndCast(unit); // GAME-09…11: errands and spells in progress end too (ADR 0096)
         world.Dockings.Remove(unit); // a ship's way to the shore and exploring end too (ADRs 0140, 0143)
         world.Explorers.Remove(unit);
+        world.WaypointQueues.Remove(unit); // and the waypoints (ORD-005)
         int w = world.Workers.IndexOf(unit);
         if (w >= 0)
         {

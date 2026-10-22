@@ -65,10 +65,11 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. The ones a source settles come first: waypoints (ORD-005), the attack's hit frame from the data (WAR-014), and the
+   order. The ones a source settles come first: the attack's hit frame from the data (WAR-014), and the
    magic workshop's several items per kind (ITEM-016: books of different spells, potions of different effects,
    swords, bows and shields). Then the screens: diplomacy, tribute, inventory, save and load. Done: Landing Tactics
-   (TECH-019), one farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013).
+   (TECH-019), one farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013),
+   waypoints (ORD-005).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
      (BLD-022) and how close another kingdom's spy must come to unmask a disguised one (MAG-012). Batch J measures
      both. The repairs are measured (run 3, ADR 0185); the distance is left. **Operator:** run 10,
@@ -114,6 +115,11 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Waypoints (ORD-005).** Shift + right click queues up to 8 more points on a unit's way, each with its
+  own mode (Ctrl: move-advance, Alt: move-sneak); another order drops them. The new store raises the hashed layout to
+  10 and the snapshot format to 12: every golden stream and final hash and the three CI benches are re-pinned
+  (sim 3397C9D0CA2C790C, gameplay 318FD48B314B4211, AI 498368A1CAC5CA1D); the AI's commands are unchanged.
 
 * **2026-10-22 — Work queue item 3: one peasant per field, move-sneak, siege friendly fire.**
   * ECO-021 (help HT_TEND_FIELDS): a field takes one worker; a peasant sent to a tended field goes to the nearest free
