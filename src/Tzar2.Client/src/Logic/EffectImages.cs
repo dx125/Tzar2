@@ -19,11 +19,14 @@ public static class EffectImages
     /// <summary>The red cross where a move order was given (IMAGES.INI <c>cursor</c>: ten frames, hotspot 24, 24).</summary>
     public const string OrderCross = "cursor";
 
+    /// <summary>The flag on a waypoint of the selection while Shift is held (IMAGES.INI <c>wp_flag</c>; CTRL-025).</summary>
+    public const string Waypoint = "wp_flag";
+
     /// <summary>Every picture a match may need.</summary>
     public static IReadOnlyList<string> All { get; } =
     [
         "arrow", "arrow_ballista", "cb_stone", "cb_metal", "arrow_rocket", "magic_star", "flame_bolt", "freeze_bolt",
-        "explosion_small", "flame_bolt_expl", "freeze_bolt_expl", FireBig, FireSmall, OrderCross,
+        "explosion_small", "flame_bolt_expl", "freeze_bolt_expl", FireBig, FireSmall, OrderCross, Waypoint,
     ];
 
     /// <summary>The picture of projectile kind <paramref name="key"/> (rules <c>projectiles</c>), or null.</summary>

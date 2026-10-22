@@ -111,8 +111,9 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // queue entries and the workers' idle timer change the hashed layout, and the third play-test's rules the match;
             // then (ADR 0184) the spies' disguise store joins the hashed layout; then (ORD-005) the waypoint store; then
             // (WAR-014) footmen and archers strike at the action row of their attack animations; then (ITEM-016) items keep
-            // their own spell, effect and look (layout 11); then (WORLD-015) units get the original's body.
-            Assert.Equal("9E5BD08013BB3772", d.Hashes[^1].ToString("X16"));
+            // their own spell, effect and look (layout 11); then (WORLD-015) units get the original's body; then (ADR 0189)
+            // queued orders gain kinds and explorers an area (layout 12).
+            Assert.Equal("42184B33EB5F71C8", d.Hashes[^1].ToString("X16"));
         }
     }
 

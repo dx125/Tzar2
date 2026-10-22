@@ -13,6 +13,13 @@ public static class SpriteRules
     public static int Direction(int facing, int directions)
         => directions < 8 ? 0 : (((2 - facing) % 8) + 8) % 8;
 
+    /// <summary>
+    /// The picture of a structure turned by 90° (BLD-019): a bridge's <c>bridge_horz</c> becomes <c>bridge_vert</c>; others
+    /// keep theirs.
+    /// </summary>
+    public static string? Turned(string? image, bool rotated)
+        => rotated && image is not null && image.Contains("_horz", StringComparison.Ordinal) ? image.Replace("_horz", "_vert", StringComparison.Ordinal) : image;
+
     /// <summary>The construction-site sheet for a footprint (<c>build1x1</c> … <c>build8x8</c> of IMAGES.INI).</summary>
     public static string BuildSiteName(EntityTypeDefinition type)
     {

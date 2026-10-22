@@ -130,3 +130,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0186](0186-items-carry-their-own-effect-spell-and-look.md) | Items carry their own effect, spell and look; the magic workshop makes each kind's variants | Accepted | 2026-10-22 |
 | [0187](0187-save-games-of-every-single-player-game.md) | Save games of every single player game, by name, in the user folder | Accepted | 2026-10-22 |
 | [0188](0188-units-have-the-original-body.md) | Units have the original's body; terrain keeps the footprint; units coming the other way squeeze past | Accepted | 2026-10-22 |
+| [0189](0189-shift-queues-every-order.md) | Queue every order given with Shift, and take a whole type with Alt | Accepted | 2026-10-22 |

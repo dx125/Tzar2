@@ -75,6 +75,30 @@ public class ConstructionM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-018")]
+    public void A_gate_placed_over_the_kingdoms_own_wall_replaces_its_pieces_but_not_another_kingdoms()
+    {
+        MapObject[] walls =
+        [
+            .. Enumerable.Range(10, 6).Select(x => Structure("comm.wall_wood", 0, x, 6)),
+            .. Enumerable.Range(20, 4).Select(x => Structure("comm.wall_wood", 1, x, 6)),
+        ];
+        using var d = new SimDriver(TestMap(40, 16, [Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 8), .. walls]), ruleset: Classic);
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        d.Order(0, CommandKind.Build, [peon], 11 * Tile, 6 * Tile, arg0: Id("comm.gate_wood")); // 3 x 1 on tiles 11..13
+        d.Step();
+        Assert.Empty(d.Rejections());
+        Assert.Single(OfType(d.World, "comm.gate_wood"));
+        Assert.Equal(3, OfType(d.World, "comm.wall_wood", 0).Count()); // 10, 14 and 15 are left
+        Assert.DoesNotContain(OfType(d.World, "comm.wall_wood", 0), w => d.World.Footprints.Get(w).TileX is >= 11 and <= 13);
+
+        d.Order(0, CommandKind.Build, [peon], 20 * Tile, 6 * Tile, arg0: Id("comm.gate_wood"));
+        d.Step();
+        Assert.Equal(CommandRejection.IllegalPlacement, d.Rejections().Last());
+        Assert.Equal(4, OfType(d.World, "comm.wall_wood", 1).Count());
+    }
+
+    [Fact]
     [Trait("Rule", "BLD-011")]
     public void A_dragged_wall_places_one_site_per_tile_and_the_builder_moves_along_it()
     {

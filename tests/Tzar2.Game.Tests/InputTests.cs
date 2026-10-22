@@ -122,12 +122,16 @@ public sealed class SelectionTests
     }
 
     [Fact]
+    [Trait("Rule", "EXP-007")]
     public void Experience_filters_split_at_the_average_level_and_skip_what_gains_none()
     {
-        EntityInfo[] screen = [Unit(1) with { Level = 1 }, Unit(2) with { Level = 4 }, Unit(3) with { Level = 7 }, Unit(4), Unit(5, owner: 1) with { Level = 9 }];
+        EntityInfo[] screen = [Unit(1) with { Level = 1 }, Unit(2) with { Level = 4 }, Unit(3) with { Level = 8 }, Unit(4), Unit(5, owner: 1) with { Level = 9 }];
         var s = new SelectionModel(Me);
-        s.SelectByExperience(screen, above: true); // on screen: levels 1, 4 and 7 average 4
+        s.SelectByExperience(screen, above: true); // nothing selected: own units on screen above level 7
         Assert.Equal([Id(3)], s.Selected);
+        s.Clear();
+        s.SelectByExperience(screen, above: false); // ... and below level 8 (unit 4 gains none)
+        Assert.Equal([Id(1), Id(2)], s.Selected);
         s.Box([screen[0], screen[1], screen[3]], shift: false);
         s.SelectByExperience(screen, above: false); // of the selection: 1 and 4 (unit 4 gains none) average 2.5
         Assert.Equal([Id(1)], s.Selected);
@@ -178,6 +182,45 @@ public sealed class OrderTests
         Assert.Equal(CommandKind.Attack, attack.Kind);
         Assert.Equal(enemy.Id, attack.Target);
         Assert.Equal(2, attack.Entities.Count);
+    }
+
+    [Fact]
+    [Trait("Rule", "CTRL-026")]
+    public void Shift_adds_an_enemy_to_the_set_and_alt_takes_every_one_of_its_type_on_screen_nearest_first()
+    {
+        EntityInfo enemy = SelectionTests.Unit(9, type: 5, owner: 1) with { X = 1000, Y = 1000 };
+        PlannedCommand queued = Assert.Single(OrderResolver.RightClick([SelectionTests.Unit(1)], enemy, 0, 0, KeyMods.Shift, Me));
+        Assert.Equal((CommandKind.Attack, CommandFlags.Queue), (queued.Kind, queued.Flags));
+
+        EntityInfo[] screen =
+        [
+            enemy,
+            SelectionTests.Unit(10, type: 5, owner: 1) with { X = 9000, Y = 1000 },
+            SelectionTests.Unit(11, type: 5, owner: 1) with { X = 3000, Y = 1000 },
+            SelectionTests.Unit(12, type: 6, owner: 1) with { X = 1500, Y = 1000 }, // another type
+            SelectionTests.Unit(13, type: 5, owner: 2) with { X = 1200, Y = 1000 }, // another kingdom
+        ];
+        IReadOnlyList<PlannedCommand> all = OrderResolver.RightClick([SelectionTests.Unit(1)], enemy, 0, 0, KeyMods.Alt, Me, onScreen: screen);
+        Assert.Equal([SelectionTests.Id(9), SelectionTests.Id(11), SelectionTests.Id(10)], all.Select(c => c.Target));
+        Assert.All(all, c => Assert.Equal(CommandKind.Attack, c.Kind));
+        Assert.Equal([CommandFlags.None, CommandFlags.Queue, CommandFlags.Queue], all.Select(c => c.Flags));
+
+        // The card's Attack order does the same.
+        Assert.Equal(3, OrderResolver.WithMode(OrderMode.Attack, [SelectionTests.Unit(1)], enemy, 0, 0, KeyMods.Alt, Me, onScreen: screen).Count);
+    }
+
+    [Fact]
+    [Trait("Rule", "CTRL-027")]
+    public void Guard_with_shift_queues_and_with_alt_guards_every_own_object_of_the_type_in_turn()
+    {
+        EntityInfo peon = SelectionTests.Unit(5, type: 3) with { X = 0, Y = 0 };
+        PlannedCommand queued = Assert.Single(OrderResolver.WithMode(OrderMode.Guard, [SelectionTests.Unit(1)], peon, 0, 0, KeyMods.Shift, Me));
+        Assert.Equal((CommandKind.Follow, CommandFlags.Queue, peon.Id), (queued.Kind, queued.Flags, queued.Target));
+
+        EntityInfo[] screen = [peon, SelectionTests.Unit(6, type: 3) with { X = 500, Y = 0 }, SelectionTests.Unit(7, type: 3, owner: 1)];
+        IReadOnlyList<PlannedCommand> set = OrderResolver.WithMode(OrderMode.Guard, [SelectionTests.Unit(1)], peon, 0, 0, KeyMods.Alt, Me, onScreen: screen);
+        Assert.Equal([SelectionTests.Id(5), SelectionTests.Id(6)], set.Select(c => c.Target));
+        Assert.All(set, c => Assert.Equal(CommandKind.Follow, c.Kind));
     }
 
     [Fact]

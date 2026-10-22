@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
@@ -170,7 +171,8 @@ internal static class GameplayCommands
         int tileX = command.X / MapState.UnitsPerTile;
         int tileY = command.Y / MapState.UnitsPerTile;
         bool rotated = command.Arg1 == 1;
-        if (!CanPlace(world, type, tileX, tileY, rotated))
+        List<EntityId>? walls = null;
+        if (!CanPlace(world, type, tileX, tileY, rotated) && (walls = WallsUnderGate(world, command.Player, type, tileX, tileY, rotated)) is null)
         {
             return CommandRejection.IllegalPlacement;
         }
@@ -183,6 +185,14 @@ internal static class GameplayCommands
         if (!ResearchRules.TryPayFor(world, command.Player, type, out PaidModifier paid))
         {
             return CommandRejection.NotAffordable;
+        }
+
+        if (walls is not null)
+        {
+            foreach (EntityId wall in walls)
+            {
+                world.Destroy(wall); // the gate takes the place of these pieces of wall (BLD-018)
+            }
         }
 
         site = world.PlaceStructure(typeId, command.Player, tileX, tileY, underConstruction: true, rotated: rotated);
@@ -579,6 +589,18 @@ internal static class GameplayCommands
                 continue;
             }
 
+            // Shift: attack it after what the unit does now, one enemy after another (CTRL-026).
+            if ((command.Flags & CommandFlags.Queue) != 0 && OrderQueue.IsBusy(world, entity, guard: false))
+            {
+                Position at = world.Positions.Get(target);
+                if (OrderQueue.Add(world, entity, new Waypoint { X = at.X, Y = at.Y, Kind = WaypointKind.Attack, Target = target.Value }))
+                {
+                    applied++;
+                }
+
+                continue;
+            }
+
             ClearTasks(world, entity, CombatMode.Explicit);
             Interaction.Halt(world, entity);
             world.Combats.Get(entity).Target = target.Value;
@@ -765,6 +787,63 @@ internal static class GameplayCommands
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// The pieces of the player's own finished wall a gate placed at (tileX, tileY) would replace (BLD-018: a gate can be
+    /// placed over a wall already built): null when the gate is no gate, covers no such piece, or a tile of it is neither
+    /// one of them nor free land.
+    /// </summary>
+    internal static List<EntityId>? WallsUnderGate(World world, byte player, EntityTypeDefinition type, int tileX, int tileY, bool rotated)
+    {
+        if (type.Traits.Gate is null)
+        {
+            return null;
+        }
+
+        var f = new Footprint { TileX = tileX, TileY = tileY, Rotated = rotated && type.FootprintWidth != type.FootprintHeight ? (byte)1 : (byte)0 };
+        int w = f.Width(type.FootprintWidth, type.FootprintHeight);
+        int h = f.Height(type.FootprintWidth, type.FootprintHeight);
+        if (!world.Map.ContainsTile(tileX, tileY) || !world.Map.ContainsTile(tileX + w - 1, tileY + h - 1))
+        {
+            return null;
+        }
+
+        var walls = new List<EntityId>();
+        Span<bool> covered = stackalloc bool[w * h];
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            Footprint piece = world.Footprints.Components[i];
+            if (piece.TileX < tileX || piece.TileX >= tileX + w || piece.TileY < tileY || piece.TileY >= tileY + h)
+            {
+                continue;
+            }
+
+            EntityId e = structures[i];
+            if (!world.TypeOf(e).Traits.IsWall || world.Identities.Get(e).Owner != player || world.Constructions.Has(e))
+            {
+                return null; // something else stands there
+            }
+
+            walls.Add(e);
+            covered[((piece.TileY - tileY) * w) + piece.TileX - tileX] = true;
+        }
+
+        ReadOnlySpan<byte> mask = type.Footprint;
+        for (int dy = 0; dy < h; dy++)
+        {
+            for (int dx = 0; dx < w; dx++)
+            {
+                if (mask[f.MaskIndex(dx, dy, type.FootprintWidth)] != 0 && !covered[(dy * w) + dx]
+                    && !PlacementQueries.IsBuildableTile(world, tileX + dx, tileY + dy))
+                {
+                    return null;
+                }
+            }
+        }
+
+        return walls.Count > 0 ? walls : null;
     }
 
     // A bridge runs along its long axis: its first and last rows across that axis stand on walkable land, every tile is

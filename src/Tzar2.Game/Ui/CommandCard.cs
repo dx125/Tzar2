@@ -430,8 +430,8 @@ public sealed class CommandCard
                 }
 
                 return gates.Count > 0 ? new CardPress(Commands: gates) : CardPress.Nothing;
-            case CardAction.Explore:
-                return Commands(CommandKind.Explore, OwnIds(selected, e => e.IsMobile));
+            case CardAction.Explore when selected.Any(e => e.Owner == _me && e.IsMobile):
+                return new CardPress(Mode: OrderMode.Explore); // the area is clicked next (manual: Explore; ORD-007)
             case CardAction.Delete:
                 return new CardPress(DeleteSelected: true);
             case CardAction.Unload when selected.Any(e => e.Owner == _me && e.IsMobile && InsideCount(context, e.Id) > 0):
@@ -710,7 +710,9 @@ public sealed class CommandCard
             capturable,
             t.InventorySlots > 0,
             t.Item is not null,
-            t.GainsExperience ? e.Level : -1);
+            t.GainsExperience ? e.Level : -1,
+            e.X,
+            e.Y);
     }
 
     // An item of the open inventory (HUD-018): right click drops it, Alt + click makes it the default item, a click uses

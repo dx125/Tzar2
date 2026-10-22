@@ -215,6 +215,9 @@ public struct FrameEntity
     /// <summary>A gate's state: <see cref="FrameGate"/> flags (0 = not a gate).</summary>
     public FrameGate Gate;
 
+    /// <summary>A structure turned by 90° (a vertical bridge or gate; CTRL-024, BLD-019).</summary>
+    public bool Rotated;
+
     /// <summary>Footprint top-left tile X of a structure, or -1.</summary>
     public int TileX;
 
@@ -249,6 +252,33 @@ public struct FrameEntity
 /// <param name="IsHero">A hero.</param>
 /// <param name="Taken">Already hired this period.</param>
 public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Count, int Level, bool IsHero, bool Taken);
+
+/// <summary>What an order of <see cref="FrameWaypoint"/> does.</summary>
+public enum FrameOrderKind : byte
+{
+    /// <summary>Walk to the point.</summary>
+    Move = 0,
+
+    /// <summary>Attack the target.</summary>
+    Attack = 1,
+
+    /// <summary>Guard the target.</summary>
+    Guard = 2,
+
+    /// <summary>A point of a patrol.</summary>
+    Patrol = 3,
+}
+
+/// <summary>
+/// An order of one of the frame's kingdom's units, the one it carries out now first and then those queued with Shift
+/// (CTRL-025: the waypoints show while Shift is held).
+/// </summary>
+/// <param name="Unit">The unit (<c>EntityId.Value</c>).</param>
+/// <param name="Kind">What the order does.</param>
+/// <param name="X">The point, or where the target stood (world units).</param>
+/// <param name="Y">The point's Y.</param>
+/// <param name="Target">The attacked or guarded entity (<c>EntityId.Value</c>), or 0.</param>
+public readonly record struct FrameWaypoint(uint Unit, FrameOrderKind Kind, int X, int Y, uint Target);
 
 /// <summary>An entry of a producer's queue (ADR 0180): how many of one item it has queued, in queue order.</summary>
 /// <param name="Entity">The producer (<c>EntityId.Value</c>).</param>
@@ -456,6 +486,12 @@ public sealed class GameFrame
     /// <summary>1 where a footprint tile may be placed (walkable land without a structure), per tile.</summary>
     public byte[] Buildable { get; internal set; } = [];
 
+    /// <summary>
+    /// Per tile, what coast and bridge placements need (<see cref="Input.Placement.Water"/>, <see cref="Input.Placement.Land"/>,
+    /// <see cref="Input.Placement.Free"/> bits), kept with <see cref="Buildable"/>.
+    /// </summary>
+    public byte[] Terrain { get; internal set; } = [];
+
     /// <summary>The map passability version <see cref="Buildable"/> was computed for.</summary>
     public int BuildableVersion { get; internal set; } = -1;
 
@@ -488,7 +524,24 @@ public sealed class GameFrame
     public int TavernCostStride { get; internal set; }
 
     private FrameTavernOffer[] _offers = [];
+    private FrameWaypoint[] _waypoints = new FrameWaypoint[16];
     private FrameQueueEntry[] _queue = new FrameQueueEntry[16];
+
+    /// <summary>The orders of the frame's kingdom's units, grouped by unit in the order they are carried out (CTRL-025).</summary>
+    public ReadOnlySpan<FrameWaypoint> Waypoints => _waypoints.AsSpan(0, WaypointCount);
+
+    /// <summary>Number of valid entries in <see cref="Waypoints"/>.</summary>
+    public int WaypointCount { get; internal set; }
+
+    internal void SetWaypoint(int index, FrameWaypoint entry)
+    {
+        if (_waypoints.Length <= index)
+        {
+            Array.Resize(ref _waypoints, Math.Max(index + 1, _waypoints.Length * 2));
+        }
+
+        _waypoints[index] = entry;
+    }
     private FrameHeld[] _held = new FrameHeld[16];
 
     /// <summary>The units inside the frame's kingdom's holders and the items its units carry, grouped by holder in the order they are kept.</summary>

@@ -174,6 +174,14 @@ public sealed class CombatSystem : ISimSystem
             {
                 c.Mode = CombatMode.None;
             }
+
+            // The fight is over: the next of the unit's queued orders (CTRL-026); a move-advance resumes first, and a
+            // unit still walking takes it on arrival.
+            if (c.Mode != CombatMode.AttackMove && world.WaypointQueues.Count > 0 && world.WaypointQueues.Has(attacker) && !Interaction.IsMoving(world, attacker))
+            {
+                OrderQueue.Next(world, attacker);
+                target = EntityId.FromValue(c.Target);
+            }
         }
 
         if (target.IsNone)
@@ -762,6 +770,11 @@ public sealed class CombatSystem : ISimSystem
         {
             c.Mode = CombatMode.None;
             c.Resume = 0;
+            if (world.WaypointQueues.Count > 0 && world.WaypointQueues.Has(attacker))
+            {
+                OrderQueue.Next(world, attacker); // the leg is done: the next queued order (ORD-005)
+            }
+
             return;
         }
 

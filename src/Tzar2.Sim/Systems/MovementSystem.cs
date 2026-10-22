@@ -226,6 +226,7 @@ public sealed class MovementSystem : ISimSystem
         {
             m.Order = MotionOrder.None;
             m.FollowTarget = 0;
+            OrderQueue.Next(world, entity); // the next object of a guarded set (CTRL-027)
             return;
         }
 
@@ -701,7 +702,11 @@ public sealed class MovementSystem : ISimSystem
             {
                 world.Events.Emit(new SimEvent(SimEventKind.Arrived, owner, entity, nx, ny, 0));
                 MovementOrders.Finish(world, entity, ref m, MotionState.Idle);
-                if (m.Order == MotionOrder.Patrol)
+                if (m.Order == MotionOrder.Patrol && OrderQueue.NextPatrolPoint(world, entity, ref m))
+                {
+                    // ORD-006: on along the patrol path.
+                }
+                else if (m.Order == MotionOrder.Patrol)
                 {
                     // The reached end becomes the reachable point; a patrol whose ends coincide (e.g. ordered just
                     // across a wall) ends instead of arriving every tick.
@@ -723,7 +728,10 @@ public sealed class MovementSystem : ISimSystem
                 else if (m.Order == MotionOrder.Move)
                 {
                     m.Order = MotionOrder.None;
-                    NextWaypoint(world, entity, ref m);
+                    if (world.Combats.IndexOf(entity) is not (>= 0 and var fight) || world.Combats.At(fight).Target == 0)
+                    {
+                        OrderQueue.Next(world, entity); // a unit that reached its target in a chase moves on after the fight
+                    }
                 }
             }
             else if ((outFlags & OutGiveUp) != 0)
@@ -739,39 +747,6 @@ public sealed class MovementSystem : ISimSystem
                 Replan(world, entity, ref m);
             }
         }
-    }
-
-    // ORD-005: arrived, the unit walks on to its next waypoint with that leg's combat mode.
-    private static void NextWaypoint(World world, EntityId entity, ref Motion m)
-    {
-        if (world.WaypointQueues.Count == 0 || world.WaypointQueues.IndexOf(entity) is not (>= 0 and var w))
-        {
-            return;
-        }
-
-        ref WaypointQueue q = ref world.WaypointQueues.At(w);
-        Waypoint next = q.Points[0];
-        for (int k = 1; k < q.Count; k++)
-        {
-            q.Points[k - 1] = q.Points[k];
-        }
-
-        q.Points[--q.Count] = default;
-        if (q.Count == 0)
-        {
-            world.WaypointQueues.Remove(entity);
-        }
-
-        if (world.Combats.IndexOf(entity) is >= 0 and var c && world.Combats.At(c).Target == 0)
-        {
-            world.Combats.At(c).Mode = next.Mode;
-        }
-
-        m.Order = MotionOrder.Move;
-        m.OrderX = next.X;
-        m.OrderY = next.Y;
-        m.Replans = 0;
-        MovementOrders.Request(world, entity, ref m, 0, next.X, next.Y);
     }
 
     // ----- shared helpers for the jobs ---------------------------------------------------------------------------

@@ -41,6 +41,14 @@ public static class PlacementQueries
     }
 
     /// <summary>
+    /// Whether <paramref name="player"/> may place <paramref name="typeId"/> there: <see cref="CanPlace"/>, or a gate over
+    /// pieces of the player's own finished wall, which it replaces (BLD-018).
+    /// </summary>
+    public static bool CanPlaceFor(World world, byte player, ushort typeId, int tileX, int tileY, bool rotated = false)
+        => CanPlace(world, typeId, tileX, tileY, rotated)
+            || (typeId < world.Ruleset.EntityTypes.Count && GameplayCommands.WallsUnderGate(world, player, world.Ruleset.EntityTypes[typeId], tileX, tileY, rotated) is not null);
+
+    /// <summary>
     /// Whether <paramref name="player"/> has every building and technology <paramref name="typeId"/> requires, by the
     /// player's civilization's tree (ADR 0040; the acting builder's or producer's civilization decides in commands).
     /// </summary>

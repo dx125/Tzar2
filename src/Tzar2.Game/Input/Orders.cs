@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
+using Tzar2.Sim.Components;
 
 namespace Tzar2.Game.Input;
 
@@ -71,6 +72,9 @@ public enum OrderMode
     /// building's list (its <c>EntityId.Value</c> is the mode's argument; manual: Emerge, ORD-015).
     /// </summary>
     Unload,
+
+    /// <summary>The units go to the clicked area and explore it (manual: Explore, ORD-007).</summary>
+    Explore,
 }
 
 /// <summary>
@@ -140,7 +144,9 @@ public sealed record PlannedCommand(CommandKind Kind, CommandFlags Flags, Entity
 /// semantics of Appendix E.6, manual ch. 5 § 2.3): each unit does its <see cref="DefaultAction"/> on what is clicked
 /// (enemy → attack, or capture with peasants; resource → harvest; own site → help build; own damaged object → repair;
 /// own holder → board; item → pick up; own unit → follow; ground → move); Ctrl = move-advance, Alt = move-sneak, Shift =
-/// waypoints (queue); a selection of producers sets the rally point. Engine-free and unit-tested.
+/// waypoints (queue); a selection of producers sets the rally point. On an object, Shift adds it to the set attacked or
+/// guarded in turn, and Alt takes every object of its type on the screen (manual ch. 5 §2.3; CTRL-026, CTRL-027).
+/// Engine-free and unit-tested.
 /// </summary>
 public static class OrderResolver
 {
@@ -238,8 +244,11 @@ public static class OrderResolver
         return best;
     }
 
-    /// <summary>Plans the default action of <paramref name="selection"/> on <paramref name="target"/> / (x, y).</summary>
-    public static IReadOnlyList<PlannedCommand> RightClick(IReadOnlyList<EntityInfo> selection, EntityInfo? target, int x, int y, KeyMods mods, byte player, Ruleset? rules = null)
+    /// <summary>
+    /// Plans the default action of <paramref name="selection"/> on <paramref name="target"/> / (x, y); with Alt, an attack
+    /// takes every object of the target's type in <paramref name="onScreen"/>.
+    /// </summary>
+    public static IReadOnlyList<PlannedCommand> RightClick(IReadOnlyList<EntityInfo> selection, EntityInfo? target, int x, int y, KeyMods mods, byte player, Ruleset? rules = null, IReadOnlyList<EntityInfo>? onScreen = null)
     {
         ArgumentNullException.ThrowIfNull(selection);
         var result = new List<PlannedCommand>();
@@ -287,6 +296,12 @@ public static class OrderResolver
         }
 
         EntityId on = target?.Id ?? EntityId.None;
+        if ((mods & KeyMods.Alt) != 0 && target is { } typed && groups[(int)DefaultAction.Attack] is { } attackers)
+        {
+            result.AddRange(Set(CommandKind.Attack, SameType(typed, onScreen), queue, attackers));
+            groups[(int)DefaultAction.Attack] = null;
+        }
+
         Add(DefaultAction.Attack, CommandKind.Attack);
         Add(DefaultAction.Capture, CommandKind.Capture);
         Add(DefaultAction.Harvest, CommandKind.Harvest);
@@ -311,8 +326,12 @@ public static class OrderResolver
         }
     }
 
-    /// <summary>Plans a click with a pending command-card order (<paramref name="argument"/>: the spell id of <see cref="OrderMode.Spell"/>).</summary>
-    public static IReadOnlyList<PlannedCommand> WithMode(OrderMode mode, IReadOnlyList<EntityInfo> selection, EntityInfo? target, int x, int y, KeyMods mods, byte player, int argument = 0)
+    /// <summary>
+    /// Plans a click with a pending command-card order (<paramref name="argument"/>: the spell id of
+    /// <see cref="OrderMode.Spell"/>); with Alt, Attack and Guard take every object of the target's type in
+    /// <paramref name="onScreen"/>.
+    /// </summary>
+    public static IReadOnlyList<PlannedCommand> WithMode(OrderMode mode, IReadOnlyList<EntityInfo> selection, EntityInfo? target, int x, int y, KeyMods mods, byte player, int argument = 0, IReadOnlyList<EntityInfo>? onScreen = null)
     {
         ArgumentNullException.ThrowIfNull(selection);
         var own = new List<EntityId>();
@@ -330,8 +349,13 @@ public static class OrderResolver
         }
 
         CommandFlags queue = Flags(mods) & CommandFlags.Queue;
+        bool alt = (mods & KeyMods.Alt) != 0;
         return mode switch
         {
+            OrderMode.Attack when alt && target is { } t && t.Owner != player && !t.IsResourceNode && t.Id != EntityId.None
+                => Set(CommandKind.Attack, SameType(t, onScreen), queue, own),
+            OrderMode.Guard when alt && target is { } g && g.Id != EntityId.None && !g.IsResourceNode && g.Owner == player
+                => Set(CommandKind.Follow, SameType(g, onScreen), queue, own),
             OrderMode.Move => [new PlannedCommand(CommandKind.Move, Flags(mods), EntityId.None, x, y, 0, 0, own)],
             OrderMode.Attack when target is { } t && t.Owner != player && !t.IsResourceNode
                 => [new PlannedCommand(CommandKind.Attack, queue, t.Id, x, y, 0, 0, own)],
@@ -362,9 +386,63 @@ public static class OrderResolver
             OrderMode.UseItem => [new PlannedCommand(CommandKind.UseItem, CommandFlags.None, target?.Id ?? EntityId.None, x, y, argument - 1, 0, own)], // 0: the default item
             OrderMode.Impersonate when target is { IsMobile: true } m && m.Owner != player && m.Id != EntityId.None
                 => [new PlannedCommand(CommandKind.Impersonate, CommandFlags.None, m.Id, x, y, 0, 0, own)],
+            OrderMode.Explore => [new PlannedCommand(CommandKind.Explore, CommandFlags.None, EntityId.None, x, y, 1, 0, own)],
             OrderMode.Unload => [new PlannedCommand(CommandKind.Unload, CommandFlags.None, argument != 0 ? EntityId.FromValue(unchecked((uint)argument)) : EntityId.None, x, y, 0, 0, own)],
             _ => [],
         };
+    }
+
+    /// <summary>
+    /// Alt on an object (manual ch. 5 §2.3, "Type of objects"): <paramref name="target"/> and every other object of its
+    /// type and owner in <paramref name="onScreen"/>, each next one the nearest to the last; as many as one order and a
+    /// full queue hold.
+    /// </summary>
+    public static List<EntityId> SameType(in EntityInfo target, IReadOnlyList<EntityInfo>? onScreen)
+    {
+        var rest = new List<EntityInfo>();
+        foreach (EntityInfo e in onScreen ?? [])
+        {
+            if (e.Id != target.Id && e.TypeId == target.TypeId && e.Owner == target.Owner && !e.UnderConstruction)
+            {
+                rest.Add(e);
+            }
+        }
+
+        var set = new List<EntityId> { target.Id };
+        (int x, int y) = (target.X, target.Y);
+        while (rest.Count > 0 && set.Count <= WaypointQueue.Capacity)
+        {
+            int best = 0;
+            long bestDistance = long.MaxValue;
+            for (int i = 0; i < rest.Count; i++)
+            {
+                long dx = rest[i].X - x, dy = rest[i].Y - y;
+                long d = (dx * dx) + (dy * dy);
+                if (d < bestDistance || (d == bestDistance && rest[i].Id.Value < rest[best].Id.Value))
+                {
+                    best = i;
+                    bestDistance = d;
+                }
+            }
+
+            set.Add(rest[best].Id);
+            (x, y) = (rest[best].X, rest[best].Y);
+            rest.RemoveAt(best);
+        }
+
+        return set;
+    }
+
+    // The commands of a set of targets: the first with the click's own Shift, the others queued after it.
+    private static List<PlannedCommand> Set(CommandKind kind, List<EntityId> targets, CommandFlags first, IReadOnlyList<EntityId> units)
+    {
+        var commands = new List<PlannedCommand>(targets.Count);
+        for (int i = 0; i < targets.Count; i++)
+        {
+            commands.Add(new PlannedCommand(kind, i == 0 ? first : CommandFlags.Queue, targets[i], 0, 0, 0, 0, units));
+        }
+
+        return commands;
     }
 
     /// <summary>Whether builders can repair <paramref name="e"/> now: a finished repairable object below full health (GAME-03).</summary>
