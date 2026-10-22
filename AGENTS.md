@@ -6,6 +6,12 @@ A deterministic C# + Godot 4 rebuild of *TZAR: The Burden of the Crown* (2000). 
 2. **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**: tools, build and test, CI, how changes land, the fidelity loop.
 3. **[docs/TDD.md](docs/TDD.md)**: the specification; **[docs/decisions/README.md](docs/decisions/README.md)**: the
    ADRs, which record why the code is the way it is and override the TDD where they differ.
+4. **[docs/STATUS.md § Handover](docs/STATUS.md#handover-2026-10-22)**: the scope of the next work, where to look, the
+   owner's PC and its tools.
+
+Questions about the original that its files and documents cannot settle: see
+[DEVELOPMENT.md § Sources of knowledge](docs/DEVELOPMENT.md#sources-of-knowledge-about-the-original). The public remake
+ReTzar is read from the original's code; read it, never copy it (GPL-3.0, DEC-09).
 
 Non-negotiable:
 
@@ -23,7 +29,8 @@ Non-negotiable:
 * Game UI logic (what a card offers, what a press does...) goes into engine-free models in `Tzar2.Game.Ui`, tested
   there; the Godot client only draws them (ADR 0182). The core never reads the original's formats or names its
   classes.
-* Branch, PR, green CI, squash merge; no force-pushes to shared branches.
+* Branch, PR, green CI, squash merge; no force-pushes to shared branches. Merge only when every check has finished:
+  `gh pr checks --watch` can return before all checks are registered, so count them (15 today) and see none pending.
 * Before you finish: `dotnet build Tzar2.sln` and `dotnet test Tzar2.sln -c Release` pass, and **docs/STATUS.md is
   updated** (milestones, work queue, a log line for any decision).
 

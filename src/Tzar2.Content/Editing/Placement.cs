@@ -122,9 +122,8 @@ public sealed class Occupancy
     public static (int X, int Y, int W, int H) Footprint(EntityTypeDefinition type, MapObject o)
     {
         ArgumentNullException.ThrowIfNull(type);
-        bool turned = (o.Flags & MapObjectFlags.Rotated) != 0 && type.FootprintWidth != type.FootprintHeight;
-        int w = turned ? type.FootprintHeight : type.FootprintWidth;
-        int h = turned ? type.FootprintWidth : type.FootprintHeight;
+        bool turned = (o.Flags & MapObjectFlags.Rotated) != 0 && type.CanTurn;
+        (int w, int h) = type.FootprintSize(turned);
         return (o.X / MapData.UnitsPerTile, o.Y / MapData.UnitsPerTile, Math.Max(1, w), Math.Max(1, h));
     }
 

@@ -151,8 +151,8 @@ public class M3ReviewRegressionTests
             maxClusters = Math.Max(maxClusters, d.World.Navigation.ClustersRebuilt - clusters);
         }
 
-        Assert.True(maxChanges <= cap, $"{maxChanges} passability changes in one tick"); // one passage tile per gate
-        Assert.True(maxClusters <= cap * d.World.Navigation.LayerCount, $"{maxClusters} clusters rebuilt in one tick ({d.World.Navigation.LayerCount} layers)");
+        Assert.True(maxChanges <= cap * 3, $"{maxChanges} passability changes in one tick"); // a door of three tiles per gate (CTRL-024)
+        Assert.True(maxClusters <= cap * 3 * d.World.Navigation.LayerCount, $"{maxClusters} clusters rebuilt in one tick ({d.World.Navigation.LayerCount} layers)");
 
         // Orders to gates that changed less than 1 s ago are rejected.
         d.RunUntil(() => false, 40);

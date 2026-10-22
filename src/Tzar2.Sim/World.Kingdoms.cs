@@ -180,13 +180,14 @@ public sealed partial class World
 
             Footprint f = Footprints.Get(gates[g]);
             EntityTypeDefinition type = TypeOf(gates[g]);
-            int w = f.Width(type.FootprintWidth, type.FootprintHeight);
-            int h = f.Height(type.FootprintWidth, type.FootprintHeight);
+            int w = f.Width(type);
+            int h = f.Height(type);
+            ReadOnlySpan<byte> door = f.Passage(type);
             for (int dy = 0; dy < h; dy++)
             {
                 for (int dx = 0; dx < w; dx++)
                 {
-                    if (type.Traits.Gate!.Passage[f.MaskIndex(dx, dy, type.FootprintWidth)] != 0)
+                    if (door[(dy * w) + dx] != 0)
                     {
                         _gateBars[((f.TileY + dy) * Map.Width) + f.TileX + dx] = (byte)(owner + 1);
                     }

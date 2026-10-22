@@ -140,6 +140,19 @@ public sealed class TerrainAndSpriteRuleTests
     }
 
     [Fact]
+    [Trait("Rule", "CTRL-024")]
+    public void A_gate_draws_the_drawbridge_of_its_facing_raised_when_closed()
+    {
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset("classic");
+        EntityTypeDefinition wood = rules.EntityTypes[rules.EntityTypeId("comm.gate_wood")];
+        EntityTypeDefinition stone = rules.EntityTypes[rules.EntityTypeId("comm.gate_stone")];
+        Assert.Equal(["gw0_anim", "gw1_anim", "gw2_anim", "gw3_anim"], Enumerable.Range(0, 4).Select(f => SpriteRules.GateImage(wood, f, site: false)));
+        Assert.Equal("gs3_build", SpriteRules.GateImage(stone, 3, site: true));
+        Assert.Null(SpriteRules.GateImage(rules.EntityTypes[rules.EntityTypeId("euro.house")], 0, site: false));
+        Assert.Equal((0, 6), (SpriteRules.GateFrame(open: false), SpriteRules.GateFrame(open: true)));
+    }
+
+    [Fact]
     [Trait("Rule", "BLD-019")]
     public void A_turned_bridge_draws_the_vertical_picture()
     {
