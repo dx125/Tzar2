@@ -60,7 +60,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0252, 2026-10-22) caravans carry 500 (European) or 300 (Arabian) and load 8 infantry, trade with any market: the ruleset, the stream and the final hash.
     // (ADR 0253, 2026-10-22) Tournaments pools experience for the Asian pupils, Mastery teaches only lower levels: the ruleset hash only.
     // (ADR 0254, 2026-10-22) healing, freezing and raise dead skip machines and the bodiless: the ruleset hash only.
-    private const ulong GoldenRulesetHash = 0x71B3C0581EA3256BUL;
+    private const ulong GoldenRulesetHash = 0xD9245700867084EDUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
