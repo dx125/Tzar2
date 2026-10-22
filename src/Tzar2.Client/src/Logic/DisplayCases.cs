@@ -11,11 +11,12 @@ namespace Tzar2.Client.Logic;
 /// <param name="WindowHeight">Window height in pixels.</param>
 /// <param name="Authentic">The Authentic preset (1024 × 768) rather than Wide.</param>
 /// <param name="Setting">The interface scale setting of Wide: 0 Auto, 1-4.</param>
-/// <param name="Scale">The whole-number scale the window shows the logical screen at.</param>
+/// <param name="Scale">The whole-number scale the window shows the logical screen at, or 0 when the window is smaller
+/// and the picture is shrunk to fit.</param>
 /// <param name="Width">Logical screen width.</param>
 /// <param name="Height">Logical screen height.</param>
-/// <param name="Visible">The part of the logical screen the window shows (left, top, right, bottom): all of it, unless the
-/// window is smaller than the logical screen at scale 1; then its top-left part.</param>
+/// <param name="Visible">The part of the logical screen the window shows (left, top, right, bottom): all of it, since the
+/// client shrinks the picture into a smaller window (UI-L1).</param>
 public readonly record struct DisplayCase(int WindowWidth, int WindowHeight, bool Authentic, int Setting, int Scale, int Width, int Height, (int Left, int Top, int Right, int Bottom) Visible)
 {
     /// <summary>A name for reports and screenshot files: <c>1920x1080-wide-auto</c>, <c>1280x720-authentic</c>.</summary>
@@ -39,7 +40,7 @@ public static class DisplayCases
 
     /// <summary>
     /// The display of one window: Wide with interface scale <paramref name="setting"/> (0 Auto, 1-4), or Authentic.
-    /// Godot's integer stretch never scales below 1: a window smaller than the logical screen shows its top-left part.
+    /// A window smaller than the logical screen shows it shrunk to fit (fractional stretch, UI-L1).
     /// </summary>
     public static DisplayCase For(int width, int height, bool authentic, int setting)
     {
@@ -56,10 +57,10 @@ public static class DisplayCases
             lh = Math.Max(lh, DisplayMath.MinHeight);
         }
 
-        // Godot's integer stretch never goes below 1: a window smaller than the logical screen shows its top-left part
-        // (measured with Godot 4.7.2 on macOS, 2026-10-22).
-        int scale = Math.Max(1, Math.Min(width / lw, height / lh));
-        return new DisplayCase(width, height, authentic, authentic ? 0 : setting, scale, lw, lh, (0, 0, Math.Min(lw, width / scale), Math.Min(lh, height / scale)));
+        // Godot's integer stretch never goes below 1 (a smaller window would show only the top-left part, measured with
+        // Godot 4.7.2 on macOS): the client shrinks the whole picture into such a window instead (scale 0, UI-L1).
+        int scale = DisplayMath.Fits(width, height, lw, lh) ? Math.Min(width / lw, height / lh) : 0;
+        return new DisplayCase(width, height, authentic, authentic ? 0 : setting, scale, lw, lh, (0, 0, lw, lh));
     }
 
     /// <summary>

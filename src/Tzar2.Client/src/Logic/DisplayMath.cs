@@ -32,6 +32,13 @@ public static class DisplayMath
         return setting <= 0 ? fits : Math.Clamp(setting, 1, fits);
     }
 
+    /// <summary>
+    /// Whether a window shows a logical screen whole at a whole-number scale (1 or more). When it does not (Authentic's
+    /// 1024 × 768 in a 1280 × 720 window), the client shrinks the picture to fit rather than cut it (UI-L1).
+    /// </summary>
+    public static bool Fits(int windowWidth, int windowHeight, int logicalWidth, int logicalHeight)
+        => windowWidth >= logicalWidth && windowHeight >= logicalHeight;
+
     /// <summary>The logical screen of the Wide preset: the window divided by the scale (whole pixels).</summary>
     public static (int Width, int Height) Logical(int width, int height, int scale)
         => (Math.Max(1, width / Math.Max(1, scale)), Math.Max(1, height / Math.Max(1, scale)));

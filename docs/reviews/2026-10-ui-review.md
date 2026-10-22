@@ -30,7 +30,7 @@ Work queue item 15 (the owner's order of 2026-10-22). ADR 0200 describes the tes
 | 1024 × 768 Wide | UI-L2 (lobby), UI-L3 (editor windows) |
 | 1024 × 768 Authentic | UI-L2, UI-L3 |
 | 1280 × 720 Wide | UI-L2 |
-| 1280 × 720 Authentic | **UI-L1**: the HUD's lower 48 rows and the bottom of every in-game dialog are cut off; UI-L2, UI-L3 |
+| 1280 × 720 Authentic | UI-L1 (fixed: the HUD's lower 48 rows and the bottom of every in-game dialog were cut off); UI-L2, UI-L3 |
 | 1366 × 768, 1600 × 900, 1920 × 1080, 1920 × 1200, 2560 × 1440, 3440 × 1440, 3840 × 2160 (Wide, every scale) | UI-L2 |
 | the same in Authentic | UI-L2, UI-L3 |
 
@@ -42,7 +42,7 @@ map notice) are on every display. The likeness findings below do not depend on t
 
 | Id | Screen | Displays | Finding | Fix |
 |---|---|---|---|---|
-| UI-L1 | game, all in-game dialogs, editor | Authentic in a window under 768 rows (1280 × 720) | Godot's integer stretch does not scale below 1, so the bottom 48 rows of the 1024 × 768 picture are cut: half the card's second row, the minimap's bottom, the dialogs' buttons. | Authentic shrinks the picture to fit a smaller window (fractional, letterboxed). |
+| UI-L1 | game, all in-game dialogs, editor | Authentic in a window under 768 rows (1280 × 720) | Godot's integer stretch does not scale below 1, so the bottom 48 rows of the 1024 × 768 picture are cut: half the card's second row, the minimap's bottom, the dialogs' buttons. | **Fixed:** a window smaller than the logical screen shrinks the picture to fit (fractional stretch, letterboxed; `DisplayMath.Fits`). |
 | UI-L2 | lobby | all | The rows of Godot controls are 30 px apart but 31 px high. The team picker runs into the ready and ping text; "Dropped players" runs into its picker. | Row pitch and columns that fit; see also UI-A7. |
 | UI-L3 | editor: import and campaign windows | 1024 × 768 Wide, every Authentic | The windows are 1152 and 1034 px wide, wider than a 1024-wide screen. | Clamp the windows to the screen. |
 | UI-L4 | conversation | all | Phrases are wrapped to 330 px in a 300 px box (`D_SAY`) and run out of it. | Wrap to the box. |

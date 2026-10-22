@@ -94,12 +94,16 @@ public class LayoutAuditTests
     }
 
     [Fact]
-    public void A_window_lower_than_the_logical_screen_shows_its_top_part()
+    public void A_window_lower_than_the_logical_screen_shows_it_whole_and_shrunk()
     {
-        // Godot's integer stretch does not go below 1 (measured): Authentic 1024 x 768 in a 720-high window loses 48 rows.
+        // UI-L1: Godot's integer stretch does not go below 1 (measured), so Authentic 1024 x 768 in a 720-row window lost
+        // its bottom 48 rows; the client now shrinks the picture (fractional stretch) for such a window.
         DisplayCase d = DisplayCases.For(1280, 720, authentic: true, 0);
-        Assert.Equal((1, 1024, 768), (d.Scale, d.Width, d.Height));
-        Assert.Equal((0, 0, 1024, 720), d.Visible);
+        Assert.Equal((0, 1024, 768), (d.Scale, d.Width, d.Height));
+        Assert.Equal((0, 0, 1024, 768), d.Visible);
+        Assert.False(DisplayMath.Fits(1280, 720, 1024, 768));
+        Assert.True(DisplayMath.Fits(1366, 768, 1024, 768));
+        Assert.True(DisplayMath.Fits(1280, 720, 1280, 720));
     }
 
     [Fact]

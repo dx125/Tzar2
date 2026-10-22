@@ -125,7 +125,8 @@ the process decisions that have no ADR.
   [reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md). Six layout findings, among them Authentic in a
   720-row window cutting off the HUD's bottom. Twenty-one likeness findings: texts not from STRINGS.INI, the
   multiplayer screens on borrowed art, the scenario dialogs off their boxes. Six requests for the owner's screenshots
-  and one decision (the main menu against its carved slots). Fixes follow in small PRs.
+  and one decision (the main menu against its carved slots). Fixes follow in small PRs. Fixed: UI-L1 (a window
+  smaller than the logical screen shrinks the picture).
 
 * **2026-10-22 — Technology effects as the original computes them (ADR 0191).** ReTzar's reading of the research
   handlers replaces the UNK-21 placeholders: whole points of attack and defence by weapon and armour (Temper Iron +1,
