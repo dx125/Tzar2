@@ -238,7 +238,7 @@ internal static class FidelitySuite
         new("m2.level-effects", "22.3", "m2-gameplay", "UNK-23", "Attack and defence per experience level (selection panel)", LevelEffects),
         new("m2.healing", "22.3", "m2-gameplay", "UNK-24", "Healing inside the castle = Holder.healPerMinute", Healing),
         new("m3.capture-time", "22.3", "m3-gameplay", "UNK-19", "Capture time = RESISTANCE / (capturePointsPerSecond x peasants)", CaptureTime),
-        new("m3.trade-profit", "22.3", "m3-gameplay", "UNK-28", "Trade profit per delivery = load x tradeProfitPerTile x tiles", TradeProfit),
+        new("m3.trade-profit", "22.3", "m3-gameplay", "UNK-28", "Trade profit per delivery = load x tiles x tradeProfitPercent / (map side x 100)", TradeProfit),
         new("m3.loan-growth", "22.3", "m3-gameplay", "UNK-28", "The first loan = world.loanStartAmount", LoanGrowth),
         new("m3.gambling", "22.3", "m3-gameplay", "UNK-28", "Gambling win share = (1 - edge) / odds (40 bets or more)", Gambling),
         new("m3.spell-effects", "22.3", "m3-gameplay", "UNK-26", "Lightning damage = spell_lightning amount", SpellEffects),
@@ -869,7 +869,7 @@ internal static class FidelitySuite
     private static CheckResult TradeProfit(FactsIndex f, EngineModel e)
     {
         var steps = Counters(f, "trade").Select(c => (Counter: c, Phase: PhaseOf(c, "gold-series"))).Where(x => x.Phase is not null && Num(x.Phase!, "steps") >= 1).ToList();
-        if (steps.Count == 0 || steps.Any(x => FactsIndex.Number(x.Counter.Get("load")) is null))
+        if (steps.Count == 0 || steps.Any(x => FactsIndex.Number(x.Counter.Get("load")) is null || FactsIndex.Number(x.Counter.Get("map_tiles")) is null))
         {
             return Pending("no trade delivery with a known load yet (trade, batch I: a discovery run first)");
         }
@@ -877,7 +877,7 @@ internal static class FidelitySuite
         var off = new List<string>();
         foreach ((YamlMapping c, YamlMapping? p) in steps)
         {
-            double expected = Num(c, "load") * (e.Rule("world", "tradeProfitPerTileBasisPoints") ?? 100) * Num(c, "distance_tiles") / 10_000;
+            double expected = Num(c, "load") * Num(c, "distance_tiles") * (e.Rule("world", "tradeProfitPercent") ?? 40) / (Num(c, "map_tiles") * 100);
             double measured = FirstStep(p!);
             if (!Within(measured, expected, 0.15))
             {

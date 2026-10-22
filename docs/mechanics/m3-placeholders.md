@@ -124,8 +124,8 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Teams | start as mutual allies sharing vision and victory | code (`Diplomacy.ApplyTeams`) | — | lobby captures |
 | Shared resources | the payer's stockpile first, then allies in slot order | code (`SharedStockpile`) | — | observation |
 | Shared unit control | movement, attack and trade orders only | code (`CommandSystem`, `GameplayCommands.Attack`) | — | observation |
-| Trade load | caravan 100, galleon 200, hulk 150, xebec 100 | YAML `^class.*.Trader.capacity` | UNK-28 | trade captures |
-| Trade profit | 1% of the load per tile between the docks (straight line), none below 8 tiles, at most 300% | YAML `world.trade*` | UNK-28 | caravan income vs. distance captures |
+| Trade load | **caravans 500 (European) / 300 (Arabian), Asian peasants 100 (ReTzar, ADR 0252)**; galleon 200, hulk 150, xebec 100 | YAML `^*.trader`, `^class.*.Trader.capacity` | UNK-28 | trade captures |
+| Trade profit | **ReTzar's reading of the original (ADR 0257):** load x tiles x 40 / (map side x 100), tiles on the larger axis, none under 12 | YAML `world.trade*` | — | a caravan capture would confirm it |
 | Trade dock time | 2 s | YAML `world.tradeDockMs` | UNK-28 | captures |
 | Unaffordable load | the trader leaves empty | code (`TradeSystem`) | — | observation |
 | Gambling | odds 2, 3, 5, 10; win chance (1 − 10%) / odds; stake ≤ 10,000 | YAML `world.gamble*` | UNK-28 | gamble dialog captures |
