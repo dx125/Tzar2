@@ -106,6 +106,10 @@ public partial class GameScreen : Node
     private ImageTexture? _minimapTexture;
     private byte[] _minimapBytes = [];
     private Image? _minimapImage;
+
+    // HUD-030: the minimap's tile colours and the trees' colour from TERRAIN.INI [minidatargb] (null: the tiles' pictures).
+    private Color[]? _minimapTiles;
+    private Color? _minimapTree;
     private int _workSoundBudget;
     private Rid _boxItem;
     private bool _faultShown;
@@ -263,6 +267,7 @@ public partial class GameScreen : Node
         Image? light = set.Light is { } l ? _ui.Image(l) : null;
         long before = watch.ElapsedMilliseconds;
         _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, grid, _store.LoadImage, light);
+        MinimapFromData(set, grid);
         ClientLog.Info($"match load: world renderer {watch.ElapsedMilliseconds - before} ms (terrain composed {_world.Terrain.ComposeMs} ms, {_world.Terrain.FrameTotal} chunk frames, uploaded {_world.Terrain.UploadMs} ms)");
         _boxItem = RenderingServer.CanvasItemCreate();
         RenderingServer.CanvasItemSetParent(_boxItem, GetViewport().FindWorld2D().Canvas);
@@ -1975,6 +1980,36 @@ public partial class GameScreen : Node
         };
     }
 
+    // HUD-030: the terrain set's [minidatargb] colours each tile by its terrain, and cliffs by their own colour.
+    private void MinimapFromData(TerrainSet set, TerrainGrid grid)
+    {
+        if (set.Table is not { } table || !_store.Vfs.Exists(table)
+            || MinimapColours.FromSection(IniTable.Parse(_store.Read(table)).Section("minidatargb")) is not { } colours)
+        {
+            return;
+        }
+
+        static Color Of((byte R, byte G, byte B) c) => Color.Color8(c.R, c.G, c.B);
+        ReadOnlySpan<byte> cliffs = _session.Map.CliffTiles;
+        Color[] fallback = _world!.Terrain.TileColours;
+        var tiles = new Color[grid.Width * grid.Height];
+        for (int y = 0; y < grid.Height; y++)
+        {
+            for (int x = 0; x < grid.Width; x++)
+            {
+                int i = (y * grid.Width) + x;
+                (int tl, int tr, int br, int bl) = grid.CornersOf(x, y);
+                (byte R, byte G, byte B)? c = i < cliffs.Length && cliffs[i] != 0 && colours.Cliff is { } cliff
+                    ? cliff
+                    : colours.Terrain(MinimapColours.TileTerrain(tl, tr, br, bl));
+                tiles[i] = c is { } rgb ? Of(rgb) : fallback[i];
+            }
+        }
+
+        _minimapTiles = tiles;
+        _minimapTree = colours.Tree is { } tree ? Of(tree) : null;
+    }
+
     private void UpdateMinimap(GameFrame frame)
     {
         if (_world is null || _minimapImage is null || _minimapTexture is null || _hud is null)
@@ -1983,7 +2018,7 @@ public partial class GameScreen : Node
         }
 
         int w = _world.MapWidth, h = _world.MapHeight;
-        Color[] terrain = _world.Terrain.TileColours;
+        Color[] terrain = _minimapTiles ?? _world.Terrain.TileColours;
         byte[] fog = _options.Fog ? frame.Visibility : [];
         if (_minimapBytes.Length != w * h * 4)
         {
@@ -2033,7 +2068,7 @@ public partial class GameScreen : Node
             }
             else if (def.Traits.ResourceNode is { } node)
             {
-                c = _rules.ResourceTypes[node.Resource] switch { "wood" => new Color(0.05f, 0.3f, 0.05f), "gold" => new Color(0.95f, 0.8f, 0.2f), _ => new Color(0.6f, 0.6f, 0.6f) };
+                c = _rules.ResourceTypes[node.Resource] switch { "wood" => _minimapTree ?? new Color(0.05f, 0.3f, 0.05f), "gold" => new Color(0.95f, 0.8f, 0.2f), _ => new Color(0.6f, 0.6f, 0.6f) };
             }
             else
             {
