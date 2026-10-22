@@ -263,7 +263,7 @@ public partial class GameScreen : Node
         Image? light = set.Light is { } l ? _ui.Image(l) : null;
         long before = watch.ElapsedMilliseconds;
         _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, grid, _store.LoadImage, light);
-        ClientLog.Info($"match load: world renderer {watch.ElapsedMilliseconds - before} ms (terrain composed {_world.Terrain.ComposeMs} ms, {_world.Terrain.FrameTotal} chunk frames, uploaded {_world.Terrain.UploadMs} ms)");
+        ClientLog.Info($"match load: world renderer {watch.ElapsedMilliseconds - before} ms (terrain composed {_world.Terrain.ComposeMs} ms, {_world.Terrain.FrameTotal} chunk frames, {_world.Terrain.AtlasTiles} distinct tiles on {_world.Terrain.AtlasPages} atlas pages, indexed {_world.Terrain.IndexMs} ms, uploaded {_world.Terrain.UploadMs} ms)");
         _boxItem = RenderingServer.CanvasItemCreate();
         RenderingServer.CanvasItemSetParent(_boxItem, GetViewport().FindWorld2D().Canvas);
         RenderingServer.CanvasItemSetZIndex(_boxItem, 100);

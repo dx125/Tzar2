@@ -216,6 +216,14 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-22 — Terrain from a deduplicated tile atlas (ADR 0210; code review, item 16).**
+  * Every distinct 32 × 32 composed tile is stored once. A chunk keeps a slot per tile and frame instead of a
+    512 × 512 texture per animation frame.
+  * On a huge map, video memory falls from 1.3 GB to 0.28 GB and the managed heap at match start from 1.37 GB to
+    0.38 GB.
+  * A real-world 512² map needs 332 MB of video memory instead of about 2.7 GB of terrain textures.
+  * The pixels drawn are the same.
+
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
   UI review (item 15: every modern resolution, likeness to the original's texts, fonts and buttons) and the code
