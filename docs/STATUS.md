@@ -122,7 +122,9 @@ the process decisions that have no ADR.
   handlers replaces the UNK-21 placeholders: whole points of attack and defence by weapon and armour (Temper Iron +1,
   Chain Mail +2, Engineering +5, Gunpowder +10...), cost cuts (Feudalism 80 %, Horsemanship 75 %), Architecture 70 %
   of the TIME, Fanaticism and Buddhism +50 % resistance, Great Wall +30 % hit points, Concentration's mana, the
-  experience speed of Warfare, Tactics and Sun Tzu. Left: Supply Storage and Seafood's population limit (TECH-022).
+  experience speed of Warfare, Tactics and Sun Tzu. Then Supply Storage and Seafood's +25 % population limit
+  (TECH-022) and Ore Flotation's mines that lose half of each load. Next: gates as the original builds them (7 by 1
+  or 1 by 6, four directions, the passage in front), which ReTzar reads (0x456b50, 0x457980).
 
 * **2026-10-22 — Rules read from the original's code by ReTzar (ADR 0190), and the owner's list.**
   * The owner pointed to ReTzar (GPL-3.0, Rust), a remake whose code names the addresses of the original it was read

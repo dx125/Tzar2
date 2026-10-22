@@ -127,13 +127,14 @@ public class CaptureAndRallyTests
     [Fact]
     [Trait("Rule", "PROD-007")]
     [Trait("Rule", "TECH-022")]
-    public void Supply_storage_raises_the_population_of_houses()
+    public void Supply_storage_raises_the_population_limit_by_a_quarter()
     {
-        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4), Structure("euro.house", 0, 16, 4)), ruleset: Classic);
+        // ReTzar's reading of the original (0x4d3819): each of Supply Storage and Seafood adds a quarter of the limit.
+        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4), Structure("euro.house", 0, 16, 4)), ruleset: Classic, configure: c => c with { PopulationLimit = 40 });
         d.Step();
-        Assert.Equal(24 + 24, d.World.Players[0].PopulationCap);
+        Assert.Equal(40, d.World.Players[0].PopulationCap); // the houses give 48, the limit holds at 40
         ResearchTests.Grant(d, 0, Classic, "te_supplystorage");
         d.Step();
-        Assert.Equal(24 + 24 + 4, d.World.Players[0].PopulationCap); // +2 per house (UNVERIFIED)
+        Assert.Equal(48, d.World.Players[0].PopulationCap); // the limit is 50 now
     }
 }

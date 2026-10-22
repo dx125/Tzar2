@@ -35,7 +35,7 @@ Shift + Delete; what each technology does (not how much).
 
 | Value | Placeholder | Where | Unknown | How to resolve |
 |---|---|---|---|---|
-| Effect magnitude of every technology | **from the original's research handlers, as ReTzar reads them (ADRs 0190, 0191)**: whole points of attack and defence by weapon and armour, cost and time cuts, resistance, mana, experience; Supply Storage and Seafood still +2 a house (the original: +25 % population limit each) | YAML `te_*.Technology.effects` | UNK-21 | Supply Storage and Seafood; Ore Flotation |
+| Effect magnitude of every technology | **from the original's research handlers, as ReTzar reads them (ADRs 0190, 0191)**: whole points of attack and defence by weapon and armour, cost and time cuts, resistance, mana, experience; Supply Storage and Seafood +25 % population limit each; Ore Flotation halves what a mine loses | YAML `te_*.Technology.effects` | UNK-21 | done (a capture may confirm any of them) |
 | Effects consumed later | Learning +4 / Heroism +1000 experience cap, Warfare/Tactics/Sun Tzu +25% experience, Body Building +5 HP per level, Philosophy +2 starting level, Leadership/Honor ability power, Inquisition, Medicine, Trade Taxes/Banking income (Landing Tactics is +50 %, from the help, 2026-10-21) | YAML | UNK-23/24/26/28 | GAME-08/09/11/14 captures |
 | Ship cannon levels | +20 % fire rate per level (the help: "fire more frequently"; TECH-036) | YAML `to_ship_level2..6`, stat `fireRate` | UNK-21 | galleon shots per minute per level |
 | Ship level order | level N needs level N−1 (`after`) | YAML | — | upgrade menus `e_galleon2…` (data) confirm the order; per-ship effects need capture |

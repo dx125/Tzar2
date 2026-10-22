@@ -94,7 +94,6 @@ public class TechnologyEffectTests
     [InlineData("te_goldplus", ModifierStat.CarryCapacity, "comm.res_gold", "comm.tree")]
     [InlineData("te_architecture", ModifierStat.BuildRate, "euro.house", "euro.footman")]
     [InlineData("te_fanaticism", ModifierStat.Resistance, "euro.castle", "euro.footman")]
-    [InlineData("te_supplystorage", ModifierStat.PopulationProvided, "euro.house", "euro.castle")]
     [InlineData("te_gunpowder", ModifierStat.Attack, "comm.tower_stone2", "comm.tower_stone")]
     [InlineData("te_tradetaxes", ModifierStat.Income, "euro.market", "euro.castle")]
     [InlineData("te_banking", ModifierStat.Income, "euro.market", "euro.castle")]

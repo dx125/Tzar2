@@ -121,10 +121,14 @@ public sealed class EconomySystem : ISimSystem
             // Wood, stone, gold and food appear in the peasant's hands all at once when the work for the whole load is
             // done (the owner's play-test: they did not grow chop by chop); a node gives what it has left. Work broken off
             // is lost.
+            // Ore Flotation: a mine loses only half of a load (ReTzar's reading of the original; TECH-010).
             int load = capacity - w.CarryAmount;
-            if (stock.Amount > 0)
+            int percent = Math.Clamp(world.Stats.Apply(owner, ModifierStat.Depletion, nodeType.Id, 100), 1, 100);
+            int lost = percent >= 100 ? load : Math.Max(1, load * percent / 100);
+            if (stock.Amount > 0 && lost > stock.Amount)
             {
-                load = Math.Min(load, stock.Amount);
+                lost = stock.Amount;
+                load = percent >= 100 ? lost : Math.Min(load, lost * 100 / percent);
             }
 
             if (load > 0 && w.TimerMs >= (long)gatherMs * load)
@@ -132,7 +136,7 @@ public sealed class EconomySystem : ISimSystem
                 w.TimerMs = 0;
                 w.CarryAmount += load;
                 w.CarryResource = (byte)resource;
-                if (stock.Amount > 0 && (stock.Amount -= load) == 0 && !definition.KeepWhenEmpty)
+                if (stock.Amount > 0 && (stock.Amount -= lost) == 0 && !definition.KeepWhenEmpty)
                 {
                     _depleted.Add(node);
                 }

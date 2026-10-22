@@ -131,7 +131,7 @@ public class ResearchCompilerTests
         Assert.DoesNotContain(Type("comm.catapult").Id, armor.Types.ToArray());
 
         ModifierDefinition supply = Assert.Single(Classic.Technologies[Tech("te_supplystorage")].Effects);
-        Assert.Equal((ModifierStat.PopulationProvided, 2), (supply.Stat, supply.Add));
+        Assert.Equal((ModifierStat.PopulationLimit, 2500), (supply.Stat, supply.BasisPoints)); // a quarter more (TECH-022)
         Assert.Empty(Classic.Technologies[Tech("te_halberd")].Effects); // unlocks only
     }
 
