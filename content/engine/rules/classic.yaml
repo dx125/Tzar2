@@ -192,15 +192,18 @@ legacy:
   # clean GOG v1.10 EN install (2,916/2,916 files identical): the pin had not followed the importer since #24 (TIME in
   # 1.25-s units, #61, among others) because nobody ran the local-only tests. Re-pinned 2026-10-22: the importer gives
   # armaments the hit frame of their attack animation (WAR-014); the pin had drifted again before that (E716BE64DED8009D).
-  # Then (ITEM-016) ITEM_PLUSPLUS is imported as a weapon, the power item.
+  # Then (ITEM-016) ITEM_PLUSPLUS is imported as a weapon, the power item; then (WORLD-015) land units get a body from
+  # their object box.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "42D6158654D385C7"
+  referenceDataHash: "4785FC7F3809937A"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
 ^Unit:
   Mobile: { locomotor: foot }
-  Collision: { radius: 7 }            # UNVERIFIED (UNK-11): collision radius in px
+  # WORLD-015: the importer gives each land unit a body of 7/16 of its IMAGES.INI object box (14 px for 32 x 32, batch K);
+  # radius here is for types without one. terrain: the footprint units slide along walls with (UNVERIFIED, UNK-11).
+  Collision: { radius: 7, terrain: 7 }
   CorpseOnDeath: {}
   PopulationCost: { amount: 1 }       # GAME-05: 1 population per unit in classic
   Experience: {}                      # GAME-08: units gain experience in combat (manual ch. 5 §2.1)
@@ -215,7 +218,7 @@ legacy:
 
 ^Cavalry:
   Mobile: { locomotor: mounted }
-  Collision: { radius: 10 }           # UNVERIFIED (UNK-11)
+  Collision: { radius: 10, terrain: 10 }   # UNVERIFIED (UNK-11)
 
 ^Ship:
   Mobile: { locomotor: ship }
@@ -225,7 +228,7 @@ legacy:
 
 ^Siege:
   Mobile: { locomotor: large }
-  Collision: { radius: 12 }           # UNVERIFIED (UNK-11)
+  Collision: { radius: 12, terrain: 12 }   # UNVERIFIED (UNK-11)
   Repairable: {}                      # GAME-03: peasants repair siege weapons (manual ch. 5)
   -CorpseOnDeath:
 

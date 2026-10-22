@@ -715,7 +715,7 @@ public sealed partial class Ruleset
         foreach (EntityTypeDefinition e in _entityTypes)
         {
             hasher.Add((int)e.Id).Add(Encoding.UTF8.GetBytes(e.Key)).Add((byte)e.Locomotor).Add(e.SpeedUnitsPerSecond).Add(e.MaxHealth)
-                .Add(e.Radius).Add(e.ClearanceTiles).Add(e.FootprintWidth).Add(e.FootprintHeight).Add(e.Footprint).Add(e.LeavesCorpse);
+                .Add(e.Radius).Add(e.TerrainRadius).Add(e.ClearanceTiles).Add(e.FootprintWidth).Add(e.FootprintHeight).Add(e.Footprint).Add(e.LeavesCorpse);
             AddTraits(hasher, e.Traits);
         }
 

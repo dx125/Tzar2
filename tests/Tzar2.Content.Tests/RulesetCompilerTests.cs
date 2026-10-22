@@ -65,7 +65,7 @@ public class RulesetCompilerTests
         Assert.Equal(Locomotor.Foot, peon.Locomotor);
         Assert.Equal(40 * 64, peon.SpeedUnitsPerSecond); // measured 40 px/s whatever its SPEED (ADR 0172)
         Assert.Equal(5 * 10 * 64, Type(Classic, "arab.jihad_warrior").SpeedUnitsPerSecond); // not measured: SPEED 5 x 10 px/s (UNVERIFIED)
-        Assert.Equal(7 * 64, peon.Radius);
+        Assert.Equal(14 * 64, peon.Radius); // 7/16 of its 32 px object box (WORLD-015, batch K)
         Assert.True(peon.LeavesCorpse);
         Assert.Equal(1, t.PopulationCost);
         Assert.NotNull(t.Armament);
@@ -87,7 +87,8 @@ public class RulesetCompilerTests
 
         EntityTypeDefinition knight = Type(Classic, "euro.knight");
         Assert.Equal(Locomotor.Mounted, knight.Locomotor);
-        Assert.Equal(10 * 64, knight.Radius);
+        Assert.Equal(14 * 64, knight.Radius); // a 32 px object box like the footman's (WORLD-015)
+        Assert.Equal(10 * 64, knight.TerrainRadius); // the cavalry footprint on the terrain
         Assert.Equal("te_platearmor", knight.Traits.RequiredTechnology);
     }
 

@@ -72,3 +72,17 @@ analyses:
         idle_peasants_join: {session: capture-20261021-220250, trial: repair-mill/lumber-mill, frame: window/after.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-21}
         repairers_full_strength: {session: capture-20261021-220250, trial: repair-mill/lumber-mill, frame: 'mem/hp-repair.bin, window/after.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-21}
         blow_interval_s: {session: capture-20261021-220250, trial: 'repair-mill/lumber-mill, repair-barracks/barracks', frame: mem/hp-repair.bin, read_by: implementation agent (Claude), read_utc: 2026-10-21}
+  unit-spacing:
+    status: ok
+    notes: ["batch K (2026-10-22), read from the bursts at 3 x zoom against a 10 px scale; the install differed from the reference in tzar.ini and Demos/tzar.wdm only (-AllowModified).", "The knight of part 3 never appeared: it was to be spawned where group 1 stood after the crossing, so the crowd around one target is not measured."]
+    facts:
+      source: unit-spacing/footmen, nine footmen per group on MP2's open bottom-left corner
+      rest_spacing_px: 32  # group 1 after the crossing, stopped short of its goal: neighbours 31, 32, 31 and 32 px apart
+      rest_on_tile_centres: true  # those footmen stand at tile centres (x 774 and 710/742 on screen, tile x.5), one to a tile
+      group_keeps_formation: true  # rest-a and rest-b: nine footmen spawned two tiles apart arrive as the same 3 x 3 block, 64 px apart
+      passing_min_px: 27  # crossing burst, frame 12: in the head-on crowd the nearest feet are 27-35 px apart; no two share a place
+      sources:
+        rest_spacing_px: {session: capture-20261022-110601, trial: unit-spacing/footmen, frame: window/end.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-22}
+        rest_on_tile_centres: {session: capture-20261022-110601, trial: unit-spacing/footmen, frame: window/end.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-22}
+        group_keeps_formation: {session: capture-20261022-110601, trial: unit-spacing/footmen, frame: 'burst/rest-a/0003.bmp, burst/rest-b/0003.bmp', read_by: implementation agent (Claude), read_utc: 2026-10-22}
+        passing_min_px: {session: capture-20261022-110601, trial: unit-spacing/footmen, frame: burst/crossing/0012.bmp, read_by: implementation agent (Claude), read_utc: 2026-10-22}

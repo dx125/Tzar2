@@ -116,8 +116,8 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 26 | 1 | 2 | 2 | 0 | 5 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 5 | 1 | 1 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 15 | 5 | 5 | 3 | 0 | 2 | 0 |
-| **All** | 335 | 174 | 74 | 38 | 28 | 9 | 12 |
+| [Terrain and movement](world.yaml) (WORLD) | 15 | 6 | 5 | 2 | 0 | 2 | 0 |
+| **All** | 335 | 175 | 74 | 37 | 28 | 9 | 12 |
 
 ## Not done yet
 
@@ -241,7 +241,6 @@ Missing and partial rules.
 
 * **WORLD-012** (partial): Each kind of unit walks at its own speed, which follows the stride of its walking animation. *18 classes are measured; the others use SPEED times 10 px/s, a placeholder, until their strides are read (ADRs 0172, 0174).*
 * **WORLD-013** (partial): A random map grows as many trees as its terrain set's data gives for its size. *Tzar2's generator uses its own forest density (ADR 0060).*
-* **WORLD-015** (partial): A unit cannot stand where another unit stands. *Units are pushed apart softly with a collision radius of 7 px (UNK-11); walking or fighting in a crowd they come within 8 px of each other, while the original's units have a 25 px selection box and a 32 px object box (work queue).*
 
 ## Unclear
 

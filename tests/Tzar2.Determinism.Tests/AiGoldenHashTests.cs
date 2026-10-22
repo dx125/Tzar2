@@ -42,12 +42,15 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) footmen and archers strike at the action row of their attack animations: the fights and
     // so the commands change.
-    private const ulong GoldenCommandStream = 0x4A0864630CED5C22UL;
+    private const ulong GoldenCommandStream = 0xADC22D9B28904481UL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
-    private const ulong GoldenHashStream = 0x0D5B275892BCB70AUL;
-    private const ulong GoldenFinalFullHash = 0x255CB7D3DEEF93E8UL;
+    // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
+    // now 10 minutes.
+    private const ulong GoldenHashStream = 0x0621999E4A2E29BEUL;
+    private const ulong GoldenFinalFullHash = 0xE34B4596CBE766A3UL;
 
-    private const int Ticks = 9600;
+    // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
+    private const int Ticks = 12000;
 
     [Theory]
     [InlineData(1)]

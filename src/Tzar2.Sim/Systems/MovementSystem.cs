@@ -282,7 +282,7 @@ public sealed class MovementSystem : ISimSystem
     private static void UpdateFlow(World world, EntityId entity, ref Motion m, NavLayer layer, int version, int tick)
     {
         Position p = world.Positions.Get(entity);
-        int margin = Math.Min(m.Radius, (MapState.UnitsPerTile / 2) - 128);
+        int margin = Math.Min(world.TypeOf(entity).TerrainRadius, (MapState.UnitsPerTile / 2) - 128);
         bool reached = IntMath.DistanceSquared(p.X, p.Y, m.SteerX, m.SteerY) <= 768L * 768;
         bool refresh = reached || (tick + entity.Index) % RefreshTicks == 0;
 
@@ -447,7 +447,7 @@ public sealed class MovementSystem : ISimSystem
             m.StallTicks = 0;
         }
 
-        int margin = Math.Min(m.Radius, (MapState.UnitsPerTile / 2) - 128);
+        int margin = Math.Min(world.TypeOf(entity).TerrainRadius, (MapState.UnitsPerTile / 2) - 128);
         if ((exit >= len - 1 || layer.ClusterOf(goalTile) == cluster) && PathSearch.CorridorClear(layer, p.X, p.Y, m.TargetX, m.TargetY, margin, out _))
         {
             m.Mode = MotionMode.Direct;
@@ -812,12 +812,12 @@ public sealed class MovementSystem : ISimSystem
             return (qx, qy);
         }
 
-        if (qx != px && !IntrudesEnemy(f, i, px, py, qx, py) && Valid(world, layer, f.Radius[i], qx, py))
+        if (qx != px && !IntrudesEnemy(f, i, px, py, qx, py) && Valid(world, layer, f.Terrain[i], qx, py))
         {
             return (qx, py);
         }
 
-        if (qy != py && !IntrudesEnemy(f, i, px, py, px, qy) && Valid(world, layer, f.Radius[i], px, qy))
+        if (qy != py && !IntrudesEnemy(f, i, px, py, px, qy) && Valid(world, layer, f.Terrain[i], px, qy))
         {
             return (px, qy);
         }
@@ -826,12 +826,12 @@ public sealed class MovementSystem : ISimSystem
         // wanted step, right first (keep right), then left; only when neither is free does the unit stop.
         int dx = qx - px;
         int dy = qy - py;
-        if ((dx != 0 || dy != 0) && !IntrudesEnemy(f, i, px, py, px - dy, py + dx) && Valid(world, layer, f.Radius[i], px - dy, py + dx))
+        if ((dx != 0 || dy != 0) && !IntrudesEnemy(f, i, px, py, px - dy, py + dx) && Valid(world, layer, f.Terrain[i], px - dy, py + dx))
         {
             return (px - dy, py + dx);
         }
 
-        if ((dx != 0 || dy != 0) && !IntrudesEnemy(f, i, px, py, px + dy, py - dx) && Valid(world, layer, f.Radius[i], px + dy, py - dx))
+        if ((dx != 0 || dy != 0) && !IntrudesEnemy(f, i, px, py, px + dy, py - dx) && Valid(world, layer, f.Terrain[i], px + dy, py - dx))
         {
             return (px + dy, py - dx);
         }
@@ -1036,6 +1036,9 @@ public sealed class MovementSystem : ISimSystem
         public int[] Vx = [];
         public int[] Vy = [];
         public int[] Radius = [];
+
+        // The radius each unit slides along the terrain with (its type's TerrainRadius, WORLD-015).
+        public int[] Terrain = [];
         public byte[] Owner = [];
         public byte[] Plane = [];
         public byte[] Moving = [];
@@ -1064,6 +1067,7 @@ public sealed class MovementSystem : ISimSystem
                 Vx = new int[size];
                 Vy = new int[size];
                 Radius = new int[size];
+                Terrain = new int[size];
                 Owner = new byte[size];
                 Plane = new byte[size];
                 Moving = new byte[size];
@@ -1094,6 +1098,7 @@ public sealed class MovementSystem : ISimSystem
                 Vx[i] = m.VelocityX;
                 Vy[i] = m.VelocityY;
                 Radius[i] = m.Radius;
+                Terrain[i] = Math.Min(m.Radius, world.Ruleset.EntityTypes[identity.TypeId].TerrainRadius);
                 MaxRadius = Math.Max(MaxRadius, m.Radius);
                 Owner[i] = identity.Owner;
                 Locomotor locomotor = world.Ruleset.EntityTypes[identity.TypeId].Locomotor;
@@ -1182,7 +1187,7 @@ public sealed class MovementSystem : ISimSystem
 
                 // Pushed past a corner: skip ahead when the next waypoint is already in sight.
                 if (cursor < last && layer is not null && (tick + i) % 4 == 0
-                    && PathSearch.CorridorClear(layer, px, py, w[2 * (cursor + 1)], w[(2 * (cursor + 1)) + 1], Math.Min(m.Radius, 896), out _))
+                    && PathSearch.CorridorClear(layer, px, py, w[2 * (cursor + 1)], w[(2 * (cursor + 1)) + 1], Math.Min(f.Terrain[i], 896), out _))
                 {
                     cursor++;
                     m.BestDistance = int.MaxValue;
@@ -1212,7 +1217,7 @@ public sealed class MovementSystem : ISimSystem
 
             if (final && dist <= speed && !IntrudesEnemy(f, i, px, py, m.SteerX, m.SteerY))
             {
-                (f.Qx[i], f.Qy[i]) = Slide(world, layer, m.Radius, px, py, (int)dx, (int)dy);
+                (f.Qx[i], f.Qy[i]) = Slide(world, layer, f.Terrain[i], px, py, (int)dx, (int)dy);
                 m.VelocityX = (int)dx;
                 m.VelocityY = (int)dy;
                 f.Out[i] = OutArrived;
@@ -1239,7 +1244,7 @@ public sealed class MovementSystem : ISimSystem
                 }
             }
 
-            (int sx, int sy) = Slide(world, layer, m.Radius, px, py, (int)vx, (int)vy);
+            (int sx, int sy) = Slide(world, layer, f.Terrain[i], px, py, (int)vx, (int)vy);
             (int qx, int qy) = HoldOffEnemies(world, layer, f, i, px, py, sx, sy);
             bool heldByEnemy = qx != sx || qy != sy;
             f.Qx[i] = qx;
@@ -1315,7 +1320,9 @@ public sealed class MovementSystem : ISimSystem
 
                         long rx = f.Px[j] - (long)px;
                         long ry = f.Py[j] - (long)py;
-                        long r = ri + f.Radius[j];
+                        // Units coming the other way squeeze past with their terrain footprints, not their bodies (WORLD-015:
+                        // otherwise opposing columns jam at a bridge, ORIG-02).
+                        long r = f.Moving[j] != 0 && ((f.Vx[j] * dx) + (f.Vy[j] * dy)) < 0 ? f.Terrain[i] + (long)f.Terrain[j] : ri + f.Radius[j];
                         long reach = r + (4L * speed);
                         long d2 = (rx * rx) + (ry * ry);
                         if (d2 > reach * reach)
@@ -1404,7 +1411,7 @@ public sealed class MovementSystem : ISimSystem
                 int qy = f.Qy[i];
                 (long sx, long sy) = Push(f, i);
                 // Escape: the center is on blocked ground, or an idle unit's body still overlaps a blocked tile.
-                if (layer is not null && (!layer.IsWalkablePoint(qx, qy) || (m.State != MotionState.Moving && !Valid(world, layer, m.Radius, qx, qy))))
+                if (layer is not null && (!layer.IsWalkablePoint(qx, qy) || (m.State != MotionState.Moving && !Valid(world, layer, f.Terrain[i], qx, qy))))
                 {
                     // Escape toward the nearest walkable tile.
                     int tile = NavQueries.NearestWalkable(layer, layer.TileX(qx), layer.TileY(qy), EscapeRadius);
@@ -1422,7 +1429,7 @@ public sealed class MovementSystem : ISimSystem
                     }
                 }
 
-                (int fx, int fy) = sx == 0 && sy == 0 ? (qx, qy) : Slide(world, layer, m.Radius, qx, qy, (int)sx, (int)sy);
+                (int fx, int fy) = sx == 0 && sy == 0 ? (qx, qy) : Slide(world, layer, f.Terrain[i], qx, qy, (int)sx, (int)sy);
 
                 // Pushes from friends behind must not drive the unit into an enemy either.
                 (f.Fx[i], f.Fy[i]) = HoldOffEnemies(world, layer, f, i, qx, qy, fx, fy);
@@ -1456,7 +1463,9 @@ public sealed class MovementSystem : ISimSystem
 
                         long rx = qx - (long)f.Qx[j];
                         long ry = qy - (long)f.Qy[j];
-                        long r = ri + f.Radius[j];
+                        bool jMoving = f.Moving[j] != 0;
+                        bool opposing = iMoving && jMoving && (((long)f.Vx[i] * f.Vx[j]) + ((long)f.Vy[i] * f.Vy[j])) < 0;
+                        long r = opposing ? f.Terrain[i] + (long)f.Terrain[j] : ri + f.Radius[j]; // squeezing past (WORLD-015)
                         long d2 = (rx * rx) + (ry * ry);
                         if (d2 >= r * r)
                         {
@@ -1468,7 +1477,6 @@ public sealed class MovementSystem : ISimSystem
                             break;
                         }
 
-                        bool jMoving = f.Moving[j] != 0;
                         bool friendly = f.Owner[j] == f.Owner[i];
                         int share; // quarters of the overlap this unit takes
                         if (iMoving == jMoving)

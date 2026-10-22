@@ -173,6 +173,7 @@ internal sealed partial class LegacyImporter
         AddInt(body, "Health", "max", row, ColHealth, source, key);
         AddInt(body, "Armor", "defence", row, ColDefence, source, key);
         AddArmament(body, row, civ, cls, source, key);
+        AddBody(body, civ, cls, source, key);
         if (Cell(row, ColSpeed).Length > 0)
         {
             AddInt(body, "Mobile", "speed", row, ColSpeed, source, key);
@@ -286,6 +287,32 @@ internal sealed partial class LegacyImporter
             }
 
             body.Trait("Armament", [.. fields]);
+        }
+    }
+
+    // WORLD-015 (batch K, capture-20261022-110601): the original's land units stand one to a tile at rest, 31-32 px apart,
+    // and keep about 27-35 px apart when two columns pass head on; their IMAGES.INI object box is 32 x 32 (64 x 64 for
+    // chariots and catapults). The collision radius is 7/16 of the box: 14 px, so two bodies keep 28 px, and the
+    // arrival lattice (2 r x 9/8) puts resting units one tile apart. Ships and flyers keep their templates.
+    private void AddBody(Body body, string civ, string cls, string source, string key)
+    {
+        if (_tables.ObjectOf(cls)?.Section("general")?.Get("teren") is "0" or "2"
+            || ObjectSection(civ, cls)?.Get("image") is not { Length: > 0 } image || _tables.Sprite(image) is not { } sprite
+            || !sprite.TryGetValue("object", out string? box))
+        {
+            return;
+        }
+
+        string[] parts = box.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length != 4)
+        {
+            throw new RulesException(source, 0, $"{key}: malformed object box '{box}'");
+        }
+
+        int size = Math.Max(ParseInt(parts[2], source, key), ParseInt(parts[3], source, key));
+        if (size >= 16)
+        {
+            body.Trait("Collision", ("radius", Num(size * 7 / 16)));
         }
     }
 

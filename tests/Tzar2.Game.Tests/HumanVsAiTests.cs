@@ -96,9 +96,10 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
 
     /// <summary>
     /// Game minutes per map type: long enough for the Hard AI's first wave (after 4 minutes, ADR 0052) to land; 6 until
-    /// one peasant tended each field (ECO-021) and the first fields had to be built before the food came in.
+    /// one peasant tended each field (ECO-021) and the first fields had to be built before the food came in; 8 until the
+    /// units had the original's body (WORLD-015), whose crowds slow the economy: the first hits came between 8 and 9.
     /// </summary>
-    private const int MapTypeMinutes = 8;
+    private const int MapTypeMinutes = 10;
 
     /// <summary>
     /// Game minutes on Archipelagos, where the first wave must also board a transport, cross the sea and land (ADR 0144;
