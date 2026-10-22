@@ -97,8 +97,8 @@ rules:
   SHELL-020:
     rule: The credits screen shows the makers of the game.
     source: [manual Credits Screen, data CREDITSFNT.INI]
-    status: missing
-    note: CREDITS prints where the credits file is.
+    status: tested
+    note: The package's credits text scrolls up the S_CREDITS book's right page in the CREDITSFNT.INI fonts. The makers' portraits of S_CREDITS and the scroll speed (30 px/s, Tzar2's) wait for the owner's screenshot (UI review question 6).
   SHELL-021:
     rule: The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game.
     source: [manual Menu Screen, manual Hot Keys]

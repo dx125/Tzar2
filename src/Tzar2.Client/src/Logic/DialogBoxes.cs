@@ -83,6 +83,12 @@ public static class DialogBoxes
     /// <summary>The story screen's CLOSE slot (a 150 × 25 state of <c>S_SCRPLAY/ok</c>).</summary>
     public static readonly ArtBox StoryButton = new(166, 538, 150, 25);
 
+    /// <summary><c>S_CREDITS/back</c>: 800 × 600.</summary>
+    public static readonly (int Width, int Height) Credits = (800, 600);
+
+    /// <summary>The credits' text, on the book's right page (light from x 475 to 745 and y 140 to 575, less a margin).</summary>
+    public static readonly ArtBox CreditsPage = new(490, 160, 240, 400);
+
     /// <summary>The number of pages of a quest log of <paramref name="quests"/> quests (at least one).</summary>
     public static int QuestPages(int quests) => Math.Max(1, (quests + QuestsPerPage - 1) / QuestsPerPage);
 }

@@ -242,12 +242,34 @@ public partial class GameApp : Node
         var menu = new MainMenuScreen(_ui!, _catalog, Screen, _ai.Notice);
         menu.SinglePlayer += ShowSinglePlayer;
         menu.MultiplayerPressed += ShowMultiplayer;
-        menu.Credits += () => GD.Print("Credits: see text/local/credits.txt of your package.");
+        menu.Credits += ShowCredits;
         menu.Viewer += () => ViewerRequested?.Invoke();
         menu.Editor += () => ShowEditor();
         menu.Settings += ShowSettings;
         menu.Quit += () => GetTree().Quit();
         Replace(menu, music: "music/intro.mid");
+    }
+
+    /// <summary>Shows the credits (SHELL-020): the package's credits text in the fonts of CREDITSFNT.INI.</summary>
+    public void ShowCredits()
+    {
+        string text = _store.Vfs.Exists(CreditsText.PackagePath) ? System.Text.Encoding.UTF8.GetString(_store.Read(CreditsText.PackagePath)) : string.Empty;
+        var fonts = new System.Collections.Generic.Dictionary<int, string>();
+        const string FontTable = "tables/data/creditsfnt.ini.json";
+        if (_store.Vfs.Exists(FontTable) && IniTable.Parse(_store.Read(FontTable)).Section("credits") is { } section)
+        {
+            foreach (System.Collections.Generic.KeyValuePair<string?, string> e in section.Entries)
+            {
+                if (int.TryParse(e.Key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int index) && CreditsText.FontAsset(e.Value) is { } font && _store.Vfs.Exists(font))
+                {
+                    fonts[index] = font;
+                }
+            }
+        }
+
+        var screen = new CreditsScreen(_ui!, Screen, CreditsText.Parse(text), fonts);
+        screen.Closed += ShowMainMenu;
+        Replace(screen, music: "music/intro.mid");
     }
 
     /// <summary>Shows SETTINGS (ADR 0177): changes are saved and applied at once.</summary>
