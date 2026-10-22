@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Godot;
@@ -7,6 +8,7 @@ using Tzar2.Client.Logic;
 using Tzar2.Client.Viewer;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Rules;
+using Tzar2.Game.Campaigns;
 using Tzar2.Game.Maps;
 using Tzar2.Game.Session;
 
@@ -329,10 +331,11 @@ public partial class GameApp : Node
     {
         ArgumentNullException.ThrowIfNull(options);
         ShowLoading(options.TestMapSize > 0 ? "the test map" : Content.MapGen.RandomMapNames.Name(SkirmishOptions.MapSizes[options.MapSize]) + " map");
-        _ = AfterFrames(2, () => BuildSkirmish(options));
+        _ = AfterFrames(2, () => BuildSkirmish(options, null));
     }
 
-    private void BuildSkirmish(SkirmishOptions options)
+    // A skirmish started with its options, or continued from a save (its description rebuilds the map).
+    private void BuildSkirmish(SkirmishOptions? options, SaveGame? resume)
     {
         if (_rules is null)
         {
@@ -340,23 +343,41 @@ public partial class GameApp : Node
             return;
         }
 
-        if (Setup(options) is not { } setup)
+        GameSession session;
+        string terrain;
+        if (resume is not null)
+        {
+            try
+            {
+                session = resume.ResumeSkirmish(_rules, _ai);
+            }
+            catch (Exception e) when (e is ArgumentException or InvalidDataException or Content.MapGen.MapGenException)
+            {
+                GD.PrintErr("The save cannot be continued: " + e.Message);
+                ShowSinglePlayer();
+                return;
+            }
+
+            terrain = session.Setup.Map is RandomMapSource random ? Content.MapGen.RandomMapNames.SetId(random.Set) : "grass";
+        }
+        else if (options is null || Setup(options) is not { } setup)
         {
             GD.PrintErr("The ruleset has no castles.");
             return;
         }
-
-        string terrain = Content.MapGen.RandomMapNames.SetId(SkirmishOptions.TerrainSets[options.Terrain]);
-        GameSession session;
-        try
+        else
         {
-            session = new GameSession(setup, _rules);
-        }
-        catch (Exception e) when (e is Content.MapGen.MapGenException or ArgumentException)
-        {
-            // A random map the rules cannot host: fall back to the skirmish test map.
-            GD.PrintErr($"Random map failed ({e.Message}); using the skirmish test map.");
-            session = new GameSession(setup with { Map = new SkirmishTestMap(96) }, _rules);
+            terrain = Content.MapGen.RandomMapNames.SetId(SkirmishOptions.TerrainSets[options.Terrain]);
+            try
+            {
+                session = new GameSession(setup, _rules);
+            }
+            catch (Exception e) when (e is Content.MapGen.MapGenException or ArgumentException)
+            {
+                // A random map the rules cannot host: fall back to the skirmish test map.
+                GD.PrintErr($"Random map failed ({e.Message}); using the skirmish test map.");
+                session = new GameSession(setup with { Map = new SkirmishTestMap(96) }, _rules);
+            }
         }
 
         if (_args.GameSmoke)
@@ -375,7 +396,24 @@ public partial class GameApp : Node
             SaveReplay(session, "skirmish");
             ShowMainMenu();
         };
-        screen.RestartRequested += () => StartSkirmish(options);
+        screen.RestartRequested += () =>
+        {
+            if (options is not null)
+            {
+                StartSkirmish(options);
+            }
+            else
+            {
+                LoadSave(resume!);
+            }
+        };
+        screen.Saves = Saves;
+        screen.CaptureSave = label => SaveGame.CaptureMatch(session, label);
+        screen.LoadRequested += save =>
+        {
+            session.Stop();
+            LoadSave(save);
+        };
         Replace(screen, music: null);
     }
 

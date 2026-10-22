@@ -64,8 +64,9 @@ rules:
   SHELL-014:
     rule: The load game screen lists the saved games, filtered by campaign or single player game, and loads or deletes the chosen one.
     source: [manual Load Game Screen]
-    status: partial
-    note: LOAD GAME loads the last quick save (F5) of a campaign mission; there is no list.
+    status: tested
+    adr: [0187]
+    note: On D_LOAD; the control switches between single player games and campaigns (the original's demo type is not offered).
   SHELL-015:
     rule: The multiplayer screen takes the player's name, lets him create a game, search for games (with their information) and join one.
     source: [manual Multiplayer Screen]
@@ -102,12 +103,14 @@ rules:
     rule: The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game.
     source: [manual Menu Screen, manual Hot Keys]
     status: partial
-    note: Instructions, load game and save game are missing; F2 quick-saves a campaign mission.
+    adr: [0187]
+    note: Instructions are missing.
   SHELL-022:
     rule: F2 opens the save dialog and F3 the load dialog.
     source: [manual Hot Keys]
-    status: partial
-    note: F2 and F3 quick-save and quick-load a campaign mission; there are no dialogs and no saves of other games.
+    status: tested
+    adr: [0187]
+    note: Every single player game is saved by name (campaign missions, custom maps, random maps); multiplayer matches are not.
   SHELL-023:
     rule: Restarting a game resets the fog and the exploration.
     source: [patch 1.05 (TZAR110.TXT)]

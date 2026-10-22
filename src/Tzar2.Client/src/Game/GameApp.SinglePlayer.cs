@@ -4,6 +4,7 @@ using System.IO;
 using Godot;
 using Tzar2.Game.Campaigns;
 using Tzar2.Game.Session;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 
@@ -23,11 +24,11 @@ public partial class GameApp
     /// <summary>Shows the single-player menu.</summary>
     public void ShowSinglePlayer()
     {
-        var screen = new SinglePlayerScreen(_ui!, _catalog, Screen, File.Exists(Profiles.SavePath("quick")), _ai.Notice);
+        var screen = new SinglePlayerScreen(_ui!, _catalog, Screen, Saves.List().Count > 0, _ai.Notice);
         screen.Campaign += ShowCampaigns;
         screen.CustomMap += ShowCustomMaps;
         screen.RandomMap += ShowSetup;
-        screen.LoadGame += LoadQuickSave;
+        screen.LoadGame += ShowLoadGame;
         screen.Back += ShowMainMenu;
         Replace(screen, music: "music/intro.mid");
     }
@@ -70,10 +71,11 @@ public partial class GameApp
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(options);
         ShowLoading(map.Title);
-        _ = AfterFrames(2, () => BuildCustomMap(map, options));
+        _ = AfterFrames(2, () => BuildCustomMap(map, options, null));
     }
 
-    private void BuildCustomMap(CustomMap map, CustomMapOptions options)
+    // A custom map started with its options, or continued from a save (whose setup it carries).
+    private void BuildCustomMap(CustomMap map, CustomMapOptions? options, SaveGame? resume)
     {
         if (_rules is null)
         {
@@ -82,9 +84,10 @@ public partial class GameApp
         }
 
         GameSession session;
+        CustomMapSettings settings = resume?.Custom is { } saved ? saved with { Ai = _ai } : (options ?? new CustomMapOptions()).ToSettings(_ai);
         try
         {
-            session = new GameSession(ScenarioMatch.Setup(map.Mission, _rules, custom: options.ToSettings(_ai)), _rules);
+            session = resume is not null ? resume.ResumeCustomMap(map.Mission, _rules, _ai) : new GameSession(ScenarioMatch.Setup(map.Mission, _rules, custom: settings), _rules);
         }
         catch (Exception e) when (e is ArgumentException or InvalidDataException or KeyNotFoundException)
         {
@@ -97,15 +100,51 @@ public partial class GameApp
         screen.Finished += (outcome, stats) =>
         {
             SaveReplay(session, "custom");
-            ShowResults(outcome, stats, () => StartCustomMap(map, options), ShowSinglePlayer);
+            ShowResults(outcome, stats, () => StartCustomMap(map, options ?? new CustomMapOptions()), ShowSinglePlayer);
         };
         screen.QuitRequested += () =>
         {
             SaveReplay(session, "custom");
             ShowSinglePlayer();
         };
-        screen.RestartRequested += () => StartCustomMap(map, options);
+        screen.RestartRequested += () =>
+        {
+            if (resume is not null)
+            {
+                LoadSave(resume);
+            }
+            else
+            {
+                StartCustomMap(map, options!);
+            }
+        };
+        screen.Saves = Saves;
+        screen.CaptureSave = label => SaveGame.CaptureMatch(session, label, map.Id, settings);
+        screen.LoadRequested += save =>
+        {
+            session.Stop();
+            LoadSave(save);
+        };
         Replace(screen, music: null);
+    }
+
+    // LOAD GAME of the single player menu: the load dialog over it.
+    private void ShowLoadGame()
+    {
+        var dialog = new LoadDialog(_ui!, Screen, new LoadGameScreen(Saves), (section, key, fallback) => _catalog?.Text(section, key, fallback) ?? fallback);
+        dialog.Closed += ShowSinglePlayer;
+        dialog.Loading += model =>
+        {
+            try
+            {
+                LoadSave(model.Load()!);
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                GD.PrintErr("Load failed: " + e.Message);
+            }
+        };
+        Replace(dialog, music: null);
     }
 
     // The original maps the import put in the package (legacy/maps/*.wmp), converted once per run (ADR 0120), by title.
@@ -149,20 +188,4 @@ public partial class GameApp
         return maps;
     }
 
-    // LOAD GAME: the last quick save (a campaign mission); the original campaigns are converted first if needed.
-    private void LoadQuickSave()
-    {
-        if (_original is null)
-        {
-            ShowLoading("the campaigns");
-            _ = AfterFrames(2, () =>
-            {
-                _original = OriginalCampaigns();
-                LoadQuickSave();
-            });
-            return;
-        }
-
-        QuickLoad();
-    }
 }

@@ -195,8 +195,13 @@ public partial class GameApp
             ShowCampaigns();
         };
         screen.RestartRequested += () => StartMission(source, map);
-        screen.SaveRequested += () => QuickSave(session);
-        screen.LoadRequested += QuickLoad;
+        screen.Saves = Saves;
+        screen.CaptureSave = label => SaveGame.Capture(session, source.Campaign.Id, map, Profile.Progress(source.Campaign.Id), label);
+        screen.LoadRequested += save =>
+        {
+            _mission?.Stop();
+            LoadSave(save);
+        };
         Replace(screen, music: null);
     }
 
@@ -224,53 +229,59 @@ public partial class GameApp
         }
     }
 
-    private void QuickSave(GameSession session)
+    /// <summary>The player's saves (<c>user://saves</c>).</summary>
+    private SaveLibrary Saves => new(Path.Combine(Profiles.Directory, "saves"));
+
+    // A save of any kind continued (SHELL-014): a campaign mission, a custom map or a skirmish. The original campaigns and
+    // maps are converted first when needed (behind the loading screen).
+    private void LoadSave(SaveGame save)
     {
-        if (_campaign is null || _missionMap is null)
+        switch (save.Kind)
         {
-            return;
-        }
-
-        try
-        {
-            SaveGame save = SaveGame.Capture(session, _campaign.Campaign.Id, _missionMap, Profile.Progress(_campaign.Campaign.Id), DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture));
-            string path = Profiles.SavePath("quick");
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllBytes(path, save.ToBytes());
-            GD.Print("Saved " + path);
-        }
-        catch (Exception e) when (e is IOException or TimeoutException or InvalidOperationException)
-        {
-            GD.PrintErr("Save failed: " + e.Message);
-        }
-    }
-
-    private void QuickLoad()
-    {
-        string path = Profiles.SavePath("quick");
-        if (!File.Exists(path))
-        {
-            return;
-        }
-
-        try
-        {
-            SaveGame save = SaveGame.FromBytes(File.ReadAllBytes(path));
-            foreach (ICampaignSource source in Campaigns())
-            {
-                if (source.Campaign.Id == save.CampaignId)
+            case SaveKind.Campaign when _original is null:
+                ShowLoading("the campaigns");
+                _ = AfterFrames(2, () =>
                 {
-                    _mission?.Stop();
-                    StartMission(source, save.MapId, save);
+                    _original = OriginalCampaigns();
+                    LoadSave(save);
+                });
+                return;
+            case SaveKind.Campaign:
+                foreach (ICampaignSource source in Campaigns())
+                {
+                    if (source.Campaign.Id == save.CampaignId)
+                    {
+                        StartMission(source, save.MapId, save);
+                        return;
+                    }
+                }
+
+                GD.PrintErr($"The save belongs to campaign '{save.CampaignId}', which is not available.");
+                ShowSinglePlayer();
+                return;
+            case SaveKind.CustomMap when _customMaps is null:
+                ShowLoading("the maps");
+                _ = AfterFrames(2, () =>
+                {
+                    _customMaps = OriginalMaps();
+                    LoadSave(save);
+                });
+                return;
+            case SaveKind.CustomMap:
+                if (_customMaps.Find(m => m.Id == save.MapId) is { } map)
+                {
+                    ShowLoading(map.Title);
+                    _ = AfterFrames(2, () => BuildCustomMap(map, null, save));
                     return;
                 }
-            }
 
-            GD.PrintErr($"The save belongs to campaign '{save.CampaignId}', which is not available.");
-        }
-        catch (InvalidDataException e)
-        {
-            GD.PrintErr("Load failed: " + e.Message);
+                GD.PrintErr($"The save's map '{save.MapId}' is not in the package.");
+                ShowSinglePlayer();
+                return;
+            default:
+                ShowLoading("the saved game");
+                _ = AfterFrames(2, () => BuildSkirmish(null, save));
+                return;
         }
     }
 }

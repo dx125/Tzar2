@@ -17,8 +17,8 @@ the feature behind it is not in the simulation yet (the key shows a message nami
 | | Fixed keys | Group keys | Building-class keys |
 |---|---|---|---|
 | Bindings | 45 | 18 | 26 |
-| Done | 32 | 9 (assign) | 26 |
-| Partial | 12 | 9 (select: the double-press centring is assumed) | — |
+| Done | 34 | 9 (assign) | 26 |
+| Partial | 10 | 9 (select: the double-press centring is assumed) | — |
 | Blocked (waits for location messages) | 1 | — | — |
 
 Mouse semantics: 16 rows, 11 done, 4 partial, 1 deliberately unbound (wheel zoom).
@@ -33,8 +33,8 @@ Updated 2026-10-22: the diplomacy, tribute and inventory screens are in.
 |---|---|---|---|---|
 | `menu` | F1 | Opens the game menu | done | Load/save entries of the menu are M6 |
 | `menu-f10` | F10 | Same as F1 | done | |
-| `save` | F2 | Save dialog | partial | quick save of campaign missions (ADR 0133); the save dialog and skirmish/MP saves are M6 |
-| `load` | F3 | Load dialog | partial | quick load of campaign missions (ADR 0133); the load dialog is M6 |
+| `save` | F2 | Save dialog | done | the save dialog of every single player game (ADR 0187); multiplayer matches are not saved |
+| `load` | F3 | Load dialog | done | the load dialog (ADR 0187) |
 | `scores` | F4 | Scores | partial | every kingdom's sim score and statistics as messages (ADR 0106); the full score screen is the results dialog |
 | `diplomacy` | F5 | Diplomacy screen | done | the diplomacy screen (HUD-012) |
 | `tribute` | F6 | Tribute dialog | done | the tribute screen (HUD-013) |

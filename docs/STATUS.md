@@ -65,7 +65,7 @@ play-test.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. Next: the save and load screens. Done: the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
+   order. Next: work queue item 4 (unit collision, WORLD-015). Done: save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
    (ORD-005), the hit frame from the data (WAR-014), several items per kind (ITEM-016, ADR 0186).
    * Two values the original's data does not hold, for a capture: the hit points a repairer restores per blow
@@ -113,6 +113,13 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Save and load of every single player game (SHELL-014, SHELL-021, SHELL-022; ADR 0187).**
+  * F2, F3, the in-game menu's SAVE GAME and LOAD GAME, and single player's LOAD GAME open the save and load
+    dialogs, built on `D_SAVE` and `D_LOAD`.
+  * Saves have names and live in `user://saves`. Each continues a campaign mission, a custom map (with its setup) or
+    a random map (with its match description). The save format is 2; format 1 files still load.
+  * Multiplayer matches are not saved.
 
 * **2026-10-22 — The inventory (HUD-017, HUD-018).**
   * The eye (ORDERS `holder`) and the arrows (`left`, `right`) sit in the three small boxes left of the orders bar.

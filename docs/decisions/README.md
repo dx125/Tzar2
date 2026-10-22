@@ -128,3 +128,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0184](0184-spies-impersonate-units-of-other-kingdoms.md) | Let a spy take the look of another kingdom's unit until it reveals itself or attacks | Accepted | 2026-10-21 |
 | [0185](0185-repairs-come-in-blows-of-a-quarter-of-the-build-rate.md) | Repair in blows of max / (4 × TIME) every 1.25 s, free, with no falloff | Accepted | 2026-10-21 |
 | [0186](0186-items-carry-their-own-effect-spell-and-look.md) | Items carry their own effect, spell and look; the magic workshop makes each kind's variants | Accepted | 2026-10-22 |
+| [0187](0187-save-games-of-every-single-player-game.md) | Save games of every single player game, by name, in the user folder | Accepted | 2026-10-22 |
