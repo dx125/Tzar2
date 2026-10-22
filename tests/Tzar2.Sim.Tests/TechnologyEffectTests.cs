@@ -22,7 +22,7 @@ public class TechnologyEffectTests
     // Effects whose targets the data does not have: iron rocks (UNK-14). The synthetic tables have no monks either; the
     // local test on the original's data (OriginTechnologyTests) checks those.
     private static readonly HashSet<(string Technology, ModifierStat Stat)> KnownEmpty =
-        [("te_ironplus", ModifierStat.GatherRate), ("te_meditation", ModifierStat.Cost), ("te_philosophy", ModifierStat.StartingLevel)];
+        [("te_ironplus", ModifierStat.CarryCapacity), ("te_meditation", ModifierStat.Cost), ("te_philosophy", ModifierStat.StartingLevel)];
 
     public static TheoryData<string> EffectTechnologies()
     {
@@ -87,8 +87,8 @@ public class TechnologyEffectTests
     [InlineData("te_scalearmor", ModifierStat.Defence, "euro.footman", "euro.knight")]
     [InlineData("te_engineering", ModifierStat.Attack, "comm.catapult", "euro.footman")]
     [InlineData("te_feudalism", ModifierStat.Cost, "euro.peon", "euro.footman")]
-    [InlineData("te_woodplus", ModifierStat.GatherRate, "comm.tree", "comm.res_gold")]
-    [InlineData("te_goldplus", ModifierStat.GatherRate, "comm.res_gold", "comm.tree")]
+    [InlineData("te_woodplus", ModifierStat.CarryCapacity, "comm.tree", "comm.res_gold")]
+    [InlineData("te_goldplus", ModifierStat.CarryCapacity, "comm.res_gold", "comm.tree")]
     [InlineData("te_architecture", ModifierStat.BuildRate, "euro.house", "euro.footman")]
     [InlineData("te_fanaticism", ModifierStat.Resistance, "euro.castle", "euro.footman")]
     [InlineData("te_supplystorage", ModifierStat.PopulationProvided, "euro.house", "euro.castle")]

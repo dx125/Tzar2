@@ -654,19 +654,88 @@ public sealed class MagicSystem : ISimSystem
         }
     }
 
-    // Crusade anchors raise their crusaders one per tick (while there is room); once all are dead the anchor stays for
-    // the cooldown and then goes (a new crusade needs it gone; 1.09).
+    /// <summary>The time between two crusaders arriving at the anchor (500 ms; ReTzar's reading of the original, 0x439d50), in ticks.</summary>
+    public static int CrusaderArrivalTicks(int tickMs) => Math.Max(1, 500 / Math.Max(1, tickMs));
+
+    /// <summary>The most crusaders <paramref name="player"/>'s cathedrals gather: the start, plus a step per full crusade.</summary>
+    public static int CrusadeCeiling(World world, int player)
+    {
+        CombatSettings c = world.Ruleset.Combat;
+        return Math.Min(c.CrusadeCeilingMax, c.CrusadeStart + (c.CrusadeCeilingStep * world.Players[player].FullCrusades));
+    }
+
+    // Each finished cathedral gathers one crusader for its kingdom, up to the ceiling, while no crusade of the kingdom runs:
+    // every 12 s in the first 15 minutes, 8 s until 20, 4 s until 30, then every second (ReTzar's reading of the
+    // original, 0x422ca0; MAG-017). Checked once a second.
+    private static void GatherCrusaders(World world, int tick)
+    {
+        int tickMs = world.Config.TickLengthMilliseconds;
+        int second = Math.Max(1, 1000 / tickMs);
+        if (tick % second != 0)
+        {
+            return;
+        }
+
+        long elapsedMs = (long)tick * tickMs;
+        int every = elapsedMs < 900_000 ? 12 : elapsedMs < 1_200_000 ? 8 : elapsedMs < 1_800_000 ? 4 : 1;
+        long seconds = tick / second;
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            EntityId cathedral = structures[i];
+            if ((world.TypeOf(cathedral).Traits.Abilities & AbilityFlags.PreachCrusade) == 0 || world.Constructions.Has(cathedral)
+                || (seconds + cathedral.Index) % every != 0)
+            {
+                continue;
+            }
+
+            byte owner = world.Identities.Get(cathedral).Owner;
+            if (!world.HasPlayer(owner) || CrusadeRuns(world, owner))
+            {
+                continue;
+            }
+
+            ref PlayerState kingdom = ref world.Players[owner];
+            if (kingdom.Crusaders < CrusadeCeiling(world, owner))
+            {
+                kingdom.Crusaders++;
+            }
+        }
+    }
+
+    private static bool CrusadeRuns(World world, byte owner)
+    {
+        foreach (EntityId anchor in world.Crusades.Entities)
+        {
+            if (world.Identities.Get(anchor).Owner == owner)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Crusade anchors call their crusaders one every 500 ms (while there is room); once all have come and died the anchor
+    // goes and the kingdom gathers again from crusadeRestart (MAG-016, MAG-017).
     private void Crusades(World world, int tick)
     {
         _done.Clear();
         CombatSettings settings = world.Ruleset.Combat;
+        GatherCrusaders(world, tick);
         ReadOnlySpan<EntityId> ids = world.Crusades.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
             ref CrusadeState s = ref world.Crusades.At(i);
             byte owner = world.Identities.Get(ids[i]).Owner;
+            if (s.ToRaise > 0 && tick < s.NextTick)
+            {
+                continue;
+            }
+
             if (s.ToRaise > 0 && settings.Crusader >= 0 && world.Entities.RemainingCapacity >= 1)
             {
+                s.NextTick = tick + CrusaderArrivalTicks(world.Config.TickLengthMilliseconds);
                 Position at = world.Positions.Get(ids[i]);
                 (int x, int y) = FreeSpot(world, world.Ruleset.EntityTypes[settings.Crusader].Locomotor, at.X, at.Y);
                 EntityId crusader = world.Spawn((ushort)settings.Crusader, owner, x, y);
@@ -682,15 +751,7 @@ public sealed class MagicSystem : ISimSystem
                 alive |= link.Anchor == ids[i].Value;
             }
 
-            if (alive || s.ToRaise > 0)
-            {
-                s.EndTick = 0;
-            }
-            else if (s.EndTick == 0)
-            {
-                s.EndTick = tick + ((settings.CrusadeCooldownMs + world.Config.TickLengthMilliseconds - 1) / world.Config.TickLengthMilliseconds);
-            }
-            else if (tick >= s.EndTick)
+            if (!alive && s.ToRaise == 0)
             {
                 _done.Add(ids[i]);
             }
@@ -698,7 +759,12 @@ public sealed class MagicSystem : ISimSystem
 
         foreach (EntityId e in _done)
         {
+            byte owner = world.Identities.Get(e).Owner;
             world.Destroy(e);
+            if (world.HasPlayer(owner))
+            {
+                world.Players[owner].Crusaders = (ushort)Math.Min(settings.CrusadeRestart, CrusadeCeiling(world, owner));
+            }
         }
     }
 

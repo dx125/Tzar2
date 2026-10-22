@@ -53,7 +53,8 @@ rules:
   ITEM-012:
     rule: A unit that picks up a magic book has yellow stars floating above it.
     source: [patch 1.09 (TZAR110.TXT)]
-    status: missing
+    status: tested
+    note: Three of the original's magic stars float over the unit's head.
   ITEM-013:
     rule: The Curse spell book works.
     source: [patch 1.05 (TZAR110.TXT)]

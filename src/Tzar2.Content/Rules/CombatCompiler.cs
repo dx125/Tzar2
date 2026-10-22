@@ -25,7 +25,7 @@ internal sealed class CombatCompiler
         "heroLevel", "leadershipTechnology", "leadershipRadiusTiles", "leadershipSharePercent", "honorTechnology", "honorAttackPercent",
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
-        "crusader", "crusadeSize", "crusadeAnchorRadiusTiles", "crusadeCooldownMs", "heroNames", "projectiles", "unitKeywords",
+        "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
     ];
 
     private static readonly string[] SpellTraits = ["Legacy", "Spell"];
@@ -292,9 +292,11 @@ internal sealed class CombatCompiler
             BribeCostPercent = Range("bribeCostPercent", d.BribeCostPercent, 0, 100_000),
             CrusadeAnchor = Type("crusadeAnchor", types),
             Crusader = Type("crusader", types),
-            CrusadeSize = Range("crusadeSize", d.CrusadeSize, 0, 256),
+            CrusadeStart = Range("crusadeStart", d.CrusadeStart, 0, 1000),
+            CrusadeRestart = Range("crusadeRestart", d.CrusadeRestart, 0, 1000),
+            CrusadeCeilingStep = Range("crusadeCeilingStep", d.CrusadeCeilingStep, 0, 1000),
+            CrusadeCeilingMax = Range("crusadeCeilingMax", d.CrusadeCeilingMax, 0, 1000),
             CrusadeAnchorRadiusUnits = Range("crusadeAnchorRadiusTiles", d.CrusadeAnchorRadiusUnits / UnitsPerTile, 0, 64) * UnitsPerTile,
-            CrusadeCooldownMs = Range("crusadeCooldownMs", d.CrusadeCooldownMs, 0, 3_600_000),
             HeroNames = HeroNameLists(legacy),
         };
     }

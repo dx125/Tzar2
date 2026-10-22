@@ -296,11 +296,15 @@ public class AiInterpreterTests
     }
 
     [Fact]
-    public void Resign_is_requested_only_when_the_lobby_allows_it()
+    [Trait("Rule", "DIP-009")]
+    public void A_resign_the_script_asks_for_is_carried_out()
     {
-        using Run run = new Run("rule when not barracks have resign trigger Resigned end").Ticks(2);
+        using Run run = new Run("rule when not barracks have resign trigger Resigned end").Ticks(3);
         Assert.True(run.State.ResignRequested);
         Assert.True(run.Flag("Resigned"));
+        PlayerFlags flags = run.Simulation.World.Players[0].Flags;
+        Assert.True((flags & PlayerFlags.Resigned) != 0, "the kingdom resigned (RESIGN.AI, 1.09)");
+        Assert.True((flags & PlayerFlags.Defeated) != 0);
     }
 
     [Fact]

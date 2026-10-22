@@ -36,7 +36,7 @@ gameplay:
   startingResources: legacy           # RES.INI [Low]/[Medium]/[High] (lobby STARTING RESOURCES)
   defaultStartingResources: medium    # UNVERIFIED: the lobby's default level
   # Compile-time conversions of table columns.
-  # Only for classes without a measured Mobile.pixelsPerSecond: the original does not scale walking speed by SPEED (ADR 0172).
+  # Only for types with neither a measured Mobile.pixelsPerSecond nor a walk sheet stride (ADRs 0172, 0190).
   speedPixelsPerSecondPerPoint: 10    # UNVERIFIED (UNK-12): px/s per SPEED point
   attackCycleMs: 6000                 # UNVERIFIED (UNK-07): time between hits = attackCycleMs / RATE
   hitDelayPercent: 50                 # UNVERIFIED (UNK-07): hit frame at this share of the cycle, for types whose attack
@@ -195,7 +195,7 @@ legacy:
   # Then (ITEM-016) ITEM_PLUSPLUS is imported as a weapon, the power item; then (WORLD-015) land units get a body from
   # their object box.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "4785FC7F3809937A"
+  referenceDataHash: "3B280CADB6062AEE"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
@@ -235,8 +235,10 @@ legacy:
 # Walking speeds (UNK-12, ADR 0172). The original ignores the SPEED column for walking: measured in both directions
 # (capture-20261019-163231 and -190321, r² ≥ 0.99), every foot class walks 40 px/s whatever its SPEED (2-4), knights and
 # crusaders 72, trolls 47, ghosts 67 (66.6), cows and bears 26 (25.7); the speed follows the stride of the walk sheet
-# (IMAGES.INI move_len 50, 85, 56, 80, 32), by a rule not yet known. Measured classes set Mobile.pixelsPerSecond
-# (VERIFIED); the others keep SPEED x gameplay.speedPixelsPerSecondPerPoint (UNVERIFIED).
+# (IMAGES.INI move_len 50, 85, 56, 80, 32). Measured classes set Mobile.pixelsPerSecond (VERIFIED); the others walk by
+# the original's rule for the stride the importer reads (Mobile.stride: a pixel every (32000 / move_len) >> 5 of its ms,
+# 1.25 of ours; ReTzar's reading of the original, ADR 0190), and only what has no stride by SPEED x
+# gameplay.speedPixelsPerSecondPerPoint (UNVERIFIED).
 ^class.footman: { Mobile: { pixelsPerSecond: 40 } }    # VERIFIED (ADR 0172)
 ^class.maceman: { Mobile: { pixelsPerSecond: 40 } }    # VERIFIED (ADR 0172)
 ^class.pikeman: { Mobile: { pixelsPerSecond: 40 } }    # VERIFIED (ADR 0172)
@@ -454,12 +456,15 @@ comm.ground_object:
 # UNVERIFIED (UNK-21). Technologies that only unlock units, buildings, spells or orders need no effect: their trees do
 # that. Stats marked (GAME-08/09/11/14) are kept in the modifier tables for the later systems that consume them.
 
-te_fields: { Technology: { effects: [{ stat: gatherRate, percent: 25, classes: [field] }] } }        # UNVERIFIED (UNK-21)
-te_irrigation: { Technology: { effects: [{ stat: gatherRate, percent: 25, classes: [field] }] } }    # UNVERIFIED (UNK-21)
-te_woodplus: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [tree] }] } }       # UNVERIFIED (UNK-21)
-te_stoneplus: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_stone] }] } } # UNVERIFIED (UNK-21)
-te_goldplus: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_gold] }] } }   # UNVERIFIED (UNK-21)
-te_ironplus: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_iron] }] } }   # UNVERIFIED (UNK-14/21): no iron rock exists
+# TECH-006, TECH-010: the gathering technologies raise what a peasant carries, as the help says, not how fast it
+# gathers: 10 + 2 for the resource's "plus" technology, + 4 of Irrigation for food (ReTzar's reading of the original,
+# 0x4ae720). The bonus goes by the node gathered from; cows keep their own load (ADR 0170).
+te_fields: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [field] }] } }
+te_irrigation: { Technology: { effects: [{ stat: carryCapacity, add: 4, classes: [field] }] } }
+te_woodplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [tree] }] } }
+te_stoneplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [res_stone] }] } }
+te_goldplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [res_gold] }] } }
+te_ironplus: { Technology: { effects: [{ stat: carryCapacity, add: 2, classes: [res_iron] }] } }      # UNVERIFIED (UNK-14): no iron rock exists
 te_orefloatation: { Technology: { effects: [{ stat: gatherRate, percent: 20, classes: [res_gold, res_stone, res_iron] }] } }   # UNVERIFIED (UNK-21)
 te_feudalism: { Technology: { effects: [{ stat: cost, percent: -20, classes: [peon] }] } }          # UNVERIFIED (UNK-21)
 te_slavery: { Technology: { effects: [{ stat: cost, percent: -20, classes: [peon] }] } }            # UNVERIFIED (UNK-21)
@@ -497,21 +502,25 @@ te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes:
 te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, percent: 50, groups: [ships] }] } } # help HT_USE_SHIPS: 50 % more units
 te_inquisition: { Technology: { effects: [{ stat: attack, percent: 50, classes: [priest] }] } }     # UNVERIFIED (UNK-26): exorcism is the priests' attack
 te_medicine: { Technology: { effects: [{ stat: abilityRange, add: 4, classes: [priest] }] } }        # UNVERIFIED (UNK-26): +4 tiles of spell range
-te_tradetaxes: { Technology: { effects: [{ stat: income, percent: 10, classes: [market] }] } }       # UNVERIFIED (UNK-28)
+# TECH-023, TECH-024: Trade Taxes and Banking add 2 and 3 to the base 40 of the trade profit (ReTzar's reading of the
+# original, K+0x11a): 5 % and 7.5 % more profit (7 here: whole percents).
+te_tradetaxes: { Technology: { effects: [{ stat: income, percent: 5, classes: [market] }] } }
 # Banking: "increases trade profit" (STRINGS.INI orders_add); the manual says it adds to the treasury over time (TECH-024).
 # Income is trade profit by the selling market, so it targets the markets: on the castle it did nothing (2026-10-21).
-te_banking: { Technology: { effects: [{ stat: income, percent: 10, classes: [market] }] } }          # UNVERIFIED (UNK-28)
+te_banking: { Technology: { effects: [{ stat: income, percent: 7, classes: [market] }] } }
 # Gunpowder (Asian): "increases cannon tower's attack power" (STRINGS.INI orders_add; TECH-013).
 te_gunpowder: { Technology: { effects: [{ stat: attack, percent: 20, classes: [tower_stone2] }] } }  # UNVERIFIED (UNK-21)
 
-# Ship cannon levels (UPGRADES.INI to_ship_level2-6): bought per galleon in order; each adds attack (UNVERIFIED UNK-21).
+# Ship cannon levels (UPGRADES.INI to_ship_level2-6): bought per galleon in order; "the cannons fire more frequently"
+# (help HT_UPGRADE_SHIPS; TECH-036): the firing period goes 3000, 2400, 1900, 1500, 1200, 800 (ReTzar's reading of the
+# original, 0x4e8f00), so the fire rate 100, 125, 158, 200, 250, 375 %.
 comm.galleon:
   Researcher: { upgrades+=: [to_ship_level3, to_ship_level4, to_ship_level5, to_ship_level6] }
-to_ship_level2: { Upgrade: { effects: [{ stat: attack, add: 5 }] } }                                    # UNVERIFIED (UNK-21)
-to_ship_level3: { Upgrade: { after: [to_ship_level2], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
-to_ship_level4: { Upgrade: { after: [to_ship_level3], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
-to_ship_level5: { Upgrade: { after: [to_ship_level4], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
-to_ship_level6: { Upgrade: { after: [to_ship_level5], effects: [{ stat: attack, add: 5 }] } }           # UNVERIFIED (UNK-21)
+to_ship_level2: { Upgrade: { effects: [{ stat: fireRate, add: 25 }] } }
+to_ship_level3: { Upgrade: { after: [to_ship_level2], effects: [{ stat: fireRate, add: 33 }] } }
+to_ship_level4: { Upgrade: { after: [to_ship_level3], effects: [{ stat: fireRate, add: 42 }] } }
+to_ship_level5: { Upgrade: { after: [to_ship_level4], effects: [{ stat: fireRate, add: 50 }] } }
+to_ship_level6: { Upgrade: { after: [to_ship_level5], effects: [{ stat: fireRate, add: 125 }] } }
 
 # ---- GAME-07...11 constants (ADRs 0090-0095; docs/mechanics/m3-placeholders.md, stream E) ---------------------------
 combat:
@@ -552,9 +561,15 @@ combat:
   bribeCostPercent: 200               # UNVERIFIED (UNK-26): gold = 200% of the unit's cost
   crusadeAnchor: euro.crusadeanchor   # OBJECTS CRUSADE_ANCHOR.INI (cost from the data)
   crusader: euro.crusader
-  crusadeSize: 5                      # ⚠ HYPOTHESIS (UNK-26): crusaders raised at the anchor
+  # MAG-016, MAG-017 (ReTzar's reading of the original, 0x439640, 0x422ca0, 0x43a010): a kingdom starts with 16 crusaders
+  # gathered; each cathedral gathers one more every 12 s (8 s after 15 minutes, 4 s after 20, 1 s after 30) up to the
+  # ceiling, 16 + 4 per full crusade, at most 36; a crusade takes them all, and once they have all died the kingdom starts
+  # again from 4: one preached early brings fewer for the same price (1.09).
+  crusadeStart: 16
+  crusadeRestart: 4
+  crusadeCeilingStep: 4
+  crusadeCeilingMax: 36
   crusadeAnchorRadiusTiles: 4         # TDD GAME-11: anchor <= 4 tiles from the cathedral
-  crusadeCooldownMs: 60000            # UNVERIFIED (1.09: a cooldown after the crusaders die)
   # GAME-07 projectiles (speeds, homing and splash are UNVERIFIED, UNK-22; strategy guide: peasants step away from
   # catapult stones "just as the projectiles are about to land", so stones land where the target stood).
   projectiles:

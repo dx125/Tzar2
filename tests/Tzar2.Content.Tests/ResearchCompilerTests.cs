@@ -107,14 +107,14 @@ public class ResearchCompilerTests
         Assert.True(Type("comm.galleon").Traits.Producer!.CanUpgrade(level3.Id));
         Assert.True(Type("comm.galleon").Traits.Producer!.Produces.IsEmpty);
         ModifierDefinition shot = Assert.Single(level3.Effects);
-        Assert.Equal((ModifierStat.Attack, 5), (shot.Stat, shot.Add));
+        Assert.Equal((ModifierStat.FireRate, 33), (shot.Stat, shot.Add)); // "fire more frequently" (TECH-036): period 2400 -> 1900
     }
 
     [Fact]
     public void Effects_resolve_their_filters_to_types()
     {
         ModifierDefinition fields = Assert.Single(Classic.Technologies[Tech("te_fields")].Effects);
-        Assert.Equal((ModifierStat.GatherRate, 2500), (fields.Stat, fields.BasisPoints));
+        Assert.Equal((ModifierStat.CarryCapacity, 2), (fields.Stat, fields.Add)); // a field's peasant carries 2 more (TECH-006)
         Assert.Equal(new[] { Type("comm.field").Id }, fields.Types.ToArray());
 
         ModifierDefinition temper = Assert.Single(Classic.Technologies[Tech("te_temperiron")].Effects);

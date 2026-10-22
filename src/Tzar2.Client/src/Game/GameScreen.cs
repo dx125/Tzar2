@@ -1950,10 +1950,12 @@ public partial class GameScreen : Node
             _picked = EntityId.None; // it came out, or died
         }
 
-        // A spy's disguise meter follows its name, as in the original: "Spy (100)" in its own look (MAG-021, batch J).
+        // A spy's disguise meter follows its name, as in the original: "Spy (100)" in its own look (MAG-021, batch J). A
+        // working peasant is named by its job: Woodcutter, Farmer, Miner, Builder... (STRINGS.INI [peons], HUD-032).
+        string name = t.LegacyClass == "peon" && FrameJobs.StringKey(e.Job) is { } job ? _catalog.Text("peons", job, v.Name) : v.Name;
         return new SelectionInfo
         {
-            Name = e.DisguiseMastery >= 0 ? string.Create(CultureInfo.InvariantCulture, $"{(e.SpyType >= 0 ? _catalog.Type((ushort)e.SpyType).Name : v.Name)} ({e.DisguiseMastery})") : v.Name,
+            Name = e.DisguiseMastery >= 0 ? string.Create(CultureInfo.InvariantCulture, $"{(e.SpyType >= 0 ? _catalog.Type((ushort)e.SpyType).Name : v.Name)} ({e.DisguiseMastery})") : name,
             Detail = e.MaxHealth > 0 ? $"{e.Health}/{e.MaxHealth} {owner}" : owner,
             Icon = v.IconIndex,
             Health = e.MaxHealth > 0 && t.Category != EntityCategory.Resource ? e.Health / (float)e.MaxHealth : -1,

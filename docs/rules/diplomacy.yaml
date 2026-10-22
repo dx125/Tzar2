@@ -42,6 +42,6 @@ rules:
     adr: [0106]
   DIP-009:
     rule: Computer kingdoms resign on their own when their AI flag allows it.
-    source: [patch 1.09 (TZAR110.TXT)]
-    status: partial
-    note: The scripts' resign request is recorded but never carried out, and the flag cannot be set (SHELL-013).
+    source: [patch 1.09 (TZAR110.TXT), data AI/RESIGN.AI]
+    status: tested
+    note: The lobby flag cannot be set yet (SHELL-013), so computer kingdoms may always resign. An AI assisting a human never resigns for it.

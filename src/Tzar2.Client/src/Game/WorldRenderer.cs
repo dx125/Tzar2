@@ -430,7 +430,29 @@ public sealed class WorldRenderer : IDisposable
         var cellOrigin = new Vector2I(px - s.Object.Position.X - (s.Object.Size.X / 2), py - s.Object.Position.Y - (s.Object.Size.Y / 2));
         AddSheet(_objects, s, cellOrigin, dir, frame, player, ((uint)(py + 4096) << 6) | 2, shadows: true);
         var selection = new Rect2(cellOrigin + s.Selection.Position, s.Selection.Size);
+        if (e.CarriesBook)
+        {
+            DrawBookStars(selection, py, phase);
+        }
         _pickables.Add(new Pickable(index, selection, py, CellBounds(s, cellOrigin, dir, frame) is { } figure ? selection.Merge(figure) : selection));
+    }
+
+    // A unit carrying a spell book has yellow stars floating above its head (1.09, ITEM-012): three of the original's
+    // magic stars, each on its own beat, rising and falling a little.
+    private void DrawBookStars(Rect2 selection, int footY, uint phase)
+    {
+        if (_bank.Get(EffectImages.BookStars) is not { } star)
+        {
+            return;
+        }
+
+        for (int k = 0; k < 3; k++)
+        {
+            long t = _timeMs + phase + (k * 330L);
+            int bob = (int)(2.5 * Math.Sin(t / 260.0));
+            var at = new Vector2I((int)(selection.Position.X + (selection.Size.X / 2)) - 9 + (k * 9), (int)selection.Position.Y - 10 + bob) - star.Anchor;
+            Add(_glow, star, at, 0, star.Animation.FrameAt(t), -1, ((uint)(footY + 4096) << 6) | 3, shadowOnly: false);
+        }
     }
 
     // The drawn (trimmed) pixels of one cell of a sheet, in world pixels, or null for an empty cell.

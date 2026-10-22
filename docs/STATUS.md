@@ -96,8 +96,8 @@ play-test.
 5. **Operator:** a fifth play-test (`tools/play/play.ps1`) once item 4 is merged.
 6. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
-7. **Maintainer:** walking speed for every class from its walk sheet's stride (`move_len`; ADRs 0172, 0174) instead of
-   more speed scenarios; why catapults, ballistas and caravans did not spawn can wait for M8.
+7. **Done (2026-10-22, ADR 0190):** walking speed for every class from its walk sheet's stride, by the rule ReTzar read
+   from the original's code. Why catapults, ballistas and caravans did not spawn can wait for M8.
 8. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
 9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
@@ -117,6 +117,23 @@ play-test.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-22 — Rules read from the original's code by ReTzar (ADR 0190), and the owner's list.**
+  * The owner pointed to ReTzar (GPL-3.0, Rust), a remake whose code names the addresses of the original it was read
+    from. DEC-09 holds: we read it and write our own code; the ledger names it as a `community` source.
+  * Walking speed follows the walk sheet's stride for every class: a pixel every `(32000 / move_len) >> 5` of the
+    original's ms. It gives the 18 measured classes within 1 % and replaces SPEED × 10 for the rest (WORLD-012).
+  * Crusades gather: 16 at the start, one per cathedral every 12 to 1 s, a ceiling that grows with full crusades, one
+    crusader every 500 ms, 4 again after they died (MAG-016, MAG-017).
+  * The gathering technologies raise loads by 2 (Irrigation 4) instead of speeding gathering (TECH-006, TECH-010).
+    Trade Taxes and Banking add 5 % and 7 % profit (TECH-023, TECH-024). Ship levels shorten the firing period to 800
+    at level six (TECH-036).
+  * From the owner's list: the yellow stars over a unit with a spell book (ITEM-012), using an item reveals an
+    invisible unit (FOG-005), working peasants named by their job (HUD-032).
+  * Also: no experience from allies (EXP-003); a computer kingdom resigns when its script says so (DIP-009).
+  * Every golden, the trigger mission, the CI benches and `legacy.referenceDataHash` are re-pinned.
+  * Found in ReTzar for later: every technology's exact effect (UNK-21), the trade profit's distance rule, the soul
+    gem bound to a unit, ore flotation, Tournaments.
 
 * **2026-10-22 — The controls (ADR 0189).** The owner's order, while the fifth play-test runs: first what every game
   uses (the item-book stars, the crusade's recovery, units revealed by using items, the workers' job names, the whole

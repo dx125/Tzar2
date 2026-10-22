@@ -191,6 +191,12 @@ public struct FrameEntity
     /// <summary>A named hero (GAME-08).</summary>
     public bool Hero;
 
+    /// <summary>Carries a spell book: yellow stars float above it (1.09, ITEM-012).</summary>
+    public bool CarriesBook;
+
+    /// <summary>What a worker is doing, which names a peasant (STRINGS.INI [peons], HUD-032).</summary>
+    public FrameJob Job;
+
     /// <summary>Invisible (a ninja's cloak or the invisibility spell; GAME-11), as its owner and detectors see it.</summary>
     public bool Cloaked;
 
@@ -252,6 +258,67 @@ public struct FrameEntity
 /// <param name="IsHero">A hero.</param>
 /// <param name="Taken">Already hired this period.</param>
 public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Count, int Level, bool IsHero, bool Taken);
+
+/// <summary>A worker's job (STRINGS.INI <c>[peons]</c>; HUD-032).</summary>
+public enum FrameJob : byte
+{
+    /// <summary>No job: the unit's own name.</summary>
+    None = 0,
+
+    /// <summary>Cutting wood (<c>chop</c>, Woodcutter).</summary>
+    Chop,
+
+    /// <summary>Farming a field (<c>dig</c>, Farmer).</summary>
+    Dig,
+
+    /// <summary>Mining gold, stone or iron (<c>mine</c>, Miner).</summary>
+    Mine,
+
+    /// <summary>Building (<c>build</c>, Builder).</summary>
+    Build,
+
+    /// <summary>Repairing (<c>repair</c>, Repairman).</summary>
+    Repair,
+
+    /// <summary>Milking cows (<c>tend cows</c>, Cowherd).</summary>
+    TendCows,
+
+    /// <summary>Exploring (<c>explore</c>, Explorer).</summary>
+    Explore,
+
+    /// <summary>Capturing a building (<c>capture</c>, Invader).</summary>
+    Capture,
+
+    /// <summary>Fighting (<c>attack</c>, Fighter).</summary>
+    Attack,
+
+    /// <summary>Gathering meat or items (<c>Gather Resource Items</c>, Collector).</summary>
+    Collect,
+
+    /// <summary>On the way into a holder (<c>Use transport</c>, Passenger).</summary>
+    Transport,
+}
+
+/// <summary>The names of the jobs.</summary>
+public static class FrameJobs
+{
+    /// <summary>The STRINGS.INI <c>[peons]</c> key naming a peasant at <paramref name="job"/> (HUD-032), or null.</summary>
+    public static string? StringKey(FrameJob job) => job switch
+    {
+        FrameJob.Chop => "chop",
+        FrameJob.Dig => "dig",
+        FrameJob.Mine => "mine",
+        FrameJob.Build => "build",
+        FrameJob.Repair => "repair",
+        FrameJob.TendCows => "tend cows",
+        FrameJob.Explore => "explore",
+        FrameJob.Capture => "capture",
+        FrameJob.Attack => "attack",
+        FrameJob.Collect => "Gather Resource Items",
+        FrameJob.Transport => "Use transport",
+        _ => null,
+    };
+}
 
 /// <summary>What an order of <see cref="FrameWaypoint"/> does.</summary>
 public enum FrameOrderKind : byte

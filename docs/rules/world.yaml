@@ -52,9 +52,10 @@ rules:
     note: The original limited the search depth (TDD §5, ORIG-03); Tzar2 always finds the way and drops the option.
   WORLD-012:
     rule: Each kind of unit walks at its own speed, which follows the stride of its walking animation.
-    source: [data IMAGES.INI move_len, capture capture-20261019-163231]
-    status: partial
-    note: 18 classes are measured; the others use SPEED times 10 px/s, a placeholder, until their strides are read (ADRs 0172, 0174).
+    source: [data IMAGES.INI move_len, capture capture-20261019-163231, community ReTzar src/gameplay/movement.rs (0x49891b)]
+    status: tested
+    note: A step of a pixel lasts (32000 / move_len) >> 5 of the original's ms, which last 1.25 of ours; it gives the 18 measured classes their speed within 1 %. Measured speeds stay.
+    adr: [0172, 0190]
   WORLD-013:
     rule: A random map grows as many trees as its terrain set's data gives for its size.
     source: ['data TERRAIN.INI [randomtreeset]']

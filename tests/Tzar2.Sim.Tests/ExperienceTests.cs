@@ -44,6 +44,23 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "EXP-003")]
+    public void Hits_on_an_ally_give_no_experience_but_hits_on_an_enemy_do()
+    {
+        // 1.05: units cannot gain experience from ally units (confusion, a rain of fire or a scripted fight hit them).
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.footman", 1, 8, 4), Unit("euro.footman", 2, 12, 4)), players: 3, ruleset: Classic);
+        d.Order(0, CommandKind.SetDiplomacy, [], x: 1, arg0: (int)Kingdoms.Stance.Ally);
+        d.Step();
+        EntityId attacker = OfType(d.World, "euro.footman", 0).Single();
+        ushort type = d.World.Identities.Get(attacker).TypeId;
+        var hit = new HitRecord(attacker, OfType(d.World, "euro.footman", 1).Single(), 0, type, 10, 10, 100, DamageClass.Sword, false);
+        CombatSystem.Credit(d.World, hit, 1, 10);
+        Assert.Equal(0, d.World.Experiences.Get(attacker).PendingXp);
+        CombatSystem.Credit(d.World, hit with { Target = OfType(d.World, "euro.footman", 2).Single() }, 2, 10);
+        Assert.True(d.World.Experiences.Get(attacker).PendingXp > 0);
+    }
+
+    [Fact]
     [Trait("Rule", "EXP-001")]
     [Trait("Rule", "EXP-002")]
     public void Experience_follows_the_damage_dealt_and_levels_cost_more_each_time()

@@ -151,7 +151,8 @@ rules:
   HUD-032:
     rule: A working peasant is named by its job, woodcutter, farmer, miner or builder.
     source: ['strings STRINGS.INI [peons]']
-    status: missing
+    status: tested
+    note: Also explorer, invader, fighter, cowherd, collector and passenger.
   HUD-033:
     rule: With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help.
     source: ['data MENU.INI [ownership] [ownership_ai]', 'data ORDERS.INI view_heroes view_spys view_items view_ai']

@@ -396,11 +396,11 @@ public struct CraftJob : IComponent
 [StructLayout(LayoutKind.Sequential)]
 public struct CrusadeState : IComponent
 {
-    /// <summary>Crusaders still to raise.</summary>
+    /// <summary>Crusaders still to come.</summary>
     public int ToRaise;
 
-    /// <summary>Tick at which the anchor goes away once its crusaders are dead (cooldown), 0 = crusaders alive.</summary>
-    public int EndTick;
+    /// <summary>Tick of the next crusader's arrival (one every 500 ms).</summary>
+    public int NextTick;
 }
 
 /// <summary>A crusader raised by an anchor.</summary>

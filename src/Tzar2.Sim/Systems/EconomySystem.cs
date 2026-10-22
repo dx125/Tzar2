@@ -100,7 +100,7 @@ public sealed class EconomySystem : ISimSystem
         int baseMs = definition.GatherMs > 0 ? definition.GatherMs : harvester.GatherMs[resource];
         (_, int bp) = world.Stats.Modifier(owner, ModifierStat.GatherRate, nodeType.Id);
         int gatherMs = Math.Max(1, (int)((long)baseMs * 10_000 / Math.Max(1, 10_000 + bp)));
-        int capacity = GameplayCommands.CarryCapacity(world, worker, definition);
+        int capacity = GameplayCommands.CarryCapacity(world, worker, nodeType);
         w.TimerMs += tickMs;
         if (definition.RegenMs > 0)
         {

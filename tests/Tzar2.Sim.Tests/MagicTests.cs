@@ -208,27 +208,76 @@ public class MagicTests
 
     [Fact]
     [Trait("Rule", "MAG-016")]
-    public void A_crusade_raises_crusaders_once_and_waits_its_cooldown()
+    public void A_crusade_brings_the_gathered_crusaders_one_by_one_and_one_runs_at_a_time()
     {
+        // ReTzar's reading of the original: 16 crusaders gathered at the start, one arriving every 500 ms.
         using var d = new SimDriver(TestMap(40, 20, Structure("euro.cathedral", 0, 4, 4)), ruleset: Classic);
         d.World.Players[0].Resources[Resource("gold")] = 5000;
         d.World.Players[0].Resources[Resource("food")] = 5000;
         EntityId cathedral = OfType(d.World, "euro.cathedral").Single();
+        Assert.Equal(16, d.World.Players[0].Crusaders);
         d.Order(0, CommandKind.PreachCrusade, [cathedral], 11 * Tile, 6 * Tile);
-        d.RunUntil(() => false, 10);
+        d.RunUntil(() => false, 30);
         Assert.Empty(d.Rejections());
         Assert.Equal(5000 - 1100, d.World.Players[0].Resources[Resource("gold")]); // CRUSADE_ANCHOR.INI cost (synthetic)
-        Assert.Equal(5, OfType(d.World, "euro.crusader").Count());
+        Assert.InRange(OfType(d.World, "euro.crusader").Count(), 2, 4); // one every 10 ticks
+        d.RunUntil(() => OfType(d.World, "euro.crusader").Count() == 16, 400);
+        Assert.Equal(16, OfType(d.World, "euro.crusader").Count());
+        Assert.Equal(1, d.World.Players[0].FullCrusades); // a full crusade raises the ceiling to 20
         d.Order(0, CommandKind.PreachCrusade, [cathedral], 11 * Tile, 6 * Tile);
         d.Step();
         Assert.Contains(CommandRejection.CrusadeActive, d.Rejections());
 
         d.Order(0, CommandKind.DebugKill, [.. OfType(d.World, "euro.crusader")]);
-        d.RunUntil(() => d.World.Crusades.Count == 0, 2000);
-        Assert.InRange(d.World.Tick.Value, 1200, 1300); // 60 s cooldown (UNVERIFIED)
+        d.RunUntil(() => d.World.Crusades.Count == 0, 20);
+        Assert.Equal(0, d.World.Crusades.Count); // the anchor goes with its last crusader
+        Assert.Equal(4, d.World.Players[0].Crusaders); // and the kingdom starts again from 4
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-017")]
+    public void Cathedrals_gather_crusaders_over_time_and_a_crusade_preached_early_brings_fewer_for_the_same_price()
+    {
+        using var d = new SimDriver(TestMap(40, 20, Structure("euro.cathedral", 0, 4, 4), Structure("euro.cathedral", 0, 4, 12)), ruleset: Classic);
+        d.World.Players[0].Resources[Resource("gold")] = 5000;
+        d.World.Players[0].Resources[Resource("food")] = 5000;
+        EntityId cathedral = OfType(d.World, "euro.cathedral").First();
         d.Order(0, CommandKind.PreachCrusade, [cathedral], 11 * Tile, 6 * Tile);
+        d.RunUntil(() => OfType(d.World, "euro.crusader").Count() == 16, 400);
+        d.Order(0, CommandKind.DebugKill, [.. OfType(d.World, "euro.crusader")]);
+        d.RunUntil(() => d.World.Crusades.Count == 0, 20);
+        Assert.Equal(4, d.World.Players[0].Crusaders);
+
+        // Two cathedrals, one crusader each every 12 s in the first 15 minutes: 4 more in 24 s.
+        d.RunUntil(() => false, 24 * 20);
+        Assert.Equal(8, d.World.Players[0].Crusaders);
+        int gold = d.World.Players[0].Resources[Resource("gold")];
+        d.Order(0, CommandKind.PreachCrusade, [cathedral], 11 * Tile, 6 * Tile);
+        d.RunUntil(() => false, 100);
+        Assert.Empty(d.Rejections());
+        Assert.Equal(gold - 1100, d.World.Players[0].Resources[Resource("gold")]); // the same price
+        Assert.Equal(8, OfType(d.World, "euro.crusader").Count()); // fewer than a full crusade
+        Assert.Equal(1, d.World.Players[0].FullCrusades); // not a full one: the ceiling stays 20
+        Assert.Equal(20, Systems.MagicSystem.CrusadeCeiling(d.World, 0));
+    }
+
+    [Fact]
+    [Trait("Rule", "FOG-005")]
+    public void An_invisible_unit_that_drinks_a_potion_is_seen_again()
+    {
+        using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 2, 4), Unit("euro.footman", 0, 6, 4), Unit("comm.item_health", MapObject.Nature, 7, 4)), ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId potion = OfType(d.World, "comm.item_health").Single();
+        d.Order(0, CommandKind.SetStance, [mage, footman], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.PickItem, [footman], target: potion);
+        d.RunUntil(() => d.World.IsHeld(potion), 400);
+        Cast(d, mage, "spell_cloak", footman);
+        d.RunUntil(() => d.World.IsCloaked(footman), 200);
+        Assert.True(d.World.IsCloaked(footman));
+        d.Order(0, CommandKind.UseItem, [footman], arg0: 0);
         d.Step();
-        Assert.Equal(1, d.World.Crusades.Count);
+        Assert.False(d.World.IsCloaked(footman)); // 1.09: using an item reveals it
     }
 
     [Fact]

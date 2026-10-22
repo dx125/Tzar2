@@ -14,8 +14,7 @@ rules:
   EXP-003:
     rule: Units gain no experience from fighting allies.
     source: [patch 1.05 (TZAR110.TXT)]
-    status: partial
-    note: Hits on the own kingdom give nothing, but hits on an ally (under confusion, rain of fire, or a scripted attack) still do.
+    status: tested
   EXP-004:
     rule: With Tactics, soldiers train on dummies built by peasants to gain their first levels.
     source: [manual Production Of Units, manual Common Buildings (Dummy), guide Important tips]

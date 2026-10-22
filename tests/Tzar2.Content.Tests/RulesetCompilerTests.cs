@@ -283,6 +283,23 @@ public class RulesetCompilerTests
     }
 
     [Fact]
+    [Trait("Rule", "WORLD-012")]
+    public void A_unit_walks_at_the_speed_of_its_walk_sheets_stride_unless_measured()
+    {
+        // The original steps a pixel every (32000 / move_len) >> 5 of its ms, which last 1.25 of ours: the five strides
+        // measured (ADR 0172) come out as measured.
+        Assert.Equal([2560, 4654, 3011, 4266, 1651], new[] { 50, 85, 56, 80, 32 }.Select(EntityCompiler.StrideUnitsPerSecond));
+        Assert.Equal(2048, EntityCompiler.StrideUnitsPerSecond(40)); // catapults and ballistas: 32 px/s
+
+        Ruleset r = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        {
+            OverrideTexts = [new("t.yaml", "arab.jihad_warrior: { Mobile: { stride: 85 } }\neuro.footman: { Mobile: { stride: 85 } }")],
+        });
+        Assert.Equal(4654, Type(r, "arab.jihad_warrior").SpeedUnitsPerSecond); // the stride before SPEED x 10
+        Assert.Equal(40 * 64, Type(r, "euro.footman").SpeedUnitsPerSecond); // a measured speed before the stride
+    }
+
+    [Fact]
     public void Tables_that_differ_from_the_reference_build_give_a_warning_not_an_error()
     {
         CompiledRuleset compiled = RulesetCompiler.Compile(SyntheticLegacyContent.CreateFileSystem(), "classic");

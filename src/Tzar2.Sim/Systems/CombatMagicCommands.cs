@@ -396,6 +396,11 @@ internal static class CombatMagicCommands
             }
 
             ItemDefinition def = world.TypeOf(item).Traits.Item!;
+            if (def.Kind is ItemKind.Potion or ItemKind.PlusPlus or ItemKind.Scroll && world.Statuses.IndexOf(unit) is >= 0 and var st)
+            {
+                world.Statuses.At(st).CloakUntil = 0; // using an item reveals an invisible unit (1.09, FOG-005)
+            }
+
             switch (def.Kind)
             {
                 case ItemKind.Potion:
@@ -791,8 +796,17 @@ internal static class CombatMagicCommands
             {
                 if (world.Identities.Get(anchor).Owner == command.Player)
                 {
-                    return CommandRejection.CrusadeActive; // one crusade at a time, and its cooldown (1.09)
+                    return CommandRejection.CrusadeActive; // one crusade at a time, until its crusaders have all died
                 }
+            }
+
+            // The crusade takes every crusader the kingdom's cathedrals have gathered (MAG-017: early, fewer for the same
+            // price); a full one raises the ceiling.
+            ref PlayerState kingdom = ref world.Players[command.Player];
+            int size = kingdom.Crusaders;
+            if (size <= 0)
+            {
+                return CommandRejection.CrusadeActive;
             }
 
             long d = Interaction.DistanceSquaredTo(world, command.X, command.Y, cathedral);
@@ -802,7 +816,7 @@ internal static class CombatMagicCommands
                 return CommandRejection.IllegalPlacement;
             }
 
-            if (world.Entities.RemainingCapacity < 1 + settings.CrusadeSize)
+            if (world.Entities.RemainingCapacity < 1 + size)
             {
                 return CommandRejection.EntityLimit;
             }
@@ -813,9 +827,15 @@ internal static class CombatMagicCommands
                 return CommandRejection.NotAffordable;
             }
 
+            if (size >= MagicSystem.CrusadeCeiling(world, command.Player) && kingdom.FullCrusades < byte.MaxValue)
+            {
+                kingdom.FullCrusades++;
+            }
+
+            kingdom.Crusaders = 0;
             EntityId a = world.Spawn(anchorType.Id, command.Player, command.X, command.Y);
-            world.Crusades.Set(a, new CrusadeState { ToRaise = settings.CrusadeSize });
-            world.Events.Emit(new SimEvent(SimEventKind.CrusadePreached, command.Player, a, cathedral.Index, 0, settings.CrusadeSize));
+            world.Crusades.Set(a, new CrusadeState { ToRaise = size, NextTick = world.Tick.Value });
+            world.Events.Emit(new SimEvent(SimEventKind.CrusadePreached, command.Player, a, cathedral.Index, 0, size));
             return null;
         }
 

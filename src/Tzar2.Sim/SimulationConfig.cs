@@ -226,8 +226,14 @@ public struct PlayerState
     /// </summary>
     public int Civilization;
 
+    /// <summary>Crusaders the kingdom's cathedrals have gathered for its next crusade (MAG-016, MAG-017).</summary>
+    public ushort Crusaders;
+
+    /// <summary>Full crusades preached, each raising the ceiling of <see cref="Crusaders"/>.</summary>
+    public byte FullCrusades;
+
     /// <summary>Padding, always 0.</summary>
-    public int Reserved;
+    public byte Reserved;
 
     /// <summary>Researched technologies (bit = technology id).</summary>
     public TechnologyBits Technologies;

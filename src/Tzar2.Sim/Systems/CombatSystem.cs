@@ -128,7 +128,7 @@ public sealed class CombatSystem : ISimSystem
 
             Identity identity = world.Identities.Get(d.Victim);
             world.Events.Emit(new SimEvent(SimEventKind.Killed, identity.Owner, d.Victim, d.Killer.Index, d.KillerOwner, identity.TypeId));
-            if (world.Entities.IsAlive(d.Killer) && world.Experiences.IndexOf(d.Killer) is >= 0 and var x && d.KillerOwner != identity.Owner)
+            if (world.Entities.IsAlive(d.Killer) && world.Experiences.IndexOf(d.Killer) is >= 0 and var x && !Allies(world, d.KillerOwner, identity.Owner))
             {
                 world.Experiences.At(x).PendingXp += world.Ruleset.Combat.ExperiencePerKill;
             }
@@ -251,7 +251,7 @@ public sealed class CombatSystem : ISimSystem
 
             if (c.HitInMs < 0 && c.CooldownMs <= 0 && world.Healths.Get(target).Current > 0)
             {
-                c.CooldownMs += arm.CooldownMs;
+                c.CooldownMs += Cycle(world, attacker, arm);
                 c.HitInMs = arm.HitDelayMs;
                 Uncloak(world, attacker); // attacking reveals an invisible unit (1.10 fix); a disguise stays (the owner)
                 if (c.HitInMs == 0)
@@ -310,7 +310,7 @@ public sealed class CombatSystem : ISimSystem
 
             if (c.HitInMs < 0 && c.CooldownMs <= 0)
             {
-                c.CooldownMs += arm.CooldownMs;
+                c.CooldownMs += Cycle(world, attacker, arm);
                 c.HitInMs = arm.HitDelayMs;
                 if (c.HitInMs == 0)
                 {
@@ -684,10 +684,11 @@ public sealed class CombatSystem : ISimSystem
         return world.Helds.Components[heldIndex].Holder == holder.Value && !world.Items.Has(e) && world.Healths.Get(e).Current > 0;
     }
 
-    // Experience for damage dealt to another kingdom's (or Nature's) unit or building (not from allies' or own; GAME-08).
+    // Experience for damage dealt to another kingdom's (or Nature's) unit or building, not to an own or an ally's (1.05,
+    // EXP-003: confusion, a rain of fire or a scripted fight may hit allies; GAME-08).
     internal static void Credit(World world, in HitRecord hit, byte victimOwner, int dealt)
     {
-        if (victimOwner == hit.Owner || !world.Entities.IsAlive(hit.Attacker) || world.Experiences.Count == 0
+        if (Allies(world, hit.Owner, victimOwner) || !world.Entities.IsAlive(hit.Attacker) || world.Experiences.Count == 0
             || world.Experiences.IndexOf(hit.Attacker) is not (>= 0 and var x))
         {
             return;
@@ -695,6 +696,10 @@ public sealed class CombatSystem : ISimSystem
 
         world.Experiences.At(x).PendingXp += (int)Math.Min((long)dealt * world.Ruleset.Combat.ExperiencePerDamagePercent / 100, 1_000_000);
     }
+
+    // Whether the attacker's kingdom counts the victim's as its own or an ally (no experience from them; EXP-003).
+    private static bool Allies(World world, int attacker, int victim)
+        => attacker == victim || world.Diplomacy.StanceOf(attacker, victim) == Kingdoms.Stance.Ally;
 
     private static void Uncloak(World world, EntityId unit)
     {
@@ -782,6 +787,19 @@ public sealed class CombatSystem : ISimSystem
         int x = motion.OrderX;
         int y = motion.OrderY;
         Interaction.MoveTo(world, attacker, x, y);
+    }
+
+    // The swing cycle: a ship's cannon levels make its cannons fire more often (help HT_UPGRADE_SHIPS; TECH-036), the
+    // cycle divided by the fire rate in percent, never shorter than the hit delay.
+    private static int Cycle(World world, EntityId attacker, ArmamentDefinition arm)
+    {
+        if (world.UpgradeLevels.Count == 0)
+        {
+            return arm.CooldownMs;
+        }
+
+        int rate = ResearchRules.LevelBonus(world, attacker, ModifierStat.FireRate, 100);
+        return rate <= 100 ? arm.CooldownMs : Math.Max(Math.Max(1, arm.HitDelayMs), (int)((long)arm.CooldownMs * 100 / rate));
     }
 
     private static int Range(World world, EntityId attacker, Identity self, EntityTypeDefinition type, ArmamentDefinition arm)
