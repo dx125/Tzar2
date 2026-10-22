@@ -189,9 +189,10 @@ legacy:
   # installation (a warning in the import and ruleset reports, not an error). Changes with the lists above and with the
   # importer's output: re-pin it from the local-only tests (TZAR2_ORIGIN) whenever those change. Re-pinned 2026-10-20 on a
   # clean GOG v1.10 EN install (2,916/2,916 files identical): the pin had not followed the importer since #24 (TIME in
-  # 1.25-s units, #61, among others) because nobody ran the local-only tests.
+  # 1.25-s units, #61, among others) because nobody ran the local-only tests. Re-pinned 2026-10-22: the importer gives
+  # armaments the hit frame of their attack animation (WAR-014); the pin had drifted again before that (E716BE64DED8009D).
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "28744B7FB33B50AB"
+  referenceDataHash: "399058E1915A63DA"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
