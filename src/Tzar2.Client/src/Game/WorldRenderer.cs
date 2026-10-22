@@ -317,7 +317,7 @@ public sealed class WorldRenderer : IDisposable
         if (def.HasFootprint)
         {
             int left = e.TileX * TilePixels, top = e.TileY * TilePixels;
-            (int width, int height) = e.Rotated ? (def.FootprintHeight, def.FootprintWidth) : (def.FootprintWidth, def.FootprintHeight);
+            (int width, int height) = def.FootprintSize(e.Rotated && def.CanTurn);
             int foot = top + (height * TilePixels);
             var footprint = new Rect2(left, top, width * TilePixels, height * TilePixels);
             if (def.Key == "comm.tree" && _bank.Trees is { } trees)
@@ -338,7 +338,15 @@ public sealed class WorldRenderer : IDisposable
             // crossing it, the owner's fourth play-test).
             bool field = def.Traits.WalkableFootprint;
             bool ground = field || def.Traits.IsBridge;
-            if (e.ConstructionPermille >= 0 && !field)
+            int facing = (e.Rotated ? 2 : 0) + (e.Mirrored ? 1 : 0);
+            if (_bank.Get(SpriteRules.GateImage(def, facing, site: e.ConstructionPermille >= 0)) is { } gate)
+            {
+                // Gates draw their drawbridge for their facing: raised when closed, lowered when open (CTRL-024).
+                sheet = gate;
+                frameIndex = e.ConstructionPermille >= 0 ? SpriteRules.SiteFrame(e.ConstructionPermille, gate.Sheet.FramesPerDirection)
+                    : SpriteRules.GateFrame((e.Gate & FrameGate.Open) != 0);
+            }
+            else if (e.ConstructionPermille >= 0 && !field)
             {
                 sheet = _bank.Get(SpriteRules.BuildSiteName(def));
                 if (sheet is not null)
@@ -654,7 +662,7 @@ public sealed class WorldRenderer : IDisposable
                 if (def.HasFootprint)
                 {
                     // Structures: the footprint outline (⚠ the original's selection look is not measured yet).
-                    (int w, int h) = e.Rotated ? (def.FootprintHeight, def.FootprintWidth) : (def.FootprintWidth, def.FootprintHeight);
+                    (int w, int h) = def.FootprintSize(e.Rotated && def.CanTurn);
                     var r = new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, w) * TilePixels, Math.Max(1, h) * TilePixels);
                     Corners(_marksOver, r, mark);
                 }
@@ -786,7 +794,7 @@ public sealed class WorldRenderer : IDisposable
                 }
 
                 EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
-                (int fw, int fh) = e.Rotated ? (def.FootprintHeight, def.FootprintWidth) : (def.FootprintWidth, def.FootprintHeight);
+                (int fw, int fh) = def.FootprintSize(e.Rotated && def.CanTurn);
                 Rect2 r = def.HasFootprint && e.TileX >= 0
                     ? new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, fw) * TilePixels, Math.Max(1, fh) * TilePixels)
                     : p.Rect;
@@ -812,9 +820,11 @@ public sealed class WorldRenderer : IDisposable
     {
         EntityTypeDefinition def = _rules.EntityTypes[ghost.TypeId];
         int left = ghost.TileX * TilePixels, top = ghost.TileY * TilePixels;
-        (int width, int height) = ghost.Rotated ? (def.FootprintHeight, def.FootprintWidth) : (def.FootprintWidth, def.FootprintHeight);
+        (int width, int height) = def.FootprintSize(ghost.Rotated && def.CanTurn);
         var rect = new Rect2(left, top, width * TilePixels, height * TilePixels);
-        if (_bank.Get(SpriteRules.Turned(_catalog.Type(ghost.TypeId).Image(UnitAnim.Base), ghost.Rotated)) is { } sheet)
+        SheetRef? image = _bank.Get(SpriteRules.GateImage(def, (ghost.Rotated ? 2 : 0) + (ghost.Mirrored ? 1 : 0), site: false))
+            ?? _bank.Get(SpriteRules.Turned(_catalog.Type(ghost.TypeId).Image(UnitAnim.Base), ghost.Rotated));
+        if (image is { } sheet)
         {
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
             // Green and without the kingdom's colours, as in the original (the owner, 2026-10-21; CTRL-023).
@@ -920,4 +930,5 @@ public sealed class WorldRenderer : IDisposable
 /// <param name="Legal">Whether the sim would accept it now.</param>
 /// <param name="Blocked">Footprint cells (offsets from the top-left) that block it.</param>
 /// <param name="Rotated">Turned by 90° (gates and bridges; CTRL-024, BLD-019).</param>
-public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null, bool Rotated = false);
+/// <param name="Mirrored">A gate facing the other way along its axis (CTRL-024).</param>
+public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null, bool Rotated = false, bool Mirrored = false);

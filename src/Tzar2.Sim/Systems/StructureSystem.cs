@@ -43,11 +43,12 @@ public sealed class StructureSystem : ISimSystem
         EntityTypeDefinition type = world.TypeOf(gate);
         (int tx, int ty, int w, int h) = world.FootprintRect(gate);
         MapState map = world.Map;
+        ReadOnlySpan<byte> door = f.Passage(type);
         for (int dy = 0; dy < h; dy++)
         {
             for (int dx = 0; dx < w; dx++)
             {
-                if (type.Traits.Gate!.Passage[f.MaskIndex(dx, dy, type.FootprintWidth)] == 0)
+                if (door[(dy * w) + dx] == 0)
                 {
                     continue;
                 }

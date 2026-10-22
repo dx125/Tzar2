@@ -378,7 +378,8 @@ public sealed partial class World
     /// </param>
     /// <param name="rotated">Turn the footprint by 90° (gates and bridges built the other way, GAME-03).</param>
     /// <exception cref="ArgumentOutOfRangeException">The type has no footprint, or the footprint leaves the map.</exception>
-    public EntityId PlaceStructure(ushort typeId, int owner, int tileX, int tileY, bool underConstruction = false, bool rotated = false)
+    /// <param name="mirrored">A gate facing the other way along its axis (CTRL-024).</param>
+    public EntityId PlaceStructure(ushort typeId, int owner, int tileX, int tileY, bool underConstruction = false, bool rotated = false, bool mirrored = false)
     {
         RequireUnlocked();
         if (typeId >= Ruleset.EntityTypes.Count || !Ruleset.EntityTypes[typeId].HasFootprint)
@@ -392,9 +393,15 @@ public sealed partial class World
         }
 
         EntityTypeDefinition type = Ruleset.EntityTypes[typeId];
-        var footprint = new Footprint { TileX = tileX, TileY = tileY, Rotated = rotated && type.FootprintWidth != type.FootprintHeight ? (byte)1 : (byte)0 };
-        int w = footprint.Width(type.FootprintWidth, type.FootprintHeight);
-        int h = footprint.Height(type.FootprintWidth, type.FootprintHeight);
+        var footprint = new Footprint
+        {
+            TileX = tileX,
+            TileY = tileY,
+            Rotated = rotated && type.CanTurn ? (byte)1 : (byte)0,
+            Mirrored = mirrored && type.Traits.Gate is not null ? (byte)1 : (byte)0,
+        };
+        int w = footprint.Width(type);
+        int h = footprint.Height(type);
         if (!Map.ContainsTile(tileX, tileY) || !Map.ContainsTile(tileX + w - 1, tileY + h - 1))
         {
             throw new ArgumentOutOfRangeException(nameof(tileX), "The footprint leaves the map.");
@@ -420,7 +427,7 @@ public sealed partial class World
     {
         Footprint f = Footprints.Get(structure);
         EntityTypeDefinition type = TypeOf(structure);
-        return (f.TileX, f.TileY, f.Width(type.FootprintWidth, type.FootprintHeight), f.Height(type.FootprintWidth, type.FootprintHeight));
+        return (f.TileX, f.TileY, f.Width(type), f.Height(type));
     }
 
     /// <summary>
@@ -563,14 +570,15 @@ public sealed partial class World
         // Only the passage tiles change (the posts stay blocked): the least navigation work per change.
         Footprint f = Footprints.Get(gate);
         EntityTypeDefinition type = TypeOf(gate);
-        int w = f.Width(type.FootprintWidth, type.FootprintHeight);
-        int h = f.Height(type.FootprintWidth, type.FootprintHeight);
+        int w = f.Width(type);
+        int h = f.Height(type);
+        ReadOnlySpan<byte> blocked = f.Mask(type), passage = f.Passage(type);
         for (int dy = 0; dy < h; dy++)
         {
             for (int dx = 0; dx < w; dx++)
             {
-                int k = f.MaskIndex(dx, dy, type.FootprintWidth);
-                if (type.Footprint[k] == 0 || type.Traits.Gate!.Passage[k] == 0)
+                int k = (dy * w) + dx;
+                if (blocked[k] == 0 || passage[k] == 0)
                 {
                     continue;
                 }
@@ -661,7 +669,7 @@ public sealed partial class World
             }
 
             EntityId placed = Ruleset.EntityTypes[typeId].HasFootprint
-                ? PlaceStructure(typeId, o.Owner, o.X / MapState.UnitsPerTile, o.Y / MapState.UnitsPerTile, rotated: (o.Flags & MapObjectFlags.Rotated) != 0)
+                ? PlaceStructure(typeId, o.Owner, o.X / MapState.UnitsPerTile, o.Y / MapState.UnitsPerTile, rotated: (o.Flags & MapObjectFlags.Rotated) != 0, mirrored: (o.Flags & MapObjectFlags.Mirrored) != 0)
                 : Spawn(typeId, o.Owner, o.X, o.Y);
             _mapObjectEntities[objectIndex++] = placed;
             if (o.HasExtras)
@@ -1227,7 +1235,7 @@ public sealed partial class World
 
         foreach (Footprint f in Footprints.Components)
         {
-            if (f.Rotated > 1 || f.Reserved0 != 0 || f.Reserved1 != 0 || f.Reserved2 != 0)
+            if (f.Rotated > 1 || f.Mirrored > 1 || f.Reserved1 != 0 || f.Reserved2 != 0)
             {
                 throw Invalid("invalid footprint");
             }
@@ -1253,8 +1261,8 @@ public sealed partial class World
         {
             Footprint f = Footprints.Components[i];
             EntityTypeDefinition type = TypeOf(ids[i]);
-            int fw = f.Width(type.FootprintWidth, type.FootprintHeight);
-            int fh = f.Height(type.FootprintWidth, type.FootprintHeight);
+            int fw = f.Width(type);
+            int fh = f.Height(type);
             if (!Map.ContainsTile(f.TileX, f.TileY) || !Map.ContainsTile(f.TileX + fw - 1, f.TileY + fh - 1))
             {
                 throw new System.IO.InvalidDataException("Snapshot violates a world invariant: a footprint leaves the map.");
@@ -1262,22 +1270,23 @@ public sealed partial class World
 
             bool site = Constructions.Has(ids[i]);
             bool open = !site && Gates.IndexOf(ids[i]) is >= 0 and var g && Gates.At(g).Open != 0;
+            ReadOnlySpan<byte> blocked = f.Mask(type), door = f.Passage(type);
             for (int dy = 0; dy < fh; dy++)
             {
                 for (int dx = 0; dx < fw; dx++)
                 {
                     int tile = ((f.TileY + dy) * w) + f.TileX + dx;
-                    int k = f.MaskIndex(dx, dy, type.FootprintWidth);
+                    int k = (dy * fw) + dx;
                     if (type.Traits.IsBridge)
                     {
                         bridges[tile] += site ? 0 : 1;
                     }
-                    else if (type.Traits.Gate is { } gate && gate.Passage[k] != 0)
+                    else if (door.Length > 0 && door[k] != 0)
                     {
                         passage[tile] = true;
                     }
 
-                    if (!type.Traits.IsBridge && !type.Traits.WalkableFootprint && type.Footprint[k] != 0 && !(open && type.Traits.Gate!.Passage[k] != 0))
+                    if (!type.Traits.IsBridge && !type.Traits.WalkableFootprint && blocked[k] != 0 && !(open && door.Length > 0 && door[k] != 0))
                     {
                         blockers[tile]++;
                     }
@@ -1424,8 +1433,8 @@ public sealed partial class World
             return;
         }
 
-        int w = f.Width(type.FootprintWidth, type.FootprintHeight);
-        int h = f.Height(type.FootprintWidth, type.FootprintHeight);
+        int w = f.Width(type);
+        int h = f.Height(type);
         bool site = Constructions.Has(entity);
         if (type.Traits.IsBridge)
         {
@@ -1452,14 +1461,14 @@ public sealed partial class World
             return;
         }
 
-        ReadOnlySpan<byte> mask = type.Footprint;
+        ReadOnlySpan<byte> mask = f.Mask(type), door = f.Passage(type);
         bool open = !site && Gates.IndexOf(entity) is >= 0 and var g && Gates.At(g).Open != 0;
         for (int dy = 0; dy < h; dy++)
         {
             for (int dx = 0; dx < w; dx++)
             {
-                int k = f.MaskIndex(dx, dy, type.FootprintWidth);
-                if (mask[k] == 0 || (open && type.Traits.Gate!.Passage[k] != 0))
+                int k = (dy * w) + dx;
+                if (mask[k] == 0 || (open && door[k] != 0))
                 {
                     continue;
                 }

@@ -69,13 +69,13 @@ public static class Placement
         bool bridge = type.Traits.Placement == PlacementKind.Bridge && terrain.Length == width * height;
         bool gate = type.Traits.Gate is not null && terrain.Length == width * height;
         bool horizontal = w >= h;
-        ReadOnlySpan<byte> mask = type.Footprint;
+        ReadOnlySpan<byte> mask = type.FootprintMask(turned);
         for (int dy = 0; dy < h; dy++)
         {
             for (int dx = 0; dx < w; dx++)
             {
-                int m = turned ? (dx * type.FootprintWidth) + dy : (dy * type.FootprintWidth) + dx;
-                if (!bridge && mask.Length == type.FootprintWidth * type.FootprintHeight && mask[m] == 0)
+                int m = (dy * w) + dx;
+                if (!bridge && mask.Length == w * h && mask[m] == 0)
                 {
                     continue;
                 }
@@ -105,18 +105,18 @@ public static class Placement
         return blocked;
     }
 
-    /// <summary>The footprint's width and height in tiles, turned when <paramref name="rotated"/>.</summary>
+    /// <summary>The footprint's width and height in tiles, turned when <paramref name="rotated"/> (its own turned footprint).</summary>
     public static (int Width, int Height) Size(EntityTypeDefinition type, bool rotated)
     {
         ArgumentNullException.ThrowIfNull(type);
-        return Turned(type, rotated) ? (type.FootprintHeight, type.FootprintWidth) : (type.FootprintWidth, type.FootprintHeight);
+        return type.FootprintSize(Turned(type, rotated));
     }
 
     /// <summary>Whether a placement of <paramref name="type"/> can be turned (gates and bridges, CTRL-024, BLD-019).</summary>
     public static bool CanTurn(EntityTypeDefinition type)
     {
         ArgumentNullException.ThrowIfNull(type);
-        return (type.Traits.Gate is not null || type.Traits.IsBridge) && type.FootprintWidth != type.FootprintHeight;
+        return (type.Traits.Gate is not null || type.Traits.IsBridge) && type.CanTurn;
     }
 
     /// <summary>The footprint top-left tile for a ghost centred on the world point (<paramref name="x"/>, <paramref name="y"/>).</summary>
@@ -132,7 +132,7 @@ public static class Placement
         return (tx, ty);
     }
 
-    private static bool Turned(EntityTypeDefinition type, bool rotated) => rotated && type.FootprintWidth != type.FootprintHeight;
+    private static bool Turned(EntityTypeDefinition type, bool rotated) => rotated && type.CanTurn;
 
     // A harbor needs water for its ships within two tiles of its footprint.
     private static bool NearWater(ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool rotated)

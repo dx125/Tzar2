@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
+using Tzar2.Content.Compiled;
 using Tzar2.Core.Serialization;
 using Tzar2.Sim.Ecs;
 
@@ -221,8 +222,11 @@ public struct Footprint : IComponent
     /// </summary>
     public byte Rotated;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved0;
+    /// <summary>
+    /// 1 when a gate faces the other way along its axis, its passage on the other side (the map's gate shape bit 0; the
+    /// original's facings 1 and 3, CTRL-024); 0 otherwise.
+    /// </summary>
+    public byte Mirrored;
 
     /// <summary>Padding, always 0.</summary>
     public byte Reserved1;
@@ -230,14 +234,20 @@ public struct Footprint : IComponent
     /// <summary>Padding, always 0.</summary>
     public byte Reserved2;
 
-    /// <summary>Footprint width on the map for a type of the given size.</summary>
-    public readonly int Width(int typeWidth, int typeHeight) => Rotated != 0 ? typeHeight : typeWidth;
+    /// <summary>Footprint width on the map: the type's, or its turned footprint's.</summary>
+    public readonly int Width(EntityTypeDefinition type) => type.FootprintSize(Rotated != 0).Width;
 
-    /// <summary>Footprint height on the map for a type of the given size.</summary>
-    public readonly int Height(int typeWidth, int typeHeight) => Rotated != 0 ? typeWidth : typeHeight;
+    /// <summary>Footprint height on the map.</summary>
+    public readonly int Height(EntityTypeDefinition type) => type.FootprintSize(Rotated != 0).Height;
 
-    /// <summary>The type-mask index of map cell (<paramref name="dx"/>, <paramref name="dy"/>) of the footprint.</summary>
-    public readonly int MaskIndex(int dx, int dy, int typeWidth) => Rotated != 0 ? (dx * typeWidth) + dy : (dy * typeWidth) + dx;
+    /// <summary>The footprint mask as placed (row-major over <see cref="Width"/> × <see cref="Height"/>; 1 = blocked).</summary>
+    public readonly ReadOnlySpan<byte> Mask(EntityTypeDefinition type) => type.FootprintMask(Rotated != 0);
+
+    /// <summary>A gate's passage as placed (row-major over <see cref="Width"/> × <see cref="Height"/>).</summary>
+    public readonly ReadOnlySpan<byte> Passage(EntityTypeDefinition type) => type.Traits.Gate is { } gate ? gate.PassageOf(Rotated != 0) : [];
+
+    /// <summary>The original's facing of a gate (0 and 1 across, 2 and 3 down; ReTzar's reading of the original).</summary>
+    public readonly int Facing => (Rotated != 0 ? 2 : 0) + (Mirrored != 0 ? 1 : 0);
 }
 
 #pragma warning restore CA1051

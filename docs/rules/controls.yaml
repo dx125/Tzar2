@@ -112,10 +112,10 @@ rules:
     note: The cells that block it turn red (CTRL-018).
   CTRL-024:
     rule: Holding Alt or Ctrl while placing a gate turns the direction of the gate to be built.
-    source: [manual Common Buildings (Wood Gate and Stone Gate), help ITEMS.TXT HT_BUILD_WALLS_GATES]
+    source: [manual Common Buildings (Wood Gate and Stone Gate), help ITEMS.TXT HT_BUILD_WALLS_GATES, community ReTzar src/world/starting.rs (0x498373)]
     status: tested
-    note: Alt or Ctrl turns the ghost by 90°. The original draws four gate directions (gw0 to gw3), Tzar2 turns between two.
-    adr: [0189]
+    note: Alt or Ctrl turns a gate's ghost through its four facings; a gate is 7 x 1 across and 1 x 6 down, the cells of its drawbridge picture, with a door of three tiles.
+    adr: [0189, 0192]
   CTRL-025:
     rule: The waypoints of the selection appear while Shift is held.
     source: [manual Commanding Units (Move)]

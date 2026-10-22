@@ -159,6 +159,27 @@ public sealed class EntityTypeDefinition
     /// <summary>Row-major footprint mask, W×H, 1 = the tile is blocked.</summary>
     public ReadOnlySpan<byte> Footprint => _footprint;
 
+    /// <summary>
+    /// The footprint turned by 90° (a gate or a bridge placed the other way; CTRL-024, BLD-019): the type's own where it
+    /// gives one (the original's vertical gate is 1 × 6 while its horizontal one is 7 × 1), else the footprint transposed.
+    /// </summary>
+    public TurnedFootprint Turned
+    {
+        get => _turned ??= TurnedFootprint.Transposed(FootprintWidth, FootprintHeight, _footprint);
+        init => _turned = value;
+    }
+
+    private TurnedFootprint? _turned;
+
+    /// <summary>Whether a placement may turn it: its turned footprint differs from its own (gates, bridges, long buildings).</summary>
+    public bool CanTurn => HasFootprint && (Turned.Width != FootprintWidth || Turned.Height != FootprintHeight || !Turned.Mask.AsSpan().SequenceEqual(_footprint) || Traits.Gate is { TurnedPassage.IsDefaultOrEmpty: false });
+
+    /// <summary>The width and height of the footprint as placed, turned or not.</summary>
+    public (int Width, int Height) FootprintSize(bool turned) => turned ? (Turned.Width, Turned.Height) : (FootprintWidth, FootprintHeight);
+
+    /// <summary>The row-major mask of the footprint as placed, turned or not.</summary>
+    public ReadOnlySpan<byte> FootprintMask(bool turned) => turned ? Turned.Mask.AsSpan() : _footprint;
+
     /// <summary>Whether a killed entity leaves a corpse decal (which never blocks movement, ORIG-01).</summary>
     public bool LeavesCorpse { get; }
 
@@ -167,4 +188,26 @@ public sealed class EntityTypeDefinition
 
     /// <summary>Whether the type moves.</summary>
     public bool IsMobile => SpeedUnitsPerSecond > 0;
+}
+
+/// <summary>A footprint turned by 90°: its width, height and row-major mask (1 = the tile is blocked).</summary>
+/// <param name="Width">Width in tiles.</param>
+/// <param name="Height">Height in tiles.</param>
+/// <param name="Mask">Row-major mask, Width × Height.</param>
+public sealed record TurnedFootprint(int Width, int Height, System.Collections.Immutable.ImmutableArray<byte> Mask)
+{
+    /// <summary>The footprint <paramref name="mask"/> of <paramref name="width"/> × <paramref name="height"/> read transposed.</summary>
+    public static TurnedFootprint Transposed(int width, int height, ReadOnlySpan<byte> mask)
+    {
+        var cells = new byte[width * height];
+        for (int y = 0; y < width; y++)
+        {
+            for (int x = 0; x < height; x++)
+            {
+                cells[(y * height) + x] = mask.Length == width * height ? mask[(x * width) + y] : (byte)1;
+            }
+        }
+
+        return new TurnedFootprint(height, width, [.. cells]);
+    }
 }
