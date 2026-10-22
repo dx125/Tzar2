@@ -64,7 +64,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
     // (ADR 0257, 2026-10-22) the trade profit as the original computes it (load x tiles x 40 / (map side x 100), none under 12).
     // (ADR 0258, 2026-10-22) experience on the original's scale: a point per kill, none per damage, level n at 1 + n(n-1)/2, dummies a point per 75 up to level 8, academies +10 to the cap.
-    private const ulong GoldenRulesetHash = 0x88F47D13195F89A6UL;
+    private const ulong GoldenRulesetHash = 0x19396203539B8F8FUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
