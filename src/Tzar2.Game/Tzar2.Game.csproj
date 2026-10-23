@@ -10,6 +10,10 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Tzar2.Game.Tests" />
+    <!-- ADR 0212: hosts and tests reach the session's simulation and AI; the client does not. -->
+    <InternalsVisibleTo Include="t2" />
+    <InternalsVisibleTo Include="Tzar2.Tools.Cli.Tests" />
+    <InternalsVisibleTo Include="Tzar2.Editor.Tests" />
   </ItemGroup>
 
   <ItemGroup>

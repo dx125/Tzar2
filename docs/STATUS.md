@@ -245,6 +245,11 @@ the process decisions that have no ADR.
   menu's QUIT asks to resign alone and to disconnect in multiplayer, in the original's D_MSGWND window with its words
   (STRINGS.INI [q]); the model is `Tzar2.Game.Ui.Confirmations`. No hash changes.
 
+* **2026-10-23 — The client sees the session, its frames and the UI models only (ADR 0212; code review, item 16).**
+  * `GameSession.Simulation` and `Ai`, `FrameBuilder` and the match-preparation hook are now internal to Game and its
+    hosts.
+  * An architecture test checks the client contract's public surface.
+
 * **2026-10-23 — Network and probe tests poll until a deadline (issue #179).**
   * The server test now polls for the Welcome and the lobby listing.
   * The relay harness has generous timeouts; the keep-alive test sets its own.

@@ -136,7 +136,7 @@ public sealed record MatchSetup
     /// ADR 0133), run once for a new match after the AI and the triggers attached and before the first tick; never on
     /// restore (the snapshot has their result). Null for none.
     /// </summary>
-    public IMatchPreparation? Preparation { get; init; }
+    internal IMatchPreparation? Preparation { get; init; }
 
     /// <summary>Trigger engine settings (null: the defaults with the human kingdoms as responders).</summary>
     public Scripting.Legacy.TriggerOptions? TriggerOptions { get; init; }
@@ -247,7 +247,7 @@ public sealed record MatchSetup
 }
 
 /// <summary>Changes a new match before its first tick (ADR 0133).</summary>
-public interface IMatchPreparation
+internal interface IMatchPreparation
 {
     /// <summary>Applies the changes; the world is still unlocked (match setup).</summary>
     /// <param name="simulation">The new match.</param>
