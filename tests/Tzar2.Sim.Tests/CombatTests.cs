@@ -91,6 +91,26 @@ public class CombatTests
     }
 
     [Fact]
+    public void An_auto_acquired_target_is_dropped_beyond_the_rulesets_leash()
+    {
+        // Code review 2026-10 (item 16, for a fork): the leash (twice the sight) was a constant in CombatSystem; it is
+        // gameplay.autoChaseLeashPercent now. A knight outruns the footman that acquired it: classic gives up, a fork with
+        // a 100-sight leash keeps chasing.
+        Assert.Equal(200, Classic.Gameplay.AutoChaseLeashPercent);
+        foreach ((Ruleset rules, bool chases) in new[] { (Classic, false), (ClassicWith("gameplay: { autoChaseLeashPercent: 10000 }"), true) })
+        {
+            using var d = new SimDriver(TestMap(80, 12, Unit("euro.footman", 0, 4, 5), Unit("euro.knight", 1, 9, 5)), ruleset: rules);
+            EntityId footman = OfType(d.World, "euro.footman").Single();
+            EntityId knight = OfType(d.World, "euro.knight").Single();
+            d.RunUntil(() => d.World.Combats.Get(footman).Target == knight.Value, 40);
+            Assert.Equal(knight.Value, d.World.Combats.Get(footman).Target);
+            d.Order(1, CommandKind.Move, [knight], (78 * Tile) + (Tile / 2), (5 * Tile) + (Tile / 2));
+            d.RunUntil(() => false, 900);
+            Assert.Equal(chases, d.World.Combats.Get(footman).Target == knight.Value);
+        }
+    }
+
+    [Fact]
     [Trait("Rule", "ORD-003")]
     public void A_move_advance_fights_on_the_way_and_then_reaches_its_destination()
     {
