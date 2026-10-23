@@ -111,11 +111,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. Next: the fifth play-test (item 5), and the owner's list of 2026-10-22 (log below). Done: the curse,
-   hypnosis, the ghost's banshee scream and the Messiah's immunity (WAR-009, WAR-010, MAG-008; ADR 0250), cancelled
-   sites, broken-off loads and the computer's repairs (BLD-020, ECO-002, AI-003; ADR 0251), trade with any market,
-   Asian peasants as traders and caravans that load infantry (TRADE-003, TRADE-004, HOLD-008; ADR 0252), Tournaments
-   and Mastery (TECH-028, TECH-029; ADR 0253), spells that skip machines (MAG-022; ADR 0254), soul items bound to a unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257), the controls
+   order. Next: the fifth play-test (item 5), and the owner's list of 2026-10-22 (log below). Done: the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -220,45 +216,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-22 — The trade profit as the original computes it (ADR 0257).** From ReTzar: load x tiles x 40 / (map side x 100),
-  the tiles on the larger axis between the markets, none under 12; it replaces the UNK-28 placeholder (1 % a tile, at most
-  300 %). The gameplay golden and bench are re-pinned.
-
-
-* **2026-10-22 — Cows grow meat that falls as food items (ADR 0256).** From ReTzar: a cow's meat starts at 300 and grows 2 a
-  second up to 600; dead, it falls as food items of at most 100. A peasant takes a resource item as its load and carries it
-  home; any other unit brings it in at once. Hashed layout 15, snapshot 17; every golden and the CI benches re-pinned.
-  Ledger: 42 open rules before, 41 after.
-
-
-* **2026-10-22 — Soul items are bound to a unit; the Messiah takes no magic (ADR 0255).** From ReTzar: Soul Bind puts a soul
-  bound to its target in the caster's bag; item_kill kills that unit (heroes too), item_berserk sends it berserk for 20
-  s, the soul stays and goes when its unit dies. Magic (spells, souls, mages', dragons' and priests' attacks) deals the
-  Messiah no damage. Hashed layout 14, snapshot 16; every golden and the CI benches re-pinned. Ledger: 43 open, 42 after.
-
-
-* **2026-10-22 — Healing, freezing and raise dead skip machines (ADR 0254).** From ReTzar (0x2719, 0x271c): golems, siege engines,
-  carpets, ships, ghosts, skeletons and fishing boats are not healed, frozen or cursed, and they and the bodiless
-  (bats, mages, dwarves, orcs, jinns, dragons) are not raised. New rule MAG-022. Ruleset hash only.
-
-
-* **2026-10-22 — Tournaments and Mastery (ADR 0253).** From ReTzar: every 75 points a kingdom's units learn teach each
-  Asian peasant, monk, ninja and priest one more; Mastery's priest teaches only those pupils, of a lower level than its
-  own. The gameplay golden's ruleset hash is re-pinned. Ledger: 45 open rules before, 43 after.
-
-* **2026-10-22 — Trade with any market; Asian peasants trade (ADR 0252).** From ReTzar and the data: a trader uses
-  any kingdom's market, enemies' too, for its own profit; caravans carry 500 (European) or 300 (Arabian), Asian peasants
-  100; caravans load 8 infantry. The gameplay golden and bench are re-pinned. Ledger: 48 open rules before, 45 after.
-
-* **2026-10-22 — Cancelled sites, broken-off loads and the computer's repairs (ADR 0251).** From ReTzar: a site gives
-  back all of its cost before any work, then half of what is left to build; a load is whole only at the end of the work
-  cycles; the computer repairs only with idle peasants near the damage. Ledger: 51 open rules before, 48 after.
-
-* **2026-10-22 — The curse, hypnosis, the banshee and the Messiah as ReTzar reads them (ADR 0250).** The curse halves
-  attack and takes all defence of enemy non-machines within the caster's sight for 30 s; a ghost's blow curses for free
-  in 71 of 1001; hypnosis hands a unit to the caster's kingdom for 30 s in its own colours; lasting spells do not take
-  on the Messiah. Hashed layout 13, snapshot 15; every golden and the CI benches are re-pinned. Ledger: 54 open rules
-  before, 51 after.
+* **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
+  * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
+    a string concatenation formats a `double`, `float`, `decimal` or date with the current culture, or an integer with
+    a culture format such as `N0`. CA1305 does not cover these.
+  * It found 48 strings: 35 in the fidelity suite (its verdicts read "37,5 s" under a German or C.UTF-8 locale, which
+    failed a test on macOS), the rest in the CLI and the client.
+  * They now use the invariant culture.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
