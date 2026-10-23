@@ -9,8 +9,8 @@ indexed in [decisions/README.md](decisions/README.md).
 * **Last updated:** 2026-10-22 (handover)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below). The product
   owner also operates the Windows PC with the original game for captures and local-only tests.
-* **`main`:** green on CI. Open PRs: none. Open issues: none ([#62](https://github.com/dx125/Tzar2/issues/62), flaky
-  `RelayTests`, fixed by ADR 0231).
+* **`main`:** green on CI. Open PRs: none. Open issues: [#62](https://github.com/dx125/Tzar2/issues/62) (flaky
+  `RelayTests`).
 
 ## Handover (2026-10-22)
 
@@ -72,7 +72,7 @@ and it has not been re-run since the handover.
 | M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). Three play-tests by the owner are done and their findings fixed (2026-10-20/21). Open before M3 closes: the ledger of the original's rules ([rules/](rules/README.md)) and its missing rules (work queue 1), and a fourth play-test. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **14 of 19 measured** (2026-10-20, editor acceptance test on the clean GOG install, scripted solver, ADR 0134; not completed: `alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`), tutorial 7 of 7 (reported). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
-| M6 Multiplayer & replays | **Done** (exit criteria met 2026-10-22) | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI (ADRs 0160–0168, 0230, 0231). **500-match soak: 500 of 500 ok, 0 desyncs, 0 failures** (2026-10-22, macOS, `t2 soak --matches 500 --parallel 10 --seed 62`: 2 bots + 2 Hard AIs, 6,000 ticks at 4x, RTT 200 ms, jitter 10 ms, 5 % loss; 251 disconnects and 251 rejoins, 138 after an AI takeover; 749 replays re-simulated; 3.0 M ticks; 65.6 min). Replays recorded on Linux verify on Windows, Linux and macOS (CI `replay-verify`, same final hashes); the nightly 20-match slice passes on Linux and Windows. Matches are 5 minutes, not two hours (ADR 0167). |
+| M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
 | M7 Windows beta | Not started | Installer, signing, crash reporting, min-spec tuning, closed beta. |
 | M8 Modding, polish, release | Not started | Also the **fidelity suite ≥ 80 %** (moved from M3, ADR 0174): **10 of 30 (33.3 %)** today, see below. |
 | PX Platform expansion | Post-1.0 (DEC-14) | |
@@ -153,7 +153,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
     diagonal rocks) to reach 19/19.
 11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
-12. **Done (2026-10-22):** issue #62 fixed at its cause (ADR 0231); M6 soak 500 of 500 with 0 desyncs; token rotation on rejoin, Noise handshake proposed for M7 (ADR 0230).
+12. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
 13. M7 planning: installer, code signing, crash reporting, min-spec hardware.
 14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
@@ -216,10 +216,14 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-22 — M6 exit criteria met; relay keep-alive and token rotation (ADRs 0230, 0231; work queue item 12).**
-  Issue #62: peers were dropped as timed out whenever the test thread did not pump for about a second, because
-  LiteNetLib pinged once a second against a 1 s timeout; it now pings five times per timeout. The relay spends a
-  rejoin's token and sends a new one. Soak: 500 of 500 matches, 0 desyncs.
+* **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
+  * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
+    a string concatenation formats a `double`, `float`, `decimal` or date with the current culture, or an integer with
+    a culture format such as `N0`. CA1305 does not cover these.
+  * It found 48 strings: 35 in the fidelity suite (its verdicts read "37,5 s" under a German or C.UTF-8 locale, which
+    failed a test on macOS), the rest in the CLI and the client.
+  * They now use the invariant culture.
+
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
   UI review (item 15: every modern resolution, likeness to the original's texts, fonts and buttons) and the code
