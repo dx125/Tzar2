@@ -42,14 +42,18 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage: the hashes.
     // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home: the hashes.
     // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books: the hashes.
-    private const ulong GoldenFinalFullHash = 0x8A0D0F742F5FCC43UL;
+    // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
+    // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
+    private const ulong GoldenFinalFullHash = 0xAD9B58CD45AC476AUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look, craft jobs their variant (layout 11): the hashes only.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
     // (ADR 0220, 2026-10-22) a unit meeting a blocked corner almost head-on slides past it at its full step; mutual
     // allies shove and queue like friends: movement changes.
-    private const ulong GoldenHashStream = 0x0F932625253D0FBDUL;
+    // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
+    // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
+    private const ulong GoldenHashStream = 0x069F2204C973F517UL;
 
     private const int Ticks = 300;
 
