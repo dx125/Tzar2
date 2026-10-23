@@ -254,6 +254,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         "<civ>.castle"; the render bench takes the ruleset's civilization order (ADR 0244 amendment).
       * 2026-10-23: the crusade gathering pace, the crusaders' arrival interval and the chase leash moved from code to
         the ruleset with the same values; only the ruleset hash is re-pinned.
+      * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
+        client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
 
 ## Decision and event log
 
