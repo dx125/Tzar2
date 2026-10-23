@@ -301,6 +301,10 @@ public class ExperienceTests
         var bookWriter = new BinaryBufferWriter();
         PersistentHeroes.Write(bookWriter, [bookHero]);
         Assert.Equal(bookHero.Items[0], Assert.Single(PersistentHeroes.Read(bookWriter.WrittenSpan)).Items[0]); // ITEM-016: its own spell and look
+        PersistentHero poolHero = hero with { Items = [new PersistentItem("comm.item_magic", 0, 2, "spell_lightning", ItemEffect.Default, 2, 7_000, ItemStateFlags.OwnCooldown | ItemStateFlags.Endless)] };
+        var poolWriter = new BinaryBufferWriter();
+        PersistentHeroes.Write(poolWriter, [poolHero]);
+        Assert.Equal(poolHero.Items[0], Assert.Single(PersistentHeroes.Read(poolWriter.WrittenSpan)).Items[0]); // ADR 0265: its own pool, endless
         Assert.Throws<System.IO.InvalidDataException>(() => PersistentHeroes.Read(writer.WrittenSpan[..^1]));
 
         // The next map: a unit of the same name takes the record (applied at match setup).

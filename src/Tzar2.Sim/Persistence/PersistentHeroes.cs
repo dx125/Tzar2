@@ -16,7 +16,9 @@ namespace Tzar2.Sim.Persistence;
 /// <param name="SpellKey">A book's own spell (ITEM-016), or null for its type's.</param>
 /// <param name="Effect">What it adds (ITEM-016).</param>
 /// <param name="Look">1 + its image in the type's looks, or 0.</param>
-public sealed record PersistentItem(string TypeKey, int Power, int Charges, string? SpellKey = null, ItemEffect Effect = ItemEffect.Default, int Look = 0);
+/// <param name="CooldownMs">A spell book's own cooldown (ADR 0265).</param>
+/// <param name="Flags">Its own book properties (ADR 0265).</param>
+public sealed record PersistentItem(string TypeKey, int Power, int Charges, string? SpellKey = null, ItemEffect Effect = ItemEffect.Default, int Look = 0, int CooldownMs = 0, ItemStateFlags Flags = ItemStateFlags.None);
 
 /// <summary>
 /// What a persistent unit carries from one campaign map to the next (editor "Persistent" flag: "the unit properties
@@ -37,7 +39,7 @@ public sealed record PersistentHero(string Name, string TypeKey, int Level, int 
 public static class PersistentHeroes
 {
     /// <summary>Format version of <see cref="Write"/>.</summary>
-    public const int FormatVersion = 2; // 2: items keep their own spell, effect and look (ITEM-016); 1 is still read
+    public const int FormatVersion = 3; // 2: items keep their own spell, effect and look (ITEM-016); 3: a book's own cooldown and endless charges (ADR 0265); 1 and 2 are still read
 
     /// <summary>Most records in one list (bounds untrusted input).</summary>
     public const int MaxRecords = 4096;
@@ -67,7 +69,7 @@ public static class PersistentHeroes
                 {
                     EntityId item = EntityId.FromValue(inventory.Items[k]);
                     ItemState s = world.Items.Get(item);
-                    items.Add(new PersistentItem(world.TypeOf(item).Key, s.Power, s.Charges, s.Spell > 0 ? world.Ruleset.Spells[s.Spell - 1].Key : null, s.Effect, s.Look));
+                    items.Add(new PersistentItem(world.TypeOf(item).Key, s.Power, s.Charges, s.Spell > 0 ? world.Ruleset.Spells[s.Spell - 1].Key : null, s.Effect, s.Look, s.CooldownMs, s.Flags));
                 }
             }
 
@@ -121,6 +123,8 @@ public static class PersistentHeroes
             s.Spell = item.SpellKey is { } spellKey && world.Ruleset.SpellId(spellKey) is >= 0 and var spell ? (ushort)(spell + 1) : (ushort)0;
             s.Effect = item.Effect <= ItemEffect.Mana ? item.Effect : ItemEffect.Default;
             s.Look = (byte)(item.Look >= 0 && item.Look <= world.Ruleset.EntityTypes[type].Traits.Item!.Looks.Length ? item.Look : 0);
+            s.CooldownMs = Math.Clamp(item.CooldownMs, 0, 3_600_000);
+            s.Flags = item.Flags & (ItemStateFlags.OwnCooldown | ItemStateFlags.Endless);
             if (Systems.CombatMagicCommands.CanCarry(world, unit, e))
             {
                 world.PutInInventory(unit, e);
@@ -153,6 +157,8 @@ public static class PersistentHeroes
                 writer.WriteString(item.SpellKey ?? string.Empty);
                 writer.WriteVarInt64((long)item.Effect);
                 writer.WriteVarInt64(item.Look);
+                writer.WriteVarInt64(item.CooldownMs);
+                writer.WriteVarInt64((long)item.Flags);
             }
         }
     }
@@ -163,7 +169,7 @@ public static class PersistentHeroes
     {
         var reader = new BinaryBufferReader(data);
         ulong version = reader.ReadVarUInt64();
-        if (version is not (1 or FormatVersion))
+        if (version is not (1 or 2 or FormatVersion))
         {
             throw new InvalidDataException("Unsupported persistent hero format.");
         }
@@ -198,6 +204,11 @@ public static class PersistentHeroes
                 {
                     string spell = reader.ReadString(MaxNameBytes);
                     item = item with { SpellKey = spell.Length > 0 ? spell : null, Effect = (ItemEffect)Bounded(reader.ReadVarInt64(), (int)ItemEffect.Mana), Look = Bounded(reader.ReadVarInt64(), 255) };
+                }
+
+                if (version >= 3)
+                {
+                    item = item with { CooldownMs = Bounded(reader.ReadVarInt64(), 3_600_000), Flags = (ItemStateFlags)Bounded(reader.ReadVarInt64(), (int)(ItemStateFlags.OwnCooldown | ItemStateFlags.Endless)) };
                 }
 
                 carried.Add(item);

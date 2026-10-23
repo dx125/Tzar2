@@ -219,6 +219,38 @@ public struct ItemState : IComponent
 
     /// <summary>A soul item's bound unit (<c>EntityId.Value</c>; ITEM-010), 0 = none.</summary>
     public uint Bound;
+
+    /// <summary>A spell book's own cooldown with <see cref="ItemStateFlags.OwnCooldown"/> (0: none; ADR 0265).</summary>
+    public int CooldownMs;
+
+    /// <summary>Its own book properties (ADR 0265).</summary>
+    public ItemStateFlags Flags;
+
+    /// <summary>Zero (layout without padding).</summary>
+    public byte Reserved0;
+
+    /// <summary>Zero (layout without padding).</summary>
+    public ushort Reserved1;
+
+    /// <summary>Whether a spell book's charges count: the type has charges and this book is not endless (ADR 0265).</summary>
+    public readonly bool LimitedCharges(ItemDefinition type) => type.Charges > 0 && (Flags & ItemStateFlags.Endless) == 0;
+
+    /// <summary>A spell book's wait between casts: its own, or the type's (ADR 0265).</summary>
+    public readonly int CooldownFor(ItemDefinition type) => (Flags & ItemStateFlags.OwnCooldown) != 0 ? CooldownMs : type.CooldownMs;
+}
+
+/// <summary>An item's own book properties (ADR 0265: the map record's +0x62 to +0x66).</summary>
+[System.Flags]
+public enum ItemStateFlags : byte
+{
+    /// <summary>The type's.</summary>
+    None = 0,
+
+    /// <summary><see cref="ItemState.CooldownMs"/> replaces the type's cooldown (a book's own pool).</summary>
+    OwnCooldown = 1,
+
+    /// <summary>A book that never runs out (no limited charges).</summary>
+    Endless = 2,
 }
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091): an entity with this component only (no identity, never a target).</summary>

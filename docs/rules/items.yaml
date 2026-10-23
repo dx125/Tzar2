@@ -82,3 +82,9 @@ rules:
     status: tested
     adr: [0264]
     note: The items' distance from the castles is ours; the book's value of 1 to 3 is kept as its power (UNVERIFIED what the original does with it).
+  ITEM-018:
+    rule: A spell book placed on a map may never run out of charges, and may have to wait for a mana pool of its own to fill between casts.
+    source: ['community ReTzar book (0x4640f0) and object setup (0x494f66)', 'data the item_magic records of both original campaigns (+0x62 needs mana, +0x63 limited charges, +0x64 time restriction)']
+    status: tested
+    adr: [0265]
+    note: A book without limited charges is endless and never used up; one that needs mana waits its time restriction as a cooldown of its own (one pool point a second, the UNVERIFIED mana rate of UNK-26); one that does not need mana does not wait. A cast stays free for the holder.

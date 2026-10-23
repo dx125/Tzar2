@@ -542,7 +542,8 @@ public static class LegacyMapConverter
                     li.Sound is null ? null : Asset(li.Sound),
                     li.Music is null ? null : Asset(li.Music),
                     li.ScrollTimeMs,
-                    li.AutoClose);
+                    li.AutoClose,
+                    li.LimitedCharges);
                 if (li.Text is { Length: > 0 } text)
                 {
                     _strings.Add(new MapString($"object/{o.Id}/scroll", text));

@@ -182,6 +182,7 @@ public static class ScenarioJson
                 Resource("music", i.Music);
                 OptionalInt("scrollTime", i.ScrollTimeMs);
                 OptionalBool("autoClose", i.AutoClose);
+                OptionalBool("limitedCharges", i.LimitedCharges);
                 w.WriteEndObject();
             }
 
@@ -695,7 +696,8 @@ public static class ScenarioJson
             Resource(e, "sound"),
             Resource(e, "music"),
             OptionalInt(e, "scrollTime"),
-            OptionalBool(e, "autoClose"));
+            OptionalBool(e, "autoClose"),
+            OptionalBool(e, "limitedCharges"));
 
         private static bool? OptionalBool(JsonElement e, string name)
         {
