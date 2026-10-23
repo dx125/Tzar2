@@ -94,6 +94,7 @@ public sealed class ScenarioMatchTests
         Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Resign, 0));
         Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.PickItem, 0)); // player orders (ADR 0135)
         Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.SetDiplomacy, 0));
+        Assert.True(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Tribute, 0)); // player order (ADR 0220)
         Assert.False(CampaignAutoplay.IsAllowedAssist(Sim.Commands.CommandKind.Delete, 0));
     }
 

@@ -112,12 +112,12 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
-| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 2 | 10 | 8 | 6 | 2 | 0 |
+| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 5 | 10 | 6 | 5 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 31 | 3 | 0 | 1 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
-| **All** | 335 | 205 | 78 | 24 | 17 | 9 | 2 |
+| [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
+| **All** | 338 | 212 | 78 | 21 | 16 | 9 | 2 |
 
 ## Not done yet
 
@@ -125,7 +125,7 @@ Missing and partial rules.
 
 ### Computer opponents
 
-* **AI-001** (partial): Each computer kingdom plays an AI script, chosen per player before the game. *Tzar2 picks the script; it cannot be chosen (SHELL-010, SHELL-016).* (ADR 0178)
+* **AI-001** (partial): Each computer kingdom plays an AI script, chosen per player before the game. *Chosen per player in the multiplayer setup (SHELL-016); the random map screen cannot choose it yet (SHELL-010).* (ADR 0178, 0232)
 
 ### Selection, mouse and pointers
 
@@ -178,9 +178,6 @@ Missing and partial rules.
 * **SHELL-011** (partial): A random map has a size (Medium, Large, Huge, Enormous, Real World), a type (Random, Archipelagos, Dry, Island, Continental, Lakes), a terrain set (Grass, Desert, Summer, Winter) and map resources (Low, Normal, High), and may have a guarded town, animals, gateways, magic items and cliffs. *Size, type and terrain set are offered; map resources and the five options are not on the screen.*
 * **SHELL-012**: The settings of the random map screen are kept for the next time.
 * **SHELL-013**: The random map screen and the multiplayer options let each computer kingdom resign on its own (a flag) or never (a sword).
-* **SHELL-016** (partial): In the multiplayer setup each player has a ready flag (red or green), a colour, an AI script, a civilization and a team; settings can only change while not ready; there is a chat; only the creator has PLAY, active when everyone is ready. *The colour and the AI script cannot be chosen.* (ADR 0168)
-* **SHELL-017**: Only the player himself chooses his AI script in the multiplayer screen, and every player is told when the host changes one.
-* **SHELL-018** (partial): The multiplayer settings choose a random or a custom map, the random map's options, the game type, the difficulty, the victory condition, the starting resources, No Fog, Explore, the population limit, and day and night and weather; with MAP SETTINGS only No Fog, Explore, day and night and weather can change. *The game type, the victory condition and the random map's resources and options cannot be set.* (ADR 0168)
 * **SHELL-019** (partial): The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears. *CD audio and when the menu bar appears are missing; the path depth is dropped on purpose (TDD ORIG-03).*
 * **SHELL-020**: The credits screen shows the makers of the game. *CREDITS prints where the credits file is.*
 * **SHELL-021** (partial): The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game. *Instructions are missing.* (ADR 0187)
@@ -195,10 +192,6 @@ Missing and partial rules.
 
 * **TRADE-002** (partial): A trade is set up by picking the starting market or harbor and its goods, the far one and its goods, and the amount, then START. *The near market is the trader's nearest own one; the far one is clicked (ADR 0103).*
 * **TRADE-008**: The amount the tavern will lend shows in the bottom left corner of the view.
-
-### Terrain and movement
-
-* **WORLD-013** (partial): A random map grows as many trees as its terrain set's data gives for its size. *Tzar2's generator uses its own forest density (ADR 0060).*
 
 ## Unclear
 
@@ -245,7 +238,7 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 144 used, 4 restated by hand, 18 not needed and 46 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 144 used, 5 restated by hand, 18 not needed and 45 to do.
 
 To do:
 
@@ -280,7 +273,6 @@ To do:
 * `IMAGES/TERRAIN/*.IMAGES.INI` `ruinpoints`: meaning not decoded
 * `IMAGES/TERRAIN/*.TERRAIN.INI` `colors`: the colour of selection marks (HUD-031)
 * `IMAGES/TERRAIN/*.TERRAIN.INI` `minidatargb`: the minimap's colours of terrains, trees and cliffs (HUD-030)
-* `IMAGES/TERRAIN/*.TERRAIN.INI` `randomtreeset`: how many trees a random map grows, by map size (WORLD-013)
 * `IMAGES/TERRAIN/*.TERRAIN.INI` `treename`: the kinds of trees in the sheet (PRES-009)
 * `LOCAL/HELP.INI` (the whole file): the hints of the menu screens' controls (SHELL-026).
 * `LOCAL/STRINGS.INI` `adds`: messages such as "Build more houses" (HUD-026)

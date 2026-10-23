@@ -255,7 +255,7 @@ internal static class KingdomCommands
             return CommandRejection.InvalidArgument;
         }
 
-        if (!HasTechnology(world, command.Player, "te_gambling"))
+        if (!HasTechnology(world, command.Player, world.Ruleset.World.GamblingTechnology))
         {
             return CommandRejection.RequirementNotMet;
         }
@@ -292,7 +292,7 @@ internal static class KingdomCommands
             return CommandRejection.InvalidArgument;
         }
 
-        if (!HasTechnology(world, command.Player, "te_usury"))
+        if (!HasTechnology(world, command.Player, world.Ruleset.World.LoanTechnology))
         {
             return CommandRejection.RequirementNotMet;
         }
