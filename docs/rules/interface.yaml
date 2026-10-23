@@ -141,8 +141,8 @@ rules:
   HUD-030:
     rule: The minimap paints terrains, trees and cliffs in the colours of the terrain set's data.
     source: ['data TERRAIN.INI [minidatargb]']
-    status: partial
-    note: Tzar2 takes each tile's colour from its picture.
+    status: tested
+    note: A tile takes the colour of the terrain most of its four corners have (ties the top-left one's), which is Tzar2's choice; the map holds terrains per corner. Without the section the tile's picture gives the colour.
   HUD-031:
     rule: Selection marks and the selection box are drawn in the terrain set's selection colour (white in every set).
     source: ['data TERRAIN.INI [colors]']

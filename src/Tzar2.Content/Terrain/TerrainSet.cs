@@ -77,9 +77,10 @@ public sealed class TerrainSet
     /// <summary>Package path of the terrain manifest.</summary>
     public const string PackagePath = "manifests/terrain.json";
 
-    private TerrainSet(string id, string name, IReadOnlyList<TerrainType> terrains, IReadOnlyList<TerrainFile> files, string? light, string? trees, string? treeShadows)
+    private TerrainSet(string id, string name, IReadOnlyList<TerrainType> terrains, IReadOnlyList<TerrainFile> files, string? light, string? trees, string? treeShadows, string? table)
     {
         Id = id;
+        Table = table;
         Name = name;
         Terrains = terrains;
         Files = files;
@@ -108,6 +109,9 @@ public sealed class TerrainSet
 
     /// <summary>Tree shadow strip asset.</summary>
     public string? TreeShadows { get; }
+
+    /// <summary>The imported <c>.TERRAIN.INI</c> table of the set (its other sections: minimap colours...), or null.</summary>
+    public string? Table { get; }
 
     /// <summary>The base texture of terrain <paramref name="terrain"/>, or null.</summary>
     public TerrainFile? BaseOf(int terrain) => Find(terrain, terrain);
@@ -200,7 +204,8 @@ public sealed class TerrainSet
                     files,
                     Text(s, "light"),
                     Text(s, "trees"),
-                    Text(s, "treeShadows")));
+                    Text(s, "treeShadows"),
+                    Text(s, "table")));
             }
 
             return sets;
