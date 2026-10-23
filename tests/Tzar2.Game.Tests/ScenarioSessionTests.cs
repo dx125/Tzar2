@@ -90,6 +90,21 @@ public sealed class ScenarioSessionTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-009")]
+    public void A_scenario_computer_kingdom_never_resigns_a_random_map_one_may()
+    {
+        // The resign flag is offered by the random map and multiplayer screens only (1.09; ADR 0220).
+        (MatchSetup setup, _) = Mission();
+        using (var session = new GameSession(setup with { ComputerAi = true }, Classic))
+        {
+            Assert.All(session.Ai!.Players, p => Assert.False(p.Settings.MayResign));
+        }
+
+        using var skirmish = new GameSession(setup with { ComputerAi = true, Scenario = null }, Classic);
+        Assert.All(skirmish.Ai!.Players, p => Assert.True(p.Settings.MayResign));
+    }
+
+    [Fact]
     public void The_scenario_is_part_of_the_match_fingerprint()
     {
         (MatchSetup setup, ScenarioBuilder b) = Mission();

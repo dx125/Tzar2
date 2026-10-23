@@ -273,6 +273,8 @@ public class RulesetCompilerTests
     [InlineData("gameplay: { groupMoveSpeed: fastest }", "'fastest' is not slowest/own")]
     [InlineData("gameplay: { colour: red }", "gameplay.colour: unknown setting")]
     [InlineData("euro.x:\n  new: true\n  Mobile: { locomotor: wheels }", "unknown locomotor 'wheels'")]
+    [InlineData("ruleset: { civilizations: [euro, euro] }", "ruleset.civilizations: 'euro' is listed twice or is the common civilization")]
+    [InlineData("ruleset: { civilizations: [euro, comm] }", "ruleset.civilizations: 'comm' is listed twice or is the common civilization")]
     public void Invalid_rules_fail_with_their_source(string yaml, string expected)
     {
         RulesException ex = Assert.Throws<RulesException>(() => SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
@@ -280,6 +282,48 @@ public class RulesetCompilerTests
             OverrideTexts = [new("test.yaml", yaml)],
         }));
         Assert.Contains(expected, ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Civilizations_keep_the_rulesets_order_and_a_fork_adds_one_in_data()
+    {
+        // ADR 0211: the classic order is the original's race order, then the common key; a kingdom's civilization is an
+        // index into it, so the order is part of the rules, not an accident of sorting.
+        Ruleset classic = SyntheticLegacyContent.CompileRuleset();
+        Assert.Equal(["euro", "arab", "asia", "comm"], classic.Civilizations);
+        Assert.Equal("comm", classic.CommonCivilization);
+        Assert.True(classic.IsPlayableCivilization("asia"));
+        Assert.False(classic.IsPlayableCivilization("comm"));
+        Assert.False(classic.IsPlayableCivilization("elves"));
+
+        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        {
+            OverrideTexts = [new("fork.yaml", "ruleset: { civilizations: [asia, euro, arab, elves] }")],
+        });
+        Assert.Equal(["asia", "euro", "arab", "elves", "comm"], fork.Civilizations);
+        Assert.True(fork.IsPlayableCivilization("elves"));
+        Assert.NotEqual(classic.ContentHash, fork.ContentHash);
+    }
+
+    [Fact]
+    public void The_seat_and_the_feature_technologies_are_data()
+    {
+        // Code review 2026-10 (item 16): the castles victory counts the Seat trait, not the class name "castle"; the
+        // tavern, gambling and loans name their technologies in world settings, not in code. A fork changes them in YAML.
+        Ruleset classic = SyntheticLegacyContent.CompileRuleset();
+        Assert.True(classic.EntityTypes[classic.EntityTypeId("euro.castle")].Traits.IsSeat);
+        Assert.False(classic.EntityTypes[classic.EntityTypeId("euro.house")].Traits.IsSeat);
+        Assert.Equal(
+            ("te_mercenaries", "te_heroesquest", "te_fame", "te_gambling", "te_usury"),
+            (classic.World.MercenariesTechnology, classic.World.HeroesTechnology, classic.World.FameTechnology, classic.World.GamblingTechnology, classic.World.LoanTechnology));
+
+        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        {
+            OverrideTexts = [new("fork.yaml", "world: { loanTechnology: te_banking, gamblingTechnology: '' }\neuro.house: { Seat: {} }")],
+        });
+        Assert.Equal(("te_banking", string.Empty), (fork.World.LoanTechnology, fork.World.GamblingTechnology));
+        Assert.True(fork.EntityTypes[fork.EntityTypeId("euro.house")].Traits.IsSeat);
+        Assert.NotEqual(classic.ContentHash, fork.ContentHash);
     }
 
     [Fact]

@@ -32,8 +32,14 @@ public sealed class ClientAssemblyFactAttribute : FactAttribute
 /// </summary>
 public class ClientTypeReferenceTests
 {
-    /// <summary>Where the Godot SDK writes the client assembly.</summary>
-    public static readonly string ClientAssembly = Path.Combine(RepositoryPaths.Root, "src", "Tzar2.Client", ".godot", "mono", "temp", "bin", "Debug", "Tzar2.Client.dll");
+    /// <summary>
+    /// The client assembly the Godot SDK wrote last: <c>Debug</c> for the editor and debug builds, <c>ExportRelease</c>
+    /// for <c>-c Release</c> (the SDK's name for it; what CI builds), <c>ExportDebug</c>. Only <c>Debug</c> was read until
+    /// 2026-10, so CI, which builds Release, skipped the check (code review, item 16).
+    /// </summary>
+    public static readonly string ClientAssembly = Newest(
+        ["Debug", "ExportRelease", "ExportDebug", "Release"],
+        configuration => Path.Combine(RepositoryPaths.Root, "src", "Tzar2.Client", ".godot", "mono", "temp", "bin", configuration, "Tzar2.Client.dll"));
 
     private static readonly string[] AllowedAssemblies = ["Tzar2.Game", "Tzar2.Content", "Tzar2.Import"];
 
@@ -124,6 +130,12 @@ public class ClientTypeReferenceTests
         }
 
         Assert.True(bad.Count == 0, "Tzar2.Client.dll uses types it may not (§7.2): " + string.Join(", ", bad));
+    }
+
+    private static string Newest(string[] configurations, Func<string, string> path)
+    {
+        string[] built = configurations.Select(path).Where(File.Exists).OrderByDescending(File.GetLastWriteTimeUtc).ToArray();
+        return built.Length > 0 ? built[0] : path(configurations[0]);
     }
 
     private static string Namespace(string qualified)

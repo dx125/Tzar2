@@ -185,6 +185,21 @@ public sealed record WorldSettings
     /// <summary>Fame: cheaper mercenaries (percent of the price kept).</summary>
     public int FameCostPercent { get; init; } = 75;
 
+    /// <summary>The technology that opens the tavern's mercenaries (empty: none needed).</summary>
+    public string MercenariesTechnology { get; init; } = "te_mercenaries";
+
+    /// <summary>The technology that opens the tavern's heroes (empty: none needed).</summary>
+    public string HeroesTechnology { get; init; } = "te_heroesquest";
+
+    /// <summary>The technology that gives more, better and cheaper mercenaries (empty: none).</summary>
+    public string FameTechnology { get; init; } = "te_fame";
+
+    /// <summary>The technology gambling needs (empty: none needed).</summary>
+    public string GamblingTechnology { get; init; } = "te_gambling";
+
+    /// <summary>The technology loans need (empty: none needed).</summary>
+    public string LoanTechnology { get; init; } = "te_usury";
+
     internal void Validate()
     {
         ArgumentOutOfRangeException.ThrowIfNegative(DefaultSightTiles);

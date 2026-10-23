@@ -96,9 +96,25 @@ public sealed class SpriteAtlas
     /// <summary>Cells of one sheet, direction-major.</summary>
     public IReadOnlyList<AtlasCell> CellsOf(int sheet) => _cells[sheet];
 
-    /// <summary>The pages of <paramref name="format"/> (each <see cref="PageSize"/>² × bytes per pixel); empty when unused.</summary>
+    /// <summary>
+    /// The pages of <paramref name="format"/> (each <see cref="PageSize"/>² × bytes per pixel); empty when unused or
+    /// after <see cref="ReleasePages"/>.
+    /// </summary>
     public IReadOnlyList<byte[]> Pages(PixelFormat format)
         => _pages.TryGetValue(format, out List<byte[]>? pages) ? pages : [];
+
+    /// <summary>Whether <see cref="ReleasePages"/> dropped the pixels.</summary>
+    public bool PagesReleased { get; private set; }
+
+    /// <summary>
+    /// Drops the pages' pixels once they are on the GPU; the cells stay (code review 2026-10, item 16: a match kept a
+    /// second copy of every page in managed memory).
+    /// </summary>
+    public void ReleasePages()
+    {
+        _pages.Clear();
+        PagesReleased = true;
+    }
 
     /// <summary>Packs <paramref name="sheets"/>; their order defines the sheet indices.</summary>
     /// <exception cref="ArgumentException">A trimmed cell is larger than a page.</exception>
