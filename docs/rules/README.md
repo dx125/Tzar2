@@ -110,7 +110,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Magic, religion and spies](magic.yaml) (MAG) | 25 | 25 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 4 | 3 | 2 | 0 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 5 | 3 | 1 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Scenario scripts](scenario.yaml) (SCN) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 15 | 10 | 1 | 0 | 2 | 0 |
@@ -118,7 +118,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 9 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 349 | 256 | 75 | 4 | 1 | 9 | 4 |
+| **All** | 349 | 257 | 75 | 3 | 1 | 9 | 4 |
 
 ## Not done yet
 
@@ -132,7 +132,6 @@ Missing and partial rules.
 ### Animations, effects and sounds
 
 * **PRES-005** (partial): Units have their own animations for capturing and collecting meat (peasants), murder (ninjas), prayer (priests), casting (mages and priests) and other attack swings (footmen, macemen, peasants, bears, ninjas). *Done - capturing and cutting meat (peasants), casting (mages and priests, image_spell; the Asian priest's prayer is the same picture) and the second swing on half the blows (footmen, macemen, peasants, bears, ninjas, priests; the original draws at random, 0x4e5720 by ReTzar's reading). Left - the ninja's murder (the order is not built) and the Asian peasant's third swing under Kung Fu.*
-* **PRES-008** (partial): Some animations start inside their sheet, at the row and column the data gives. *An attack turns its picture by startcol (a knight striking east shows column 4) and a swing starts on its startrow. Walks and idles still start where the shared clock is, because the frame does not carry when a picture was set.*
 
 ### Menus, setup and pause
 

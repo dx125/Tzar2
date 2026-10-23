@@ -87,6 +87,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly HashSet<uint> _shotSeen = [];
     private readonly List<uint> _shotGone = [];
     private readonly List<(SheetRef Sheet, int X, int Y, long StartMs)> _bursts = [];
+    private readonly AnimationStarts _starts = new(); // when each unit's picture was set (PRES-008)
     private long _timeMs;
     private (int X, int Y, uint Target, long StartMs, BlinkColour Colour)? _order;
     private bool _lightsValid;
@@ -191,6 +192,7 @@ public sealed class WorldRenderer : IDisposable
     {
         ArgumentNullException.ThrowIfNull(frame);
         _timeMs = timeMs;
+        _starts.Sweep(timeMs);
         var view = new Transform2D(new Vector2(1, 0), new Vector2(0, 1), (Vector2)(origin - pan));
         var visible = new Rect2I(pan, viewSize);
         RS.CanvasItemSetTransform(_root, Transform2D.Identity);
@@ -458,7 +460,8 @@ public sealed class WorldRenderer : IDisposable
         }
         else
         {
-            frame = s.Animation.FrameAt(timeMs + phase);
+            // PRES-008: a picture runs from its start row from when it was set (ReTzar 0x5017f0), not on a shared clock.
+            frame = SpriteRules.SwingFrame(s.StartRow, s.Animation.FrameAt(_starts.Elapsed(e.Id.Value, (int)anim, timeMs)), s.Sheet.FramesPerDirection);
         }
 
         int dir = SpriteRules.Direction(e.Facing, s.Sheet.Directions);
