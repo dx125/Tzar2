@@ -133,7 +133,7 @@ internal static class SoakCommand
         }
 
         double value = double.Parse(text, CultureInfo.InvariantCulture);
-        return value >= min && value <= max ? value : throw new ArgumentException($"--{name} must be in [{min}, {max}].");
+        return value >= min && value <= max ? value : throw new ArgumentException(string.Create(CultureInfo.InvariantCulture, $"--{name} must be in [{min}, {max}]."));
     }
 
     private static void WriteReport(string path, SoakOptions options, IReadOnlyList<SoakMatchResult> results)

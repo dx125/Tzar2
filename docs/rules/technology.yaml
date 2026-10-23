@@ -95,8 +95,8 @@ rules:
     rule: Warfare, Tactics and Sun Tzu's Book (Asians) make units learn faster.
     source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: A level needs 70, 50 and 35 % of the experience (here as gains of 43, 57 and 86 % that add up).
-    adr: [0191]
+    note: A level needs 70, 50 and 35 % of the points; each needs the one before, and the kingdom has the lowest (combat.experienceSpeeds).
+    adr: [0191, 0258]
   TECH-018:
     rule: Body Building makes hit points grow as a unit gains experience.
     source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
@@ -156,19 +156,22 @@ rules:
     note: Meditation cuts the Asian monk's costs to 75 %; Philosophy makes monks and priests start at level 2.
     adr: [0191]
   TECH-028:
-    rule: Mastery (Asians) lets priests teach kung-fu units and turn mana into experience.
-    source: [manual Researching Technologies]
-    status: partial
-    note: Mastery gates the spell that turns mana into experience (spell_raiseexp), which works; whether priests "teaching kung-fu units" is more than that is not known.
+    rule: Mastery (Asians) lets priests teach kung-fu units and turn mana into experience. The Asian priest's spell teaches an Asian peasant, monk, ninja or priest of a lower level than its own.
+    source: [manual Researching Technologies, 'data MENU.INI [a_priest] spell_raiseexp', community ReTzar src/gameplay.rs (0x473bf0)]
+    status: tested
+    adr: [0253]
+    note: The original teaches one point of its experience; Tzar2's experience has another scale (UNK-23) and teaches 100.
   TECH-029:
-    rule: Tournaments (Asians) lets kung-fu units share their experience.
-    source: [manual Researching Technologies]
-    status: missing
+    rule: Tournaments (Asians) lets kung-fu units share their experience. Every 75 points of experience the kingdom's units learn teach each of its Asian peasants, monks, ninjas and priests one more; what goes over 75 is lost.
+    source: [manual Researching Technologies, community ReTzar src/gameplay.rs (0x4de900)]
+    status: tested
+    adr: [0253]
   TECH-030:
     rule: Jewelry (Asians) lets the markets sell and buy items, the same items in every market.
-    source: [manual Researching Technologies, patch 1.09 (TZAR110.TXT)]
-    status: missing
-    note: The markets' item menus (market_items, market_sell) are empty in MENU.INI and filled by the game; Tzar2 has no item trade.
+    source: [manual Researching Technologies, patch 1.09 (TZAR110.TXT), 'data TECHTREE ASIA.INI market_items', 'community ReTzar src/gameplay.rs (0x479c34, 0x47a254, 0x47a1e1)']
+    status: tested
+    adr: [0259]
+    note: One market of the kingdom gets an offer a second after it stands and then every minute (a book, a power item, a book or a potion, each with a random record); the newest 8 stay; any market of the kingdom sells an offer for 4 times its value in gold, at one of its corners, and buys a carried book, power item or potion for its value. An offered potion of experience gives one level here.
   TECH-031:
     rule: Piracy gives boarding units an attack bonus, and Boarding Ram lets ships board others.
     source: [manual Asian Buildings (Harbor), strings STRINGS.INI orders_add te_piracy te_boardingram]

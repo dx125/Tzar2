@@ -35,10 +35,11 @@ rules:
     source: [manual Asian technologies (Confusion)]
     status: tested
   MAG-008:
-    rule: Hypnotism (Asian, from Concentration) is a spell of the Asian mages.
-    source: [manual Asian Buildings (Mage Tower)]
-    status: unclear
-    note: Neither the manual nor the game's text says what it does; Tzar2 makes it hold the unit like freeze.
+    rule: Hypnosis gives the unit to the caster's kingdom for 30 s, which commands it and whose side it fights on, while it keeps its own kingdom's colours and population; then it goes back. A new hypnosis restarts the time. Only spell books cast it (v1.10 puts the manual's Hypnotism on no command card).
+    source: [manual Asian Buildings (Mage Tower), data ORDERS.INI spell_hypnotize, 'community ReTzar src/gameplay.rs (0x473887, 0x4e59b2, 0x4e5c4b)']
+    status: tested
+    adr: [0250]
+    note: The original changes only the unit's command and side; Tzar2 hands the unit over, so for those 30 s its attack, defence and hit points follow the caster's technologies.
   MAG-009:
     rule: Priests heal units (with Healing) and bless them (Bless raises their attack for a while); Medicine lets them heal from farther; Arabian priests also exorcise, which Inquisition makes stronger.
     source: [manual Civilizations (Priest), manual Researching Technologies]
@@ -97,6 +98,23 @@ rules:
     rule: Units under a stone spell take no damage.
     source: [community TDD GAME-11]
     status: tested
+  MAG-022:
+    rule: Healing, freezing, the curse and raise dead do not take on machines (golems, siege engines, magic carpets, ships, ghosts, skeletons, fishing boats), and creatures that leave no body (bats, golems, carpets, mages, dwarves, orcs, jinns, ghosts, skeletons, dragons) cannot be raised.
+    source: ['community ReTzar src/gameplay.rs (0x2719, 0x271c)']
+    status: tested
+    adr: [0254]
+  MAG-023:
+    rule: Each spell has the original's range and mana. Ranges in tiles - fire rain 14; lightning, freeze and confusion 12; heal 3 (5 with Medicine); the golem, carpet, dragon and jinn summons 4; bats and whirlpool 16; magic vision anywhere; stone 20; flame bolt 18; Mastery 1; the rest 8. Mana - fire rain 100, heal 4, freeze 60, confusion and raise dead 70, magic vision 30, Mastery 10, the rest 50; summons cost their creature's mana.
+    source: ['community ReTzar src/gameplay.rs (0x4721e0, 0x4723e0)']
+    status: tested
+    adr: [0260]
+    note: The ranges are counted edge to edge here; how the original measures them (cells between centres or edges) is not settled.
+  MAG-024:
+    rule: The spells have the original's strength. Heal gives 6 hit points; bless adds 5 attack to the friendly units within 4 tiles for 30 s; lightning deals 150; freeze holds every unit within 3 tiles of its impact for 20 s, without defence, and deals up to 40 but never kills; invisibility lasts 45 s; stone 2 to 5 minutes; confusion takes every unit within 2 tiles for 20 s; the flame bolt deals 60; magic vision lasts 60 s; raise dead raises every body within 8 tiles of the caster.
+    source: ['community ReTzar src/gameplay.rs (0x472ff1, 0x4e5809, 0x472e83, 0x432590, 0x4734a1, 0x473913, 0x473250, 0x473b44, 0x4735ac, 0x47367c)']
+    status: tested
+    adr: [0261]
+    note: Fire rain (twenty fireballs of 40 over a 5 by 5 square), the whirlpool (a 3 by 3 vortex that moves), the cooldowns and cast times stay UNVERIFIED (UNK-26). The original's heal casts again while the unit is hurt; Tzar2's casts once.
   MAG-021:
     rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; the fuller it is, the closer the copied kingdom's spies must come to unmask it, right next to it at 100.
     source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846, capture capture-20261022-011438]

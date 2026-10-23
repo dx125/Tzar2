@@ -13,8 +13,9 @@ namespace Tzar2.Sim.Systems;
 /// <summary>
 /// Pipeline step 5 (economy, GAME-14, ADR 0103): traders cycle between two docks. At a dock a trader spends
 /// <c>tradeDockMs</c>, sells what it carries (when it was loaded at the other dock) for the load plus a profit of
-/// <c>tradeProfitPerTileBasisPoints</c> per tile between the two docks (none below <c>tradeMinDistanceTiles</c>, at most
-/// <c>tradeMaxProfitPercent</c>; Trade Taxes raise it), then loads the goods of this dock (paid from the stockpile; an
+/// load x tiles x <c>tradeProfitPercent</c> / (map side x 100), the tiles being the larger axis between the two docks (none
+/// below <c>tradeMinDistanceTiles</c>; TRADE-001, ReTzar's reading of the original; Trade Taxes and Banking raise it), then
+/// loads the goods of this dock (paid from the stockpile; an
 /// unaffordable load leaves empty) and heads for the other dock. A route ends when a dock is gone, unfinished, or no
 /// longer an allowed partner; carried goods are refunded without profit.
 /// </summary>
@@ -37,14 +38,14 @@ public sealed class TradeSystem : ISimSystem
         ArgumentNullException.ThrowIfNull(world);
         WorldSettings w = world.Ruleset.World;
         Position at = world.Positions.Get(dock);
-        long tiles = IntMath.ISqrt(IntMath.DistanceSquared(loadX, loadY, at.X, at.Y)) / MapState.UnitsPerTile;
+        long tiles = Math.Max(Math.Abs((long)loadX - at.X), Math.Abs((long)loadY - at.Y)) / MapState.UnitsPerTile;
         if (tiles < w.TradeMinDistanceTiles)
         {
             return 0;
         }
 
-        long bp = Math.Min(tiles * w.TradeProfitPerTileBasisPoints, w.TradeMaxProfitBasisPoints);
-        int profit = (int)Math.Min((long)carry * bp / 10_000, int.MaxValue);
+        long side = Math.Max(1, Math.Max(world.Map.Width, world.Map.Height));
+        int profit = (int)Math.Min((long)carry * tiles * w.TradeProfitPercent / (side * 100), int.MaxValue);
         return Math.Max(0, world.Stats.Apply(owner, ModifierStat.Income, world.Identities.Get(dock).TypeId, profit));
     }
 

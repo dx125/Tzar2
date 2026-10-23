@@ -90,8 +90,8 @@ public sealed class WorldRenderer : IDisposable
     private bool _lightsValid;
     private ImageTexture? _lightPatternTexture;
 
-    /// <summary>Creates the renderer for a match.</summary>
-    public WorldRenderer(Node host, Rid canvas, Ruleset rules, PresentationCatalog catalog, SpriteBank bank, TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load, Image? lightPattern)
+    /// <summary>Creates the renderer for a match; the terrain is <paramref name="composed"/> already, or composed here.</summary>
+    public WorldRenderer(Node host, Rid canvas, Ruleset rules, PresentationCatalog catalog, SpriteBank bank, TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load, Image? lightPattern, TerrainLayer.ComposedTerrain? composed = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         _rules = rules;
@@ -99,7 +99,7 @@ public sealed class WorldRenderer : IDisposable
         _bank = bank;
         _root = RS.CanvasItemCreate();
         RS.CanvasItemSetParent(_root, canvas);
-        _terrain = new TerrainLayer(_root, 10, set, grid, load);
+        _terrain = composed is null ? new TerrainLayer(_root, 10, set, grid, load) : new TerrainLayer(_root, 10, composed);
         _ground = new SpriteRenderer(host, _root, 20);
         _marksUnder = Item(25);
         _objects = new SpriteRenderer(host, _root, 30);

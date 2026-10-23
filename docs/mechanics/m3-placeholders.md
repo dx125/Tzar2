@@ -124,8 +124,8 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Teams | start as mutual allies sharing vision and victory | code (`Diplomacy.ApplyTeams`) | — | lobby captures |
 | Shared resources | the payer's stockpile first, then allies in slot order | code (`SharedStockpile`) | — | observation |
 | Shared unit control | movement, attack and trade orders only | code (`CommandSystem`, `GameplayCommands.Attack`) | — | observation |
-| Trade load | caravan 100, galleon 200, hulk 150, xebec 100 | YAML `^class.*.Trader.capacity` | UNK-28 | trade captures |
-| Trade profit | 1% of the load per tile between the docks (straight line), none below 8 tiles, at most 300% | YAML `world.trade*` | UNK-28 | caravan income vs. distance captures |
+| Trade load | **caravans 500 (European) / 300 (Arabian), Asian peasants 100 (ReTzar, ADR 0252)**; galleon 200, hulk 150, xebec 100 | YAML `^*.trader`, `^class.*.Trader.capacity` | UNK-28 | trade captures |
+| Trade profit | **ReTzar's reading of the original (ADR 0257):** load x tiles x 40 / (map side x 100), tiles on the larger axis, none under 12 | YAML `world.trade*` | — | a caravan capture would confirm it |
 | Trade dock time | 2 s | YAML `world.tradeDockMs` | UNK-28 | captures |
 | Unaffordable load | the trader leaves empty | code (`TradeSystem`) | — | observation |
 | Gambling | odds 2, 3, 5, 10; win chance (1 − 10%) / odds; stake ≤ 10,000 | YAML `world.gamble*` | UNK-28 | gamble dialog captures |
@@ -197,9 +197,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Damage roll | a hit rolls in [attack, `max_damage`] (⚠ HYPOTHESIS: what `max_damage` means) | code (`CombatSystem`) | UNK-08 | tower damage grid |
 | Missing RATE | priests (euro, arab) 2, Jihad warriors 3, armored chariots 3 | YAML | UNK-07 | attack timing captures |
 | Carpet speed / radius | SPEED 5, 12 px (no SPEED in the table) | YAML `^class.carpet` | UNK-12, UNK-11 | captures |
-| Experience per damage | 100% (1 point per point of damage dealt to an enemy) | YAML `combat.experiencePerDamagePercent` | UNK-23 | XP captures |
-| Experience per kill | 0 | YAML `combat.experiencePerKill` | UNK-23 | same |
-| Level curve | level n at 100 × n × (n + 1) / 2 | YAML `combat.levelBaseXp` | UNK-23 | same |
+| Experience | **ReTzar's reading of the original (ADR 0258):** a kill is 1 point, damage 0; level n at 1 + n × (n − 1) / 2 points, each level at Warfare's 70 / Tactics' 50 / Sun Tzu's 35 %; dummies a point per 75 of damage up to level 8; each academy +10 to the cap | YAML `combat.experience*`, `levelBaseXp`, `dummy*`, `levelCap*` | — | an XP capture would confirm it |
 | Level cap | 0 without Learning; Learning +4, Heroism +1,000 (stream A values) | YAML `combat.baseLevelCap`, `te_*` | UNK-23 | same |
 | Defence per level | ½, truncated (1 per 2 levels) | YAML `combat.defenceHalvesPerLevel` | UNK-08 | same |
 | Hero level | 12 (TDD) | YAML `combat.heroLevel` | — | — |
@@ -213,12 +211,13 @@ when the building is hit; catapult stones can be stepped away from.
 | Crafting | 50 gold per power point, 2 s per point, at most 20; a potion 10 HP or 5 mana per point, a level per 5 points; a book's uses = its points (ADR 0186) | YAML `combat.craft*` | UNK-25 | workshop captures |
 | Workshop items | books of 20 spells, potions of health (red), levels (green), mana (blue), attack (yellow), defence (grey), sword, bow, shield | YAML `Item.crafts` | ITEM-016 | an owner session in the workshop |
 | A map book's spell | magic type = index in STRINGS.INI `[spell_names]` (⚠ HYPOTHESIS) | `ScenarioSetup.LegacySpellOrder` | ITEM-016 | the editor shows a book's spell |
-| Spell magnitudes | per spell (amount, mana, range, cooldown, cast time, duration, radius, pulse) | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
+| Spell magnitudes | cooldowns, cast times, fire rain and whirlpool; **range, mana, amounts, durations and areas of the other spells from ReTzar (ADRs 0260, 0261)** | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
 | Spell damage | no defence, no bonus | code (`MagicSystem`) | UNK-26 | captures |
 | Summon mana above the pool | costs at most the caster's whole pool (golem 600m, dragon 800m vs `max_manna` 100; ⚠ HYPOTHESIS) | code (`MagicSystem.ManaCost`) | UNK-26 | summon captures |
-| Medicine | +4 tiles of spell range for priests | YAML `te_medicine` | UNK-26 | captures |
+| Medicine | **+2 tiles of healing range (ReTzar, ADR 0260)** | YAML `te_medicine` | — | captures |
 | Inquisition | +50% attack of priests (exorcism) | YAML `te_inquisition` | UNK-26 | captures |
 | Crusade | **ReTzar's reading of the original (ADR 0190):** 16 gathered at the start, one per cathedral every 12/8/4/1 s by the time played, ceiling 16 + 4 per full crusade (36), one arriving every 500 ms, 4 again after the crusaders died | YAML `combat.crusade*`; `MagicSystem` | UNK-26 | a crusade capture would confirm it |
+| Curse, hypnosis, banshee, Messiah | **ReTzar's reading of the original (ADR 0250):** the curse halves attack and zeroes defence of enemy non-machines within the caster's sight for 30 s; hypnosis hands the unit over for 30 s; a ghost's blow curses in 71 of 1001; the Messiah refuses lasting spells. Mana, range, cooldown and cast time stay UNVERIFIED | YAML `spell_curse`, `spell_hypnotize`, `combat.banshee*`; `MagicSystem` | UNK-26 | a capture would confirm it |
 | Bribe price | 200% of the unit's cost, in gold | YAML `combat.bribeCostPercent` | UNK-26 | bribe captures |
 | Magic vision | the revealer lasts 30 s | YAML `comm.fog_revealer.Lifetime` | UNK-26 | captures |
 

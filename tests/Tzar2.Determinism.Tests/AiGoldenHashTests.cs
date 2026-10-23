@@ -42,14 +42,22 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) footmen and archers strike at the action row of their attack animations: the fights and
     // so the commands change.
-    private const ulong GoldenCommandStream = 0xADC22D9B28904481UL;
+    // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement: the fights and so the commands change.
+    // (ADR 0250, 2026-10-22) the curse, hypnosis, the banshee and the Messiah as ReTzar reads them: a synthetic Messiah shifts type ids, status effects grow (hashed layout 13): the commands name the shifted type ids.
+    private const ulong GoldenCommandStream = 0xA10DD058749DF77DUL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0x174F7DEFE6953C5CUL;
-    private const ulong GoldenFinalFullHash = 0x8663446EB15E5C7EUL;
+    // (ADR 0211, 2026-10-22) civilizations in the ruleset's order (euro first): the kingdoms' civilization indices, so the
+    // hashes only; the commands are the same.
+    // (ADR 0220, 2026-10-22) movement: the corner slide, allies as friends: the hashes.
+    // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
+    // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
+    // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
+    private const ulong GoldenHashStream = 0x3174BB9F6572FFF8UL;
+    private const ulong GoldenFinalFullHash = 0xBD717DEF296B9604UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

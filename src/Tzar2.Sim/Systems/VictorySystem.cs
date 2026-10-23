@@ -232,7 +232,7 @@ public sealed class VictorySystem : ISimSystem
 
             EntityTraits t = world.Ruleset.EntityTypes[identities[i].TypeId].Traits;
             alive[owner] = condition == VictoryCondition.DestroyCastles
-                ? t.Category == EntityCategory.Building && t.LegacyClass == "castle"
+                ? t.Category == EntityCategory.Building && t.IsSeat
                 : (t.Category == EntityCategory.Unit && !t.World.IsAmbient)
                     || (t.Category == EntityCategory.Building && !t.IsWall && t.Gate is null && !t.IsBridge && t.Decay is null);
         }
