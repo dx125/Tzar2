@@ -119,7 +119,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -244,12 +244,16 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         on an s2 world. Only the full hashes are re-pinned.
       * 2026-10-23: the network test harnesses' timeouts no longer drop members of loaded CI runners, and the capture
         end-to-end test runs on a virtual clock (issue #179).
+      * 2026-10-23: the worker pool waits for the jobs, not for the helpers it woke (ADR 0214). On the CI macOS runner
+        under contention, the median fork had waited a 10 ms slice for idle helpers.
       * 2026-10-23: a test checks that the relay and the clients hand their ping interval to LiteNetLib (ADR 0231).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-23 — Custom map setup (SHELL-006, SHELL-007).** S_SINGLESETUP draws an engine-free CustomMapScreenModel on the random map screen's places (a shared SetupScreen base): a row per kingdom of the map with colour, civilization and team, USE MAP SETTINGS (only No Fog and Explore change; the map's difficulty), else the number of kingdoms, game type, victory and its limit, population, difficulty and starting resources (Default: the map's stockpiles). ScenarioMatch takes the choices: kingdoms left out lose their objects at the start (the map's object list stays, the scenario names them by index), a chosen civilization converts the kingdom's units and buildings where the ruleset has the class, teams ally over the map's diplomacy. Saves of a custom map write version 3 only when these choices were made. No hash changes.
 
 * **2026-10-23 — The AI resign flag (SHELL-013; ADR 0262).** MatchSettings.AiResign (the white flag by default, as before) reaches each computer's MayResign; the random map screen draws AIRESIGN.BMP and the lobby an "AI may resign" check. The sword is written as match settings version 3, so an older build refuses it at the version check; the flag up keeps the version 1 and 2 bytes, and no hash changes.
 
