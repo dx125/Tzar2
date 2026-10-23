@@ -79,7 +79,7 @@ public partial class GameApp : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
-        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke && _args.ResourceSoak is null);
+        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke && _args.ResourceSoak is null && !_args.BenchRender);
         _ui = new UiAssets(_store);
         try
         {
@@ -101,7 +101,11 @@ public partial class GameApp : Node
             GD.PrintErr("The classic ruleset does not compile from this package: " + e.Message);
         }
 
-        if (_args.MultiplayerSmoke)
+        if (_args.BenchRender)
+        {
+            _ = RenderBenchAsync();
+        }
+        else if (_args.MultiplayerSmoke)
         {
             ShowMainMenu();
             _ = MultiplayerSmokeAsync();
