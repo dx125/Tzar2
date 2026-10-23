@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using Tzar2.Formats.Audio;
 using Tzar2.Formats.Bmp;
 using Tzar2.Formats.Dat;
@@ -21,7 +22,7 @@ namespace Tzar2.Formats.Fuzzing;
 public static class FuzzTargets
 {
     /// <summary>Names accepted by <see cref="Run"/>.</summary>
-    public static readonly string[] Names = ["rle", "dat", "bmp", "pal", "fnt", "hpfs", "ini", "tsv", "wav", "mid", "wmp", "wcm"];
+    public static readonly ImmutableArray<string> Names = ["rle", "dat", "bmp", "pal", "fnt", "hpfs", "ini", "tsv", "wav", "mid", "wmp", "wcm"];
 
     /// <summary>Runs the target <paramref name="name"/> on <paramref name="data"/>.</summary>
     /// <returns>True when the input parsed, false when it was rejected with <see cref="LegacyFormatException"/>.</returns>
