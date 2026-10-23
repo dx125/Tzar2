@@ -235,6 +235,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       Done since (log below): the nightly Benchmarks' gameplay rows re-recorded, the architecture tests' four gaps,
       the civilization list (ADR 0211, the `Race` bug), the asset caches cleared in the menu, the load off the main
       thread, rules decided by data instead of names in code.
+      * 2026-10-23: the full state hash hashes its large arrays in 64 KiB chunks on the workers (ADR 0215): 0.56 → 0.18 ms
+        on an s2 world. Only the full hashes are re-pinned.
 
 ## Decision and event log
 

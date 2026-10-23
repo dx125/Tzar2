@@ -138,6 +138,7 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0201](0201-random-maps-grow-the-originals-forests.md) | Grow a random map's forests the way the original does | Accepted | 2026-10-22 |
 | [0210](0210-draw-terrain-from-a-deduplicated-tile-atlas.md) | Draw terrain from a deduplicated tile atlas | Accepted | 2026-10-22 |
 | [0211](0211-civilizations-are-an-ordered-list-in-the-ruleset.md) | Civilizations are an ordered list in the ruleset | Accepted | 2026-10-22 |
+| [0215](0215-full-state-hash-bulk-arrays-in-parallel-chunks.md) | Hash the full state's large arrays in fixed chunks, in parallel | Accepted | 2026-10-23 |
 | [0220](0220-main-campaign-completable-scenario-engine-fixes-and-solver.md) | Make the main campaign completable: scenario-engine fixes and a stronger solver | Accepted | 2026-10-22 |
 | [0230](0230-rotate-the-session-token-on-every-rejoin.md) | Rotate the session token on every rejoin; encrypt the handshake with Noise later | Accepted | 2026-10-22 |
 | [0231](0231-keep-alive-pings-five-times-per-disconnect-timeout.md) | Ping five times per disconnect timeout on LiteNetLib's thread, so a busy game thread does not drop a peer | Accepted | 2026-10-22 |
