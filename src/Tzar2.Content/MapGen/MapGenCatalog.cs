@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Tzar2.Content.Compiled;
 
 namespace Tzar2.Content.MapGen;
@@ -151,11 +152,13 @@ public sealed class MapGenCatalog
     public MapGenCatalog RestrictTo(Ruleset ruleset)
     {
         ArgumentNullException.ThrowIfNull(ruleset);
-        // The ruleset's playable civilizations in its order (ADR 0211; a fork's own ones too), not the catalog's list.
+        // The ruleset's playable civilizations in its order (ADR 0211; a fork's own ones too); the catalog's list for a
+        // ruleset that lists none.
+        IEnumerable<string> candidates = ruleset.Civilizations.Count > 0 ? ruleset.Civilizations.Where(ruleset.IsPlayableCivilization) : Civilizations;
         var civs = new List<string>();
-        foreach (string civ in ruleset.Civilizations)
+        foreach (string civ in candidates)
         {
-            if (ruleset.IsPlayableCivilization(civ) && Exists(ruleset, MapObjectRole.Castle, civ) && Exists(ruleset, MapObjectRole.Peasant, civ))
+            if (Exists(ruleset, MapObjectRole.Castle, civ) && Exists(ruleset, MapObjectRole.Peasant, civ))
             {
                 civs.Add(civ);
             }
