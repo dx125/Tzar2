@@ -41,6 +41,12 @@ public sealed class SheetRef
 
     /// <summary>The shadow sprite (<c>_s</c>), or null.</summary>
     public SheetRef? Shadow { get; set; }
+
+    /// <summary>The row (frame) the picture starts at when it is set (IMAGES.INI <c>startrow</c>, PRES-008).</summary>
+    public int StartRow { get; init; }
+
+    /// <summary>The columns the picture turns its facing by (IMAGES.INI <c>startcol</c>, PRES-008).</summary>
+    public int StartCol { get; init; }
 }
 
 /// <summary>
@@ -196,6 +202,8 @@ public sealed class SpriteBank : IDisposable
             Selection = sel is { Length: >= 4 } && sel[2] > 1 && sel[3] > 1 ? new Rect2I(sel[0], sel[1], sel[2], sel[3]) : obj,
             OverlayOffset = box is { Length: >= 2 } ? new Vector2I(box[0], box[1]) : Vector2I.Zero,
             Anchor = hot is { Length: >= 2 } ? new Vector2I(hot[0], hot[1]) : box is { Length: >= 2 } ? new Vector2I(box[0], box[1]) : new Vector2I(sheet.CellWidth / 2, sheet.CellHeight / 2),
+            StartRow = Math.Max(0, entry.GetInt("startrow", 0)),
+            StartCol = Math.Max(0, entry.GetInt("startcol", 0)),
         };
     }
 }
