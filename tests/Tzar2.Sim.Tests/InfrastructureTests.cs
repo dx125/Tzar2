@@ -80,6 +80,33 @@ public class InfrastructureTests
         Assert.Throws<InvalidOperationException>(() => state.RemoveBlocker(1, 1));
     }
 
+    [Theory]
+    [Trait("Rule", "WORLD-018")]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(3, false)]
+    public void Only_a_climber_crosses_a_cliff_band_and_only_one_or_two_tiles_thick(int thick, bool climbs)
+    {
+        // A cliff band from edge to edge across a 9 x 4 map, `thick` columns wide from column 3.
+        byte[] cliffs = new byte[9 * 4];
+        for (int y = 0; y < 4; y++)
+        {
+            for (int x = 3; x < 3 + thick; x++)
+            {
+                cliffs[(y * 9) + x] = 1;
+            }
+        }
+
+        var state = new MapState(new MapData("band", 9, 4, new byte[10 * 5], [], cliffs), TestWorlds.Ruleset);
+        Assert.False(state.IsPassable(Locomotor.Foot, 3, 1));
+        Assert.False(state.IsPassable(Locomotor.Mounted, 3, 1));
+        Assert.Equal(climbs, state.IsPassable(Locomotor.Climber, 3, 1));
+        Assert.True(state.IsPassable(Locomotor.Climber, 1, 1)); // everywhere else the climber walks as infantry
+        Assert.Equal(LocomotorMask.Foot | LocomotorMask.Climber, Locomotor.Foot.Family()); // data's "foot" includes it
+        Assert.True(Locomotor.Climber.IsA(Locomotor.Foot));
+        Assert.False(Locomotor.Foot.IsA(Locomotor.Climber));
+    }
+
     [Fact]
     public void Map_layers_scale_to_1024_tiles()
     {

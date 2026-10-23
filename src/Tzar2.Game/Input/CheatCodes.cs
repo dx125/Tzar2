@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Immutable;
 using Tzar2.Content.Compiled;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Systems;
@@ -13,7 +14,7 @@ namespace Tzar2.Game.Input;
 public static class CheatCodes
 {
     /// <summary>The codes and what they do (for the help text and tests).</summary>
-    public static readonly (string Code, string Effect)[] All =
+    public static readonly ImmutableArray<(string Code, string Effect)> All =
     [
         ("hmreveal", "explore the whole map"),
         ("hmnofog", "toggle No Fog"),

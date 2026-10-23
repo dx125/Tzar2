@@ -32,25 +32,59 @@ public class MagicTests
         EntityId[] enemies = [.. OfType(d.World, "euro.footman")];
         d.Order(1, CommandKind.SetStance, enemies, arg0: (int)CombatStance.HoldFire);
         d.Order(0, CommandKind.SetStance, [mage], arg0: (int)CombatStance.HoldFire);
+        d.World.Healths.Get(enemies[0]).Current = d.World.Healths.Get(enemies[0]).Max = 400;
         Cast(d, mage, "spell_lightning", enemies[0]);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
-        Assert.Equal(70 - 40, Hp(d, enemies[0]));
-        Assert.Equal(90 - 30, Mana(d, mage));
+        Assert.Equal(400 - 150, Hp(d, enemies[0])); // 150 damage (ReTzar, 0x472e83)
+        Assert.Equal(90 - 50, Mana(d, mage)); // 50 mana (ReTzar, 0x4723e0)
         Cast(d, mage, "spell_lightning", enemies[1]);
         d.Step();
         Assert.Contains(CommandRejection.SpellNotReady, d.Rejections());
         d.RunUntil(() => false, 60);
         Cast(d, mage, "spell_lightning", enemies[1]);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
-        d.RunUntil(() => false, 60);
-        Cast(d, mage, "spell_lightning", enemies[0]);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 3, 200);
-        Assert.False(d.World.Entities.IsAlive(enemies[0]));
-        Assert.Equal(0, Mana(d, mage));
-        d.RunUntil(() => false, 60);
-        Cast(d, mage, "spell_lightning", enemies[1]);
         d.Step();
-        Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections());
+        Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections()); // 40 left
+        d.World.Manas.Get(mage).MilliMana = 90_000;
+        Cast(d, mage, "spell_lightning", enemies[1]);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
+        Assert.False(d.World.Entities.IsAlive(enemies[1]));
+    }
+
+    [Theory]
+    [InlineData("spell_firerain", 14, 100)]
+    [InlineData("spell_lightning", 12, 50)]
+    [InlineData("spell_freeze", 12, 60)]
+    [InlineData("spell_berserk", 12, 70)]
+    [InlineData("spell_heal", 3, 4)]
+    [InlineData("spell_spawnbat", 16, 0)]
+    [InlineData("spell_spawndragon", 4, 0)]
+    [InlineData("spell_whirlpool", 16, 50)]
+    [InlineData("spell_magicvision", 1024, 30)]
+    [InlineData("spell_turntostone", 20, 50)]
+    [InlineData("spell_flamebolt", 18, 50)]
+    [InlineData("spell_raiseexp", 1, 10)]
+    [InlineData("raisedead", 8, 70)]
+    [InlineData("spell_bless", 8, 50)]
+    [InlineData("spell_curse", 8, 50)]
+    [Trait("Rule", "MAG-023")]
+    public void Each_spell_has_the_originals_range_and_mana(string key, int rangeTiles, int mana)
+    {
+        // ReTzar's reading of the original's spell dispatch (0x4721e0, 0x4723e0); summons pay their creature's mana.
+        SpellDefinition s = Classic.Spells[Classic.SpellId(key)];
+        Assert.Equal((rangeTiles * Tile, mana), (s.RangeUnits, s.ManaCost));
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-023")]
+    [Trait("Rule", "MAG-009")]
+    public void Medicine_lets_priests_heal_from_five_tiles_instead_of_three()
+    {
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.priest", 0, 4, 4)), ruleset: Classic);
+        EntityId priest = OfType(d.World, "euro.priest").Single();
+        SpellDefinition heal = d.World.Ruleset.Spells[Spell(d.World.Ruleset, "spell_heal")];
+        Assert.Equal(3 * Tile, MagicSystem.RangeOf(d.World, priest, heal));
+        Grant(d.World, 0, "te_medicine");
+        Assert.Equal(5 * Tile, MagicSystem.RangeOf(d.World, priest, heal));
     }
 
     [Fact]
@@ -95,14 +129,14 @@ public class MagicTests
         d.World.Healths.Get(footman).Current = 20;
         Cast(d, priest, "spell_heal", footman);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
-        Assert.Equal(60, Hp(d, footman));
+        Assert.Equal(26, Hp(d, footman)); // +6 a cast (ReTzar, 0x472ff1)
 
         d.RunUntil(() => false, 60);
         Cast(d, priest, "spell_bless", footman);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
         d.Order(0, CommandKind.Attack, [footman], target: enemy);
         d.RunUntil(() => d.Count(SimEventKind.Damaged) > 0, 200);
-        Assert.Equal((9 * 125 / 100) - 2, Of(d, SimEventKind.Damaged).First().Arg); // +25% attack (UNVERIFIED)
+        Assert.Equal(9 + 5 - 2, Of(d, SimEventKind.Damaged).First().Arg); // +5 attack (ReTzar, 0x4e5809)
     }
 
     [Fact]
@@ -144,11 +178,12 @@ public class MagicTests
         using var d = new SimDriver(
             AsciiMap(["..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~"],
                 Unit("euro.mage", 0, 1, 1), Unit("euro.footman", 0, 6, 2), Unit("euro.footman", 1, 6, 3), Unit("comm.galleon", 1, 12, 3), Unit("euro.footman", 1, 9, 3)),
-            ruleset: Classic);
+            ruleset: ClassicWith("euro.mage: { ManaPool: { max: 200 } }")); // fire rain costs 100 (ReTzar), above the synthetic mage's 90
         EntityId mage = OfType(d.World, "euro.mage").Single();
         EntityId own = OfType(d.World, "euro.footman", 0).Single();
         d.Order(0, CommandKind.SetStance, [mage, own], arg0: (int)CombatStance.HoldFire);
         d.Order(1, CommandKind.SetStance, [.. OfType(d.World, "euro.footman", 1), .. OfType(d.World, "comm.galleon")], arg0: (int)CombatStance.HoldFire);
+        d.World.Manas.Get(mage).MilliMana = 200_000;
         Cast(d, mage, "spell_firerain", default, (6 * Tile) + 1024, 3 * Tile);
         d.RunUntil(() => d.World.AreaEffects.Count == 0 && d.Count(SimEventKind.SpellCast) == 1, 400);
         Assert.True(Hp(d, own) < 70); // the manual: "including your own"
@@ -157,6 +192,7 @@ public class MagicTests
         EntityId ship = OfType(d.World, "comm.galleon").Single();
         EntityId shore = OfType(d.World, "euro.footman", 1).Single(f => d.PositionOf(f).X / Tile == 9);
         d.RunUntil(() => false, 120);
+        d.World.Manas.Get(mage).MilliMana = 90_000;
         Cast(d, mage, "spell_whirlpool", default, 11 * Tile, (3 * Tile) + 1024);
         d.RunUntil(() => d.World.AreaEffects.Count == 0 && d.Count(SimEventKind.SpellCast) == 2, 600);
         Assert.True(Hp(d, ship) < 1150);
@@ -182,7 +218,8 @@ public class MagicTests
         Assert.Equal(70, Hp(d, enemies[0]));
 
         d.Order(0, CommandKind.DebugKill, [attacker]); // only the confused unit's own friend is left in its sight
-        d.RunUntil(() => !d.World.IsStone(enemies[0]), 400);
+        d.RunUntil(() => !d.World.IsStone(enemies[0]), 6200); // 120 to 300 s (ReTzar, 0x473913)
+        d.World.Manas.Get(mage).MilliMana = 90_000; // berserk costs 70 (ReTzar)
         Cast(d, mage, "spell_berserk", enemies[0]);
         d.RunUntil(() => d.World.IsConfused(enemies[0]), 200);
         d.RunUntil(() => Of(d, SimEventKind.Damaged).Any(e => e.Entity == enemies[1] && e.X == enemies[0].Index), 300);
@@ -319,32 +356,55 @@ public class MagicTests
     }
 
     [Fact]
-    [Trait("Rule", "MAG-014")]
-    public void A_soul_kills_a_unit_but_not_a_hero()
+    [Trait("Rule", "ITEM-010")]
+    public void Soul_bind_puts_a_bound_soul_in_the_bag_which_sends_its_unit_berserk_or_kills_it_and_goes_with_it()
     {
+        // ReTzar's reading of the original (0x473403, 0x465340, 0x4e219f): a hero dies like any unit.
         using var d = new SimDriver(
-            TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("comm.item_soul", MapObject.Nature, 5, 4), Unit("comm.item_soul", MapObject.Nature, 5, 5), Unit("euro.footman", 1, 6, 4), Unit("euro.knight", 1, 6, 6)),
+            TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("comm.item_magic", MapObject.Nature, 5, 4), Unit("euro.knight", 1, 8, 4)),
             ruleset: Classic);
         EntityId footman = OfType(d.World, "euro.footman", 0).Single();
-        EntityId victim = OfType(d.World, "euro.footman", 1).Single();
+        EntityId book = OfType(d.World, "comm.item_magic").Single();
         EntityId hero = OfType(d.World, "euro.knight").Single();
         d.Order(0, CommandKind.SetStance, [footman], arg0: (int)CombatStance.HoldFire);
-        d.Order(1, CommandKind.SetStance, [victim, hero], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [hero], arg0: (int)CombatStance.HoldFire);
         d.World.Experiences.Get(hero).Level = (ushort)d.World.Ruleset.Combat.HeroLevel;
         d.World.Experiences.Get(hero).Flags = ExperienceFlags.Hero;
-        foreach (EntityId soul in OfType(d.World, "comm.item_soul").ToArray())
-        {
-            d.Order(0, CommandKind.PickItem, [footman], target: soul);
-            d.RunUntil(() => d.World.IsHeld(soul), 200);
-        }
+        d.Order(0, CommandKind.PickItem, [footman], target: book);
+        d.RunUntil(() => d.World.IsHeld(book), 200);
+        d.World.Items.Get(book).Spell = (ushort)(Spell(d.World.Ruleset, "spell_soulbind") + 1);
+        Position at = d.PositionOf(hero);
+        d.Order(0, CommandKind.UseItem, [footman], at.X, at.Y, hero, arg0: 0);
+        d.RunUntil(() => OfType(d.World, "comm.item_soul").Any(), 400);
+        EntityId soul = OfType(d.World, "comm.item_soul").Single();
+        Assert.Equal(hero.Value, d.World.Items.Get(soul).Bound);
+        Assert.Equal(footman.Value, d.World.Helds.Get(soul).Holder);
+        Assert.Equal(1, d.World.Identities.Get(hero).Owner); // it keeps its owner
+        int slot = d.World.Inventories.Get(footman).Count - 1;
 
-        d.Order(0, CommandKind.UseItem, [footman], target: hero, arg0: 0);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
-        Assert.True(d.World.Entities.IsAlive(hero)); // heroes are immune to murder (UNVERIFIED)
-        Assert.Equal(1, d.World.Inventories.Get(footman).Count); // a soul is used once
-        d.RunUntil(() => false, 200); // murder's cooldown
-        d.Order(0, CommandKind.UseItem, [footman], target: victim, arg0: 0);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 400);
-        Assert.False(d.World.Entities.IsAlive(victim));
+        d.Order(0, CommandKind.UseItem, [footman], target: footman, arg0: slot, arg1: 1); // item_berserk
+        d.Step();
+        Assert.True(d.World.IsConfused(hero));
+        Assert.True(d.World.Entities.IsAlive(soul)); // the soul stays
+
+        d.Order(0, CommandKind.UseItem, [footman], target: footman, arg0: slot, arg1: 0); // item_kill
+        d.Step();
+        Assert.False(d.World.Entities.IsAlive(hero));
+        Assert.False(d.World.Entities.IsAlive(soul)); // it goes with its unit
+    }
+
+    [Fact]
+    [Trait("Rule", "ITEM-010")]
+    public void A_soul_bound_to_nobody_does_nothing()
+    {
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("comm.item_soul", MapObject.Nature, 5, 4)), ruleset: Classic);
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId soul = OfType(d.World, "comm.item_soul").Single();
+        d.Order(0, CommandKind.PickItem, [footman], target: soul);
+        d.RunUntil(() => d.World.IsHeld(soul), 200);
+        d.Order(0, CommandKind.UseItem, [footman], target: footman, arg0: 0);
+        d.Step();
+        Assert.Contains(CommandRejection.InvalidArgument, d.Rejections());
+        Assert.True(d.World.Entities.IsAlive(soul));
     }
 }

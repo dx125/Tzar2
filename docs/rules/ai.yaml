@@ -6,8 +6,8 @@ rules:
     rule: Each computer kingdom plays an AI script, chosen per player before the game.
     source: [manual Random Map Screen, manual Multiplayer Setup Screen]
     status: partial
-    note: Tzar2 picks the script; it cannot be chosen (SHELL-010, SHELL-016).
-    adr: [0178]
+    note: Chosen per player in the multiplayer setup (SHELL-016); the random map screen cannot choose it yet (SHELL-010).
+    adr: [0178, 0232]
   AI-002:
     rule: The computer's strategy (build order, technologies, army mix) comes from the original's scripts; its tactics are Tzar2's own, smarter with the difficulty.
     source: [owner 2026-10-20]
@@ -15,10 +15,11 @@ rules:
     note: Owner decision (2026-10-20, ADR 0178).
     adr: [0178]
   AI-003:
-    rule: The computer does not repair its damaged towers.
-    source: [guide Campaign Discussion (Mission 17)]
-    status: unclear
-    note: The guide describes one campaign mission; whether it is the AI's general behaviour is not known.
+    rule: The computer does not repair its damaged towers. It has no repair plan; only a peasant of its that stands idle near a damaged building repairs it.
+    source: [guide Campaign Discussion (Mission 17), community ReTzar src/gameplay/ai/idle.rs (0x4153a0)]
+    status: tested
+    adr: [0251]
+    note: The original's computer repairs with a peasant idle for two of its think periods, within 15 tiles; Tzar2's idle peasants (of every kingdom) repair within idleWorkRadiusTiles (12) after idleWorkAfterMs (10 s), both UNVERIFIED. Tzar2.AI gives no repair order.
   AI-004:
     rule: A player can put his kingdom under the computer's assistance, none, economy, war or full, from the card with nothing selected. The war adviser commands the troops, builds the military buildings and trains troops; the economy adviser builds the economic buildings, researches and gathers.
     source: ['data MENU.INI [aiassist]', 'data ORDERS.INI view_ai set_ai_full', 'strings STRINGS2.INI set_ai_none set_ai_eco set_ai_war set_ai_full', 'strings STRINGS.INI [mp_setupmap] ai_assist', owner 2026-10-21 (answers)]

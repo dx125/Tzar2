@@ -125,6 +125,7 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
             objects.Add(new MapObject(casters[i], 0, (4 + (i * 3)) * 2048, 10 * 2048));
         }
 
+        objects.Add(new MapObject("asia.peon", 0, 17 * 2048, 11 * 2048)); // a pupil for the Asian priest's Mastery (TECH-028)
         for (int i = 0; i < 16; i++)
         {
             objects.Add(new MapObject("euro.knight", 1, (2 + i) * 2048, 15 * 2048));
@@ -172,7 +173,12 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
 
                     ushort spell = traits.Spells[next.GetValueOrDefault(c.Value) % traits.Spells.Length]; // the next spell once one took effect
                     SpellDefinition s = rules.Spells[spell];
-                    EntityId target = Nearest(w, c, own: s.Affects == SpellAffects.Own);
+                    EntityId target = Nearest(w, c, own: s.Affects == SpellAffects.Own, s);
+                    if (s.Effect == SpellEffect.Experience)
+                    {
+                        w.Experiences.Get(c).Level = 5; // a teacher above its pupil (ReTzar, 0x473bf0)
+                    }
+
                     Position at = w.Positions.Get(c);
                     Position aim = target.IsNone ? at : w.Positions.Get(target);
                     batch.Add(CommandKind.CastSpell, [c], aim.X, aim.Y, target, arg0: spell);
@@ -207,7 +213,7 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
         output.WriteLine($"spells cast: {string.Join(", ", cast.Select(i => rules.Spells[i].Key).OrderBy(k => k))}");
     }
 
-    private static EntityId Nearest(World w, EntityId caster, bool own)
+    private static EntityId Nearest(World w, EntityId caster, bool own, SpellDefinition s)
     {
         byte owner = w.Identities.Get(caster).Owner;
         Position at = w.Positions.Get(caster);
@@ -215,7 +221,7 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
         long bestD = long.MaxValue;
         foreach (EntityId e in w.Combats.Entities.ToArray())
         {
-            if (e == caster || (w.Identities.Get(e).Owner == owner) != own || !w.TypeOf(e).IsMobile || w.IsHeld(e))
+            if (e == caster || (w.Identities.Get(e).Owner == owner) != own || !w.TypeOf(e).IsMobile || w.IsHeld(e) || !s.AffectsType(w.Identities.Get(e).TypeId))
             {
                 continue;
             }

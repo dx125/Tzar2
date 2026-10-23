@@ -31,7 +31,8 @@ public sealed class UiAssets : IDisposable
     private readonly Dictionary<string, Texture2D> _cells = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (FontAsset Font, Image Strip)?> _fonts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Image> _tintedStrips = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, ImageTexture> _texts = new(StringComparer.Ordinal);
+    // Keyed by (font, colour, text) without building a key string: the HUD asks for its lines every frame.
+    private readonly Dictionary<(string Font, uint Colour, string Text), ImageTexture> _texts = [];
 
     /// <summary>Creates the cache over <paramref name="store"/>.</summary>
     public UiAssets(ContentStore store) => _store = store;
@@ -161,7 +162,7 @@ public sealed class UiAssets : IDisposable
     public ImageTexture? Text(string text, string font = SmallFont, Color? colour = null)
     {
         Color c = colour ?? Colors.White;
-        string key = $"{font}|{c.ToHtml()}|{text}";
+        (string, uint, string) key = (font, c.ToRgba32(), text);
         if (_texts.TryGetValue(key, out ImageTexture? cached))
         {
             return cached;
@@ -193,6 +194,7 @@ public sealed class UiAssets : IDisposable
 
         var texture = ImageTexture.CreateFromImage(image);
         texture.ResourceName = UiAudit.TextPrefix + text; // tells the layout audit that this picture is text (ADR 0200)
+        image.Dispose();
         if (_texts.Count > 4096)
         {
             ClearTexts();

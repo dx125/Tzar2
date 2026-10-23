@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -93,7 +94,7 @@ internal static unsafe class SelfTest
                     }
                 }
 
-                Report(wrong == 0 ? "PASS" : "FAIL", "window capture", $"{driver.LastCaptureMethod}, {ms:F1} ms, {4 - wrong}/4 colours exact");
+                Report(wrong == 0 ? "PASS" : "FAIL", "window capture", string.Create(CultureInfo.InvariantCulture, $"{driver.LastCaptureMethod}, {ms:F1} ms, {4 - wrong}/4 colours exact"));
             }
 
             bool foreground = driver.Focus();

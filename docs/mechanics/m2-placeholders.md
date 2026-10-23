@@ -60,7 +60,7 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 | Idle work | a peasant idle for 10 s takes the nearest work within 12 tiles: an own site, an own damaged building, a resource it gathers that an own drop-off takes (owner's third play-test: the original's peasants did; delay and radius UNVERIFIED; ADR 0180) | YAML `gameplay.idleWorkAfterMs`, `idleWorkRadiusTiles` | — | capture: idle peasants next to a site, a tree and a damaged building |
 | Population limit default | 200 — **VERIFIED** (capture-20261018-024524, `smoke/plain` window capture `setup`: the setup screen's default) | YAML `gameplay.populationLimit` | UNK-20 | done |
 | Starting resources default | `medium` | YAML `gameplay.defaultStartingResources` | — | lobby default |
-| Refund on cancel | 100% (sites at any progress, and queue items) | YAML `gameplay.*RefundPercent` | — | cancel captures |
+| Refund on cancel | queue items 100%; sites all before any work, then half of what is left (**ReTzar's reading of the original, ADR 0251**) | YAML `gameplay.*RefundPercent`; `GameplayCommands.SiteRefundBasisPoints` | — | cancel captures |
 | Destroyed producer | its queue is lost without a refund | code (`World.Destroy`) | — | observation |
 | Collision radius | **from the data** (ADR 0188): 7/16 of the IMAGES.INI object box, 14 px for 32 x 32 (batch K: 32 px apart at rest, 27+ px head on); the terrain footprint stays 7 px (cavalry 10, siege 12) | importer; YAML `Collision.terrain` | UNK-11 | a crowd around one target |
 | Occupancy cells per tile | 2 × 2 | YAML `ruleset.occupancyCellsPerTileAxis` | UNK-11 | same |

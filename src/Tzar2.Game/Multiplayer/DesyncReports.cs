@@ -18,10 +18,14 @@ internal readonly record struct LobbySlotData(SlotState State, string Name, byte
 /// <summary>How a lobby becomes a match: its occupied slots, in slot order, are the kingdoms (ADR 0162).</summary>
 internal static class LobbyDescription
 {
-    /// <summary>The description of the match, and the relay slot of each kingdom and back (255 = none).</summary>
-    /// <exception cref="InvalidDataException">The lobby does not fit the saved game being resumed, or the ruleset has no castle.</exception>
+    /// <summary>
+    /// The description of the match, and the relay slot of each kingdom and back (255 = none). On a custom map with
+    /// <paramref name="customKingdoms"/> kingdoms (ADR 0233), lobby slot k plays kingdom k; a kingdom whose slot is open
+    /// or closed stays on the map, played by nobody.
+    /// </summary>
+    /// <exception cref="InvalidDataException">The lobby does not fit the saved game being resumed or the custom map, or the ruleset has no castle.</exception>
     public static (MatchDescriptor Descriptor, byte[] SimSlotOf, byte[] LobbySlotOf) Build(
-        MatchSettings settings, IReadOnlyList<LobbySlotData> slots, Ruleset ruleset, MultiplayerSave? save)
+        MatchSettings settings, IReadOnlyList<LobbySlotData> slots, Ruleset ruleset, MultiplayerSave? save, int customKingdoms = 0)
     {
         var players = ImmutableArray.CreateBuilder<MatchPlayer>();
         byte[] simOf = Enumerable.Repeat((byte)255, Limits.MaxSlots).ToArray();
@@ -29,7 +33,20 @@ internal static class LobbyDescription
         for (int i = 0; i < slots.Count && i < Limits.MaxSlots; i++)
         {
             LobbySlotData s = slots[i];
-            if (s.State is not (SlotState.Human or SlotState.Computer))
+            bool occupied = s.State is SlotState.Human or SlotState.Computer;
+            if (customKingdoms > 0 && i >= customKingdoms && occupied)
+            {
+                throw new InvalidDataException($"The map has {customKingdoms} kingdoms; slot {i + 1} is not one of them.");
+            }
+
+            if (customKingdoms > 0 && i < customKingdoms && !occupied)
+            {
+                players.Add(new MatchPlayer((byte)players.Count, string.Empty, string.Empty, ControllerKind.Passive, Difficulty.Normal, 0));
+                lobbyOf.Add(255);
+                continue;
+            }
+
+            if (!occupied)
             {
                 continue;
             }
@@ -42,12 +59,26 @@ internal static class LobbyDescription
             {
                 MatchPlayer old = sim < save.Descriptor.Players.Length ? save.Descriptor.Players[sim]
                     : throw new InvalidDataException("The lobby has more kingdoms than the saved game.");
-                choice = new SlotChoice(old.Civilization, old.Team, old.Difficulty);
+                choice = new SlotChoice(old.Civilization, old.Team, old.Difficulty, old.AiScript, old.Colour);
             }
 
             string civ = ruleset.EntityTypeId(choice.Civilization + ".castle") >= 0 ? choice.Civilization : FirstCivilization(ruleset);
             ControllerKind controller = s.State == SlotState.Human ? ControllerKind.Human : ControllerKind.Computer;
-            players.Add(new MatchPlayer(sim, s.State == SlotState.Human ? s.Name : string.Empty, civ, controller, choice.Difficulty, choice.Team));
+            players.Add(new MatchPlayer(sim, s.State == SlotState.Human ? s.Name : string.Empty, civ, controller, choice.Difficulty, choice.Team, choice.AiScript, choice.Colour));
+        }
+
+        for (int k = players.Count; k < customKingdoms; k++)
+        {
+            players.Add(new MatchPlayer((byte)k, string.Empty, string.Empty, ControllerKind.Passive, Difficulty.Normal, 0));
+            lobbyOf.Add(255);
+        }
+
+        // Colours (SHELL-016): wanted ones first, in slot order (the first slot keeps a colour two slots want), then
+        // the rest take the free ones in order, so a lobby without wishes keeps the kingdom-index colours.
+        byte[] colours = Colours(players.Select(p => p.Colour).ToArray());
+        for (int k = 0; k < players.Count; k++)
+        {
+            players[k] = players[k] with { Colour = colours[k] == k ? (byte)255 : colours[k] };
         }
 
         if (players.Count == 0)
@@ -64,6 +95,43 @@ internal static class LobbyDescription
             ? settings
             : save.Descriptor.Settings with { ResumeSnapshotHash = settings.ResumeSnapshotHash, SpeedPercent = settings.SpeedPercent };
         return (new MatchDescriptor(effective, players.ToImmutable()), simOf, [.. lobbyOf]);
+    }
+
+    /// <summary>
+    /// The colour of each of <paramref name="wanted"/>'s kingdoms (0-7; <see cref="SlotChoice.AnyColour"/> = no wish):
+    /// a wish is granted unless an earlier kingdom has that colour; the others take the free colours in order.
+    /// </summary>
+    public static byte[] Colours(IReadOnlyList<byte> wanted)
+    {
+        ArgumentNullException.ThrowIfNull(wanted);
+        var result = new byte[wanted.Count];
+        var taken = new bool[Math.Max(8, wanted.Count)];
+        for (int k = 0; k < wanted.Count; k++)
+        {
+            result[k] = SlotChoice.AnyColour;
+            if (wanted[k] < 8 && !taken[wanted[k]])
+            {
+                result[k] = wanted[k];
+                taken[wanted[k]] = true;
+            }
+        }
+
+        int next = 0;
+        for (int k = 0; k < wanted.Count; k++)
+        {
+            if (result[k] == SlotChoice.AnyColour)
+            {
+                while (taken[next])
+                {
+                    next++;
+                }
+
+                result[k] = (byte)next;
+                taken[next] = true;
+            }
+        }
+
+        return result;
     }
 
     private static string FirstCivilization(Ruleset ruleset)

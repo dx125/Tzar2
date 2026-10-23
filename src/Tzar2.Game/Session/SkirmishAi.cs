@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Tzar2.AI.Legacy.Loading;
@@ -14,9 +15,14 @@ namespace Tzar2.Game.Session;
 /// client never sees AI types (§7.2): the original <c>random.ais</c> from the user's imported base package
 /// (<c>text/data/ai/*</c>, with its includes), else the engine-default <c>content/engine/ai/skirmish.ais</c>. Its
 /// <see cref="ContentHash"/> is part of the match fingerprint and the replay header: peers must resolve the same program.
+/// The other strategies the package's <c>AI.INI</c> offers (<see cref="Scripts"/>) are chosen per player in the lobby
+/// (AI-001, SHELL-016, SHELL-017) and resolved with <see cref="ForScript"/>.
 /// </summary>
 public sealed class SkirmishAi
 {
+    /// <summary>Path of <c>AI.INI</c> in a base package (imported as an INI table, docs/formats/ini-tsv.md).</summary>
+    public const string AiIniPath = "tables/data/ai/ai.ini.json";
+
     /// <summary>Folder of the original AI scripts in a base package.</summary>
     public const string PackageFolder = "text/data/ai/";
 
@@ -28,11 +34,56 @@ public sealed class SkirmishAi
         isOriginal: false,
         notice: null));
 
-    private SkirmishAi(AiProgram program, bool isOriginal, string? notice)
+    private readonly IAiScriptSource? _source;
+    private readonly Dictionary<string, SkirmishAi> _byScript = new(StringComparer.Ordinal);
+
+    private SkirmishAi(AiProgram program, bool isOriginal, string? notice, IAiScriptSource? source = null, IReadOnlyList<AiScriptOption>? scripts = null)
     {
         Program = program;
         IsOriginal = isOriginal;
         Notice = notice;
+        _source = source;
+        Scripts = scripts ?? [new AiScriptOption(isOriginal ? "Random" : "Default", string.Empty)];
+    }
+
+    /// <summary>
+    /// The strategies a player can choose (AI-001): first this one (script <c>""</c>), then the package's
+    /// <c>AI.INI</c> entries. The engine default offers only itself.
+    /// </summary>
+    public IReadOnlyList<AiScriptOption> Scripts { get; }
+
+    /// <summary>
+    /// The AI of <paramref name="script"/> (a <see cref="AiScriptOption.Script"/>): this one for <c>""</c>, an unknown
+    /// script or one that does not compile. Peers that resolve differently fail the loading barrier (AI hashes).
+    /// </summary>
+    public SkirmishAi ForScript(string? script)
+    {
+        if (string.IsNullOrEmpty(script) || _source is null)
+        {
+            return this;
+        }
+
+        lock (_byScript)
+        {
+            if (_byScript.TryGetValue(script, out SkirmishAi? known))
+            {
+                return known;
+            }
+
+            SkirmishAi resolved = this;
+            foreach (AiScriptOption option in Scripts)
+            {
+                if (option.Script == script)
+                {
+                    AiProgram program = AiCompiler.Compile(script, _source);
+                    resolved = program.HasErrors ? this : new SkirmishAi(program, IsOriginal, null);
+                    break;
+                }
+            }
+
+            _byScript[script] = resolved;
+            return resolved;
+        }
     }
 
     /// <summary>The engine-default script (public CI, packages without scripts).</summary>
@@ -88,7 +139,54 @@ public sealed class SkirmishAi
             return new SkirmishAi(EngineDefault.Program, false, $"The original AI scripts do not compile ({first}): computer kingdoms use Tzar2's default AI.");
         }
 
-        return new SkirmishAi(original, true, null);
+        var scripts = new List<AiScriptOption> { new("Random", string.Empty) };
+        foreach ((string name, string script) in ScriptsOfAiIni(package))
+        {
+            if (script != AiIni.DefaultScript && source.TryRead(script, out _) && scripts.TrueForAll(o => o.Script != script))
+            {
+                scripts.Add(new AiScriptOption(name, script));
+            }
+        }
+
+        return new SkirmishAi(original, true, null, source, scripts);
+    }
+
+    // AI.INI [scripts] (Appendix D.1) as the importer stores it: sections with [key, value] entries; comments are gone.
+    private static List<(string Name, string Script)> ScriptsOfAiIni(IContentSource package)
+    {
+        var result = new List<(string, string)>();
+        if (!package.Contains(AiIniPath))
+        {
+            return result;
+        }
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(package.ReadAllBytes(AiIniPath));
+            foreach (System.Text.Json.JsonElement section in doc.RootElement.GetProperty("sections").EnumerateArray())
+            {
+                if (!string.Equals(section.GetProperty("name").GetString()?.Trim(), "scripts", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (System.Text.Json.JsonElement entry in section.GetProperty("entries").EnumerateArray())
+                {
+                    string? key = entry[0].GetString()?.Trim();
+                    string? value = entry[1].GetString()?.Trim();
+                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
+                    {
+                        result.Add((key, AiScriptNames.Normalize(value)));
+                    }
+                }
+            }
+        }
+        catch (Exception e) when (e is System.Text.Json.JsonException or InvalidOperationException or KeyNotFoundException or IndexOutOfRangeException)
+        {
+            result.Clear(); // a malformed table offers no choices; the default still plays
+        }
+
+        return result;
     }
 
     /// <summary>The AI difficulty of a lobby difficulty.</summary>
@@ -117,3 +215,8 @@ public sealed class SkirmishAi
         }
     }
 }
+
+/// <summary>A strategy a player can choose for his kingdom's computer player (AI-001; <c>AI.INI</c> <c>[scripts]</c>).</summary>
+/// <param name="Name">The name shown, e.g. <c>Magic, Religion</c>.</param>
+/// <param name="Script">The script, or <c>""</c> for the match's default.</param>
+public sealed record AiScriptOption(string Name, string Script);
