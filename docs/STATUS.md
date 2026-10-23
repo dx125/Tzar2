@@ -264,6 +264,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — Item properties on map objects (ADR 0264; work queue 17, from #215).** Map objects get an optional item (effect, power, charges, spell and look keys), written as map.bin version 3 only when a map has items, so existing maps keep their bytes and hashes. The random map generator then places the original's books, weapons and shields, and potions with their ranges (ReTzar 0x4b5c50). The coordinator moved the item ahead of M8.
+
 * **2026-10-23 — Chat screen (HUD-010, HUD-011).** CHAT (and Enter in single player) opens D_CHAT at ReTzar's places: the line, ALL, ALLY, ENEMY and CUSTOM, whose large window lists the other kingdoms with a check, their colour, name and a stance shield. The engine-free ChatScreen gives the line, recipients and mask to GameSession.SubmitChat, so single player can type the cheat codes again. Multiplayer's Enter keeps the overlay's chat line. No hash changes.
 
 * **2026-10-23 — F4's scoreboard and clock (DIP-008).** F4 now steps from nothing to the scoreboard and the clock, the clock alone, and back, as ReTzar reads the original (0x4f2903): the game time at the view's top right, one line per kingdom (name, own/team score, the best first, defeated struck through, its colour) above the bottom right corner. The engine-free ScoreBoard model orders and averages; the score itself stays the placeholder of UNK-29. No hash changes.
