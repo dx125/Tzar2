@@ -444,7 +444,7 @@ internal sealed class ResearchCompiler
             if (except.Contains(t.Traits.LegacyClass)
                 || (damageClass is { } dc && t.Traits.Armament?.DamageClass != dc)
                 || (wanted is { } w && t.Traits.Category != w)
-                || (locomotor is { } lo && (!t.IsMobile || t.Locomotor != lo))
+                || (locomotor is { } lo && (!t.IsMobile || !t.Locomotor.IsA(lo)))
                 || (civ is not null && t.Traits.Civilization != civ))
             {
                 continue;

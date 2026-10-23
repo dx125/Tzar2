@@ -33,6 +33,7 @@ internal static class BenchCommand
         int? ordersOption = null;
         int? churnOption = null;
         int? intervalOption = null;
+        int sampleEvery = 0;
         for (int i = 0; i < args.Length; i++)
         {
             string arg = args[i];
@@ -68,6 +69,7 @@ internal static class BenchCommand
                 case "--churn": ok = TryInt(value, 0, 64, v => churnOption = v); break;
                 case "--interval": ok = TryInt(value, 1, 10_000, v => intervalOption = v); break;
                 case "--ticks": ok = TryInt(value, 1, 10_000_000, v => ticksOption = v); break;
+                case "--sample": ok = TryInt(value, 1, 10_000_000, v => sampleEvery = v); break;
                 case "--warmup": ok = TryInt(value, 0, 1_000_000, v => warmupOption = v); break;
                 case "--workers": ok = TryInt(value, 1, 64, v => workers = v); break;
                 case "--seed":
@@ -158,7 +160,9 @@ internal static class BenchCommand
             }
         }
 
+        long setupStart = Stopwatch.GetTimestamp();
         using IBenchScenario scenario = Create();
+        double setupMs = Stopwatch.GetElapsedTime(setupStart).TotalMilliseconds;
         Tzar2.Sim.Systems.PathRequestSystem? pathSystem = null;
         scenario.Simulation.Systems.Seal();
         foreach (Tzar2.Sim.Systems.ISimSystem system in scenario.Simulation.Systems.Ordered)
@@ -174,6 +178,8 @@ internal static class BenchCommand
             Write(stream, scenario.RunTick());
         }
 
+        // Live managed heap after a full collection, before and after the measured ticks (a leak shows as growth).
+        long liveBefore = GC.GetTotalMemory(forceFullCollection: true);
         double[] samples = new double[ticks];
         var profiler = new TickProfiler(ticks);
         scenario.Simulation.Profiler = profiler;
@@ -181,6 +187,12 @@ internal static class BenchCommand
         int gcBefore = GC.CollectionCount(0);
         long simTicks = 0;
         TickResult last = default;
+        var inv0 = CultureInfo.InvariantCulture;
+        if (sampleEvery > 0)
+        {
+            stdout.WriteLine("sample     tick\tgame min\tp50 ms\tp99 ms\tmax ms\tgen0\tgen1\tgen2\theap MB\tcommitted MB\tworking set MB\talive\tsnapshot KB");
+        }
+
         for (int t = 0; t < ticks; t++)
         {
             scenario.GenerateCommands();
@@ -196,11 +208,22 @@ internal static class BenchCommand
                 stdout.WriteLine(string.Create(CultureInfo.InvariantCulture, $"trace      tick {last.Tick.Value}: {samples[t]:F3} ms, paths accepted {pathSystem.LastAccepted}, spent {pathSystem.LastSpent}, computed {pathSystem.LastComputed}, inline {pathSystem.LastInline}, queue {scenario.Simulation.World.PathQueue.Count}"));
             }
             Write(stream, last);
+            if (sampleEvery > 0 && (t + 1) % sampleEvery == 0)
+            {
+                double[] window = samples[(t + 1 - sampleEvery)..(t + 1)];
+                Array.Sort(window);
+                // A keyframe snapshot, as a recording session takes one every 60 s of game time (its size and garbage).
+                int snapshotBytes = scenario.Simulation.CaptureSnapshot().Length;
+                GCMemoryInfo memory = GC.GetGCMemoryInfo();
+                double minutes = (double)last.Tick.Value * scenario.Simulation.World.Config.TickLengthMilliseconds / 60_000.0;
+                stdout.WriteLine(string.Create(inv0, $"sample     {last.Tick.Value}\t{minutes:F1}\t{Percentile(window, 50):F3}\t{Percentile(window, 99):F3}\t{window[^1]:F3}\t{GC.CollectionCount(0)}\t{GC.CollectionCount(1)}\t{GC.CollectionCount(2)}\t{GC.GetTotalMemory(false) / 1048576.0:F1}\t{memory.TotalCommittedBytes / 1048576.0:F1}\t{Environment.WorkingSet / 1048576.0:F1}\t{scenario.Simulation.World.Entities.AliveCount}\t{snapshotBytes / 1024.0:F0}"));
+            }
         }
 
         long allocated = GC.GetTotalAllocatedBytes(precise: true) - allocatedBefore;
         int gcs = GC.CollectionCount(0) - gcBefore;
         scenario.Simulation.Profiler = null;
+        long liveAfter = GC.GetTotalMemory(forceFullCollection: true);
         double[] inTickOrder = (double[])samples.Clone();
         Array.Sort(samples);
         ulong finalHash = scenario.Simulation.ComputeFullHash();
@@ -219,6 +242,7 @@ internal static class BenchCommand
         stdout.WriteLine(string.Create(inv, $"runtime    {Environment.Version}, {System.Runtime.InteropServices.RuntimeInformation.OSDescription.Trim()} {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}, workers {workers}, overflow policy {Core.Numerics.OverflowPolicy.Mode}"));
         stdout.WriteLine(string.Create(inv, $"cpu        {CpuModel()}, {Environment.ProcessorCount} logical processors"));
         stdout.WriteLine(string.Create(inv, $"entities   {world.Entities.AliveCount} alive, {moving} moving at the end"));
+        stdout.WriteLine(string.Create(inv, $"setup ms   {setupMs:F1} (scenario and match creation)"));
         stdout.WriteLine(string.Create(inv, $"ticks      {ticks} measured after {warmup} warm-up"));
         double mean = simTicks * 1000.0 / Stopwatch.Frequency / ticks;
         stdout.WriteLine(string.Create(inv, $"tick ms    p50 {Percentile(samples, 50):F3}  p99 {Percentile(samples, 99):F3}  max {samples[^1]:F3}  mean {mean:F3}"));
@@ -227,6 +251,7 @@ internal static class BenchCommand
         stdout.WriteLine(string.Create(inv, $"calibration {calibration:F3} ms (reference {Calibration.ReferenceMs:F1} ms, scale {scale:F3})"));
         stdout.WriteLine(string.Create(inv, $"normalized p50 {Percentile(samples, 50) * scale:F3}  p99 {Percentile(samples, 99) * scale:F3}  mean {mean * scale:F3}"));
         stdout.WriteLine(string.Create(inv, $"alloc      {allocated / (double)ticks:F1} B/tick (incl. bot command generation), gen0 GCs {gcs}"));
+        stdout.WriteLine(string.Create(inv, $"live heap  {liveBefore / 1048576.0:F1} MB before, {liveAfter / 1048576.0:F1} MB after the measured ticks (full collections)"));
         profiler.Print(stdout, inTickOrder);
         stdout.WriteLine(string.Create(inv, $"final tick {world.Tick.Value}"));
         stdout.WriteLine(string.Create(inv, $"final hash {finalHash:X16}"));
@@ -350,6 +375,8 @@ internal static class BenchCommand
         output.WriteLine("  --churn <n>         units deleted and respawned per player per tick (default 0; B4-like)");
         output.WriteLine("  --interval <n>      ticks between a player's order passes (default 1; s2: 10)");
         output.WriteLine("  --ticks <n>         measured ticks (default 1000)");
+        output.WriteLine("  --sample <n>        every n measured ticks print the window's tick p50/p99/max, GC counts, heap and");
+        output.WriteLine("                      working set (long-match memory and GC over time)");
         output.WriteLine("  --warmup <n>        unmeasured ticks first (default 100)");
         output.WriteLine("  --workers <n>       sim worker threads (default: cores, max 8); never changes the result");
         output.WriteLine("  --seed <n>          scenario and match seed");

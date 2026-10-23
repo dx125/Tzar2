@@ -37,7 +37,14 @@ public sealed class AutoplayDriver
         {
             Directory.CreateDirectory(_dir);
             DisplayServer.WindowSetSize(GameApp.ClassicScreen);
+            var waiting = System.Diagnostics.Stopwatch.StartNew();
+            while (_app.Game is null && waiting.Elapsed.TotalSeconds < 120)
+            {
+                await Frames(1); // the match is prepared on a worker thread behind the loading screen
+            }
+
             await Frames(30);
+
             GameScreen game = _app.Game ?? throw new InvalidOperationException("No game.");
             game.EdgeScroll = false;
             game.Scripted = true;
@@ -223,9 +230,10 @@ public sealed class AutoplayDriver
                 await Shot("map-setup");
                 Vector2 start = art + new Vector2(555 + 105, 499 + 13);
                 await RealButton(start, start, MouseButton.Left);
-                for (int i = 0; i < 900 && _app.Game is null; i++)
+                var loading = System.Diagnostics.Stopwatch.StartNew();
+                while (_app.Game is null && loading.Elapsed.TotalSeconds < 120)
                 {
-                    await Frames(1);
+                    await Frames(1); // prepared on a worker thread behind the loading screen
                 }
 
                 if (_app.Game is { } custom)
