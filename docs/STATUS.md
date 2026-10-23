@@ -6,11 +6,11 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-22 (handover)
+* **Last updated:** 2026-10-23 (consolidated update after the batch merge of 46 PRs)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below). The product
   owner also operates the Windows PC with the original game for captures and local-only tests.
-* **`main`:** green on CI. Open PRs: none. Open issues: [#62](https://github.com/dx125/Tzar2/issues/62) (flaky
-  `RelayTests`).
+* **`main`:** green on CI. Open PRs: none. Open issues: none ([#62](https://github.com/dx125/Tzar2/issues/62), flaky
+  `RelayTests`, fixed by ADR 0231).
 
 ## Handover (2026-10-22)
 
@@ -70,10 +70,10 @@ and it has not been re-run since the handover.
 | M1 Importer & viewer | **Done** (reported) | All 961 RLE sheets and the other formats of the reference build import (ADR 0013, `t2 import`); golden sprite comparisons and the import of the reference build are local-only tests (`TZAR2_ORIGIN`, `TZAR2_GOLDENS`). |
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
 | M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). Three play-tests by the owner are done and their findings fixed (2026-10-20/21). Open before M3 closes: the ledger of the original's rules ([rules/](rules/README.md)) and its missing rules (work queue 1), and a fourth play-test. |
-| M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **14 of 19 measured** (2026-10-20, editor acceptance test on the clean GOG install, scripted solver, ADR 0134; not completed: `alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`), tutorial 7 of 7 (reported). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
+| M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **19 of 19 measured** (2026-10-22, `t2 campaign run --survey` on the clean GOG install, ADRs 0134, 0220; every map with cheat assistance, none by pure play), tutorial **7 of 7 measured** (2026-10-22). Earlier counts were inflated by AI resignations (ADR 0220). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
-| M6 Multiplayer & replays | **In progress** | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI merged (ADRs 0160–0168). 500-match soak with 0 desyncs: 168 matches, 0 desyncs (reported); nightly soak job runs. |
-| M7 Windows beta | Not started | Installer, signing, crash reporting, min-spec tuning, closed beta. |
+| M6 Multiplayer & replays | **Done** (exit criteria met 2026-10-22) | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI (ADRs 0160–0168, 0230, 0231). **500-match soak: 500 of 500 ok, 0 desyncs, 0 failures** (2026-10-22, macOS, `t2 soak --matches 500 --parallel 10 --seed 62`: 2 bots + 2 Hard AIs, 6,000 ticks at 4x, RTT 200 ms, jitter 10 ms, 5 % loss; 251 disconnects and 251 rejoins, 138 after an AI takeover; 749 replays re-simulated; 3.0 M ticks; 65.6 min). Replays recorded on Linux verify on Windows, Linux and macOS (CI `replay-verify`, same final hashes); the nightly 20-match slice passes on Linux and Windows. Matches are 5 minutes, not two hours (ADR 0167). Since the exit: the multiplayer setup (colours, AI scripts, every map and game option; ADR 0232), custom maps in multiplayer with time and score limits (ADRs 0233, 0234; SHELL-018), and the multiplayer menu, lobby and replays on the original's art and font (UI review). |
+| M7 Windows beta | **In progress** | Plan: ADR 0240 (D1–D7). Done: the Windows package (Godot headless export, portable zip, Inno Setup installer, version stamp, uninstall keeps the player's data; ADR 0241), first-run import in the client, the signing step (skipped without secrets; ADR 0242), opt-in crash reports over the Sentry protocol (ADR 0243), the S2 render bench `--bench-render` (D6, ADR 0244; first run on an M5 MacBook at 1080p: 120 FPS, sim p99 14.8 ms above the 12 ms budget, VRAM 3.1 GB). The code review cut the client's memory (terrain tile atlas, ADR 0210; caches and atlas pages freed after a match; a match loaded on a worker thread). Open: the crash server and the signing certificate (owner), the owner's sim bench, installed-build and Windows render-bench runs, the closed beta (D7). Exit: crash-free ≥ 99.5 %, S2, no P0/P1. |
 | M8 Modding, polish, release | Not started | Also the **fidelity suite ≥ 80 %** (moved from M3, ADR 0174): **10 of 30 (33.3 %)** today, see below. |
 | PX Platform expansion | Post-1.0 (DEC-14) | |
 
@@ -111,7 +111,15 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    the online help. `attack_type` is on no card of the original, so it is left
    out.
 3. **Maintainer:** close the ledger's missing and partial rules (`t2 rules list missing partial`), in the owner's
-   order. Next: the fifth play-test (item 5), and the owner's list of 2026-10-22 (log below). Done: the controls
+   order. Next: the fifth play-test (item 5), and the owner's list of 2026-10-22 (log below). Done: the curse,
+   hypnosis, the ghost's banshee scream and the Messiah's immunity (WAR-009, WAR-010, MAG-008; ADR 0250), cancelled
+   sites, broken-off loads and the computer's repairs (BLD-020, ECO-002, AI-003; ADR 0251), trade with any market,
+   Asian peasants as traders and caravans that load infantry (TRADE-003, TRADE-004, HOLD-008; ADR 0252), Tournaments
+   and Mastery (TECH-028, TECH-029; ADR 0253), spells that skip machines (MAG-022; ADR 0254), soul items bound to a
+   unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
+   experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
+   0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
+   0261), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -147,14 +155,17 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 8. **Maintainer (deferred to M8):** before batches F and H, move or guard the scenarios that leave soldiers idle in
    MP2's middle next to Nature's cows (experience, combat outcomes; ADR 0171). **Operator:** batches F–I.
 9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
-   the diagonal-rock passability check on campaign map `rajba` (blocks a campaign mission).
-10. **Maintainer:** decode UNK-70…80, compare random maps with our generator; make the five main-campaign missions the
-    solver does not complete pass (`alex1`, `bigisland`, `v_02`, `vsaa`, `rajba`; all time out, `rajba` on the
-    diagonal rocks) to reach 19/19.
+   (the `rajba` cliff check is settled: only ninjas climb cliffs, WORLD-018).
+10. **Maintainer:** decode UNK-70…80, compare random maps with our generator. Done: the main campaign is 19 of 19
+    (ADR 0220, 2026-10-22). Follow-ups: ninjas climbing walls, peasants gathering resource items (ReTzar).
 11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
-12. **Maintainer:** issue #62 (flaky `RelayTests`); M6 soak to 500 matches.
-13. M7 planning: installer, code signing, crash reporting, min-spec hardware.
+12. **Done (2026-10-22):** issue #62 fixed at its cause (ADR 0231); M6 soak 500 of 500 with 0 desyncs; token rotation
+    on rejoin, Noise handshake proposed for M7 (ADR 0230).
+13. **Maintainer:** M7 (ADR 0240). Done: package, installer, first-run import, signing step, crash reports (ADRs
+    0241–0243), the render bench (D6, ADR 0244). **Owner:** pick the crash server and the signing route (ADRs 0242,
+    0243); run the sim bench and the installed build ([min-spec-tuning.md](release/min-spec-tuning.md), requests 1
+    and 2), and `--bench-render` on Windows.
 14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
@@ -185,6 +196,9 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       * a STATUS log line.
 
       Ask the owner for screenshots of the original's screens that are not in the art yet.
+    * **Progress:** the test (`--ui-smoke`, CI job `godot-smoke`, ADR 0200) and the findings
+      ([reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md)) are done. Fixes are in progress, and the
+      screenshots are asked of the owner.
 16. **Maintainer (owner's order of 2026-10-22): a full code review for performance, resources and memory, and for a
     fork.**
     * **Performance and resources:**
@@ -210,11 +224,210 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       * a review report (`docs/reviews/2026-…-code-review.md`) with findings ranked by impact;
       * ADRs for the structural changes;
       * the fixes in small PRs, each with its measurements.
+    * **In progress (2026-10-22):** the report is [reviews/2026-10-code-review.md](reviews/2026-10-code-review.md).
+      Measured so far:
+      * the sim: an hour of 4 Hard AIs on 256² runs at 0.19 / 0.70 ms per tick (p50 / p99) with one GC, and does not
+        leak;
+      * the client: the terrain took 1.3 GB of video memory on a huge map (ADR 0210 fixes it), and Godot objects and
+        nodes do not leak between matches.
+
+      Done since (log below): the nightly Benchmarks' gameplay rows re-recorded, the architecture tests' four gaps,
+      the civilization list (ADR 0211, the `Race` bug), the asset caches cleared in the menu, the load off the main
+      thread, rules decided by data instead of names in code.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-23 — The batch merge of 46 PRs (#132–#178, without #141).**
+  * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
+  * Golden and bench hashes were re-pinned where the PRs met: the civilization order (ADR 0211), the movement of
+    ADR 0220, the ledger chain (ADRs 0250–0261) and the rules decided by data instead of names in code.
+  * `HumanVsAiTests`' Archipelagos time limit is now 18 minutes. WORLD-013's forests (ADR 0201) and ADR 0220's
+    movement together delay the first sea landing to between 16 and 18 minutes.
+  * The lobby fix UI-L2 (#140) was superseded by the `LobbyScreenModel` lobby (#160, ADR 0232), and then by the
+    lobby rebuilt on the original's art (#177), which also takes #166's custom maps and limits and the ruleset's
+    civilizations (#174).
+  * Where PRs met in code: `LobbyScreenModel`'s population limits and speeds became `ImmutableArray`s (#145's
+    architecture test), and the render bench (#170) uses the loading stages of #146.
+
+* **2026-10-22 — The UI review's test and findings (work queue 15, ADR 0200).** A headless UI smoke test opens 35
+  screens and dialogs of the shell, the game and the editor at 22 displays (1024 × 768 to 3840 × 2160, Wide at every
+  interface scale and Authentic). It fails when a control leaves the window or covers another. A new CI job
+  (`godot-smoke`, Linux) runs it and the other client smoke tests. Findings per screen and display:
+  [reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md). Six layout findings, among them Authentic in a
+  720-row window cutting off the HUD's bottom. Twenty-one likeness findings: texts not from STRINGS.INI, the
+  multiplayer screens on borrowed art, the scenario dialogs off their boxes. Eight requests for the owner's
+  screenshots (two added for HUD-028 and HUD-031) and one decision (the main menu against its carved slots). Fixes
+  follow in small PRs.
+  * Fixed: UI-L1 (a window smaller than the logical screen shrinks the picture), UI-L2 (the lobby's rows), UI-L3 (the
+    editor's windows on 1024-wide screens), UI-L4 and UI-L5 (text wrapped to its box): no open layout finding is left.
+  * UI-T1, UI-T2, UI-T3, UI-T5: shell labels from STRINGS.INI.
+  * UI-A3, UI-A10, UI-A11, UI-A12: the load selector and the scenario dialogs in their art's boxes.
+  * UI-A2: the credits screen (SHELL-020).
+  * UI-A4, UI-A9: the end-of-game and options slots as far as the data shows them.
+  * UI-A6, UI-A7, UI-F1, UI-T6: the multiplayer menu, lobby and replays rebuilt on the original's art, pieces and
+    font.
+
+* **2026-10-22 — Spell magnitudes as the original casts them (ADR 0261).** From ReTzar: heal +6, bless +5 attack to
+  friends within 4 tiles, lightning 150, freeze every unit within 3 tiles for 20 s without defence and up to 40
+  damage, invisibility 45 s, stone 2-5 min, confusion every unit within 2 tiles, flame bolt 60, magic vision 60 s,
+  raise dead every body within 8 tiles of the caster. New rule MAG-024. The gameplay golden and bench are re-pinned;
+  fire rain, whirlpool, cooldowns and cast times stay UNVERIFIED.
+
+* **2026-10-22 — Spell ranges and mana as the original dispatches them (ADR 0260).** From ReTzar: fire rain 14 tiles
+  and 100 mana, lightning 12 and 50, freeze 12 and 60, heal 3 (5 with Medicine) and 4, confusion 12 and 70, the rest
+  8 and 50, summons their creature's mana. New rule MAG-023. The gameplay golden and bench are re-pinned; the other
+  magnitudes stay UNVERIFIED.
+
+* **2026-10-22 — Jewelry: the markets sell and buy items (ADR 0259).** From ReTzar: with Jewelry one market of the
+  kingdom gets an offer (book, power item, book or potion with a random record) a second after it stands and then
+  every minute, the newest 8 kept; any market sells an offer for 4 times its value and buys carried items for theirs.
+  Map books now read their spell by the original's numbering. Hashed layout 16, snapshot 18; every golden and the CI
+  benches re-pinned. Ledger: 41 open rules before, 40 after.
+
+* **2026-10-22 — Experience on the original's scale (ADR 0258).** From ReTzar: a kill is one point and damage none;
+  the first point gives level 1 and level k needs k more (Warfare, Tactics, Sun Tzu: 70, 50, 35 %); dummies a point
+  per 75 of damage up to level 8; each academy +10 to the cap; Mastery teaches one point. Replaces UNK-23's scale. The
+  AI skirmish is unchanged (no Learning in 10 minutes); the gameplay golden (level-ups 95 to 269) and bench are
+  re-pinned.
+
+* **2026-10-22 — The trade profit as the original computes it (ADR 0257).** From ReTzar: load x tiles x 40 / (map
+  side x 100), the tiles on the larger axis between the markets, none under 12; it replaces the UNK-28 placeholder
+  (1 % a tile, at most 300 %). The gameplay golden and bench are re-pinned.
+
+* **2026-10-22 — Cows grow meat that falls as food items (ADR 0256).** From ReTzar: a cow's meat starts at 300 and
+  grows 2 a second up to 600; dead, it falls as food items of at most 100. A peasant takes a resource item as its
+  load and carries it home; any other unit brings it in at once. Hashed layout 15, snapshot 17; every golden and the
+  CI benches re-pinned. Ledger: 42 open rules before, 41 after.
+
+* **2026-10-22 — Soul items are bound to a unit; the Messiah takes no magic (ADR 0255).** From ReTzar: Soul Bind puts
+  a soul bound to its target in the caster's bag; item_kill kills that unit (heroes too), item_berserk sends it
+  berserk for 20 s, the soul stays and goes when its unit dies. Magic (spells, souls, mages', dragons' and priests'
+  attacks) deals the Messiah no damage. Hashed layout 14, snapshot 16; every golden and the CI benches re-pinned.
+  Ledger: 43 open, 42 after.
+
+* **2026-10-22 — Healing, freezing and raise dead skip machines (ADR 0254).** From ReTzar (0x2719, 0x271c): golems,
+  siege engines, carpets, ships, ghosts, skeletons and fishing boats are not healed, frozen or cursed, and they and
+  the bodiless (bats, mages, dwarves, orcs, jinns, dragons) are not raised. New rule MAG-022. Ruleset hash only.
+
+* **2026-10-22 — Tournaments and Mastery (ADR 0253).** From ReTzar: every 75 points a kingdom's units learn teach
+  each Asian peasant, monk, ninja and priest one more; Mastery's priest teaches only those pupils, of a lower level
+  than its own. The gameplay golden's ruleset hash is re-pinned. Ledger: 45 open rules before, 43 after.
+
+* **2026-10-22 — Trade with any market; Asian peasants trade (ADR 0252).** From ReTzar and the data: a trader uses
+  any kingdom's market, enemies' too, for its own profit; caravans carry 500 (European) or 300 (Arabian), Asian
+  peasants 100; caravans load 8 infantry. The gameplay golden and bench are re-pinned. Ledger: 48 open rules before,
+  45 after.
+
+* **2026-10-22 — Cancelled sites, broken-off loads and the computer's repairs (ADR 0251).** From ReTzar: a site gives
+  back all of its cost before any work, then half of what is left to build; a load is whole only at the end of the
+  work cycles; the computer repairs only with idle peasants near the damage. Ledger: 51 open rules before, 48 after.
+
+* **2026-10-22 — The curse, hypnosis, the banshee and the Messiah as ReTzar reads them (ADR 0250).** The curse halves
+  attack and takes all defence of enemy non-machines within the caster's sight for 30 s; a ghost's blow curses for
+  free in 71 of 1001; hypnosis hands a unit to the caster's kingdom for 30 s in its own colours; lasting spells do not
+  take on the Messiah. Hashed layout 13, snapshot 15; every golden and the CI benches are re-pinned. Ledger: 54 open
+  rules before, 51 after.
+
+* **2026-10-22 — Custom maps in multiplayer, time and score limits (ADRs 0233, 0234; SHELL-018).** The host
+  chooses a random or a custom map; every peer finds the custom map by its content hash among its own (a player
+  without it cannot be ready, and the loading barrier stops the match); slot k plays the map's kingdom k; USE MAP
+  SETTINGS keeps the map's own settings. Lobbies have eight slots, opened or closed to fit the map. The time and
+  score limits are typed in; the game types stay Standard and Deathmatch. ADR 0234 proposes the Noise handshake
+  for a public relay (owner questions in it).
+
+* **2026-10-22 — The multiplayer setup: colours, AI scripts and every map and game option (ADR 0232; SHELL-016,
+  SHELL-017, SHELL-018).** Each player picks his colour and the AI script of his kingdom's computer player (AI.INI's
+  strategies); the host does the same for computers, and everyone is told when he changes one. The host sets the
+  map's resources and options, the game type, the victory, the starting resources, the population limit, Explore,
+  day and night and weather. The lobby screen draws an engine-free `LobbyScreenModel`. Custom maps in multiplayer
+  remain open (SHELL-018 partial).
+
+* **2026-10-22 — A match loads on a worker thread (code review, item 16).**
+  * Sprite decoding and packing, the terrain's layout and its composition into the tile atlas now run on a worker
+    thread. The loading screen stays up and responsive meanwhile.
+  * The main thread only uploads, which takes 60–80 ms. Before, it froze for the whole load: 4 s for an original map
+    on the review machine, 12 s for a real-world map.
+
+* **2026-10-22 — Rules no longer decided by names in code (code review, item 16).**
+  * The "destroy the castles" victory counts a `Seat` trait, not the class name `castle`.
+  * The tavern, gambling and loans name their technologies in `world:` settings, not in Sim or card code.
+  * The client's Delete honours `ProtectedDelete` and finds the start camera by `Seat`.
+  * Only the ruleset hash moves.
+
+* **2026-10-22 — The main campaign is completable: 19 of 19 (ADR 0220; work queue 10).**
+  The survey on `main` said 17 of 19, but AI resignation (DIP-009) had won or broken missions, so the real count was
+  15. Scenario kingdoms no longer resign, and scripted orders work for a beaten kingdom. Units aboard count where
+  their ship is, and `$cargo` is what is aboard or inside (ReTzar). In movement, allies are friends and units slide
+  past corners. UNK-81 is settled by the owner: cliffs stop every ground unit but the ninja, who climbs a band of one
+  or two tiles (WORLD-018; a new `climber` locomotor). Goldens are re-pinned. The solver gains tribute, item pickup by
+  a unit that can reach it, evacuations, sticky ferries and goal protection.
+
+* **2026-10-22 — Civilizations are an ordered list in the ruleset (ADR 0211; code review, item 16).**
+  * `ruleset.civilizations: [euro, arab, asia]` and `commonCivilization: comm` replace an ordinally sorted list.
+  * This fixes a bug: the trigger variable `Race` read 1 Arabian, 2 Asian and 4 European; it now reads the original's
+    1 European, 2 Arabian, 3 Asian.
+  * A kingdom without objects now defaults to euro instead of arab.
+  * The gameplay, AI and synthetic-mission hashes are re-pinned; the AI's commands are unchanged.
+  * The client's skirmish, custom-map and lobby screens offer the ruleset's playable civilizations instead of three
+    keys written in code.
+
+* **2026-10-22 — The S2 render bench (ADR 0244, M7 D6).** `--bench-render` plays the S2 scenario (512² random map,
+  eight Hard AIs, 4,000 units, day/night and weather, no fog) with V-Sync off and prints one `RENDER-BENCH` line:
+  FPS, frame and sim tick percentiles, memory, load time and the S2 verdict. First run on an M5 MacBook at 1080p:
+  120 FPS, sim p99 14.8 ms (above the 12 ms budget), VRAM 3.1 GB; the owner's Windows runs decide.
+
+* **2026-10-22 — Random maps grow the original's forests (WORLD-013, ADR 0201).** `[randomtreeset]` drives a plasma
+  field and the chances of a tree as ReTzar reads the original. Forests are tighter, about a fifth of the land instead
+  of a third (Medium Continental 1531 → 1001 trees). The map generator's golden hashes are re-pinned; the bench hashes
+  do not change.
+
+* **2026-10-22 — M6 exit criteria met; relay keep-alive and token rotation (ADRs 0230, 0231; work queue item 12).**
+  Issue #62: peers were dropped as timed out whenever the test thread did not pump for about a second, because
+  LiteNetLib pinged once a second against a 1 s timeout; it now pings five times per timeout. The relay spends a
+  rejoin's token and sends a new one. Soak: 500 of 500 matches, 0 desyncs.
+
+* **2026-10-22 — M7 plan and the Windows beta's infrastructure (ADRs 0240–0243).** Seven deliverables; PR #132: the
+  Windows package (export, zip, Inno Setup, version `0.7.0-beta.<run>+<commit>`), the first-run import, the signing
+  step that skips without secrets, opt-in crash reports with sessions for the crash-free rate. Nothing is sent, signed
+  or published until the owner chooses the server and the certificate.
+
+* **2026-10-22 — Terrain from a deduplicated tile atlas (ADR 0210; code review, item 16).**
+  * Every distinct 32 × 32 composed tile is stored once. A chunk keeps a slot per tile and frame instead of a
+    512 × 512 texture per animation frame.
+  * On a huge map, video memory falls from 1.3 GB to 0.28 GB and the managed heap at match start from 1.37 GB to
+    0.38 GB.
+  * A real-world 512² map needs 332 MB of video memory instead of about 2.7 GB of terrain textures.
+  * The pixels drawn are the same.
+
+* **2026-10-22 — The code review's first measurements (item 16).**
+  * `t2 bench --sample` reports a long match's tick times, GCs, heap and snapshot size over time.
+  * The client's `--resource-soak` plays matches back to back and logs Godot's memory, object and video-memory
+    counters.
+  * The ranked findings are in [reviews/2026-10-code-review.md](reviews/2026-10-code-review.md).
+
+* **2026-10-22 — The client frees what a match no longer needs (code review, item 16).**
+  * Hidden shadow viewports stop rendering. Glow and ghost never show shadows, and the Shadows option hides the rest.
+  * The sprite atlas drops its CPU pages after the upload, and the upload's Godot images are disposed.
+  * The decoded-asset cache is cleared back in the menu.
+  * The menu's managed heap after a match falls from 270 to 150 MB. The next match decodes its sprites again, about
+    0.4 s.
+
+* **2026-10-22 — Music renders without allocating (code review, item 16).** `MidiPlayer` pushes whole chunks of
+  512 frames through one array; it used to allocate a slice every frame.
+
+* **2026-10-22 — The nightly gameplay benchmark rows re-recorded (code review, item 16; ADR 0080 history).**
+  * A bisect over #64–#131 on one runner shows s2 flat and the gameplay cost rising only where its play changed. The
+    walking speeds of ADRs 0171/0172 brought more fighting, so p99 went from 8.1 to 9.3 ms on the EPYC 7763.
+  * There is no code regression. The s2 failures of 10-19 and 10-20 were slow runners.
+
+* **2026-10-22 — The architecture tests close four gaps the code review found (item 16).**
+  * The compiled client is now checked on CI. The test read only the `Debug` DLL, but CI builds `ExportRelease`.
+  * The sim may use only `Content.Compiled`.
+  * The AI may not call `ChangeOwner`, `ConvertType`, `RefreshMaxHealth` or `AddTechnology`.
+  * No public static state can be changed. Six public static arrays became `ImmutableArray`s.
 
 * **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
   * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
