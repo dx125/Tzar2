@@ -207,8 +207,12 @@ legacy:
   # armaments the hit frame of their attack animation (WAR-014); the pin had drifted again before that (E716BE64DED8009D).
   # Then (ITEM-016) ITEM_PLUSPLUS is imported as a weapon, the power item; then (WORLD-015) land units get a body from
   # their object box. Then (ADR 0250) the ^class.messiah and ^class.ghost templates take the Messiah and the ghost; then (ADR 0252) ^euro.trader, ^arab.trader and ^asia.peon.
+  # Re-pinned 2026-10-23 (code review): measured at every pinning commit on a clean install, the pin matched its own
+  # commit up to #131 (D13ECBADA7B58867); #168 (only ninjas climb cliffs) moved it to 2B10D506FB5D9D5A without a re-pin,
+  # and #133 and #139 pinned values measured on branches made before #168 (8E099B69A78D8E17, 8EB08346ED82C438), which no
+  # commit of main ever produced. Main has given 7F4CCBEEEC76AD36 since #139 (#187 and later moved nothing).
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "8EB08346ED82C438"
+  referenceDataHash: "7F4CCBEEEC76AD36"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
@@ -681,8 +685,8 @@ spell_spawnstonegolem: { new: true, Spell: { effect: summon, summon: comm.troll,
 spell_spawndragon: { new: true, Spell: { effect: summon, summon: comm.dragon, range: 4, cooldownMs: 5000, castMs: 1000 } }
 spell_spawncarpet: { new: true, Spell: { effect: summon, summon: comm.carpet, range: 4, cooldownMs: 5000, castMs: 1000 } }
 spell_spawnjin: { new: true, Spell: { effect: summon, summon: comm.jinn, range: 4, cooldownMs: 5000, castMs: 1000 } }
-spell_firerain: { new: true, Spell: { bookValue: 50, effect: areaDamage, amount: 10, radius: 2, durationMs: 5000, pulseMs: 1000, mana: 100, range: 14, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too
-spell_whirlpool: { new: true, Spell: { bookValue: 20, effect: areaDamage, affects: enemy, amount: 30, radius: 2, durationMs: 6000, pulseMs: 1000, mana: 50, range: 16, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"
+spell_firerain: { new: true, Spell: { bookValue: 50, effect: areaDamage, amount: 40, radius: 2, square: 1, scatter: 2, pulseMs: 170, delayMs: 375, durationMs: 3775, mana: 100, range: 14, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too; twenty fireballs of 40 on 5 x 5 tiles (ReTzar 0x472ddb, 0x450820)
+spell_whirlpool: { new: true, Spell: { bookValue: 20, effect: areaDamage, amount: 20, radius: 1, square: 1, pulseMs: 250, moveMs: 2000, durationMs: 30000, mana: 50, range: 16, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"; 20 to every ship on 3 x 3 tiles each 250 ms, moving (ReTzar 0x4fd0e0)
 spell_flamebolt: { new: true, Spell: { bookValue: 30, effect: damage, amount: 60, mana: 50, range: 18, cooldownMs: 2000, castMs: 500, projectile: flame_bolt } }
 spell_turntostone: { new: true, Spell: { durationMaxMs: 300000, bookValue: 10, effect: stone, durationMs: 120000, mana: 50, range: 20, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
 spell_berserk: { new: true, Spell: { radius: 2, bookValue: 30, effect: confuse, durationMs: 20000, mana: 70, range: 12, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"

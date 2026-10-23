@@ -113,6 +113,29 @@ public sealed class RelayTests
         Assert.Equal("line 4", b.Last<ChatEvent>()!.Text);
     }
 
+    [Theory]
+    [InlineData(100, 50)]
+    [InlineData(2_000, 400)]
+    [InlineData(5_000, 1_000)]
+    [InlineData(10_000, 1_000)]
+    public void The_ping_interval_is_a_fifth_of_the_timeout_from_50_ms_to_1_s(int timeoutMs, int expectedMs)
+    {
+        Assert.Equal(expectedMs, KeepAlive.PingIntervalMs(timeoutMs));
+    }
+
+    [Fact]
+    public void The_relay_and_the_clients_hand_their_ping_interval_to_LiteNetLib()
+    {
+        // ADR 0231: LiteNetLib's own default (1 s) would leave a 2 s timeout two pings; the keep-alive test above relies
+        // on the interval actually reaching the NetManager, not only on KeepAlive computing it (review of #200).
+        using var h = new RelayHarness(o => o.DisconnectTimeoutMs = 2_000, clientTimeoutMs: 3_000);
+        TestPeer host = h.Create(slots: 2);
+        h.Pump(() => host.Welcome is not null, what: "host's welcome");
+
+        Assert.Equal((2_000, 400), h.Relay.Transport);
+        Assert.Equal((3_000, 600), host.Client.Transport);
+    }
+
     [Fact]
     public void Ticks_close_on_the_deadline_with_every_members_commands_in_the_same_order()
     {

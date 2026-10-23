@@ -207,6 +207,9 @@ public sealed class LockstepClient : IDisposable
     /// <summary>The match parameters, or null before loading.</summary>
     public MatchParameters? Parameters { get; private set; }
 
+    /// <summary>The transport's keep-alive settings as LiteNetLib got them: (disconnect timeout, ping interval) in ms.</summary>
+    internal (int TimeoutMs, int PingIntervalMs) Transport => (_net.DisconnectTimeout, _net.PingInterval);
+
     /// <summary>The current input delay in ticks.</summary>
     public int InputDelay
     {

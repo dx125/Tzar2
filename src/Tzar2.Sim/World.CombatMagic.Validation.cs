@@ -200,7 +200,7 @@ public sealed partial class World
         {
             AreaEffect a = AreaEffects.Components[i];
             if (Identities.Has(ids[i]) || Positions.Has(ids[i]) || a.Spell >= Ruleset.Spells.Count || Ruleset.Spells[a.Spell].Effect != SpellEffect.AreaDamage
-                || a.RemainingMs < 0 || a.RemainingMs > Ruleset.Spells[a.Spell].DurationMs || a.PulseAccumMs < 0 || a.PulseAccumMs >= Ruleset.Spells[a.Spell].PulseMs
+                || a.RemainingMs < 0 || a.RemainingMs > Ruleset.Spells[a.Spell].DurationMs || a.PulseAccumMs < -Ruleset.Spells[a.Spell].DelayMs || a.PulseAccumMs >= Ruleset.Spells[a.Spell].PulseMs
                 || !Map.ContainsPoint(a.X, a.Y) || !IsValidOwner(a.Owner) || a.Reserved != 0)
             {
                 throw Invalid("invalid area effect");

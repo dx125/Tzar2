@@ -129,8 +129,9 @@ files:
     account: columns
     used: [building, class, cost, time, sight, resistance, health, emit (own/other), depends on]
   - path: HELP/HELP_STR.INI
-    account: unused
-    reason: "todo: the labels of the online help (HUD-020)."
+    reader: Tzar2.Client HelpScreen (the online help's labels and button hints)
+    account: sections
+    used: [help, help_str]
   - path: IMAGES/TERRAIN/*.IMAGES.INI
     reader: Tzar2.Content terrain sets; the editor's scenery
     account: keys

@@ -369,7 +369,8 @@ public sealed class MagicSystem : ISimSystem
                 if (world.Entities.RemainingCapacity >= 1 && world.Map.ContainsPoint(x, y))
                 {
                     EntityId area = world.Entities.Create();
-                    world.AreaEffects.Set(area, new AreaEffect { X = x, Y = y, RemainingMs = s.DurationMs, Caster = caster.Value, Spell = s.Id, Owner = owner });
+                    // A delayed first pulse (fire rain's fall) starts the accumulator below zero.
+                    world.AreaEffects.Set(area, new AreaEffect { X = x, Y = y, RemainingMs = s.DurationMs, PulseAccumMs = -s.DelayMs, Caster = caster.Value, Spell = s.Id, Owner = owner });
                 }
 
                 return;
@@ -793,7 +794,10 @@ public sealed class MagicSystem : ISimSystem
     }
 
     // Rain of fire, whirlpools: each pulse damages every affected unit and building in the radius (fire rain hits the
-    // caster's own units too, manual ch. 6).
+    // caster's own units too, manual ch. 6). As ReTzar reads the original (0x472ddb, 0x450820, 0x4fd0e0): fire rain is twenty
+    // fireballs, one every 170 ms, each falling 375 ms on a random tile up to 2 from the point and dealing 40 to what meets
+    // the 5 x 5 tiles around it; a whirlpool deals 20 to the ships on its 3 x 3 tiles every 250 ms, steps one tile at random
+    // every 2 s where it stays on water and is gone after 30 s.
     private void PulseAreas(World world, int tickMs)
     {
         _done.Clear();
@@ -803,12 +807,22 @@ public sealed class MagicSystem : ISimSystem
             ref AreaEffect a = ref world.AreaEffects.At(i);
             SpellDefinition s = world.Ruleset.Spells[a.Spell];
             int elapsed = Math.Min(tickMs, a.RemainingMs);
+            int before = s.DurationMs - a.RemainingMs;
             a.RemainingMs -= elapsed;
             a.PulseAccumMs += elapsed;
             while (a.PulseAccumMs >= s.PulseMs)
             {
                 a.PulseAccumMs -= s.PulseMs;
                 Pulse(world, a, s);
+            }
+
+            // The moves due in this tick: every MoveMs since the cast (the time is the state: nothing more to keep).
+            if (s.MoveMs > 0 && a.RemainingMs > 0)
+            {
+                for (int m = (before / s.MoveMs) + 1; m <= (s.DurationMs - a.RemainingMs) / s.MoveMs; m++)
+                {
+                    Step(world, ref a, s);
+                }
             }
 
             if (a.RemainingMs <= 0)
@@ -827,17 +841,63 @@ public sealed class MagicSystem : ISimSystem
     {
         long r2 = (long)s.RadiusUnits * s.RadiusUnits;
         EntityId caster = EntityId.FromValue(a.Caster);
+        (int x, int y) = (a.X, a.Y);
+        if (s.ScatterUnits > 0)
+        {
+            ref Core.Rng.Xoshiro256StarStar rng = ref world.Rng.Misc;
+            x = Math.Clamp(x + rng.NextInt((2 * s.ScatterUnits) + 1) - s.ScatterUnits, 0, world.Map.WorldWidth - 1);
+            y = Math.Clamp(y + rng.NextInt((2 * s.ScatterUnits) + 1) - s.ScatterUnits, 0, world.Map.WorldHeight - 1);
+        }
+
+        // A square area counts the tiles around the pulse's tile: what meets them is in.
+        int tile = MapState.UnitsPerTile;
+        if (s.Square)
+        {
+            (x, y) = (((x / tile) * tile) + (tile / 2), ((y / tile) * tile) + (tile / 2));
+        }
+
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
             EntityId e = ids[i];
-            if (!Affects(world, s, a.Owner, e) || Interaction.DistanceSquaredTo(world, a.X, a.Y, e) > r2)
+            bool inside = s.Square ? Interaction.ChebyshevTo(world, x, y, e) < s.RadiusUnits + (tile / 2) : Interaction.DistanceSquaredTo(world, x, y, e) <= r2;
+            if (!inside || !Affects(world, s, a.Owner, e))
             {
                 continue;
             }
 
             Damage(world, caster, a.Owner, e, s.Amount, _deaths);
         }
+    }
+
+    // One random step of a tile (each axis -1, 0 or +1), taken only when the whole square stays on water.
+    private static void Step(World world, ref AreaEffect a, SpellDefinition s)
+    {
+        ref Core.Rng.Xoshiro256StarStar rng = ref world.Rng.Misc;
+        int dx = rng.NextInt(3) - 1, dy = rng.NextInt(3) - 1;
+        int tile = MapState.UnitsPerTile;
+        if (SquareOnWater(world, (a.X / tile) + dx, (a.Y / tile) + dy, s.RadiusUnits / tile))
+        {
+            a.X += dx * tile;
+            a.Y += dy * tile;
+        }
+    }
+
+    /// <summary>Whether every tile within <paramref name="r"/> of tile (<paramref name="cx"/>, <paramref name="cy"/>) is water a ship can sail.</summary>
+    internal static bool SquareOnWater(World world, int cx, int cy, int r)
+    {
+        for (int ty = cy - r; ty <= cy + r; ty++)
+        {
+            for (int tx = cx - r; tx <= cx + r; tx++)
+            {
+                if (!world.Map.ContainsTile(tx, ty) || !world.Map.IsPassable(Locomotor.Ship, tx, ty))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private void ExpireStatuses(World world, int tick)

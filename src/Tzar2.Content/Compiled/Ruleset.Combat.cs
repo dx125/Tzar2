@@ -217,7 +217,8 @@ public sealed partial class Ruleset
         {
             hasher.Add(Encoding.UTF8.GetBytes(s.Key)).Add((byte)s.Effect).Add((byte)s.Target).Add((byte)s.Affects).Add(s.ManaCost).Add(s.RangeUnits)
                 .Add(s.CooldownMs).Add(s.CastMs).Add(s.Amount).Add(s.DurationMs).Add(s.RadiusUnits).Add(s.Summon).Add(s.Projectile)
-                .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan()).Add(s.BookValue).Add(s.DurationMaxMs);
+                .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan()).Add(s.BookValue).Add(s.DurationMaxMs)
+                .Add(s.Square).Add(s.ScatterUnits).Add(s.DelayMs).Add(s.MoveMs);
         }
     }
 
