@@ -284,6 +284,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — The kingdom's heroes include those inside its buildings (HUD-033; ReTzar 0x49f1fc, 0x49d590).** The
+  list of heroes on the kingdom's card now holds:
+  * promoted units, and units with a name of their own (a scenario's named units);
+  * heroes inside the kingdom's buildings. Their entry selects the building, whose list shows them.
+
+  The frame's held units carry hero and level. No hash changes.
 * **2026-10-23 — Casters wait only for mana; units learn spells from books (ADR 0266; MAG-025, ITEM-019).** ReTzar
   reads no wait between a caster's spells but its mana (0x4e1c30), so the classic spells lose their UNVERIFIED
   cooldowns (1.5–5 s). The field stays for other rulesets.
