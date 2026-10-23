@@ -24,6 +24,7 @@ public abstract partial class SaveListDialog : ArtScreen
     protected SaveListDialog(UiAssets ui, Vector2I screen, string background)
         : base(ui, screen, background, dim: true)
     {
+        Theme = ui.ScreenTheme(); // the save name in the original font (UI-F1)
         var area = new Control { Position = Origin + ListArea.Position, Size = ListArea.Size, MouseFilter = MouseFilterEnum.Stop };
         area.GuiInput += e =>
         {

@@ -33,9 +33,6 @@ internal static class UiFindings
     /// <summary>The open findings.</summary>
     public static readonly Known[] Open =
     [
-        // The lobby's rows of Godot controls are 30 px apart but 31 px high, and the team picker runs into the ping.
-        new("UI-L2", ".*", "lobby", "Overlap", "LobbyScreen"),
-
     ];
 
     /// <summary>The issues in the smoke test's output.</summary>

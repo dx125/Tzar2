@@ -41,7 +41,7 @@ public partial class GameApp
             return;
         }
 
-        var menu = new MultiplayerMenuScreen(_ui!, Screen, _mp);
+        var menu = new MultiplayerMenuScreen(_ui!, Screen, _mp, (section, key, fallback) => _catalog?.Text(section, key, fallback) ?? fallback);
         menu.CreateInternet += s =>
         {
             (string host, int port) = s.Endpoint();
@@ -119,7 +119,7 @@ public partial class GameApp
         }
 
         _networkGameShown = false;
-        _lobby = new LobbyScreen(_ui!, Screen, _network, PlayerColour, _rules);
+        _lobby = new LobbyScreen(_ui!, Screen, _network, PlayerColour, (section, key, fallback) => _catalog?.Text(section, key, fallback) ?? fallback, _rules);
         _lobby.Leave += ShowMultiplayer;
         Replace(_lobby, music: null);
     }
@@ -209,7 +209,7 @@ public partial class GameApp
     public void ShowReplays()
     {
         LeaveNetwork();
-        var browser = new ReplayBrowserScreen(_ui!, Screen, UserPath("replays"));
+        var browser = new ReplayBrowserScreen(_ui!, Screen, UserPath("replays"), (section, key, fallback) => _catalog?.Text(section, key, fallback) ?? fallback);
         browser.Play += PlayReplay;
         browser.Back += ShowMultiplayer;
         Replace(browser, music: null);
