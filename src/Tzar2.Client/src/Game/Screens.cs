@@ -187,6 +187,152 @@ public abstract partial class ArtScreen : Control
         AddChild(button);
         return button;
     }
+
+    private readonly System.Collections.Generic.List<(Rect2I Rect, string Key)> _hints = [];
+    private readonly Tzar2.Game.Ui.MenuHelp _help = new();
+    private Control? _helpLayer;
+    private TextureRect? _ball;
+    private Control? _hintBox;
+    private Rect2I _ballRect;
+    private string _ballImage = string.Empty;
+    private Func<string, string>? _hintText;
+
+    /// <summary>
+    /// The control at <paramref name="rect"/> (relative to the art) explains itself with <c>LOCAL/HELP.INI</c> key
+    /// <paramref name="key"/> in hint mode (SHELL-026). Later registrations come first.
+    /// </summary>
+    protected void Hint(Rect2I rect, string key) => _hints.Insert(0, (rect, key));
+
+    /// <summary>Forgets the hints registered so far (a screen that draws its controls again).</summary>
+    protected void ClearHints() => _hints.Clear();
+
+    /// <summary>
+    /// The help ball (SHELL-026; ReTzar 0x45c800): <c>COMMON/BTN_HELP_B</c> (57 × 74) at the art's top left, or the small
+    /// <c>BTN_HELP_S</c> (50 × 43) at <paramref name="at"/>. A press turns hint mode on (the ball red) or off (green); in
+    /// hint mode the screen takes no other press and the control under the pointer shows its hint. Call it last, so that
+    /// its layer lies over the screen's controls. <paramref name="text"/> gives a key's text.
+    /// </summary>
+    protected void HelpBall(Func<string, string> text, Vector2I at = default, bool small = false)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        _hintText = text;
+        _ballImage = small ? "art/screens/common/btn_help_s.t2img" : "art/screens/common/btn_help_b.t2img";
+        _ballRect = new Rect2I(at, small ? new Vector2I(50, 43) : new Vector2I(57, 74));
+        _ball = new TextureRect { Position = Origin + at, MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_ball);
+        Area(_ballRect, ToggleHelp);
+        _helpLayer = new Control { Position = Origin, Size = ArtSize, MouseFilter = MouseFilterEnum.Ignore, Name = "Help" };
+        _helpLayer.GuiInput += HelpInput;
+        AddChild(_helpLayer);
+        ChildEnteredTree += _ => Callable.From(() =>
+        {
+            if (_helpLayer is not null && IsInstanceValid(_helpLayer) && _helpLayer.GetIndex() != GetChildCount() - 1)
+            {
+                MoveChild(_helpLayer, -1);
+            }
+        }).CallDeferred();
+        ShowBall();
+    }
+
+    // The ball's frame: the column normal (0) or disabled (1), the row red (0) in hint mode, green (1) otherwise.
+    private void ShowBall()
+    {
+        if (_ball is not null)
+        {
+            Vector2I size = _ballRect.Size;
+            _ball.Texture = Ui.Region(_ballImage, new Rect2I(0, (_help.On ? 0 : 1) * size.Y, size.X, size.Y));
+        }
+    }
+
+    private void ToggleHelp()
+    {
+        _help.Toggle();
+        ShowBall();
+        UpdateHelpLayer();
+    }
+
+    // Hint mode takes the presses and the keys (Esc ends it).
+    private void UpdateHelpLayer()
+    {
+        ShowBall();
+        if (_helpLayer is not null)
+        {
+            _helpLayer.MouseFilter = _help.On ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
+            _helpLayer.FocusMode = _help.On ? FocusModeEnum.All : FocusModeEnum.None;
+            if (_help.On)
+            {
+                _helpLayer.GrabFocus();
+            }
+        }
+
+        HideHint();
+    }
+
+    private void HelpInput(InputEvent @event)
+    {
+        if (_helpLayer is null || !_help.On)
+        {
+            return;
+        }
+
+        switch (@event)
+        {
+            case InputEventKey { Pressed: true, Keycode: Key.Escape }:
+                if (_help.Escape())
+                {
+                    UpdateHelpLayer();
+                    _helpLayer.AcceptEvent();
+                }
+
+                break;
+            case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } press:
+                if (_ballRect.HasPoint((Vector2I)press.Position))
+                {
+                    ToggleHelp();
+                }
+
+                _helpLayer.AcceptEvent();
+                break;
+            case InputEventMouseButton:
+                _helpLayer.AcceptEvent();
+                break;
+            case InputEventMouseMotion motion:
+                Vector2I at = (Vector2I)motion.Position;
+                HideHint();
+                foreach ((Rect2I rect, string key) in _hints)
+                {
+                    if (rect.HasPoint(at))
+                    {
+                        ShowHint(_hintText?.Invoke(key) ?? key, at);
+                        break;
+                    }
+                }
+
+                break;
+        }
+    }
+
+    // The box, black edged on cream with black text, below the pointer (MenuHelp.Box on the screen's size).
+    private void ShowHint(string text, Vector2I at)
+    {
+        if (_helpLayer is null || Ui.Text(text, UiAssets.SmallFont, Colors.Black) is not { } t)
+        {
+            return;
+        }
+
+        Vector2I screen = Origin + at;
+        (int x, int y, int w) = Tzar2.Game.Ui.MenuHelp.Box(screen.X, screen.Y, t.GetWidth(), (int)Size.X, (int)Size.Y);
+        _hintBox = new ColorRect { Position = new Vector2(x, y) - Origin, Size = new Vector2(w, Tzar2.Game.Ui.MenuHelp.BoxHeight), Color = Colors.Black, MouseFilter = MouseFilterEnum.Ignore };
+        _hintBox.AddChild(new ColorRect { Position = Vector2.One, Size = new Vector2(w - 2, Tzar2.Game.Ui.MenuHelp.BoxHeight - 2), Color = new Color(1f, 0.953f, 0.82f), MouseFilter = MouseFilterEnum.Ignore });
+        _hintBox.AddChild(new TextureRect { Texture = t, Position = new Vector2((w - t.GetWidth()) / 2, (Tzar2.Game.Ui.MenuHelp.BoxHeight - t.GetHeight()) / 2), MouseFilter = MouseFilterEnum.Ignore });
+        _helpLayer.AddChild(_hintBox);
+    }
+
+    private void HideHint()
+    {
+        _hintBox?.QueueFree();
+        _hintBox = null;
+    }
 }
 
 /// <summary>
@@ -351,6 +497,7 @@ public partial class SkirmishSetupScreen : SetupScreen
             Cancel?.Invoke();
         });
         Refresh();
+        HelpBall(k => catalog?.Text("HELP", k, k) ?? k); // SHELL-026
     }
 
     /// <summary>PLAY, with <see cref="SkirmishOptions.Match"/> set to the chosen match.</summary>
@@ -459,10 +606,33 @@ public partial class SkirmishSetupScreen : SetupScreen
     }
 
     private void Option(Vector2I at, Vector2I captionAt, string caption, string value, Tzar2.Game.Ui.RandomMapOption option)
-        => Option(at, captionAt, caption, value, step => _model.Change(option, step), true);
+        => Option(at, captionAt, caption, value, step => _model.Change(option, step), true, RandomHint(option));
 
     private void Check(Vector2I at, Vector2I captionAt, string caption, Tzar2.Game.Ui.RandomMapOption option)
-        => Check(at, captionAt, caption, _model.IsOn(option), () => _model.Change(option, +1), true);
+        => Check(at, captionAt, caption, _model.IsOn(option), () => _model.Change(option, +1), true, RandomHint(option));
+
+    // The LOCAL/HELP.INI key of a control of the random map screen (the original's names, ReTzar's reading).
+    private static string RandomHint(Tzar2.Game.Ui.RandomMapOption option) => option switch
+    {
+        Tzar2.Game.Ui.RandomMapOption.Players => "RM_NUMBER_OF_PLAYERS",
+        Tzar2.Game.Ui.RandomMapOption.GameType => "RM_GAME_TYPE",
+        Tzar2.Game.Ui.RandomMapOption.Victory => "RM_VICTORY_CONDITION",
+        Tzar2.Game.Ui.RandomMapOption.PopulationLimit => "RM_POP_LIMIT",
+        Tzar2.Game.Ui.RandomMapOption.Difficulty => "RM_DIFFICULTY_LEVEL",
+        Tzar2.Game.Ui.RandomMapOption.StartingResources => "RM_STARTING_RESOURCES",
+        Tzar2.Game.Ui.RandomMapOption.MapSize => "RM_MAP_SIZE",
+        Tzar2.Game.Ui.RandomMapOption.MapType => "RM_MAP_TYPE",
+        Tzar2.Game.Ui.RandomMapOption.Terrain => "RM_TERRAIN",
+        Tzar2.Game.Ui.RandomMapOption.MapResources => "RM_MAP_RESOURCES",
+        Tzar2.Game.Ui.RandomMapOption.GuardedTown => "RM_GUARDED_TOWN",
+        Tzar2.Game.Ui.RandomMapOption.Animals => "RM_AMNIMALS",
+        Tzar2.Game.Ui.RandomMapOption.MagicItems => "RM_MAGIC_ITEMS",
+        Tzar2.Game.Ui.RandomMapOption.Cliffs => "RM_CLIFFS",
+        Tzar2.Game.Ui.RandomMapOption.Gateways => "RM_GATEWAYS",
+        Tzar2.Game.Ui.RandomMapOption.NoFog => "RM_NO_FOG",
+        Tzar2.Game.Ui.RandomMapOption.Explore => "RM_EXPLORE",
+        _ => "RM_VALUE",
+    };
 }
 
 /// <summary>

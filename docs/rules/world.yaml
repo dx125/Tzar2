@@ -85,8 +85,8 @@ rules:
     adr: [0220]
     note: The threshold is 4x ratio (cross-component > 4 * along-component). UNVERIFIED against the original.
   WORLD-018:
-    rule: Cliffs stop every ground unit except the ninja, who climbs over a band of one or two cliff tiles from ground to ground, never three.
-    source: ['owner 2026-10-22 (rajba: only ninjas reach the mage plateau; original footage https://youtu.be/CxPm7ja1ujI?t=955)', 'community ReTzar src/gameplay/pathing.rs (0x4a99a0)']
+    rule: Cliffs and walls stop every ground unit except the ninja, who climbs over a band of one or two cliff or wall tiles from ground to ground, never three.
+    source: ['owner 2026-10-22 (rajba: only ninjas reach the mage plateau; original footage https://youtu.be/CxPm7ja1ujI?t=955)', 'community ReTzar src/gameplay/pathing.rs (0x4a99a0: walls and cliffs alike)', 'community ReTzar src/gameplay/movement.rs (0x4fad01: the wall pieces mark the cells a ninja climbs; 0x4ebc00: the jump)']
     status: tested
     adr: [0220]
-    note: The ninja has its own locomotor, climber, which is infantry everywhere else ("foot" in data and technologies includes it). A cliff tile is open to it when, along a row, a column or a diagonal, its cliff run is at most two tiles with climbable ground at both ends; the original decides per step, so walking along the top of a long band is possible here and not there. The original's ninja climbs walls too (ReTzar); walls are not done yet.
+    note: The ninja has its own locomotor, climber, which is infantry everywhere else ("foot" in data and technologies includes it). A cliff tile is open to it when, along a row, a column or a diagonal, its cliff run is at most two tiles with climbable ground at both ends; the original decides per step, so walking along the top of a long band is possible here and not there. Wall pieces (not gates or towers) count as climbed tiles when only walls block the tile; a cliff tile does not look at walls beside it (the original mixes them in one band). The jump picture (0x4ebd2d) is not drawn yet.
