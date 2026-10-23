@@ -134,12 +134,3 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0190](0190-rules-read-from-the-originals-code-by-retzar.md) | Take the rules ReTzar read from the original's code, never ReTzar's code | Accepted | 2026-10-22 |
 | [0191](0191-technology-effects-as-the-original-computes-them.md) | Give technologies the effects the original's research handlers compute | Accepted | 2026-10-22 |
 | [0192](0192-gates-and-bridges-take-the-cells-of-their-pictures.md) | Gates and bridges take the cells of their pictures, either way | Accepted | 2026-10-22 |
-| [0250](0250-the-curse-hypnosis-the-banshee-and-the-messiah.md) | Curse, hypnotize, scream and resist magic as the original's code does | Accepted | 2026-10-22 |
-| [0251](0251-cancelled-sites-broken-loads-and-the-computers-repairs.md) | Refund cancelled sites, drop broken-off loads and leave repairs to idle peasants, as the original does | Accepted | 2026-10-22 |
-| [0252](0252-trade-with-any-market-and-asian-peasants-as-traders.md) | Trade with any kingdom's market, and let Asian peasants trade | Accepted | 2026-10-22 |
-| [0253](0253-tournaments-and-mastery-share-experience-as-the-original-does.md) | Share experience through Tournaments and Mastery as the original does | Accepted | 2026-10-22 |
-| [0254](0254-healing-freezing-and-raise-dead-skip-machines.md) | Make healing, freezing and raise dead skip machines and the bodiless | Accepted | 2026-10-22 |
-| [0255](0255-soul-items-are-bound-to-a-unit.md) | Bind soul items to a unit, and spare the Messiah all magic damage | Accepted | 2026-10-22 |
-| [0256](0256-cows-grow-meat-that-falls-as-food-items.md) | Let cows grow meat that falls as food items | Accepted | 2026-10-22 |
-| [0257](0257-trade-profit-as-the-original-computes-it.md) | Compute the trade profit as the original does | Accepted | 2026-10-22 |
-| [0258](0258-experience-on-the-originals-scale.md) | Count experience on the original's scale: a point per kill | Accepted | 2026-10-22 |
