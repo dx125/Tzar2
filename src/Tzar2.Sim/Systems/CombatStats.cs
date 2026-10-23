@@ -112,7 +112,8 @@ internal static class CombatStats
 
     /// <summary>
     /// Experience needed for level <paramref name="level"/> (ReTzar's reading of the original, 0x5022e0): the first point
-    /// gives level 1, and level <c>k</c> needs <c>base × k</c> more for the next, so <c>1 + base × n × (n − 1) / 2</c> in all.
+    /// gives level 1, and level <c>k</c> needs <c>base + step × (k − 1)</c> more for the next, so
+    /// <c>1 + base × (n − 1) + step × (n − 1) × (n − 2) / 2</c> in all (classic: step = base, <c>1 + base × n × (n − 1) / 2</c>).
     /// </summary>
     public static int XpForLevel(CombatSettings settings, int level) => XpForLevel(settings, level, 100);
 
@@ -125,13 +126,15 @@ internal static class CombatStats
     {
         if (speedPercent == 100)
         {
-            return level <= 0 ? 0 : (int)Math.Min(1 + ((long)settings.LevelBaseXp * level * (level - 1) / 2), int.MaxValue);
+            long n = level;
+            return level <= 0 ? 0 : (int)Math.Min(1 + ((long)settings.LevelBaseXp * (n - 1)) + ((long)settings.LevelStep * (n - 1) * (n - 2) / 2), int.MaxValue);
         }
 
         long total = 0;
         for (int k = 0; k < Math.Min(level, 100_000) && total < int.MaxValue; k++)
         {
-            total += Math.Max(1, (long)settings.LevelBaseXp * speedPercent * k / 100);
+            long cost = k == 0 ? 0 : settings.LevelBaseXp + ((long)settings.LevelStep * (k - 1)); // classic: base × k
+            total += Math.Max(1, cost * speedPercent / 100);
         }
 
         return (int)Math.Min(total, int.MaxValue);

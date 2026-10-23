@@ -257,8 +257,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         the ruleset with the same values; only the ruleset hash is re-pinned.
       * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
         client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
-      * 2026-10-23: map builders place a kingdom's seat and starting worker by their traits (`Seat`, the new
-        `StartingWorker`), not by "<civ>.castle" and "<civ>.peon"; maps do not change; the ratchet is down to 19 files.
+      * 2026-10-23: a harbor's reach to the water is `Building.coastReachTiles` (2), one value for the sim, the AI and the
+        build ghost instead of two constants; only the ruleset hash is re-pinned.
 17. **Maintainer (the coordinator moved it ahead of M8, 2026-10-23; ADR 0264):** the random map generator's items as
     the original makes them (ReTzar 0x4b5c50): spell books of a random spell with 1 to 5 charges, bows, shields and
     swords of 5 to 15, potions of 10 to 50 or 2 to 8. It needs item properties on `MapObject` (map.bin and its hash)
@@ -272,6 +272,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — Ninjas climb walls as they climb cliffs (WORLD-018; ReTzar 0x4a99a0).** A wall piece (not a gate or
+  a tower) is open to the climber when the band of wall or cliff tiles through it is one or two thick, from ground to
+  ground. The climber keeps its own navigation layer on every map, since walls are built later. Goldens and bench hashes
+  are unchanged; survey main 18 of 19 (`v_02`, as on `main`), tutorial 7 of 7.
 * **2026-10-23 — Fish patches and the selection view (HUD-025, HUD-016).** The patch the player's boats fish gets a blue selection (patch 1.05; the frame now carries each worker's work target). The selection view names the kingdom, shows every experienced unit's LEVEL (but traders') and an item's POWER, as ReTzar reads the original. ITEM-015 is unclear: the original's random map generator makes its items itself (work queue 17, deferred to M8). No hash changes.
 
 * **2026-10-23 — Menu hints (SHELL-026).** The help ball of the original (BTN_HELP_B, BTN_HELP_S on the load and save windows) turns hint mode on and off on the campaign, custom map, custom setup, random map, options, load and save screens; the control under the pointer then shows its LOCAL/HELP.INI text in the original's box (MenuHelp in Tzar2.Game.Ui; the keys are ReTzar's reading of the controls' names). No hash changes.

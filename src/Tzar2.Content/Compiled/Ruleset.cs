@@ -867,7 +867,7 @@ public sealed partial class Ruleset
             .AddSpan<int>(t.Cost.AsSpan()).Add(t.BuildTimeMs).Add(t.SightUnits).Add(t.Defence).Add(t.Resistance)
             .Add(t.DropOffMask).Add(t.PopulationCost).Add(t.PopulationProvided)
             .AddSpan<ushort>(t.Builds.AsSpan()).AddSpan<ushort>(t.RequiredTypes.AsSpan())
-            .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology)).Add(t.ManaCost).Add((byte)t.DropOffAccess).Add(t.AutoGather).Add((byte)t.Placement)
+            .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology)).Add(t.ManaCost).Add((byte)t.DropOffAccess).Add(t.AutoGather).Add((byte)t.Placement).Add(t.CoastReachTiles)
             .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete).Add(t.IsSeat).Add(t.IsStartingWorker)
             .Add(t.SpawnOnDeath).Add(t.LifetimeMs).Add(t.WalkableFootprint)
             .Add(t.Meat?.Start ?? -1).Add(t.Meat?.PerSecond ?? -1).Add(t.Meat?.Max ?? -1).Add(t.Meat?.Piece ?? -1);

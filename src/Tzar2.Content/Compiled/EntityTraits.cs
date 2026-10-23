@@ -297,6 +297,12 @@ public sealed partial record EntityTraits
     /// <summary>Placement rule of a building.</summary>
     public PlacementKind Placement { get; init; }
 
+    /// <summary>
+    /// A <see cref="PlacementKind.Coast"/> building needs water for its ships within this many tiles of its footprint
+    /// (<c>Building.coastReachTiles</c>, 2; UNVERIFIED, UNK-02).
+    /// </summary>
+    public int CoastReachTiles { get; init; } = 2;
+
     /// <summary>Capture by peasants (GAME-04), or null.</summary>
     public CapturableDefinition? Capturable { get; init; }
 

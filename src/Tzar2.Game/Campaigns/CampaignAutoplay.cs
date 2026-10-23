@@ -282,6 +282,7 @@ public static class CampaignAutoplay
         int ticks = 0;
         var events = new List<Sim.Events.SimEvent>();
         var rejected = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        var faulted = new SortedDictionary<string, int>(StringComparer.Ordinal);
         for (; ticks < options.MaxTicksPerMission; ticks++)
         {
             pilot.Act(ticks);
@@ -300,7 +301,13 @@ public static class CampaignAutoplay
             session.DrainEvents(events);
             foreach (Sim.Events.SimEvent e in events)
             {
-                faults += e.Kind == Sim.Events.SimEventKind.ScenarioFault ? 1 : 0;
+                if (e.Kind == Sim.Events.SimEventKind.ScenarioFault)
+                {
+                    faults++;
+                    string key = $"{e.X}.{e.Y}:{(Scripting.Legacy.ScenarioFault)e.Arg}";
+                    faulted[key] = faulted.TryGetValue(key, out int f) ? f + 1 : 1;
+                }
+
                 if (e.Kind == Sim.Events.SimEventKind.CommandRejected)
                 {
                     string key = $"{e.Player + 1}:{(Sim.Events.CommandRejection)e.Arg}";
@@ -318,7 +325,8 @@ public static class CampaignAutoplay
         }
 
         string trace = Trace(session) + " | goal: " + pilot.Goal + (pilot.Log.Count > 0 ? " | log: " + string.Join("; ", pilot.Log) : string.Empty)
-            + (rejected.Count > 0 ? " | rejected (kingdom:reason×n): " + string.Join(" ", rejected.Select(r => $"{r.Key}×{r.Value}")) : string.Empty);
+            + (rejected.Count > 0 ? " | rejected (kingdom:reason×n): " + string.Join(" ", rejected.Select(r => $"{r.Key}×{r.Value}")) : string.Empty)
+            + (faulted.Count > 0 ? " | faults (rule.action:kind×n): " + string.Join(" ", faulted.Select(r => $"{r.Key}×{r.Value}")) : string.Empty);
         MissionEnd end = CampaignFlow.Finish(campaign, progress, mapId, session, requested, transition);
         MissionResult result = end.Result;
         bool completed = result != MissionResult.Lost;
