@@ -80,7 +80,7 @@ public partial class GameApp : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
-        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke && _args.ResourceSoak is null && !_args.BenchRender);
+        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke && _args.ResourceSoak is null && !_args.BenchRender && !_args.UiSmoke);
         _ui = new UiAssets(_store);
         try
         {
@@ -110,6 +110,11 @@ public partial class GameApp : Node
         {
             ShowMainMenu();
             _ = MultiplayerSmokeAsync();
+        }
+        else if (_args.UiSmoke)
+        {
+            ShowMainMenu();
+            _ = UiSmokeAsync();
         }
         else if (_args.GameSmoke || _args.AutoplayDir is not null || _args.Skirmish)
         {
@@ -194,7 +199,13 @@ public partial class GameApp : Node
         Vector2I window = DisplayServer.WindowGetSize();
         _window = window;
         Vector2I logical = ClassicScreen;
-        if (_settings.DisplayPreset == 0)
+        if (_display is { } display)
+        {
+            // The UI smoke test's display (ADR 0200) instead of the window's.
+            window = new Vector2I(display.WindowWidth, display.WindowHeight);
+            logical = new Vector2I(display.Width, display.Height);
+        }
+        else if (_settings.DisplayPreset == 0)
         {
             int k = DisplayMath.Scale(window.X, window.Y, _settings.InterfaceScale);
             (int w, int h) = DisplayMath.Logical(window.X, window.Y, k);
@@ -211,13 +222,13 @@ public partial class GameApp : Node
         }
 
         Screen = logical;
-        ClientLog.Info($"display: window {window.X}x{window.Y}, logical {logical.X}x{logical.Y}, {(_settings.DisplayPreset == 0 ? "Wide" : "Authentic")}");
-        Node? shown = _current is CanvasLayer layer && layer.GetChildCount() > 0 ? layer.GetChild(0) : _current;
-        if (shown is ArtScreen art)
+        ClientLog.Info($"display: window {window.X}x{window.Y}, logical {logical.X}x{logical.Y}, {(_display is { } shown ? shown.Name : _settings.DisplayPreset == 0 ? "Wide" : "Authentic")}");
+        Node? current = _current is CanvasLayer layer && layer.GetChildCount() > 0 ? layer.GetChild(0) : _current;
+        if (current is ArtScreen art)
         {
             art.Resize(logical);
         }
-        else if (shown is GameScreen game)
+        else if (current is GameScreen game)
         {
             game.Relayout();
         }

@@ -41,7 +41,7 @@ several PRs, run it on the combined result.
 | Variable | What | Used by |
 |---|---|---|
 | `TZAR2_ORIGIN` (or `TZAR2_ORIGINAL_PATH`) | the original install (clean GOG v1.10 EN) | import, reference-table, campaign and fidelity tests; `t2 fidelity analyze` |
-| `TZAR2_PACKAGE` | an imported base package (`t2 import`) | `t2 campaign run` (M4 harness) |
+| `TZAR2_PACKAGE` | an imported base package (`t2 import`) | `t2 campaign run` (M4 harness); the UI smoke test with the original's art and fonts |
 | `TZAR2_FX_CAMPAIGNS` | folder with the FX Gold Edition campaigns (kept in `Origin/Campaign`, never committed) | editor acceptance `acc-fx` |
 | `TZAR2_CORPUS` | folder of community maps and campaigns | corpus pass rate (M4 exit), `acc-fx` |
 | `TZAR2_GOLDENS` | golden sprites from `tools/re/make_goldens.py` | M1 golden comparisons |
@@ -75,6 +75,10 @@ its order on release (setting `drag_scroll` in `user://game.cfg`). The client's 
   hashes (`--expect-hash`), compared across the three OSes.
 * **Replays**: a corpus recorded on Linux and verified on every OS; **capture harness** self-test on Windows;
   **relay server** Docker image.
+* **Godot client smoke tests** on Linux with the pinned Godot (ADR 0200): the viewer, a skirmish, the editor, a LAN
+  match and its replay, and every screen at every display of the UI review (`--ui-smoke`). A layout issue that no open
+  finding of [the review](reviews/2026-10-ui-review.md) covers fails it. `--ui-smoke --ui-shots <dir>` without
+  `--headless` saves screenshots for a look (they show the original's art: keep them local).
 
 `nightly.yml` adds long hash streams, benchmarks, the Windows package and the multiplayer soak.
 

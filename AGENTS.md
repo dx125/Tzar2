@@ -30,7 +30,7 @@ Non-negotiable:
   there; the Godot client only draws them (ADR 0182). The core never reads the original's formats or names its
   classes.
 * Branch, PR, green CI, squash merge; no force-pushes to shared branches. Merge only when every check has finished:
-  `gh pr checks --watch` can return before all checks are registered, so count them (15 today) and see none pending.
+  `gh pr checks --watch` can return before all checks are registered, so count them (16 today) and see none pending.
 * Before you finish: `dotnet build Tzar2.sln` and `dotnet test Tzar2.sln -c Release` pass, and **docs/STATUS.md is
   updated** (milestones, work queue, a log line for any decision).
 

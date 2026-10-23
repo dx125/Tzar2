@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 
 namespace Tzar2.Client.Tests;
 
-/// <summary>Runs only where a Godot 4.7 .NET editor binary is available (local development; CI has none yet).</summary>
+/// <summary>Runs only where a Godot 4.7 .NET editor binary is available (local development, and the CI job godot-smoke on Linux).</summary>
 public sealed class GodotFactAttribute : FactAttribute
 {
     public GodotFactAttribute()
@@ -21,6 +21,25 @@ public sealed class GodotFactAttribute : FactAttribute
             Skip = "Godot 4.7 .NET not found (set TZAR2_GODOT to the editor binary to run the client smoke tests).";
         }
     }
+}
+
+/// <summary>Runs only with Godot and a package imported from the original (<c>TZAR2_PACKAGE</c>; local only, REQ-LEGAL-01).</summary>
+public sealed class GodotPackageFactAttribute : FactAttribute
+{
+    public GodotPackageFactAttribute()
+    {
+        if (GodotRunner.Executable is null)
+        {
+            Skip = "Godot 4.7 .NET not found (TZAR2_GODOT).";
+        }
+        else if (Package is null)
+        {
+            Skip = "No imported package (set TZAR2_PACKAGE to a .t2pkg made by 't2 import' from the original).";
+        }
+    }
+
+    /// <summary>The package, or null.</summary>
+    public static string? Package => Environment.GetEnvironmentVariable("TZAR2_PACKAGE") is { Length: > 0 } p && (File.Exists(p) || Directory.Exists(p)) ? p : null;
 }
 
 /// <summary>Finds and runs the Godot editor binary on src/Tzar2.Client.</summary>
@@ -84,11 +103,13 @@ internal static class GodotRunner
         }
     }
 
-    public static (int Exit, string Output) RunClient(params string[] userArgs)
+    public static (int Exit, string Output) RunClient(params string[] userArgs) => RunClient(TimeSpan.FromMinutes(3), userArgs);
+
+    public static (int Exit, string Output) RunClient(TimeSpan timeout, params string[] userArgs)
     {
         EnsureClientBuilt();
         string[] args = ["--headless", "--path", Path.Combine(RepositoryRoot, "src/Tzar2.Client"), "--", .. userArgs];
-        return Run(Executable!, args, TimeSpan.FromMinutes(3));
+        return Run(Executable!, args, timeout);
     }
 
     private static (int Exit, string Output) Run(string file, string[] args, TimeSpan timeout)
@@ -244,6 +265,33 @@ public sealed class GodotSmokeTests : IDisposable
         string line = output.Split('\n').Single(l => l.StartsWith("MP SMOKE OK", StringComparison.Ordinal));
         Assert.Contains("generation=1", line, StringComparison.Ordinal);
         Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);
+    }
+
+    [GodotFact]
+    public void Every_screen_and_dialog_fits_every_display_of_the_review()
+    {
+        // ADR 0200: the shell, the game (HUD and dialogs), the lobby and the editor at each display of the UI review;
+        // nothing may leave the window or cover another control, except the open findings of the review.
+        string package = Path.Combine(_dir, "ui.t2pkg");
+        PackageWriter writer = GamePackage();
+        SyntheticUi.AddTo(writer);
+        writer.WriteTo(package);
+        (int exit, string output) = GodotRunner.RunClient(TimeSpan.FromMinutes(10), "--config", Path.Combine(_dir, "ui.cfg"), "--package", package, "--ui-smoke");
+        _output.WriteLine(output);
+        Assert.True(exit == 0, "The UI smoke test failed:\n" + output);
+        Assert.Contains("UI SMOKE DONE", output, StringComparison.Ordinal);
+        UiFindings.AssertOnlyKnown(output, _output, everyKnownSeen: true);
+    }
+
+    [GodotPackageFact]
+    public void Every_screen_and_dialog_fits_every_display_with_the_original_package()
+    {
+        // The same with the package imported from the original (TZAR2_PACKAGE, local only): its real art and fonts.
+        (int exit, string output) = GodotRunner.RunClient(TimeSpan.FromMinutes(15), "--config", Path.Combine(_dir, "ui-orig.cfg"), "--package", GodotPackageFactAttribute.Package!, "--ui-smoke");
+        _output.WriteLine(output);
+        Assert.True(exit == 0, "The UI smoke test failed:\n" + output);
+        Assert.Contains("UI SMOKE DONE", output, StringComparison.Ordinal);
+        UiFindings.AssertOnlyKnown(output, _output, everyKnownSeen: false);
     }
 
     // The synthetic art plus the synthetic legacy tables, so the classic ruleset compiles.

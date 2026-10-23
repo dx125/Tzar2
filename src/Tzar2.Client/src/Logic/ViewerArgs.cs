@@ -32,6 +32,9 @@ public sealed record ViewerArgs
         + "  --resource-soak <f>  play --matches skirmishes of --ticks ticks each at top speed, back to the menu after each,\n"
         + "                       and write the engine's memory, object and video-memory counters over time to <f> (TSV)\n"
         + "  --matches <n>        matches of --resource-soak (default 3)\n"
+        + "  --ui-smoke           open every screen and dialog at every display of the UI review, audit the layout, quit\n"
+        + "  --ui-shots <dir>     with --ui-smoke: also save a screenshot of each (needs a renderer, not --headless)\n"
+        + "  --ui-only <text>     with --ui-smoke: only the displays and screens whose names contain <text>\n"
         + "  --ticks <n>          ticks for --game-smoke, --mp-smoke and --resource-soak (default 300)\n"
         + "  --seed <n>           match seed\n"
         + "  --map-type <type>    random map type (random, archipelagos, island, continental, lakes, dry)\n"
@@ -103,6 +106,15 @@ public sealed record ViewerArgs
 
     /// <summary>The render bench in exclusive fullscreen.</summary>
     public bool Fullscreen { get; init; }
+
+    /// <summary>The UI smoke test (ADR 0200): every screen at every display, audited.</summary>
+    public bool UiSmoke { get; init; }
+
+    /// <summary>Screenshot folder of the UI smoke test, or null.</summary>
+    public string? UiShots { get; init; }
+
+    /// <summary>Only the UI smoke cases whose display or screen name contains this, or null for all.</summary>
+    public string? UiOnly { get; init; }
 
     /// <summary>Ticks of the game smoke test.</summary>
     public int Ticks { get; init; } = 300;
@@ -246,6 +258,15 @@ public sealed record ViewerArgs
                     break;
                 case "--matches":
                     result = result with { Matches = Number(Value(), 1, 1000, 3) };
+                    break;
+                case "--ui-smoke":
+                    result = result with { UiSmoke = true };
+                    break;
+                case "--ui-shots":
+                    result = result with { UiShots = Value() };
+                    break;
+                case "--ui-only":
+                    result = result with { UiOnly = Value() };
                     break;
                 case "--ticks":
                     result = result with { Ticks = Number(Value(), 1, 1_000_000, 300) };
