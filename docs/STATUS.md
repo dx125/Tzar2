@@ -243,7 +243,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-23 — Random map screen.** S_SINGLERND now draws an engine-free RandomMapScreenModel (Tzar2.Game.Ui): per-kingdom colour, AI script, civilization (or RANDOM, drawn from the seed) and team, game type, victory condition with its limit, map resources and the five map options; the match it describes runs through MatchDescriptor.ToSetup. Positions from ReTzar's reading of the original; caption places UNVERIFIED. The map preview is dropped (the map options take its place); the AI button steps through the scripts until D_CHOOSEAI is built. SHELL-013 (AI resign flag) waits: it needs a per-match flag in MatchSettings.
+* **2026-10-23 — Random map screen.** S_SINGLERND now draws an engine-free RandomMapScreenModel (Tzar2.Game.Ui): per-kingdom colour, AI script, civilization (or RANDOM, drawn from the seed) and team, game type, victory condition with its limit, map resources and the five map options; the match it describes runs through MatchDescriptor.ToSetup. Positions and caption places from ReTzar's reading of the original. The map preview is dropped (the map options take its place); the AI button steps through the scripts until D_CHOOSEAI is built. SHELL-013 (AI resign flag) waits: it needs a per-match flag in MatchSettings.
 
 * **2026-10-23 — Quitting, resigning and disconnecting ask first (SHELL-027).** The main menu's QUIT asks "Exit Tzar", the game
   menu's QUIT asks to resign alone and to disconnect in multiplayer, in the original's D_MSGWND window with its words

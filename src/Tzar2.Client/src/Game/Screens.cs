@@ -316,8 +316,8 @@ public sealed class SkirmishOptions
 /// The random map screen (<c>S_SINGLERND</c>; SHELL-010, SHELL-011, SHELL-012, AI-001) drawing
 /// <see cref="Tzar2.Game.Ui.RandomMapScreenModel"/>: one <c>ROW BACK</c> per kingdom (colour, name, the computer's AI
 /// button, civilization, team), the six options of the left panel, the victory limit, No Fog and Explore below them, the
-/// map's size, type, terrain and resources and its five options on the right, PLAY and BACK. Positions are the original's
-/// as ReTzar reads its constructor; the captions' places are ours (UNVERIFIED until a screenshot of the original).
+/// map's size, type, terrain and resources and its five options on the right, PLAY and BACK. Positions, the captions'
+/// included, are the original's as ReTzar reads its constructor and its labels.
 /// What the screen set is kept in <c>user://random-map.cfg</c>.
 /// </summary>
 public partial class SkirmishSetupScreen : ArtScreen
@@ -443,48 +443,48 @@ public partial class SkirmishSetupScreen : ArtScreen
         string N(int n) => n.ToString(CultureInfo.InvariantCulture);
         string[] victories = ["Standard", "Destroy Castles", "Time Limit", "Score Limit"];
         string victory = T($"vcond_{model.VictoryChoice}", victories[model.VictoryChoice]);
-        Option(new Vector2I(66, 369), T("t_num_players", "Number of Players"), N(model.Players), Tzar2.Game.Ui.RandomMapOption.Players);
-        Option(new Vector2I(66, 427), T("t_game_type", "Game Type"), model.IsDeathmatch ? "Deathmatch" : T("g_type_0", "Standard"), Tzar2.Game.Ui.RandomMapOption.GameType);
-        Option(new Vector2I(66, 487), T("t_vict_cond", "Victory Condition"), victory, Tzar2.Game.Ui.RandomMapOption.Victory);
-        Option(new Vector2I(270, 369), T("t_poplimit", "Population Limit"), N(s.PopulationLimit), Tzar2.Game.Ui.RandomMapOption.PopulationLimit);
-        Option(new Vector2I(270, 427), T("t_diff_lvl", "Difficulty Level"), T($"difflvl_{(int)model.Difficulty}", model.Difficulty.ToString()), Tzar2.Game.Ui.RandomMapOption.Difficulty);
-        Option(new Vector2I(270, 487), T("t_st_res", "Starting Resources"), T($"resurcs_{s.StartingResources}", N(s.StartingResources)), Tzar2.Game.Ui.RandomMapOption.StartingResources);
+        Option(new Vector2I(66, 369), new Vector2I(68, 353), T("t_num_players", "Number of Players") + $" (2 - {model.MostPlayers})", N(model.Players), Tzar2.Game.Ui.RandomMapOption.Players);
+        Option(new Vector2I(66, 427), new Vector2I(68, 410), T("t_game_type", "Game Type"), model.IsDeathmatch ? "Deathmatch" : T("g_type_0", "Standard"), Tzar2.Game.Ui.RandomMapOption.GameType);
+        Option(new Vector2I(66, 487), new Vector2I(68, 470), T("t_vict_cond", "Victory Condition"), victory, Tzar2.Game.Ui.RandomMapOption.Victory);
+        Option(new Vector2I(270, 369), new Vector2I(273, 353), T("t_poplimit", "Population Limit"), N(s.PopulationLimit), Tzar2.Game.Ui.RandomMapOption.PopulationLimit);
+        Option(new Vector2I(270, 427), new Vector2I(273, 412), T("t_diff_lvl", "Difficulty Level"), T($"difflvl_{(int)model.Difficulty}", model.Difficulty.ToString()), Tzar2.Game.Ui.RandomMapOption.Difficulty);
+        Option(new Vector2I(270, 487), new Vector2I(273, 470), T("t_st_res", "Starting Resources"), T($"resurcs_{s.StartingResources}", N(s.StartingResources)), Tzar2.Game.Ui.RandomMapOption.StartingResources);
         if (model.HasVictoryLimit)
         {
             // The limit's selector (COMMON/SCROLL CTRL) under the victory condition.
             Picture(new Vector2I(66, 538), Ui.Texture(Common + "scroll ctrl.t2img"));
             string caption = model.IsScoreLimit ? T("t_score_lim", "Score Limit") : T("t_time_lim", "Time Limit (min.)");
-            Label(new Vector2I(66, 524), caption, Caption);
+            Label(new Vector2I(68, 527), caption, Caption);
             Spin(new Vector2I(66, 541), N(model.VictoryLimit), step => model.Change(Tzar2.Game.Ui.RandomMapOption.VictoryLimit, step), arrows: false, width: 191);
         }
 
-        Check(new Vector2I(268, 539), T("t_fog", "No Fog"), Tzar2.Game.Ui.RandomMapOption.NoFog);
-        Check(new Vector2I(268, 569), T("t_expolre", "Explore"), Tzar2.Game.Ui.RandomMapOption.Explore);
+        Check(new Vector2I(268, 539), new Vector2I(302, 549), T("t_fog", "No Fog"), Tzar2.Game.Ui.RandomMapOption.NoFog);
+        Check(new Vector2I(268, 569), new Vector2I(302, 579), T("t_expolre", "Explore"), Tzar2.Game.Ui.RandomMapOption.Explore);
 
-        Option(new Vector2I(565, 56), T("t_map_size", "Map Size"), ShellTexts.MapSize(s.MapSize).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapSize);
-        Option(new Vector2I(565, 111), T("t_map_type", "Map Type"), ShellTexts.MapType(s.MapType).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapType);
-        Option(new Vector2I(565, 169), T("t_terrain", "Terrain"), ShellTexts.Terrain(s.Terrain).In(Lookup), Tzar2.Game.Ui.RandomMapOption.Terrain);
-        Option(new Vector2I(565, 228), T("t_map_res", "Map Resources"), T($"m_res_{(int)s.Resources}", s.Resources.ToString()), Tzar2.Game.Ui.RandomMapOption.MapResources);
-        Check(new Vector2I(564, 267), T("t_gslocations", "Guarded Town"), Tzar2.Game.Ui.RandomMapOption.GuardedTown);
-        Check(new Vector2I(564, 303), T("t_animals", "Animals"), Tzar2.Game.Ui.RandomMapOption.Animals);
-        Check(new Vector2I(564, 339), T("t_mitems", "Magic Items"), Tzar2.Game.Ui.RandomMapOption.MagicItems);
-        Check(new Vector2I(564, 376), T("t_cliffs", "Cliffs"), Tzar2.Game.Ui.RandomMapOption.Cliffs);
-        Check(new Vector2I(564, 411), T("t_gateways", "Gateways"), Tzar2.Game.Ui.RandomMapOption.Gateways);
+        Option(new Vector2I(565, 56), new Vector2I(568, 43), T("t_map_size", "Map Size"), ShellTexts.MapSize(s.MapSize).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapSize);
+        Option(new Vector2I(565, 111), new Vector2I(568, 98), T("t_map_type", "Map Type"), ShellTexts.MapType(s.MapType).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapType);
+        Option(new Vector2I(565, 169), new Vector2I(568, 155), T("t_terrain", "Terrain"), ShellTexts.Terrain(s.Terrain).In(Lookup), Tzar2.Game.Ui.RandomMapOption.Terrain);
+        Option(new Vector2I(565, 228), new Vector2I(568, 214), T("t_map_res", "Map Resources"), T($"m_res_{(int)s.Resources}", s.Resources.ToString()), Tzar2.Game.Ui.RandomMapOption.MapResources);
+        Check(new Vector2I(564, 267), new Vector2I(610, 278), T("t_gslocations", "Guarded Town"), Tzar2.Game.Ui.RandomMapOption.GuardedTown);
+        Check(new Vector2I(564, 303), new Vector2I(610, 313), T("t_animals", "Animals"), Tzar2.Game.Ui.RandomMapOption.Animals);
+        Check(new Vector2I(564, 339), new Vector2I(610, 350), T("t_mitems", "Magic Items"), Tzar2.Game.Ui.RandomMapOption.MagicItems);
+        Check(new Vector2I(564, 376), new Vector2I(610, 386), T("t_cliffs", "Cliffs"), Tzar2.Game.Ui.RandomMapOption.Cliffs);
+        Check(new Vector2I(564, 411), new Vector2I(610, 423), T("t_gateways", "Gateways"), Tzar2.Game.Ui.RandomMapOption.Gateways);
     }
 
-    // A baked 180 x 27 spin of the art with its caption above it.
-    private void Option(Vector2I at, string caption, string value, Tzar2.Game.Ui.RandomMapOption option)
+    // A baked 180 x 27 spin of the art with its caption.
+    private void Option(Vector2I at, Vector2I captionAt, string caption, string value, Tzar2.Game.Ui.RandomMapOption option)
     {
-        Label(at - new Vector2I(0, 17), caption, Caption);
+        Label(captionAt, caption, Caption);
         Spin(at, value, step => _model.Change(option, step), arrows: false);
     }
 
     // A 30 x 30 check box (COMMON/CHK: the green light on top, the red one below) with its caption to the right.
-    private void Check(Vector2I at, string caption, Tzar2.Game.Ui.RandomMapOption option)
+    private void Check(Vector2I at, Vector2I captionAt, string caption, Tzar2.Game.Ui.RandomMapOption option)
     {
         Picture(at, Ui.Region(Common + "chk.t2img", new Rect2I(0, _model.IsOn(option) ? 0 : 31, 31, 31)));
         Click(new Rect2I(at, new Vector2I(30, 30)), () => _model.Change(option, +1)); // the original's 30 x 30 boxes, 30 apart
-        Label(at + new Vector2I(36, 8), caption, Caption);
+        Label(captionAt, caption, Caption);
     }
 
     // A spin: arrows at both ends (drawn from COMMON/BTN LEFT and RIGHT where the art has none), the value between them.
