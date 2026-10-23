@@ -235,6 +235,10 @@ public partial class GameApp : Node
         menu.Settings += ShowSettings;
         menu.Quit += () => GetTree().Quit();
         Replace(menu, music: "music/intro.mid");
+
+        // Back in the menu no match holds the decoded sheets and images (the UI keeps its own textures): drop them, so
+        // they do not pile up over matches of other civilizations and terrain sets (code review 2026-10, item 16).
+        _store.ClearCaches();
     }
 
     /// <summary>Shows SETTINGS (ADR 0177): changes are saved and applied at once.</summary>
