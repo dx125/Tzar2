@@ -165,7 +165,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 13. **Maintainer:** M7 (ADR 0240). Done: package, installer, first-run import, signing step, crash reports (ADRs
     0241–0243), the render bench (D6, ADR 0244). **Owner:** pick the crash server and the signing route (ADRs 0242,
     0243); run the sim bench and the installed build ([min-spec-tuning.md](release/min-spec-tuning.md), requests 1
-    and 2), and `--bench-render` on Windows.
+    and 2), and `--bench-render` on Windows (the command: min-spec-tuning.md, "The render bench").
 14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
