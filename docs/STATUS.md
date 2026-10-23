@@ -216,12 +216,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-22 — The client frees what a match no longer needs (code review, item 16).**
-  * Hidden shadow viewports stop rendering. Glow and ghost never show shadows, and the Shadows option hides the rest.
-  * The sprite atlas drops its CPU pages after the upload, and the upload's Godot images are disposed.
-  * The decoded-asset cache is cleared back in the menu.
-  * The menu's managed heap after a match falls from 270 to 150 MB. The next match decodes its sprites again, about
-    0.4 s.
+* **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
+  * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
+    a string concatenation formats a `double`, `float`, `decimal` or date with the current culture, or an integer with
+    a culture format such as `N0`. CA1305 does not cover these.
+  * It found 48 strings: 35 in the fidelity suite (its verdicts read "37,5 s" under a German or C.UTF-8 locale, which
+    failed a test on macOS), the rest in the CLI and the client.
+  * They now use the invariant culture.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
