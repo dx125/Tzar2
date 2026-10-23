@@ -11,14 +11,15 @@ internal static class WorldReader
     private static readonly string[] KnownFields =
     [
         "defaultSightTiles", "nightSightPercent", "memoryRefreshTicks", "diplomacyChangeIntervalMs", "tributeIntervalMs",
-        "maxTributeAmount", "stockpileCap", "tradeProfitPerTileBasisPoints", "tradeMinDistanceTiles", "tradeMaxProfitPercent",
+        "maxTributeAmount", "stockpileCap", "tradeProfitPercent", "tradeMinDistanceTiles",
         "tradeDockMs", "convertRatio", "gambleOdds", "gambleHouseEdgePercent", "maxGambleStake", "loanStartAmount", "loanStepAmount",
         "loanGrowDelayMs", "loanInterestPercent", "claimReachPx", "claimIntervalMs", "guardRadiusTiles", "wanderRadiusTiles",
         "wanderIntervalMs", "dayLengthMs", "dayStartMinute", "nightStartMinute", "nightEndMinute", "weatherPeriodMs",
         "weatherChancePercent", "weather", "scoreGatherDivisor", "scoreKillDivisor", "scoreBuildDivisor", "scorePerTechnology",
         "victoryIntervalTicks", "deathmatchStartingResources", "cheatSmallResources", "cheatLargeResources", "tavernRefreshMs",
         "mercenaryOffers", "heroOffers", "mercenaryGroupMin", "mercenaryGroupMax", "mercenaryCostPercent", "heroCostPercent",
-        "mercenaryLevel", "fameGroupBonus", "fameLevelBonus", "fameCostPercent",
+        "mercenaryLevel", "fameGroupBonus", "fameLevelBonus", "fameCostPercent", "mercenariesTechnology", "heroesTechnology",
+        "fameTechnology", "gamblingTechnology", "loanTechnology",
     ];
 
     public static WorldSettings Build(RulesetCompiler.SectionSet settings, GameplaySettings gameplay)
@@ -50,9 +51,8 @@ internal static class WorldReader
             TributeIntervalMs = Range(settings, "tributeIntervalMs", d.TributeIntervalMs, 0, 3_600_000),
             MaxTributeAmount = Range(settings, "maxTributeAmount", d.MaxTributeAmount, 1, int.MaxValue),
             StockpileCap = Range(settings, "stockpileCap", d.StockpileCap, 1, int.MaxValue),
-            TradeProfitPerTileBasisPoints = Range(settings, "tradeProfitPerTileBasisPoints", d.TradeProfitPerTileBasisPoints, 0, 100_000),
+            TradeProfitPercent = Range(settings, "tradeProfitPercent", d.TradeProfitPercent, 0, 100_000),
             TradeMinDistanceTiles = Range(settings, "tradeMinDistanceTiles", d.TradeMinDistanceTiles, 0, 1024),
-            TradeMaxProfitBasisPoints = Range(settings, "tradeMaxProfitPercent", d.TradeMaxProfitBasisPoints / 100, 0, 10_000) * 100,
             TradeDockMs = Range(settings, "tradeDockMs", d.TradeDockMs, 0, 600_000),
             ConvertRatio = Range(settings, "convertRatio", d.ConvertRatio, 1, 1000),
             GambleOdds = Odds(settings) ?? d.GambleOdds,
@@ -93,6 +93,11 @@ internal static class WorldReader
             FameGroupBonus = Range(settings, "fameGroupBonus", d.FameGroupBonus, 0, 16),
             FameLevelBonus = Range(settings, "fameLevelBonus", d.FameLevelBonus, 0, 1_000),
             FameCostPercent = Range(settings, "fameCostPercent", d.FameCostPercent, 0, 1_000),
+            MercenariesTechnology = settings.Scalar("world", "mercenariesTechnology") ?? d.MercenariesTechnology,
+            HeroesTechnology = settings.Scalar("world", "heroesTechnology") ?? d.HeroesTechnology,
+            FameTechnology = settings.Scalar("world", "fameTechnology") ?? d.FameTechnology,
+            GamblingTechnology = settings.Scalar("world", "gamblingTechnology") ?? d.GamblingTechnology,
+            LoanTechnology = settings.Scalar("world", "loanTechnology") ?? d.LoanTechnology,
         };
     }
 

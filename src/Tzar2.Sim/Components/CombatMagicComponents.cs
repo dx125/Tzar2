@@ -40,8 +40,8 @@ public struct Experience : IComponent
     /// <summary>Flags.</summary>
     public ExperienceFlags Flags;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved;
+    /// <summary>Damage dealt to training dummies not yet worth a point (below <c>combat.dummyDamagePerPoint</c>).</summary>
+    public byte DummyCarry;
 }
 
 /// <summary>An entity inside a holder (a unit in a castle or ship) or an item in an inventory (GAME-09/10; ADR 0093).</summary>
@@ -152,6 +152,26 @@ public struct InventorySlots
     private uint _item;
 }
 
+/// <summary>A market's items on offer (Jewelry, TECH-030): slots 0..Count-1 hold item entities, oldest first.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct MarketStock : IComponent
+{
+    /// <summary>The offers (<c>EntityId.Value</c>), first <see cref="Count"/> slots; the rest 0.</summary>
+    public InventorySlots Items;
+
+    /// <summary>Offers.</summary>
+    public byte Count;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved0;
+
+    /// <summary>Padding, always 0.</summary>
+    public short Reserved1;
+
+    /// <summary>The tick of the next offer.</summary>
+    public int NextTick;
+}
+
 /// <summary>The items a unit carries (GAME-10; ADR 0094): slots 0..Count-1 hold item entities.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Inventory : IComponent
@@ -196,6 +216,9 @@ public struct ItemState : IComponent
 
     /// <summary>1 + the index of its image in <see cref="ItemDefinition.Looks"/>; 0: the type's own (ITEM-016).</summary>
     public byte Look;
+
+    /// <summary>A soul item's bound unit (<c>EntityId.Value</c>; ITEM-010), 0 = none.</summary>
+    public uint Bound;
 }
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091): an entity with this component only (no identity, never a target).</summary>
@@ -299,11 +322,23 @@ public struct StatusEffects : IComponent
     /// <summary>Cursed until this tick.</summary>
     public int CurseUntil;
 
-    /// <summary>Attack bonus of the blessing (percent).</summary>
+    /// <summary>Attack bonus of the blessing (points).</summary>
     public short BlessPercent;
 
-    /// <summary>Attack and defence malus of the curse (percent).</summary>
+    /// <summary>Attack malus of the curse (percent); a cursed unit has no defence.</summary>
     public short CursePercent;
+
+    /// <summary>Hypnotized until this tick: it obeys the caster's kingdom, then goes back to <see cref="HypnoOwner"/> (MAG-008).</summary>
+    public int HypnoUntil;
+
+    /// <summary>The kingdom a hypnotized unit goes back to.</summary>
+    public byte HypnoOwner;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved0;
+
+    /// <summary>Padding, always 0.</summary>
+    public short Reserved1;
 }
 
 /// <summary>Phase of a cast.</summary>

@@ -175,7 +175,7 @@ public static class Dialogs
                 list.Clear();
                 foreach (System.Collections.Generic.KeyValuePair<string, System.Collections.Immutable.ImmutableArray<byte>> a in doc.State.Assets)
                 {
-                    list.AddItem($"{a.Key}  ({a.Value.Length:N0} bytes, {AssetEdits.KindOf(a.Key)})");
+                    list.AddItem(string.Create(CultureInfo.InvariantCulture, $"{a.Key}  ({a.Value.Length:N0} bytes, {AssetEdits.KindOf(a.Key)})"));
                 }
             }
 

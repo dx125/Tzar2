@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Tzar2.Analyzers.Tests;
 
-/// <summary>Compiles a snippet against the test host's framework assemblies and runs <see cref="DeterminismAnalyzer"/> on it.</summary>
+/// <summary>Compiles a snippet against the test host's framework assemblies and runs <see cref="DeterminismAnalyzer"/> (or another analyzer) on it.</summary>
 internal static class AnalyzerHarness
 {
     private const string Attributes = """
@@ -25,7 +25,7 @@ internal static class AnalyzerHarness
         .Select(path => (MetadataReference)MetadataReference.CreateFromFile(path))
         .ToImmutableArray();
 
-    public static ImmutableArray<Diagnostic> Analyze(string source, bool deterministic = true, bool noIO = false)
+    public static ImmutableArray<Diagnostic> Analyze(string source, bool deterministic = true, bool noIO = false, DiagnosticAnalyzer? analyzer = null)
     {
         string markers = (deterministic ? "[assembly: Tzar2.Core.Tzar2Deterministic]\n" : string.Empty)
             + (noIO ? "[assembly: Tzar2.Core.Tzar2NoIO]\n" : string.Empty);
@@ -46,7 +46,7 @@ internal static class AnalyzerHarness
         }
 
         return compilation
-            .WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(new DeterminismAnalyzer()))
+            .WithAnalyzers(ImmutableArray.Create(analyzer ?? new DeterminismAnalyzer()))
             .GetAnalyzerDiagnosticsAsync()
             .GetAwaiter()
             .GetResult();
