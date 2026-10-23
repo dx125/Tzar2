@@ -19,6 +19,18 @@ public sealed class MenuHelp
     /// <summary>A press on the ball.</summary>
     public void Toggle() => On = !On;
 
+    /// <summary>Esc: hint mode ends; true when it was on (the key is taken), false when it goes on to the screen.</summary>
+    public bool Escape()
+    {
+        if (!On)
+        {
+            return false;
+        }
+
+        On = false;
+        return true;
+    }
+
     /// <summary>Whether a press on a control (not the ball) does anything now: not in hint mode.</summary>
     public bool Allows => !On;
 

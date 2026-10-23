@@ -17,6 +17,11 @@ public class MenuHelpTests
         Assert.False(help.Allows); // only the ball works now
         help.Toggle();
         Assert.True(help.Allows);
+
+        Assert.False(help.Escape()); // Esc without hint mode goes on to the screen
+        help.Toggle();
+        Assert.True(help.Escape()); // Esc ends hint mode and is taken
+        Assert.False(help.On);
     }
 
     [Fact]

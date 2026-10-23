@@ -248,9 +248,21 @@ public abstract partial class ArtScreen : Control
     {
         _help.Toggle();
         ShowBall();
+        UpdateHelpLayer();
+    }
+
+    // Hint mode takes the presses and the keys (Esc ends it).
+    private void UpdateHelpLayer()
+    {
+        ShowBall();
         if (_helpLayer is not null)
         {
-            _helpLayer.MouseFilter = _help.On ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore; // hint mode takes the presses
+            _helpLayer.MouseFilter = _help.On ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
+            _helpLayer.FocusMode = _help.On ? FocusModeEnum.All : FocusModeEnum.None;
+            if (_help.On)
+            {
+                _helpLayer.GrabFocus();
+            }
         }
 
         HideHint();
@@ -265,6 +277,14 @@ public abstract partial class ArtScreen : Control
 
         switch (@event)
         {
+            case InputEventKey { Pressed: true, Keycode: Key.Escape }:
+                if (_help.Escape())
+                {
+                    UpdateHelpLayer();
+                    _helpLayer.AcceptEvent();
+                }
+
+                break;
             case InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } press:
                 if (_ballRect.HasPoint((Vector2I)press.Position))
                 {
