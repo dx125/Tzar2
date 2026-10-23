@@ -75,7 +75,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0263, 2026-10-23) fire rain and the whirlpool as the original casts them (the spell fields square, scatter, delayMs, moveMs): only the ruleset hash moves, the scenario casts neither.
     // (code review, 2026-10-23) the crusade gathering pace, the crusaders' arrival and the chase leash read from the ruleset
     // with the same values (three new settings): the ruleset hash only, the match is the same.
-    private const ulong GoldenRulesetHash = 0x1EE829B846D92165UL;
+    // (code review, 2026-10-23) a harbor's reach to the water is a field of its Building trait (coastReachTiles 2, was a
+    // constant in Sim, the AI and the build ghost): the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0x36C4F32DCB422833UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.

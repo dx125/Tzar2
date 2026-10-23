@@ -41,7 +41,7 @@ internal sealed partial class EntityCompiler
         ["BuildTime"] = ["ms"],
         ["PopulationCost"] = ["amount"],
         ["PopulationProvider"] = ["amount"],
-        ["Building"] = ["width", "height", "mask", "placement", "turnedWidth", "turnedHeight", "turnedMask"],
+        ["Building"] = ["width", "height", "mask", "placement", "coastReachTiles", "turnedWidth", "turnedHeight", "turnedMask"],
         ["Harvester"] = ["capacity", "gatherMs"],
         ["Builder"] = ["builds", "civilizations"],
         ["Producer"] = ["queue"],
@@ -183,6 +183,7 @@ internal sealed partial class EntityCompiler
                 DropOffAccess = d.DropOffAccess,
                 AutoGather = d.AutoGather,
                 Placement = d.Placement,
+                CoastReachTiles = d.CoastReachTiles,
                 Capturable = d.Capturable,
                 IsCapturer = d.IsCapturer,
                 Influence = d.Influence,
@@ -387,6 +388,11 @@ internal sealed partial class EntityCompiler
                 "bridge" => PlacementKind.Bridge,
                 { } other => throw Error(building.Get("placement")!.Value, $"{Where("Building", "placement")}: '{other}' is not land/coast/bridge"),
             };
+            d.CoastReachTiles = NonNegative("Building", "coastReachTiles", 2);
+            if (d.CoastReachTiles > 16)
+            {
+                throw Error(building.Get("coastReachTiles")!.Value, $"{Where("Building", "coastReachTiles")} must be 0..16");
+            }
         }
 
         if (entry.Find("Harvester") is { } harvester)
@@ -804,6 +810,7 @@ internal sealed partial class EntityCompiler
         public DropOffAccess DropOffAccess = DropOffAccess.Land;
         public bool AutoGather;
         public PlacementKind Placement;
+        public int CoastReachTiles = 2;
         public CapturableDefinition? Capturable;
         public bool IsCapturer;
         public InfluenceDefinition? Influence;
