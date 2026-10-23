@@ -387,6 +387,10 @@ internal static class FrameBuilder
             fp.Civilization = world.PlayerCivilization(p);
             fp.Statistics = KingdomStatistics.From(world.Kingdoms[p]);
             fp.Score = VictorySystem.Score(world.Ruleset.World, world.Kingdoms[p]);
+            Sim.Kingdoms.KingdomState k = world.Kingdoms[p];
+            fp.LoanLimit = k.LoanRaiseTick >= 0 && world.Tick.Value >= k.LoanRaiseTick ? (int)Math.Min((long)k.LoanLimit + world.Ruleset.World.LoanStepAmount, 100_000_000) : k.LoanLimit;
+            fp.LoanDue = k.LoanDue;
+            fp.LoanResource = k.LoanResource;
             for (int w = 0; w < TechnologyRow.Capacity / 64; w++)
             {
                 fp.Technologies[w] = state.Technologies[w];

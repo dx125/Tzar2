@@ -190,6 +190,12 @@ public sealed partial class Ruleset
             hasher.Add(speed.Technology).Add(speed.Percent);
         }
 
+        hasher.Add(c.CrusaderArrivalMs).Add(c.CrusadeGather.Length);
+        foreach (CrusadeGatherStep step in c.CrusadeGather)
+        {
+            hasher.Add(step.FromMinute).Add(step.EverySeconds);
+        }
+
         foreach (HeroNames h in c.HeroNames)
         {
             hasher.Add(Encoding.UTF8.GetBytes(h.Civilization)).Add(h.Names.Length);
@@ -211,7 +217,8 @@ public sealed partial class Ruleset
         {
             hasher.Add(Encoding.UTF8.GetBytes(s.Key)).Add((byte)s.Effect).Add((byte)s.Target).Add((byte)s.Affects).Add(s.ManaCost).Add(s.RangeUnits)
                 .Add(s.CooldownMs).Add(s.CastMs).Add(s.Amount).Add(s.DurationMs).Add(s.RadiusUnits).Add(s.Summon).Add(s.Projectile)
-                .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan()).Add(s.BookValue).Add(s.DurationMaxMs);
+                .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan()).Add(s.BookValue).Add(s.DurationMaxMs)
+                .Add(s.Square).Add(s.ScatterUnits).Add(s.DelayMs).Add(s.MoveMs);
         }
     }
 

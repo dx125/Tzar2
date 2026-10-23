@@ -254,6 +254,10 @@ public sealed class CommandCard
             (bool enabled, string detail) = Availability(context, b, civ);
             (ImmutableArray<int> cost, int timeMs) = Price(context, b, civ);
             string description = _source.Text("orders_add", b.Order, string.Empty).Trim();
+            if (b.Action == CardAction.Loan && LoanHint(context, b) is { } loan)
+            {
+                description = loan; // TRADE-008: what the tavern lends, or the loan to return
+            }
             if (captures && b.Action == CardAction.Submenu && CapturedKeys(b.Argument) is { Length: > 0 } keys)
             {
                 // A category of the build menu has no letter of its own; its hint lists the letters of what is in it, which
@@ -1067,6 +1071,27 @@ public sealed class CommandCard
     }
 
     // The original's "Requires: ..." (STRINGS3.INI req3).
+    // The original's hint of a loan order (STRINGS3 getloan3, retloan3): "Obtain loan 1000 of Gold", "Return your loan: 1000 of Gold".
+    private string? LoanHint(CardContext context, CardButton b)
+    {
+        if ((uint)_me >= (uint)context.Frame.Players.Length)
+        {
+            return null;
+        }
+
+        FramePlayer me = context.Frame.Players[_me];
+        string Name(int r) => r >= 0 && r < _rules.ResourceTypes.Count && _rules.ResourceTypes[r] is { Length: > 0 } key ? char.ToUpperInvariant(key[0]) + key[1..] : "resources";
+        if (b.Argument == "return")
+        {
+            return me.LoanResource < 0 ? null
+                : _source.Text("misc", "retloan3", "Return your loan: %d of %s").Replace("%d", me.LoanDue.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal).Replace("%s", Name(me.LoanResource), StringComparison.Ordinal);
+        }
+
+        int resource = _rules.ResourceId(b.Argument);
+        return resource < 0 ? null
+            : _source.Text("misc", "getloan3", "Obtain loan %d of %s").Replace("%d", me.LoanLimit.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal).Replace("%s", Name(resource), StringComparison.Ordinal);
+    }
+
     private string Requires(string what) => $"{_source.Text("misc", "req3", "Requires")}: {what}";
 
     // The original's tavern menus are empty in MENU.INI: the game lists the period's offers there. True: the heroes' menu.
@@ -1133,6 +1158,12 @@ public sealed class CommandCard
     // do orders a technology unlocks (TECHTREE [orders]: bribe, spells, loans...) until it is researched.
     private bool Hidden(CardContext context, CardButton b, in FrameEntity lead)
     {
+        // HUD-029: a button with a condition shows only while it holds (the one the data has: QuestCount).
+        if (string.Equals(b.Enable.Trim(), "QuestCount", StringComparison.OrdinalIgnoreCase) && context.QuestCount <= 0)
+        {
+            return true;
+        }
+
         int gate = _rules.OrderTechnology(b.Order, lead.Id.IsNone ? string.Empty : _source.Civilization(lead.TypeId));
         if (gate >= 0 && !Me(context).HasTechnology(gate))
         {

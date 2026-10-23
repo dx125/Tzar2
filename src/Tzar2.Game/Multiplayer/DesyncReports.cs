@@ -62,7 +62,7 @@ internal static class LobbyDescription
                 choice = new SlotChoice(old.Civilization, old.Team, old.Difficulty, old.AiScript, old.Colour);
             }
 
-            string civ = ruleset.EntityTypeId(choice.Civilization + ".castle") >= 0 ? choice.Civilization : FirstCivilization(ruleset);
+            string civ = ruleset.CanFoundKingdom(choice.Civilization) ? choice.Civilization : FirstCivilization(ruleset);
             ControllerKind controller = s.State == SlotState.Human ? ControllerKind.Human : ControllerKind.Computer;
             players.Add(new MatchPlayer(sim, s.State == SlotState.Human ? s.Name : string.Empty, civ, controller, choice.Difficulty, choice.Team, choice.AiScript, choice.Colour));
         }
@@ -135,17 +135,7 @@ internal static class LobbyDescription
     }
 
     private static string FirstCivilization(Ruleset ruleset)
-    {
-        foreach (string civ in ruleset.Civilizations)
-        {
-            if (ruleset.EntityTypeId(civ + ".castle") >= 0)
-            {
-                return civ;
-            }
-        }
-
-        throw new InvalidDataException("The ruleset has no civilization with a castle.");
-    }
+        => ruleset.FirstKingdomCivilization ?? throw new InvalidDataException("The ruleset has no civilization with a seat.");
 }
 
 /// <summary>

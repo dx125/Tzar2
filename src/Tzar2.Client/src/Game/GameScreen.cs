@@ -1598,7 +1598,7 @@ public partial class GameScreen : Node
 
     // What the command card is built for now (Tzar2.Game.Ui.CommandCard, ADR 0182).
     private CardContext CardNow()
-        => new(_frame!, _selection.Selected, _selection.Focus, _selection.IsOwn, _placing != ushort.MaxValue, _mode, _modeArgument, _session.Scenario is not null, _picked, _session.Setup.AiAssist);
+        => new(_frame!, _selection.Selected, _selection.Focus, _selection.IsOwn, _placing != ushort.MaxValue, _mode, _modeArgument, _session.Scenario is not null, _picked, _session.Setup.AiAssist, _frame?.Scenario?.Quests.Length ?? 0);
 
     private void Submit(CommandList? commands)
     {

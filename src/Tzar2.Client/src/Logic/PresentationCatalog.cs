@@ -142,6 +142,7 @@ public sealed class PresentationCatalog : ICardSource
     private readonly IniTable _sounds;
     private readonly IniTable _strings;
     private readonly IniTable _icons;
+    private readonly IniTable _equations;
     private readonly Dictionary<string, string[]> _keyClasses = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Builds the catalog.</summary>
@@ -160,6 +161,7 @@ public sealed class PresentationCatalog : ICardSource
         _sounds = Load("tables/data/sounds.ini.json");
         _strings = Load("tables/local/strings.ini.json");
         _icons = Load("tables/data/icons.ini.json");
+        _equations = Load("tables/data/equations.ini.json");
         IniTable keys = Load("tables/data/keys.ini.json");
         if (keys.Section("Ctrl") is { } ctrl)
         {
@@ -290,7 +292,11 @@ public sealed class PresentationCatalog : ICardSource
                 argument = string.Equals(order, "fireatwill", StringComparison.OrdinalIgnoreCase) ? "0" : "2";
             }
 
-            buttons.Add(new CardButton(order, hotkey, kind, argument, image, tooltip));
+            // ENABLE names an equation of EQUATIONS.INI (EnableQuestButton = QuestCount; HUD-029).
+            string enable = o?.Get("ENABLE") is { Length: > 0 } condition
+                ? _equations.Get("Equations", condition) ?? (string.Equals(condition, "EnableQuestButton", StringComparison.OrdinalIgnoreCase) ? "QuestCount" : condition)
+                : string.Empty;
+            buttons.Add(new CardButton(order, hotkey, kind, argument, image, tooltip) { Enable = enable });
         }
 
         return buttons;

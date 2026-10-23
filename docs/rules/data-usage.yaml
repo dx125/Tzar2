@@ -21,9 +21,9 @@ files:
     account: sections
     used: [credits]
   - path: DATA/EQUATIONS.INI
+    reader: Tzar2.Client PresentationCatalog (the conditions of orders, HUD-029)
     account: keys
-    todo:
-      enablequestbutton: when the quest order is on (HUD-029)
+    used: [enablequestbutton]
   - path: DATA/GENERAL.INI
     account: keys
     ignored:
@@ -73,9 +73,7 @@ files:
   - path: DATA/ORDERS.INI
     reader: Tzar2.Client PresentationCatalog (the command card's orders)
     account: keys
-    used: [action, classname, img, place, submenu]
-    todo:
-      enable: an order shown only when its condition holds, the quest order (HUD-029)
+    used: [action, classname, enable, img, place, submenu]
   - path: DATA/ORG  MENU.INI
     account: unused
     reason: An older copy of MENU.INI that the game does not read.
