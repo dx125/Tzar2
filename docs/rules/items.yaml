@@ -75,3 +75,9 @@ rules:
     status: tested
     adr: [0186]
     note: Each item keeps its own effect, spell and look. The workshop makes a book of any of 20 spells, a potion of health, levels, mana, attack or defence, and a sword, bow or shield (power items, ITEM_PLUSPLUS). Maps give their items the numbers of their records. Which spells and potion colours the workshop offers, a book's minimum gold (goldreq) and how gold becomes a potion's amount are UNVERIFIED.
+  ITEM-017:
+    rule: The random map generator places weapons and shields, spell books and potions, R(1, 10) plus a 32nd of the side of each, each item with its own picture and strength - a book one of seven spells with 1 to 5 charges, a bow, shield or sword 5 to 15, a potion of health or mana 10 to 50, or of levels, attack or defence 2 to 8.
+    source: ['community ReTzar src/random_map.rs (0x4b5b14, 0x4b5c50)']
+    status: tested
+    adr: [0264]
+    note: The items' distance from the castles is ours; the book's value of 1 to 3 is kept as its power (UNVERIFIED what the original does with it).

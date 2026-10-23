@@ -50,6 +50,15 @@ public enum MapObjectRole : byte
 
     /// <summary>A decorative ground patch without a footprint.</summary>
     GroundPatch,
+
+    /// <summary>A weapon or shield on the ground (the original's <c>item_plusplus</c>; ADR 0264).</summary>
+    Weapon,
+
+    /// <summary>A spell book on the ground (the original's <c>item_magic</c>; ADR 0264).</summary>
+    Book,
+
+    /// <summary>A potion on the ground (the original's <c>item_health</c>; ADR 0264).</summary>
+    Potion,
 }
 
 /// <summary>An entity type the generator places for a role.</summary>
@@ -73,7 +82,8 @@ public readonly record struct MapObjectKind(string KeyTemplate, int Width, int H
 /// </summary>
 public sealed class MapGenCatalog
 {
-    private const int RoleCount = (int)MapObjectRole.GroundPatch + 1;
+    /// <summary>The number of roles.</summary>
+    public const int RoleCount = (int)MapObjectRole.Potion + 1;
 
     private readonly MapObjectKind?[] _kinds;
 
@@ -132,6 +142,9 @@ public sealed class MapGenCatalog
             new MapObjectKind("comm.item", 0, 0),
             new MapObjectKind("comm.ground_object", 1, 1),
             new MapObjectKind("comm.ground_patch", 0, 0),
+            new MapObjectKind("comm.item_plusplus", 0, 0),
+            new MapObjectKind("comm.item_magic", 0, 0),
+            new MapObjectKind("comm.item_health", 0, 0),
         ],
         startingPeasants: 5);
 

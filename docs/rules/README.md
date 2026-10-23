@@ -106,7 +106,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 11 | 15 | 3 | 2 | 2 | 1 |
-| [Items](items.yaml) (ITEM) | 16 | 11 | 3 | 0 | 1 | 1 | 0 |
+| [Items](items.yaml) (ITEM) | 17 | 12 | 3 | 0 | 1 | 1 | 0 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 24 | 20 | 4 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 8 | 1 | 1 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 341 | 238 | 79 | 8 | 4 | 9 | 3 |
+| **All** | 342 | 239 | 79 | 8 | 4 | 9 | 3 |
 
 ## Not done yet
 
