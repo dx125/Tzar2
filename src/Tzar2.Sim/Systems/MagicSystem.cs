@@ -100,7 +100,7 @@ public sealed class MagicSystem : ISimSystem
         {
             return CommandRejectionReason.Unknown;
         }
-        else if ((item.Charges > 0 && world.Items.At(b).Charges <= 0) || world.Items.At(b).ReadyTick > world.Tick.Value)
+        else if ((world.Items.At(b).LimitedCharges(item) && world.Items.At(b).Charges <= 0) || world.Items.At(b).ReadyTick > world.Tick.Value)
         {
             return CommandRejectionReason.NotReady;
         }
@@ -266,8 +266,8 @@ public sealed class MagicSystem : ISimSystem
         {
             ref ItemState state = ref world.Items.Get(book);
             ItemDefinition def = world.TypeOf(book).Traits.Item!;
-            state.ReadyTick = tick + ((def.CooldownMs + tickMs - 1) / tickMs);
-            if (def.Charges > 0)
+            state.ReadyTick = tick + ((state.CooldownFor(def) + tickMs - 1) / tickMs);
+            if (state.LimitedCharges(def))
             {
                 state.Charges--;
             }
@@ -315,7 +315,7 @@ public sealed class MagicSystem : ISimSystem
             ApplyEffect(world, s.Id, caster, owner, effectTarget, tx, ty, _deaths);
         }
 
-        if (usedBook && world.Items.IndexOf(bookEntity) is >= 0 and var used && world.TypeOf(bookEntity).Traits.Item is { Charges: > 0 } && world.Items.At(used).Charges <= 0)
+        if (usedBook && world.Items.IndexOf(bookEntity) is >= 0 and var used && world.TypeOf(bookEntity).Traits.Item is { } usedType && world.Items.At(used).LimitedCharges(usedType) && world.Items.At(used).Charges <= 0)
         {
             world.Destroy(bookEntity); // a spent book is gone
         }

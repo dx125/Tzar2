@@ -183,6 +183,53 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-018")]
+    public void A_map_book_may_never_run_out_and_waits_its_own_pool()
+    {
+        // ADR 0265: a book without limited charges is endless; one that needs mana waits its own pool (6 s here) instead of
+        // the type's 10 s. The caster still waits the spell's own recast (fire rain 5 s, Tzar2's UNVERIFIED value).
+        using var d = new SimDriver(TestMap(32, 16, Unit("euro.footman", 0, 4, 4), Item("comm.item_magic", 5, 4)), ruleset: Classic);
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId book = OfType(d.World, "comm.item_magic").Single();
+        ref ItemState state = ref d.World.Items.Get(book);
+        state.Flags = ItemStateFlags.Endless | ItemStateFlags.OwnCooldown;
+        state.CooldownMs = 6_000;
+        int charges = state.Charges;
+        Pick(d, footman, book);
+        int tickMs = d.World.Config.TickLengthMilliseconds;
+        int NotReady() => d.Rejections().Count(r => r == CommandRejection.SpellNotReady);
+        for (int use = 0; use < 5; use++) // more casts than the type's three charges
+        {
+            d.Order(0, CommandKind.UseItem, [footman], (12 * Tile) + use, 8 * Tile, arg0: 0);
+            d.RunUntil(() => d.Count(SimEventKind.SpellCast) == use + 1, 400);
+            Assert.Equal(use + 1, d.Count(SimEventKind.SpellCast));
+            d.RunUntil(() => false, 5_500 / tickMs); // past the spell's recast, not yet the pool
+            int rejected = NotReady();
+            d.Order(0, CommandKind.UseItem, [footman], 12 * Tile, 8 * Tile, arg0: 0);
+            d.Step();
+            Assert.Equal(rejected + 1, NotReady()); // its own pool refills first
+            d.RunUntil(() => false, 1_000 / tickMs); // 6.5 s: the pool is full, the type's 10 s are not over
+        }
+
+        Assert.True(d.World.Entities.IsAlive(book)); // never used up
+        Assert.Equal(charges, d.World.Items.Get(book).Charges);
+
+        // An own pool of 0 (the record does not need mana): only the spell's recast, never the type's 10 s.
+        d.World.Items.Get(book).CooldownMs = 0;
+        d.RunUntil(() => false, 6_000 / tickMs);
+        int casts = d.Count(SimEventKind.SpellCast);
+        d.Order(0, CommandKind.UseItem, [footman], 12 * Tile, 8 * Tile, arg0: 0);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == casts + 1, 400);
+        d.RunUntil(() => false, 5_500 / tickMs);
+        int before = NotReady();
+        d.Order(0, CommandKind.UseItem, [footman], 13 * Tile, 8 * Tile, arg0: 0);
+        d.Step();
+        Assert.Equal(before, NotReady());
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == casts + 2, 400);
+        Assert.Equal(casts + 2, d.Count(SimEventKind.SpellCast));
+    }
+
+    [Fact]
     [Trait("Rule", "ITEM-011")]
     public void A_dead_units_items_fall_to_the_ground_and_friends_can_be_given_items()
     {

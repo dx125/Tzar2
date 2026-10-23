@@ -168,3 +168,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0262](0262-ai-resign-flag-in-the-match-settings.md) | Carry the AI resign flag in the match settings, format version 3 | Accepted | 2026-10-23 |
 | [0263](0263-fire-rain-and-whirlpool-as-the-original-casts-them.md) | Fire rain and the whirlpool as the original casts them | Accepted | 2026-10-23 |
 | [0264](0264-item-properties-on-map-objects.md) | Give map objects item properties; the random map generator makes its items as the original | Accepted | 2026-10-23 |
+| [0265](0265-spell-books-own-pool-and-endless-charges.md) | Spell books keep their own recharge and may be endless | Accepted | 2026-10-23 |

@@ -42,4 +42,29 @@ public class MapItemTests
         EntityId book = w.Items.Entities.ToArray().Single(i => w.Positions.Get(i).X / 2048 == 10);
         Assert.Equal((w.Ruleset.SpellId("spell_lightning"), 2, "item_book3"), (w.ItemSpell(book), At(10).Charges, Look(10)));
     }
+
+    [Fact]
+    [Trait("Rule", "ITEM-018")]
+    public void A_books_record_says_whether_it_runs_out_and_how_long_its_pool_takes()
+    {
+        // ADR 0265: +0x62 needs mana (its own pool of the time restriction), +0x63 limited charges (else endless).
+        var b = new ScenarioBuilder();
+        static ObjectInfo Book(bool? needsMana, int? seconds, bool? limited)
+            => new(string.Empty, string.Empty, ObjectFlags.None, Item: new ItemInfo("item_book1", 0, MagicType: 1, NeedsMana: needsMana, CooldownSeconds: seconds, Charges: 4, LimitedCharges: limited));
+        b.Unit("comm.item_magic", MapObject.Nature, 2, 2, Book(needsMana: true, seconds: 7, limited: true));
+        b.Unit("comm.item_magic", MapObject.Nature, 4, 2, Book(needsMana: false, seconds: 7, limited: false));
+        b.Unit("comm.item_magic", MapObject.Nature, 6, 2, Book(needsMana: null, seconds: null, limited: null));
+        using TriggerDriver d = b.Start();
+        d.Step();
+        World w = d.World;
+        ItemState At(int x) => w.Items.Get(w.Items.Entities.ToArray().Single(e => w.Positions.Get(e).X / 2048 == x));
+        ItemDefinition type = w.Ruleset.EntityTypes[w.Ruleset.EntityTypeId("comm.item_magic")].Traits.Item!;
+
+        Assert.Equal((ItemStateFlags.OwnCooldown, 7_000, 4), (At(2).Flags, At(2).CooldownMs, At(2).Charges));
+        Assert.True(At(2).LimitedCharges(type));
+        Assert.Equal((ItemStateFlags.OwnCooldown | ItemStateFlags.Endless, 0), (At(4).Flags, At(4).CooldownFor(type)));
+        Assert.False(At(4).LimitedCharges(type));
+        Assert.Equal(ItemStateFlags.None, At(6).Flags); // an older record keeps the type's
+        Assert.Equal(type.CooldownMs, At(6).CooldownFor(type));
+    }
 }

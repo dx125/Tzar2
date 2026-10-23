@@ -96,7 +96,7 @@ public sealed record ObjectInfo(
 /// <param name="Value">Bonus value (weapon attack, armor defence, potion amount; meaning by item class).</param>
 /// <param name="Amount">Resource amount of a resource item.</param>
 /// <param name="MagicType">Spell book magic type.</param>
-/// <param name="NeedsMana">Spell book needs mana.</param>
+/// <param name="NeedsMana">Spell book needs mana: its own pool of <paramref name="CooldownSeconds"/> (ADR 0265).</param>
 /// <param name="CooldownSeconds">Spell book time restriction.</param>
 /// <param name="Charges">Spell book max charges.</param>
 /// <param name="Text">Scroll text (UTF-8).</param>
@@ -105,6 +105,7 @@ public sealed record ObjectInfo(
 /// <param name="Music">Scroll music.</param>
 /// <param name="ScrollTimeMs">Scroll time.</param>
 /// <param name="AutoClose">Scroll closes by itself.</param>
+/// <param name="LimitedCharges">Spell book's charges count; false: it never runs out (ADR 0265).</param>
 public sealed record ItemInfo(
     string Definition,
     int? Value = null,
@@ -118,7 +119,8 @@ public sealed record ItemInfo(
     ResourceRef? Sound = null,
     ResourceRef? Music = null,
     int? ScrollTimeMs = null,
-    bool? AutoClose = null);
+    bool? AutoClose = null,
+    bool? LimitedCharges = null);
 
 /// <summary>Object flags (Appendix C.2).</summary>
 [System.Flags]

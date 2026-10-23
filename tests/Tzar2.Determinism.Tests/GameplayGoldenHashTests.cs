@@ -96,8 +96,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // stream and the final hash.
     // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
     // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
-    private const ulong GoldenHashStream = 0x05AB4D4DEB89E38FUL;
-    private const ulong GoldenFinalFullHash = 0x2E60EAFBC3458F9BUL;
+    // (ADR 0265, 2026-10-23) a spell book keeps its own pool and may be endless (item state grows, hashed layout 17, snapshot 19): the hashes.
+    private const ulong GoldenHashStream = 0x85BB15267C16C14BUL;
+    private const ulong GoldenFinalFullHash = 0x975F49CF2E7E3AABUL;
 
     private const int Ticks = 1600;
 

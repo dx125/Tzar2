@@ -175,6 +175,12 @@ public sealed record PlayerProfile(string Name, ImmutableArray<CampaignProgress>
                             w.WriteNumber("look", i.Look);
                         }
 
+                        if (i.Flags != Sim.Components.ItemStateFlags.None)
+                        {
+                            w.WriteNumber("bookFlags", (int)i.Flags);
+                            w.WriteNumber("cooldownMs", i.CooldownMs);
+                        }
+
                         w.WriteEndObject();
                     }
 
@@ -255,7 +261,9 @@ public sealed record PlayerProfile(string Name, ImmutableArray<CampaignProgress>
                             Number(i, "charges", 0, 1_000_000),
                             i.TryGetProperty("spell", out _) ? Text(i, "spell", 256) : null,
                             i.TryGetProperty("effect", out _) ? (Content.Compiled.ItemEffect)Number(i, "effect", 0, (int)Content.Compiled.ItemEffect.Mana) : Content.Compiled.ItemEffect.Default,
-                            i.TryGetProperty("look", out _) ? Number(i, "look", 0, 255) : 0));
+                            i.TryGetProperty("look", out _) ? Number(i, "look", 0, 255) : 0,
+                            i.TryGetProperty("cooldownMs", out _) ? Number(i, "cooldownMs", 0, 3_600_000) : 0,
+                            i.TryGetProperty("bookFlags", out _) ? (Sim.Components.ItemStateFlags)Number(i, "bookFlags", 0, 3) : Sim.Components.ItemStateFlags.None));
                     }
 
                     heroes.Add(new PersistentHero(

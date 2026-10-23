@@ -157,6 +157,7 @@ public partial class PropertiesPanel : VBoxContainer
             Forms.Optional(g, "Magic type", item.MagicType, 0, 0, 64, v => Set("Magic type", i => i with { MagicType = v }));
             Forms.Check(g, "Needs mana", item.NeedsMana == true, v => Set("Needs mana", i => i with { NeedsMana = v }));
             Forms.Optional(g, "Time restriction (s)", item.CooldownSeconds, 0, 0, 3600, v => Set("Cooldown", i => i with { CooldownSeconds = v }));
+            Forms.Check(g, "Limited charges", item.LimitedCharges == true, v => Set("Limited charges", i => i with { LimitedCharges = v }));
             Forms.Optional(g, "Max charges", item.Charges, 1, 0, 1000, v => Set("Charges", i => i with { Charges = v }));
         }
         else
