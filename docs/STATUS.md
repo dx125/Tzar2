@@ -234,16 +234,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       Done since (log below): the nightly Benchmarks' gameplay rows re-recorded, the architecture tests' four gaps,
       the civilization list (ADR 0211, the `Race` bug), the asset caches cleared in the menu, the load off the main
       thread, rules decided by data instead of names in code.
+      * 2026-10-23: the worker pool waits for the jobs, not for the helpers it woke (ADR 0214). On the CI macOS runner
+        under contention, the median fork had waited a 10 ms slice for idle helpers.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
-
-* **2026-10-23 — The worker pool's wait for late helpers is measured (ADR 0214; code review, item 16).**
-  * Under full CPU contention, 6–7 % of forks wait a 10 ms time slice for a helper that wakes after all the jobs are
-    done.
-  * A stress test now reports this on every CI runner. The pool changes only if the runners show it too.
 
 * **2026-10-23 — Network and probe tests poll until a deadline (issue #179).**
   * The server test now polls for the Welcome and the lobby listing.

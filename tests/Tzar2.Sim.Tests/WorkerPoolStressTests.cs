@@ -16,6 +16,7 @@ namespace Tzar2.Sim.Tests;
 /// if the tail eats the 50 ms tick; its percentiles are written to the test output, so CI runners show whether the stalls
 /// are real there. The pool changes only if they are (ADR 0214).
 /// </summary>
+[Collection(nameof(WorkerPoolStressCollection))]
 public sealed class WorkerPoolStressTests(ITestOutputHelper output)
 {
     private const int Forks = 500;
@@ -47,8 +48,17 @@ public sealed class WorkerPoolStressTests(ITestOutputHelper output)
         double[] totals = new double[Forks];
         try
         {
+            // At most Forks forks or 20 s: on a small runner the contention can slow everything down a lot.
+            var wall = Stopwatch.StartNew();
             for (int f = 0; f < Forks; f++)
             {
+                if (wall.Elapsed.TotalSeconds > 20)
+                {
+                    Array.Resize(ref tails, f);
+                    Array.Resize(ref totals, f);
+                    break;
+                }
+
                 job.Reset();
                 long start = Stopwatch.GetTimestamp();
                 pool.Run(job, workers * 2);
@@ -71,7 +81,7 @@ public sealed class WorkerPoolStressTests(ITestOutputHelper output)
         int slow = Array.FindAll(tails, t => t >= 5).Length;
         string report = string.Create(
             CultureInfo.InvariantCulture,
-            $"workers {workers}, {Environment.ProcessorCount} cores, {Forks} forks under contention: tail after the last job p50 {P(tails, 50):F3} p99 {P(tails, 99):F3} max {tails[^1]:F3} ms ({slow} at 5 ms or more); whole fork p50 {P(totals, 50):F3} p99 {P(totals, 99):F3} max {totals[^1]:F3} ms");
+            $"workers {workers}, {Environment.ProcessorCount} cores, {tails.Length} forks under contention: tail after the last job p50 {P(tails, 50):F3} p99 {P(tails, 99):F3} max {tails[^1]:F3} ms ({slow} at 5 ms or more); whole fork p50 {P(totals, 50):F3} p99 {P(totals, 99):F3} max {totals[^1]:F3} ms");
         output.WriteLine(report);
         Assert.True(P(tails, 99) < 50, "late helpers eat a 50 ms tick: " + report);
     }
@@ -99,3 +109,10 @@ public sealed class WorkerPoolStressTests(ITestOutputHelper output)
         }
     }
 }
+
+/// <summary>
+/// The stress test runs alone: its busy threads take every core, which would starve the other test classes running in
+/// parallel (a local run of the whole assembly took 36 minutes with it in the mix).
+/// </summary>
+[CollectionDefinition(nameof(WorkerPoolStressCollection), DisableParallelization = true)]
+public sealed class WorkerPoolStressCollection;
