@@ -81,3 +81,6 @@ come back as one line he can paste.
 * The owner's runs come with exact commands (docs/STATUS.md work queue item 13 and the min-spec plan).
 * Follow-ups: a per-system breakdown of the real game's tick (the `t2 bench` sections inside the client), and the
   bench as an optional nightly job once a runner with a GPU exists.
+* **Amendment (2026-10-23, code review item 16, #204):** the bench gives its kingdoms the ruleset's civilization order
+  (classic: euro, arab, asia; before: euro, asia, arab). The match changed with that commit, so bench numbers from
+  before #204 are not directly comparable with later ones.

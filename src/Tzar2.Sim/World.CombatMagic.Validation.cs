@@ -305,7 +305,7 @@ public sealed partial class World
         {
             CrusadeState s = Crusades.Components[i];
             if (Identities.Get(ids[i]).TypeId != settings.CrusadeAnchor || s.ToRaise < 0 || s.ToRaise > settings.CrusadeCeilingMax + settings.CrusadeStart
-                || s.NextTick < 0 || s.NextTick > tick + Systems.MagicSystem.CrusaderArrivalTicks(tickMs) || !HasPlayer(Identities.Get(ids[i]).Owner))
+                || s.NextTick < 0 || s.NextTick > tick + Systems.MagicSystem.CrusaderArrivalTicks(Ruleset.Combat, tickMs) || !HasPlayer(Identities.Get(ids[i]).Owner))
             {
                 throw Invalid("invalid crusade");
             }

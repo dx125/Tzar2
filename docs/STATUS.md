@@ -250,6 +250,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       * 2026-10-23: `legacy.referenceDataHash` re-pinned to 7F4CCBEEEC76AD36, the value main has produced since #139: #168
         moved it unpinned and #133/#139 pinned values measured on stale branches. Import tests with `TZAR2_ORIGIN` pass;
         importer PRs now run them after merging main (DEVELOPMENT.md, AGENTS.md).
+      * 2026-10-23: whether a civilization can found a kingdom is asked of the ruleset (its Seat), not of a type named
+        "<civ>.castle"; the render bench takes the ruleset's civilization order (ADR 0244 amendment).
+      * 2026-10-23: the crusade gathering pace, the crusaders' arrival interval and the chase leash moved from code to
+        the ruleset with the same values; only the ruleset hash is re-pinned.
+      * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
+        client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
       * 2026-10-23: the review doc has the second "for a fork" sweep: a ranked list of nine findings, what #204, #205 and
         #211 did, and what remains (UI fallbacks, the client's per-civilization art, map builders by key, some caps).
 

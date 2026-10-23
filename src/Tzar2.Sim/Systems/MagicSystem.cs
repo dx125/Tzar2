@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Core.Numerics;
@@ -945,8 +946,8 @@ public sealed class MagicSystem : ISimSystem
         _woken.Clear();
     }
 
-    /// <summary>The time between two crusaders arriving at the anchor (500 ms; ReTzar's reading of the original, 0x439d50), in ticks.</summary>
-    public static int CrusaderArrivalTicks(int tickMs) => Math.Max(1, 500 / Math.Max(1, tickMs));
+    /// <summary>The time between two crusaders arriving at the anchor (<see cref="CombatSettings.CrusaderArrivalMs"/>), in ticks.</summary>
+    public static int CrusaderArrivalTicks(CombatSettings combat, int tickMs) => Math.Max(1, combat.CrusaderArrivalMs / Math.Max(1, tickMs));
 
     /// <summary>The most crusaders <paramref name="player"/>'s cathedrals gather: the start, plus a step per full crusade.</summary>
     public static int CrusadeCeiling(World world, int player)
@@ -955,9 +956,8 @@ public sealed class MagicSystem : ISimSystem
         return Math.Min(c.CrusadeCeilingMax, c.CrusadeStart + (c.CrusadeCeilingStep * world.Players[player].FullCrusades));
     }
 
-    // Each finished cathedral gathers one crusader for its kingdom, up to the ceiling, while no crusade of the kingdom runs:
-    // every 12 s in the first 15 minutes, 8 s until 20, 4 s until 30, then every second (ReTzar's reading of the
-    // original, 0x422ca0; MAG-017). Checked once a second.
+    // Each finished cathedral gathers one crusader for its kingdom, up to the ceiling, while no crusade of the kingdom runs,
+    // at the pace of combat.crusadeGather for the time played (MAG-017). Checked once a second.
     private static void GatherCrusaders(World world, int tick)
     {
         int tickMs = world.Config.TickLengthMilliseconds;
@@ -968,7 +968,13 @@ public sealed class MagicSystem : ISimSystem
         }
 
         long elapsedMs = (long)tick * tickMs;
-        int every = elapsedMs < 900_000 ? 12 : elapsedMs < 1_200_000 ? 8 : elapsedMs < 1_800_000 ? 4 : 1;
+        ImmutableArray<CrusadeGatherStep> steps = world.Ruleset.Combat.CrusadeGather;
+        int every = steps[0].EverySeconds;
+        for (int s = 1; s < steps.Length && elapsedMs >= steps[s].FromMinute * 60_000L; s++)
+        {
+            every = steps[s].EverySeconds;
+        }
+
         long seconds = tick / second;
         ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
         for (int i = 0; i < structures.Length; i++)
@@ -1026,7 +1032,7 @@ public sealed class MagicSystem : ISimSystem
 
             if (s.ToRaise > 0 && settings.Crusader >= 0 && world.Entities.RemainingCapacity >= 1)
             {
-                s.NextTick = tick + CrusaderArrivalTicks(world.Config.TickLengthMilliseconds);
+                s.NextTick = tick + CrusaderArrivalTicks(world.Ruleset.Combat, world.Config.TickLengthMilliseconds);
                 Position at = world.Positions.Get(ids[i]);
                 (int x, int y) = FreeSpot(world, world.Ruleset.EntityTypes[settings.Crusader].Locomotor, at.X, at.Y);
                 EntityId crusader = world.Spawn((ushort)settings.Crusader, owner, x, y);

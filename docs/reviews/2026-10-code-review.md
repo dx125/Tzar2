@@ -228,10 +228,10 @@ twelve AI mutators and the client's namespaces. Its gaps:
 | #188, ADR 0214 | the worker pool waits for the jobs, not the helpers it woke | CI macOS (3 cores, loaded), tail after a fork's last job: p50 10.1 / p99 135 / max 19,355 ms before; review Mac after: p50 0.003–0.007 / p99 1.3–10 ms. CI macOS now passes the p99 < 50 ms assertion (its log does not print the numbers) |
 | #191 | issue #190: the host's choice for a computer goes to the relay even on a stale lobby view | |
 | #193, ADR 0215 | the full state hash hashes its large arrays in 64 KiB chunks on the workers | full hash 0.56 → 0.18 ms (s2 world); full hashes re-pinned |
-| #204 (open) | a kingdom's civilization is one with a seat, asked of the ruleset (`SeatTypeId`, `CanFoundKingdom`); the render bench takes the ruleset's order | 7 `"<civ>.castle"` look-ups and 2 `"euro"` fallbacks in Game removed; no hash moves; render bench numbers before #204 are not comparable (ADR 0244 amendment) |
-| #205 (open) | the crusade gathering pace, the crusaders' arrival interval and the chase leash in YAML | 3 constants out of Sim; ruleset hash only |
+| #204 | a kingdom's civilization is one with a seat, asked of the ruleset (`SeatTypeId`, `CanFoundKingdom`); the render bench takes the ruleset's order | 7 `"<civ>.castle"` look-ups and 2 `"euro"` fallbacks in Game removed; no hash moves; render bench numbers before #204 are not comparable (ADR 0244 amendment) |
+| #205 | the crusade gathering pace, the crusaders' arrival interval and the chase leash in YAML | 3 constants out of Sim; ruleset hash only |
 | #209 | `legacy.referenceDataHash` re-pinned; importer PRs run the `TZAR2_ORIGIN` tests after merging main | 5 local Import tests failing → 0 (bisect: #168 moved the hash unpinned, #133 and #139 pinned values from stale branches) |
-| #211 (open, on #204) | `CivilizationKeyTests`: civilization keys and type-key suffixes only in a list of files that may only shrink | 20 files listed (see below) |
+| #211 | `CivilizationKeyTests`: civilization keys and type-key suffixes only in a list of files that may only shrink | 20 files listed (see below) |
 
 ## For a fork: the second sweep (2026-10-23)
 
