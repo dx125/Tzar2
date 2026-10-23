@@ -161,3 +161,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0259](0259-jewelry-markets-sell-and-buy-items.md) | Let the markets sell and buy items under Jewelry, as the original does | Accepted | 2026-10-22 |
 | [0260](0260-spell-ranges-and-mana-as-the-original-dispatches-them.md) | Give spells the original's ranges and mana | Accepted | 2026-10-22 |
 | [0261](0261-spell-magnitudes-as-the-original-casts-them.md) | Give spells the original's strength, duration and area | Accepted | 2026-10-22 |
+| [0262](0262-ai-resign-flag-in-the-match-settings.md) | Carry the AI resign flag in the match settings, format version 3 | Accepted | 2026-10-23 |

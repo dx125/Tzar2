@@ -110,6 +110,7 @@ public sealed class MultiplayerSetupTests
         Assert.True(Apply(LobbySettingKey.Explore, 1).Explored);
         Assert.False(Apply(LobbySettingKey.DayNight, 0).DayNight);
         Assert.False(Apply(LobbySettingKey.Weather, 0).Weather);
+        Assert.False(Apply(LobbySettingKey.AiResign, 0).AiResign); // SHELL-013: the sword
 
         // What the panel shows follows the settings, and only the host may change them.
         LobbySetting victory = Assert.Single(model.Settings, s => s.Key == LobbySettingKey.Victory);

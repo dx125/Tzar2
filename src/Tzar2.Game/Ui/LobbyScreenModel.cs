@@ -100,6 +100,9 @@ public enum LobbySettingKey
 
     /// <summary>A ranked match.</summary>
     Ranked,
+
+    /// <summary>The AI resign flag: computer kingdoms may resign on their own (SHELL-013).</summary>
+    AiResign,
 }
 
 /// <summary>A setting with its choices as the settings panel shows it.</summary>
@@ -234,6 +237,7 @@ public sealed class LobbyScreenModel
             LobbySettingKey.Weather => s with { Weather = on },
             LobbySettingKey.Speed => s with { SpeedPercent = Speeds[Math.Clamp(index, 0, Speeds.Length - 1)] },
             LobbySettingKey.AiAssist => s with { AiAssist = on },
+            LobbySettingKey.AiResign => s with { AiResign = on },
             LobbySettingKey.Cheats => s with { CheatsAllowed = on && !s.Ranked },
             LobbySettingKey.Ranked => s with { Ranked = on, CheatsAllowed = false },
             _ => s,
@@ -401,6 +405,7 @@ public sealed class LobbyScreenModel
         Check(LobbySettingKey.Weather, "Weather", s.Weather);
         Option(LobbySettingKey.Speed, "Speed", [.. Speeds.Select(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture) + " %")], Speeds.IndexOf(s.SpeedPercent));
         Check(LobbySettingKey.AiAssist, "AI Assist", s.AiAssist);
+        Check(LobbySettingKey.AiResign, "AI may resign", s.AiResign);
         Check(LobbySettingKey.Cheats, "Cheats allowed", s.CheatsAllowed, enabled: !s.Ranked);
         Check(LobbySettingKey.Ranked, "Ranked (never cheats)", s.Ranked);
         return list;

@@ -458,6 +458,10 @@ public partial class SkirmishSetupScreen : ArtScreen
             Spin(new Vector2I(66, 541), N(model.VictoryLimit), step => model.Change(Tzar2.Game.Ui.RandomMapOption.VictoryLimit, step), arrows: false, width: 191);
         }
 
+        // The AI resign flag (AIRESIGN.BMP, 2 x 2 frames of 32: the white flag on top, the swords below; the right
+        // column is the lit one, not used here).
+        Picture(new Vector2I(471, 427), Ui.Region("art/airesign.t2img", new Rect2I(0, model.IsOn(Tzar2.Game.Ui.RandomMapOption.AiResign) ? 0 : 32, 32, 32)));
+        Click(new Rect2I(471, 427, 32, 32), () => model.Change(Tzar2.Game.Ui.RandomMapOption.AiResign, +1));
         Check(new Vector2I(268, 539), T("t_fog", "No Fog"), Tzar2.Game.Ui.RandomMapOption.NoFog);
         Check(new Vector2I(268, 569), T("t_expolre", "Explore"), Tzar2.Game.Ui.RandomMapOption.Explore);
 

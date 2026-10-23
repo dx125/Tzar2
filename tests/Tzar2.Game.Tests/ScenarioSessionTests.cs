@@ -105,6 +105,17 @@ public sealed class ScenarioSessionTests
     }
 
     [Fact]
+    [Trait("Rule", "SHELL-013")]
+    [Trait("Rule", "DIP-009")]
+    public void The_sword_keeps_every_computer_kingdom_from_resigning()
+    {
+        (MatchSetup setup, _) = Mission();
+        using var sword = new GameSession(setup with { ComputerAi = true, Scenario = null, AiResign = false }, Classic);
+        Assert.NotEmpty(sword.Ai!.Players);
+        Assert.All(sword.Ai!.Players, p => Assert.False(p.Settings.MayResign));
+    }
+
+    [Fact]
     public void The_scenario_is_part_of_the_match_fingerprint()
     {
         (MatchSetup setup, ScenarioBuilder b) = Mission();

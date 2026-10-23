@@ -65,6 +65,9 @@ public enum RandomMapOption
 
     /// <summary>Explore (a check box).</summary>
     Explore,
+
+    /// <summary>The AI resign flag (<c>AIRESIGN.BMP</c>: the white flag lets computers resign, the sword never; SHELL-013).</summary>
+    AiResign,
 }
 
 /// <summary>What a kingdom's row of the random map screen changes.</summary>
@@ -208,6 +211,7 @@ public sealed class RandomMapScreenModel
         RandomMapOption.Gateways => Settings.Features.HasFlag(MapFeatures.Gateways),
         RandomMapOption.NoFog => Settings.NoFog,
         RandomMapOption.Explore => Settings.Explored,
+        RandomMapOption.AiResign => Settings.AiResign,
         _ => false,
     };
 
@@ -251,6 +255,7 @@ public sealed class RandomMapScreenModel
             RandomMapOption.Gateways => s with { Features = s.Features ^ MapFeatures.Gateways },
             RandomMapOption.NoFog => s with { NoFog = !s.NoFog },
             RandomMapOption.Explore => s with { Explored = !s.Explored },
+            RandomMapOption.AiResign => s with { AiResign = !s.AiResign },
             _ => s,
         };
         Players = Math.Clamp(Players, 2, MostPlayers); // a smaller map holds fewer kingdoms
