@@ -18,6 +18,7 @@ namespace Tzar2.Sim.Systems;
 public sealed class ExperienceSystem : ISimSystem
 {
     private readonly List<(EntityId Hero, int Gain)> _shares = [];
+    private readonly List<byte> _tournaments = [];
 
     /// <inheritdoc />
     public SimPhase Phase => SimPhase.Experience;
@@ -37,6 +38,7 @@ public sealed class ExperienceSystem : ISimSystem
 
         CombatSettings settings = world.Ruleset.Combat;
         _shares.Clear();
+        _tournaments.Clear();
         ReadOnlySpan<EntityId> ids = world.Experiences.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
@@ -53,6 +55,13 @@ public sealed class ExperienceSystem : ISimSystem
             {
                 _shares.Add((ids[i], x.PendingXp));
             }
+
+            Tournament(world, identity.Owner, x.PendingXp, settings);
+        }
+
+        foreach (byte kingdom in _tournaments)
+        {
+            Teach(world, kingdom, settings);
         }
 
         foreach ((EntityId hero, int gain) in _shares)
@@ -65,6 +74,42 @@ public sealed class ExperienceSystem : ISimSystem
             if (world.Experiences.At(i).PendingXp > 0)
             {
                 Gain(world, world.Experiences.Entities[i], i, settings);
+            }
+        }
+    }
+
+    // Tournaments (TECH-029; ReTzar's reading of the original, 0x4de900): what a kingdom's units learn (not what Leadership
+    // shares or Tournaments teaches) fills the kingdom's pool; when it reaches tournamentEvery it empties, the rest lost.
+    private void Tournament(World world, byte owner, int gain, CombatSettings settings)
+    {
+        if (settings.TournamentTechnology < 0 || settings.TournamentPupils.IsDefaultOrEmpty || !world.HasPlayer(owner)
+            || !world.Players[owner].HasTechnology(settings.TournamentTechnology))
+        {
+            return;
+        }
+
+        ref PlayerState kingdom = ref world.Players[owner];
+        long pool = (long)kingdom.KungFuPool + gain;
+        if (pool < settings.TournamentEvery)
+        {
+            kingdom.KungFuPool = (byte)pool;
+            return;
+        }
+
+        kingdom.KungFuPool = 0;
+        _tournaments.Add(owner);
+    }
+
+    // Every pupil of the kingdom (Asian peasants, monks, ninjas and priests) learns tournamentGrant.
+    private static void Teach(World world, byte owner, CombatSettings settings)
+    {
+        ReadOnlySpan<EntityId> ids = world.Experiences.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Identity identity = world.Identities.Get(ids[i]);
+            if (identity.Owner == owner && settings.TournamentPupils.BinarySearch(identity.TypeId) >= 0)
+            {
+                world.Experiences.At(i).PendingXp += settings.TournamentGrant;
             }
         }
     }
@@ -101,11 +146,12 @@ public sealed class ExperienceSystem : ISimSystem
     {
         ref Experience x = ref world.Experiences.At(index);
         int cap = CombatStats.LevelCap(world, unit);
-        int ceiling = CombatStats.XpForLevel(settings, Math.Min(cap, 100_000));
+        int speed = CombatStats.ExperienceSpeed(world, world.Identities.Get(unit).Owner);
+        int ceiling = CombatStats.XpForLevel(settings, Math.Min(cap, 100_000), speed);
         x.Xp = (int)Math.Min(Math.Min((long)x.Xp + x.PendingXp, ceiling), int.MaxValue);
         x.PendingXp = 0;
         int level = x.Level;
-        while (level < cap && level < 10_000 && x.Xp >= CombatStats.XpForLevel(settings, level + 1))
+        while (level < cap && level < 10_000 && x.Xp >= CombatStats.XpForLevel(settings, level + 1, speed))
         {
             level++;
         }

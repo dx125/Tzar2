@@ -220,7 +220,7 @@ public partial class ImportWindow : Window
 
         if (item.Report is { } r)
         {
-            _header.Text = $"{r.Kind} {r.Source}: {r.SourceSize:N0} bytes, MD5 {r.SourceMd5}; code page {r.CodePage} ({r.CodePageSource}{(r.CodePageAmbiguous ? ", ambiguous" : string.Empty)}), language {r.Language}; converter {ConversionReport.ConverterVersion}";
+            _header.Text = string.Create(CultureInfo.InvariantCulture, $"{r.Kind} {r.Source}: {r.SourceSize:N0} bytes, MD5 {r.SourceMd5}; code page {r.CodePage} ({r.CodePageSource}{(r.CodePageAmbiguous ? ", ambiguous" : string.Empty)}), language {r.Language}; converter {ConversionReport.ConverterVersion}");
         }
         else
         {

@@ -17,6 +17,12 @@ public enum MapSourceKind : byte
 
     /// <summary>A random map (<see cref="RandomMapSource"/>).</summary>
     RandomMap = 2,
+
+    /// <summary>
+    /// A custom map with its scenario (SHELL-018; ADR 0233), named by <see cref="MatchSettings.CustomMapId"/> and
+    /// identified by <see cref="MatchSettings.CustomMapHash"/>: every peer must have it.
+    /// </summary>
+    CustomMap = 3,
 }
 
 /// <summary>
@@ -26,8 +32,8 @@ public enum MapSourceKind : byte
 /// </summary>
 public sealed record MatchSettings
 {
-    /// <summary>Format version.</summary>
-    public const byte Version = 1;
+    /// <summary>Format version (2 adds the custom map; settings without one are still written as 1).</summary>
+    public const byte Version = 2;
 
     /// <summary>The ruleset name.</summary>
     public string Ruleset { get; init; } = "classic";
@@ -104,10 +110,26 @@ public sealed record MatchSettings
     /// <summary>AI assistance for the humans (the lobby's "AI Assist"; ADR 0183).</summary>
     public bool AiAssist { get; init; }
 
+    /// <summary>The custom map's id (its file name) with <see cref="MapSourceKind.CustomMap"/>, for the lobby and messages.</summary>
+    public string CustomMapId { get; init; } = string.Empty;
+
+    /// <summary>The custom map's content hash (<see cref="Campaigns.CustomMapEntry.Hash"/>): what peers look it up by.</summary>
+    public ulong CustomMapHash { get; init; }
+
+    /// <summary>
+    /// USE MAP SETTINGS (SHELL-018): a custom map keeps its game type, victory, starting stockpiles and population
+    /// limit; only No Fog, Explore, day and night and weather come from the lobby. Off: the lobby's apply.
+    /// </summary>
+    public bool UseMapSettings { get; init; } = true;
+
     /// <summary>The map source these settings describe.</summary>
-    public IMapSource MapSource() => Map == MapSourceKind.TestMap
-        ? new SkirmishTestMap(TestMapSize)
-        : new RandomMapSource(MapType, Terrain, MapSize, Resources, Features);
+    /// <exception cref="InvalidOperationException">A custom map: its source is the map itself (<see cref="MatchDescriptor.ToSetup"/>).</exception>
+    public IMapSource MapSource() => Map switch
+    {
+        MapSourceKind.TestMap => new SkirmishTestMap(TestMapSize),
+        MapSourceKind.RandomMap => new RandomMapSource(MapType, Terrain, MapSize, Resources, Features),
+        _ => throw new InvalidOperationException("A custom map is played from the map itself."),
+    };
 
     /// <summary>The encoded settings.</summary>
     public byte[] ToBytes()
@@ -119,7 +141,8 @@ public sealed record MatchSettings
 
     internal void Write(BinaryBufferWriter w)
     {
-        w.WriteByte(Version);
+        bool custom = Map == MapSourceKind.CustomMap;
+        w.WriteByte(custom ? Version : (byte)1);
         w.WriteString(Ruleset);
         w.WriteByte((byte)Map);
         w.WriteVarUInt64((ulong)TestMapSize);
@@ -138,7 +161,16 @@ public sealed record MatchSettings
         w.WriteByte((byte)((NoFog ? 1 : 0) | (Explored ? 2 : 0) | (DayNight ? 4 : 0) | (Weather ? 8 : 0) | (CheatsAllowed ? 16 : 0) | (Ranked ? 32 : 0) | (AiAssist ? 64 : 0)));
         w.WriteUInt64(ResumeSnapshotHash);
         w.WriteVarInt64(SpeedPercent);
+        if (custom)
+        {
+            w.WriteString(CustomMapId.Length <= MaxMapIdLength ? CustomMapId : CustomMapId[..MaxMapIdLength]);
+            w.WriteUInt64(CustomMapHash);
+            w.WriteByte(UseMapSettings ? (byte)1 : (byte)0);
+        }
     }
+
+    /// <summary>Longest custom map id kept.</summary>
+    public const int MaxMapIdLength = 64;
 
     /// <summary>Decodes settings.</summary>
     /// <exception cref="InvalidDataException">Malformed, another version, or a value out of range.</exception>
@@ -151,7 +183,8 @@ public sealed record MatchSettings
 
     internal static MatchSettings Read(ref BinaryBufferReader r)
     {
-        if (r.ReadByte() != Version)
+        byte version = r.ReadByte();
+        if (version is not (1 or Version))
         {
             throw new InvalidDataException("Unsupported match settings version.");
         }
@@ -174,7 +207,22 @@ public sealed record MatchSettings
         byte flags = r.ReadByte();
         ulong resume = r.ReadUInt64();
         int speed = (int)Bounded(r.ReadVarInt64(), 25, 400);
-        if (map is not (MapSourceKind.TestMap or MapSourceKind.RandomMap) || type > RandomMapType.Dry || terrain > MapTerrainSet.Winter
+        string mapId = string.Empty;
+        ulong mapHash = 0;
+        bool useMap = true;
+        if (version == Version)
+        {
+            mapId = r.ReadString(MaxMapIdLength * 4);
+            mapHash = r.ReadUInt64();
+            byte use = r.ReadByte();
+            useMap = use == 1;
+            if (map != MapSourceKind.CustomMap || use > 1 || mapId.Length == 0 || mapId.Length > MaxMapIdLength)
+            {
+                throw new InvalidDataException("Custom map settings out of range.");
+            }
+        }
+
+        if (map is not (MapSourceKind.TestMap or MapSourceKind.RandomMap) && !(map == MapSourceKind.CustomMap && version == Version) || type > RandomMapType.Dry || terrain > MapTerrainSet.Winter
             || size > RandomMapSize.RealWorld || resources > MapResourceLevel.High || victory > VictoryCondition.NotSpecified
             || gameType > GameType.Deathmatch || flags > 127 || ruleset.Length == 0)
         {
@@ -209,6 +257,9 @@ public sealed record MatchSettings
             ResumeSnapshotHash = resume,
             SpeedPercent = speed,
             AiAssist = (flags & 64) != 0,
+            CustomMapId = mapId,
+            CustomMapHash = mapHash,
+            UseMapSettings = useMap,
         };
     }
 
@@ -392,10 +443,16 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
     /// The setup of this match. <paramref name="localSlot"/> is the slot this machine plays (null for a replay or a
     /// headless check); with <paramref name="multiplayer"/> every human kingdom gets a standby AI (REQ-NET-07).
     /// </summary>
+    /// <exception cref="InvalidDataException">A custom map: use the overload that finds it.</exception>
     public MatchSetup ToSetup(SkirmishAi ai, bool multiplayer, byte? localSlot)
     {
         ArgumentNullException.ThrowIfNull(ai);
         MatchSettings s = Settings;
+        if (s.Map == MapSourceKind.CustomMap)
+        {
+            throw new InvalidDataException($"The match was played on the custom map '{s.CustomMapId}'; it is needed to rebuild it.");
+        }
+
         return new MatchSetup
         {
             Ruleset = s.Ruleset,
@@ -421,6 +478,23 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             LocalSlot = localSlot,
             Descriptor = this,
         };
+    }
+
+    /// <summary>
+    /// The setup of this match, finding a custom map (SHELL-018; ADR 0233) with <paramref name="maps"/> by its hash.
+    /// </summary>
+    /// <exception cref="InvalidDataException">A custom map that <paramref name="maps"/> does not have.</exception>
+    public MatchSetup ToSetup(SkirmishAi ai, bool multiplayer, byte? localSlot, Content.Compiled.Ruleset ruleset, Func<ulong, Campaigns.MissionContent?>? maps)
+    {
+        ArgumentNullException.ThrowIfNull(ruleset);
+        if (Settings.Map != MapSourceKind.CustomMap)
+        {
+            return ToSetup(ai, multiplayer, localSlot);
+        }
+
+        Campaigns.MissionContent mission = maps?.Invoke(Settings.CustomMapHash)
+            ?? throw new InvalidDataException($"This machine does not have the custom map '{Settings.CustomMapId}' (or has another version of it).");
+        return Campaigns.ScenarioMatch.Multiplayer(mission, ruleset, this, ai, multiplayer, localSlot);
     }
 
     /// <summary>The description of <paramref name="setup"/>, or null when its map cannot be described (scenario or campaign maps).</summary>

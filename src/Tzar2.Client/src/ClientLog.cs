@@ -15,7 +15,8 @@ namespace Tzar2.Client;
 /// The client's diagnostic log (ADR 0176): one <see cref="SessionLog"/> per run in <c>user://logs/</c>, levels from
 /// <c>TZAR2_TRACE</c> or <c>user://trace.txt</c> (default: debug everywhere). Godot's own output and errors, including the
 /// exceptions it catches in our callbacks, arrive through <see cref="GodotLogger"/>; unhandled .NET exceptions write a
-/// crash report and the running match's replay into the run's folder.
+/// crash report and the running match's replay into the run's folder. The opt-in crash reporter (ADR 0243) turns
+/// crashes, exceptions Godot caught and runs that never quit into Sentry envelopes, sent only with the player's consent.
 /// </summary>
 internal static class ClientLog
 {
@@ -24,6 +25,9 @@ internal static class ClientLog
 
     /// <summary>The run's log, or null before <see cref="Open"/>.</summary>
     public static SessionLog? Sink { get; private set; }
+
+    /// <summary>The crash reporter of this run, or null before <see cref="Open"/> (or when the log could not open).</summary>
+    public static CrashReporter? Reporter { get; private set; }
 
     /// <summary>Opens the run's log in <paramref name="userDir"/>/logs and hooks Godot's and .NET's error reporting.</summary>
     public static void Open(string userDir, IReadOnlyList<string> args)
@@ -69,7 +73,17 @@ internal static class ClientLog
             Sink.Log(TraceArea.Session, LogLevel.Warn, $"trace settings: ignored '{error}'");
         }
 
-        _logger = new GodotLogger { Log = Sink };
+        // Scripted runs (smoke tests, captures, autoplay) are not players' sessions: no reports and no session counts.
+        if (Logic.ViewerArgs.Parse(args).IsAutomated)
+        {
+            Sink.Log(TraceArea.Session, LogLevel.Info, "crash reports: off for a scripted run");
+        }
+        else
+        {
+            StartCrashReporter(userDir, Sink);
+        }
+
+        _logger = new GodotLogger { Log = Sink, Reporter = Reporter };
         OS.AddLogger(_logger);
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Crash("unhandled exception", e.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, e) =>
@@ -77,6 +91,45 @@ internal static class ClientLog
             Error("unobserved task exception: " + e.Exception);
             e.SetObserved();
         };
+    }
+
+    private static void StartCrashReporter(string userDir, SessionLog log)
+    {
+        try
+        {
+            string? executableDir = OS.HasFeature("template") ? Path.GetDirectoryName(OS.GetExecutablePath()) : null;
+            var system = new SystemInfo(
+                OS.GetName(),
+                OS.GetVersion(),
+                OS.GetProcessorName(),
+                OS.GetProcessorCount(),
+                RenderingServer.GetVideoAdapterName(),
+                RenderingServer.GetVideoAdapterVendor(),
+                (string)Engine.GetVersionInfo()["string"],
+                RenderingServer.GetCurrentRenderingMethod() + "/" + RenderingServer.GetCurrentRenderingDriverName());
+            Reporter = CrashReporter.Start(userDir, Path.Combine(userDir, "logs"), log.Folder, executableDir, system);
+            log.Log(TraceArea.Session, LogLevel.Info, $"crash reports: {Reporter.Settings.Consent.ToString().ToLowerInvariant()}, endpoint {(Reporter.Dsn is null ? "none" : Reporter.Dsn.EnvelopeEndpoint.Host)}, {Reporter.PendingFiles().Count} waiting");
+            SendCrashReports();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            log.Log(TraceArea.Session, LogLevel.Warn, "no crash reporter: " + e.Message);
+        }
+    }
+
+    /// <summary>Sends the waiting crash reports in the background when the player agreed (nothing otherwise).</summary>
+    public static void SendCrashReports()
+    {
+        if (Reporter is not { Settings.Consent: CrashReportConsent.Granted } reporter)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            int sent = await reporter.SendPendingAsync().ConfigureAwait(false);
+            Sink?.Log(TraceArea.Session, LogLevel.Info, $"crash reports: {sent} sent, {reporter.PendingFiles().Count} waiting");
+        });
     }
 
     /// <summary>The match whose replay a crash report saves (the running game screen's), or null.</summary>
@@ -103,6 +156,7 @@ internal static class ClientLog
         }
 
         string? report = log.WriteCrashReport(context, exception);
+        string? replayPath = null;
         if (_session is { IsRecording: true } session)
         {
             try
@@ -112,6 +166,7 @@ internal static class ClientLog
                 {
                     string path = Path.Combine(log.Folder, "crash-replay.t2rep");
                     File.WriteAllBytes(path, replay);
+                    replayPath = path;
                     log.Log(TraceArea.Session, LogLevel.Error, "the crashed match's replay: " + path);
                 }
             }
@@ -121,6 +176,7 @@ internal static class ClientLog
             }
         }
 
+        Reporter?.CaptureCrash(context, exception, log.Recent(), replayPath);
         log.Flush();
         return report;
     }
@@ -134,6 +190,7 @@ internal static class ClientLog
             _logger = null;
         }
 
+        Reporter?.EndRun();
         Sink?.Log(TraceArea.Session, LogLevel.Info, "quit");
         Sink?.Dispose();
         Sink = null;
@@ -149,6 +206,9 @@ internal sealed partial class GodotLogger : Logger
     /// <summary>The log to write to.</summary>
     public SessionLog? Log { get; init; }
 
+    /// <summary>The crash reporter that gets the .NET exceptions Godot caught in our callbacks, or null.</summary>
+    public CrashReporter? Reporter { get; init; }
+
     /// <inheritdoc/>
     public override void _LogMessage(string message, bool error) =>
         Log?.Write(TraceArea.Client, error ? LogLevel.Error : LogLevel.Info, -1, "godot: " + message.TrimEnd());
@@ -159,5 +219,9 @@ internal sealed partial class GodotLogger : Logger
         LogLevel level = errorType == (int)ErrorType.Warning ? LogLevel.Warn : LogLevel.Error;
         string text = string.IsNullOrEmpty(rationale) ? code : rationale + (string.IsNullOrEmpty(code) ? string.Empty : " | " + code);
         Log?.Write(TraceArea.Client, level, -1, string.Create(CultureInfo.InvariantCulture, $"godot {(ErrorType)errorType}: {text} ({function} at {file}:{line})"));
+        if (level == LogLevel.Error && Reporter is not null)
+        {
+            _ = Reporter.CaptureLoggedError(SentryEnvelope.IsExceptionText(rationale) ? rationale : code);
+        }
     }
 }

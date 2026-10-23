@@ -390,9 +390,9 @@ public partial class MultiplayerMenuScreen : MultiplayerArtScreen
 public partial class LobbyScreen : MultiplayerArtScreen
 {
     private const string Art = "art/screens/s_multiplayer/";
-    private static readonly string[] Civilizations = ["euro", "arab", "asia"];
     private static readonly Vector2I Cell = new(20, 20);
 
+    private readonly string[] _civilizations;
     private readonly NetworkMatch _match;
     private readonly Func<int, Color> _colour;
     private readonly Control _rows = new() { MouseFilter = MouseFilterEnum.Pass };
@@ -406,12 +406,16 @@ public partial class LobbyScreen : MultiplayerArtScreen
     private LobbyView? _shown;
     private DropRule _drop = DropRule.AiTakeover;
 
-    /// <summary>Creates the lobby screen for <paramref name="match"/>; <paramref name="colour"/> gives a colour ramp's swatch.</summary>
-    public LobbyScreen(UiAssets ui, Vector2I screen, NetworkMatch match, Func<int, Color> colour, Func<string, string, string, string>? text = null)
+    /// <summary>
+    /// Creates the lobby screen for <paramref name="match"/>; <paramref name="colour"/> gives a colour ramp's swatch, and the
+    /// civilizations offered are <paramref name="rules"/>' (ADR 0211).
+    /// </summary>
+    public LobbyScreen(UiAssets ui, Vector2I screen, NetworkMatch match, Func<int, Color> colour, Func<string, string, string, string>? text = null, Tzar2.Content.Compiled.Ruleset? rules = null)
         : base(ui, screen, Art + "back.t2img", text)
     {
         _match = match;
         _colour = colour;
+        _civilizations = SkirmishOptions.CivilizationsOf(rules);
         _title = Caption(75, 28, "Connecting...", 470);
         _rows.Position = Origin;
         AddChild(_rows);
@@ -475,7 +479,7 @@ public partial class LobbyScreen : MultiplayerArtScreen
 
     private void Rebuild(LobbyView lobby)
     {
-        var model = new LobbyScreenModel(lobby, _match.AiScripts);
+        var model = new LobbyScreenModel(lobby, _match.AiScripts, _match.CustomMaps);
         SetLine(_title, $"{lobby.Name}   —   code {lobby.Code}{(lobby.LocalIsHost ? "   (you host)" : string.Empty)}", 470);
         foreach (Node child in _rows.GetChildren())
         {
@@ -496,7 +500,7 @@ public partial class LobbyScreen : MultiplayerArtScreen
         LobbySlotView? me = lobby.Slots.FirstOrDefault(s => s.IsLocal);
         _start.Visible = lobby.LocalIsHost;
         _start.Disabled = !model.CanStart;
-        SetLine(_status, me is { Ready: true } && !lobby.LocalIsHost ? "You are ready (your choices are locked)." : !lobby.LocalIsHost ? "Click your gem when you are ready." : string.Empty, 330);
+        SetLine(_status, model.MapNotice ?? (me is { Ready: true } && !lobby.LocalIsHost ? "You are ready (your choices are locked)." : !lobby.LocalIsHost ? "Click your gem when you are ready." : string.Empty), 330);
     }
 
     private void AddRow(LobbyView lobby, LobbySlotView slot, LobbyRow row, LobbyScreenModel model, Vector2I at)
@@ -522,7 +526,7 @@ public partial class LobbyScreen : MultiplayerArtScreen
             string name = $"{slot.Name}{(slot.IsHost ? " (host)" : string.Empty)}{(slot.Connected ? string.Empty : " (dropped)")}  {slot.PingMs} ms";
             RowLabel(at + new Vector2I(40, 3), name, 170);
             Picture(at + new Vector2I(214, 7), CellOf(Art + "chk_check.t2img", slot.Ready || slot.IsHost ? 1 : 0, Cell), _rows);
-            if (slot.IsLocal && !slot.IsHost)
+            if (slot.IsLocal && !slot.IsHost && (slot.Ready || model.HasMap))
             {
                 RowArea(at + new Vector2I(210, 3), new Vector2I(28, 27), () => _match.SetReady(!slot.Ready));
             }
@@ -564,13 +568,14 @@ public partial class LobbyScreen : MultiplayerArtScreen
         }
 
         // The civilization between the arrows, and the team in the right square.
-        int civ = Math.Max(0, Array.IndexOf(Civilizations, slot.Choice.Civilization));
+        int civ = Math.Max(0, Array.IndexOf(_civilizations, slot.Choice.Civilization));
+        int civs = _civilizations.Length;
         Picture(at + new Vector2I(296, 6), CellOf(Art + "btn_civil.t2img", civ, new Vector2I(80, 20)), _rows);
         Picture(at + new Vector2I(437, 7), CellOf(Art + "btn_digits.t2img", Math.Clamp((int)slot.Choice.Team, 0, 8), Cell), _rows);
         if (row.CanChoose)
         {
-            RowArea(at + new Vector2I(243, 3), new Vector2I(30, 27), () => SetChoice(slot, slot.Choice with { Civilization = Civilizations[(civ + 2) % 3] }));
-            RowArea(at + new Vector2I(398, 3), new Vector2I(30, 27), () => SetChoice(slot, slot.Choice with { Civilization = Civilizations[(civ + 1) % 3] }));
+            RowArea(at + new Vector2I(243, 3), new Vector2I(30, 27), () => SetChoice(slot, slot.Choice with { Civilization = _civilizations[(civ + civs - 1) % civs] }));
+            RowArea(at + new Vector2I(398, 3), new Vector2I(30, 27), () => SetChoice(slot, slot.Choice with { Civilization = _civilizations[(civ + 1) % civs] }));
             RowArea(at + new Vector2I(432, 3), new Vector2I(29, 27), () => SetChoice(slot, slot.Choice with { Team = (byte)((slot.Choice.Team + 1) % 5) }));
         }
     }
@@ -584,11 +589,15 @@ public partial class LobbyScreen : MultiplayerArtScreen
             LobbySettingKey key = setting.Key;
             if (setting.IsCheck)
             {
-                Check(setting.Caption, setting.Selected == 1, setting.Enabled, on => _match.SetSettings(model.Apply(key, on ? 1 : 0)), ref y);
+                Check(setting.Caption, setting.Selected == 1, setting.Enabled, on => model.Choose(_match, key, on ? 1 : 0), ref y);
+            }
+            else if (setting.IsNumber)
+            {
+                Number(setting, i => model.Choose(_match, key, i), ref y);
             }
             else
             {
-                Option(setting.Caption, setting.Items, setting.Selected, setting.Enabled, i => _match.SetSettings(model.Apply(key, i)), ref y);
+                Option(setting.Caption, setting.Items, setting.Selected, setting.Enabled, i => model.Choose(_match, key, i), ref y);
             }
         }
 
@@ -617,6 +626,16 @@ public partial class LobbyScreen : MultiplayerArtScreen
             PanelArea(new Vector2(176, y + 15), new Vector2(20, 20), () => changed((index + 1) % items.Count));
         }
 
+        y += 40;
+    }
+
+    // The original's value field (time or score limit) under its caption.
+    private void Number(LobbySetting setting, Action<int> changed, ref int y)
+    {
+        PanelLabel(new Vector2(0, y), setting.Caption, 196);
+        var number = new SpinBox { Position = new Vector2(22, y + 16), Size = new Vector2(150, 20), MinValue = setting.Min, MaxValue = setting.Max, Value = setting.Selected, Editable = setting.Enabled };
+        number.ValueChanged += v => changed((int)v);
+        _settingsPanel.AddChild(number);
         y += 40;
     }
 
@@ -709,7 +728,7 @@ public partial class ReplayBrowserScreen : MultiplayerArtScreen
         _list = new ItemList { Position = Origin + new Vector2I(428, 80), Size = new Vector2(320, 182) };
         foreach (string f in _files)
         {
-            _list.AddItem($"{System.IO.Path.GetFileNameWithoutExtension(f)}   {System.IO.File.GetLastWriteTime(f):yyyy-MM-dd HH:mm}");
+            _list.AddItem(string.Create(CultureInfo.InvariantCulture, $"{System.IO.Path.GetFileNameWithoutExtension(f)}   {System.IO.File.GetLastWriteTime(f):yyyy-MM-dd HH:mm}"));
         }
 
         _list.ItemActivated += i => Play?.Invoke(_files[(int)i]);

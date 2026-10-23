@@ -145,10 +145,10 @@ files:
     used: [minidatargb, sounds, terrain, terrainfiles, terrainname, terrainsize, treename, trees]
     restated:
       randomterrainset: the random map's terrain layers (Tzar2.Content TerrainProfile, ADR 0060; semantics unknown)
+      randomtreeset: the forest field and the chances of a tree by map side (Tzar2.Content Forests, WORLD-013, ADR 0201)
       treeterrain: the terrains trees grow on (Tzar2.Content TerrainProfile, ADR 0060)
     todo:
       colors: the colour of selection marks (HUD-031)
-      randomtreeset: how many trees a random map grows, by map size (WORLD-013)
   - path: LOCAL/HELP.INI
     account: unused
     reason: "todo: the hints of the menu screens' controls (SHELL-026)."

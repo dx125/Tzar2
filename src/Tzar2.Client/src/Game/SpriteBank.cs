@@ -159,16 +159,17 @@ public sealed class SpriteBank : IDisposable
     /// <summary>Packs everything registered into an atlas (CPU only: may run off the main thread).</summary>
     public void Pack() => Packed = SpriteAtlas.Build(_sheets);
 
-    /// <summary>Uploads the packed atlas (packing first if needed); main thread.</summary>
+    /// <summary>Uploads the packed atlas (packing first if needed), then drops its CPU pages; main thread, once.</summary>
     public void Upload()
     {
         Gpu?.Dispose();
-        if (Packed is null)
+        if (Packed is null || Packed.PagesReleased)
         {
             Pack();
         }
 
         Gpu = new GpuSpriteAtlas(Packed!, _store.Palette, _colourOf);
+        Packed!.ReleasePages();
     }
 
     /// <inheritdoc/>

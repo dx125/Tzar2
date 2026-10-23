@@ -190,29 +190,11 @@ jobs:
           path: BenchmarkDotNet.Artifacts
 
   windows-godot:
-    # Placeholder for the nightly Windows export: export presets and templates arrive with the Windows build work (M7).
-    # Until then this imports the project headlessly with the pinned Godot editor and builds its C# solution.
+    # The nightly Windows export (TDD §24), now the M7 package (ADR 0241): Godot headless export, signing when its
+    # secrets exist, portable zip and installer, and the install/uninstall checks. Artifacts only, nothing is published.
     name: Windows Godot build
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-          dotnet-version: 8.0.x
-      - name: Download Godot ${{ env.GODOT_VERSION }} (.NET)
-        shell: pwsh
-        run: |
-          $name = "Godot_v${env:GODOT_VERSION}-stable_mono_win64"
-          Invoke-WebRequest "https://github.com/godotengine/godot/releases/download/${env:GODOT_VERSION}-stable/$name.zip" -OutFile godot.zip
-          Expand-Archive godot.zip -DestinationPath "$env:RUNNER_TEMP/godot"
-          "GODOT=$env:RUNNER_TEMP/godot/$name/${name}_console.exe" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Import project and build C# headlessly
-        shell: pwsh
-        run: |
-          & $env:GODOT --headless --path src/Tzar2.Client --build-solutions --quit
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (-not (Test-Path src/Tzar2.Client/.godot/mono/temp/bin/Debug/Tzar2.Client.dll)) { throw "Godot did not build Tzar2.Client.dll" }
+    uses: ./.github/workflows/windows-package.yml
+    secrets: inherit
 
   mp-soak:
     # M6 (ADR 0167, TDD §22.7): a nightly slice of the multiplayer soak on Windows and Linux. Each match: two bot players

@@ -96,28 +96,28 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 
 | Chapter | Rules | Tested | Implemented | Partial | Missing | Deviation | Unclear |
 |---|---|---|---|---|---|---|---|
-| [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
+| [Computer opponents](ai.yaml) (AI) | 4 | 2 | 0 | 1 | 0 | 1 | 0 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
-| [Combat](combat.yaml) (WAR) | 14 | 8 | 4 | 0 | 2 | 0 | 0 |
-| [Construction and repair](construction.yaml) (BLD) | 22 | 17 | 4 | 0 | 0 | 0 | 1 |
+| [Combat](combat.yaml) (WAR) | 14 | 10 | 4 | 0 | 0 | 0 | 0 |
+| [Construction and repair](construction.yaml) (BLD) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 18 | 10 | 1 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 7 | 1 | 1 | 0 | 0 | 0 |
-| [Resources and gathering](economy.yaml) (ECO) | 22 | 16 | 5 | 0 | 0 | 0 | 1 |
+| [Resources and gathering](economy.yaml) (ECO) | 22 | 17 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 1 | 0 | 0 | 0 |
-| [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
+| [Holders and transport](holders.yaml) (HOLD) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 8 | 14 | 5 | 4 | 2 | 1 |
-| [Items](items.yaml) (ITEM) | 16 | 10 | 3 | 1 | 1 | 1 | 0 |
-| [Magic, religion and spies](magic.yaml) (MAG) | 21 | 16 | 4 | 0 | 0 | 0 | 1 |
-| [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
+| [Items](items.yaml) (ITEM) | 16 | 11 | 3 | 0 | 1 | 1 | 0 |
+| [Magic, religion and spies](magic.yaml) (MAG) | 24 | 20 | 4 | 0 | 0 | 0 | 0 |
+| [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 4 | 3 | 2 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
-| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 5 | 10 | 7 | 4 | 2 | 0 |
-| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 29 | 3 | 1 | 2 | 0 | 1 |
-| [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
+| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 6 | 10 | 6 | 4 | 2 | 0 |
+| [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
+| [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
-| **All** | 335 | 202 | 78 | 24 | 14 | 9 | 8 |
+| [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
+| **All** | 341 | 224 | 78 | 18 | 10 | 9 | 2 |
 
 ## Not done yet
 
@@ -126,11 +126,6 @@ Missing and partial rules.
 ### Computer opponents
 
 * **AI-001** (partial): Each computer kingdom plays an AI script, chosen per player before the game. *Chosen per player in the multiplayer setup (SHELL-016); the random map screen cannot choose it yet (SHELL-010).* (ADR 0178, 0232)
-
-### Combat
-
-* **WAR-009**: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it.
-* **WAR-010**: The Messiah (campaign) is immune to magic.
 
 ### Selection, mouse and pointers
 
@@ -143,10 +138,6 @@ Missing and partial rules.
 ### Experience and heroes
 
 * **EXP-005** (partial): Very experienced units become heroes and can be named. *Units become named heroes at level 12 with Heroism; the player cannot name them.*
-
-### Holders and transport
-
-* **HOLD-008** (partial): Ships, magic carpets and traders can load units, but only ships and carpets carry them over water. *Traders do not load units.*
 
 ### The screen
 
@@ -162,12 +153,7 @@ Missing and partial rules.
 
 ### Items
 
-* **ITEM-010** (partial): A soul item kills a unit or makes it go berserk; a hero is not killed. *The simulation does it; the card's item_kill and item_berserk orders do nothing yet.*
 * **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
-
-### Nature, gateways, day and weather
-
-* **NAT-004** (partial): Cows can be slaughtered, and their meat collected by peasants or other units. *Peasants collect the meat; other units do not.*
 
 ### Animations, effects and sounds
 
@@ -182,59 +168,27 @@ Missing and partial rules.
 * **SHELL-011** (partial): A random map has a size (Medium, Large, Huge, Enormous, Real World), a type (Random, Archipelagos, Dry, Island, Continental, Lakes), a terrain set (Grass, Desert, Summer, Winter) and map resources (Low, Normal, High), and may have a guarded town, animals, gateways, magic items and cliffs. *Size, type and terrain set are offered; map resources and the five options are not on the screen.*
 * **SHELL-012**: The settings of the random map screen are kept for the next time.
 * **SHELL-013**: The random map screen and the multiplayer options let each computer kingdom resign on its own (a flag) or never (a sword).
-* **SHELL-018** (partial): The multiplayer settings choose a random or a custom map, the random map's options, the game type, the difficulty, the victory condition, the starting resources, No Fog, Explore, the population limit, and day and night and weather; with MAP SETTINGS only No Fog, Explore, day and night and weather can change. *Custom maps cannot be chosen (multiplayer plays random maps), so neither can MAP SETTINGS; the difficulty is set per computer slot. The time and score limits keep their defaults.* (ADR 0168, 0232)
 * **SHELL-019** (partial): The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears. *The checks by the sound and music volumes turn them off, as in the options' art; CD audio is shown and stays off (Tzar2 plays MIDI); the hardware cursor is the system's pointer. When the menu bar appears is missing, the path depth is dropped on purpose (TDD ORIG-03), and where weather and day/night sit waits for the owner's screenshot (UI review question 3).*
 * **SHELL-021** (partial): The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game. *Instructions are missing.* (ADR 0187)
 * **SHELL-026**: The controls of the menu screens explain themselves in a hint line.
 * **SHELL-027**: Quitting, resigning and disconnecting ask for confirmation.
-
-### Technologies and upgrades
-
-* **TECH-028** (partial): Mastery (Asians) lets priests teach kung-fu units and turn mana into experience. *Mastery gates the spell that turns mana into experience (spell_raiseexp), which works; whether priests "teaching kung-fu units" is more than that is not known.*
-* **TECH-029**: Tournaments (Asians) lets kung-fu units share their experience.
-* **TECH-030**: Jewelry (Asians) lets the markets sell and buy items, the same items in every market. *The markets' item menus (market_items, market_sell) are empty in MENU.INI and filled by the game; Tzar2 has no item trade.*
 
 ### Trade, tavern and loans
 
 * **TRADE-002** (partial): A trade is set up by picking the starting market or harbor and its goods, the far one and its goods, and the amount, then START. *The near market is the trader's nearest own one; the far one is clicked (ADR 0103).*
 * **TRADE-008**: The amount the tavern will lend shows in the bottom left corner of the view.
 
-### Terrain and movement
-
-* **WORLD-013** (partial): A random map grows as many trees as its terrain set's data gives for its size. *Tzar2's generator uses its own forest density (ADR 0060).*
-
 ## Unclear
 
 The sources disagree or say too little.
-
-### Computer opponents
-
-* **AI-003**: The computer does not repair its damaged towers. *The guide describes one campaign mission; whether it is the AI's general behaviour is not known.*
-
-### Construction and repair
-
-* **BLD-020**: Deleting a building just after its construction began gives its cost back. *Tzar2 refunds a cancelled site in full at any time (placeholder); "at the beginning" suggests the original refunds only early, or less later.*
-
-### Resources and gathering
-
-* **ECO-002**: Gathering broken off before the load is complete gives nothing. *Tzar2 drops the work done (ADR 0180); a capture of an interrupted gather would settle it (UNK-17).*
 
 ### The screen
 
 * **HUD-031**: Selection marks and the selection box are drawn in the terrain set's selection colour (white in every set). *Tzar2 draws own units green, enemies red and Nature yellow, and the box green; whether the original colours them by owner is to be confirmed.* Work: UI review screenshot 9 (docs/reviews/2026-10-ui-review.md).
 
-### Magic, religion and spies
-
-* **MAG-008**: Hypnotism (Asian, from Concentration) is a spell of the Asian mages. *Neither the manual nor the game's text says what it does; Tzar2 makes it hold the unit like freeze.*
-
 ### Technologies and upgrades
 
 * **TECH-031**: Piracy gives boarding units an attack bonus, and Boarding Ram lets ships board others. *The manual and the game's texts name them, but the original's data has no such technologies: they look cut from the game.*
-
-### Trade, tavern and loans
-
-* **TRADE-003**: Trade can also be done with other kingdoms' markets. *Whether a trader may use another kingdom's market, and who profits, is not known.*
-* **TRADE-004**: Asian peasants can trade between markets as caravans do. *The help names "a caravan or an Asian peasant"; the manual gives the Asian market caravans. Tzar2 trades with caravans and traders only.*
 
 ## Deliberate differences
 
@@ -269,7 +223,7 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 6 not read, and of the names in the others 156 used, 4 restated by hand, 18 not needed and 34 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 6 not read, and of the names in the others 156 used, 5 restated by hand, 18 not needed and 33 to do.
 
 To do:
 
@@ -293,7 +247,6 @@ To do:
 * `HELP/HELP_STR.INI` (the whole file): the labels of the online help (HUD-020).
 * `IMAGES/TERRAIN/*.IMAGES.INI` `ruinpoints`: meaning not decoded
 * `IMAGES/TERRAIN/*.TERRAIN.INI` `colors`: the colour of selection marks (HUD-031)
-* `IMAGES/TERRAIN/*.TERRAIN.INI` `randomtreeset`: how many trees a random map grows, by map size (WORLD-013)
 * `LOCAL/HELP.INI` (the whole file): the hints of the menu screens' controls (SHELL-026).
 * `LOCAL/STRINGS.INI` `adds`: messages such as "Build more houses" (HUD-026)
 * `LOCAL/STRINGS.INI` `defmsg`: the hint line's description of orders (HUD-001)
