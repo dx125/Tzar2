@@ -158,6 +158,13 @@ public class ViewerAssetTests
         AtlasCell unit = atlas.GetCell(0, 0);
         Assert.Equal((PixelFormat.Indexed8, 0, 240, 2, 2, 1, 1), (unit.Format, unit.PaletteRow, unit.PlayerFirst, unit.Width, unit.Height, unit.OffsetX, unit.OffsetY));
         Assert.True(atlas.GetCell(0, 1).IsEmpty);
+
+        // Once uploaded, the pixels go; the cell lookups the renderer and hit tests use stay.
+        SpriteAtlas released = SpriteAtlas.Build([units, building, overlay], pageSize: 8);
+        released.ReleasePages();
+        Assert.True(released.PagesReleased);
+        Assert.Empty(released.Pages(PixelFormat.Indexed8));
+        Assert.Equal(unit, released.GetCell(0, 0));
         Assert.Equal(1, atlas.GetCell(2, 3).PaletteRow);
         Assert.Equal(0x0020, atlas.GetCell(1, 0).ShadowColour);
 
@@ -414,6 +421,71 @@ public class ViewerAssetTests
         Assert.Equal(2, drawn.Issues.Count);
         Assert.Contains("three or more terrains", drawn.Issues[0], StringComparison.Ordinal);
         Assert.Contains("no usable transition for pair 18", drawn.Issues[1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Terrain_tile_atlas_stores_each_distinct_tile_once_and_rebuilds_every_frame_exactly()
+    {
+        TerrainSet set = Assert.Single(TerrainSet.ParseAll(Encoding.UTF8.GetBytes(TerrainJson)));
+        var images = new Dictionary<string, ImageAsset>
+        {
+            ["w"] = Solid(32, 96, (_, y) => 0x8000 | ((y / 32) + 1)),
+            ["d"] = Solid(64, 32, (x, y) => 0x8000 | (0x0011 + (x / 32) + y)),
+            ["g"] = Solid(32, 32, (_, _) => 0x8000 | 0x0222),
+            ["shore"] = Solid(128, 448, (x, _) => x % 32 == 0 ? 0x8000 | (0x100 + ((x / 32) % 2)) : TerrainComposer.KeyMagenta),
+        };
+        var composer = new TerrainComposer(set, a => images.GetValueOrDefault(a));
+        var atlas = new TerrainTileAtlas();
+        var windows = new List<(int Width, int Height, List<byte[]> Frames, int[][] Slots)>();
+        foreach ((int w, int h, int ox) in new[] { (6, 3, 0), (5, 4, 6) })
+        {
+            var grid = new TerrainGrid(w, h, 1);
+            for (int x = 0; x <= w; x++)
+            {
+                grid[x, 0] = 0; // a water row along the top: water and shore tiles animate
+                grid[x, h] = 2;
+            }
+
+            var frames = new List<byte[]>();
+            TerrainImage first = composer.Compose(grid, 0, ox, 0);
+            frames.Add(first.Pixels);
+            for (int f = 1; f < composer.FrameCount(grid); f++)
+            {
+                frames.Add(composer.Compose(grid, f, ox, 0, first).Pixels);
+            }
+
+            windows.Add((first.Width, first.Height, frames, atlas.Add(first.Width, first.Height, frames)));
+        }
+
+        // Every frame of every window is rebuilt pixel for pixel from its slots.
+        byte[] tile = new byte[32 * 32 * 2];
+        foreach ((int width, int height, List<byte[]> frames, int[][] slots) in windows)
+        {
+            Assert.Equal(frames.Count, slots.Length);
+            for (int f = 0; f < frames.Count; f++)
+            {
+                byte[] rebuilt = new byte[width * height * 2];
+                for (int t = 0; t < slots[f].Length; t++)
+                {
+                    atlas.CopyTile(slots[f][t], tile);
+                    int tx = t % (width / 32), ty = t / (width / 32);
+                    for (int row = 0; row < 32; row++)
+                    {
+                        Array.Copy(tile, row * 64, rebuilt, ((((ty * 32) + row) * width) + (tx * 32)) * 2, 64);
+                    }
+                }
+
+                Assert.Equal(frames[f], rebuilt);
+            }
+        }
+
+        // Far fewer tiles than tile frames: the grass and dirt repeat, water's 3 frames repeat over the 6-frame cycle.
+        long tileFrames = windows.Sum(w => (long)w.Slots.Length * w.Slots[0].Length);
+        Assert.Equal(tileFrames, atlas.Lookups);
+        Assert.True(atlas.Count * 4 < tileFrames, $"{atlas.Count} distinct of {tileFrames}");
+        Assert.Equal([0], atlas.TakeDirtyPages());
+        Assert.Empty(atlas.TakeDirtyPages());
+        Assert.Throws<ArgumentException>(() => atlas.Add(33, 32, [new byte[33 * 32 * 2]]));
     }
 
     [Fact]

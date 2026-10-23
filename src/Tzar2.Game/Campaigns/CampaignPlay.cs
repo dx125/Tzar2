@@ -21,7 +21,25 @@ namespace Tzar2.Game.Campaigns;
 /// <summary>One playable map: the terrain and objects plus its scenario (ADR 0120).</summary>
 /// <param name="Map">The map.</param>
 /// <param name="Scenario">Its scenario (objects, kingdoms, triggers).</param>
-public sealed record MissionContent(MapData Map, ScenarioData Scenario);
+public sealed record MissionContent(MapData Map, ScenarioData Scenario)
+{
+    /// <summary>What identifies the map across machines: its terrain and objects and its scenario (SHELL-018; ADR 0233).</summary>
+    public ulong ContentHash => new StateHasher().Add(Map.ContentHash).Add(Scenario.ContentHash).GetCurrentHash();
+}
+
+/// <summary>A custom map a lobby can choose (SHELL-018; ADR 0233).</summary>
+/// <param name="Id">Its id (the file name without extension).</param>
+/// <param name="Title">The title shown.</param>
+/// <param name="Description">Its description.</param>
+/// <param name="Mission">The map and its scenario.</param>
+public sealed record CustomMapEntry(string Id, string Title, string Description, MissionContent Mission)
+{
+    /// <summary>The map's content hash (<see cref="MissionContent.ContentHash"/>).</summary>
+    public ulong Hash => Mission.ContentHash;
+
+    /// <summary>Its kingdoms (lobby slots 0..n-1 play them; <see cref="ScenarioMatch.KingdomCount"/>).</summary>
+    public int Kingdoms => ScenarioMatch.KingdomCount(Mission);
+}
 
 /// <summary>Where a campaign's maps come from: a converted <c>.wcm</c>, a <c>.t2camp</c> package, or code (tests, demo).</summary>
 public interface ICampaignSource
@@ -103,24 +121,7 @@ public static class ScenarioMatch
         ArgumentNullException.ThrowIfNull(mission);
         ArgumentNullException.ThrowIfNull(ruleset);
         ScenarioData s = mission.Scenario;
-        int players = 1;
-        foreach (MapObject o in mission.Map.Objects)
-        {
-            if (o.Owner != MapObject.Nature)
-            {
-                players = Math.Max(players, o.Owner + 1);
-            }
-        }
-
-        foreach (KingdomDef k in s.Kingdoms)
-        {
-            if (k.Active && k.Number is >= 1 and <= 8)
-            {
-                players = Math.Max(players, k.Number);
-            }
-        }
-
-        players = Math.Min(players, ruleset.MaxPlayers);
+        int players = KingdomCount(mission, ruleset.MaxPlayers);
 
         // The legacy Rescue pseudo-kingdom (objects flagged Rescue, owned by Nature in the IR) becomes one more,
         // passive kingdom: Nature may not own working buildings in the sim. Rescuing itself (its units joining whoever
@@ -206,6 +207,79 @@ public static class ScenarioMatch
             ComputerAi = computerAi,
             CheatsAllowed = cheats,
             Preparation = new Preparation(s, carry, (byte)human, rescue, mapStockpiles: custom is not { StartingResources: >= 0 }),
+        };
+    }
+
+    /// <summary>The kingdoms of <paramref name="mission"/>: the highest owner on the map or active kingdom number, at most <paramref name="max"/>.</summary>
+    public static int KingdomCount(MissionContent mission, int max = 8)
+    {
+        ArgumentNullException.ThrowIfNull(mission);
+        int players = 1;
+        foreach (MapObject o in mission.Map.Objects)
+        {
+            if (o.Owner != MapObject.Nature)
+            {
+                players = Math.Max(players, o.Owner + 1);
+            }
+        }
+
+        foreach (KingdomDef k in mission.Scenario.Kingdoms)
+        {
+            if (k.Active && k.Number is >= 1 and <= 8)
+            {
+                players = Math.Max(players, k.Number);
+            }
+        }
+
+        return Math.Min(players, max);
+    }
+
+    /// <summary>
+    /// The setup of a multiplayer match on a custom map (SHELL-018; ADR 0233): the map and its scenario as in single
+    /// player, with the kingdoms of <paramref name="descriptor"/> (lobby slot k plays kingdom k) and its settings.
+    /// With <see cref="MatchSettings.UseMapSettings"/> the map keeps its victory, population limit and stockpiles;
+    /// No Fog, Explore, day and night and weather always come from the lobby.
+    /// </summary>
+    public static MatchSetup Multiplayer(MissionContent mission, Ruleset ruleset, MatchDescriptor descriptor, SkirmishAi ai, bool multiplayer, byte? localSlot)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        ArgumentNullException.ThrowIfNull(ai);
+        MatchSettings m = descriptor.Settings;
+        bool own = m.UseMapSettings;
+        MatchSetup b = Setup(mission, ruleset, custom: new CustomMapSettings
+        {
+            StartingResources = own ? -1 : m.StartingResources,
+            PopulationLimit = own ? -1 : m.PopulationLimit,
+            NoFog = m.NoFog,
+            Explored = m.Explored,
+            Ai = ai,
+        });
+        var players = new PlayerSetup[b.Players.Count];
+        for (int p = 0; p < players.Length; p++)
+        {
+            players[p] = p < descriptor.Players.Length && descriptor.Players[p] is { } d
+                ? new PlayerSetup((byte)p, ruleset.EntityTypeId(d.Civilization + ".castle") >= 0 ? d.Civilization : b.Players[p].Civilization, d.Controller, d.Difficulty, d.AiScript, d.Colour)
+                : b.Players[p]; // the rescue kingdom the map adds
+        }
+
+        return b with
+        {
+            Ruleset = m.Ruleset,
+            Players = players,
+            Seed = m.Seed,
+            Victory = own ? b.Victory : m.Victory,
+            GameType = own ? b.GameType : m.GameType,
+            ScoreLimit = m.ScoreLimit,
+            TimeLimitMinutes = m.TimeLimitMinutes,
+            DayNight = m.DayNight,
+            Weather = m.Weather,
+            Teams = descriptor.Teams,
+            CheatsAllowed = m.CheatsAllowed && !m.Ranked,
+            Ranked = m.Ranked,
+            AiAssist = m.AiAssist,
+            Multiplayer = multiplayer,
+            LocalSlot = localSlot,
+            Descriptor = descriptor,
         };
     }
 

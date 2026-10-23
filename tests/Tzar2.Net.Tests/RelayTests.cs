@@ -202,6 +202,37 @@ public sealed class RelayTests
     }
 
     [Fact]
+    public void A_rejoin_spends_its_token_and_the_welcome_brings_a_new_one()
+    {
+        // ADR 0230: the token travels in plain text in the rejoin hello; once used it no longer opens the slot.
+        using var h = new RelayHarness();
+        (_, TestPeer[] guests) = h.Running(guests: 1);
+        Welcome first = guests[0].Welcome!;
+        guests[0].Client.Dispose();
+        h.Peers.Remove(guests[0]);
+
+        TestPeer back = h.Rejoin(first.Code, first.Slot, first.Token);
+        h.Pump(() => back.Last<ResumeEvent>() is not null, what: "resume");
+        Welcome second = back.Welcome!;
+        Assert.NotEqual(first.Token, second.Token);
+        Assert.NotEqual(0UL, second.Token);
+
+        // A replayed hello with the spent token is refused and leaves the player connected.
+        TestPeer replay = h.Rejoin(first.Code, first.Slot, first.Token);
+        h.Pump(() => replay.Last<RefusedEvent>() is not null, what: "refusal");
+        Assert.Equal(RefusalReason.BadToken, replay.Last<RefusedEvent>()!.Refusal.Reason);
+        Assert.Null(back.Last<DisconnectedEvent>());
+
+        // The new token opens the slot (and rotates again).
+        back.Client.Dispose();
+        h.Peers.Remove(back);
+        TestPeer again = h.Rejoin(second.Code, second.Slot, second.Token);
+        h.Pump(() => again.Last<ResumeEvent>() is not null, what: "second resume");
+        Assert.NotEqual(second.Token, again.Welcome!.Token);
+        Assert.Equal(2, h.Relay.Metrics.Rejoins);
+    }
+
+    [Fact]
     public void After_the_drop_timeout_the_kingdom_is_taken_over_and_returned_on_rejoin()
     {
         using var h = new RelayHarness();
@@ -294,6 +325,27 @@ public sealed class RelayTests
         h.Pump(() => guest.Lobby?.HostSlot == 1);
         guest.Client.Leave();
         h.Pump(() => h.Relay.Metrics.Lobbies == 0 || h.LogLines.Any(l => l.Event == "lobby.end"));
+    }
+
+    [Fact]
+    public void Members_that_do_not_pump_for_longer_than_the_timeout_stay_connected()
+    {
+        // Issue #62: the keep-alive must not depend on the game thread pumping. A loaded CI runner (or a client loading a
+        // map) can leave Poll and Update uncalled for longer than the disconnect timeout; LiteNetLib's own pings then
+        // have to keep the connection, so they must come several times per timeout, not once per second.
+        using var h = new RelayHarness();
+        TestPeer host = h.Create(slots: 2);
+        h.Pump(() => host.Welcome is not null);
+        TestPeer guest = h.Join(host.Welcome!.Code);
+        h.Pump(() => guest.Welcome is not null && host.Lobby?.Slots[1].State == SlotState.Human);
+
+        System.Threading.Thread.Sleep(2_500); // nobody pumps: longer than the relay's (1 s) and the clients' (2 s) timeout
+
+        guest.Client.SetReady(true);
+        h.Pump(() => host.Lobby!.Slots[1].Ready, what: "ready after the stall");
+        Assert.DoesNotContain(h.LogLines, l => l.Event == "member.drop");
+        Assert.Null(guest.Last<DisconnectedEvent>());
+        Assert.Null(host.Last<DisconnectedEvent>());
     }
 
     private sealed class ListSink : IDesyncSink
