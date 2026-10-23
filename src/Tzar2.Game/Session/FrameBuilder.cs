@@ -135,6 +135,11 @@ internal static class FrameBuilder
                 e.InsideMax = world.HolderCapacity(id);
             }
 
+            if (world.Items.Count != 0 && world.Items.IndexOf(id) is >= 0 and var power)
+            {
+                e.ItemPower = world.Items.At(power).Power;
+            }
+
             if (world.Items.Count != 0 && world.Items.IndexOf(id) is >= 0 and var it && world.Items.At(it).Look is > 0 and var itemLook
                 && world.Ruleset.EntityTypes[identity.TypeId].Traits.Item is { } itemType && itemLook <= itemType.Looks.Length)
             {
@@ -202,6 +207,11 @@ internal static class FrameBuilder
                     EntityId item = EntityId.FromValue(carried.Items[slot]);
                     e.CarriesBook = world.Entities.IsAlive(item) && world.TypeOf(item).Traits.Item is { Kind: ItemKind.SpellBook };
                 }
+            }
+
+            if (world.Workers.IndexOf(id) is >= 0 and var wk)
+            {
+                e.WorkTarget = EntityId.FromValue(world.Workers.At(wk).Target);
             }
 
             int c = world.Combats.IndexOf(id);

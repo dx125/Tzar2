@@ -1879,7 +1879,7 @@ public partial class GameScreen : Node
         FrameEntity e = frame.Entities[lead];
         TypeVisual v = _catalog.Type(e.TypeId);
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
-        string owner = e.Owner < 8 ? SpritePage.PlayerNames[ColourOf(e.Owner)] : string.Empty;
+        string owner = e.Owner < 8 ? KingdomName(e.Owner) : string.Empty; // KINGDOM: its name (HUD-016)
         var strip = new List<StripItem>();
         _insideShown.Clear();
         if (_selection.Selected.Count > 1)
@@ -1938,9 +1938,15 @@ public partial class GameScreen : Node
             stats.Add(("art/icons/defence.t2img", HudText.Number(t.Defence)));
         }
 
-        if (t.GainsExperience && e.Owner == _session.LocalPlayer)
+        if (t.GainsExperience && t.LegacyClass != "trader")
         {
-            stats.Add(("art/icons/level.t2img", HudText.Number(e.Level))); // LEVEL (manual: The Selection View; HUD-016)
+            // LEVEL of every unit, the enemy's too, but traders (ReTzar's reading of the original's view; HUD-016).
+            stats.Add(("art/icons/level.t2img", HudText.Number(e.Level)));
+        }
+
+        if (e.ItemPower > 0)
+        {
+            stats.Add(("art/icons/power.t2img", HudText.Number(e.ItemPower))); // POWER of an item on the ground (HUD-016)
         }
 
         if (t.Category == EntityCategory.Building && t.Resistance > 0)

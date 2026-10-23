@@ -257,6 +257,12 @@ public struct FrameEntity
     /// <summary>Attack target of an armed entity, or none.</summary>
     public EntityId Target;
 
+    /// <summary>An item's power on the ground (a potion's health, a weapon's attack; the selection view's POWER, HUD-016), or 0.</summary>
+    public int ItemPower;
+
+    /// <summary>The node or site a worker works (a fishing boat's fish patch, HUD-025), or none; may be stale.</summary>
+    public EntityId WorkTarget;
+
     /// <summary>A structure out of sight, drawn as the local kingdom last saw it (GAME-12); its state may be stale.</summary>
     public bool Remembered;
 #pragma warning restore CA1051

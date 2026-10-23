@@ -105,8 +105,8 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 17 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 34 | 9 | 14 | 5 | 3 | 2 | 1 |
-| [Items](items.yaml) (ITEM) | 16 | 11 | 3 | 0 | 1 | 1 | 0 |
+| [The screen](interface.yaml) (HUD) | 34 | 11 | 14 | 4 | 2 | 2 | 1 |
+| [Items](items.yaml) (ITEM) | 16 | 11 | 3 | 0 | 0 | 1 | 1 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 24 | 20 | 4 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 341 | 234 | 78 | 11 | 6 | 9 | 3 |
+| **All** | 341 | 236 | 78 | 10 | 4 | 9 | 4 |
 
 ## Not done yet
 
@@ -136,15 +136,9 @@ Missing and partial rules.
 * **HUD-009**: The interface can be placed along the bottom, the left or the right of the screen. Work: STATUS work queue 12 (M8, owner decision 2026-10-21).
 * **HUD-010** (partial): The resource bar at the top shows food, wood, stone and gold, the population against its limit, and the CHAT, DIPLOMACY and MENU buttons. *DIPLOMACY says "not available yet" and CHAT works only in multiplayer.*
 * **HUD-011** (partial): The chat screen opens with the CHAT button or Enter; the message goes to the allies, the enemies, everyone, or players picked from a list that shows each one's stance. *Multiplayer only, as a chat line where Tab cycles everyone, allies and enemies; there is no list of players to pick from.* (ADR 0168)
-* **HUD-016** (partial): The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level. *The kingdom's name (only its colour shows) and power are not shown. INSIDE and LEVEL show for the player's own objects only.*
-* **HUD-025**: The fish patch a kingdom's boats are fishing is marked with a blue selection.
 * **HUD-028** (partial): The \ key shows the trees translucent so that units under them can be seen. *Trees are drawn at 45 % opacity, not with the original's look; neither the data nor ReTzar says how the original does it.* Work: UI review screenshot 8 (docs/reviews/2026-10-ui-review.md).
 * **HUD-029**: An order shows only when its condition holds; the quest order only when there are quests. *The quest order is always there.*
 * **HUD-033** (partial): With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help. *The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. Heroes inside buildings are not listed. The online help opens with P (HUD-020).*
-
-### Items
-
-* **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
 
 ### Animations, effects and sounds
 
@@ -172,6 +166,10 @@ The sources disagree or say too little.
 ### The screen
 
 * **HUD-031**: Selection marks and the selection box are drawn in the terrain set's selection colour (white in every set). *Tzar2 draws own units green, enemies red and Nature yellow, and the box green; whether the original colours them by owner is to be confirmed.* Work: UI review screenshot 9 (docs/reviews/2026-10-ui-review.md).
+
+### Items
+
+* **ITEM-015**: The random items of a map take their strength from the data (treasure, weapons, armour, potions). *The original's random map generator does not read these sections (ReTzar 0x4b5c50 makes its items with ranges of its own; work queue 17); what reads them is not known.*
 
 ### Technologies and upgrades
 
@@ -210,7 +208,7 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 5 not read, and of the names in the others 159 used, 5 restated by hand, 18 not needed and 31 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 5 not read, and of the names in the others 159 used, 5 restated by hand, 22 not needed and 27 to do.
 
 To do:
 
@@ -221,10 +219,6 @@ To do:
 * `DATA/OBJECTS/*.INI` `image_murder`: the ninja's murder animation (PRES-005)
 * `DATA/OBJECTS/*.INI` `image_pray`: the priest's prayer animation (PRES-005)
 * `DATA/ORDERS.INI` `enable`: an order shown only when its condition holds, the quest order (HUD-029)
-* `DATA/RES.INI` `armouritem`: the strength of the map's random items (ITEM-015)
-* `DATA/RES.INI` `potionitem`: the strength of the map's random items (ITEM-015)
-* `DATA/RES.INI` `treasuryitem`: the strength of the map's random items (ITEM-015)
-* `DATA/RES.INI` `weaponitem`: the strength of the map's random items (ITEM-015)
 * `DATA/TREES.INI` `bushes`: where the bushes are in the tree sheet (PRES-009)
 * `DATA/TREES.INI` `chopped`: where the stumps are in the tree sheet (PRES-009)
 * `DATA/TREES.INI` `img_shadows`: the trees' shadow sheet (PRES-009)
