@@ -217,7 +217,7 @@ public partial class MultiplayerMenuScreen : ArtScreen
 /// </summary>
 public partial class LobbyScreen : ArtScreen
 {
-    private static readonly string[] Civilizations = ["euro", "arab", "asia"];
+    private readonly string[] _civilizations;
     private static readonly string[] SlotChoices = ["Open", "Closed", "Computer (Easy)", "Computer (Normal)", "Computer (Hard)"];
     private static readonly int[] Speeds = [50, 75, 100, 150, 200, 300];
 
@@ -234,11 +234,12 @@ public partial class LobbyScreen : ArtScreen
     private LobbyView? _shown;
     private DropRule _drop = DropRule.AiTakeover;
 
-    /// <summary>Creates the lobby screen for <paramref name="match"/>.</summary>
-    public LobbyScreen(UiAssets ui, Vector2I screen, NetworkMatch match)
+    /// <summary>Creates the lobby screen for <paramref name="match"/>; the civilizations offered are <paramref name="rules"/>' (ADR 0211).</summary>
+    public LobbyScreen(UiAssets ui, Vector2I screen, NetworkMatch match, Tzar2.Content.Compiled.Ruleset? rules = null)
         : base(ui, screen, "art/screens/s_singlesetup/back.t2img")
     {
         _match = match;
+        _civilizations = SkirmishOptions.CivilizationsOf(rules);
         _title = new Label { Position = Origin + new Vector2I(66, 36), Text = "Connecting...", MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_title);
         AddChild(_rows);
@@ -374,13 +375,13 @@ public partial class LobbyScreen : ArtScreen
         {
             bool editable = mine || (lobby.LocalIsHost && slot.Kind == SlotKind.Computer);
             var civ = new OptionButton { Position = Origin + new Vector2I(306, y), Size = new Vector2(90, 24), Disabled = !editable };
-            foreach (string c in Civilizations)
+            foreach (string c in _civilizations)
             {
                 civ.AddItem(c);
             }
 
-            civ.Selected = Math.Max(0, Array.IndexOf(Civilizations, slot.Choice.Civilization));
-            civ.ItemSelected += index => SetChoice(slot, slot.Choice with { Civilization = Civilizations[(int)index] });
+            civ.Selected = Math.Max(0, Array.IndexOf(_civilizations, slot.Choice.Civilization));
+            civ.ItemSelected += index => SetChoice(slot, slot.Choice with { Civilization = _civilizations[(int)index] });
             _rows.AddChild(civ);
             var team = new OptionButton { Position = Origin + new Vector2I(400, y), Size = new Vector2(70, 24), Disabled = !editable };
             team.AddItem("no team");

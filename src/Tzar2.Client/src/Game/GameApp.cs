@@ -455,8 +455,9 @@ public partial class GameApp : Node
             return null;
         }
 
-        string own = SkirmishOptions.Civilizations[options.Civilization];
-        string[] civs = SkirmishOptions.Civilizations.Where(c => _rules.EntityTypeId(c + ".castle") >= 0).ToArray();
+        string[] offered = SkirmishOptions.CivilizationsOf(_rules);
+        string own = offered[Math.Min(options.Civilization, offered.Length - 1)];
+        string[] civs = offered.Where(c => _rules.EntityTypeId(c + ".castle") >= 0).ToArray();
         if (civs.Length == 0)
         {
             return null;
