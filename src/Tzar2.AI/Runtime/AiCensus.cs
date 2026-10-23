@@ -161,8 +161,8 @@ public sealed class AiCensus
     }
 
     private static bool IsLive(World world, int player, int other)
-        => other != player && world.HasPlayer(other) && (world.Players[other].Flags & PlayerFlags.Active) != 0
-            && (world.Players[other].Flags & PlayerFlags.Defeated) == 0;
+        => other != player && world.HasPlayer(other) && (world.PlayersView[other].Flags & PlayerFlags.Active) != 0
+            && (world.PlayersView[other].Flags & PlayerFlags.Defeated) == 0;
 
     /// <summary>Recomputes the census unless it is already from this tick.</summary>
     internal void Update(World world)
@@ -191,7 +191,7 @@ public sealed class AiCensus
 
         IReadOnlyList<EntityTypeDefinition> types = world.Ruleset.EntityTypes;
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
-        Span<Identity> identities = world.Identities.Components;
+        ReadOnlySpan<Identity> identities = world.Identities.View;
         int[] bestTown = _bestTown;
         Array.Fill(bestTown, -1);
         for (int i = 0; i < ids.Length; i++)
@@ -311,7 +311,7 @@ public sealed class AiCensus
         }
 
         ReadOnlySpan<EntityId> nodes = world.ResourceStocks.Entities;
-        Span<ResourceStock> stocks = world.ResourceStocks.Components;
+        ReadOnlySpan<ResourceStock> stocks = world.ResourceStocks.View;
         for (int i = 0; i < nodes.Length; i++)
         {
             if (stocks[i].Amount == 0 || world.Constructions.Has(nodes[i]) || Tzar2.Sim.Systems.Shore.IsOnWater(world, nodes[i]))
@@ -326,7 +326,7 @@ public sealed class AiCensus
         }
 
         ReadOnlySpan<EntityId> workers = world.Workers.Entities;
-        Span<Worker> states = world.Workers.Components;
+        ReadOnlySpan<Worker> states = world.Workers.View;
         for (int i = 0; i < workers.Length; i++)
         {
             Worker w = states[i];

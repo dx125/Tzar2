@@ -95,7 +95,7 @@ public sealed class ResearchExecutor : IAiExecutor
 
             foreach (ushort tech in set.Technologies)
             {
-                if (!world.Players[context.Slot].HasTechnology(tech))
+                if (!world.PlayersView[context.Slot].HasTechnology(tech))
                 {
                     return tech;
                 }
@@ -115,7 +115,7 @@ public sealed class ResearchExecutor : IAiExecutor
         _tried[technology] = _stamp;
         World world = context.World;
         TechnologyDefinition tech = world.Ruleset.Technologies[technology];
-        if (world.Players[context.Slot].HasTechnology(technology) || GameplayQueries.IsResearchPending(world, context.Slot, technology)
+        if (world.PlayersView[context.Slot].HasTechnology(technology) || GameplayQueries.IsResearchPending(world, context.Slot, technology)
             || !context.CanAfford(tech.Cost, locked))
         {
             return false;
