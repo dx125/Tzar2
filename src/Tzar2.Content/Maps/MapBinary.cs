@@ -16,7 +16,9 @@ namespace Tzar2.Content.Maps;
 /// (W+1)(H+1) terrain bytes, (W+1)(H+1) height bytes, W·H cliff bytes, set-corner bytes (same count as terrain, absent
 /// without a terrain set), u32 object count, then per object: string type key, u8 owner, i32 x, i32 y. Strings are a
 /// u16 byte length plus UTF-8. Version 2 (written only when an object carries editor extras, so maps without them keep
-/// their version-1 bytes; ADR 0152) adds per object: u8 flags, u8 facing, i32 amount.
+/// their version-1 bytes; ADR 0152) adds per object: u8 flags, u8 facing, i32 amount. Version 3 (written only when an
+/// object carries an item, ADR 0264) adds after them a u8 (1 when an item follows), then u8 effect, i32 power,
+/// i32 charges, string spell, string look.
 /// </remarks>
 public static class MapBinary
 {
@@ -26,6 +28,9 @@ public static class MapBinary
     /// <summary>Version with per-object flags, facing and amount (ADR 0152).</summary>
     public const ushort ExtrasVersion = 2;
 
+    /// <summary>Version with per-object items as well (ADR 0264).</summary>
+    public const ushort ItemsVersion = 3;
+
     private static ReadOnlySpan<byte> Magic => "T2MP"u8;
 
     /// <summary>Encodes <paramref name="map"/>.</summary>
@@ -33,14 +38,16 @@ public static class MapBinary
     {
         ArgumentNullException.ThrowIfNull(map);
         using var ms = new MemoryStream();
-        bool extras = false;
+        bool extras = false, items = false;
         foreach (MapObject o in map.Objects)
         {
             extras |= o.HasExtras;
+            items |= o.Item is not null;
         }
 
+        extras |= items;
         ms.Write(Magic);
-        U16(ms, extras ? ExtrasVersion : Version);
+        U16(ms, items ? ItemsVersion : extras ? ExtrasVersion : Version);
         Str(ms, map.Name);
         U16(ms, (ushort)map.Width);
         U16(ms, (ushort)map.Height);
@@ -71,6 +78,26 @@ public static class MapBinary
                 BinaryPrimitives.WriteInt32LittleEndian(b4, o.Amount);
                 ms.Write(b4);
             }
+
+            if (items)
+            {
+                ms.WriteByte(o.Item is null ? (byte)0 : (byte)1);
+                if (o.Item is { } item)
+                {
+                    if (!item.IsValid)
+                    {
+                        throw new ArgumentException($"Map object {o.TypeKey} has an invalid item.", nameof(map));
+                    }
+
+                    ms.WriteByte((byte)item.Effect);
+                    BinaryPrimitives.WriteInt32LittleEndian(b4, item.Power);
+                    ms.Write(b4);
+                    BinaryPrimitives.WriteInt32LittleEndian(b4, item.Charges);
+                    ms.Write(b4);
+                    Str(ms, item.Spell);
+                    Str(ms, item.Look);
+                }
+            }
         }
 
         return ms.ToArray();
@@ -87,7 +114,7 @@ public static class MapBinary
         }
 
         ushort version = r.U16();
-        if (version is not (Version or ExtrasVersion))
+        if (version is not (Version or ExtrasVersion or ItemsVersion))
         {
             throw new FormatException($"map.bin: unsupported version {version}.");
         }
@@ -115,7 +142,7 @@ public static class MapBinary
             int x = r.I32();
             int y = r.I32();
             var o = new MapObject(key, owner, x, y);
-            if (version == ExtrasVersion)
+            if (version >= ExtrasVersion)
             {
                 byte flags = r.Take(1)[0];
                 byte facing = r.Take(1)[0];
@@ -126,6 +153,17 @@ public static class MapBinary
                 }
 
                 o = o with { Flags = (MapObjectFlags)flags, Facing = facing, Amount = amount };
+            }
+
+            if (version == ItemsVersion && r.Take(1)[0] is var has and not 0)
+            {
+                var item = new MapItem((ItemEffect)r.Take(1)[0], r.I32(), r.I32(), r.Str(), r.Str());
+                if (has != 1 || !item.IsValid)
+                {
+                    throw new FormatException($"map.bin: object {i} has an invalid item.");
+                }
+
+                o = o with { Item = item };
             }
 
             objects.Add(o);
