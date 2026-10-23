@@ -296,8 +296,13 @@ public sealed class StructureSystem : ISimSystem
         {
             Identity identity = world.Identities.Get(casters[i]);
             ManaPoolDefinition pool = world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool!;
-            long max = (long)world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max) * 1000;
+            long max = (long)Math.Max(world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max), pools[i].RaisedMax) * 1000;
             long regen = world.Stats.Apply(identity.Owner, ModifierStat.ManaRegen, identity.TypeId, pool.RegenPerMinute);
+            if (identity.Owner == MapObject.Nature)
+            {
+                regen = regen * world.Ruleset.Combat.NatureManaRegenPercent / 100; // a neutral caster regains half (ReTzar 0x502ea2)
+            }
+
             long gained = ((now + tickMs) * regen / 60) - (now * regen / 60); // milli-mana: regen × 1,000 / 60,000 ms
             pools[i].MilliMana = (int)Math.Clamp(pools[i].MilliMana + gained, 0, Math.Min(max, int.MaxValue));
         }

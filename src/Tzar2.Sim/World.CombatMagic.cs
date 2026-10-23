@@ -47,6 +47,21 @@ public sealed partial class World
     /// <summary>Whether <paramref name="unit"/> has learned <paramref name="spell"/> from a book (ITEM-019).</summary>
     public bool HasLearned(EntityId unit, int spell) => Learned.Count > 0 && Learned.IndexOf(unit) is >= 0 and var l && Learned.At(l).Has(spell);
 
+    /// <summary>
+    /// A caster's most mana: its pool's maximum with its owner's technologies, or the cost of a spell it was ordered to cast
+    /// and could not afford when that is more (ReTzar 0x4e1c30, ADR 0267); 0 for a unit without a pool.
+    /// </summary>
+    public int MaxMana(EntityId unit)
+    {
+        if (Manas.IndexOf(unit) is not (>= 0 and var m) || TypeOf(unit).Traits.ManaPool is not { } pool)
+        {
+            return 0;
+        }
+
+        Identity identity = Identities.Get(unit);
+        return Math.Max(Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max), Manas.At(m).RaisedMax);
+    }
+
     /// <summary>Units' errands: boarding, pick-up, give, bribe, conversion (hot).</summary>
     public ComponentStore<Errand> Errands { get; private set; } = null!;
 

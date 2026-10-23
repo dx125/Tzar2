@@ -521,6 +521,12 @@ public struct ManaState : IComponent
 {
     /// <summary>Mana × 1,000.</summary>
     public int MilliMana;
+
+    /// <summary>
+    /// The most mana raised to the cost of a spell it was ordered to cast and could not afford (ReTzar 0x4e1c30, ADR 0267),
+    /// or 0. <see cref="World.MaxMana"/> takes the larger of this and the pool's maximum.
+    /// </summary>
+    public int RaisedMax;
 }
 
 /// <summary>An entity that disappears at a tick (trait <c>Lifetime</c>: meat rots).</summary>

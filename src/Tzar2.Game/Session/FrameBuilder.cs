@@ -114,7 +114,7 @@ internal static class FrameBuilder
             }
             if (world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool is { } pool)
             {
-                e.MaxMana = world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max);
+                e.MaxMana = world.Manas.Has(id) ? world.MaxMana(id) : world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max);
                 e.Mana = world.Manas.IndexOf(id) is >= 0 and var mana ? Math.Min(world.Manas.At(mana).MilliMana / 1000, e.MaxMana) : 0;
             }
 

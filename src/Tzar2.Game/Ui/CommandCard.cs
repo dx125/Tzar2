@@ -1302,7 +1302,8 @@ public sealed class CommandCard
                     return (false, "not in this build yet");
                 }
 
-                int manaCost = _rules.Spells[spellId].ManaCost;
+                SpellDefinition sd = _rules.Spells[spellId];
+                int manaCost = sd.ManaCost + (sd.Effect == SpellEffect.Summon && sd.Summon >= 0 ? _rules.EntityTypes[sd.Summon].Traits.ManaCost * sd.Count : 0); // a summon costs its creature's mana (ADR 0267)
                 string mana = manaCost > 0 ? string.Create(CultureInfo.InvariantCulture, $"mana {manaCost}") : string.Empty;
                 return selected.Any(e => e.Owner == _me && CanCast(e, spellId)) ? (true, mana) : (false, "needs a caster");
             case CardAction.Loan or CardAction.Crusade:

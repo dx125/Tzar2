@@ -196,6 +196,7 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
                         (target, aim) = (EntityId.None, new Position(37 * 2048, 11 * 2048)); // the middle of the pond
                     }
                     batch.Add(CommandKind.CastSpell, [c], aim.X, aim.Y, target, arg0: spell);
+                    w.Manas.Get(c).RaisedMax = 1_000; // summons cost up to 800 (ADR 0267): a pool that holds them
                     w.Manas.Get(c).MilliMana = 100_000_000 / 100; // plenty of mana for the test
                 }
 

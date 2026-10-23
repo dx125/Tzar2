@@ -513,9 +513,9 @@ internal static class CombatMagicCommands
 
         ref Health h = ref world.Healths.Get(unit);
         h.Current = (int)Math.Min((long)h.Current + health, h.Max);
-        if (mana > 0 && world.Manas.IndexOf(unit) is >= 0 and var m && world.TypeOf(unit).Traits.ManaPool is { } pool)
+        if (mana > 0 && world.Manas.IndexOf(unit) is >= 0 and var m && world.TypeOf(unit).Traits.ManaPool is not null)
         {
-            long max = (long)world.Stats.Apply(world.Identities.Get(unit).Owner, ModifierStat.ManaMax, world.Identities.Get(unit).TypeId, pool.Max) * 1000;
+            long max = (long)world.MaxMana(unit) * 1000;
             world.Manas.At(m).MilliMana = (int)Math.Min(world.Manas.At(m).MilliMana + ((long)mana * 1000), max);
         }
 
@@ -562,6 +562,7 @@ internal static class CombatMagicCommands
             case MagicSystem.CommandRejectionReason.NotReady:
                 return CommandRejection.SpellNotReady;
             case MagicSystem.CommandRejectionReason.NoMana:
+                MagicSystem.RaiseMaxToCost(world, caster, spell); // a pool below the cost grows to it (ReTzar 0x4e1c30, ADR 0267)
                 return CommandRejection.NotEnoughMana;
         }
 

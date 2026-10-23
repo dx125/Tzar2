@@ -439,6 +439,12 @@ public sealed record CombatSettings
     /// <summary><see cref="LevelStepXp"/>, with -1 resolved to <see cref="LevelBaseXp"/>.</summary>
     public int LevelStep => LevelStepXp < 0 ? LevelBaseXp : LevelStepXp;
 
+    /// <summary>
+    /// The share of their type's mana regeneration Nature's casters regain, in percent (ReTzar 0x502ea2: a neutral caster 1 a
+    /// second, a kingdom's 2; ADR 0267). 100, the default, treats them like a kingdom's.
+    /// </summary>
+    public int NatureManaRegenPercent { get; init; } = 100;
+
     /// <summary>Levels a unit may reach without technologies (<c>experienceCap</c> modifiers add; UNK-23).</summary>
     public int BaseLevelCap { get; init; } = 3;
 
@@ -636,6 +642,7 @@ public sealed record CombatSettings
         Check(ExperiencePerKill, 0, 1_000_000);
         Check(LevelBaseXp, 1, 1_000_000);
         Check(LevelStepXp, -1, 1_000_000);
+        Check(NatureManaRegenPercent, 0, 1_000);
         Check(BaseLevelCap, 0, 10_000);
         Check(AttackPerLevel, 0, 10_000);
         Check(DefenceHalvesPerLevel, 0, 10_000);

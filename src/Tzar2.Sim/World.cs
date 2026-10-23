@@ -1271,8 +1271,8 @@ public sealed partial class World
         for (int i = 0; i < ids.Length; i++)
         {
             Identity identity = Identities.Get(ids[i]);
-            if (TypeOf(ids[i]).Traits.ManaPool is not { } pool || Manas.Components[i].MilliMana < 0
-                || Manas.Components[i].MilliMana > (long)Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max) * 1000)
+            if (TypeOf(ids[i]).Traits.ManaPool is not { } pool || Manas.Components[i].MilliMana < 0 || Manas.Components[i].RaisedMax is < 0 or > 1_000_000
+                || Manas.Components[i].MilliMana > (long)Math.Max(Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max), Manas.Components[i].RaisedMax) * 1000)
             {
                 throw Invalid("invalid mana");
             }

@@ -21,7 +21,7 @@ internal sealed class CombatCompiler
 
     private static readonly string[] KnownFields =
     [
-        "experiencePerDamagePercent", "experiencePerKill", "levelBaseXp", "levelStepXp", "baseLevelCap", "attackPerLevel", "defenceHalvesPerLevel",
+        "experiencePerDamagePercent", "experiencePerKill", "levelBaseXp", "levelStepXp", "natureManaRegenPercent", "baseLevelCap", "attackPerLevel", "defenceHalvesPerLevel",
         "heroLevel", "leadershipTechnology", "leadershipRadiusTiles", "leadershipSharePercent", "honorTechnology", "honorAttackPercent",
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
@@ -284,6 +284,7 @@ internal sealed class CombatCompiler
             ExperiencePerKill = Range("experiencePerKill", d.ExperiencePerKill, 0, 1_000_000),
             LevelBaseXp = Range("levelBaseXp", d.LevelBaseXp, 1, 1_000_000),
             LevelStepXp = Range("levelStepXp", d.LevelStepXp, -1, 1_000_000),
+            NatureManaRegenPercent = Range("natureManaRegenPercent", d.NatureManaRegenPercent, 0, 1_000),
             BaseLevelCap = Range("baseLevelCap", d.BaseLevelCap, 0, 10_000),
             AttackPerLevel = Range("attackPerLevel", d.AttackPerLevel, 0, 10_000),
             DefenceHalvesPerLevel = Range("defenceHalvesPerLevel", d.DefenceHalvesPerLevel, 0, 10_000),
