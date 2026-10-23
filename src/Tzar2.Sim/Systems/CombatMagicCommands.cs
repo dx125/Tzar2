@@ -225,7 +225,7 @@ internal static class CombatMagicCommands
     private static bool CanBeImpersonated(World world, byte player, EntityId target)
         => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var t && !world.IsHeld(target)
             && world.Identities.At(t).Owner != player && world.HasPlayer(world.Identities.At(t).Owner)
-            && world.TypeOf(target) is { IsMobile: true, Locomotor: Locomotor.Foot or Locomotor.Mounted } type && type.Traits.Category == EntityCategory.Unit
+            && world.TypeOf(target) is { IsMobile: true, Locomotor: Locomotor.Foot or Locomotor.Mounted or Locomotor.Climber } type && type.Traits.Category == EntityCategory.Unit
             && type.Traits.ResourceNode is null;
 
     public static CommandRejection? PickItem(World world, in Command command, ReadOnlySpan<EntityId> entities)
@@ -264,6 +264,35 @@ internal static class CombatMagicCommands
         return applied > 0 ? null : last;
     }
 
+    // A peasant takes a resource item as its load and carries it home (NAT-004; ReTzar's reading of the original, 0x464f60,
+    // program 0x1e); any other unit, or a peasant with another load, brings it to the stockpile at once.
+    private static bool TakeAsLoad(World world, EntityId unit, EntityId item, ItemDefinition def, int amount)
+    {
+        if (world.Workers.IndexOf(unit) is not (>= 0 and var w) || world.TypeOf(unit).Traits.Harvester is not { } harvester || !harvester.CanGather(def.Resource))
+        {
+            return false;
+        }
+
+        ref Worker worker = ref world.Workers.At(w);
+        if (worker.CarryAmount > 0 && worker.CarryResource != def.Resource)
+        {
+            return false;
+        }
+
+        Position at = world.Positions.Get(item);
+        worker.CarryAmount = (int)Math.Min((long)worker.CarryAmount + amount, int.MaxValue);
+        worker.CarryResource = (byte)def.Resource;
+        worker.NodeResource = (byte)def.Resource;
+        worker.NodeX = at.X;
+        worker.NodeY = at.Y;
+        worker.Task = WorkerTask.Harvest;
+        worker.Phase = WorkerPhase.ToDropOff;
+        worker.Target = 0;
+        worker.DropTarget = 0;
+        worker.Retries = 0;
+        return true;
+    }
+
     /// <summary>Whether <paramref name="unit"/> can take <paramref name="item"/> into its inventory now.</summary>
     public static bool CanCarry(World world, EntityId unit, EntityId item)
         => world.Entities.IsAlive(unit) && world.Inventories.IndexOf(unit) is >= 0 and var i && world.Items.Has(item)
@@ -289,6 +318,13 @@ internal static class CombatMagicCommands
         }
 
         ushort type = world.Identities.Get(item).TypeId;
+        if (def.Kind == ItemKind.Resource && TakeAsLoad(world, unit, item, def, world.Items.At(s).Power))
+        {
+            world.Events.Emit(new SimEvent(SimEventKind.ItemPicked, owner, item, unit.Index, 0, type));
+            world.Destroy(item);
+            return;
+        }
+
         if (def.Kind == ItemKind.Resource)
         {
             ref PlayerState player = ref world.Players[owner];
@@ -410,8 +446,10 @@ internal static class CombatMagicCommands
                 case ItemKind.Scroll:
                     world.Events.Emit(new SimEvent(SimEventKind.ItemUsed, command.Player, item, unit.Index, 0, world.Identities.Get(item).TypeId));
                     return null;
-                case ItemKind.SpellBook:
                 case ItemKind.Soul:
+                    // ITEM-010: Arg1 0 = item_kill, 1 = item_berserk, on the bound unit; an unbound soul does nothing.
+                    return MagicSystem.SoulOrder(world, unit, item, command.Arg1 == 1) ? null : CommandRejection.InvalidArgument;
+                case ItemKind.SpellBook:
                     if (world.ItemSpell(item) is not (>= 0 and var spell))
                     {
                         return CommandRejection.InvalidArgument;
@@ -439,7 +477,7 @@ internal static class CombatMagicCommands
             ref Experience e = ref world.Experiences.At(x);
             if (levels > 0)
             {
-                int wanted = CombatStats.XpForLevel(world.Ruleset.Combat, e.Level + Math.Min(levels, 1000));
+                int wanted = CombatStats.XpForLevel(world, unit, e.Level + Math.Min(levels, 1000));
                 e.PendingXp += Math.Max(0, wanted - e.Xp);
             }
 

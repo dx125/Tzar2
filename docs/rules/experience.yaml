@@ -3,22 +3,25 @@ prefix: EXP
 title: Experience and heroes
 rules:
   EXP-001:
-    rule: Units gain experience in combat; each level adds one point of attack and half a point of defence, and a veteran beats several new units of its kind.
-    source: [manual Production Of Units, manual Hints About Gameplay]
+    rule: Units gain experience in combat; each level adds one point of attack and half a point of defence, and a veteran beats several new units of its kind. A kill of an enemy is one point and damage gives none; the level cap is Learning's 4 per research plus 10 for each academy of the kingdom.
+    source: [manual Production Of Units, manual Hints About Gameplay, 'community ReTzar src/gameplay.rs (0x504f20, 0x5022e0, 0x401850)']
     status: tested
-    note: How experience is earned and the curve are placeholders (UNK-23).
+    adr: [0258]
   EXP-002:
-    rule: Each level needs more experience than the last.
-    source: [guide Important tips]
+    rule: Each level needs more experience than the last. The first point gives level 1, and level k needs k more points for the next (at the experience speed of Warfare, Tactics and Sun Tzu).
+    source: [guide Important tips, 'community ReTzar src/gameplay.rs (0x5022e0)']
     status: tested
+    adr: [0258]
   EXP-003:
     rule: Units gain no experience from fighting allies.
     source: [patch 1.05 (TZAR110.TXT)]
     status: tested
   EXP-004:
-    rule: With Tactics, soldiers train on dummies built by peasants to gain their first levels.
-    source: [manual Production Of Units, manual Common Buildings (Dummy), guide Important tips]
+    rule: With Tactics, soldiers train on dummies built by peasants to gain their first levels. A dummy teaches one point for every 75 of damage, up to level 8.
+    source: [manual Production Of Units, manual Common Buildings (Dummy), guide Important tips, 'community ReTzar src/gameplay.rs (0x4481e0, 0x4df884)']
     status: tested
+    adr: [0258]
+    note: The original's dummy loses the hit points; Tzar2's takes no damage and counts what the blows would deal.
   EXP-005:
     rule: Very experienced units become heroes and can be named.
     source: [manual Production Of Units]
