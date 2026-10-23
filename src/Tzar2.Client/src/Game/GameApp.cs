@@ -38,6 +38,7 @@ public partial class GameApp : Node
     private int _loadings;
     private Vector2I _window;
     private Node? _current;
+    private GameScreen? _pending;
     private MidiPlayer? _menuMusic;
 
     /// <summary>Creates the mode over an opened package.</summary>
@@ -79,7 +80,7 @@ public partial class GameApp : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
-        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke);
+        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke && _args.ResourceSoak is null && !_args.BenchRender);
         _ui = new UiAssets(_store);
         try
         {
@@ -101,7 +102,11 @@ public partial class GameApp : Node
             GD.PrintErr("The classic ruleset does not compile from this package: " + e.Message);
         }
 
-        if (_args.MultiplayerSmoke)
+        if (_args.BenchRender)
+        {
+            _ = RenderBenchAsync();
+        }
+        else if (_args.MultiplayerSmoke)
         {
             ShowMainMenu();
             _ = MultiplayerSmokeAsync();
@@ -116,6 +121,10 @@ public partial class GameApp : Node
             else if (_args.AutoplayDir is { } dir)
             {
                 _ = new AutoplayDriver(this, dir).RunAsync();
+            }
+            else if (_args.ResourceSoak is { } soak)
+            {
+                _ = ResourceSoakAsync(soak);
             }
         }
         else if (_args.Editor)
@@ -235,6 +244,10 @@ public partial class GameApp : Node
         menu.Settings += ShowSettings;
         menu.Quit += () => GetTree().Quit();
         Replace(menu, music: "music/intro.mid");
+
+        // Back in the menu no match holds the decoded sheets and images (the UI keeps its own textures): drop them, so
+        // they do not pile up over matches of other civilizations and terrain sets (code review 2026-10, item 16).
+        _store.ClearCaches();
     }
 
     /// <summary>Shows SETTINGS (ADR 0177): changes are saved and applied at once.</summary>
@@ -385,7 +398,7 @@ public partial class GameApp : Node
             session.SpeedIndex = GameSession.SpeedSteps.Length - 1;
         }
 
-        var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null };
+        var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null || _args.ResourceSoak is not null };
         screen.Finished += (outcome, stats) =>
         {
             SaveReplay(session, "skirmish");
@@ -442,8 +455,9 @@ public partial class GameApp : Node
             return null;
         }
 
-        string own = SkirmishOptions.Civilizations[options.Civilization];
-        string[] civs = SkirmishOptions.Civilizations.Where(c => _rules.EntityTypeId(c + ".castle") >= 0).ToArray();
+        string[] offered = SkirmishOptions.CivilizationsOf(_rules);
+        string own = offered[Math.Min(options.Civilization, offered.Length - 1)];
+        string[] civs = offered.Where(c => _rules.EntityTypeId(c + ".castle") >= 0).ToArray();
         if (civs.Length == 0)
         {
             return null;
@@ -510,6 +524,17 @@ public partial class GameApp : Node
 
     private void Replace(Node next, string? music)
     {
+        // A match is prepared on a worker thread while the current screen (the loading screen) stays up and answers;
+        // a later Replace supersedes a match still preparing (code review 2026-10, item 16).
+        _pending?.QueueFree();
+        _pending = null;
+        if (next is GameScreen game && !game.IsPrepared)
+        {
+            _pending = game;
+            _ = ShowWhenPrepared(game, music);
+            return;
+        }
+
         if (_current is not null)
         {
             RemoveChild(_current);
@@ -532,6 +557,27 @@ public partial class GameApp : Node
         }
 
         PlayMenuMusic(music);
+    }
+
+    private async System.Threading.Tasks.Task ShowWhenPrepared(GameScreen game, string? music)
+    {
+        try
+        {
+            await game.Prepare();
+        }
+#pragma warning disable CA1031 // any failure: _Ready rethrows it
+        catch (Exception e)
+#pragma warning restore CA1031
+        {
+            // _Ready rethrows it on the main thread, where the screen's own error handling and the crash log see it.
+            GD.PrintErr("Match preparation failed: " + e.Message);
+        }
+
+        if (_pending == game)
+        {
+            _pending = null;
+            Replace(game, music);
+        }
     }
 
     private void PlayMenuMusic(string? track)

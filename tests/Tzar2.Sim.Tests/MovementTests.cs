@@ -379,4 +379,58 @@ public class MovementTests
         Assert.All(units, u => Assert.True(d.PositionOf(u).X > 31 * Tile));
         Assert.Equal(0, d.Count(SimEventKind.Blocked));
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [Trait("Rule", "WORLD-016")]
+    public void An_idle_unit_of_a_mutual_ally_is_shoved_aside_like_a_friend_an_enemy_is_not(bool allied)
+    {
+        // ADR 0220: allies are friends for movement (heroes walking through an allied village); enemies stay hard
+        // obstacles (ADR 0025).
+        using var d = new SimDriver(Open(24));
+        if (allied)
+        {
+            d.World.Diplomacy.Set(0, 1, Kingdoms.Stance.Ally, Kingdoms.Sharing.None, 0);
+            d.World.Diplomacy.Set(1, 0, Kingdoms.Stance.Ally, Kingdoms.Sharing.None, 0);
+        }
+
+        EntityId mover = d.Spawn(SyntheticScenario.Swordsman, 0, 4, 10);
+        EntityId stander = d.Spawn(SyntheticScenario.Swordsman, 1, 12, 10);
+        Position before = d.PositionOf(stander);
+        d.MoveToTile(0, [mover], 12, 10);
+        d.RunUntil(() => !d.IsMoving(mover), 800);
+        long shoved = Distance(d.PositionOf(stander), before.X, before.Y);
+        if (allied)
+        {
+            Assert.True(shoved > 0, "the idle ally steps aside");
+        }
+        else
+        {
+            Assert.Equal(0, shoved);
+        }
+    }
+
+    [Fact]
+    [Trait("Rule", "WORLD-017")]
+    public void A_unit_meeting_a_blocked_corner_almost_head_on_slides_past_it()
+    {
+        // ADR 0220: the step along the free axis takes the step's full length, not only its tiny sideways part.
+        MapData map = ScenarioMaps.FromAscii(
+            "corner",
+            "..........",
+            "..........",
+            "..........",
+            "....#.....",
+            "....#.....",
+            "....#.....",
+            "..........",
+            "..........");
+        using var d = new SimDriver(map);
+        EntityId u = d.Spawn(SyntheticScenario.Swordsman, 0, 5, 1);
+        d.MoveToTile(0, [u], 5, 7);
+        d.RunUntil(() => !d.IsMoving(u), 600);
+        Position p = d.PositionOf(u);
+        Assert.Equal((5, 7), (p.X / Tile, p.Y / Tile));
+    }
 }

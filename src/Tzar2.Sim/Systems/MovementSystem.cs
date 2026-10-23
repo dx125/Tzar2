@@ -826,7 +826,7 @@ public sealed class MovementSystem : ISimSystem
                 for (int k = f.CellStart[cell]; k < f.CellStart[cell + 1]; k++)
                 {
                     int j = f.CellItems[k];
-                    if (j == i || f.Plane[j] != f.Plane[i] || f.Owner[j] == f.Owner[i])
+                    if (j == i || f.Plane[j] != f.Plane[i] || f.Friends(i, j))
                     {
                         continue;
                     }
@@ -867,14 +867,19 @@ public sealed class MovementSystem : ISimSystem
             return (qx, qy);
         }
 
+        // Along one axis. A unit that meets the corner of a blocked tile almost head-on slides past it at the step's full
+        // length: the tiny sideways part alone would take it hundreds of ticks, and every re-plan pulls it back to the
+        // middle of its tile (a galleon stuck at a corner of the coast, ADR 0220).
         if (vx != 0 && Valid(world, layer, radius, qx, py))
         {
-            return (qx, py);
+            int along = Math.Abs(vy) > 4 * Math.Abs(vx) ? Math.Sign(vx) * Math.Abs(vy) : vx;
+            return along != vx && Valid(world, layer, radius, px + along, py) ? (px + along, py) : (qx, py);
         }
 
         if (vy != 0 && Valid(world, layer, radius, px, qy))
         {
-            return (px, qy);
+            int along = Math.Abs(vx) > 4 * Math.Abs(vy) ? Math.Sign(vy) * Math.Abs(vx) : vy;
+            return along != vy && Valid(world, layer, radius, px, py + along) ? (px, py + along) : (px, qy);
         }
 
         // Wedged against a corner: edge sideways (right first, then left) at half speed.
@@ -1012,6 +1017,12 @@ public sealed class MovementSystem : ISimSystem
         public int[] Vy = [];
         public int[] Radius = [];
 
+        // Per kingdom (below 16): the kingdoms whose units count as friends (WORLD-016), itself included.
+        // At most 16 kingdoms: 8 players + Nature + Rescue + passive + margin; the Friends check guards > 15.
+        public readonly ulong[] Allies = new ulong[16];
+
+        public bool Friends(int i, int j) => Owner[i] == Owner[j] || (Owner[i] < Allies.Length && Owner[j] < Allies.Length && ((Allies[Owner[i]] >> Owner[j]) & 1) != 0);
+
         // The radius each unit slides along the terrain with (its type's TerrainRadius, WORLD-015).
         public int[] Terrain = [];
         public byte[] Owner = [];
@@ -1060,6 +1071,21 @@ public sealed class MovementSystem : ISimSystem
             ReadOnlySpan<EntityId> entities = motions.Entities;
             Span<Motion> data = motions.Components;
             MaxRadius = 0;
+
+            // Kingdoms in a mutual alliance treat each other's units as friends: they shove idle ones aside and queue
+            // behind them, instead of bouncing off them like enemies (ADR 0220).
+            for (int a = 0; a < Allies.Length; a++)
+            {
+                Allies[a] = 1UL << a;
+                for (int b = 0; b < Allies.Length && a < world.Players.Length; b++)
+                {
+                    if (b != a && b < world.Players.Length && world.HasPlayer(a) && world.HasPlayer(b) && world.Diplomacy.AreMutualAllies(a, b))
+                    {
+                        Allies[a] |= 1UL << b;
+                    }
+                }
+            }
+
             Array.Clear(CellStart);
             for (int i = 0; i < n; i++)
             {
@@ -1314,7 +1340,7 @@ public sealed class MovementSystem : ISimSystem
                         {
                             // Low 16 bits: friendly contacts (a crowd to wait for); high bits: contacts with units that
                             // are not moving (anyone already settled, or an enemy blocking the way).
-                            contacts += (f.Moving[j] == 0 ? 0x10000 : 0) + (f.Owner[j] == f.Owner[i] ? 1 : 0);
+                            contacts += (f.Moving[j] == 0 ? 0x10000 : 0) + (f.Friends(i, j) ? 1 : 0);
                         }
 
                         long forward = ((rx * dx) + (ry * dy)) / dist;
@@ -1333,7 +1359,7 @@ public sealed class MovementSystem : ISimSystem
                         long vjy = f.Vy[j];
                         long vj = IntMath.ISqrt((vjx * vjx) + (vjy * vjy));
                         bool sameWay = f.Moving[j] != 0 && vj > 0 && 4 * ((vjx * dx) + (vjy * dy)) > 3 * vj * dist;
-                        if (sameWay && f.Owner[j] == f.Owner[i])
+                        if (sameWay && f.Friends(i, j))
                         {
                             // Queue behind: do not run into the unit ahead.
                             long gap = Math.Max(0, forward - r);
@@ -1342,7 +1368,7 @@ public sealed class MovementSystem : ISimSystem
                         }
 
                         long strength = (r - Math.Abs(lateral)) * 1024 / r * (reach - forward) / reach;
-                        if (f.Moving[j] == 0 && f.Owner[j] == f.Owner[i])
+                        if (f.Moving[j] == 0 && f.Friends(i, j))
                         {
                             strength /= 2; // idle friends step aside (shoving)
                         }
@@ -1452,7 +1478,7 @@ public sealed class MovementSystem : ISimSystem
                             break;
                         }
 
-                        bool friendly = f.Owner[j] == f.Owner[i];
+                        bool friendly = f.Friends(i, j);
                         int share; // quarters of the overlap this unit takes
                         if (iMoving == jMoving)
                         {

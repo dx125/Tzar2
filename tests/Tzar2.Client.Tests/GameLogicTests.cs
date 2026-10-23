@@ -242,6 +242,11 @@ public sealed class GameArgsTests
         Assert.Equal(("lakes", "large", 0), (r.MapType, r.MapSizeName, r.MapSize));
         Assert.NotEmpty(ViewerArgs.Parse(["--players", "12"]).Errors);
         Assert.NotEmpty(ViewerArgs.Parse(["--ticks", "x"]).Errors);
+        ViewerArgs soak = ViewerArgs.Parse(["--resource-soak", "s.tsv", "--matches", "5", "--ticks", "18000"]);
+        Assert.Empty(soak.Errors);
+        Assert.True(soak.Skirmish && !soak.IsViewerMode);
+        Assert.Equal(("s.tsv", 5, 18000), (soak.ResourceSoak, soak.Matches, soak.Ticks));
+        Assert.Equal(3, ViewerArgs.Parse(["--resource-soak", "s.tsv"]).Matches);
     }
 }
 

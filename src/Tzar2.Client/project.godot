@@ -11,9 +11,15 @@ config_version=5
 [application]
 
 config/name="Tzar2"
-config/description="Tzar2 client (M1: asset viewer)"
+config/description="Tzar2 client"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Mobile")
+
+[debug]
+
+; Godot's own log (user://logs/godot*.log) also in exported builds: the crash reporter reads the backtrace of a native
+; crash from it at the next start (ADR 0243).
+file_logging/enable_file_logging.pc=true
 
 [display]
 
