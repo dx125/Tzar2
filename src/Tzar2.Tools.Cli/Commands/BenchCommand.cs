@@ -307,11 +307,19 @@ internal static class BenchCommand
         stream.WriteLine(result.FullHash is { } full ? string.Create(CultureInfo.InvariantCulture, $"\t{full:X16}") : string.Empty);
     }
 
-    // The CPU model on Linux (CI runners differ: normalized times, ADR 0080); "unknown" elsewhere.
+    // The CPU model on Linux (CI runners differ: normalized times, ADR 0080) and Windows (the owner's and testers' PCs,
+    // min-spec-tuning.md); "unknown" elsewhere.
     private static string CpuModel()
     {
         try
         {
+            if (OperatingSystem.IsWindows()
+                && Microsoft.Win32.Registry.GetValue(@"HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0", "ProcessorNameString", null) is string name
+                && name.Trim().Length > 0)
+            {
+                return name.Trim();
+            }
+
             if (File.Exists("/proc/cpuinfo"))
             {
                 foreach (string line in File.ReadLines("/proc/cpuinfo"))
