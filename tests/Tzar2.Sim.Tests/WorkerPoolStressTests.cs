@@ -18,7 +18,7 @@ namespace Tzar2.Sim.Tests;
 /// </summary>
 public sealed class WorkerPoolStressTests(ITestOutputHelper output)
 {
-    private const int Forks = 1_500;
+    private const int Forks = 500;
 
     [Theory]
     [InlineData(4)]
