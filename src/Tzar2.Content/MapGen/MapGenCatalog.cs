@@ -115,7 +115,7 @@ public sealed class MapGenCatalog
     /// houses 2 × 2, gateway 3 × 3; docs/mechanics/mapgen-placeholders.md); five starting peasants (UNVERIFIED).
     /// </summary>
     public static MapGenCatalog Classic { get; } = new(
-        ["euro", "asia", "arab"],
+        ["euro", "arab", "asia"], // the classic ruleset's order (ADR 0211); bound to a ruleset, its own list replaces it
         [
             new MapObjectKind("{civ}.castle", 5, 5),
             new MapObjectKind("{civ}.peon", 0, 0),
@@ -151,10 +151,11 @@ public sealed class MapGenCatalog
     public MapGenCatalog RestrictTo(Ruleset ruleset)
     {
         ArgumentNullException.ThrowIfNull(ruleset);
+        // The ruleset's playable civilizations in its order (ADR 0211; a fork's own ones too), not the catalog's list.
         var civs = new List<string>();
-        foreach (string civ in Civilizations)
+        foreach (string civ in ruleset.Civilizations)
         {
-            if (Exists(ruleset, MapObjectRole.Castle, civ) && Exists(ruleset, MapObjectRole.Peasant, civ))
+            if (ruleset.IsPlayableCivilization(civ) && Exists(ruleset, MapObjectRole.Castle, civ) && Exists(ruleset, MapObjectRole.Peasant, civ))
             {
                 civs.Add(civ);
             }

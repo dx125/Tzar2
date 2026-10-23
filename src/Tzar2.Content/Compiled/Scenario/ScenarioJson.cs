@@ -18,7 +18,7 @@ namespace Tzar2.Content.Compiled.Scenario;
 public static class ScenarioJson
 {
     /// <summary>Format version written into the document.</summary>
-    public const int FormatVersion = 1;
+    public const int FormatVersion = 2;
 
     private static readonly JsonWriterOptions Compact = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, Indented = false };
     private static readonly JsonWriterOptions Pretty = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, Indented = true };
@@ -194,7 +194,7 @@ public static class ScenarioJson
             w.WriteNumber("number", k.Number);
             w.WriteString("name", k.Name);
             w.WriteString("tzar", k.TzarName);
-            w.WriteString("civilization", k.Civilization.ToString());
+            w.WriteString("civilization", k.Civilization);
             w.WriteString("playerType", k.PlayerType.ToString());
             w.WriteBoolean("active", k.Active);
             w.WriteNumber("food", k.Food);
@@ -587,7 +587,7 @@ public static class ScenarioJson
         public ScenarioData Scenario(JsonElement root)
         {
             int format = root.GetProperty("format").GetInt32();
-            if (format != FormatVersion)
+            if (format is < 1 or > FormatVersion) // 1: civilizations as European/Arabian/Asian/Random (ADR 0211)
             {
                 throw new JsonException($"unsupported scenario format {format}");
             }
@@ -710,7 +710,7 @@ public static class ScenarioJson
             Int(e, "number"),
             Str(e, "name"),
             Str(e, "tzar"),
-            Enum<Civilization>(e, "civilization"),
+            ScenarioCivilization.FromFormat1(Str(e, "civilization")),
             Enum<PlayerType>(e, "playerType"),
             Bool(e, "active"),
             Int(e, "food"),
