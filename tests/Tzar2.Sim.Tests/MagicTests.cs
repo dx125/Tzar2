@@ -25,7 +25,8 @@ public class MagicTests
     [Fact]
     [Trait("Rule", "MAG-001")]
     [Trait("Rule", "MAG-002")]
-    public void Lightning_costs_mana_has_a_cooldown_and_needs_enough_mana()
+    [Trait("Rule", "MAG-025")]
+    public void Lightning_costs_mana_and_needs_enough_mana_but_no_wait()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 4, 4), Unit("euro.footman", 1, 10, 4), Unit("euro.footman", 1, 10, 7)), ruleset: NoRegen);
         EntityId mage = OfType(d.World, "euro.mage").Single();
@@ -39,13 +40,10 @@ public class MagicTests
         Assert.Equal(90 - 50, Mana(d, mage)); // 50 mana (ReTzar, 0x4723e0)
         Cast(d, mage, "spell_lightning", enemies[1]);
         d.Step();
-        Assert.Contains(CommandRejection.SpellNotReady, d.Rejections());
-        d.RunUntil(() => false, 60);
-        Cast(d, mage, "spell_lightning", enemies[1]);
-        d.Step();
         Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections()); // 40 left
+        Assert.DoesNotContain(CommandRejection.SpellNotReady, d.Rejections()); // no wait between spells but the mana (MAG-025)
         d.World.Manas.Get(mage).MilliMana = 90_000;
-        Cast(d, mage, "spell_lightning", enemies[1]);
+        Cast(d, mage, "spell_lightning", enemies[1]); // at once
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
         Assert.False(d.World.Entities.IsAlive(enemies[1]));
     }

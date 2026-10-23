@@ -116,6 +116,12 @@ rules:
     status: tested
     adr: [0261, 0263]
     note: Fire rain is twenty fireballs of 40, one every 170 ms, each falling 375 ms on a random tile within 2 of the point and hitting what meets the 5 by 5 tiles around it; the whirlpool forms on water only, deals 20 to every ship on its 3 by 3 tiles each 250 ms, wanders a tile every 2 s and is gone after 30 s (ADR 0263). The cooldowns and cast times stay UNVERIFIED (UNK-26). The original's heal casts again while the unit is hurt; Tzar2's casts once.
+  MAG-025:
+    rule: A caster waits for nothing between its spells but its mana; a spell costs no time of waiting after it is cast.
+    source: ['community ReTzar src/gameplay.rs (0x4e1c30, 0x4e1d2e)']
+    status: tested
+    adr: [0266]
+    note: Tzar2 had a cooldown of 1.5 to 5 s per spell (UNVERIFIED); the classic ruleset now has none, the field stays for other rulesets. Not done yet - a caster short of mana should take the order and wait for it, looking again every 2 s, its maximum raised to the cost when lower (0x4e1c30); Tzar2 refuses the order.
   MAG-021:
     rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; the fuller it is, the closer the copied kingdom's spies must come to unmask it, right next to it at 100.
     source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846, capture capture-20261022-011438]

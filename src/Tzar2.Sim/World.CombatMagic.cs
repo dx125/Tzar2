@@ -41,6 +41,12 @@ public sealed partial class World
     /// <summary>The kingdom's market holding its items on offer (Jewelry, TECH-030).</summary>
     public ComponentStore<MarketStock> MarketStocks { get; private set; } = null!;
 
+    /// <summary>The spells units have learned from books (ITEM-019, ADR 0266); only units that learned one have an entry.</summary>
+    public ComponentStore<LearnedSpells> Learned { get; private set; } = null!;
+
+    /// <summary>Whether <paramref name="unit"/> has learned <paramref name="spell"/> from a book (ITEM-019).</summary>
+    public bool HasLearned(EntityId unit, int spell) => Learned.Count > 0 && Learned.IndexOf(unit) is >= 0 and var l && Learned.At(l).Has(spell);
+
     /// <summary>Units' errands: boarding, pick-up, give, bribe, conversion (hot).</summary>
     public ComponentStore<Errand> Errands { get; private set; } = null!;
 
@@ -94,6 +100,7 @@ public sealed partial class World
         Disguises = Components.RegisterHot<Disguise>("game.disguise");
         WaypointQueues = Components.RegisterHot<WaypointQueue>("game.waypoints");
         MarketStocks = Components.RegisterHot<MarketStock>("game.market");
+        Learned = Components.RegisterHot<LearnedSpells>("game.learned");
     }
 
     /// <summary>

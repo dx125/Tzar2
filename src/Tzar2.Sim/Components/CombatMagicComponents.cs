@@ -152,6 +152,23 @@ public struct InventorySlots
     private uint _item;
 }
 
+/// <summary>
+/// The spells a unit has learned from books (ITEM-019, ADR 0266; ReTzar 0x4640f0): they join its own card (0x4e3fb0). Bit
+/// n is spell n of the ruleset, so a unit can learn only the first <see cref="Capacity"/> spells.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct LearnedSpells : IComponent
+{
+    /// <summary>The spells a unit can learn: the bits of <see cref="Mask"/>.</summary>
+    public const int Capacity = 64;
+
+    /// <summary>Bit n set: spell n is learned.</summary>
+    public ulong Mask;
+
+    /// <summary>Whether spell <paramref name="spell"/> is learned.</summary>
+    public readonly bool Has(int spell) => (uint)spell < Capacity && (Mask & (1UL << spell)) != 0;
+}
+
 /// <summary>A market's items on offer (Jewelry, TECH-030): slots 0..Count-1 hold item entities, oldest first.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct MarketStock : IComponent

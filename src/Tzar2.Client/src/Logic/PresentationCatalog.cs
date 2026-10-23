@@ -280,28 +280,34 @@ public sealed class PresentationCatalog : ICardSource
                 continue;
             }
 
-            string order = e.Key;
-            char hotkey = e.Value.Length == 1 ? char.ToUpperInvariant(e.Value[0]) : '\0';
-            IniSection? o = _orders.Section(order);
-            string action = o?.Get("ACTION") ?? string.Empty;
-            string? submenu = o?.Get("SUBMENU");
-            int image = o?.Get("IMG") is { } img && int.TryParse(img, NumberStyles.Integer, CultureInfo.InvariantCulture, out int ix) ? ix : -1;
-            string tooltip = _strings.Get("orders_names", order) ?? order;
-            (CardAction kind, string argument) = Classify(action, submenu, o?.Get("CLASSNAME"));
-            if (kind == CardAction.Stance && argument == "toggle")
-            {
-                // holdfire and fireatwill share the action; the order says which way it goes.
-                argument = string.Equals(order, "fireatwill", StringComparison.OrdinalIgnoreCase) ? "0" : "2";
-            }
-
-            // ENABLE names an equation of EQUATIONS.INI (EnableQuestButton = QuestCount; HUD-029).
-            string enable = o?.Get("ENABLE") is { Length: > 0 } condition
-                ? _equations.Get("Equations", condition) ?? (string.Equals(condition, "EnableQuestButton", StringComparison.OrdinalIgnoreCase) ? "QuestCount" : condition)
-                : string.Empty;
-            buttons.Add(new CardButton(order, hotkey, kind, argument, image, tooltip) { Enable = enable });
+            buttons.Add(Button(e.Key, e.Value.Length == 1 ? char.ToUpperInvariant(e.Value[0]) : '\0'));
         }
 
         return buttons;
+    }
+
+    /// <inheritdoc/>
+    public CardButton? OrderButton(string order) => _orders.Section(order) is null ? null : Button(order, '\0');
+
+    private CardButton Button(string order, char hotkey)
+    {
+        IniSection? o = _orders.Section(order);
+        string action = o?.Get("ACTION") ?? string.Empty;
+        string? submenu = o?.Get("SUBMENU");
+        int image = o?.Get("IMG") is { } img && int.TryParse(img, NumberStyles.Integer, CultureInfo.InvariantCulture, out int ix) ? ix : -1;
+        string tooltip = _strings.Get("orders_names", order) ?? order;
+        (CardAction kind, string argument) = Classify(action, submenu, o?.Get("CLASSNAME"));
+        if (kind == CardAction.Stance && argument == "toggle")
+        {
+            // holdfire and fireatwill share the action; the order says which way it goes.
+            argument = string.Equals(order, "fireatwill", StringComparison.OrdinalIgnoreCase) ? "0" : "2";
+        }
+
+        // ENABLE names an equation of EQUATIONS.INI (EnableQuestButton = QuestCount; HUD-029).
+        string enable = o?.Get("ENABLE") is { Length: > 0 } condition
+            ? _equations.Get("Equations", condition) ?? (string.Equals(condition, "EnableQuestButton", StringComparison.OrdinalIgnoreCase) ? "QuestCount" : condition)
+            : string.Empty;
+        return new CardButton(order, hotkey, kind, argument, image, tooltip) { Enable = enable };
     }
 
     /// <inheritdoc/>

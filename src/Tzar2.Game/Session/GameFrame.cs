@@ -203,6 +203,9 @@ public struct FrameEntity
     /// <summary>Carries a spell book: yellow stars float above it (1.09, ITEM-012).</summary>
     public bool CarriesBook;
 
+    /// <summary>The spells it learned from books (ITEM-019): bit n = spell n.</summary>
+    public ulong LearnedSpells;
+
     /// <summary>What a worker is doing, which names a peasant (STRINGS.INI [peons], HUD-032).</summary>
     public FrameJob Job;
 

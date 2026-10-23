@@ -88,3 +88,9 @@ rules:
     status: tested
     adr: [0265]
     note: A book without limited charges is endless and never used up; one that needs mana waits its time restriction as a cooldown of its own (one pool point a second, the UNVERIFIED mana rate of UNK-26); one that does not need mana does not wait. A cast stays free for the holder.
+  ITEM-019:
+    rule: A unit with mana that uses a spell book with no target learns its spell, if it does not know it, and the book is used up; the spell then joins that unit's own orders.
+    source: ['community ReTzar src/gameplay.rs (0x4640f0, 0x4a1c58, 0x4e3fb0)']
+    status: tested
+    adr: [0266]
+    note: In Tzar2, Ctrl + click on the book in the inventory. The spell still needs its research and costs the unit's own mana. Not done - the computer's units learning or using the books they pick up (0x464280); learned spells are not carried by persistent heroes.

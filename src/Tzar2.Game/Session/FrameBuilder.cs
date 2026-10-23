@@ -214,6 +214,11 @@ internal static class FrameBuilder
                 e.WorkTarget = EntityId.FromValue(world.Workers.At(wk).Target);
             }
 
+            if (world.Learned.Count > 0 && world.Learned.IndexOf(id) is >= 0 and var learned)
+            {
+                e.LearnedSpells = world.Learned.At(learned).Mask;
+            }
+
             int c = world.Combats.IndexOf(id);
             if (c >= 0)
             {

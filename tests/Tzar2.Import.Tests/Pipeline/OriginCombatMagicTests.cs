@@ -176,9 +176,9 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
                 foreach (EntityId c in w.Casters.Entities.ToArray())
                 {
                     EntityTraits traits = w.TypeOf(c).Traits;
-                    if (w.Identities.Get(c).Owner != 0 || traits.Spells.IsEmpty)
+                    if (w.Identities.Get(c).Owner != 0 || traits.Spells.IsEmpty || w.Casters.Get(c).Phase != CastPhase.None)
                     {
-                        continue;
+                        continue; // a new order would start the cast again (no spell waits, ADR 0266)
                     }
 
                     ushort spell = traits.Spells[next.GetValueOrDefault(c.Value) % traits.Spells.Length]; // the next spell once one took effect
@@ -200,6 +200,14 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
                 }
 
                 list.AppendStamped(0, batch);
+            }
+
+            foreach (EntityId c in w.Casters.Entities.ToArray())
+            {
+                if (w.Identities.Get(c).Owner == 0)
+                {
+                    w.Healths.Get(c).Current = w.Healths.Get(c).Max; // confused knights and fire rain spare no one; the casters must last
+                }
             }
 
             sim.Tick(list);
