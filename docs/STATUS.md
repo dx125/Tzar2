@@ -240,6 +240,11 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — The worker pool's wait for late helpers is measured (ADR 0214; code review, item 16).**
+  * Under full CPU contention, 6–7 % of forks wait a 10 ms time slice for a helper that wakes after all the jobs are
+    done.
+  * A stress test now reports this on every CI runner. The pool changes only if the runners show it too.
+
 * **2026-10-23 — Network and probe tests poll until a deadline (issue #179).**
   * The server test now polls for the Welcome and the lobby listing.
   * The relay harness has generous timeouts; the keep-alive test sets its own.
