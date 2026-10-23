@@ -6,11 +6,12 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-23 (consolidated update after the batch merge of 46 PRs)
-* **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below). The product
-  owner also operates the Windows PC with the original game for captures and local-only tests.
-* **`main`:** green on CI. Open PRs: none. Open issues: none ([#62](https://github.com/dx125/Tzar2/issues/62), flaky
-  `RelayTests`, fixed by ADR 0231).
+* **Last updated:** 2026-10-23 (the paused agent's open work landed; the owner's PC runs; consolidated update)
+* **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
+  paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
+  Windows PC with the original game for captures and local-only tests.
+* **`main`:** green on CI. Open PRs: none. Open issues: [#179](https://github.com/dx125/Tzar2/issues/179) (network
+  tests still time out on loaded Windows runners; rerun the failed job).
 
 ## Handover (2026-10-22)
 
@@ -73,7 +74,7 @@ and it has not been re-run since the handover.
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **19 of 19 measured** (2026-10-22, `t2 campaign run --survey` on the clean GOG install, ADRs 0134, 0220; every map with cheat assistance, none by pure play), tutorial **7 of 7 measured** (2026-10-22). Earlier counts were inflated by AI resignations (ADR 0220). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
 | M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **Done** (exit criteria met 2026-10-22) | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI (ADRs 0160–0168, 0230, 0231). **500-match soak: 500 of 500 ok, 0 desyncs, 0 failures** (2026-10-22, macOS, `t2 soak --matches 500 --parallel 10 --seed 62`: 2 bots + 2 Hard AIs, 6,000 ticks at 4x, RTT 200 ms, jitter 10 ms, 5 % loss; 251 disconnects and 251 rejoins, 138 after an AI takeover; 749 replays re-simulated; 3.0 M ticks; 65.6 min). Replays recorded on Linux verify on Windows, Linux and macOS (CI `replay-verify`, same final hashes); the nightly 20-match slice passes on Linux and Windows. Matches are 5 minutes, not two hours (ADR 0167). Since the exit: the multiplayer setup (colours, AI scripts, every map and game option; ADR 0232), custom maps in multiplayer with time and score limits (ADRs 0233, 0234; SHELL-018), and the multiplayer menu, lobby and replays on the original's art and font (UI review). |
-| M7 Windows beta | **In progress** | Plan: ADR 0240 (D1–D7). Done: the Windows package (Godot headless export, portable zip, Inno Setup installer, version stamp, uninstall keeps the player's data; ADR 0241), first-run import in the client, the signing step (skipped without secrets; ADR 0242), opt-in crash reports over the Sentry protocol (ADR 0243), the S2 render bench `--bench-render` (D6, ADR 0244; first run on an M5 MacBook at 1080p: 120 FPS, sim p99 14.8 ms above the 12 ms budget, VRAM 3.1 GB). The code review cut the client's memory (terrain tile atlas, ADR 0210; caches and atlas pages freed after a match; a match loaded on a worker thread). Open: the crash server and the signing certificate (owner), the owner's sim bench, installed-build and Windows render-bench runs, the closed beta (D7). Exit: crash-free ≥ 99.5 %, S2, no P0/P1. |
+| M7 Windows beta | **In progress** | Plan: ADR 0240 (D1–D7). Done: the Windows package (Godot headless export, portable zip, Inno Setup installer, version stamp, uninstall keeps the player's data; ADR 0241), first-run import in the client, the signing step (skipped without secrets; ADR 0242), opt-in crash reports over the Sentry protocol (ADR 0243), the S2 render bench `--bench-render` (D6, ADR 0244; first run on an M5 MacBook at 1080p: 120 FPS, sim p99 14.8 ms above the 12 ms budget, VRAM 3.1 GB). The code review cut the client's memory (terrain tile atlas, ADR 0210; caches and atlas pages freed after a match; a match loaded on a worker thread). The owner's PC (2026-10-23, [min-spec-tuning.md § Results](release/min-spec-tuning.md#results)): S2 passes at 2560 × 1440 (about 1,680 FPS, sim p99 6.8 ms, VRAM 0.33 GB, RAM 2.3 GB, match load 2 s); the headless sim p99 is at most 4.8 ms with 1 to 8 workers; the first-run import takes 10.4 s. Open: the 10-minute skirmish of request 2 (owner), the crash server and the signing certificate (owner), the closed beta (D7). Exit: crash-free ≥ 99.5 %, S2, no P0/P1. |
 | M8 Modding, polish, release | Not started | Also the **fidelity suite ≥ 80 %** (moved from M3, ADR 0174): **10 of 30 (33.3 %)** today, see below. |
 | PX Platform expansion | Post-1.0 (DEC-14) | |
 
@@ -119,7 +120,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), orders shown only while their condition holds (the quest order: HUD-029), the loan orders' hints tell what the tavern lends (TRADE-008), F4's scoreboard and clock (DIP-008), the chat screen (D_CHAT: everyone, allies, enemies or picked kingdoms with their stance; the cheat codes in single player: HUD-010, HUD-011), the menu screens' help ball and hints (LOCAL/HELP.INI: SHELL-026), the fished patch's blue selection and the selection view's kingdom, level and power (HUD-025, HUD-016), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), orders shown only while their condition holds (the quest order: HUD-029), the loan orders' hints tell what the tavern lends (TRADE-008), F4's scoreboard and clock (DIP-008), the chat screen (D_CHAT: everyone, allies, enemies or picked kingdoms with their stance; the cheat codes in single player: HUD-010, HUD-011), the menu screens' help ball and hints (LOCAL/HELP.INI: SHELL-026), the fished patch's blue selection and the selection view's kingdom, level and power (HUD-025, HUD-016), tests for the last untested magic rules (MAG-006, MAG-010, MAG-011, MAG-018), the trade window's source and destination markets (TRADE-002), the order target's blink as the original's (CTRL-017), map objects' own item properties (map.bin version 3, ADR 0264), the random map generator's items as the original's (ITEM-017, ADR 0264), a spell book's own pool and endless charges (ITEM-018, ADR 0265), scenario counts over several kingdoms as one total (SCN-001), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -164,9 +165,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 12. **Done (2026-10-22):** issue #62 fixed at its cause (ADR 0231); M6 soak 500 of 500 with 0 desyncs; token rotation
     on rejoin, Noise handshake proposed for M7 (ADR 0230).
 13. **Maintainer:** M7 (ADR 0240). Done: package, installer, first-run import, signing step, crash reports (ADRs
-    0241–0243), the render bench (D6, ADR 0244). **Owner:** pick the crash server and the signing route (ADRs 0242,
-    0243); run the sim bench and the installed build ([min-spec-tuning.md](release/min-spec-tuning.md), requests 1
-    and 2), and `--bench-render` on Windows (the command: min-spec-tuning.md, "The render bench").
+    0241–0243), the render bench (D6, ADR 0244), and the owner's PC runs: the sim bench, the installed build's import
+    and the render bench ([min-spec-tuning.md § Results](release/min-spec-tuning.md#results), 2026-10-23). **Owner:**
+    pick the crash server and the signing route (ADRs 0242, 0243); play request 2's 10-minute skirmish on the
+    installed build and send its log folder.
 14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
@@ -259,18 +261,99 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
       * 2026-10-23: a harbor's reach to the water is `Building.coastReachTiles` (2), one value for the sim, the AI and the
         build ghost instead of two constants; only the ruleset hash is re-pinned.
-17. **Maintainer (the coordinator moved it ahead of M8, 2026-10-23; ADR 0264):** the random map generator's items as
+      * 2026-10-23: the experience curve's step is data (`combat.levelStepXp`; -1 keeps the original's base × k); only
+        the ruleset hash is re-pinned.
+      * 2026-10-23: map builders place a kingdom's seat and starting worker by their traits (`Seat`, the new
+        `StartingWorker`), not by "<civ>.castle" and "<civ>.peon"; maps do not change; the ratchet is down to 19 files.
+      * 2026-10-23: the campaign acceptance test imports the original itself when only `TZAR2_ORIGIN` is set and never
+        plays the original's missions on the synthetic ruleset (saa12's 513 faults were types that ruleset lacks); the
+        autoplay trace tallies scenario faults by rule, action and kind.
+      * 2026-10-23: the nightly bench gates compare calibration-normalized times and every gate runs after a failure
+        (ADR 0080 amendment 1): four nights out of five had failed on slow runners, and b4, gameplay, ai and stress had
+        gone unchecked on those nights.
+      * 2026-10-23: the review doc has the second "for a fork" sweep: a ranked list of nine findings, what #204, #205 and
+        #211 did, and what remains (UI fallbacks, the client's per-civilization art, map builders by key, some caps).
+17. **Done (2026-10-23, ADR 0264):** the random map generator's items as
     the original makes them (ReTzar 0x4b5c50): spell books of a random spell with 1 to 5 charges, bows, shields and
     swords of 5 to 15, potions of 10 to 50 or 2 to 8. It needs item properties on `MapObject` (map.bin and its hash)
     and changes the generator's hashes. RES.INI's TreasuryItem, WeaponItem, ArmourItem and PotionItem are not what the
     generator reads (ITEM-015 unclear).
-      * 2026-10-23: the review doc has the second "for a fork" sweep: a ranked list of nine findings, what #204, #205 and
-        #211 did, and what remains (UI fallbacks, the client's per-civilization art, map builders by key, some caps).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-23 — The paused agent's open work landed; STATUS consolidated.** The maintainer agent paused with ten open
+  PRs and three branches without one. Claude merged each with `main` and moved the STATUS edits into this update. It
+  re-measured the golden pins where two PRs met:
+  * the gameplay ruleset hash for #226, #225 and #229 together;
+  * the `Ruleset` hash fields for coast reach and the starting worker.
+
+  Then it squash-merged them after green CI: #220, #221, #217–#219, #222–#226, and #227, #229 and #230 for the three
+  branches. Issue #179 is reopened: a server test timed out again on a loaded Windows runner (#226), after #181's
+  polling.
+* **2026-10-23 — Spell books keep their own pool and may be endless (ADR 0265, ITEM-018).** A map's book record holds
+  needs-mana (+0x62: a pool of its own, the time restriction at +0x64) and limited charges (+0x63). Tzar2 read +0x63
+  as needs-mana and applied only the charges, so SAA11's endless book ran out and every book waited the type's 10 s.
+  `ItemState` gains its own cooldown and an endless flag:
+  * the hashed layout goes to 17 and the snapshot to 19;
+  * every golden, the trigger mission and the CI bench hashes are re-pinned;
+  * `legacy.referenceDataHash` does not move (measured with `TZAR2_ORIGIN`).
+
+  Open: ReTzar's reading has no recast for a caster at all, only mana, so Tzar2's UNVERIFIED spell `cooldownMs`, which
+  also holds a book's holder, may have to go (UNK-26). ReTzar also reads that a unit with a mana pool learns a book's
+  spell when it uses the book without a target; that rule is not in the ledger yet.
+* **2026-10-23 — Nightly bench gates on normalized times (ADR 0080 amendment 1).** Runners of one CPU model differed
+  by up to 30 % in speed from night to night: s2 on the EPYC 9V74 was 1.27 times its row raw but 0.98 normalized. The
+  relative checks now use the calibration-normalized p50 and p99 against the same-model row. The 12 ms budget stays on
+  raw times. Gate steps after the first run even after a failure.
+
+  Replayed on twelve nightlies, the change passes the two noisy s2 nights. It still fails the real regression of
+  2026-10-19 and #40's b4 (+13 % normalized too; to be watched). A nightly dispatched on the branch ran all six gates
+  green; ai was at 0.99 of its provisional limit.
+* **2026-10-23 — The owner's PC runs (M7, min-spec requests 1, 2 and the render bench).** Claude ran them on the
+  owner's Ryzen 7 9800X3D and RTX 4070 Ti with the PC otherwise idle:
+  * headless S2 sim p99 3.0–4.8 ms with 1 to 8 workers (it stops scaling at 6);
+  * the installed beta's first-run import in 10.4 s;
+  * the render bench at 2560 × 1440: about 1,680 FPS (frame p99 1.4 ms), sim p99 6.8 ms, VRAM 0.33 GB, RAM 2.3 GB,
+    load 2 s, **S2 PASS**; the Compatibility renderer about 1,085 FPS.
+
+  The numbers are in [min-spec-tuning.md § Results](release/min-spec-tuning.md#results). `t2 bench` now names the CPU
+  on Windows (#231). Left for the owner: request 2's 10-minute skirmish.
+* **2026-10-23 — Scenario counts add up the masked kingdoms (SCN-001; ReTzar).** A count by type or category over
+  several kingdoms is one total, not a test per kingdom joined by Any or All (UNK-54's placeholder). saa12's "Help"
+  (military units of kingdoms 1 and 6 at most 50, Keep Rule) had spawned 70 units a second for as long as the player
+  alone had fewer than 50: 3,215 units by tick 741. Rules retest each second (SCN-002, as before). New ledger chapter
+  `scenario.yaml`.
+* **2026-10-23 — The generator's items as the original's (ADR 0264; work queue 17; ITEM-017).** Map objects carry an
+  item's effect, power, charges, spell and look keys. map.bin version 3 is written only when a map has items; versions
+  1 and 2 still load, and maps without items keep their bytes and hashes. Random maps now hold the original's three
+  item classes, R(1, 10) + side / 32 of each, as ReTzar reads 0x4b5b14 and 0x4b5c50:
+  * weapons and shields (bow, shield or sword, 5–15);
+  * spell books (one of seven spells, 1–5 charges);
+  * potions (health or mana 10–50; levels, attack or defence 2–8).
+
+  The mapgen goldens are re-pinned.
+* **2026-10-23 — Order target's blink (CTRL-017).** An order on an object makes it blink as ReTzar reads the original:
+  * a one-pixel frame inside its selection, three 100 ms flashes in 500 ms;
+  * red for an attack, a capture and the card's orders; blue for a guard; green for other right clicks.
+
+  Until now it was our three blinks of the selection corners. No hash changes.
+* **2026-10-23 — Trade window's markets (TRADE-002).** The trade window's two market cells pick where the route starts
+  and where it goes on the map, as in the manual's Performing Trade:
+  * without a source, the route starts at the trader's nearest own market;
+  * without a destination, TRADE asks for a click as before.
+
+  No hash changes.
+* **2026-10-23 — Magic chapter fully tested (MAG-006, MAG-010, MAG-011, MAG-018).**
+  * Raise the dead skips a destroyed building's ruin.
+  * Priests' BONUS.INI bonus against mages and magic creatures, and the Asian priest's conversion from monks, are
+    checked on an imported package (local only).
+  * The crusade test of ships names MAG-018.
+  * The origin spell test casts the whirlpool on water (#227; it failed on `main` with `TZAR2_ORIGIN`).
+
+  Tests only, no code or hash changes.
 
 * **2026-10-23 — Ninjas climb walls as they climb cliffs (WORLD-018; ReTzar 0x4a99a0).** A wall piece (not a gate or
   a tower) is open to the climber when the band of wall or cliff tiles through it is one or two thick, from ground to

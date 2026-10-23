@@ -36,6 +36,49 @@ To add in M7, each only if a measurement shows it is needed (no setting without 
 | Client log `slow frame` lines | Frames over budget during real play, at most one per 5 s (ADR 0176). | yes |
 | **Client render bench** `--bench-render` (ADR 0244) | The S2 scenario in the real client for 120 s after 15 s of warm-up, the camera touring the castles: FPS, frame time p50/p99, sim p50/p99, the tick's phases, RAM and VRAM peaks, load time, the S2 verdict; one `RENDER-BENCH` line per run. | yes |
 
+## Results
+
+### High tier: the owner's PC (2026-10-23)
+
+AMD Ryzen 7 9800X3D (8 cores, 16 threads), NVIDIA RTX 4070 Ti (12 GB), 64 GB RAM, Windows 11, monitor 3440 × 1440.
+`main` 25b60b3; the installed build 0.7.0-beta.41+22eaed1 (nightly #41). Claude ran the three requests with the PC
+otherwise idle.
+
+**Request 1, the sim on a desktop CPU** (`t2 bench`, three runs per worker count; calibration 16.6–17.6 ms, scale
+1.42–1.51):
+
+| Scenario | Workers | Tick p50 (ms) | Tick p99 (ms) |
+|---|---|---|---|
+| s2 | 1 | 2.96–2.99 | 4.41–4.49 |
+| s2 | 4 | 1.16–1.18 | 3.94–4.82 |
+| s2 | 6 | 0.99–1.02 | 3.03–3.36 |
+| s2 | 8 | 0.95–0.99 | 3.16–3.69 |
+| ai, 8 players, 24,000 ticks | 4 | 0.32 | 1.26 |
+
+* S2's sim half passes with room: p99 at most 4.8 ms against the 12 ms budget.
+* The sim stops scaling at 6 workers.
+
+**Request 2, the installed build:**
+* The silent per-user install worked.
+* `FIRST-RUN IMPORT OK` came in **10.4 s**, against the ≤ 180 s target.
+* The 10-minute skirmish and its logs are still to come (the owner).
+
+**The render bench** (`RENDER-BENCH v1`, 4,000 units, 120 s):
+
+| Run | Renderer | FPS | 1 % low | Frame p50 / p99 (ms) | Sim p50 / p99 (ms) | Load (s) | RAM (GB) | VRAM (GB) | S2 |
+|---|---|---|---|---|---|---|---|---|---|
+| 2560 × 1440 | Mobile (Vulkan) | 1,684 | 603 | 0.6 / 1.4 | 2.8 / 6.8 | 2.2 | 2.31 | 0.33 | PASS |
+| 2560 × 1440 | Mobile (Vulkan) | 1,670 | 543 | 0.6 / 1.5 | 2.8 / 6.8 | 2.0 | 2.37 | 0.33 | PASS |
+| 1920 × 1080 | Mobile (Vulkan) | 1,585 | 527 | 0.6 / 1.5 | 2.8 / 6.6 | 2.1 | 2.29 | 0.34 | n/a |
+| fullscreen 3440 × 1440 | Mobile (Vulkan) | 1,572 | 598 | 0.6 / 1.4 | 2.9 / 6.6 | 2.0 | 2.43 | 0.34 | n/a |
+| 2560 × 1440 | Compatibility (OpenGL) | 1,085 | 485 | 0.9 / 1.8 | 2.8 / 6.7 | 2.1 | 2.15 | 0.43 | PASS |
+
+**Follow-ups:**
+* In the client, the sim p99 (6.6–6.8 ms) is about twice the headless bench's. The peaks are the full-state hash (up
+  to 3.3 ms; once the AI, 4.7 ms).
+* RAM is 2.3 GB against a 296 MB package: within the 3 GB target, but worth a look in the code review (work queue 16).
+* Normal play keeps Godot's default V-Sync; only the bench turns it off.
+
 ## Requests for the owner's PC
 
 All from the repository checkout on the owner's PC (`git pull` first), in PowerShell. Nothing needs the original game
