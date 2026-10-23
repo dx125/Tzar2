@@ -58,9 +58,10 @@ rules:
     adr: [0172, 0190]
   WORLD-013:
     rule: A random map grows as many trees as its terrain set's data gives for its size.
-    source: ['data TERRAIN.INI [randomtreeset]']
-    status: partial
-    note: Tzar2's generator uses its own forest density (ADR 0060).
+    source: ['data TERRAIN.INI [randomtreeset]', community ReTzar src/random_map.rs (0x4b2ab0)]
+    status: tested
+    adr: [0201]
+    note: The original's plasma field and chances (ReTzar's reading) with Tzar2's random numbers, so forests have the original's shape and density but not its exact trees.
   WORLD-014:
     rule: Units crossing a bridge are drawn on it, as on the ground; the bridge never hides them.
     source: [owner 2026-10-21 (fourth play-test)]
