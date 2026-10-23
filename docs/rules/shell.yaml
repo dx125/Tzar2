@@ -131,8 +131,9 @@ rules:
     note: Nothing runs while paused; commands wait for the next tick.
   SHELL-026:
     rule: The controls of the menu screens explain themselves in a hint line.
-    source: [data LOCAL HELP.INI]
-    status: missing
+    source: [data LOCAL HELP.INI, data IMAGES/SCREENS/COMMON/BTN_HELP_B, 'community ReTzar src/menu.rs (hint_key, 0x45c800, 0x45c6c6)']
+    status: tested
+    note: As ReTzar reads the original, the help ball (BTN_HELP_B at the top left of the campaign, custom map, custom setup, random map and options screens, BTN_HELP_S on the load and save windows) turns hint mode on and off; in hint mode the screen takes no other press and the control under the pointer shows its HELP.INI text in a box below the pointer. The keys are the original's names of the controls (ReTzar). Tzar2's own options rows without an original counterpart have no hint, and the windows over the map (diplomacy, tribute, chat) have no ball yet.
   SHELL-027:
     rule: Quitting, resigning and disconnecting ask for confirmation. Leaving Tzar from the main menu asks "Exit Tzar - Are you sure you want to quit the game?"; the game menu's QUIT asks to resign in a single player game and to disconnect in a multiplayer one, with Yes and No.
     source: ['strings STRINGS.INI [q]', 'data IMAGES/SCREENS/D_MSGWND', 'community ReTzar src/menu.rs (Screen::Quit, Screen::Resign)']

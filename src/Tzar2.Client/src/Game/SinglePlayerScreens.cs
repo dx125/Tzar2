@@ -133,6 +133,13 @@ public partial class ChooseMapScreen : ArtScreen
             }
         });
         Select(Math.Clamp(selected, 0, Math.Max(0, maps.Count - 1)));
+
+        // SHELL-026: the original's names of these controls (ReTzar's reading).
+        Hint(List, "CM_MAPS");
+        Hint(About, "CM_MAP_DECRIPTION");
+        Hint(new Rect2I(BackSlot, size), "CM_BACK");
+        Hint(new Rect2I(PlaySlot, size), "CM_PLAY");
+        HelpBall(k => catalog?.Text("HELP", k, k) ?? k);
     }
 
     /// <summary>PLAY: the chosen map (its setup comes next).</summary>

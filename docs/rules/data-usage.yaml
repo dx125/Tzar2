@@ -149,8 +149,9 @@ files:
     todo:
       colors: the colour of selection marks (HUD-031)
   - path: LOCAL/HELP.INI
-    account: unused
-    reason: "todo: the hints of the menu screens' controls (SHELL-026)."
+    reader: Tzar2.Client PresentationCatalog (the hints of the menu screens' controls, SHELL-026)
+    account: sections
+    used: [help]
   - path: LOCAL/STRINGS.INI
     reader: Tzar2.Client PresentationCatalog (texts)
     account: sections

@@ -112,12 +112,12 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 4 | 3 | 2 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
-| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 14 | 10 | 1 | 1 | 2 | 0 |
+| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 15 | 10 | 1 | 0 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 8 | 1 | 1 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 341 | 238 | 79 | 8 | 4 | 9 | 3 |
+| **All** | 341 | 239 | 79 | 8 | 3 | 9 | 3 |
 
 ## Not done yet
 
@@ -147,7 +147,6 @@ Missing and partial rules.
 ### Menus, setup and pause
 
 * **SHELL-019** (partial): The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears. *The checks by the sound and music volumes turn them off, as in the options' art; CD audio is shown and stays off (Tzar2 plays MIDI); the hardware cursor is the system's pointer. When the menu bar appears is missing, the path depth is dropped on purpose (TDD ORIG-03), and where weather and day/night sit waits for the owner's screenshot (UI review question 3).*
-* **SHELL-026**: The controls of the menu screens explain themselves in a hint line.
 
 ### Trade, tavern and loans
 
@@ -202,7 +201,7 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 5 not read, and of the names in the others 161 used, 5 restated by hand, 18 not needed and 29 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 4 not read, and of the names in the others 162 used, 5 restated by hand, 18 not needed and 28 to do.
 
 To do:
 
@@ -223,7 +222,6 @@ To do:
 * `DATA/TREES.INI` `pos_tree`: where a tree sits on its tile (PRES-009)
 * `IMAGES/TERRAIN/*.IMAGES.INI` `ruinpoints`: meaning not decoded
 * `IMAGES/TERRAIN/*.TERRAIN.INI` `colors`: the colour of selection marks (HUD-031)
-* `LOCAL/HELP.INI` (the whole file): the hints of the menu screens' controls (SHELL-026).
 * `LOCAL/STRINGS.INI` `adds`: messages such as "Build more houses" (HUD-026)
 * `LOCAL/STRINGS.INI` `defmsg`: the hint line's description of orders (HUD-001)
 * `LOCAL/STRINGS.INI` `msg`: the game's messages in the original's words (HUD-026)
