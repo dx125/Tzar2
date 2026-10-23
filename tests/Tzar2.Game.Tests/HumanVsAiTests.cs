@@ -104,9 +104,12 @@ public sealed class HumanVsAiTests(ITestOutputHelper output)
     /// <summary>
     /// Game minutes on Archipelagos, where the first wave must also board a transport, cross the sea and land (ADR 0144;
     /// on this map a little after 9 minutes, between 12 and 14 since the measured walking speeds of ADR 0172): a passive
-    /// human keeps nothing within a ship's range of the water before.
+    /// human keeps nothing within a ship's range of the water before. Since the original's bodies (WORLD-015, #126) the
+    /// landed wave first hits between 17 and 18.5 minutes (17.2 before the forests of ADR 0201, 18.4 with them, 17.6
+    /// with ADR 0220's movement); the 14 minutes passed only because an AI warship parked within range of the human's
+    /// woodcutters, which any change in where it parks undoes (ADR 0220).
     /// </summary>
-    private const int SeaMapTypeMinutes = 14;
+    private const int SeaMapTypeMinutes = 20;
 
     private static int MinutesFor(Tzar2.Content.MapGen.RandomMapType type) => type == Tzar2.Content.MapGen.RandomMapType.Archipelagos ? SeaMapTypeMinutes : MapTypeMinutes;
 

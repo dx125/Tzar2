@@ -221,7 +221,8 @@ the process decisions that have no ADR.
   their ship is, and `$cargo` is what is aboard or inside (ReTzar). In movement, allies are friends and units slide
   past corners. UNK-81 is settled by the owner: cliffs stop every ground unit but the ninja, who climbs a band of one
   or two tiles (WORLD-018; a new `climber` locomotor). Goldens are re-pinned. The solver gains tribute, item pickup by
-  a unit that can reach it, evacuations, sticky ferries and goal protection.
+  a unit that can reach it, evacuations, sticky ferries and goal protection. The Archipelagos attack check plays 20
+  minutes: its landed wave first hits after 17 on `main` too, and 14 passed only on a xebec's shots (ADR 0220).
 
 * **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
   * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
