@@ -36,9 +36,9 @@ the type has charges.
   * `OwnCooldown`: `CooldownMs` replaces the type's cooldown, and may be 0, which means no restriction;
   * `Endless`: the book never runs out and is never used up.
 
-  Two reserved bytes keep the layout free of padding. The snapshot's item layout changes, so the full-state golden
-  hashes are re-pinned. The persistent heroes format (version 3) and the player profile carry both fields with the
-  hero's items.
+  Two reserved bytes keep the layout free of padding. The item store's layout changes, so the hashed layout goes to
+  17 and the snapshot format to 19 (older saves are refused), and every golden and the CI bench hashes are re-pinned.
+  The persistent heroes format (version 3) and the player profile carry both fields with the hero's items.
 * **A book's pool becomes a cooldown.** The original refills a pool of N points at the mana regeneration rate. Our
   `manaRegenPerMinute` is 60, one point a second (UNK-26, UNVERIFIED), so a pool of N is a cooldown of N seconds. A
   book without +0x62 has no restriction.
@@ -54,9 +54,11 @@ the type has charges.
   * a book that needs mana gets `OwnCooldown` with its time restriction, and a book that does not gets `OwnCooldown`
     with 0.
   * A record without these fields (an older conversion, a hand-made scenario) keeps the type's values.
-* **The rest:** the cast stays free for the holder, as before (`NeedsMana` of the item type, false for the classic
-  books). The imported reference data changes with the scenario JSON, so `legacy.referenceDataHash` is re-pinned,
-  measured after merging main with `TZAR2_ORIGIN`.
+* **The rest:**
+  * The cast stays free for the holder, as before (`NeedsMana` of the item type, false for the classic books).
+  * `legacy.referenceDataHash` covers the rules tables only, not maps, so it does not move. Measured with
+    `TZAR2_ORIGIN` on the owner's PC after merging main: still 7F4CCBEEEC76AD36. Every original map and campaign
+    converts without errors.
 
 ## Consequences
 
@@ -64,6 +66,9 @@ the type has charges.
   between casts.
 * Packages imported before this change keep the old reading until they are imported again. That is the import's
   usual rule.
+* After a cast from a book, the caster still waits the spell's own recast (Tzar2's `cooldownMs`, UNVERIFIED; fire rain
+  5 s). A book's wait is therefore the longer of its pool and the spell's recast. Whether the original holds a holder
+  back after a book's cast is open (UNK-26); a play-test or ReTzar settles it.
 * ADR 0264's `MapItem` adds the same two properties to map.bin version 3, so the random map generator's books can
   have their pool of 1–5 and 1–3 charges.
 

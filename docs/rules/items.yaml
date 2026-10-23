@@ -76,3 +76,9 @@ rules:
     status: tested
     adr: [0186]
     note: Each item keeps its own effect, spell and look. The workshop makes a book of any of 20 spells, a potion of health, levels, mana, attack or defence, and a sword, bow or shield (power items, ITEM_PLUSPLUS). Maps give their items the numbers of their records. Which spells and potion colours the workshop offers, a book's minimum gold (goldreq) and how gold becomes a potion's amount are UNVERIFIED.
+  ITEM-018:
+    rule: A spell book placed on a map may never run out of charges, and may have to wait for a mana pool of its own to fill between casts.
+    source: ['community ReTzar book (0x4640f0) and object setup (0x494f66)', 'data the item_magic records of both original campaigns (+0x62 needs mana, +0x63 limited charges, +0x64 time restriction)']
+    status: tested
+    adr: [0265]
+    note: A book without limited charges is endless and never used up; one that needs mana waits its time restriction as a cooldown of its own (one pool point a second, the UNVERIFIED mana rate of UNK-26); one that does not need mana does not wait. A cast stays free for the holder.
