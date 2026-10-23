@@ -43,7 +43,8 @@ the tick budget. Tzar2.Sim cannot reference Tzar2.Scripting (§7.2). The AI solv
   by `MaxConversationSteps`, delayed action lists by 1,024, queued conversations by 64.
 * **Events** follow Appendix C.5 as state tests: in area, exist, destroyed (named: dead and not hidden), in holder,
   player defeated/won (any kingdom of the mask), object expression (reserved variables are the object's properties).
-  Typed specifications count per kingdom of the mask, and All/Any combine the kingdoms (UNK-54). "Destroyed" of a type
+  Typed specifications count per kingdom of the mask, and All/Any combine the kingdoms (UNK-54). *Superseded 2026-10-23:*
+  the masked kingdoms are counted together, as ReTzar reads the original (SCN-001). "Destroyed" of a type
   and "left the holder" need memory: the engine counts the tick's `Destroyed`/`Unloaded` sim events, the ones of the
   command step when step 2 starts and the rest after cleanup, each once.
 * **Actions** change the world only through the public mutators (`Spawn`, `Kill`, `Destroy`, `ChangeOwner`,

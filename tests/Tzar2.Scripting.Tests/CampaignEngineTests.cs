@@ -57,6 +57,22 @@ public class CampaignEngineTests
     }
 
     [Fact]
+    [Trait("Rule", "SCN-001")]
+    [Trait("Rule", "SCN-002")]
+    public void A_count_over_several_kingdoms_adds_their_objects_up()
+    {
+        // saa12's "Help": reinforcements for kingdoms 1 and 2 while they have at most 50 troops between them, again each
+        // second (Keep Rule). Kingdom 1 alone keeps one; counted per kingdom, the rule would spawn for ever.
+        var b = new ScenarioBuilder();
+        b.Unit("euro.footman", 0, 3, 3);
+        b.Event(new ObjectExistEvent("below", new CategoryObjects(ObjectCategory.MilitaryUnits, (ushort)(PlayerMasks.Of(1) | PlayerMasks.Of(2)), CountComparison.AtMost, 50, Quantifier.Any)));
+        b.Rule("below", b.Action(new SpawnObjectAction("help", "euro.footman", 2, 20, Rect(20, 2, 30, 12))), b.Action(new KeepRuleAction("again")));
+        using TriggerDriver d = b.Start();
+        d.Seconds(10);
+        Assert.Equal(60, d.Count(Tzar2.Sim.Events.SimEventKind.Spawned)); // 1, 21 and 41 troops are at most 50; 61 are not
+    }
+
+    [Fact]
     [Trait("Rule", "ECO-024")]
     [Trait("Rule", "ECO-023")]
     public void A_peasant_given_to_another_kingdom_keeps_its_load_and_the_default_order_delivers_it_at_the_store()

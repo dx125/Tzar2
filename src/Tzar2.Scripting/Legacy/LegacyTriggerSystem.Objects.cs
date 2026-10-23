@@ -198,9 +198,9 @@ public sealed partial class LegacyTriggerSystem
             }
 
             case TypedObjects typed:
-                return Compare(typed.Players, typed.Comparison, typed.Count, typed.Quantifier, Counts(typed, test));
+                return Compare(typed.Players, typed.Comparison, typed.Count, Counts(typed, test));
             case CategoryObjects category:
-                return Compare(category.Players, category.Comparison, category.Count, category.Quantifier, Counts(category, test));
+                return Compare(category.Players, category.Comparison, category.Count, Counts(category, test));
 
             default:
                 return false;
@@ -231,31 +231,22 @@ public sealed partial class LegacyTriggerSystem
     // Shared scratch of Counts: Holds is not re-entrant (no test function calls Holds).
     private readonly int[] _counts = new int[16];
 
-    // Per kingdom of the mask: count against the spec's comparison, combined by the quantifier.
-    private static bool Compare(ushort players, CountComparison comparison, int count, Quantifier quantifier, ReadOnlySpan<int> counts)
+    // The objects of all the masked kingdoms together, against the spec's comparison (SCN-001; ReTzar's reading of the
+    // original: a selection by class counts every listed kingdom's objects as one, and Any or All play no part).
+    private static bool Compare(ushort players, CountComparison comparison, int count, ReadOnlySpan<int> counts)
     {
-        bool all = quantifier == Quantifier.All;
-        bool any = false;
-        for (int p = 0; p < 16; p++)
+        int n = 0;
+        for (int p = 0; p < 16 && p < counts.Length; p++)
         {
-            if ((players & (1 << p)) == 0)
+            if ((players & (1 << p)) != 0)
             {
-                continue;
+                n += counts[p];
             }
-
-            int n = p < counts.Length ? counts[p] : 0;
-            bool pass = comparison == CountComparison.AtLeast ? n >= count : n <= count;
-            if (all && !pass)
-            {
-                return false;
-            }
-
-            any |= pass;
         }
 
-        return all ? players != 0 : any;
+        return comparison == CountComparison.AtLeast ? n >= count : n <= count;
     }
 
     private static bool Compare(TypedObjects typed, ReadOnlySpan<int> counts)
-        => Compare(typed.Players, typed.Comparison, typed.Count, typed.Quantifier, counts);
+        => Compare(typed.Players, typed.Comparison, typed.Count, counts);
 }

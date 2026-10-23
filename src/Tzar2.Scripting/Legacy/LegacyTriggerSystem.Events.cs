@@ -60,7 +60,7 @@ public sealed partial class LegacyTriggerSystem
             case ObjectDestroyedEvent { Objects: TypedObjects typed }:
                 return Compare(typed, memory);
             case ObjectDestroyedEvent { Objects: CategoryObjects category }:
-                return Compare(category.Players, category.Comparison, category.Count, category.Quantifier, memory);
+                return Compare(category.Players, category.Comparison, category.Count, memory);
             case ObjectExistEvent e:
                 return Holds(e.Objects, static _ => true);
             case ObjectsEnterHolderEvent e:
@@ -91,7 +91,7 @@ public sealed partial class LegacyTriggerSystem
             case ObjectLeaveHolderEvent { Objects: TypedObjects typed }:
                 return Compare(typed, memory);
             case ObjectLeaveHolderEvent { Objects: CategoryObjects category }:
-                return Compare(category.Players, category.Comparison, category.Count, category.Quantifier, memory);
+                return Compare(category.Players, category.Comparison, category.Count, memory);
             case PlayerDefeatedEvent e:
                 return AnyPlayer(e.Players, PlayerFlags.Defeated);
             case PlayerWonEvent e:
