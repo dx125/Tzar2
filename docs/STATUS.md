@@ -244,6 +244,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         on an s2 world. Only the full hashes are re-pinned.
       * 2026-10-23: the network test harnesses' timeouts no longer drop members of loaded CI runners, and the capture
         end-to-end test runs on a virtual clock (issue #179).
+      * 2026-10-23: the worker pool waits for the jobs, not for the helpers it woke (ADR 0214). On the CI macOS runner
+        under contention, the median fork had waited a 10 ms slice for idle helpers.
 
 ## Decision and event log
 
