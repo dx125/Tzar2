@@ -85,7 +85,7 @@ public sealed partial class Ruleset
         {
             SpellDefinition s = _spells[i] ?? throw new ArgumentException("Null spell.", nameof(combat));
             if (s.Id != i || string.IsNullOrEmpty(s.Key) || !keys.Add(s.Key) || s.Effect > SpellEffect.SoulBind || s.Target > SpellTarget.Self
-                || s.Affects > SpellAffects.All || s.ManaCost is < 0 or > 1_000_000 || s.RangeUnits is < 0 or > 64 * 2048
+                || s.Affects > SpellAffects.All || s.ManaCost is < 0 or > 1_000_000 || s.RangeUnits is < 0 or > 1024 * 2048
                 || s.CooldownMs is < 0 or > 3_600_000 || s.CastMs is < 0 or > 60_000 || s.Amount is < 0 or > 1_000_000
                 || s.DurationMs is < 0 or > 3_600_000 || s.RadiusUnits is < 0 or > 32 * 2048 || s.Summon < -1 || s.Summon >= _entityTypes.Length
                 || s.Projectile < -1 || s.Projectile >= _projectiles.Length || s.PulseMs is < 1 or > 60_000 || s.Count is < 1 or > 64
