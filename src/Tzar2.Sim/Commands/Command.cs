@@ -142,6 +142,12 @@ public enum CommandKind : ushort
 
     /// <summary>The listed disguised spies show their true selves again (order <c>reveal_self</c>).</summary>
     RevealSelf = 52,
+
+    /// <summary>The listed own market sells the kingdom's offer <see cref="Command.Target"/> for four times its value in gold (Jewelry, TECH-030).</summary>
+    MarketBuy = 53,
+
+    /// <summary>The listed own market buys item <see cref="Command.Target"/>, carried by a unit of the kingdom, for its value in gold (TECH-030).</summary>
+    MarketSell = 54,
     // GAME-07…11 (ADR 0096): values 20-39.
 
     /// <summary>The listed units walk to own holder <see cref="Command.Target"/> (castle, outpost, ship, carpet) and enter it (GAME-09).</summary>

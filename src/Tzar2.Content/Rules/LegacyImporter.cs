@@ -389,6 +389,13 @@ internal sealed partial class LegacyImporter
             }
         }
 
+        // The ninja climbs cliffs, no other ground unit does (WORLD-018: the owner, the original's footage; ReTzar
+        // 0x4a99a0). No data file says so; the class does.
+        if (!building && string.Equals(cls, "ninja", StringComparison.OrdinalIgnoreCase))
+        {
+            body.Trait("Mobile", ("locomotor", "climber"));
+        }
+
         LegacyIniSection? section = ObjectSection(civ, cls);
         if (section?.Get("max_manna") is { Length: > 0 } mana)
         {

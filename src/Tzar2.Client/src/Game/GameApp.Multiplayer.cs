@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Globalization;
 using System.IO;
 using Godot;
 using Tzar2.Game.Multiplayer;
 using Tzar2.Game.Session;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 
@@ -42,7 +45,7 @@ public partial class GameApp
         menu.CreateInternet += s =>
         {
             (string host, int port) = s.Endpoint();
-            OpenLobby(() => NetworkMatch.Create(NetworkOptions(host, port), $"{s.Name}'s game", 4, isPublic: true));
+            OpenLobby(() => NetworkMatch.Create(NetworkOptions(host, port), $"{s.Name}'s game", LobbyScreenModel.LobbySlots, isPublic: true, LobbyScreenModel.DefaultOpenSlots));
         };
         menu.JoinCode += (s, code) =>
         {
@@ -53,7 +56,7 @@ public partial class GameApp
         menu.HostLan += s =>
         {
             _lanHost = LanHost.Start(desyncDirectory: UserPath("desync"));
-            OpenLobby(() => NetworkMatch.Create(NetworkOptions("127.0.0.1", _lanHost.Port), $"{s.Name}'s LAN game", 4, isPublic: true));
+            OpenLobby(() => NetworkMatch.Create(NetworkOptions("127.0.0.1", _lanHost.Port), $"{s.Name}'s LAN game", LobbyScreenModel.LobbySlots, isPublic: true, LobbyScreenModel.DefaultOpenSlots));
         };
         menu.Reconnect += (_, ticket) => OpenLobby(() => NetworkMatch.Rejoin(NetworkOptions(ticket.Host, ticket.Port), ticket));
         menu.Replays += ShowReplays;
@@ -72,6 +75,13 @@ public partial class GameApp
             StartNetworkGame(_network, session);
         }
 
+        // A rejoin spends the stored token and the relay sends a new one (ADR 0230): keep it at once, so a crash while
+        // the match loads again does not lock the player out.
+        if (_network?.Ticket is { } ticket && _mp.Ticket is { } stored && stored.Code == ticket.Code && stored.Token != ticket.Token)
+        {
+            _mp.Ticket = ticket;
+        }
+
         if (_playback is { } playback && playback.Generation != _playbackGeneration)
         {
             ShowPlayback(); // a backward seek restored a keyframe into a new session
@@ -87,7 +97,12 @@ public partial class GameApp
         Ai = _ai,
         SaveDirectory = UserPath(Path.Combine("saves", "multiplayer")),
         DeferLoadReport = true,
+        CustomMaps = MultiplayerMaps(),
     };
+
+    // The original maps a lobby can choose (SHELL-018; ADR 0233), converted once per run like CUSTOM MAP's.
+    private List<Tzar2.Game.Campaigns.CustomMapEntry> MultiplayerMaps() =>
+        [.. (_customMaps ??= OriginalMaps()).Select(m => new Tzar2.Game.Campaigns.CustomMapEntry(m.Id, m.Title, m.Description, m.Mission))];
 
     private void OpenLobby(Func<NetworkMatch> connect)
     {
@@ -104,7 +119,7 @@ public partial class GameApp
         }
 
         _networkGameShown = false;
-        _lobby = new LobbyScreen(_ui!, Screen, _network);
+        _lobby = new LobbyScreen(_ui!, Screen, _network, PlayerColour, _rules);
         _lobby.Leave += ShowMultiplayer;
         Replace(_lobby, music: null);
     }
@@ -210,7 +225,7 @@ public partial class GameApp
 
         try
         {
-            _playback = ReplayPlayback.Open(File.ReadAllBytes(file), _rules, _ai);
+            _playback = ReplayPlayback.Open(File.ReadAllBytes(file), _rules, _ai, MultiplayerMaps());
         }
         catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException)
         {

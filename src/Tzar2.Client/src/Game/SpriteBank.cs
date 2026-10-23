@@ -61,9 +61,14 @@ public sealed class SpriteBank : IDisposable
     private readonly ContentStore _store;
     private readonly Dictionary<string, SheetRef?> _byName = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<SpriteSheet> _sheets = [];
+    private readonly IReadOnlyList<int>? _colourOf;
 
-    /// <summary>Creates an empty bank.</summary>
-    public SpriteBank(ContentStore store) => _store = store;
+    /// <summary>Creates an empty bank; kingdom p is drawn with colour <c>colourOf[p]</c> (null: its own).</summary>
+    public SpriteBank(ContentStore store, IReadOnlyList<int>? colourOf = null)
+    {
+        _store = store;
+        _colourOf = colourOf;
+    }
 
     /// <summary>The uploaded atlas (after <see cref="Upload"/>).</summary>
     public GpuSpriteAtlas? Gpu { get; private set; }
@@ -154,16 +159,17 @@ public sealed class SpriteBank : IDisposable
     /// <summary>Packs everything registered into an atlas (CPU only: may run off the main thread).</summary>
     public void Pack() => Packed = SpriteAtlas.Build(_sheets);
 
-    /// <summary>Uploads the packed atlas (packing first if needed); main thread.</summary>
+    /// <summary>Uploads the packed atlas (packing first if needed), then drops its CPU pages; main thread, once.</summary>
     public void Upload()
     {
         Gpu?.Dispose();
-        if (Packed is null)
+        if (Packed is null || Packed.PagesReleased)
         {
             Pack();
         }
 
-        Gpu = new GpuSpriteAtlas(Packed!, _store.Palette);
+        Gpu = new GpuSpriteAtlas(Packed!, _store.Palette, _colourOf);
+        Packed!.ReleasePages();
     }
 
     /// <inheritdoc/>

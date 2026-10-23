@@ -37,7 +37,8 @@ public class AiNavalTests(ITestOutputHelper output)
         {
             scenario.RunTick();
             fished |= w.Workers.Entities.ToArray().Any(e => w.IsShip(e) && w.Workers.Get(e).CarryAmount > 0);
-            ashore |= t % 200 == 0 && Enumerable.Range(0, 2).Any(p => OnEnemyIsland(w, p) > 0);
+            // Every second: on the map of the original's forests (WORLD-013) the landed soldiers fall within seconds.
+            ashore |= t % 20 == 0 && Enumerable.Range(0, 2).Any(p => OnEnemyIsland(w, p) > 0);
         }
 
         output.WriteLine(scenario.Describe());

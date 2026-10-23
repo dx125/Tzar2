@@ -59,6 +59,11 @@ public sealed partial class Ruleset
         Combat.Validate(_entityTypes.Length, _technologies.Length);
         _spells = [.. combat.Spells ?? []];
         _projectiles = [.. combat.Projectiles ?? []];
+        if (Combat.BansheeSpell >= _spells.Length || Combat.SoulBerserkSpell >= _spells.Length)
+        {
+            throw new ArgumentException("combat: the banshee spell must be a spell.", nameof(combat));
+        }
+
         if (_spells.Length > MaxSpells || _projectiles.Length > MaxProjectiles)
         {
             throw new ArgumentException($"At most {MaxSpells} spells and {MaxProjectiles} projectiles.", nameof(combat));
@@ -79,8 +84,8 @@ public sealed partial class Ruleset
         for (int i = 0; i < _spells.Length; i++)
         {
             SpellDefinition s = _spells[i] ?? throw new ArgumentException("Null spell.", nameof(combat));
-            if (s.Id != i || string.IsNullOrEmpty(s.Key) || !keys.Add(s.Key) || s.Effect > SpellEffect.Kill || s.Target > SpellTarget.Self
-                || s.Affects > SpellAffects.All || s.ManaCost is < 0 or > 1_000_000 || s.RangeUnits is < 0 or > 64 * 2048
+            if (s.Id != i || string.IsNullOrEmpty(s.Key) || !keys.Add(s.Key) || s.Effect > SpellEffect.SoulBind || s.Target > SpellTarget.Self
+                || s.Affects > SpellAffects.All || s.ManaCost is < 0 or > 1_000_000 || s.RangeUnits is < 0 or > 1024 * 2048
                 || s.CooldownMs is < 0 or > 3_600_000 || s.CastMs is < 0 or > 60_000 || s.Amount is < 0 or > 1_000_000
                 || s.DurationMs is < 0 or > 3_600_000 || s.RadiusUnits is < 0 or > 32 * 2048 || s.Summon < -1 || s.Summon >= _entityTypes.Length
                 || s.Projectile < -1 || s.Projectile >= _projectiles.Length || s.PulseMs is < 1 or > 60_000 || s.Count is < 1 or > 64
@@ -89,7 +94,7 @@ public sealed partial class Ruleset
                 throw new ArgumentException($"Spell '{s.Key}' must have id {i}, a unique key and values in range.", nameof(combat));
             }
 
-            if (s.Summon >= 0 && (_entityTypes[s.Summon].HasFootprint || (s.Effect != SpellEffect.Reveal && !_entityTypes[s.Summon].IsMobile)))
+            if (s.Summon >= 0 && (_entityTypes[s.Summon].HasFootprint || (s.Effect is not (SpellEffect.Reveal or SpellEffect.SoulBind) && !_entityTypes[s.Summon].IsMobile) || (s.Effect == SpellEffect.SoulBind && _entityTypes[s.Summon].Traits.Item is not { Kind: ItemKind.Soul })))
             {
                 throw new ArgumentException($"Spell '{s.Key}' summons '{_entityTypes[s.Summon].Key}', which is not a unit.", nameof(combat));
             }
@@ -165,7 +170,26 @@ public sealed partial class Ruleset
             .Add(c.DefenceHalvesPerLevel).Add(c.HeroLevel).Add(c.LeadershipTechnology).Add(c.LeadershipRadiusUnits).Add(c.LeadershipSharePercent)
             .Add(c.HonorTechnology).Add(c.HonorAttackPercent).Add(c.DummyMaxLevel).Add(c.ExitRadiusTiles).Add(c.CraftGoldPerPower)
             .Add(c.CraftMsPerPower).Add(c.CraftMaxPower).Add(c.CraftHealthPerPower).Add(c.CraftManaPerPower).Add(c.CraftPowerPerLevel).Add(c.CraftBookCostPercent).Add(c.CraftBookTimePercent).Add(c.BribeCostPercent).Add(c.CrusadeAnchor).Add(c.Crusader).Add(c.CrusadeStart).Add(c.CrusadeRestart).Add(c.CrusadeCeilingStep).Add(c.CrusadeCeilingMax)
-            .Add(c.CrusadeAnchorRadiusUnits).Add(c.HeroNames.Length);
+            .Add(c.CrusadeAnchorRadiusUnits).Add(c.BansheeSpell).Add(c.BansheeChance).Add(c.BansheeOutOf)
+            .Add(c.TournamentTechnology).Add(c.TournamentEvery).Add(c.TournamentGrant).AddSpan<ushort>(c.TournamentPupils.AsSpan())
+            .AddSpan<ushort>(c.MagicAttackers.AsSpan()).Add(c.SoulBerserkSpell)
+            .Add(c.ExperienceSpeeds.Length).Add(c.DummyDamagePerPoint)
+            .Add(c.MarketTechnology).Add(c.MarketFirstMs).Add(c.MarketEveryMs).Add(c.MarketSize).Add(c.MarketBuyPercent)
+            .AddSpan<ushort>(c.MarketBookSpells.AsSpan()).Add(c.MarketOffers.Length).AddSpan<ushort>(c.LevelCapBuildings.AsSpan()).Add(c.LevelCapPerBuilding).Add(c.HeroNames.Length);
+        foreach (ImmutableArray<MarketVariant> kind in c.MarketOffers)
+        {
+            hasher.Add(kind.Length);
+            foreach (MarketVariant v in kind)
+            {
+                hasher.Add(v.Item).Add((byte)v.Effect).Add(v.Look).Add(v.Min).Add(v.Max).Add(v.Book);
+            }
+        }
+
+        foreach (ExperienceSpeed speed in c.ExperienceSpeeds)
+        {
+            hasher.Add(speed.Technology).Add(speed.Percent);
+        }
+
         foreach (HeroNames h in c.HeroNames)
         {
             hasher.Add(Encoding.UTF8.GetBytes(h.Civilization)).Add(h.Names.Length);
@@ -187,7 +211,7 @@ public sealed partial class Ruleset
         {
             hasher.Add(Encoding.UTF8.GetBytes(s.Key)).Add((byte)s.Effect).Add((byte)s.Target).Add((byte)s.Affects).Add(s.ManaCost).Add(s.RangeUnits)
                 .Add(s.CooldownMs).Add(s.CastMs).Add(s.Amount).Add(s.DurationMs).Add(s.RadiusUnits).Add(s.Summon).Add(s.Projectile)
-                .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan());
+                .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan()).Add(s.BookValue).Add(s.DurationMaxMs);
         }
     }
 
