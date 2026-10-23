@@ -164,7 +164,7 @@ internal static class AiInterpreter
 
             case AiSymbolKind.Resource:
                 // A stock is compared with the number as is ('gold 300'); a '%' or 'enemy' on a resource has no known meaning.
-                return !enemy && world.Players[slot].Resources[symbol.Id] >= c.Number;
+                return !enemy && world.PlayersView[slot].Resources[symbol.Id] >= c.Number;
 
             case AiSymbolKind.Technology:
                 return options.Technologies.StateOf(world, slot, binding.Program.Symbols[c.Operand], symbol.Id) != AiTechnologyState.NotResearched;
@@ -180,7 +180,7 @@ internal static class AiInterpreter
 
         // A share of the population limit (UNVERIFIED): the peasant shares of the deathmatch and start modules and the
         // start module's ten-peasant gate only work out against the limit, not against the current units (ADR 0050).
-        long basis = enemy ? EnemyPopulationLimit(world, slot) : world.Players[slot].PopulationLimit;
+        long basis = enemy ? EnemyPopulationLimit(world, slot) : world.PlayersView[slot].PopulationLimit;
         return count * 100 >= (long)c.Number * basis;
     }
 
@@ -240,7 +240,7 @@ internal static class AiInterpreter
                 }
 
                 AiCensusPlayer player = census.Player(slot);
-                int target = ObjectTarget(a.Number, a.Percent, world.Players[slot].PopulationLimit);
+                int target = ObjectTarget(a.Number, a.Percent, world.PlayersView[slot].PopulationLimit);
                 bool met = player.Completed[symbol.Id] >= target;
                 if (!met)
                 {
@@ -253,7 +253,7 @@ internal static class AiInterpreter
             case AiSymbolKind.Resource:
             {
                 int amount = a.Number < 0 ? 1 : a.Number;
-                bool met = world.Players[slot].Resources[symbol.Id] >= amount;
+                bool met = world.PlayersView[slot].Resources[symbol.Id] >= amount;
                 if (!met)
                 {
                     state.UnmetResources |= (byte)(1 << Math.Min(symbol.Id, 7));
@@ -306,11 +306,11 @@ internal static class AiInterpreter
     private static long EnemyPopulationLimit(World world, byte slot)
     {
         long n = 0;
-        for (int q = 0; q < world.Players.Length; q++)
+        for (int q = 0; q < world.PlayersView.Length; q++)
         {
             if (AiCensus.IsEnemy(world, slot, q))
             {
-                n += world.Players[q].PopulationLimit;
+                n += world.PlayersView[q].PopulationLimit;
             }
         }
 
@@ -356,7 +356,7 @@ internal static class AiExternEvaluator
                 }
 
                 int resource = world.Ruleset.ResourceId(name);
-                return resource >= 0 ? world.Players[slot].Resources[resource] : 0;
+                return resource >= 0 ? world.PlayersView[slot].Resources[resource] : 0;
 
             case AiCallExpression call:
                 string function = call.Name;
@@ -377,7 +377,7 @@ internal static class AiExternEvaluator
                 if (r >= 0 && call.Arguments.Length == 1)
                 {
                     int kingdom = Evaluate(world, slot, call.Arguments[0], depth + 1) - 1;
-                    return world.HasPlayer(kingdom) ? world.Players[kingdom].Resources[r] : 0;
+                    return world.HasPlayer(kingdom) ? world.PlayersView[kingdom].Resources[r] : 0;
                 }
 
                 return 0;

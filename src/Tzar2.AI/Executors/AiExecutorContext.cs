@@ -301,7 +301,7 @@ public sealed class AiExecutorContext
         Options = options;
         CommandsLeft = options.MaxCommandsPerRun;
         Issued = 0;
-        PlayerFlags flags = world.Players[state.Settings.Slot].Flags;
+        PlayerFlags flags = world.PlayersView[state.Settings.Slot].Flags;
         bool whole = !state.Settings.Standby || (flags & PlayerFlags.AiControlled) != 0;
         EconomyAi = state.Settings.EconomyAi && (whole || (flags & PlayerFlags.AssistEconomy) != 0);
         WarAi = state.Settings.WarAi && (whole || (flags & PlayerFlags.AssistWar) != 0);
@@ -314,7 +314,7 @@ public sealed class AiExecutorContext
         }
 
         Array.Clear(_inProgressDelta);
-        ref readonly PlayerState player = ref world.Players[state.Settings.Slot];
+        ref readonly PlayerState player = ref world.PlayersView[state.Settings.Slot];
         for (int r = 0; r < _budget.Length; r++)
         {
             _budget[r] = player.Resources[r];
@@ -461,7 +461,7 @@ public sealed class AiExecutorContext
     }
 
     /// <summary>The target count of an object goal (N, or N % of the population limit rounded up).</summary>
-    public int TargetOf(AiGoal goal) => AiInterpreter.ObjectTarget(goal.Number, goal.Percent, World.Players[Slot].PopulationLimit);
+    public int TargetOf(AiGoal goal) => AiInterpreter.ObjectTarget(goal.Number, goal.Percent, World.PlayersView[Slot].PopulationLimit);
 
     /// <summary>The bound symbol of a goal.</summary>
     public AiSymbol SymbolOf(AiGoal goal) => Binding.Symbols[goal.Symbol];

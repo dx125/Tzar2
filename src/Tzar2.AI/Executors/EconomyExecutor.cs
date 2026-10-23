@@ -264,7 +264,7 @@ public sealed class EconomyExecutor : IAiExecutor
             if (goal.Kind == AiGoalKind.Resource && symbol.Id < resources && !_resourceGoalSeen[symbol.Id])
             {
                 _resourceGoalSeen[symbol.Id] = true; // the first (highest-priority) goal for a resource counts
-                _demand[symbol.Id] += Math.Max(0, (goal.Number < 0 ? 1 : goal.Number) - world.Players[context.Slot].Resources[symbol.Id]);
+                _demand[symbol.Id] += Math.Max(0, (goal.Number < 0 ? 1 : goal.Number) - world.PlayersView[context.Slot].Resources[symbol.Id]);
                 considered++;
             }
             else if (goal.Kind == AiGoalKind.Object && symbol.OwnType >= 0)
@@ -278,7 +278,7 @@ public sealed class EconomyExecutor : IAiExecutor
                 System.Collections.Immutable.ImmutableArray<int> cost = world.Ruleset.EntityTypes[symbol.OwnType].Traits.Cost;
                 for (int r = 0; r < cost.Length && r < resources; r++)
                 {
-                    _demand[r] += Math.Max(0, ((long)cost[r] * Math.Min(deficit, 4)) - world.Players[context.Slot].Resources[r]);
+                    _demand[r] += Math.Max(0, ((long)cost[r] * Math.Min(deficit, 4)) - world.PlayersView[context.Slot].Resources[r]);
                 }
 
                 considered++;
@@ -300,7 +300,7 @@ public sealed class EconomyExecutor : IAiExecutor
                 System.Collections.Immutable.ImmutableArray<int> cost = world.Ruleset.EntityTypes[fieldType].Traits.Cost;
                 for (int r = 0; r < cost.Length && r < resources; r++)
                 {
-                    _demand[r] += Math.Max(0, ((long)cost[r] * missing) - world.Players[context.Slot].Resources[r]);
+                    _demand[r] += Math.Max(0, ((long)cost[r] * missing) - world.PlayersView[context.Slot].Resources[r]);
                 }
 
                 Array.Clear(_desired);
@@ -331,7 +331,7 @@ public sealed class EconomyExecutor : IAiExecutor
             }
 
             // A resource stocked beyond the surplus mark keeps only the gatherers its goals ask for.
-            int stock = world.Players[context.Slot].Resources[r];
+            int stock = world.PlayersView[context.Slot].Resources[r];
             int baseShare = options.BaseShares.TryGetValue(world.Ruleset.ResourceTypes[r], out int b) && stock < options.SurplusStock ? b : 0;
             _share[r] = baseShare + (demandSum > 0 ? options.DemandShare * _demand[r] / demandSum : 0);
             total += _share[r];

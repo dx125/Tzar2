@@ -237,6 +237,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       thread, rules decided by data instead of names in code.
       * 2026-10-23: the host's choice for a computer goes to the relay (issue #190, ADR 0168 amendment). A stale lobby
         view lost it silently.
+      * 2026-10-23: the AI reads the world through read-only views (ADR 0213); an architecture test keeps it off the
+        writable spans.
       * 2026-10-23: the full state hash hashes its large arrays in 64 KiB chunks on the workers (ADR 0215): 0.56 → 0.18 ms
         on an s2 world. Only the full hashes are re-pinned.
 

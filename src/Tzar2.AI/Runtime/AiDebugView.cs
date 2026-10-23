@@ -21,7 +21,7 @@ public static class AiDebugView
         AiProgram program = state.Settings.Program;
         var text = new StringBuilder();
         CultureInfo inv = CultureInfo.InvariantCulture;
-        ref readonly PlayerState player = ref world.Players[state.Settings.Slot];
+        ref readonly PlayerState player = ref world.PlayersView[state.Settings.Slot];
         text.Append(inv, $"AI slot {state.Settings.Slot} ({program.Root}, {state.Settings.Civilization}, {state.Settings.Difficulty}): passes {state.PassCount}, {(state.InPass ? $"in pass at rule {state.Pc}" : "idle")}, waves {state.Waves}, resign {state.ResignRequested}\n");
         text.Append(inv, $"  population {player.Population}/{player.PopulationCap} (limit {player.PopulationLimit}); stock");
         for (int r = 0; r < world.Ruleset.ResourceTypes.Count; r++)
@@ -41,7 +41,7 @@ public static class AiDebugView
                 continue;
             }
 
-            Sim.Components.Worker w = world.Workers.Components[i];
+            Sim.Components.Worker w = world.Workers.View[i];
             switch (w.Task)
             {
                 case Sim.Components.WorkerTask.Harvest when w.NodeResource < gathering.Length: gathering[w.NodeResource]++; break;
