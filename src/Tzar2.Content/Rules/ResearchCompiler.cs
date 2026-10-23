@@ -48,7 +48,7 @@ internal sealed class ResearchIds
 internal sealed class ResearchCompiler
 {
     private static readonly string[] TechTraits = ["Legacy", "Cost", "BuildTime", "Technology", "Upgrade", "Requires", "TechTree"];
-    private static readonly string[] EffectFields = ["stat", "add", "percent", "classes", "groups", "types", "damage", "category", "locomotor", "civ"];
+    private static readonly string[] EffectFields = ["stat", "add", "percent", "classes", "groups", "types", "damage", "category", "locomotor", "civ", "except"];
 
     private readonly List<EntityTypeDefinition> _types;
     private readonly List<string> _resources;
@@ -430,13 +430,21 @@ internal sealed class ResearchCompiler
             _ => throw new RulesException(source, m.Line, $"{key}.effects[].category: '{category}' is not unit/building/resource"),
         };
 
+        // except: legacy classes left out of what the other selectors chose.
+        var except = new HashSet<string>(StringComparer.Ordinal);
+        if (m.Get("except") is { } exceptNode)
+        {
+            except.UnionWith(RulesDocument.StringList(exceptNode, source, $"{key}.effects[].except"));
+        }
+
         var result = ImmutableArray.CreateBuilder<ushort>();
         foreach (ushort id in selected)
         {
             EntityTypeDefinition t = _types[id];
-            if ((damageClass is { } dc && t.Traits.Armament?.DamageClass != dc)
+            if (except.Contains(t.Traits.LegacyClass)
+                || (damageClass is { } dc && t.Traits.Armament?.DamageClass != dc)
                 || (wanted is { } w && t.Traits.Category != w)
-                || (locomotor is { } lo && (!t.IsMobile || t.Locomotor != lo))
+                || (locomotor is { } lo && (!t.IsMobile || !t.Locomotor.IsA(lo)))
                 || (civ is not null && t.Traits.Civilization != civ))
             {
                 continue;

@@ -223,7 +223,7 @@ public sealed partial class World
                 foreach (EntityTypeDefinition t in Ruleset.EntityTypes)
                 {
                     if (trained[t.Id] && t.Traits.World.IsMilitary && t.Traits.Civilization == Ruleset.Civilizations[c]
-                        && t.Locomotor is Locomotor.Foot or Locomotor.Mounted)
+                        && t.Locomotor is Locomotor.Foot or Locomotor.Mounted or Locomotor.Climber)
                     {
                         list.Add(t.Id);
                     }

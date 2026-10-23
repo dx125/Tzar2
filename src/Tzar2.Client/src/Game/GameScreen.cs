@@ -113,6 +113,10 @@ public partial class GameScreen : Node
     private int _workSoundBudget;
     private Rid _boxItem;
     private bool _faultShown;
+    private System.Threading.Tasks.Task? _prepare;
+    private TerrainSet? _set;
+    private TerrainGrid? _grid;
+    private TerrainLayer.ComposedTerrain? _composed;
     private CanvasLayer? _hudLayer;
     private CanvasLayer? _weatherLayer;
     private double _animMs;
@@ -200,19 +204,29 @@ public partial class GameScreen : Node
     /// <summary>The player's preferences.</summary>
     public GameSettings Settings { get; }
 
-    /// <inheritdoc/>
-    public override void _Ready()
+    /// <summary>
+    /// Starts the match's CPU work on a worker thread (code review 2026-10, item 16): decoding and packing the sprites,
+    /// laying out and composing the terrain. A huge map took 2-5 s of it and a real-world map 12 s, all on the main thread
+    /// behind a frozen loading screen. The caller shows the screen once the task is done; <see cref="_Ready"/> only
+    /// uploads. Idempotent.
+    /// </summary>
+    public System.Threading.Tasks.Task Prepare() => _prepare ??= System.Threading.Tasks.Task.Run(PrepareCpu);
+
+    /// <summary>Whether <see cref="Prepare"/> has finished (successfully or not).</summary>
+    public bool IsPrepared => _prepare is { IsCompleted: true };
+
+    // The CPU part of the load (no Godot objects): sprite sheets decoded and packed, the terrain grid and its composition.
+    private void PrepareCpu()
     {
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        HudLayout layout = LoadLayout();
         string setId = _session.Map.TerrainSet ?? _terrainSetId;
         TerrainSet set = _store.TerrainSets.FirstOrDefault(s => s.Id == setId) ?? _store.TerrainSets.FirstOrDefault()
             ?? throw new InvalidOperationException("The package has no terrain sets.");
 
         // Sprites of the civilizations in the match (REQ-GFX-05): the kingdoms' and those of every object on the map (the
         // original maps give a kingdom buildings and units of other civilizations).
-        _bank = new SpriteBank(_store);
-        var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { "comm", string.Empty };
+        _bank = new SpriteBank(_store, [.. Enumerable.Range(0, 8).Select(ColourOf)]);
+        var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { _rules.CommonCivilization, string.Empty };
         foreach (MapObject o in _session.Map.Objects)
         {
             if (_rules.EntityTypeId(o.TypeKey) is >= 0 and var placed)
@@ -259,16 +273,28 @@ public partial class GameScreen : Node
         long decoded = watch.ElapsedMilliseconds;
         _bank.Pack();
         long packed = watch.ElapsedMilliseconds;
-        _bank.Upload();
-        long uploaded = watch.ElapsedMilliseconds;
+        _grid = TerrainPresentation.Build(_session.Map, _rules, set);
+        long laid = watch.ElapsedMilliseconds;
+        _composed = TerrainLayer.Compose(set, _grid, _store.LoadImage);
+        _set = set;
+        ClientLog.Info($"match load (worker thread): sprites decoded {decoded} ms ({_bank.SheetCount} sheets), packed {packed - decoded} ms, terrain laid out {laid - packed} ms, composed {watch.ElapsedMilliseconds - laid} ms ({_composed.FrameTotal} chunk frames, {_composed.Atlas.Count} distinct tiles on {_composed.Atlas.Pages.Count} atlas pages)");
+    }
 
-        TerrainGrid grid = TerrainPresentation.Build(_session.Map, _rules, set);
-        ClientLog.Info($"match load: sprites decoded {decoded} ms ({_bank.SheetCount} sheets), packed {packed - decoded} ms, uploaded {uploaded - packed} ms, terrain {watch.ElapsedMilliseconds - uploaded} ms");
+    /// <inheritdoc/>
+    public override void _Ready()
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        HudLayout layout = LoadLayout();
+        Prepare().GetAwaiter().GetResult(); // shown before it finished (tests, the editor's playtest): wait here
+        long waited = watch.ElapsedMilliseconds;
+        TerrainSet set = _set!;
+        _bank!.Upload();
+        long uploaded = watch.ElapsedMilliseconds;
         Image? light = set.Light is { } l ? _ui.Image(l) : null;
-        long before = watch.ElapsedMilliseconds;
-        _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, grid, _store.LoadImage, light);
-        MinimapFromData(set, grid);
-        ClientLog.Info($"match load: world renderer {watch.ElapsedMilliseconds - before} ms (terrain composed {_world.Terrain.ComposeMs} ms, {_world.Terrain.FrameTotal} chunk frames, uploaded {_world.Terrain.UploadMs} ms)");
+        _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, _grid!, _store.LoadImage, light, _composed);
+        _composed = null;
+        MinimapFromData(set, _grid!);
+        ClientLog.Info($"match load (main thread): waited {waited} ms for the worker, sprites uploaded {uploaded - waited} ms, world renderer {watch.ElapsedMilliseconds - uploaded} ms (terrain uploaded {_world.Terrain.UploadMs} ms)");
         _boxItem = RenderingServer.CanvasItemCreate();
         RenderingServer.CanvasItemSetParent(_boxItem, GetViewport().FindWorld2D().Canvas);
         RenderingServer.CanvasItemSetZIndex(_boxItem, 100);
@@ -304,7 +330,7 @@ public partial class GameScreen : Node
             Accept(first);
             foreach (FrameEntity e in first.Entities)
             {
-                if (e.Owner == _session.LocalPlayer && _catalog.Type(e.TypeId).Class == "castle")
+                if (e.Owner == _session.LocalPlayer && _rules.EntityTypes[e.TypeId].Traits.IsSeat)
                 {
                     CenterOn(e.X, e.Y);
                     break;
@@ -1223,8 +1249,8 @@ public partial class GameScreen : Node
         var ids = new List<EntityId>();
         foreach (EntityInfo e in SelectedInfos())
         {
-            string cls = _catalog.Type(e.TypeId).Class;
-            if (e.Owner == _session.LocalPlayer && (important || cls != "castle"))
+            // A protected type (classic: the castle, GAME-04) goes only with Shift + Del.
+            if (e.Owner == _session.LocalPlayer && (important || !_rules.EntityTypes[e.TypeId].Traits.ProtectedDelete))
             {
                 ids.Add(e.Id);
             }
@@ -1839,7 +1865,7 @@ public partial class GameScreen : Node
         FrameEntity e = frame.Entities[lead];
         TypeVisual v = _catalog.Type(e.TypeId);
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
-        string owner = e.Owner < 8 ? SpritePage.PlayerNames[e.Owner] : string.Empty;
+        string owner = e.Owner < 8 ? SpritePage.PlayerNames[ColourOf(e.Owner)] : string.Empty;
         var strip = new List<StripItem>();
         _insideShown.Clear();
         if (_selection.Selected.Count > 1)
@@ -2063,7 +2089,7 @@ public partial class GameScreen : Node
             Color c;
             if (e.Owner < 8)
             {
-                Rgba32 r = palette.Ramp(e.Owner, 11);
+                Rgba32 r = palette.Ramp(ColourOf(e.Owner), 11);
                 c = Color.Color8(r.R, r.G, r.B);
             }
             else if (def.Traits.ResourceNode is { } node)
@@ -2190,7 +2216,7 @@ public partial class GameScreen : Node
     private void Screenshot()
     {
         Image image = GetViewport().GetTexture().GetImage();
-        string path = ProjectSettings.GlobalizePath($"user://screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png");
+        string path = ProjectSettings.GlobalizePath(string.Create(CultureInfo.InvariantCulture, $"user://screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png"));
         image.SavePng(path);
         Message("Screenshot " + path);
     }
@@ -2320,7 +2346,7 @@ public partial class GameScreen : Node
     private string KingdomName(int slot)
     {
         _kingdomNames ??= MatchDescriptor.Of(_session.Setup)?.Players.ToDictionary(p => (int)p.Slot, p => p.Name) ?? [];
-        return _kingdomNames.TryGetValue(slot, out string? name) && name.Length > 0 ? name : slot < 8 ? SpritePage.PlayerNames[slot] : $"Kingdom {slot + 1}";
+        return _kingdomNames.TryGetValue(slot, out string? name) && name.Length > 0 ? name : slot < 8 ? SpritePage.PlayerNames[ColourOf(slot)] : $"Kingdom {slot + 1}";
     }
 
     private Dictionary<int, string>? _kingdomNames;
@@ -2332,9 +2358,12 @@ public partial class GameScreen : Node
             return Colors.Gray;
         }
 
-        Rgba32 r = _store.Palette.Ramp(slot, 11);
+        Rgba32 r = _store.Palette.Ramp(ColourOf(slot), 11);
         return Color.Color8(r.R, r.G, r.B);
     }
+
+    // The colour a kingdom plays with (SHELL-016: chosen in the multiplayer setup, else its slot's).
+    private int ColourOf(int kingdom) => kingdom < _session.Setup.Players.Count ? _session.Setup.Players[kingdom].ColourIndex : kingdom;
 
     private void ShowMenu()
     {

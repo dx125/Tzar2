@@ -26,6 +26,7 @@ public sealed class MagicSystem : ISimSystem
     private readonly List<Death> _deaths = [];
     private readonly List<EntityId> _done = [];
     private readonly List<EntityId> _casting = [];
+    private readonly List<(EntityId Unit, byte Owner)> _woken = [];
 
     /// <inheritdoc />
     public SimPhase Phase => SimPhase.Spells;
@@ -63,6 +64,7 @@ public sealed class MagicSystem : ISimSystem
         ExpireStatuses(world, tick);
         Crusades(world, tick);
         Crafting(world, tickMs);
+        MarketItems.Step(world, tick);
         CombatSystem.ProcessDeaths(world, _deaths);
     }
 
@@ -188,7 +190,7 @@ public sealed class MagicSystem : ISimSystem
         Identity identity = world.Identities.Get(caster);
         int extraTiles = world.Stats.Apply(identity.Owner, ModifierStat.AbilityRange, identity.TypeId, 0);
         long range = Math.Max(s.RangeUnits, world.Ruleset.Gameplay.MeleeReachUnits) + ((long)extraTiles * MapState.UnitsPerTile); // range 0 = touch
-        return (int)Math.Min(range, 64L * MapState.UnitsPerTile);
+        return (int)Math.Min(range, 1024L * MapState.UnitsPerTile);
     }
 
     private void Cast(World world, EntityId caster, int index, int tick, int tickMs)
@@ -199,7 +201,7 @@ public sealed class MagicSystem : ISimSystem
         EntityId target = EntityId.FromValue(c.Target);
         EntityId book = EntityId.FromValue(c.Book);
         bool bookGone = c.Book != 0 && !(world.Helds.IndexOf(book) is >= 0 and var bh && world.Helds.At(bh).Holder == caster.Value);
-        bool targetGone = s.Target == SpellTarget.Unit && !Affects(world, s, owner, target);
+        bool targetGone = s.Target == SpellTarget.Unit && (!Affects(world, s, owner, target) || !Teachable(world, s, caster, target));
         if (bookGone || targetGone || !world.CanAct(caster))
         {
             world.StopCasting(caster);
@@ -335,9 +337,19 @@ public sealed class MagicSystem : ISimSystem
         SpellDefinition s = world.Ruleset.Spells[spell];
         int tick = world.Tick.Value;
         int tickMs = world.Config.TickLengthMilliseconds;
-        int until = tick + Math.Max(1, (s.DurationMs + tickMs - 1) / tickMs);
+        int durationMs = s.DurationMaxMs > s.DurationMs ? s.DurationMs + world.Rng.Misc.NextInt(s.DurationMaxMs - s.DurationMs + 1) : s.DurationMs;
+        int until = tick + Math.Max(1, (durationMs + tickMs - 1) / tickMs);
         switch (s.Effect)
         {
+            case SpellEffect.Bless or SpellEffect.Freeze or SpellEffect.Confuse when s.RadiusUnits > 0:
+                if (world.Entities.IsAlive(target) && world.Positions.Has(target))
+                {
+                    Position c = world.Positions.Get(target);
+                    (x, y) = (c.X, c.Y);
+                }
+
+                StatusAround(world, s, caster, owner, x, y, until, deaths);
+                return;
             case SpellEffect.Summon:
                 Summon(world, caster, owner, s, x, y);
                 return;
@@ -360,11 +372,25 @@ public sealed class MagicSystem : ISimSystem
                 }
 
                 return;
+            case SpellEffect.Curse:
+                if (world.Entities.IsAlive(target) && world.Positions.Has(target))
+                {
+                    Position p = world.Positions.Get(target);
+                    (x, y) = (p.X, p.Y);
+                }
+
+                CurseAround(world, s, caster, owner, x, y, until);
+                return;
         }
 
         if (!Affects(world, s, owner, target))
         {
             return;
+        }
+
+        if (s.Effect is SpellEffect.Freeze or SpellEffect.Stone or SpellEffect.Confuse or SpellEffect.Hypnotize or SpellEffect.Kill && IsMagicImmune(world, target))
+        {
+            return; // the Messiah (WAR-010; ReTzar's reading of the original, 0x4ef200)
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(target).Owner, target, caster.Index, 0, s.Id));
@@ -381,22 +407,11 @@ public sealed class MagicSystem : ISimSystem
             }
 
             case SpellEffect.Bless:
-            {
-                ref StatusEffects st = ref StatusOf(world, target);
-                st.BlessUntil = until;
-                st.BlessPercent = (short)Math.Min(s.Amount, 1000);
-                break;
-            }
-
-            case SpellEffect.Curse:
-            {
-                ref StatusEffects st = ref StatusOf(world, target);
-                st.CurseUntil = until;
-                st.CursePercent = (short)Math.Min(s.Amount, 100);
-                break;
-            }
-
             case SpellEffect.Freeze:
+            case SpellEffect.Confuse:
+                ApplyStatus(world, s, caster, owner, target, until, deaths);
+                break;
+
             case SpellEffect.Stone:
             {
                 ref StatusEffects st = ref StatusOf(world, target);
@@ -422,19 +437,34 @@ public sealed class MagicSystem : ISimSystem
                 break;
             }
 
-            case SpellEffect.Confuse:
+            case SpellEffect.Hypnotize:
             {
-                ref StatusEffects st = ref StatusOf(world, target);
-                st.ConfuseUntil = until;
-                if (world.Combats.IndexOf(target) is >= 0 and var cb)
+                // MAG-008 (ReTzar's reading of the original, 0x473887, 0x4e59b2, 0x4e5c4b): the caster's kingdom commands the
+                // unit and it takes the caster's side until the effect ends; a new hypnosis restarts the time and the unit
+                // still goes back to its first kingdom.
+                byte from = world.Identities.Get(target).Owner;
+                if (from == owner || !world.HasPlayer(owner))
                 {
-                    world.Combats.At(cb).Target = 0;
-                    world.Combats.At(cb).Mode = CombatMode.None;
+                    break;
                 }
 
+                ref StatusEffects st = ref StatusOf(world, target);
+                if (st.HypnoUntil <= tick)
+                {
+                    st.HypnoOwner = from;
+                }
+
+                st.HypnoUntil = until;
+                world.StopCasting(target);
+                world.ChangeOwner(target, owner);
+                GameplayCommands.ClearTasks(world, target);
+                Interaction.Halt(world, target);
                 break;
             }
 
+            case SpellEffect.SoulBind:
+                BindSoul(world, caster, target, s);
+                break;
             case SpellEffect.Experience:
                 if (world.Experiences.IndexOf(target) is >= 0 and var xp)
                 {
@@ -455,7 +485,8 @@ public sealed class MagicSystem : ISimSystem
     // Spell damage: the amount, without defence or bonuses (UNVERIFIED, UNK-26); stone and units inside holders are immune.
     private static void Damage(World world, EntityId caster, byte owner, EntityId target, int amount, List<Death> deaths)
     {
-        if (amount <= 0 || world.IsStone(target) || world.IsHeld(target) || world.IsInvulnerable(world.Identities.Get(target).Owner))
+        if (amount <= 0 || world.IsStone(target) || world.IsHeld(target) || world.IsInvulnerable(world.Identities.Get(target).Owner)
+            || IsMagicImmune(world, target)) // spells are magic: the Messiah takes none (WAR-010)
         {
             return;
         }
@@ -473,6 +504,183 @@ public sealed class MagicSystem : ISimSystem
         if (h.Current == 0)
         {
             deaths.Add(new Death(target, caster, owner));
+        }
+    }
+
+    // Teaching (TECH-028; ReTzar's reading of the original, 0x473bf0): mana turns into experience only for a unit of a lower
+    // level than the caster's.
+    private static bool Teachable(World world, SpellDefinition s, EntityId caster, EntityId target)
+    {
+        if (s.Effect != SpellEffect.Experience)
+        {
+            return true;
+        }
+
+        int teacher = world.Experiences.IndexOf(caster) is >= 0 and var c ? world.Experiences.At(c).Level : 0;
+        return world.Experiences.IndexOf(target) is >= 0 and var t && world.Experiences.At(t).Level < teacher;
+    }
+
+    // Soul Bind (ITEM-010; ReTzar's reading of the original, 0x473403): the target keeps its owner; a soul item bound to it
+    // goes into the caster's inventory, if there is room.
+    private static void BindSoul(World world, EntityId caster, EntityId target, SpellDefinition s)
+    {
+        if (!world.Entities.IsAlive(caster) || world.Inventories.IndexOf(caster) is not (>= 0 and var inv)
+            || world.Inventories.At(inv).Count >= world.TypeOf(caster).Traits.InventorySlots || world.Entities.RemainingCapacity < 1)
+        {
+            return;
+        }
+
+        Position at = world.Positions.Get(caster);
+        EntityId gem = world.Spawn((ushort)s.Summon, Content.Compiled.MapObject.Nature, at.X, at.Y);
+        world.Items.Get(gem).Bound = target.Value;
+        world.PutInInventory(caster, gem);
+        world.Events.Emit(new SimEvent(SimEventKind.Summoned, world.Identities.Get(caster).Owner, gem, caster.Index, 0, s.Summon));
+    }
+
+    /// <summary>
+    /// A soul item's orders (ITEM-010; ReTzar's reading of the original, 0x465340): item_kill strikes its bound unit with
+    /// 10,000 magic damage, item_berserk casts <c>combat.soulBerserkSpell</c>'s confusion on it. The item stays.
+    /// </summary>
+    internal static bool SoulOrder(World world, EntityId holder, EntityId gem, bool berserk)
+    {
+        EntityId bound = EntityId.FromValue(world.Items.Get(gem).Bound);
+        if (world.Items.Get(gem).Bound == 0 || !world.Entities.IsAlive(bound) || !world.Healths.Has(bound))
+        {
+            return false;
+        }
+
+        byte owner = world.Identities.Get(holder).Owner;
+        if (berserk)
+        {
+            int spell = world.Ruleset.Combat.SoulBerserkSpell;
+            if (spell >= 0 && !IsMagicImmune(world, bound))
+            {
+                SpellDefinition s = world.Ruleset.Spells[spell];
+                int tickMs = world.Config.TickLengthMilliseconds;
+                ref StatusEffects st = ref StatusOf(world, bound);
+                st.ConfuseUntil = world.Tick.Value + Math.Max(1, (s.DurationMs + tickMs - 1) / tickMs);
+                world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(bound).Owner, bound, holder.Index, 0, s.Id));
+            }
+
+            return true;
+        }
+
+        var deaths = new List<Death>(1);
+        Damage(world, holder, owner, bound, 10_000, deaths);
+        CombatSystem.ProcessDeaths(world, deaths);
+        return true;
+    }
+
+    // Blessing, freezing and confusion on the units around the point, within the spell's radius counted in tiles on the
+    // larger axis (ReTzar's reading of the original: bless ±4 on units not hostile to the caster, 0x4e5809; freeze ±3 on
+    // every unit, 0x432590; confusion ±2 on every unit but the caster, 0x473250).
+    private static void StatusAround(World world, SpellDefinition s, EntityId caster, byte owner, int x, int y, int until, List<Death> deaths)
+    {
+        long r = s.RadiusUnits;
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        Span<uint> hit = stackalloc uint[256];
+        int n = 0;
+        for (int i = 0; i < ids.Length && n < hit.Length; i++)
+        {
+            EntityId e = ids[i];
+            Identity identity = world.Identities.Get(e);
+            if (e == caster || !world.Entities.IsAlive(e) || world.Ruleset.EntityTypes[identity.TypeId].Traits.Category != EntityCategory.Unit
+                || !s.AffectsType(identity.TypeId) || world.IsHeld(e) || world.Healths.IndexOf(e) is not (>= 0 and var h) || world.Healths.At(h).Current <= 0)
+            {
+                continue;
+            }
+
+            Position p = world.Positions.Get(e);
+            if (Math.Max(Math.Abs((long)p.X - x), Math.Abs((long)p.Y - y)) > r
+                || (s.Effect == SpellEffect.Bless && identity.Owner != owner && world.MayAttack(owner, e)))
+            {
+                continue;
+            }
+
+            hit[n++] = e.Value;
+        }
+
+        for (int k = 0; k < n; k++)
+        {
+            ApplyStatus(world, s, caster, owner, EntityId.FromValue(hit[k]), until, deaths);
+        }
+    }
+
+    // One unit blessed (+amount attack), frozen (stopped, no defence, up to amount damage short of death) or confused.
+    private static void ApplyStatus(World world, SpellDefinition s, EntityId caster, byte owner, EntityId target, int until, List<Death> deaths)
+    {
+        if (s.Effect != SpellEffect.Bless && IsMagicImmune(world, target))
+        {
+            return;
+        }
+
+        world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(target).Owner, target, caster.Index, 0, s.Id));
+        ref StatusEffects st = ref StatusOf(world, target);
+        switch (s.Effect)
+        {
+            case SpellEffect.Bless:
+                st.BlessUntil = until;
+                st.BlessPercent = (short)Math.Min(s.Amount, 1000);
+                break;
+            case SpellEffect.Freeze:
+                st.FrozenUntil = Math.Max(st.FrozenUntil, until);
+                GameplayCommands.ClearTasks(world, target);
+                world.StopCasting(target);
+                Interaction.Halt(world, target);
+                if (s.Amount > 0 && world.Healths.Get(target).Current > 1)
+                {
+                    Damage(world, caster, owner, target, Math.Min(s.Amount, world.Healths.Get(target).Current - 1), deaths);
+                }
+
+                break;
+            case SpellEffect.Confuse:
+                st.ConfuseUntil = until;
+                if (world.Combats.IndexOf(target) is >= 0 and var cb)
+                {
+                    world.Combats.At(cb).Target = 0;
+                    world.Combats.At(cb).Mode = CombatMode.None;
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>Whether lasting spells do not take on <paramref name="unit"/> (the Messiah; WAR-010).</summary>
+    internal static bool IsMagicImmune(World world, EntityId unit)
+        => (world.TypeOf(unit).Traits.Abilities & AbilityFlags.MagicImmune) != 0;
+
+    // The curse (ReTzar's reading of the original, 0x4e5841): every enemy unit the spell may affect within the caster's
+    // sight of the point (the spell's radius when the caster has gone) loses half its attack and all its defence until
+    // the effect ends. Cursing a cursed unit restarts the time.
+    private static void CurseAround(World world, SpellDefinition s, EntityId caster, byte owner, int x, int y, int until)
+    {
+        long radius = s.RadiusUnits;
+        if (world.Entities.IsAlive(caster) && world.Identities.IndexOf(caster) is >= 0 and var ci)
+        {
+            Identity self = world.Identities.At(ci);
+            radius = world.Stats.Apply(self.Owner, ModifierStat.Sight, self.TypeId, world.Ruleset.EntityTypes[self.TypeId].Traits.SightUnits);
+        }
+
+        long r2 = radius * radius;
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            EntityId e = ids[i];
+            if (e == caster || !Affects(world, s, owner, e) || !world.MayAttack(owner, e) || Interaction.DistanceSquaredTo(world, x, y, e) > r2)
+            {
+                continue;
+            }
+
+            if (IsMagicImmune(world, e))
+            {
+                continue;
+            }
+
+            world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(e).Owner, e, caster.Index, 0, s.Id));
+
+            ref StatusEffects st = ref StatusOf(world, e);
+            st.CurseUntil = until;
+            st.CursePercent = (short)Math.Min(s.Amount, 100);
         }
     }
 
@@ -535,13 +743,14 @@ public sealed class MagicSystem : ISimSystem
         }
     }
 
-    // Raise Dead (necromancy): the oldest corpses within the radius of the point rise as the spell's units.
+    // Raise Dead (necromancy): the oldest corpses within the radius of the point rise as the spell's units; only corpses of
+    // the spell's target types (not machines or the bodiless; MAG-022).
     private static void RaiseDead(World world, EntityId caster, byte owner, SpellDefinition s, int x, int y)
     {
         EntityTypeDefinition type = world.Ruleset.EntityTypes[s.Summon];
         for (int n = 0; n < s.Count && world.Entities.RemainingCapacity >= 1; n++)
         {
-            if (!world.Decals.TakeCorpse(x, y, s.RadiusUnits, out Decal corpse))
+            if (!world.Decals.TakeCorpse(x, y, s.RadiusUnits, s.TargetTypes, out Decal corpse))
             {
                 break;
             }
@@ -642,7 +851,15 @@ public sealed class MagicSystem : ISimSystem
                 Interaction.Halt(world, ids[i]); // a frozen or stone unit stays put
             }
 
-            if (s.FrozenUntil <= tick && s.StoneUntil <= tick && s.CloakUntil <= tick && s.ConfuseUntil <= tick && s.BlessUntil <= tick && s.CurseUntil <= tick)
+            if (s.HypnoUntil > 0 && s.HypnoUntil <= tick)
+            {
+                _woken.Add((ids[i], s.HypnoOwner));
+                s.HypnoUntil = 0;
+                s.HypnoOwner = 0;
+            }
+
+            if (s.FrozenUntil <= tick && s.StoneUntil <= tick && s.CloakUntil <= tick && s.ConfuseUntil <= tick && s.BlessUntil <= tick && s.CurseUntil <= tick
+                && s.HypnoUntil <= tick)
             {
                 _done.Add(ids[i]);
             }
@@ -652,6 +869,20 @@ public sealed class MagicSystem : ISimSystem
         {
             world.Statuses.Remove(e);
         }
+
+        // A hypnotized unit goes back to its kingdom (if it still plays), its orders dropped.
+        foreach ((EntityId unit, byte owner) in _woken)
+        {
+            if (world.Entities.IsAlive(unit) && world.HasPlayer(owner) && world.Identities.Get(unit).Owner != owner)
+            {
+                world.StopCasting(unit);
+                world.ChangeOwner(unit, owner);
+                GameplayCommands.ClearTasks(world, unit);
+                Interaction.Halt(world, unit);
+            }
+        }
+
+        _woken.Clear();
     }
 
     /// <summary>The time between two crusaders arriving at the anchor (500 ms; ReTzar's reading of the original, 0x439d50), in ticks.</summary>

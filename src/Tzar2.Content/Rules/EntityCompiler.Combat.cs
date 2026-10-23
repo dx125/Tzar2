@@ -29,6 +29,8 @@ internal sealed partial class EntityCompiler
         ["CrusadePreacher"] = [],
         ["TrainingDummy"] = [],
         ["KillImmune"] = [],
+        ["MagicImmune"] = [],
+        ["Banshee"] = [],
         ["ConvertsFrom"] = ["classes", "order"],
         ["ItemCrafter"] = ["items"],
     };
@@ -220,7 +222,9 @@ internal sealed partial class EntityCompiler
             | (entry.Find("CrusadePreacher") is not null ? AbilityFlags.PreachCrusade : 0)
             | (entry.Find("TrainingDummy") is not null ? AbilityFlags.TrainingDummy : 0)
             | (entry.Find("KillImmune") is not null ? AbilityFlags.KillImmune : 0)
-            | (entry.Find("Impersonator") is not null ? AbilityFlags.Impersonate : 0);
+            | (entry.Find("Impersonator") is not null ? AbilityFlags.Impersonate : 0)
+            | (entry.Find("MagicImmune") is not null ? AbilityFlags.MagicImmune : 0)
+            | (entry.Find("Banshee") is not null ? AbilityFlags.Banshee : 0);
         if (entry.Find("Impersonator") is { } impersonator)
         {
             if (impersonator.Get("never") is { } never)

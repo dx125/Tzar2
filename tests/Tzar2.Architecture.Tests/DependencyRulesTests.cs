@@ -49,6 +49,10 @@ public class DependencyRulesTests
     {
         ["Tzar2.AI"] = [("Tzar2.Content", "Tzar2.Content.Compiled")],
 
+        // The sim consumes only the compiled ruleset and map, never the VFS, packages, rules compiler or editing model
+        // (REQ-ARCH-01; pinned by the code review of 2026-10, item 16).
+        ["Tzar2.Sim"] = [("Tzar2.Content", "Tzar2.Content.Compiled")],
+
         // The trigger engine consumes the scenario IR (ADR 0120, ADR 0130) next to the compiled ruleset and map.
         ["Tzar2.Scripting"] =
         [
@@ -338,6 +342,12 @@ public class DependencyRulesTests
             "Tzar2.Sim.World::PlaceStructure", "Tzar2.Sim.World::CompleteConstruction", "Tzar2.Sim.World::Kill",
             "Tzar2.Sim.World::Destroy", "Tzar2.Sim.Map.MapState::AddBlocker", "Tzar2.Sim.Map.MapState::RemoveBlocker",
             "Tzar2.Sim.Map.MapState::AddOccupant", "Tzar2.Sim.Map.MapState::RemoveOccupant",
+
+            // Added by the code review of 2026-10 (item 16): the other public mutators of the world and the match.
+            // World.SetCivilization is not here: it is match setup, refused once the first tick ran (the AI's skirmish
+            // scenario sets up its kingdoms with it).
+            "Tzar2.Sim.World::ChangeOwner", "Tzar2.Sim.World::ConvertType", "Tzar2.Sim.World::RefreshMaxHealth",
+            "Tzar2.Sim.SimulationConfig::AddTechnology",
         };
         Assembly assembly = typeof(AI.AIAssembly).Assembly;
         using var stream = File.OpenRead(assembly.Location);
