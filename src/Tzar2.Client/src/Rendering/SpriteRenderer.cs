@@ -129,7 +129,7 @@ public sealed class SpriteRenderer : IDisposable
     public void SetShadowsVisible(bool value)
     {
         _shadowsVisible = value;
-        RS.CanvasItemSetVisible(_composite, _visible && _shadowsVisible);
+        ShowShadowPass();
     }
 
     /// <summary>Shows or hides everything.</summary>
@@ -138,7 +138,16 @@ public sealed class SpriteRenderer : IDisposable
         _visible = value;
         RS.CanvasItemSetVisible(_objectsItem, value);
         RS.CanvasItemSetVisible(_maskRoot, value);
-        RS.CanvasItemSetVisible(_composite, _visible && _shadowsVisible);
+        ShowShadowPass();
+    }
+
+    // The shadow viewport renders only while its composite is shown: hiding the composite alone left a full-screen
+    // viewport rendering every frame for nothing (glow and ghost never show shadows; the Shadows option).
+    private void ShowShadowPass()
+    {
+        bool shown = _visible && _shadowsVisible;
+        RS.CanvasItemSetVisible(_composite, shown);
+        _maskViewport.RenderTargetUpdateMode = shown ? SubViewport.UpdateMode.Always : SubViewport.UpdateMode.Disabled;
     }
 
     /// <summary>Multiplies the colour pass (translucent trees, §13.3).</summary>

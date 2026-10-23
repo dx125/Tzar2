@@ -56,6 +56,11 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // the ruleset, the stream and the final hash.
     // (ADR 0191 amendment, 2026-10-22) Supply Storage and Seafood raise the population limit, Ore Flotation halves what mines lose: the ruleset hash only.
     // (ADR 0192, 2026-10-22) gates are 7 x 1 or 1 x 6 with a door of three tiles, bridges turn into their own cells: the bot's gate and bridge change, so the ruleset, the stream and the final hash.
+    // (ADR 0211, 2026-10-22) civilizations in the ruleset's order (euro, arab, asia, then comm), not sorted: every
+    // kingdom's civilization index changes, so the ruleset, the stream and the final hash; the match plays the same.
+    // (WORLD-018, 2026-10-22) the ninja moves as a climber, the cliff-climbing locomotor: only the ruleset hash moves.
+    // (code review, 2026-10-22) the castle's Seat trait and the tavern, gambling and loan technologies named in the
+    // world settings instead of in code: the ruleset hash only, the match is the same.
     // (ADR 0250, 2026-10-22) the curse, hypnosis, the banshee and the Messiah as ReTzar reads them: a synthetic Messiah shifts type ids, status effects grow (hashed layout 13): the ruleset and the hashes.
     // (ADR 0252, 2026-10-22) caravans carry 500 (European) or 300 (Arabian) and load 8 infantry, trade with any market: the ruleset, the stream and the final hash.
     // (ADR 0253, 2026-10-22) Tournaments pools experience for the Asian pupils, Mastery teaches only lower levels: the ruleset hash only.
@@ -67,7 +72,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
     // (ADR 0260, 2026-10-22) spells take the original's ranges and mana (ReTzar's dispatch tables): the gameplay bot's casters cast less.
     // (ADR 0261, 2026-10-22) the spells' strength, durations and areas as ReTzar reads them (lightning 150, freeze and confusion by area, bless +5).
-    private const ulong GoldenRulesetHash = 0xE72FB8F13278F1C5UL;
+    private const ulong GoldenRulesetHash = 0x2115B4FFC7505589UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -75,8 +80,11 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
     // (ADR 0191, 2026-10-22) technology effects as the original computes them (whole points, cost and time cuts): the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0xA0560CA349B2A963UL;
-    private const ulong GoldenFinalFullHash = 0x00C6DF22DC8DE034UL;
+    // (ADR 0211, 2026-10-22) civilizations in the ruleset's order: the kingdoms' civilization indices, so the hashes.
+    // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement (kingdoms 0 and 1 are allies here): the
+    // stream and the final hash.
+    private const ulong GoldenHashStream = 0x68B2B58C6475AAF6UL;
+    private const ulong GoldenFinalFullHash = 0x60C02C75A1395F44UL;
 
     private const int Ticks = 1600;
 
