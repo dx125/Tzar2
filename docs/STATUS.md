@@ -119,7 +119,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -165,7 +165,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 13. **Maintainer:** M7 (ADR 0240). Done: package, installer, first-run import, signing step, crash reports (ADRs
     0241–0243), the render bench (D6, ADR 0244). **Owner:** pick the crash server and the signing route (ADRs 0242,
     0243); run the sim bench and the installed build ([min-spec-tuning.md](release/min-spec-tuning.md), requests 1
-    and 2), and `--bench-render` on Windows.
+    and 2), and `--bench-render` on Windows (the command: min-spec-tuning.md, "The render bench").
 14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
@@ -235,6 +235,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       Done since (log below): the nightly Benchmarks' gameplay rows re-recorded, the architecture tests' four gaps,
       the civilization list (ADR 0211, the `Race` bug), the asset caches cleared in the menu, the load off the main
       thread, rules decided by data instead of names in code.
+      * 2026-10-23: the host's choice for a computer goes to the relay (issue #190, ADR 0168 amendment). A stale lobby
+        view lost it silently.
 
 ## Decision and event log
 
@@ -242,6 +244,15 @@ Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisi
 the process decisions that have no ADR.
 
 * **2026-10-23 — Random map screen.** S_SINGLERND now draws an engine-free RandomMapScreenModel (Tzar2.Game.Ui): per-kingdom colour, AI script, civilization (or RANDOM, drawn from the seed) and team, game type, victory condition with its limit, map resources and the five map options; the match it describes runs through MatchDescriptor.ToSetup. Positions from ReTzar's reading of the original; caption places UNVERIFIED. The map preview is dropped (the map options take its place); the AI button steps through the scripts until D_CHOOSEAI is built. SHELL-013 (AI resign flag) waits: it needs a per-match flag in MatchSettings.
+
+* **2026-10-23 — Quitting, resigning and disconnecting ask first (SHELL-027).** The main menu's QUIT asks "Exit Tzar", the game
+  menu's QUIT asks to resign alone and to disconnect in multiplayer, in the original's D_MSGWND window with its words
+  (STRINGS.INI [q]); the model is `Tzar2.Game.Ui.Confirmations`. No hash changes.
+
+* **2026-10-23 — The client sees the session, its frames and the UI models only (ADR 0212; code review, item 16).**
+  * `GameSession.Simulation` and `Ai`, `FrameBuilder` and the match-preparation hook are now internal to Game and its
+    hosts.
+  * An architecture test checks the client contract's public surface.
 
 * **2026-10-23 — Network and probe tests poll until a deadline (issue #179).**
   * The server test now polls for the Welcome and the lobby listing.
@@ -253,8 +264,10 @@ the process decisions that have no ADR.
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
   * Golden and bench hashes were re-pinned where the PRs met: the civilization order (ADR 0211), the movement of
     ADR 0220, the ledger chain (ADRs 0250–0261) and the rules decided by data instead of names in code.
-  * `HumanVsAiTests`' Archipelagos time limit is now 18 minutes. WORLD-013's forests (ADR 0201) and ADR 0220's
-    movement together delay the first sea landing to between 16 and 18 minutes.
+  * `HumanVsAiTests`' Archipelagos check plays 20 minutes (#182; first set to 18 in the batch, with a wrong reason). The
+    landed wave has hit after 17 minutes since WORLD-015 (#126): 17.2 on `main` before the forests, 18.4 with them.
+    The 14 minutes passed only on a xebec's shots at the human's woodcutters, which ADR 0220's corner slide moved out
+    of range with the forests (ADR 0220, Consequences).
   * The lobby fix UI-L2 (#140) was superseded by the `LobbyScreenModel` lobby (#160, ADR 0232), and then by the
     lobby rebuilt on the original's art (#177), which also takes #166's custom maps and limits and the ruleset's
     civilizations (#174).

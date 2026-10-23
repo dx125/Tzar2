@@ -205,7 +205,7 @@ public static class DemoCampaign
         }
 
         private static KingdomDef Kingdom(int number, PlayerType type)
-            => new(number, "Kingdom " + number, string.Empty, Civilization.European, type, true, 300, 300, 300, 300, string.Empty, true, true, false, -1, -1,
+            => new(number, "Kingdom " + number, string.Empty, "euro", type, true, 300, 300, 300, 300, string.Empty, true, true, false, -1, -1,
                 EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty);
     }
 }

@@ -153,27 +153,28 @@ public enum PlayerType : byte
     Rescue,
 }
 
-/// <summary>Civilization of a kingdom.</summary>
-public enum Civilization : byte
+/// <summary>
+/// Civilization keys of scenario kingdoms (ADR 0211): a key of the ruleset's civilizations, or empty for random / not
+/// set (the ruleset's first playable civilization at match start). Scenario files of format 1 named three values.
+/// </summary>
+public static class ScenarioCivilization
 {
-    /// <summary>European.</summary>
-    European,
-
-    /// <summary>Arabian.</summary>
-    Arabian,
-
-    /// <summary>Asian.</summary>
-    Asian,
-
-    /// <summary>Random / not set.</summary>
-    Random,
+    /// <summary>The key of a format-1 name (<c>European</c>, <c>Arabian</c>, <c>Asian</c>, <c>Random</c>), else the key itself.</summary>
+    public static string FromFormat1(string value) => value switch
+    {
+        "European" => "euro",
+        "Arabian" => "arab",
+        "Asian" => "asia",
+        "Random" => string.Empty,
+        _ => value,
+    };
 }
 
 /// <summary>Kingdom set-up (Appendix C.1).</summary>
 /// <param name="Number">Legacy kingdom number, 1–8.</param>
 /// <param name="Name">Kingdom name.</param>
 /// <param name="TzarName">Tzar (ruler) name.</param>
-/// <param name="Civilization">Civilization.</param>
+/// <param name="Civilization">Civilization key, or empty for random / not set (<see cref="ScenarioCivilization"/>).</param>
 /// <param name="PlayerType">Controller.</param>
 /// <param name="Active">Whether the kingdom takes part.</param>
 /// <param name="Food">Starting food.</param>
@@ -195,7 +196,7 @@ public sealed record KingdomDef(
     int Number,
     string Name,
     string TzarName,
-    Civilization Civilization,
+    string Civilization,
     PlayerType PlayerType,
     bool Active,
     int Food,

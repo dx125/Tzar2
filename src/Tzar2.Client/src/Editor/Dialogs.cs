@@ -62,7 +62,9 @@ public static class Dialogs
         GridContainer g = Forms.Grid(page);
         Forms.Text(g, "Kingdom name", d.Name, v => Set("Kingdom name", x => x with { Name = v }));
         Forms.Text(g, "Tzar", d.TzarName, v => Set("Tzar name", x => x with { TzarName = v }));
-        Forms.Enum(g, "Civilization", d.Civilization, v => Set("Civilization", x => x with { Civilization = v }));
+        string[] civs = ["", .. System.Linq.Enumerable.Where(ruleset.Civilizations, ruleset.IsPlayableCivilization)];
+        string[] civNames = [.. System.Linq.Enumerable.Select(civs, c => c.Length == 0 ? "(random)" : c)];
+        Forms.Choice(g, "Civilization", civNames, Math.Max(0, Array.IndexOf(civs, d.Civilization)), i => Set("Civilization", x => x with { Civilization = civs[i] }));
         Forms.Enum(g, "Player type", d.PlayerType, v => Set("Player type", x => x with { PlayerType = v }));
         Forms.Check(g, "Active", d.Active, v => Set("Active", x => x with { Active = v }));
         Forms.Check(g, "Shared victory", d.SharedVictory, v => Set("Shared victory", x => x with { SharedVictory = v }));

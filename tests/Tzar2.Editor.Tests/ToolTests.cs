@@ -365,7 +365,7 @@ public class ToolTests
         doc.Apply("Kingdoms", s => s.WithScenario(m => m
             .SetStart(1, 3, 4)
             .SetStart(8, 20, 20)
-            .UpdateKingdom(2, k => k with { Name = "North", TzarName = "Ivan", Civilization = Civilization.Asian, PlayerType = PlayerType.Rescue, Active = true, AiScript = "defend.ais", EconomyAi = false, WarAi = true })
+            .UpdateKingdom(2, k => k with { Name = "North", TzarName = "Ivan", Civilization = "asia", PlayerType = PlayerType.Rescue, Active = true, AiScript = "defend.ais", EconomyAi = false, WarAi = true })
             .Fill(Fixtures.Classic, 1, 2)
             .EqualizeColumn(KingdomResource.Gold, 1)
             .EqualizeRow(3, KingdomResource.Gold)

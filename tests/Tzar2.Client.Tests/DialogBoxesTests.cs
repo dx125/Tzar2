@@ -29,6 +29,7 @@ public class DialogBoxesTests
     public void Each_dialogs_boxes_lie_inside_its_art_and_apart()
     {
         Inside(DialogBoxes.Message, DialogBoxes.MessageImage, DialogBoxes.MessageText, DialogBoxes.MessageButton);
+        Inside(DialogBoxes.Question, DialogBoxes.QuestionTitle, DialogBoxes.QuestionText, DialogBoxes.QuestionYes, DialogBoxes.QuestionNo);
         var quests = new List<ArtBox> { DialogBoxes.QuestPagePrevious, DialogBoxes.QuestPageField, DialogBoxes.QuestPageNext, DialogBoxes.QuestButton };
         for (int row = 0; row < DialogBoxes.QuestsPerPage; row++)
         {
@@ -51,6 +52,8 @@ public class DialogBoxesTests
         Assert.Equal((210, 27), (DialogBoxes.MessageButton.Width, DialogBoxes.MessageButton.Height));
         Assert.Equal((210, 27), (DialogBoxes.QuestButton.Width, DialogBoxes.QuestButton.Height));
         Assert.Equal((150, 25), (DialogBoxes.StoryButton.Width, DialogBoxes.StoryButton.Height));
+        Assert.Equal((189, 27), (DialogBoxes.QuestionYes.Width, DialogBoxes.QuestionYes.Height)); // D_MSGWND/btn: 378 x 27
+        Assert.Equal((189, 27), (DialogBoxes.QuestionNo.Width, DialogBoxes.QuestionNo.Height));
     }
 
     [Theory]

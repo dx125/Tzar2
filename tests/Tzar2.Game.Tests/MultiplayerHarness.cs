@@ -16,11 +16,14 @@ internal sealed class MultiplayerHarness : IDisposable
     public MultiplayerHarness(string? saveDirectory = null)
     {
         SaveDirectory = saveDirectory;
-        Relay = new RelayServer(new RelayOptions { StartDelayMs = 50, DisconnectTimeoutMs = 1_000, DesyncCollectMs = 5_000, DesyncSink = Sink });
+        Relay = new RelayServer(new RelayOptions { StartDelayMs = 50, DisconnectTimeoutMs = 1_000, DesyncCollectMs = 5_000, DesyncSink = Sink, Log = e => RelayLog.Add(e) });
         Relay.Start();
     }
 
     public RelayServer Relay { get; }
+
+    /// <summary>What the relay logged (joins, drops, refusals...), for the timeout message.</summary>
+    public List<RelayLogEntry> RelayLog { get; } = [];
 
     public ListSink Sink { get; } = new();
 
@@ -106,11 +109,34 @@ internal sealed class MultiplayerHarness : IDisposable
         {
             if (watch.ElapsedMilliseconds > timeoutMs)
             {
-                throw new TimeoutException($"Timed out waiting for {what ?? "the condition"} (stages {string.Join(", ", Matches.Select(m => $"{m.Stage}/{m.Session?.Simulation.World.Tick.Value}/{m.EndReason}"))}).");
+                // Issue #190: say what each peer and the relay saw, so a failure on a CI runner explains itself.
+                throw new TimeoutException($"Timed out waiting for {what ?? "the condition"} (stages {string.Join(", ", Matches.Select(m => $"{m.Stage}/{m.Session?.Simulation.World.Tick.Value}/{m.EndReason}"))}).\n{Diagnostics()}");
             }
 
             Step();
         }
+    }
+
+    // Each peer's lobby slots as it sees them and its chat lines so far (notices, refusals), then the relay's log.
+    private string Diagnostics()
+    {
+        var text = new System.Text.StringBuilder();
+        for (int i = 0; i < Matches.Count; i++)
+        {
+            NetworkMatch m = Matches[i];
+            text.Append(System.Globalization.CultureInfo.InvariantCulture, $"peer {i}: ");
+            if (m.Lobby is { } lobby)
+            {
+                text.AppendJoin("; ", lobby.Slots.Select(s => $"{s.Kind}{(s.Ready ? "+ready" : string.Empty)} {s.Choice.Civilization}/{s.Choice.AiScript}"));
+            }
+
+            var chat = new List<ChatLine>();
+            m.DrainChat(chat);
+            text.Append(" | chat: ").AppendJoin(" / ", chat.Select(l => $"{l.Kind}: {l.Text}")).Append('\n');
+        }
+
+        text.Append("relay: ").AppendJoin(" / ", RelayLog.TakeLast(30).Select(e => $"{e.Event} {e.Lobby} {e.Slot} {e.Detail}"));
+        return text.ToString();
     }
 
     /// <summary>Pumps for <paramref name="ms"/> milliseconds.</summary>
