@@ -47,7 +47,7 @@ public class CivilizationKeyTests
     };
 
     private static readonly Regex Spelling = new(
-        "\"(?:(?:euro|arab|asia)(?:\\.[a-z_0-9]*)?|\\.(?:castle|peon)|european|arabian|asian)\"",
+        "\"(?:(?:euro|arab|asia)(?:\\.[a-z_0-9]*)?|\\.(?:castle|peon)|european|arabian|asian)\"|\\}\\.(?:castle|peon)\"",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     [Fact]
@@ -97,6 +97,9 @@ public class CivilizationKeyTests
         Assert.Matches(Spelling, "EntityTypeId(\"arab.castle\")");
         Assert.Matches(Spelling, "civ + \".castle\"");
         Assert.Matches(Spelling, "\"European\" => \"euro\"");
+        Assert.Matches(Spelling, "$\"{civ}.castle\""); // review of #211: interpolation went past the pattern
+        Assert.Matches(Spelling, "$\"{player.Civilization}.peon\"");
+        Assert.DoesNotMatch(Spelling, "$\"{civ}.castles\"");
         Assert.DoesNotMatch(Spelling, "\"europe\"");
         Assert.DoesNotMatch(Spelling, "\"comm.res_gold\"");
         Assert.DoesNotMatch(Spelling, "\"castle\"");
