@@ -799,7 +799,7 @@ public partial class GameScreen : Node
                 if (_mode != OrderMode.None)
                 {
                     (int x, int y) = ToWorld(e.Position);
-                    SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument, OnScreen()), x, y);
+                    SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument, OnScreen()), x, y, _mode);
                     if ((mods & KeyMods.Shift) == 0)
                     {
                         _mode = OrderMode.None;
@@ -889,7 +889,7 @@ public partial class GameScreen : Node
             // Emerge and unload, patrol, guard and attack: a right click gives the place or the object too, and with Shift
             // the order waits for more (the manual ch. 5 §2.3, the owner 2026-10-21; ORD-015, ORD-006, CTRL-026, CTRL-027).
             (int ux, int uy) = ToWorld(position);
-            SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument, OnScreen()), ux, uy);
+            SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument, OnScreen()), ux, uy, _mode);
             if ((mods & KeyMods.Shift) == 0 || _mode == OrderMode.Unload)
             {
                 _mode = OrderMode.None;
@@ -963,7 +963,8 @@ public partial class GameScreen : Node
 
     // Sends the orders of a click in the world and confirms them where they go: the target's marks flash, or the
     // original's red cross plays on the clicked ground (play-test of 2026-10-20).
-    private void SendAndConfirm(IReadOnlyList<PlannedCommand> orders, int x, int y)
+    // Sends the orders and confirms them on the map; mode: the card's order mode they were given in (none: a right click).
+    private void SendAndConfirm(IReadOnlyList<PlannedCommand> orders, int x, int y, OrderMode mode = OrderMode.None)
     {
         if (orders.Count == 0)
         {
@@ -981,7 +982,7 @@ public partial class GameScreen : Node
             }
         }
 
-        _world?.ConfirmOrder(x, y, target);
+        _world?.ConfirmOrder(x, y, target, OrderBlink.Of(mode, orders));
     }
 
     private void Send(IReadOnlyList<PlannedCommand> orders)
