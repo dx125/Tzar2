@@ -36,9 +36,6 @@ internal static class UiFindings
         // The lobby's rows of Godot controls are 30 px apart but 31 px high, and the team picker runs into the ping.
         new("UI-L2", ".*", "lobby", "Overlap", "LobbyScreen"),
 
-        // The editor's import and campaign windows are wider than a 1024-wide screen.
-        new("UI-L3", "1024x768-wide-auto|.*-authentic", "editor-import|editor-campaign", "OffScreen", "ImportWindow|CampaignWindow"),
-
         // The conversation's phrases are not wrapped to its 300 px box.
         new("UI-L4", ".*", "conversation", "TextOverflow", "ConversationDialog"),
 
