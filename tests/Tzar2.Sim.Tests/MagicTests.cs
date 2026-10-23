@@ -48,6 +48,53 @@ public class MagicTests
         Assert.False(d.World.Entities.IsAlive(enemies[1]));
     }
 
+    [Fact]
+    [Trait("Rule", "MAG-026")]
+    public void A_kingdoms_casters_regain_two_mana_a_second_natures_one_and_concentration_adds_four()
+    {
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.mage", 0, 4, 4), Unit("euro.mage", 1, 12, 4), Unit("euro.mage", MapObject.Nature, 20, 4)), ruleset: Classic);
+        EntityId own = OfType(d.World, "euro.mage", 0).Single();
+        EntityId other = OfType(d.World, "euro.mage", 1).Single();
+        d.Order(0, CommandKind.SetStance, [own], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [other], arg0: (int)CombatStance.HoldFire);
+        EntityId wild = OfType(d.World, "euro.mage", MapObject.Nature).Single();
+        Grant(d.World, 1, "te_concentration");
+        foreach (EntityId mage in new[] { own, other, wild })
+        {
+            d.World.Manas.Get(mage).MilliMana = 0;
+        }
+
+        d.RunUntil(() => false, 200); // 10 s
+        Assert.Equal((20, 60, 10), (Mana(d, own), Mana(d, other), Mana(d, wild)));
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-027")]
+    public void A_summon_above_the_casters_pool_raises_the_pool_to_its_cost_and_casts_once_it_fills()
+    {
+        // ReTzar 0x4e1c30: the order finds too little mana; the caster's most mana grows to the cost, here the golem's whole
+        // mana (the tables' 600m against a pool of 90), and the spell is cast once the pool has filled.
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.mage", 0, 4, 4), Structure("euro.castle", 0, 14, 2)), ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        int spell = Spell(d.World.Ruleset, "spell_spawnstonegolem");
+        int cost = d.World.Ruleset.EntityTypes[d.World.Ruleset.Spells[spell].Summon].Traits.ManaCost;
+        Assert.True(cost > d.World.MaxMana(mage));
+        for (int r = 0; r < d.World.Ruleset.ResourceTypes.Count; r++)
+        {
+            d.World.Players[0].Resources[r] = 100_000;
+        }
+
+        Cast(d, mage, "spell_spawnstonegolem", default, 6 * Tile, 4 * Tile);
+        d.Step();
+        Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections());
+        Assert.Equal(cost, d.World.MaxMana(mage)); // the pool now holds the cost
+        d.World.Manas.Get(mage).MilliMana = cost * 1000;
+        Cast(d, mage, "spell_spawnstonegolem", default, 6 * Tile, 4 * Tile);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 400);
+        Assert.Equal(1, d.Count(SimEventKind.SpellCast));
+        Assert.True(Mana(d, mage) < 50); // the whole cost was paid
+    }
+
     [Theory]
     [InlineData("spell_firerain", 14, 100)]
     [InlineData("spell_lightning", 12, 50)]
