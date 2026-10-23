@@ -45,18 +45,19 @@ rules:
     status: implemented
   SHELL-010:
     rule: The random map screen sets for each player an AI script (the small button by the name), the civilization, the number of kingdoms, the game type (Standard or Deathmatch), the victory condition, the difficulty, the starting resources, No Fog and Explore.
-    source: [manual Random Map Screen]
-    status: partial
-    note: The AI script, the computer kingdoms' civilizations, the game type and the victory condition cannot be chosen.
+    source: [manual Random Map Screen, 'strings STRINGS.INI [sp_setuprnd]', 'community ReTzar src/menu.rs (Screen::Random)']
+    status: tested
+    note: Each kingdom also has a colour and a team (1-4). The victory condition's time limit runs 30-180 minutes by 30 and its score limit 200-2,000 by 200 (ReTzar). The AI button steps through the scripts; the original opens a list (D_CHOOSEAI, still to build). The captions sit where the original writes them (ReTzar), and Number of Players shows its range ("(2 - 6)"); the map preview of the old screen is gone, the five map options are in its place.
   SHELL-011:
     rule: A random map has a size (Medium, Large, Huge, Enormous, Real World), a type (Random, Archipelagos, Dry, Island, Continental, Lakes), a terrain set (Grass, Desert, Summer, Winter) and map resources (Low, Normal, High), and may have a guarded town, animals, gateways, magic items and cliffs.
-    source: [manual Random Map Screen]
-    status: partial
-    note: Size, type and terrain set are offered; map resources and the five options are not on the screen.
+    source: [manual Random Map Screen, 'community ReTzar src/menu.rs (Screen::Random)']
+    status: tested
+    note: Tiny and Small are offered too. The original's defaults (ReTzar, tzar.ini [SINGLE_RANDOM]) have the guarded town, animals, magic items and gateways on and cliffs off; the original's random terrain set is not offered.
   SHELL-012:
     rule: The settings of the random map screen are kept for the next time.
-    source: [patch 1.09 (TZAR110.TXT)]
-    status: missing
+    source: [patch 1.09 (TZAR110.TXT), 'community ReTzar src/menu.rs (Screen::Random)']
+    status: tested
+    note: The original keeps them in tzar.ini [SINGLE_RANDOM]; Tzar2 in user://random-map.cfg, with the kingdoms' rows.
   SHELL-013:
     rule: The random map screen and the multiplayer options let each computer kingdom resign on its own (a flag) or never (a sword).
     source: [patch 1.09 (TZAR110.TXT)]

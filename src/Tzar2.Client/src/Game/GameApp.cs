@@ -306,33 +306,10 @@ public partial class GameApp : Node
     /// <summary>Shows the skirmish setup.</summary>
     public void ShowSetup()
     {
-        var setup = new SkirmishSetupScreen(_ui!, _catalog, Screen, _skirmish, Preview, _ai.Notice);
+        var setup = new SkirmishSetupScreen(_ui!, _catalog, Screen, _skirmish, _ai.Scripts, _ai.Notice);
         setup.Play += StartSkirmish;
         setup.Cancel += ShowSinglePlayer;
         Replace(setup, music: null);
-    }
-
-    /// <summary>A small picture of the map the options generate (setup dialog), or null.</summary>
-    public Image? Preview(SkirmishOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        if (_rules is null || Setup(options) is not { } setup)
-        {
-            return null;
-        }
-
-        MapData map;
-        try
-        {
-            map = setup.Map.Create(_rules, setup);
-        }
-        catch (Exception e) when (e is Content.MapGen.MapGenException or ArgumentException)
-        {
-            GD.PrintErr("Map preview: " + e.Message);
-            return null;
-        }
-
-        return MapPreview(map);
     }
 
     /// <summary>A small picture of <paramref name="map"/>: land and water, trees, mines and the kingdoms' objects.</summary>
@@ -415,7 +392,7 @@ public partial class GameApp : Node
         }
         else
         {
-            terrain = Content.MapGen.RandomMapNames.SetId(SkirmishOptions.TerrainSets[options.Terrain]);
+            terrain = Content.MapGen.RandomMapNames.SetId(setup.Map is RandomMapSource chosen ? chosen.Set : SkirmishOptions.TerrainSets[options.Terrain]);
             try
             {
                 session = new GameSession(setup, _rules);
@@ -424,7 +401,7 @@ public partial class GameApp : Node
             {
                 // A random map the rules cannot host: fall back to the skirmish test map.
                 GD.PrintErr($"Random map failed ({e.Message}); using the skirmish test map.");
-                session = new GameSession(setup with { Map = new SkirmishTestMap(96) }, _rules);
+                session = new GameSession(setup with { Map = new SkirmishTestMap(96), Descriptor = null }, _rules);
             }
         }
 
@@ -488,6 +465,12 @@ public partial class GameApp : Node
         if (_rules is null)
         {
             return null;
+        }
+
+        if (options.Match is { } match)
+        {
+            // The random map screen's match (SHELL-010): its kingdoms, scripts, teams and options.
+            return match.ToSetup(_ai, multiplayer: false, localSlot: null);
         }
 
         string[] offered = SkirmishOptions.CivilizationsOf(_rules);

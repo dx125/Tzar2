@@ -304,120 +304,234 @@ public sealed class SkirmishOptions
 
     /// <summary>Match seed.</summary>
     public ulong Seed { get; set; } = 0x7A42_0003UL;
+
+    /// <summary>
+    /// The match chosen on the random map screen (<see cref="Tzar2.Game.Ui.RandomMapScreenModel.Describe"/>); when set
+    /// it is played instead of the options above (those stay for the command line and the test drivers).
+    /// </summary>
+    public MatchDescriptor? Match { get; set; }
 }
 
 /// <summary>
-/// The random-map setup (<c>S_SINGLERND</c>): six option sliders (kingdom, difficulty, starting resources, population
-/// limit, No Fog, Explore), the map rows of the right panel (type, size, terrain, kingdoms) above a preview of the map,
-/// PLAY and BACK.
+/// The random map screen (<c>S_SINGLERND</c>; SHELL-010, SHELL-011, SHELL-012, AI-001) drawing
+/// <see cref="Tzar2.Game.Ui.RandomMapScreenModel"/>: one <c>ROW BACK</c> per kingdom (colour, name, the computer's AI
+/// button, civilization, team), the six options of the left panel, the victory limit, No Fog and Explore below them, the
+/// map's size, type, terrain and resources and its five options on the right, PLAY and BACK. Positions, the captions'
+/// included, are the original's as ReTzar reads its constructor and its labels.
+/// What the screen set is kept in <c>user://random-map.cfg</c>.
 /// </summary>
 public partial class SkirmishSetupScreen : ArtScreen
 {
-    private const int Slots = 10;
-    private readonly string[] _civilizations;
+    private const string Art = "art/screens/s_singlernd/";
+    private const string Common = "art/screens/common/";
+    private const string SavePath = "user://random-map.cfg";
+    private static readonly Color Caption = new(0.85f, 0.85f, 0.75f);
+
+    private readonly Tzar2.Game.Ui.RandomMapScreenModel _model;
     private readonly SkirmishOptions _options;
     private readonly PresentationCatalog? _catalog;
-    private readonly TextureRect[] _values = new TextureRect[Slots];
-    private readonly Func<SkirmishOptions, Image?>? _preview;
-    private readonly TextureRect _map;
+    private readonly Control _layer;
 
-    /// <summary>Creates the dialog.</summary>
-    public SkirmishSetupScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, SkirmishOptions options, Func<SkirmishOptions, Image?>? preview = null, string? notice = null)
-        : base(ui, screen, "art/screens/s_singlernd/back.t2img")
+    /// <summary>Creates the screen.</summary>
+    public SkirmishSetupScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, SkirmishOptions options, System.Collections.Generic.IReadOnlyList<AiScriptOption> scripts, string? notice = null)
+        : base(ui, screen, Art + "back.t2img")
     {
-        _civilizations = SkirmishOptions.CivilizationsOf(catalog?.Ruleset);
-        Notice(notice, new Vector2I(66, 88), 470); // the left panel, x 66-536 of the art
+        ArgumentNullException.ThrowIfNull(options);
         _options = options;
         _catalog = catalog;
-        _preview = preview;
-        _map = new TextureRect { Position = Origin + new Vector2I(566, 272), Size = new Vector2(180, 172), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, MouseFilter = MouseFilterEnum.Ignore };
-        AddChild(_map);
-        Text(new Vector2I(66, 40), catalog?.Text("singlescr", "random", "RANDOM MAP") ?? "RANDOM MAP", UiAssets.TitleFont);
-        string[] titles =
-        [
-            "Kingdom",
-            T("t_diff_lvl", "Difficulty Level"),
-            T("t_st_res", "Starting Resources"),
-            T("t_poplimit", "Population Limit"),
-            T("t_fog", "No Fog"),
-            T("t_expolre", "Explore"),
-            T("t_map_type", "Map Type"),
-            T("t_map_size", "Map Size"),
-            T("t_terrain", "Terrain"),
-            T("t_num_players", "Number of Players"),
-        ];
-        int[] rows = [58, 113, 171, 230]; // the right panel's rows of back.bmp, measured on the art
-        for (int i = 0; i < Slots; i++)
+        _model = new Tzar2.Game.Ui.RandomMapScreenModel(SkirmishOptions.CivilizationsOf(catalog?.Ruleset), scripts, Load());
+        _layer = new Control { MouseFilter = MouseFilterEnum.Ignore, Position = Origin }; // moves with the art (Resize)
+        AddChild(_layer);
+        Notice(notice, new Vector2I(66, 304), 470); // below the kingdoms' rows
+        const string Btn = Art + "btn.t2img";
+        Button(new Vector2I(556, 499), new Vector2I(210, 27), Btn, T("play", "PLAY"), () =>
         {
-            int slot = i;
-            var at = i < 6 ? new Vector2I(i % 2 == 0 ? 66 : 271, 370 + ((i / 2) * 58)) : new Vector2I(566, rows[i - 6]);
-            Text(at - new Vector2I(0, 17), titles[i], UiAssets.SmallFont, new Color(0.85f, 0.85f, 0.75f));
-            Area(new Rect2I(at, new Vector2I(27, 27)), () => Change(slot, -1));
-            Area(new Rect2I(at + new Vector2I(154, 0), new Vector2I(27, 27)), () => Change(slot, +1));
-            _values[i] = Text(at + new Vector2I(30, 6), string.Empty, UiAssets.SmallFont, Colors.White);
-        }
-
-        const string Btn = "art/screens/s_singlernd/btn.t2img";
-        Button(new Vector2I(555, 499), new Vector2I(210, 27), Btn, T("play", "PLAY"), () => Play?.Invoke(_options));
-        Button(new Vector2I(555, 554), new Vector2I(210, 27), Btn, T("back", "BACK"), () => Cancel?.Invoke());
+            Save();
+            _options.Match = _model.Describe(_options.Seed);
+            Play?.Invoke(_options);
+        });
+        Button(new Vector2I(556, 554), new Vector2I(210, 27), Btn, T("back", "BACK"), () =>
+        {
+            Save();
+            Cancel?.Invoke();
+        });
         Refresh();
     }
 
-    /// <summary>PLAY.</summary>
+    /// <summary>PLAY, with <see cref="SkirmishOptions.Match"/> set to the chosen match.</summary>
     public event Action<SkirmishOptions>? Play;
 
     /// <summary>BACK.</summary>
     public event Action? Cancel;
 
-    /// <summary>Changes option <paramref name="slot"/> by one step.</summary>
-    public void Change(int slot, int step)
-    {
-        static int Wrap(int v, int n) => ((v % n) + n) % n;
-        switch (slot)
-        {
-            case 0: _options.Civilization = Wrap(_options.Civilization + step, _civilizations.Length); break;
-            case 1: _options.Difficulty = (Difficulty)Wrap((int)_options.Difficulty + step, 3); break;
-            case 2: _options.StartingResources = Wrap(_options.StartingResources + step, 4); break;
-            case 3: _options.PopulationLimit = Wrap(_options.PopulationLimit + step, SkirmishOptions.PopulationLimits.Length); break;
-            case 4: _options.NoFog = !_options.NoFog; break;
-            case 5: _options.Explore = !_options.Explore; break;
-            case 6: _options.MapType = Wrap(_options.MapType + step, SkirmishOptions.MapTypes.Length); break;
-            case 7: _options.MapSize = Wrap(_options.MapSize + step, SkirmishOptions.MapSizes.Length); break;
-            case 8: _options.Terrain = Wrap(_options.Terrain + step, SkirmishOptions.TerrainSets.Length); break;
-            case 9: _options.Players = 2 + Wrap(_options.Players - 2 + step, 7); break;
-        }
-
-        Refresh();
-    }
-
-    private string T(string key, string fallback) => _catalog?.Text("sp_setuprnd", key, fallback) ?? fallback;
+    /// <summary>The model (test drivers).</summary>
+    public Tzar2.Game.Ui.RandomMapScreenModel Model => _model;
 
     private Func<string, string, string, string>? Lookup => _catalog is null ? null : _catalog.Text;
 
-    private void Refresh()
+    private string T(string key, string fallback) => _catalog?.Text("sp_setuprnd", key, fallback) ?? fallback;
+
+    private static byte[] Load()
     {
-        string[] values =
-        [
-            T($"race_{_options.Civilization + 1}", _civilizations[Math.Min(_options.Civilization, _civilizations.Length - 1)]),
-            T($"difflvl_{(int)_options.Difficulty}", _options.Difficulty.ToString()),
-            T($"resurcs_{_options.StartingResources}", _options.StartingResources.ToString(CultureInfo.InvariantCulture)),
-            SkirmishOptions.PopulationLimits[_options.PopulationLimit].ToString(CultureInfo.InvariantCulture),
-            ShellTexts.YesNo(_options.NoFog).In(Lookup),
-            ShellTexts.YesNo(_options.Explore).In(Lookup),
-            ShellTexts.MapType(SkirmishOptions.MapTypes[_options.MapType]).In(Lookup),
-            ShellTexts.MapSize(SkirmishOptions.MapSizes[_options.MapSize]).In(Lookup),
-            ShellTexts.Terrain(SkirmishOptions.TerrainSets[_options.Terrain]).In(Lookup),
-            _options.Players.ToString(CultureInfo.InvariantCulture),
-        ];
-        for (int i = 0; i < Slots; i++)
+        var file = new ConfigFile();
+        if (file.Load(SavePath) != Error.Ok)
         {
-            _values[i].Texture = Ui.Text(values[i], UiAssets.SmallFont, Colors.White);
+            return [];
         }
 
-        if (_preview?.Invoke(_options) is { } image)
+        try
         {
-            _map.Texture = ImageTexture.CreateFromImage(image);
+            return Convert.FromBase64String((string)file.GetValue("random", "screen", string.Empty));
         }
+        catch (FormatException)
+        {
+            return [];
+        }
+    }
+
+    private void Save()
+    {
+        var file = new ConfigFile();
+        file.SetValue("random", "screen", Convert.ToBase64String(_model.ToBytes()));
+        if (file.Save(SavePath) != Error.Ok)
+        {
+            GD.PrintErr("The random map settings could not be kept.");
+        }
+    }
+
+    private void Refresh()
+    {
+        foreach (Node child in _layer.GetChildren())
+        {
+            child.QueueFree();
+        }
+
+        Rows();
+        Options();
+    }
+
+    private void Rows()
+    {
+        var model = _model;
+        for (int i = 0; i < model.Rows.Count; i++)
+        {
+            Tzar2.Game.Ui.RandomMapRow row = model.Rows[i];
+            int y = 35 * i, index = i;
+            Picture(new Vector2I(62, 20 + y), Ui.Texture(Art + "row back.t2img"));
+            Picture(new Vector2I(73, 31 + y), Ui.Region(Common + "color bars.t2img", new Rect2I(0, row.Colour * 13, 13, 13)));
+            Click(new Rect2I(73, 31 + y, 13, 13), () => model.ChangeRow(index, Tzar2.Game.Ui.RandomMapRowField.Colour, +1));
+            string name = i == 0 ? "Player" : row.Script > 0 ? model.Scripts[row.Script].Name : $"Computer {i}";
+            Label(new Vector2I(110, 30 + y), Fit(name, 160, UiAssets.SmallFont), Colors.White);
+            if (i > 0)
+            {
+                // The computer's AI button (COMMON/AI: dim, lit once it has a script of its own); each press the next script.
+                Picture(new Vector2I(273, 26 + y), Ui.Region(Common + "ai.t2img", new Rect2I(0, row.Script > 0 ? 20 : 0, 20, 20)));
+                Click(new Rect2I(273, 26 + y, 20, 20), () => model.ChangeRow(index, Tzar2.Game.Ui.RandomMapRowField.Script, +1));
+            }
+
+            string civ = model.CivilizationOf(row) is { } key ? T($"race_{row.Civilization}", key) : T("race_0", "RANDOM");
+            Spin(new Vector2I(311, 23 + y), civ, step => model.ChangeRow(index, Tzar2.Game.Ui.RandomMapRowField.Civilization, step), arrows: true);
+            Picture(new Vector2I(511, 31 + y), Ui.Region(Common + "teams.t2img", new Rect2I(0, ((row.Team + 4) % 5) * 13, 13, 13)));
+            Click(new Rect2I(511, 31 + y, 13, 13), () => model.ChangeRow(index, Tzar2.Game.Ui.RandomMapRowField.Team, +1));
+        }
+    }
+
+    private void Options()
+    {
+        var model = _model;
+        Tzar2.Game.Session.MatchSettings s = model.Settings;
+        string N(int n) => n.ToString(CultureInfo.InvariantCulture);
+        string[] victories = ["Standard", "Destroy Castles", "Time Limit", "Score Limit"];
+        string victory = T($"vcond_{model.VictoryChoice}", victories[model.VictoryChoice]);
+        Option(new Vector2I(66, 369), new Vector2I(68, 353), T("t_num_players", "Number of Players") + $" (2 - {model.MostPlayers})", N(model.Players), Tzar2.Game.Ui.RandomMapOption.Players);
+        Option(new Vector2I(66, 427), new Vector2I(68, 410), T("t_game_type", "Game Type"), model.IsDeathmatch ? "Deathmatch" : T("g_type_0", "Standard"), Tzar2.Game.Ui.RandomMapOption.GameType);
+        Option(new Vector2I(66, 487), new Vector2I(68, 470), T("t_vict_cond", "Victory Condition"), victory, Tzar2.Game.Ui.RandomMapOption.Victory);
+        Option(new Vector2I(270, 369), new Vector2I(273, 353), T("t_poplimit", "Population Limit"), N(s.PopulationLimit), Tzar2.Game.Ui.RandomMapOption.PopulationLimit);
+        Option(new Vector2I(270, 427), new Vector2I(273, 412), T("t_diff_lvl", "Difficulty Level"), T($"difflvl_{(int)model.Difficulty}", model.Difficulty.ToString()), Tzar2.Game.Ui.RandomMapOption.Difficulty);
+        Option(new Vector2I(270, 487), new Vector2I(273, 470), T("t_st_res", "Starting Resources"), T($"resurcs_{s.StartingResources}", N(s.StartingResources)), Tzar2.Game.Ui.RandomMapOption.StartingResources);
+        if (model.HasVictoryLimit)
+        {
+            // The limit's selector (COMMON/SCROLL CTRL) under the victory condition.
+            Picture(new Vector2I(66, 538), Ui.Texture(Common + "scroll ctrl.t2img"));
+            string caption = model.IsScoreLimit ? T("t_score_lim", "Score Limit") : T("t_time_lim", "Time Limit (min.)");
+            Label(new Vector2I(68, 527), caption, Caption);
+            Spin(new Vector2I(66, 541), N(model.VictoryLimit), step => model.Change(Tzar2.Game.Ui.RandomMapOption.VictoryLimit, step), arrows: false, width: 191);
+        }
+
+        Check(new Vector2I(268, 539), new Vector2I(302, 549), T("t_fog", "No Fog"), Tzar2.Game.Ui.RandomMapOption.NoFog);
+        Check(new Vector2I(268, 569), new Vector2I(302, 579), T("t_expolre", "Explore"), Tzar2.Game.Ui.RandomMapOption.Explore);
+
+        Option(new Vector2I(565, 56), new Vector2I(568, 43), T("t_map_size", "Map Size"), ShellTexts.MapSize(s.MapSize).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapSize);
+        Option(new Vector2I(565, 111), new Vector2I(568, 98), T("t_map_type", "Map Type"), ShellTexts.MapType(s.MapType).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapType);
+        Option(new Vector2I(565, 169), new Vector2I(568, 155), T("t_terrain", "Terrain"), ShellTexts.Terrain(s.Terrain).In(Lookup), Tzar2.Game.Ui.RandomMapOption.Terrain);
+        Option(new Vector2I(565, 228), new Vector2I(568, 214), T("t_map_res", "Map Resources"), T($"m_res_{(int)s.Resources}", s.Resources.ToString()), Tzar2.Game.Ui.RandomMapOption.MapResources);
+        Check(new Vector2I(564, 267), new Vector2I(610, 278), T("t_gslocations", "Guarded Town"), Tzar2.Game.Ui.RandomMapOption.GuardedTown);
+        Check(new Vector2I(564, 303), new Vector2I(610, 313), T("t_animals", "Animals"), Tzar2.Game.Ui.RandomMapOption.Animals);
+        Check(new Vector2I(564, 339), new Vector2I(610, 350), T("t_mitems", "Magic Items"), Tzar2.Game.Ui.RandomMapOption.MagicItems);
+        Check(new Vector2I(564, 376), new Vector2I(610, 386), T("t_cliffs", "Cliffs"), Tzar2.Game.Ui.RandomMapOption.Cliffs);
+        Check(new Vector2I(564, 411), new Vector2I(610, 423), T("t_gateways", "Gateways"), Tzar2.Game.Ui.RandomMapOption.Gateways);
+    }
+
+    // A baked 180 x 27 spin of the art with its caption.
+    private void Option(Vector2I at, Vector2I captionAt, string caption, string value, Tzar2.Game.Ui.RandomMapOption option)
+    {
+        Label(captionAt, caption, Caption);
+        Spin(at, value, step => _model.Change(option, step), arrows: false);
+    }
+
+    // A 30 x 30 check box (COMMON/CHK: the green light on top, the red one below) with its caption to the right.
+    private void Check(Vector2I at, Vector2I captionAt, string caption, Tzar2.Game.Ui.RandomMapOption option)
+    {
+        Picture(at, Ui.Region(Common + "chk.t2img", new Rect2I(0, _model.IsOn(option) ? 0 : 31, 31, 31)));
+        Click(new Rect2I(at, new Vector2I(30, 30)), () => _model.Change(option, +1)); // the original's 30 x 30 boxes, 30 apart
+        Label(captionAt, caption, Caption);
+    }
+
+    // A spin: arrows at both ends (drawn from COMMON/BTN LEFT and RIGHT where the art has none), the value between them.
+    private void Spin(Vector2I at, string value, Action<int> change, bool arrows, int width = 180)
+    {
+        const int Arrow = 27;
+        if (arrows)
+        {
+            Picture(at, Ui.Region(Common + "btn left.t2img", new Rect2I(0, 0, Arrow, Arrow)));
+            Picture(at + new Vector2I(width - Arrow, 0), Ui.Region(Common + "btn right.t2img", new Rect2I(0, 0, Arrow, Arrow)));
+        }
+
+        Click(new Rect2I(at, new Vector2I(Arrow, Arrow)), () => change(-1));
+        Click(new Rect2I(at + new Vector2I(width - Arrow, 0), new Vector2I(Arrow, Arrow)), () => change(+1));
+        Click(new Rect2I(at + new Vector2I(Arrow, 0), new Vector2I(width - (2 * Arrow), Arrow)), () => change(+1));
+        string shown = Fit(value, width - (2 * Arrow) - 6, UiAssets.SmallFont);
+        if (Ui.Text(shown, UiAssets.SmallFont, Colors.White) is { } t)
+        {
+            Picture(at + new Vector2I((width - t.GetWidth()) / 2, (Arrow - t.GetHeight()) / 2), t);
+        }
+    }
+
+    private void Label(Vector2I at, string text, Color colour)
+    {
+        if (Ui.Text(text, UiAssets.SmallFont, colour) is { } t)
+        {
+            Picture(at, t);
+        }
+    }
+
+    private void Picture(Vector2I at, Texture2D? texture)
+    {
+        if (texture is not null)
+        {
+            _layer.AddChild(new TextureRect { Texture = texture, Position = at, MouseFilter = MouseFilterEnum.Ignore });
+        }
+    }
+
+    private void Click(Rect2I rect, Action pressed)
+    {
+        var button = new Button { Position = rect.Position, Size = rect.Size, Flat = true, Modulate = new Color(1, 1, 1, 0.02f) };
+        button.Pressed += () =>
+        {
+            pressed();
+            Callable.From(Refresh).CallDeferred();
+        };
+        _layer.AddChild(button);
     }
 }
 

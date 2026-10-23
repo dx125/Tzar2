@@ -33,7 +33,7 @@ rules:
     rule: A Deathmatch game starts every kingdom rich.
     source: [manual Random Map Screen (game type)]
     status: implemented
-    note: The starting level (High) is a placeholder; the setup screens cannot choose Deathmatch (SHELL-010).
+    note: The starting level (High) is a placeholder. The random map screen and the multiplayer lobby choose Deathmatch (SHELL-010).
   DIP-008:
     rule: F4 shows the scores.
     source: [manual Hot Keys]
