@@ -164,8 +164,8 @@ merge.
      in YAML).
 4. **Formula constants in code, not in the ruleset:**
    * the experience curve's shape (`CombatStats.cs`: base × n(n+1)/2) and its linear and half-step bonuses;
-   * the crusader's arrival times (`MagicSystem.cs`);
-   * `LeashFactor = 2`;
+   * ~~the crusader's arrival times (`MagicSystem.cs`)~~ (#205);
+   * ~~`LeashFactor = 2`~~ (#205);
    * the bless and curse caps (1000 %, 100 %) and the potion cap (1000);
    * the summon radius and the coast reach.
    * The AI's resource weights and wave sizes are C# option records.
@@ -221,10 +221,54 @@ twelve AI mutators and the client's namespaces. Its gaps:
 | #172 (on #138) | a match loads on a worker thread; the main thread only uploads | main thread 4.2 s → 77 ms (original map) |
 | #174 (on #163) | the client's civilization choices from the ruleset | |
 | #176 | the `Seat` trait and the feature technologies in world settings | ruleset hash only |
+| #181, #200, #202 | network test flakes (issue #179): polling instead of sleeps, harness timeouts a loaded runner cannot trip, the capture end-to-end test on a virtual clock, the ping interval checked on the `NetManager` | the failing run's relay log showed `member.drop Timeout` during set-up, before the stall: starvation, not a keep-alive bug |
+| #185, ADR 0212 | the client sees the session, frames and UI models only; `ClientContractTests` | |
+| #186, ADR 0213 | the AI reads the world through read-only views; `AiReadOnlyTests` | hashes unchanged |
+| #187 | scenarios and map generation take civilization keys from the ruleset | mapgen goldens re-pinned (random civilizations draw from the ruleset order) |
+| #188, ADR 0214 | the worker pool waits for the jobs, not the helpers it woke | CI macOS (3 cores, loaded), tail after a fork's last job: p50 10.1 / p99 135 / max 19,355 ms before; review Mac after: p50 0.003–0.007 / p99 1.3–10 ms. CI macOS now passes the p99 < 50 ms assertion (its log does not print the numbers) |
+| #191 | issue #190: the host's choice for a computer goes to the relay even on a stale lobby view | |
+| #193, ADR 0215 | the full state hash hashes its large arrays in 64 KiB chunks on the workers | full hash 0.56 → 0.18 ms (s2 world); full hashes re-pinned |
+| #204 (open) | a kingdom's civilization is one with a seat, asked of the ruleset (`SeatTypeId`, `CanFoundKingdom`); the render bench takes the ruleset's order | 7 `"<civ>.castle"` look-ups and 2 `"euro"` fallbacks in Game removed; no hash moves; render bench numbers before #204 are not comparable (ADR 0244 amendment) |
+| #205 (open) | the crusade gathering pace, the crusaders' arrival interval and the chase leash in YAML | 3 constants out of Sim; ruleset hash only |
+| #209 | `legacy.referenceDataHash` re-pinned; importer PRs run the `TZAR2_ORIGIN` tests after merging main | 5 local Import tests failing → 0 (bisect: #168 moved the hash unpinned, #133 and #139 pinned values from stale branches) |
+| #211 (open, on #204) | `CivilizationKeyTests`: civilization keys and type-key suffixes only in a list of files that may only shrink | 20 files listed (see below) |
+
+## For a fork: the second sweep (2026-10-23)
+
+Sim, Game, AI and the client were searched for rules and formulas outside the ruleset and `ModifierStat`, for
+switches on class and unit names, for the civilization keys and race names, and for fixed lists of the three races.
+Ranked by how likely a fork hits them and how cheap the move is:
+
+| # | Finding | Where | Status |
+|---|---|---|---|
+| 1 | Whether a civilization can found a kingdom was decided by a type named `"<civ>.castle"`, with `"euro"` as the fallback | `MatchSetup`, `CampaignPlay` (3), `DesyncReports` (2), `RenderBench`, client `GameApp` and render bench | **done** (#204, #211): `Ruleset.SeatTypeId`, `CanFoundKingdom`, `FirstKingdomCivilization`, `KingdomCivilizations`, read from the `Seat` trait |
+| 2 | Game rules written as literals next to settings that were already data | crusade gathering pace and arrival (`MagicSystem`), chase leash (`CombatSystem.LeashFactor`) | **done** (#205) |
+| 3 | Fallback lists `["euro", "arab", "asia"]` and the `"euro"` default where no ruleset is at hand | `SlotChoice.Default`, `RandomMapScreenModel`, `CustomMapScreenModel`, client `Screens` | remaining: pass the ruleset's `KingdomCivilizations` in, or resolve an empty key at the match (as #187 does for scenarios) |
+| 4 | The client's per-civilization art: sprite name suffix (`" e"`, `" r"`, `" a"`) and diplomacy race picture index | `PresentationCatalog`, `DiplomacyScreens` | remaining: a presentation field per civilization in the package manifest |
+| 5 | Map builders place `"<civ>.castle"` and `"<civ>.peon"` by key | `MapGenCatalog` templates, `SkirmishTestMap`, `AiSkirmishScenario`, the client smokes | remaining: the seat from `SeatTypeId`; the starting worker needs a trait (`Harvester` plus a "starting unit" flag) |
+| 6 | Test and demo scenarios spell `euro.*` types | `GameplayScenario` (Sim), `DemoCampaign`, `CampaignAutoplay` | left as is: fixtures for the classic ruleset; the ratchet keeps them from spreading |
+| 7 | Translators of the original's race names (`european`, `Arabian`, the help's E/R/A) | `AiParser`, `AiRulesetModel`, `ScenarioParts`, `OnlineHelp` | left as is: they read the original's files; a fork's own formats use keys |
+| 8 | Remaining numeric rules in Sim | the experience curve's shape, the cloak's one-hour bound (a restore bound), the bless, curse and potion caps, the summon radius and the coast reach | remaining, low priority: the caps belong in `combat:` |
+| 9 | Engine cadences in Sim: chase and repath intervals, replan counts, search radii, shore crowding | `CombatSystem`, `MovementSystem`, `Shore`, `NavalSystem` | not rules (agreed with the coordinator): engine tuning, stays in code |
+
+The core formulas already come from data: damage (`minimumDamage`, `resistanceScale`, BONUS.INI), the swing cycle,
+reaches, the experience amounts (the curve's shape is still code, row 8), crafting, the market and the technology
+effects (`ModifierStat`).
+
+**Module boundaries, second look.** A read-only sweep found no leak that the architecture tests miss: project
+references, `Content.Compiled`, the client contract (ADR 0212), the AI's read-only views (ADR 0213), public mutable
+statics, the editor layers, and floats, the wall clock and `System.Random` in Sim, AI and Scripting. For a fork, the leak
+that matters is code that spells data. `CivilizationKeyTests` (#211) now keeps civilization keys, race names and
+`".castle"`/`".peon"` suffixes out of Sim, Game, AI and the client, except in 20 listed files (rows 3–7) whose counts
+may only go down.
+
+**Local-only tests.** Running them with the original found the reference data pin stale on main (#209). The
+long campaign acceptance test (Editor) loses alex1, bigisland, v_02 and rajba after three attempts; the
+campaign-19 work is bisecting v_02.
 
 ## Remaining findings and plan
 
-Agreed with the coordinator (2026-10-22). Each item gets its own PR once the open ones merge.
+Agreed with the coordinator (2026-10-22). Items 1–4 are done (#185, #187, #186, #188; see Fixes).
 
 1. **The client's view of the match (module boundaries 2–3).** `GameSession` stops handing out `Simulation` and `Ai`,
    and `GameFrame` stops naming `Sim.Kingdoms` types. The client reads only frames, UI models and commands. This gets an
@@ -239,7 +283,7 @@ Agreed with the coordinator (2026-10-22). Each item gets its own PR once the ope
 
 Not planned yet:
 
-* the formula constants in code (fork 4);
+* the rest of the formula constants in code (fork 4; second sweep rows 3–5 and 8);
 * the AI's tuning in C# options;
 * the diplomacy icon and name-suffix maps of the original's art;
 * the replay recording's in-memory keyframes;
