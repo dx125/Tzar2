@@ -17,7 +17,7 @@ public partial class GameScreen
     public static readonly string[] AuditDialogs =
     [
         "game-menu", "options", "save", "load", "diplomacy", "tribute", "gamble", "exchange", "trade", "craft",
-        "message", "story", "quests", "conversation", "help", "help-hotkeys",
+        "message", "story", "quests", "conversation", "help", "help-hotkeys", "scores",
     ];
 
     // Sample scenario texts, long enough to wrap (our own words).
@@ -44,6 +44,10 @@ public partial class GameScreen
                 return true;
             case "help-hotkeys":
                 ShowHelp(Tzar2.Game.Ui.HelpCategory.HotKeys);
+                return true;
+            case "scores":
+                _scoreView = Tzar2.Game.Ui.ScoreView.ScoresAndClock; // F4's scoreboard over the view
+                _scoresDrawn = null;
                 return true;
             case "options":
                 ShowOptions();
@@ -109,6 +113,7 @@ public partial class GameScreen
         _open = null;
         _storyPause = false;
         _session.Paused = false;
+        _scoreView = Tzar2.Game.Ui.ScoreView.None;
     }
 
     private void AddAuditLayer(Control dialog)

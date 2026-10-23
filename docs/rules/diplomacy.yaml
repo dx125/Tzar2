@@ -36,9 +36,9 @@ rules:
     note: The starting level (High) is a placeholder. The random map screen and the multiplayer lobby choose Deathmatch (SHELL-010).
   DIP-008:
     rule: F4 shows the scores.
-    source: [manual Hot Keys]
-    status: partial
-    note: The scores show as messages; there is no score screen.
+    source: [manual Hot Keys, help HK.TXT, 'community ReTzar src/hud.rs (clock), src/gameplay.rs (scores)']
+    status: tested
+    note: As ReTzar reads the original, F4 steps from nothing to the scoreboard and the clock, the clock alone, and back. The clock (h:mm:ss) sits at the view's top right; above its bottom right corner one line per kingdom, "name  own/team" (the team's is its members' mean), the best first, a defeated kingdom struck through, its colour in a square. The score itself is still Tzar2's placeholder formula (UNK-29); ReTzar shows the original's raw score divided by 100.
     adr: [0106]
   DIP-009:
     rule: Computer kingdoms resign on their own when their AI flag allows it.
