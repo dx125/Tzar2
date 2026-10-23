@@ -102,13 +102,17 @@ public sealed class ServerTests : IDisposable
         // Issue #179: poll until a generous deadline instead of fixed waits (a loaded Windows runner missed a 5 s Welcome
         // and a 400 ms listing refresh); the happy path takes as long as before.
         var watch = Stopwatch.StartNew();
+        var total = Stopwatch.StartNew();
         while (client.Welcome is null && watch.ElapsedMilliseconds < 30_000)
         {
             client.Poll();
             Thread.Sleep(2);
         }
 
-        Assert.NotNull(client.Welcome);
+        long welcomeMs = watch.ElapsedMilliseconds, listedMs = -1;
+        // Issue #179: on a failure, say which phase took how long, where the client stands and what the relay logged.
+        string Diagnostics() => $"welcome after {welcomeMs} ms, listed after {listedMs} ms, {total.ElapsedMilliseconds} ms in all; client {client.Phase}; relay log:\n{output}";
+        Assert.True(client.Welcome is not null, Diagnostics());
         using var http = new HttpClient { BaseAddress = new Uri($"http://localhost:{httpPort}/") };
         Assert.Equal("ok\n", await http.GetStringAsync("healthz"));
         string listing = "[]", metrics = string.Empty;
@@ -120,12 +124,14 @@ public sealed class ServerTests : IDisposable
             using JsonDocument now = JsonDocument.Parse(listing);
             if (now.RootElement.GetArrayLength() == 1 && metrics.Contains("tzar2_lobbies 1\n", StringComparison.Ordinal))
             {
+                listedMs = watch.ElapsedMilliseconds;
                 break;
             }
         }
 
         using JsonDocument lobbies = JsonDocument.Parse(listing);
-        JsonElement lobby = Assert.Single(lobbies.RootElement.EnumerateArray());
+        Assert.True(lobbies.RootElement.GetArrayLength() == 1, Diagnostics());
+        JsonElement lobby = lobbies.RootElement.EnumerateArray().Single();
         Assert.Equal(client.Welcome!.Code, lobby.GetProperty("code").GetString());
         Assert.Equal("lobby", lobby.GetProperty("phase").GetString());
         Assert.Contains("tzar2_lobbies 1\n", metrics, StringComparison.Ordinal);
@@ -133,8 +139,10 @@ public sealed class ServerTests : IDisposable
         Assert.Equal(System.Net.HttpStatusCode.NotFound, (await http.GetAsync("nothing")).StatusCode);
         Assert.Equal(System.Net.HttpStatusCode.MethodNotAllowed, (await http.PostAsync("lobbies", new StringContent("x"))).StatusCode);
 
+        client.Poll();
         BrowseReply? reply = LobbyBrowser.Query("127.0.0.1", host.UdpPort);
-        Assert.Equal(client.Welcome.Code, Assert.Single(reply!.Lobbies).Code);
+        Assert.True(reply is { Lobbies.Length: 1 }, $"browse reply: {(reply is null ? "none" : reply.Lobbies.Length + " lobbies")}; " + Diagnostics());
+        Assert.Equal(client.Welcome.Code, reply!.Lobbies[0].Code);
         Assert.Contains("\"event\":\"lobby.create\"", output.ToString(), StringComparison.Ordinal);
     }
 
