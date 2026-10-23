@@ -252,6 +252,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         importer PRs now run them after merging main (DEVELOPMENT.md, AGENTS.md).
       * 2026-10-23: whether a civilization can found a kingdom is asked of the ruleset (its Seat), not of a type named
         "<civ>.castle"; the render bench takes the ruleset's civilization order (ADR 0244 amendment).
+      * 2026-10-23: the crusade gathering pace, the crusaders' arrival interval and the chase leash moved from code to
+        the ruleset with the same values; only the ruleset hash is re-pinned.
 
 ## Decision and event log
 
