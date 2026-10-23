@@ -299,7 +299,7 @@ public partial class GameScreen : Node
             Accept(first);
             foreach (FrameEntity e in first.Entities)
             {
-                if (e.Owner == _session.LocalPlayer && _catalog.Type(e.TypeId).Class == "castle")
+                if (e.Owner == _session.LocalPlayer && _rules.EntityTypes[e.TypeId].Traits.IsSeat)
                 {
                     CenterOn(e.X, e.Y);
                     break;
@@ -1218,8 +1218,8 @@ public partial class GameScreen : Node
         var ids = new List<EntityId>();
         foreach (EntityInfo e in SelectedInfos())
         {
-            string cls = _catalog.Type(e.TypeId).Class;
-            if (e.Owner == _session.LocalPlayer && (important || cls != "castle"))
+            // A protected type (classic: the castle, GAME-04) goes only with Shift + Del.
+            if (e.Owner == _session.LocalPlayer && (important || !_rules.EntityTypes[e.TypeId].Traits.ProtectedDelete))
             {
                 ids.Add(e.Id);
             }

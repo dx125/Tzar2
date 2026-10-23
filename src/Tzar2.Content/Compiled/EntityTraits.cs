@@ -315,6 +315,12 @@ public sealed partial record EntityTraits
     /// <summary>Whether a destroyed entity leaves a ruin decal (never blocking, ORIG-01).</summary>
     public bool LeavesRuin { get; init; }
 
+    /// <summary>
+    /// Whether the type is a kingdom's seat (trait <c>Seat</c>; classic: the castle): the "destroy the castles" victory
+    /// defeats a kingdom that has none left (GAME-17). A fork names its own seats in data.
+    /// </summary>
+    public bool IsSeat { get; init; }
+
     /// <summary>Whether the type is a wall segment that can be placed by dragging a line (GAME-03).</summary>
     public bool IsWall { get; init; }
 

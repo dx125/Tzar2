@@ -59,7 +59,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0211, 2026-10-22) civilizations in the ruleset's order (euro, arab, asia, then comm), not sorted: every
     // kingdom's civilization index changes, so the ruleset, the stream and the final hash; the match plays the same.
     // (WORLD-018, 2026-10-22) the ninja moves as a climber, the cliff-climbing locomotor: only the ruleset hash moves.
-    private const ulong GoldenRulesetHash = 0x3C4FE07A2AC78BDBUL;
+    // (code review, 2026-10-22) the castle's Seat trait and the tavern, gambling and loan technologies named in the
+    // world settings instead of in code: the ruleset hash only, the match is the same.
+    private const ulong GoldenRulesetHash = 0x0873D053B52E43CDUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
