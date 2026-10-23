@@ -119,7 +119,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -241,6 +241,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — Quitting, resigning and disconnecting ask first (SHELL-027).** The main menu's QUIT asks "Exit Tzar", the game
+  menu's QUIT asks to resign alone and to disconnect in multiplayer, in the original's D_MSGWND window with its words
+  (STRINGS.INI [q]); the model is `Tzar2.Game.Ui.Confirmations`. No hash changes.
+
 * **2026-10-23 — Network and probe tests poll until a deadline (issue #179).**
   * The server test now polls for the Welcome and the lobby listing.
   * The relay harness has generous timeouts; the keep-alive test sets its own.
@@ -251,8 +255,10 @@ the process decisions that have no ADR.
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
   * Golden and bench hashes were re-pinned where the PRs met: the civilization order (ADR 0211), the movement of
     ADR 0220, the ledger chain (ADRs 0250–0261) and the rules decided by data instead of names in code.
-  * `HumanVsAiTests`' Archipelagos time limit is now 18 minutes. WORLD-013's forests (ADR 0201) and ADR 0220's
-    movement together delay the first sea landing to between 16 and 18 minutes.
+  * `HumanVsAiTests`' Archipelagos check plays 20 minutes (#182; first set to 18 in the batch, with a wrong reason). The
+    landed wave has hit after 17 minutes since WORLD-015 (#126): 17.2 on `main` before the forests, 18.4 with them.
+    The 14 minutes passed only on a xebec's shots at the human's woodcutters, which ADR 0220's corner slide moved out
+    of range with the forests (ADR 0220, Consequences).
   * The lobby fix UI-L2 (#140) was superseded by the `LobbyScreenModel` lobby (#160, ADR 0232), and then by the
     lobby rebuilt on the original's art (#177), which also takes #166's custom maps and limits and the ruleset's
     civilizations (#174).
