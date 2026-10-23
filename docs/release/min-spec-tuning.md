@@ -34,7 +34,7 @@ To add in M7, each only if a measurement shows it is needed (no setting without 
 | `t2 bench --scenario ai --players 8 --ticks 24000` | 8 legacy AIs for 20 minutes: AI cost at scale. | yes |
 | `t2 bench --scenario b4` | Mass death then traffic (ORIG-01). | yes |
 | Client log `slow frame` lines | Frames over budget during real play, at most one per 5 s (ADR 0176). | yes |
-| **Client render bench** `--bench-render` | The S2 scenario in the real client at a given resolution for 120 s with a scripted camera: FPS, frame time p50/p99, sim p99, RAM and VRAM peaks, load time; one line per result for a table. | **to build (M7 deliverable D6)** |
+| **Client render bench** `--bench-render` (ADR 0244) | The S2 scenario in the real client for 120 s after 15 s of warm-up, the camera touring the castles: FPS, frame time p50/p99, sim p50/p99, the tick's phases, RAM and VRAM peaks, load time, the S2 verdict; one `RENDER-BENCH` line per run. | yes |
 
 ## Requests for the owner's PC
 
@@ -75,8 +75,33 @@ and how the sim scales with workers.
    imported game. Play a 4-player skirmish for 10 minutes at 2560 × 1440 fullscreen, quit normally, and send the
    newest folder under `%APPDATA%\Godot\app_userdata\Tzar2\logs\`.
 
-**After D6 (the render bench) is merged (about 20 minutes, hands off):** the S2 render measurement at 1920 × 1080,
-2560 × 1440 and 3840 × 2160, each with the Mobile and the Compatibility renderer. The exact command comes with D6.
+**The render bench (about 20 minutes, hands off).** Needs the installed build of a `Windows package` run from
+2026-10-23 or later (it has `--bench-render`; request 2 says how to download and install it) and the PC otherwise idle:
+no game, browser or capture running, on mains power. The window opens and closes five times; do not touch it. All
+results go into one file on the desktop.
+
+```powershell
+$exe = "$env:LOCALAPPDATA\Programs\Tzar2\Tzar2.console.exe"
+$pkg = "$env:APPDATA\Godot\app_userdata\Tzar2\import\base.original.t2pkg"
+$out = Join-Path ([Environment]::GetFolderPath("Desktop")) "tzar2-render-bench.txt"
+if (-not (Test-Path $pkg)) {
+  & $exe --headless -- --import "E:\Games\Tzar" --smoke 2>&1 | Select-String "FIRST-RUN" | ForEach-Object Line | Add-Content $out
+}
+foreach ($run in @(
+    @("--", "--package", $pkg, "--bench-render", "--resolution", "2560x1440"),
+    @("--", "--package", $pkg, "--bench-render", "--resolution", "2560x1440"),
+    @("--", "--package", $pkg, "--bench-render", "--resolution", "1920x1080"),
+    @("--", "--package", $pkg, "--bench-render", "--fullscreen"),
+    @("--rendering-method", "gl_compatibility", "--", "--package", $pkg, "--bench-render", "--resolution", "2560x1440"))) {
+  & $exe @run 2>&1 | Select-String "^RENDER-BENCH" | ForEach-Object Line | Add-Content $out
+}
+Get-Content $out
+```
+
+Send `tzar2-render-bench.txt` from the desktop (or paste its lines). The two 2560 × 1440 runs with the default renderer
+give the S2 verdict (`S2=PASS` or `FAIL`); `--fullscreen` measures the monitor's own resolution; the last line is the
+Compatibility (OpenGL) renderer. If the monitor is smaller than 2560 × 1440, the window comes out smaller, the line
+says so in `res=` and `S2=n/a`.
 
 **Minimum tier:** the owner or a beta tester with such a machine (an older laptop with Intel graphics is ideal) runs
 the same three steps with the installed build. If nobody has one, a cloud Windows VM does not help (no real GPU); the

@@ -206,8 +206,10 @@ public sealed partial class NetworkMatch : IDisposable
     {
         ArgumentNullException.ThrowIfNull(choice);
 
-        // The relay refuses anything else (ADR 0160); asking only for what it allows keeps the lobby quiet.
-        if (_lobby is not { LocalIsHost: true } lobby || slot >= lobby.Slots.Count || lobby.Slots[slot].Kind != SlotKind.Computer)
+        // Only the host asks. Whether the slot holds a computer is the relay's to check (ADR 0160): the host's own view
+        // can lag behind the lobby by a broadcast (a player joining while the host adds a computer), and a choice dropped
+        // here on that view was lost without a trace (issue #190). The relay refuses a wrong slot with a notice.
+        if (_lobby is not { LocalIsHost: true } lobby || slot >= lobby.Slots.Count)
         {
             return;
         }

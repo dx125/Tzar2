@@ -737,12 +737,13 @@ public static class LegacyMapConverter
             {
                 int i = k.Number - 1;
                 uint self = _map.Diplomacy[(i * n) + i];
-                Civilization civ = k.Race switch
+                // The original's race numbers (LegacyMap.Race): 1 European, 2 Arabian, 3 Asian, else random.
+                string civ = k.Race switch
                 {
-                    1 => Civilization.European,
-                    2 => Civilization.Arabian,
-                    3 => Civilization.Asian,
-                    _ => Civilization.Random,
+                    1 => "euro",
+                    2 => "arab",
+                    3 => "asia",
+                    _ => string.Empty,
                 };
                 PlayerType type = k.PlayerType switch
                 {

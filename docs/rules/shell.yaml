@@ -134,9 +134,9 @@ rules:
     source: [data LOCAL HELP.INI]
     status: missing
   SHELL-027:
-    rule: Quitting, resigning and disconnecting ask for confirmation.
-    source: ['strings STRINGS.INI [q]']
-    status: missing
+    rule: Quitting, resigning and disconnecting ask for confirmation. Leaving Tzar from the main menu asks "Exit Tzar - Are you sure you want to quit the game?"; the game menu's QUIT asks to resign in a single player game and to disconnect in a multiplayer one, with Yes and No.
+    source: ['strings STRINGS.INI [q]', 'data IMAGES/SCREENS/D_MSGWND', 'community ReTzar src/menu.rs (Screen::Quit, Screen::Resign)']
+    status: tested
   SHELL-028:
     rule: Esc opens the game menu when there is nothing left for it to cancel or deselect.
     source: [owner 2026-10-21 (fourth play-test)]

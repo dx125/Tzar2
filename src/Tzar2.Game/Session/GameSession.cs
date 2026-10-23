@@ -391,7 +391,7 @@ public sealed class GameSession : IDisposable
     public MatchFingerprint Fingerprint { get; }
 
     /// <summary>The replay header of this match (with the AI program of every computer kingdom).</summary>
-    public ReplayHeader ReplayHeader() => Tzar2.Replay.ReplayHeader.For(Simulation, GameInfo.Version) with { AiPrograms = Setup.AiPrograms };
+    internal ReplayHeader ReplayHeader() => Tzar2.Replay.ReplayHeader.For(Simulation, GameInfo.Version) with { AiPrograms = Setup.AiPrograms };
 
     private static SimulationConfig Config(MatchSetup setup) => new()
     {
@@ -455,7 +455,7 @@ public sealed class GameSession : IDisposable
     }
 
     /// <summary>The AI of the computer kingdoms, or null when there are none (diagnostics; owned by the sim thread).</summary>
-    public LegacyAiSystem? Ai { get; }
+    internal LegacyAiSystem? Ai { get; }
 
     /// <summary>The ruleset.</summary>
     public Ruleset Ruleset { get; }
@@ -467,7 +467,7 @@ public sealed class GameSession : IDisposable
     public byte LocalPlayer { get; }
 
     /// <summary>The simulation. Owned by the sim thread while <see cref="IsRunning"/>; tests read it after <see cref="Step"/>.</summary>
-    public Simulation Simulation { get; }
+    internal Simulation Simulation { get; }
 
     /// <summary>Whether the sim thread runs.</summary>
     public bool IsRunning => _thread is not null;

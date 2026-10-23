@@ -255,7 +255,7 @@ public partial class GameApp : Node
         menu.Viewer += () => ViewerRequested?.Invoke();
         menu.Editor += () => ShowEditor();
         menu.Settings += ShowSettings;
-        menu.Quit += () => GetTree().Quit();
+        menu.Quit += () => Confirm(Tzar2.Game.Ui.ConfirmKind.Quit, () => GetTree().Quit()); // SHELL-027
         Replace(menu, music: "music/intro.mid");
 
         // Back in the menu no match holds the decoded sheets and images (the UI keeps its own textures): drop them, so
@@ -539,6 +539,23 @@ public partial class GameApp : Node
         results.Quit += quit ?? ShowMainMenu;
         results.LoadGame += ShowLoadGame;
         Replace(results, music: outcome == MatchOutcome.Victory ? "music/win1.mid" : "music/outro.mid");
+    }
+
+    // A yes-or-no question over the current screen (SHELL-027); yes runs <paramref name="yes"/>.
+    private void Confirm(Tzar2.Game.Ui.ConfirmKind kind, Action yes)
+    {
+        var dialog = new ConfirmDialog(_ui!, Screen, Tzar2.Game.Ui.Confirmations.For(kind, _catalog is null ? null : _catalog.Text));
+        var layer = new CanvasLayer { Layer = 10, Name = "Confirm" };
+        layer.AddChild(dialog);
+        AddChild(layer);
+        dialog.Answered += ok =>
+        {
+            if (ok)
+            {
+                yes();
+            }
+        };
+        dialog.Closed += () => layer.QueueFree();
     }
 
     private void Replace(Node next, string? music)

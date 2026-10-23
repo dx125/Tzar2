@@ -52,3 +52,21 @@ mission's trigger hash, and the CI bench hashes of the gameplay and AI scenarios
   They should read `Ruleset.Civilizations` next.
 * Revisit when a fork needs per-civilization data beyond the order (names, icons, colours): grow the list into
   definitions.
+
+## Amendment (2026-10-23): scenarios and map generation
+
+The code review's plan item (d) finished the move to the ruleset's list:
+
+* **Scenarios:** a kingdom's civilization is a key (`KingdomDef.Civilization` is a `string`; empty means random / not
+  set). The three-value enum is gone.
+  * Scenario JSON is now format 2 and writes the key. It still reads format 1, mapping `European`, `Arabian`, `Asian`
+    and `Random` to `euro`, `arab`, `asia` and empty (`ScenarioCivilization.FromFormat1`).
+  * The editor's kingdom page offers the ruleset's playable civilizations.
+  * A match turns an empty key into the ruleset's first playable civilization with a castle. Before, it was always
+    `euro`, which classic gives too.
+  * The map converter turns the original's race numbers 1–3 into keys.
+* **Map generation:** `MapGenCatalog.RestrictTo(ruleset)` takes the ruleset's playable civilizations in its order. A
+  ruleset that lists none keeps the catalog's list.
+  * The unbound classic catalog is ordered like the ruleset (`euro`, `arab`, `asia`; before: `euro`, `asia`, `arab`), so
+    kingdoms with a random civilization draw differently.
+  * The 168 map generation golden hashes (24 rows × 7 sizes) are re-pinned for that reason, and nothing else.

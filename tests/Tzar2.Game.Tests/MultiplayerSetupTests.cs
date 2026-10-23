@@ -161,6 +161,8 @@ public sealed class MultiplayerSetupTests
         host.SetSettings(MultiplayerHarness.Settings());
         host.SetSlot(2, SlotKind.Computer, new SlotChoice("euro", 0, Difficulty.Normal));
         NetworkMatch guest = h.Join(host.Code!);
+        // The guest's view may show the computer before the host's own does (the join's broadcast and the computer's
+        // cross); the host's choice below must still reach the relay (issue #190).
         h.Pump(() => host.Lobby!.Slots[1].Kind == SlotKind.Human && guest.Lobby?.Slots[2].Kind == SlotKind.Computer, what: "join");
         var lines = new List<ChatLine>();
         guest.DrainChat(lines);
@@ -180,6 +182,12 @@ public sealed class MultiplayerSetupTests
         h.PumpFor(200);
         Assert.Equal("war.ais", host.Lobby!.Slots[1].Choice.AiScript);
         Assert.Equal("war.ais", host.Lobby.Slots[2].Choice.AiScript);
+
+        // The host's choice for a player's slot reaches the relay, which refuses it and says so (issue #190: the client no
+        // longer drops it on its own view of the lobby).
+        var hostLines = new List<ChatLine>();
+        host.DrainChat(hostLines);
+        Assert.Contains(hostLines, l => l.Kind == ChatLineKind.System && l.Text.Contains("Not your slot", StringComparison.Ordinal));
 
         guest.SetReady(true);
         h.Pump(() => host.Lobby!.Slots[1].Ready, what: "ready");
