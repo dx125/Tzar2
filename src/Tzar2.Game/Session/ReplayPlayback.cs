@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,7 +21,7 @@ namespace Tzar2.Game.Session;
 public sealed class ReplayPlayback
 {
     /// <summary>Speeds offered (multiples of the recorded tick rate).</summary>
-    public static readonly double[] Speeds = [0.25, 0.5, 1, 2, 4, 8, 16];
+    public static readonly ImmutableArray<double> Speeds = [0.25, 0.5, 1, 2, 4, 8, 16];
 
     private readonly ReplayFile _replay;
     private readonly MatchSetup _setup;

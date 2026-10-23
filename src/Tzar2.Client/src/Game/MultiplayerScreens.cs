@@ -219,7 +219,7 @@ public partial class MultiplayerMenuScreen : ArtScreen
 /// </summary>
 public partial class LobbyScreen : ArtScreen
 {
-    private static readonly string[] Civilizations = ["euro", "arab", "asia"];
+    private readonly string[] _civilizations;
     private static readonly string[] SlotChoices = ["Open", "Closed", "Computer (Easy)", "Computer (Normal)", "Computer (Hard)"];
 
     private readonly NetworkMatch _match;
@@ -236,12 +236,16 @@ public partial class LobbyScreen : ArtScreen
     private LobbyView? _shown;
     private DropRule _drop = DropRule.AiTakeover;
 
-    /// <summary>Creates the lobby screen for <paramref name="match"/>; <paramref name="colour"/> gives a colour ramp's swatch.</summary>
-    public LobbyScreen(UiAssets ui, Vector2I screen, NetworkMatch match, Func<int, Color> colour)
+    /// <summary>
+    /// Creates the lobby screen for <paramref name="match"/>; <paramref name="colour"/> gives a colour ramp's swatch, and the
+    /// civilizations offered are <paramref name="rules"/>' (ADR 0211).
+    /// </summary>
+    public LobbyScreen(UiAssets ui, Vector2I screen, NetworkMatch match, Func<int, Color> colour, Tzar2.Content.Compiled.Ruleset? rules = null)
         : base(ui, screen, "art/screens/s_singlesetup/back.t2img")
     {
         _match = match;
         _colour = colour;
+        _civilizations = SkirmishOptions.CivilizationsOf(rules);
         _title = new Label { Position = Origin + new Vector2I(66, 36), Text = "Connecting...", MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_title);
         AddChild(_rows);
@@ -404,13 +408,13 @@ public partial class LobbyScreen : ArtScreen
             script.ItemSelected += index => SetChoice(slot, model.WithScript(slot.Slot, (int)index));
             _rows.AddChild(script);
             var civ = new OptionButton { Position = Origin + new Vector2I(344, y), Size = new Vector2(70, 24), Disabled = !row.CanChoose };
-            foreach (string c in Civilizations)
+            foreach (string c in _civilizations)
             {
                 civ.AddItem(c);
             }
 
-            civ.Selected = Math.Max(0, Array.IndexOf(Civilizations, slot.Choice.Civilization));
-            civ.ItemSelected += index => SetChoice(slot, slot.Choice with { Civilization = Civilizations[(int)index] });
+            civ.Selected = Math.Max(0, Array.IndexOf(_civilizations, slot.Choice.Civilization));
+            civ.ItemSelected += index => SetChoice(slot, slot.Choice with { Civilization = _civilizations[(int)index] });
             _rows.AddChild(civ);
             var team = new OptionButton { Position = Origin + new Vector2I(418, y), Size = new Vector2(64, 24), Disabled = !row.CanChoose };
             team.AddItem("no team");
@@ -521,7 +525,7 @@ public partial class ReplayBrowserScreen : ArtScreen
         _list = new ItemList { Position = Origin + new Vector2I(66, 80), Size = new Vector2(460, 460) };
         foreach (string f in _files)
         {
-            _list.AddItem($"{System.IO.Path.GetFileNameWithoutExtension(f)}   {System.IO.File.GetLastWriteTime(f):yyyy-MM-dd HH:mm}");
+            _list.AddItem(string.Create(CultureInfo.InvariantCulture, $"{System.IO.Path.GetFileNameWithoutExtension(f)}   {System.IO.File.GetLastWriteTime(f):yyyy-MM-dd HH:mm}"));
         }
 
         _list.ItemActivated += i => Play?.Invoke(_files[(int)i]);

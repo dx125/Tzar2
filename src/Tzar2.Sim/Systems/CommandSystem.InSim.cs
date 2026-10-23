@@ -15,7 +15,19 @@ public sealed partial class CommandSystem
     /// <paramref name="commands"/>.
     /// </summary>
     /// <exception cref="InvalidOperationException">Called between ticks (the world is locked).</exception>
-    public static void ExecuteInTick(World world, CommandList commands)
+    public static void ExecuteInTick(World world, CommandList commands) => Execute(world, commands, scripted: false);
+
+    /// <summary>
+    /// Executes a scenario's own orders (Object Order actions, ADR 0130) during a tick, through the validation of
+    /// <see cref="ExecuteInTick"/> except one check: the units obey whatever the state of their kingdom. A kingdom that
+    /// only holds a campaign's heroes may have resigned or been defeated (a computer kingdom gives up when it has no
+    /// town), and the script still walks its heroes (ADR 0220). Each command's <see cref="Command.Player"/> is the
+    /// units' owner.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Called between ticks (the world is locked).</exception>
+    public static void ExecuteScripted(World world, CommandList commands) => Execute(world, commands, scripted: true);
+
+    private static void Execute(World world, CommandList commands, bool scripted)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(commands);
@@ -27,7 +39,7 @@ public sealed partial class CommandSystem
         for (int i = 0; i < commands.Count; i++)
         {
             ref readonly Command command = ref commands[i];
-            CommandRejection? rejection = Apply(world, command, commands.EntitiesOf(command));
+            CommandRejection? rejection = Apply(world, command, commands.EntitiesOf(command), scripted);
             if (rejection is { } reason)
             {
                 world.Events.Emit(new SimEvent(SimEventKind.CommandRejected, command.Player, EntityId.None, i, (int)command.Kind, (int)reason));

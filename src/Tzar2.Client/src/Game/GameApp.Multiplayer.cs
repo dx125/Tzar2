@@ -72,6 +72,13 @@ public partial class GameApp
             StartNetworkGame(_network, session);
         }
 
+        // A rejoin spends the stored token and the relay sends a new one (ADR 0230): keep it at once, so a crash while
+        // the match loads again does not lock the player out.
+        if (_network?.Ticket is { } ticket && _mp.Ticket is { } stored && stored.Code == ticket.Code && stored.Token != ticket.Token)
+        {
+            _mp.Ticket = ticket;
+        }
+
         if (_playback is { } playback && playback.Generation != _playbackGeneration)
         {
             ShowPlayback(); // a backward seek restored a keyframe into a new session
@@ -104,7 +111,7 @@ public partial class GameApp
         }
 
         _networkGameShown = false;
-        _lobby = new LobbyScreen(_ui!, Screen, _network, PlayerColour);
+        _lobby = new LobbyScreen(_ui!, Screen, _network, PlayerColour, _rules);
         _lobby.Leave += ShowMultiplayer;
         Replace(_lobby, music: null);
     }
