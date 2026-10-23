@@ -360,7 +360,7 @@ legacy:
   DropOff: { resources: [stone, gold], autoGather: true }
 ^class.harbor:
   DropOff: { resources: [food], access: [water] }   # UNVERIFIED: only boats deliver here
-  Building: { placement: coast }
+  Building: { placement: coast, coastReachTiles: 2 }   # UNVERIFIED (UNK-02): water for the ships within 2 tiles
   TradeDock: { access: water }        # GAME-14: ships trade between harbors
 
 # Guilds are deletable only with Shift + Del (GAME-04).

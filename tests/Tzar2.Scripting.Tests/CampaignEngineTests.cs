@@ -1,4 +1,6 @@
+using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
+using Tzar2.Core.Ids;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 using Tzar2.Tests.Scenario;
@@ -52,5 +54,38 @@ public class CampaignEngineTests
         d.Order(0, CommandKind.Unload, [d.Object(castle)], Tiles(6), Tiles(6));
         d.Seconds(1);
         Assert.Equal(0, d.Variable("loaded"));
+    }
+
+    [Fact]
+    [Trait("Rule", "ECO-024")]
+    [Trait("Rule", "ECO-023")]
+    public void A_peasant_given_to_another_kingdom_keeps_its_load_and_the_default_order_delivers_it_at_the_store()
+    {
+        // bigisland: Azim takes the gold for a kingdom without a store; "Azim changes kingdom back" and "Azim leaves gold"
+        // (a default order on the village's storage) put it into the village's stockpile.
+        var b = new ScenarioBuilder();
+        b.Structure("euro.castle", 0, 2, 2);
+        int storage = b.Structure("euro.storage", 0, 30, 2);
+        int peon = b.Unit("euro.peon", 1, 8, 8);
+        int gold = b.Unit("comm.resitem", MapObject.Nature, 9, 8);
+        b.Event(new ObjectExistEvent("lies", All(gold)));
+        b.Rule("!lies", b.Action(new ChangeObjectOwnerAction("back", All(peon), 1)), b.Action(new ObjectOrderAction("leave", All(peon), new ObjectArea(storage, 0), "default")));
+        using TriggerDriver d = b.Start();
+        int id = d.World.Ruleset.ResourceId("gold");
+        int before = d.World.Players[0].Resources[id];
+        EntityId azim = d.Object(peon);
+        d.Order(1, CommandKind.PickItem, [azim], target: d.Object(gold));
+        d.Run(1);
+        int ticks = 0;
+        while (d.World.Identities.Get(azim).Owner != 0 && ticks++ < 2000)
+        {
+            d.Step();
+        }
+
+        Assert.Equal(0, d.World.Identities.Get(azim).Owner);
+        Assert.Equal(100, d.World.Workers.Get(azim).CarryAmount); // the load stays with it
+        d.Seconds(30);
+        Assert.Equal(0, d.World.Workers.Get(azim).CarryAmount);
+        Assert.Equal(before + 100, d.World.Players[0].Resources[id]);
     }
 }

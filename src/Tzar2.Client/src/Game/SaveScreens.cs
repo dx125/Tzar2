@@ -51,6 +51,9 @@ public abstract partial class SaveListDialog : ArtScreen
         AddChild(area);
     }
 
+    /// <summary>The list of saves on the art.</summary>
+    protected static Rect2I ListRect => ListArea;
+
     /// <summary>Raised when the dialog closes.</summary>
     public event Action? Closed;
 
@@ -147,6 +150,13 @@ public partial class SaveDialog : SaveListDialog
             RefreshList();
         });
         Button(new Vector2I(370, 252), new Vector2I(137, 27), "art/screens/d_save/btn.t2img", text("save", "cancel", "CANCEL"), Close);
+        Hint(new Rect2I(122, 37, 276, 22), "SG_SAVE_GAME"); // SHELL-026
+        Hint(new Rect2I(408, 35, 105, 27), "SG_NEW");
+        Hint(new Rect2I(42, 252, 137, 27), "SG_SAVE");
+        Hint(new Rect2I(206, 252, 137, 27), "SG_DELETE");
+        Hint(new Rect2I(370, 252, 137, 27), "SG_CANCEL");
+        Hint(ListRect, "SG_LIST");
+        HelpBall(k => text("HELP", k, k), small: true);
         RefreshList();
         Callable.From(() => _name.GrabFocus()).CallDeferred();
     }
@@ -221,6 +231,13 @@ public partial class LoadDialog : SaveListDialog
             RefreshList();
         });
         Button(new Vector2I(370, 252), new Vector2I(137, 27), "art/screens/d_load/btn.t2img", text("load", "cancel", "CANCEL"), Close);
+        Hint(Box(DialogBoxes.LoadTypePrevious), "LG_CHOOSE"); // SHELL-026
+        Hint(Box(DialogBoxes.LoadTypeNext), "LG_CHOOSE");
+        Hint(new Rect2I(42, 252, 137, 27), "LG_LOAD");
+        Hint(new Rect2I(206, 252, 137, 27), "LG_DELETE");
+        Hint(new Rect2I(370, 252, 137, 27), "LG_CANCEL");
+        Hint(ListRect, "LG_SELECT_GAME");
+        HelpBall(k => text("HELP", k, k), small: true);
         RefreshType();
         RefreshList();
     }

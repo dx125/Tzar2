@@ -816,20 +816,20 @@ public static class CampaignAutoplay
 
         private int _lastTribute = int.MinValue / 2;
 
-        // "@gold(k) >= n" (or > n) about another kingdom that is not an enemy: a tribute of what it lacks, a player's order
-        // (ADR 0220); the local kingdom's own stock is topped up by cheat assistance when it is short.
-        private void Tribute(World world, byte me, Content.Compiled.Scenario.Expressions.Expr node)
+        // "@gold(k) >= n" (or > n) about another kingdom that is not an enemy: what it lacks (kingdom k as the script
+        // numbers it, the resource id and name, the amount).
+        private static void Shortfalls(World world, byte me, Content.Compiled.Scenario.Expressions.Expr node, List<(int Kingdom, int Resource, string Name, int Need)> into)
         {
             switch (node)
             {
                 case Content.Compiled.Scenario.Expressions.UnaryExpr { Op: Content.Compiled.Scenario.Expressions.UnaryOp.Not }:
                     return; // "!(@gold(7) >= n)" wants less, not more
                 case Content.Compiled.Scenario.Expressions.UnaryExpr u:
-                    Tribute(world, me, u.Operand);
+                    Shortfalls(world, me, u.Operand, into);
                     return;
                 case Content.Compiled.Scenario.Expressions.BinaryExpr { Op: Content.Compiled.Scenario.Expressions.BinaryOp.And or Content.Compiled.Scenario.Expressions.BinaryOp.Or } b:
-                    Tribute(world, me, b.Left);
-                    Tribute(world, me, b.Right);
+                    Shortfalls(world, me, b.Left, into);
+                    Shortfalls(world, me, b.Right, into);
                     return;
                 case Content.Compiled.Scenario.Expressions.BinaryExpr { Left: Content.Compiled.Scenario.Expressions.CallExpr { Arguments.Length: 1 } c, Right: Content.Compiled.Scenario.Expressions.IntLiteral n } b
                     when b.Op is Content.Compiled.Scenario.Expressions.BinaryOp.Greater or Content.Compiled.Scenario.Expressions.BinaryOp.GreaterOrEqual
@@ -845,31 +845,71 @@ public static class CampaignAutoplay
                     } is { } resource && world.Ruleset.ResourceId(resource) is >= 0 and var id:
                 {
                     int need = n.Value + (b.Op == Content.Compiled.Scenario.Expressions.BinaryOp.Greater ? 1 : 0) - world.Players[k - 1].Resources[id];
-                    if (need <= 0 || need > world.Ruleset.World.MaxTributeAmount)
+                    if (need > 0)
                     {
-                        return;
+                        into.Add((k, id, resource, need));
                     }
 
-                    if (world.Players[me].Resources[id] < need)
-                    {
-                        if (!options.CheatAssist)
-                        {
-                            return;
-                        }
-
-                        _batch.Add(CommandKind.Cheat, [], 0, 0, default, (int)Sim.Systems.CheatCode.LargeResources, 0);
-                        Assist = Assist == "play" ? "resources" : Assist;
-                    }
-
-                    _lastTribute = _tick;
-                    _batch.Add(CommandKind.Tribute, x: k - 1, arg0: id, arg1: need);
-                    Note($"tribute of {need} {resource} to kingdom {k}");
                     return;
                 }
 
                 default:
                     return;
             }
+        }
+
+        // A tribute of what a friendly kingdom lacks, a player's order (ADR 0220); the local kingdom's own stock is topped
+        // up by cheat assistance when it is short.
+        private void Tribute(World world, byte me, List<(int Kingdom, int Resource, string Name, int Need)> shortfalls)
+        {
+            foreach ((int k, int id, string resource, int need) in shortfalls)
+            {
+                if (need > world.Ruleset.World.MaxTributeAmount)
+                {
+                    continue;
+                }
+
+                if (world.Players[me].Resources[id] < need)
+                {
+                    if (!options.CheatAssist)
+                    {
+                        continue;
+                    }
+
+                    _batch.Add(CommandKind.Cheat, [], 0, 0, default, (int)Sim.Systems.CheatCode.LargeResources, 0);
+                    Assist = Assist == "play" ? "resources" : Assist;
+                }
+
+                _lastTribute = _tick;
+                _batch.Add(CommandKind.Tribute, x: k - 1, arg0: id, arg1: need);
+                Note($"tribute of {need} {resource} to kingdom {k}");
+                return;
+            }
+        }
+
+        // The rules still to come that give kingdom k objects (bigisland's "Azim changes kingdom back", then his load
+        // goes into its store, ECO-023): the scenario fills that kingdom's stockpile itself.
+        private List<int> Givers(Scripting.Legacy.LegacyTriggerSystem triggers, int kingdom)
+        {
+            var rules = new List<int>();
+            for (int r = 0; r < scenario.Rules.Length; r++)
+            {
+                if (triggers.State.RuleDisabled[r])
+                {
+                    continue;
+                }
+
+                foreach (int a in scenario.Rules[r].ActionIndices)
+                {
+                    if ((uint)a < (uint)scenario.Actions.Length && scenario.Actions[a] is ChangeObjectOwnerAction { Kingdom: var to } && to == kingdom)
+                    {
+                        rules.Add(r);
+                        break;
+                    }
+                }
+            }
+
+            return rules;
         }
 
         // The value of a part of a condition that the solver cannot change, or null when it may change or is not known
@@ -943,17 +983,28 @@ public static class CampaignAutoplay
                 Assist = Assist == "play" ? "resources" : Assist;
             }
 
-            // A rule waiting on a friendly kingdom's stockpile ("@gold(7) >= 1000"): the player sends it a tribute.
-            if (_tick - _lastTribute >= 600)
+            // A rule waiting on a friendly kingdom's stockpile ("@gold(7) >= 1000"): the scenario's own rules that give
+            // that kingdom objects are its gates (they bring it the resources); with none, the player sends a tribute.
+            var gates = new List<int>();
+            bool gated = false;
+            var shortfalls = new List<(int Kingdom, int Resource, string Name, int Need)>();
+            Shortfalls(world, me, condition, shortfalls);
+            foreach ((int k, _, _, _) in shortfalls)
             {
-                Tribute(world, me, condition);
+                List<int> givers = Givers(triggers, k);
+                givers.Remove(r);
+                gated |= givers.Count > 0;
+                gates.AddRange(givers);
+            }
+
+            if (!gated && shortfalls.Count > 0 && _tick - _lastTribute >= 600)
+            {
+                Tribute(world, me, shortfalls);
             }
 
             // Gates first: variables still 0 that some other rule sets, objects some other rule makes appear. While a gate
             // is open the rule's own events are premature (walking the heroes off before the conversation that needs
             // them), so only the gate's rules are pursued.
-            var gates = new List<int>();
-            bool gated = false;
             var variables = new List<int>();
             Variables(condition, negated: false, variables);
             foreach (int v in variables)
@@ -996,6 +1047,17 @@ public static class CampaignAutoplay
                 return false;
             }
 
+            // A resource item that a peasant the rule names must take ("AzimNearStorage && !GoldNotTaken"): first the
+            // item, then the walk with its load, or the two goals pull the peasant back and forth.
+            foreach (int e in Unwanted(condition))
+            {
+                if (triggers.State.EventValues[e] && Lying(world, triggers, scenario.Events[e]) is { } item
+                    && world.TypeOf(item).Traits.Item is { Kind: ItemKind.Resource } definition && NamedGatherer(world, triggers, condition, definition) is not null)
+                {
+                    return Take(world, me, triggers, scenario.Events[e].Name, item, condition);
+                }
+            }
+
             // Loading holders before moving them: a "$cargo >= N" goal sends the holders to the units, an area goal for
             // the same holders then takes them away loaded.
             wanted.Sort((a, b) => IsCargo(scenario.Events[b]).CompareTo(IsCargo(scenario.Events[a])));
@@ -1020,7 +1082,7 @@ public static class CampaignAutoplay
             // "!GoldNotTaken" (a named item must stop existing): a unit the kingdom commands picks it up (ADR 0220).
             foreach (int e in Unwanted(condition))
             {
-                if (triggers.State.EventValues[e] && Lying(world, triggers, scenario.Events[e]) is { } item && Take(world, me, triggers, scenario.Events[e].Name, item))
+                if (triggers.State.EventValues[e] && Lying(world, triggers, scenario.Events[e]) is { } item && Take(world, me, triggers, scenario.Events[e].Name, item, condition))
                 {
                     return true;
                 }
@@ -1170,7 +1232,7 @@ public static class CampaignAutoplay
 
         // The nearest unit the kingdom commands that can hold the item walks to it and picks it up; across water or a
         // wall it is ferried or breaches first, as for a delivery.
-        private bool Take(World world, byte me, Scripting.Legacy.LegacyTriggerSystem triggers, string name, EntityId item)
+        private bool Take(World world, byte me, Scripting.Legacy.LegacyTriggerSystem triggers, string name, EntityId item, Content.Compiled.Scenario.Expressions.Expr? condition = null)
         {
             Position where = Pos(world, item);
             EntityId? picker = null;
@@ -1179,8 +1241,23 @@ public static class CampaignAutoplay
             ReadOnlySpan<EntityId> ids = world.Identities.Entities;
             ReadOnlySpan<Identity> identities = world.Identities.Components;
 
-            // The unit chosen first keeps the job (aboard a ferry it is no longer the nearest, and another would board).
-            if (_takers.TryGetValue(item.Value, out EntityId kept) && world.Entities.IsAlive(kept) && world.Diplomacy.MayCommand(me, world.Identities.Get(kept).Owner)
+            // A resource item the rule's other events name a peasant for ("AzimNearStorage && !GoldNotTaken"): that
+            // peasant gathers it as its load and carries it where the scenario wants it (program 0x1e, ReTzar 0x464f60);
+            // any other unit would put it in its own kingdom's stockpile. Until the kingdom commands that peasant, the
+            // item waits.
+            EntityId? named = definition.Kind == ItemKind.Resource && condition is not null ? NamedGatherer(world, triggers, condition, definition) : null;
+            if (named is { } gatherer && !world.Diplomacy.MayCommand(me, world.Identities.Get(gatherer).Owner))
+            {
+                Goal = $"{name}: waiting to command the {world.TypeOf(gatherer).Key} that takes the item";
+                return false;
+            }
+
+            // Else the unit chosen first keeps the job (aboard a ferry it is no longer the nearest, and another would board).
+            if (named is not null)
+            {
+                picker = named;
+            }
+            else if (_takers.TryGetValue(item.Value, out EntityId kept) && world.Entities.IsAlive(kept) && world.Diplomacy.MayCommand(me, world.Identities.Get(kept).Owner)
                 && (world.Motions.Has(kept) || world.IsHeld(kept)))
             {
                 picker = kept;
@@ -1220,6 +1297,31 @@ public static class CampaignAutoplay
             Goal = $"{name}: {world.Ruleset.EntityTypes[world.Identities.Get(unit).TypeId].Key}/{world.Identities.Get(unit).Owner} takes the item at ({where.X / Tile},{where.Y / Tile})";
             Note($"take an item for {name}");
             return true;
+        }
+
+        // A peasant that an area event of the condition names and that gathers the item's resource, or null.
+        private EntityId? NamedGatherer(World world, Scripting.Legacy.LegacyTriggerSystem triggers, Content.Compiled.Scenario.Expressions.Expr condition, ItemDefinition definition)
+        {
+            var mates = new List<int>();
+            Events(condition, mates);
+            foreach (int m in mates)
+            {
+                if (scenario.Events[m] is not ObjectInAreaEvent { Objects: NamedObjects named })
+                {
+                    continue;
+                }
+
+                foreach (int index in named.ObjectIndices)
+                {
+                    if (Entity(world, triggers, index) is { } u && world.TypeOf(u).Traits.Harvester is { } harvester && harvester.CanGather(definition.Resource)
+                        && definition.CanBeHeldBy(world.Identities.Get(u).TypeId))
+                    {
+                        return u;
+                    }
+                }
+            }
+
+            return null;
         }
 
         private Dictionary<int, List<int>>? _setters;
@@ -2488,6 +2590,7 @@ public static class CampaignAutoplay
             }
 
             bool keep = picker is not null;
+
             for (int i = 0; i < ids.Length && !keep; i++)
             {
                 if (world.Diplomacy.MayCommand(me, world.Identities.Get(ids[i]).Owner) && !world.IsHeld(ids[i]) && world.Motions.Has(ids[i])
@@ -2901,14 +3004,93 @@ public static class CampaignAutoplay
             _spawnPoint = at;
         }
 
+        // The units a rule still to come waits to see hurt ("WoolinIsWounded": $health < $WoolinHealth, when that is all
+        // it lacks): the scenario's own enemies must land that blow, so cheat assistance spares the enemies near them.
+        private readonly List<EntityId> _wounded = [];
+        private readonly List<int> _woundEvents = [];
+        private readonly List<int> _woundVariables = [];
+
+        private List<EntityId> AwaitingWounds(World world)
+        {
+            // Buffers reused across calls (once a second with cheat assistance on).
+            List<EntityId> units = _wounded;
+            List<int> wanted = _woundEvents, variables = _woundVariables;
+            units.Clear();
+            if (session.Scenario?.Triggers is not { } triggers)
+            {
+                return units;
+            }
+
+            for (int r = 0; r < scenario.Rules.Length; r++)
+            {
+                if (triggers.State.RuleDisabled[r] || scenario.Rules[r].Condition.Root is not { } condition)
+                {
+                    continue;
+                }
+
+                wanted.Clear();
+                Wanted(condition, negated: false, wanted);
+                variables.Clear();
+                Variables(condition, negated: false, variables);
+                int open = 0;
+                foreach (int e in wanted)
+                {
+                    open += triggers.State.EventValues[e] ? 0 : 1;
+                }
+
+                // Only when the wound is all the rule still lacks (Kaffar has spoken).
+                if (open != 1 || variables.Exists(v => (uint)v < (uint)triggers.State.Variables.Length && triggers.State.Variables[v] == 0))
+                {
+                    continue;
+                }
+
+                foreach (int e in wanted)
+                {
+                    if (!triggers.State.EventValues[e] && scenario.Events[e] is ObjectExpressionEvent
+                        {
+                            Objects: NamedObjects named,
+                            Expression.Root: Content.Compiled.Scenario.Expressions.BinaryExpr
+                            {
+                                Op: Content.Compiled.Scenario.Expressions.BinaryOp.Less,
+                                Left: Content.Compiled.Scenario.Expressions.ReservedVar { Variable: Content.Compiled.Scenario.Expressions.ReservedVariable.Health },
+                            },
+                        })
+                    {
+                        foreach (int index in named.ObjectIndices)
+                        {
+                            if (Entity(world, triggers, index) is { } u)
+                            {
+                                units.Add(u);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return units;
+        }
+
+        // Whether an object stands within 12 tiles of one of the points.
+        private static bool Near(World world, EntityId e, List<Position> points)
+        {
+            if (points.Count == 0 || !world.Positions.Has(e))
+            {
+                return false;
+            }
+
+            Position at = world.Positions.Get(e);
+            return points.Exists(p => Math.Max(Math.Abs(p.X - at.X), Math.Abs(p.Y - at.Y)) <= 12 * Tile);
+        }
+
         private void Clear(World world, byte me)
         {
             var targets = new List<EntityId>();
+            List<Position> spared = AwaitingWounds(world).ConvertAll(u => Pos(world, u));
             ReadOnlySpan<EntityId> ids = world.Identities.Entities;
             ReadOnlySpan<Identity> identities = world.Identities.Components;
             for (int i = 0; i < ids.Length && targets.Count < 1000; i++)
             {
-                if (IsEnemy(world, me, identities[i]) && !_protected.Contains(ids[i]))
+                if (IsEnemy(world, me, identities[i]) && !_protected.Contains(ids[i]) && !Near(world, ids[i], spared))
                 {
                     targets.Add(ids[i]);
                 }

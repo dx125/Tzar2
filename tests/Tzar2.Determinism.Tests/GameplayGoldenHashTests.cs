@@ -77,7 +77,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // with the same values (three new settings): the ruleset hash only, the match is the same.
     // (code review, 2026-10-23) the experience curve's step is a setting (combat.levelStepXp, -1: as levelBaseXp, the
     // original's curve): the ruleset hash only, every level costs what it did.
-    private const ulong GoldenRulesetHash = 0x3AA1D3B73C008216UL;
+    // (code review, 2026-10-23) a harbor's reach to the water is a field of its Building trait (coastReachTiles 2, was a
+    // constant in Sim, the AI and the build ghost): the ruleset hash only. With both settings (#225 merged after #226) the
+    // ruleset hash is the value below.
+    private const ulong GoldenRulesetHash = 0x1A188E140DBFD1D8UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
