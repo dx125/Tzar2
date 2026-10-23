@@ -424,8 +424,20 @@ public sealed record CombatSettings
     /// <summary>Extra experience for a kill (UNK-23).</summary>
     public int ExperiencePerKill { get; init; }
 
-    /// <summary>Experience for level n is <c>LevelBaseXp × n × (n + 1) / 2</c>: each level costs more (strategy guide).</summary>
+    /// <summary>
+    /// Experience curve (ReTzar's reading of the original, 0x5022e0): the first point gives level 1, and level <c>k</c>
+    /// costs <c>LevelBaseXp + LevelStepXp × (k − 1)</c> more for the next.
+    /// </summary>
     public int LevelBaseXp { get; init; } = 100;
+
+    /// <summary>
+    /// How much each level costs more than the one before (<see cref="LevelBaseXp"/>); -1, the default, is the same as
+    /// <see cref="LevelBaseXp"/>, the original's curve (level <c>k</c> costs <c>base × k</c>); 0 makes every level cost the same.
+    /// </summary>
+    public int LevelStepXp { get; init; } = -1;
+
+    /// <summary><see cref="LevelStepXp"/>, with -1 resolved to <see cref="LevelBaseXp"/>.</summary>
+    public int LevelStep => LevelStepXp < 0 ? LevelBaseXp : LevelStepXp;
 
     /// <summary>Levels a unit may reach without technologies (<c>experienceCap</c> modifiers add; UNK-23).</summary>
     public int BaseLevelCap { get; init; } = 3;
@@ -623,6 +635,7 @@ public sealed record CombatSettings
         Check(ExperiencePerDamagePercent, 0, 100_000);
         Check(ExperiencePerKill, 0, 1_000_000);
         Check(LevelBaseXp, 1, 1_000_000);
+        Check(LevelStepXp, -1, 1_000_000);
         Check(BaseLevelCap, 0, 10_000);
         Check(AttackPerLevel, 0, 10_000);
         Check(DefenceHalvesPerLevel, 0, 10_000);

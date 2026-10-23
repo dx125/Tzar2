@@ -199,7 +199,7 @@ public sealed class AiSkirmishScenario : IBenchScenario
             (int ox, int oy) = Directions[p % Directions.Length];
             int bx = center + (ox * radius / 100) - 2;
             int by = center + (oy * radius / 100) - 2;
-            Place(objects, used, size, ruleset, civ + ".castle", p, bx, by);
+            Place(objects, used, size, ruleset, ruleset.EntityTypes[ruleset.SeatTypeId(civ)].Key, p, bx, by);
             Place(objects, used, size, ruleset, "comm.res_gold", MapObject.Nature, bx + 9, by - 2);
             Place(objects, used, size, ruleset, "comm.res_stone", MapObject.Nature, bx - 4, by + 9);
 
@@ -216,7 +216,7 @@ public sealed class AiSkirmishScenario : IBenchScenario
 
             for (int w = 0; w < options.WorkersPerPlayer; w++)
             {
-                objects.Add(new MapObject(civ + ".peon", (byte)p, Center(bx + 6 + (w % 3), size), Center(by + 1 + (w / 3), size)));
+                objects.Add(new MapObject(ruleset.EntityTypes[ruleset.StartingWorkerTypeId(civ)].Key, (byte)p, Center(bx + 6 + (w % 3), size), Center(by + 1 + (w / 3), size)));
             }
         }
 

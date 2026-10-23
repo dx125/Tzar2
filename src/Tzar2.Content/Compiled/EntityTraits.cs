@@ -297,6 +297,12 @@ public sealed partial record EntityTraits
     /// <summary>Placement rule of a building.</summary>
     public PlacementKind Placement { get; init; }
 
+    /// <summary>
+    /// A <see cref="PlacementKind.Coast"/> building needs water for its ships within this many tiles of its footprint
+    /// (<c>Building.coastReachTiles</c>, 2; UNVERIFIED, UNK-02).
+    /// </summary>
+    public int CoastReachTiles { get; init; } = 2;
+
     /// <summary>Capture by peasants (GAME-04), or null.</summary>
     public CapturableDefinition? Capturable { get; init; }
 
@@ -320,6 +326,12 @@ public sealed partial record EntityTraits
     /// defeats a kingdom that has none left (GAME-17). A fork names its own seats in data.
     /// </summary>
     public bool IsSeat { get; init; }
+
+    /// <summary>
+    /// Whether the type is a kingdom's starting worker (trait <c>StartingWorker</c>; classic: the peasant): map builders
+    /// place it next to the seat (<see cref="Ruleset.StartingWorkerTypeId"/>). A fork names its own in data.
+    /// </summary>
+    public bool IsStartingWorker { get; init; }
 
     /// <summary>Whether the type is a wall segment that can be placed by dragging a line (GAME-03).</summary>
     public bool IsWall { get; init; }

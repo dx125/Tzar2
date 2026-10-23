@@ -23,9 +23,6 @@ public static class Placement
     /// <summary><see cref="Session.GameFrame.Terrain"/> bit: a finished piece of the frame's kingdom's wall, which a gate may replace (BLD-018).</summary>
     public const byte OwnWall = 8;
 
-    /// <summary>How far from a coast building's footprint the water for its ships may be (tiles, as the sim).</summary>
-    public const int CoastReachTiles = 2;
-
     /// <summary>Whether <paramref name="type"/> fits with its footprint's top-left at (<paramref name="tileX"/>, <paramref name="tileY"/>).</summary>
     public static bool IsLegal(ReadOnlySpan<byte> buildable, int width, int height, EntityTypeDefinition type, int tileX, int tileY)
         => IsLegal(buildable, [], width, height, type, tileX, tileY, rotated: false);
@@ -134,13 +131,14 @@ public static class Placement
 
     private static bool Turned(EntityTypeDefinition type, bool rotated) => rotated && type.CanTurn;
 
-    // A harbor needs water for its ships within two tiles of its footprint.
+    // A harbor needs water for its ships within its type's reach of its footprint (as the sim).
     private static bool NearWater(ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool rotated)
     {
         (int w, int h) = Size(type, rotated);
-        for (int y = Math.Max(0, tileY - CoastReachTiles); y < Math.Min(height, tileY + h + CoastReachTiles); y++)
+        int reach = type.Traits.CoastReachTiles;
+        for (int y = Math.Max(0, tileY - reach); y < Math.Min(height, tileY + h + reach); y++)
         {
-            for (int x = Math.Max(0, tileX - CoastReachTiles); x < Math.Min(width, tileX + w + CoastReachTiles); x++)
+            for (int x = Math.Max(0, tileX - reach); x < Math.Min(width, tileX + w + reach); x++)
             {
                 if ((terrain[(y * width) + x] & Water) != 0)
                 {

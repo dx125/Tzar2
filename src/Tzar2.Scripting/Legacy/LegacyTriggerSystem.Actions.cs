@@ -339,11 +339,38 @@ public sealed partial class LegacyTriggerSystem
             return;
         }
 
+        // The default order on an object is the unit's right click on it (ReTzar's reading of the original, 0x4bb1a4): a
+        // peasant with a load delivers it at its kingdom's store (ECO-023, bigisland's "Azim leaves gold"); the other
+        // right clicks stay a move there (UNVERIFIED, UNK-57).
+        List<EntityId> units = Collect(order.Objects, _targets);
+        if (string.Equals(key, "default", StringComparison.OrdinalIgnoreCase) && order.Area is ObjectArea at && MapEntity(at.ObjectIndex) is var store
+            && store != EntityId.None && _world.Entities.IsAlive(store))
+        {
+            _orders.Clear();
+            for (int i = units.Count - 1; i >= 0; i--)
+            {
+                EntityId e = units[i];
+                if (_world.Workers.IndexOf(e) is >= 0 and var w && _world.Workers.At(w).CarryAmount > 0 && _world.Identities.Get(e).Owner == _world.Identities.Get(store).Owner
+                    && _world.TypeOf(store).Traits.AcceptsDropOff(_world.Workers.At(w).CarryResource))
+                {
+                    _orders.Add(CommandKind.Harvest, [e], area.CenterX, area.CenterY, store, 0, 0, CommandFlags.None, _world.Identities.Get(e).Owner);
+                    units.RemoveAt(i);
+                }
+            }
+
+            // Executed here, in a batch of their own: the deliveries are one command per peasant (each targets the
+            // store), the moves below are grouped per kingdom and sent as a second batch. A peasant is in one batch or the
+            // other, never both (it leaves `units` above), so nothing is ordered twice.
+            if (_orders.Count > 0)
+            {
+                CommandSystem.ExecuteScripted(_world, _orders);
+            }
+        }
+
         CommandKind kind = key.Contains("patrol", StringComparison.OrdinalIgnoreCase) ? CommandKind.Patrol
             : key.Contains("stop", StringComparison.OrdinalIgnoreCase) ? CommandKind.Stop : CommandKind.Move;
         CommandFlags flags = key.Contains("attack", StringComparison.OrdinalIgnoreCase) ? CommandFlags.Ctrl : CommandFlags.None;
         _orders.Clear();
-        List<EntityId> units = Collect(order.Objects, _targets);
         Span<EntityId> group = stackalloc EntityId[64];
         for (int p = 0; p < _world.Players.Length; p++)
         {

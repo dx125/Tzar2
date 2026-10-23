@@ -586,6 +586,36 @@ public sealed class CommandCardTests : IDisposable
         return press.Commands[0];
     }
 
+    [Fact]
+    [Trait("Rule", "TRADE-002")]
+    public void The_trade_window_picks_the_source_and_the_destination_market()
+    {
+        World world = _session.Simulation.World;
+        Position at = world.Positions.Get(Own("euro.footman"));
+        int cx = at.X / 2048, cy = at.Y / 2048;
+        EntityId trader = world.Spawn((ushort)Rules.Value.EntityTypeId("euro.trader"), 0, at.X, at.Y + 2048);
+        EntityId near = world.PlaceStructure((ushort)Rules.Value.EntityTypeId("euro.market"), 0, cx + 4, cy + 2);
+        EntityId source = world.PlaceStructure((ushort)Rules.Value.EntityTypeId("euro.market"), 0, cx - 8, cy + 2);
+        EntityId far = world.PlaceStructure((ushort)Rules.Value.EntityTypeId("euro.market"), 0, cx + 4, cy + 12);
+        Step();
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext context = Context([trader]);
+
+        Assert.True(card.IsTradeDock(context, source));
+        Assert.False(card.IsTradeDock(context, trader)); // a caravan is no market
+        Assert.False(card.IsTradeDock(Context([Own("euro.footman")]), source)); // no trader selected
+
+        Command picked = card.Trade(context, far, 1 | (2 << 8), 50, source).Commands![0];
+        Assert.Equal((CommandKind.Trade, source, 1 | (2 << 8), 50), (picked.Kind, picked.Target, picked.Arg0, picked.Arg1));
+        Position farAt = world.Positions.Get(far);
+        Assert.Equal((farAt.X, farAt.Y), (picked.X, picked.Y));
+
+        // No source picked (or the destination picked twice): the trader's nearest own market, as before.
+        Assert.Equal(near, card.Trade(context, far, 0, 0, EntityId.None).Commands![0].Target);
+        Assert.Equal(near, card.Trade(context, far, 0, 0, far).Commands![0].Target);
+        Assert.Null(card.Trade(context, trader, 0, 0, source).Commands);
+    }
+
     private CardContext Context(EntityId[] selection) => new(_session.AcquireFrame(out _) ?? Step(), selection);
 
     private GameFrame Step()

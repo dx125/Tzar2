@@ -438,8 +438,9 @@ public sealed partial class World
     }
 
     /// <summary>
-    /// Changes the owner of a live entity (GAME-04 capture, cow poaching): its queue is lost, its fight ends, its hit
-    /// points follow the new owner's technologies (damage taken stays taken), capture progress on it is dropped.
+    /// Changes the owner of a live entity (GAME-04 capture, cow poaching): its queue is lost, its fight and its task end
+    /// (a peasant keeps its load), its hit points follow the new owner's technologies (damage taken stays taken), capture
+    /// progress on it is dropped.
     /// </summary>
     public void ChangeOwner(EntityId entity, byte newOwner)
     {
@@ -466,7 +467,9 @@ public sealed partial class World
 
         if (Workers.IndexOf(entity) is >= 0 and var w)
         {
-            Workers.At(w) = new Worker { CarryResource = Worker.NoResource, NodeResource = Worker.NoResource };
+            // The task ends; the load stays with the unit (ECO-024, ReTzar's reading of the original, 0x5050a0).
+            Worker old = Workers.At(w);
+            Workers.At(w) = new Worker { CarryAmount = old.CarryAmount, CarryResource = old.CarryResource, NodeResource = Worker.NoResource };
         }
 
         CaptureStates.Remove(entity);
@@ -1010,6 +1013,7 @@ public sealed partial class World
         }
 
         Map.RebuildOccupancy(cells);
+        RebuildWalls();
         RebuildWalkableCover();
         ValidateGameplayComponents();
         ValidateM3Components();
@@ -1464,6 +1468,35 @@ public sealed partial class World
     // Adds or removes what a structure puts on the map: blockers on its mask tiles (an open gate's passage excepted), or a
     // completed bridge's deck on every tile (a bridge site puts nothing, ADR 0043). Rotation applies. A walkable footprint
     // (fields) puts nothing: placement keeps other structures off it (GameplayCommands.CanPlace).
+    // Wall pieces, not gates or towers, are what ninjas climb (WORLD-018; ReTzar 0x4fad01 marks the wall classes).
+    private static bool IsClimbableWall(EntityTypeDefinition type) => type.Traits.IsWall && type.Traits.Gate is null;
+
+    // The map's wall counts are derived from the wall pieces' footprints (snapshot restore).
+    private void RebuildWalls()
+    {
+        Map.ClearWalls();
+        ReadOnlySpan<EntityId> structures = Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            EntityTypeDefinition type = TypeOf(structures[i]);
+            if (!IsClimbableWall(type) || type.Traits.WalkableFootprint)
+            {
+                continue;
+            }
+
+            Footprint f = Footprints.At(i);
+            int w = f.Width(type);
+            ReadOnlySpan<byte> mask = f.Mask(type);
+            for (int k = 0; k < mask.Length; k++)
+            {
+                if (mask[k] != 0)
+                {
+                    Map.CountWall(f.TileX + (k % w), f.TileY + (k / w));
+                }
+            }
+        }
+    }
+
     private void ApplyStructure(EntityId entity, bool add)
     {
         Footprint f = Footprints.Get(entity);
@@ -1504,6 +1537,7 @@ public sealed partial class World
 
         ReadOnlySpan<byte> mask = f.Mask(type), door = f.Passage(type);
         bool open = !site && Gates.IndexOf(entity) is >= 0 and var g && Gates.At(g).Open != 0;
+        bool wall = IsClimbableWall(type);
         for (int dy = 0; dy < h; dy++)
         {
             for (int dx = 0; dx < w; dx++)
@@ -1516,11 +1550,11 @@ public sealed partial class World
 
                 if (add)
                 {
-                    Map.AddBlocker(f.TileX + dx, f.TileY + dy);
+                    Map.AddBlocker(f.TileX + dx, f.TileY + dy, wall);
                 }
                 else
                 {
-                    Map.RemoveBlocker(f.TileX + dx, f.TileY + dy);
+                    Map.RemoveBlocker(f.TileX + dx, f.TileY + dy, wall);
                 }
             }
         }

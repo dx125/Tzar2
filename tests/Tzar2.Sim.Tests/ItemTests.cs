@@ -76,6 +76,38 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-023")]
+    public void A_peasant_delivers_its_load_at_the_store_it_is_sent_to()
+    {
+        using var d = new SimDriver(
+            TestMap(40, 12, Structure("euro.castle", 0, 2, 2), Structure("euro.storage", 0, 30, 2), Unit("euro.peon", 0, 8, 8), Item("comm.resitem", 9, 8)),
+            ruleset: Classic);
+        int goldId = Resource("gold");
+        int gold = d.World.Players[0].Resources[goldId];
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        Pick(d, peon, OfType(d.World, "comm.resitem").Single());
+        Assert.Equal(100, d.World.Workers.Get(peon).CarryAmount); // on its way to the nearest store, the castle
+
+        // Sent to the storage instead.
+        EntityId storage = OfType(d.World, "euro.storage").Single();
+        d.Order(0, CommandKind.Harvest, [peon], target: storage);
+        d.RunUntil(() => d.World.Workers.Get(peon).CarryAmount == 0, 3000);
+        Assert.Equal(gold + 100, d.World.Players[0].Resources[goldId]);
+        Assert.Equal(storage.Index, d.Events.Last(e => e.Event.Kind == SimEventKind.ResourceDelivered).Event.Y);
+        for (int t = 0; t < 100; t++)
+        {
+            d.Step();
+        }
+
+        Assert.Equal(WorkerTask.None, d.World.Workers.Get(peon).Task); // the order ends with the delivery
+
+        // A peasant with nothing to deliver is not sent.
+        d.Order(0, CommandKind.Harvest, [peon], target: storage);
+        d.Step();
+        Assert.Contains(CommandRejection.NoValidEntities, d.Rejections());
+    }
+
+    [Fact]
     [Trait("Rule", "ITEM-006")]
     [Trait("Rule", "NAT-004")]
     public void Resource_items_go_to_the_stockpile_and_a_peasant_carries_them_home()

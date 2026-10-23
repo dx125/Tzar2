@@ -166,7 +166,7 @@ public sealed partial class Ruleset
     private void AddCombat(StateHasher hasher)
     {
         CombatSettings c = Combat;
-        hasher.Add(c.ExperiencePerDamagePercent).Add(c.ExperiencePerKill).Add(c.LevelBaseXp).Add(c.BaseLevelCap).Add(c.AttackPerLevel)
+        hasher.Add(c.ExperiencePerDamagePercent).Add(c.ExperiencePerKill).Add(c.LevelBaseXp).Add(c.LevelStepXp).Add(c.BaseLevelCap).Add(c.AttackPerLevel)
             .Add(c.DefenceHalvesPerLevel).Add(c.HeroLevel).Add(c.LeadershipTechnology).Add(c.LeadershipRadiusUnits).Add(c.LeadershipSharePercent)
             .Add(c.HonorTechnology).Add(c.HonorAttackPercent).Add(c.DummyMaxLevel).Add(c.ExitRadiusTiles).Add(c.CraftGoldPerPower)
             .Add(c.CraftMsPerPower).Add(c.CraftMaxPower).Add(c.CraftHealthPerPower).Add(c.CraftManaPerPower).Add(c.CraftPowerPerLevel).Add(c.CraftBookCostPercent).Add(c.CraftBookTimePercent).Add(c.BribeCostPercent).Add(c.CrusadeAnchor).Add(c.Crusader).Add(c.CrusadeStart).Add(c.CrusadeRestart).Add(c.CrusadeCeilingStep).Add(c.CrusadeCeilingMax)
