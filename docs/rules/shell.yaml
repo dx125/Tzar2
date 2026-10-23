@@ -104,9 +104,9 @@ rules:
   SHELL-021:
     rule: The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game.
     source: [manual Menu Screen, manual Hot Keys]
-    status: partial
+    status: tested
     adr: [0187]
-    note: Instructions are missing.
+    note: INSTRUCTIONS (at the top of D_MENU, where ReTzar puts it) opens the online help at its hot keys (HK.TXT), as ReTzar does; what the original's "floating screen" of directives shows is UNVERIFIED.
   SHELL-022:
     rule: F2 opens the save dialog and F3 the load dialog.
     source: [manual Hot Keys]

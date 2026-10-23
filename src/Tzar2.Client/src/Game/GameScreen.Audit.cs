@@ -17,7 +17,7 @@ public partial class GameScreen
     public static readonly string[] AuditDialogs =
     [
         "game-menu", "options", "save", "load", "diplomacy", "tribute", "gamble", "exchange", "trade", "craft",
-        "message", "story", "quests", "conversation",
+        "message", "story", "quests", "conversation", "help", "help-hotkeys",
     ];
 
     // Sample scenario texts, long enough to wrap (our own words).
@@ -38,6 +38,12 @@ public partial class GameScreen
         {
             case "game-menu":
                 ShowMenu();
+                return true;
+            case "help":
+                ShowHelp(Tzar2.Game.Ui.HelpCategory.Units);
+                return true;
+            case "help-hotkeys":
+                ShowHelp(Tzar2.Game.Ui.HelpCategory.HotKeys);
                 return true;
             case "options":
                 ShowOptions();
