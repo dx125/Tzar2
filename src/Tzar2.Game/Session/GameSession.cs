@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Diagnostics;
 using System.Threading;
@@ -33,7 +34,7 @@ namespace Tzar2.Game.Session;
 public sealed class GameSession : IDisposable
 {
     /// <summary>Game speeds in percent of the classic tick rate (the original's <c>+</c>/<c>-</c> keys step through them).</summary>
-    public static readonly int[] SpeedSteps = [25, 50, 75, 100, 150, 200, 300];
+    public static readonly ImmutableArray<int> SpeedSteps = [25, 50, 75, 100, 150, 200, 300];
 
     private readonly object _gate = new();
     private readonly CommandList[] _pending;
@@ -145,6 +146,10 @@ public sealed class GameSession : IDisposable
                         Civilization = p.Civilization,
                         Difficulty = SkirmishAi.ToAi(p.Difficulty),
                         Standby = p.Controller == ControllerKind.Human,
+
+                        // The resign flag is offered by the random map and multiplayer screens only (1.09, SHELL-013):
+                        // a scenario's computer kingdoms never resign (ReTzar: ai_resign is off in a campaign mission; ADR 0220).
+                        MayResign = setup.Scenario is null,
                     });
                 }
             }
@@ -517,6 +522,25 @@ public sealed class GameSession : IDisposable
     /// <summary>The result (tick and hashes) of the latest tick; read it on the sim thread in <see cref="AfterTick"/>.</summary>
     public TickResult LastTickResult { get; private set; }
 
+    /// <summary>How long each tick took on this machine (ms), for the render bench (ADR 0244); never part of the match.</summary>
+    public Diagnostics.SampleRing TickTimes { get; } = new();
+
+    /// <summary>
+    /// Per-section tick times (ADR 0244; null: off). Set it before <see cref="Start"/> or between ticks: the sim thread
+    /// feeds it, and it never changes the match.
+    /// </summary>
+    public Diagnostics.PhaseTimes? Phases
+    {
+        get => _phases;
+        set
+        {
+            _phases = value;
+            Simulation.Profiler = value;
+        }
+    }
+
+    private Diagnostics.PhaseTimes? _phases;
+
     private void TraceSession(LogLevel level, string message)
     {
         ITraceSink trace = Simulation.World.Trace;
@@ -725,7 +749,11 @@ public sealed class GameSession : IDisposable
         }
 
         bool replied = _replyQueued;
+        long started = Stopwatch.GetTimestamp();
         TickResult result = Simulation.Tick(_tickSet);
+        double tickMs = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+        TickTimes.Add(tickMs);
+        _phases?.EndTick(tickMs);
         LastTickResult = result;
         _recorder?.RecordTick(_tickSet, result);
         Interlocked.Increment(ref _ticksRun);

@@ -23,6 +23,11 @@ ruleset:
   corpseTtlMs: 120000                 # REQ-PATH-08 default; UNVERIFIED corpse lifetime of the original
   decalCap: 4000
   hudResources: [food, wood, stone, gold]   # GAME-01: iron exists in the data but not in the HUD (UNK-14)
+  # ADR 0211: a kingdom's civilization is an index into this list. The playable civilizations in the original's race
+  # order (its maps and triggers number them 1 European, 2 Arabian, 3 Asian; LegacyMap.Race, trigger variable Race),
+  # then the key of the types they all share. A fork adds a civilization here.
+  civilizations: [euro, arab, asia]
+  commonCivilization: comm
 
 # GAME-01. Resource type ids are positions in this list. Iron exists in the data (RES.INI, te_ironplus) but not in the
 # HUD (UNK-14). Mana is per caster (trait ManaPool), not a stockpile.

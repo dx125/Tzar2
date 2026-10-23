@@ -208,7 +208,7 @@ public partial class GameScreen : Node
         // Sprites of the civilizations in the match (REQ-GFX-05): the kingdoms' and those of every object on the map (the
         // original maps give a kingdom buildings and units of other civilizations).
         _bank = new SpriteBank(_store);
-        var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { "comm", string.Empty };
+        var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { _rules.CommonCivilization, string.Empty };
         foreach (MapObject o in _session.Map.Objects)
         {
             if (_rules.EntityTypeId(o.TypeKey) is >= 0 and var placed)
@@ -263,7 +263,7 @@ public partial class GameScreen : Node
         Image? light = set.Light is { } l ? _ui.Image(l) : null;
         long before = watch.ElapsedMilliseconds;
         _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, grid, _store.LoadImage, light);
-        ClientLog.Info($"match load: world renderer {watch.ElapsedMilliseconds - before} ms (terrain composed {_world.Terrain.ComposeMs} ms, {_world.Terrain.FrameTotal} chunk frames, uploaded {_world.Terrain.UploadMs} ms)");
+        ClientLog.Info($"match load: world renderer {watch.ElapsedMilliseconds - before} ms (terrain composed {_world.Terrain.ComposeMs} ms, {_world.Terrain.FrameTotal} chunk frames, {_world.Terrain.AtlasTiles} distinct tiles on {_world.Terrain.AtlasPages} atlas pages, indexed {_world.Terrain.IndexMs} ms, uploaded {_world.Terrain.UploadMs} ms)");
         _boxItem = RenderingServer.CanvasItemCreate();
         RenderingServer.CanvasItemSetParent(_boxItem, GetViewport().FindWorld2D().Canvas);
         RenderingServer.CanvasItemSetZIndex(_boxItem, 100);
@@ -2155,7 +2155,7 @@ public partial class GameScreen : Node
     private void Screenshot()
     {
         Image image = GetViewport().GetTexture().GetImage();
-        string path = ProjectSettings.GlobalizePath($"user://screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png");
+        string path = ProjectSettings.GlobalizePath(string.Create(CultureInfo.InvariantCulture, $"user://screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png"));
         image.SavePng(path);
         Message("Screenshot " + path);
     }

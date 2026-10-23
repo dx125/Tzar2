@@ -56,9 +56,12 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // the ruleset, the stream and the final hash.
     // (ADR 0191 amendment, 2026-10-22) Supply Storage and Seafood raise the population limit, Ore Flotation halves what mines lose: the ruleset hash only.
     // (ADR 0192, 2026-10-22) gates are 7 x 1 or 1 x 6 with a door of three tiles, bridges turn into their own cells: the bot's gate and bridge change, so the ruleset, the stream and the final hash.
+    // (ADR 0211, 2026-10-22) civilizations in the ruleset's order (euro, arab, asia, then comm), not sorted: every
+    // kingdom's civilization index changes, so the ruleset, the stream and the final hash; the match plays the same.
+    // (WORLD-018, 2026-10-22) the ninja moves as a climber, the cliff-climbing locomotor: only the ruleset hash moves.
     // (code review, 2026-10-22) the castle's Seat trait and the tavern, gambling and loan technologies named in the
     // world settings instead of in code: the ruleset hash only, the match is the same.
-    private const ulong GoldenRulesetHash = 0x5965D53247EE8BF1UL;
+    private const ulong GoldenRulesetHash = 0x0873D053B52E43CDUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -66,8 +69,11 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
     // (ADR 0191, 2026-10-22) technology effects as the original computes them (whole points, cost and time cuts): the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0x5160323D05FC2BACUL;
-    private const ulong GoldenFinalFullHash = 0xF9F7194383A108C8UL;
+    // (ADR 0211, 2026-10-22) civilizations in the ruleset's order: the kingdoms' civilization indices, so the hashes.
+    // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement (kingdoms 0 and 1 are allies here): the
+    // stream and the final hash.
+    private const ulong GoldenHashStream = 0xA6BCB9CF383A3A74UL;
+    private const ulong GoldenFinalFullHash = 0x4F2E27CF8C11740FUL;
 
     private const int Ticks = 1600;
 
