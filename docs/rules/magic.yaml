@@ -98,6 +98,11 @@ rules:
     rule: Units under a stone spell take no damage.
     source: [community TDD GAME-11]
     status: tested
+  MAG-022:
+    rule: Healing, freezing, the curse and raise dead do not take on machines (golems, siege engines, magic carpets, ships, ghosts, skeletons, fishing boats), and creatures that leave no body (bats, golems, carpets, mages, dwarves, orcs, jinns, ghosts, skeletons, dragons) cannot be raised.
+    source: ['community ReTzar src/gameplay.rs (0x2719, 0x271c)']
+    status: tested
+    adr: [0254]
   MAG-021:
     rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; the fuller it is, the closer the copied kingdom's spies must come to unmask it, right next to it at 100.
     source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846, capture capture-20261022-011438]

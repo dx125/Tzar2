@@ -618,13 +618,14 @@ public sealed class MagicSystem : ISimSystem
         }
     }
 
-    // Raise Dead (necromancy): the oldest corpses within the radius of the point rise as the spell's units.
+    // Raise Dead (necromancy): the oldest corpses within the radius of the point rise as the spell's units; only corpses of
+    // the spell's target types (not machines or the bodiless; MAG-022).
     private static void RaiseDead(World world, EntityId caster, byte owner, SpellDefinition s, int x, int y)
     {
         EntityTypeDefinition type = world.Ruleset.EntityTypes[s.Summon];
         for (int n = 0; n < s.Count && world.Entities.RemainingCapacity >= 1; n++)
         {
-            if (!world.Decals.TakeCorpse(x, y, s.RadiusUnits, out Decal corpse))
+            if (!world.Decals.TakeCorpse(x, y, s.RadiusUnits, s.TargetTypes, out Decal corpse))
             {
                 break;
             }
