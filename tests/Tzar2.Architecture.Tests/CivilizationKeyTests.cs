@@ -25,10 +25,9 @@ public class CivilizationKeyTests
         ["src/Tzar2.Game/Ui/OnlineHelp.cs"] = 3, // the help's pages per race (E, R, A)
 
         // Test, bench and demo scenarios that build their maps by key.
-        ["src/Tzar2.AI/Scenarios/AiSkirmishScenario.cs"] = 3,
+        ["src/Tzar2.AI/Scenarios/AiSkirmishScenario.cs"] = 1,
         ["src/Tzar2.Sim/Scenarios/GameplayScenario.cs"] = 20,
         ["src/Tzar2.Sim/Scenarios/GameplayScenario.CombatMagic.cs"] = 4,
-        ["src/Tzar2.Game/Maps/SkirmishTestMap.cs"] = 3,
         ["src/Tzar2.Game/Campaigns/DemoCampaign.cs"] = 14,
         ["src/Tzar2.Game/Campaigns/CampaignAutoplay.cs"] = 1,
         ["src/Tzar2.Client/src/Editor/EditorSmoke.cs"] = 2,
