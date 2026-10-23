@@ -532,9 +532,10 @@ public static class LegacyMapReader
                             Fixed(p, 0x38, 40),
                             p[0x60],
                             MagicType: p[0x60],
-                            NeedsMana: p[0x63] != 0,
+                            NeedsMana: p[0x62] != 0, // ReTzar's reading of 0x494f66 and 0x4640f0 (ADR 0265)
                             CooldownSeconds: ByteReader.U16(p, 0x64, Format, "cooldown"),
-                            Charges: ByteReader.U16(p, 0x66, Format, "charges")),
+                            Charges: ByteReader.U16(p, 0x66, Format, "charges"),
+                            LimitedCharges: p[0x63] != 0),
                     };
                 case "resitem" when p.Length >= 0x64:
                     return o with { Item = new LegacyItem(Fixed(p, 0x38, 40), p[0x60], Amount: ByteReader.U16(p, 0x62, Format, "amount")) };

@@ -246,8 +246,8 @@ public sealed record LegacyObject(
 /// <param name="Value">The word at 0x60 (bonus value of weapon/armor/potion items, resource type of resource items).</param>
 /// <param name="Amount">Resource item amount.</param>
 /// <param name="MagicType">Spell book magic type.</param>
-/// <param name="NeedsMana">Spell book needs mana.</param>
-/// <param name="CooldownSeconds">Spell book time restriction (⚠ UNVERIFIED unit).</param>
+/// <param name="NeedsMana">Spell book needs mana: it has a pool of its own, refilled before each cast (+0x62; ADR 0265).</param>
+/// <param name="CooldownSeconds">Spell book time restriction: the pool's size (+0x64; one point a second, ⚠ UNVERIFIED).</param>
 /// <param name="Charges">Spell book max charges.</param>
 /// <param name="Text">Scroll text.</param>
 /// <param name="Image">Scroll image.</param>
@@ -255,6 +255,7 @@ public sealed record LegacyObject(
 /// <param name="Music">Scroll music.</param>
 /// <param name="ScrollTimeMs">Scroll time.</param>
 /// <param name="AutoClose">Scroll closes by itself.</param>
+/// <param name="LimitedCharges">Spell book's charges count (+0x63); without them it never runs out (ADR 0265).</param>
 public sealed record LegacyItem(
     string Name,
     int Value,
@@ -268,7 +269,8 @@ public sealed record LegacyItem(
     string? Sound = null,
     string? Music = null,
     int? ScrollTimeMs = null,
-    bool? AutoClose = null);
+    bool? AutoClose = null,
+    bool? LimitedCharges = null);
 
 /// <summary>An <c>objext</c> record: title and portrait of an object.</summary>
 /// <param name="ObjectId">Object id.</param>
