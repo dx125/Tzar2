@@ -215,7 +215,9 @@ public partial class GameApp : Node
         root.ContentScaleSize = logical;
         root.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
         root.ContentScaleAspect = Window.ContentScaleAspectEnum.Keep;
-        root.ContentScaleStretch = Window.ContentScaleStretchEnum.Integer;
+        // Integer stretch never goes below 1 and would cut a logical screen larger than the window (Authentic in a
+        // 720-row window): such a window shrinks the picture to fit instead (UI-L1, ADR 0200).
+        root.ContentScaleStretch = DisplayMath.Fits(window.X, window.Y, logical.X, logical.Y) ? Window.ContentScaleStretchEnum.Integer : Window.ContentScaleStretchEnum.Fractional;
         if (logical == Screen)
         {
             return;

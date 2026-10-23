@@ -33,10 +33,6 @@ internal static class UiFindings
     /// <summary>The open findings.</summary>
     public static readonly Known[] Open =
     [
-        // Authentic on a window lower than 768: Godot's integer stretch shows the top 720 rows; the HUD's bottom panel,
-        // the bottom of the dialogs over it and the editor's status line are cut off.
-        new("UI-L1", "1280x720-authentic", "hud.*|game-menu|options|save|load|diplomacy|tribute|gamble|exchange|trade|craft|message|story|quests|conversation|editor.*", "OffScreen", "."),
-
         // The lobby's rows of Godot controls are 30 px apart but 31 px high, and the team picker runs into the ping.
         new("UI-L2", ".*", "lobby", "Overlap", "LobbyScreen"),
 
