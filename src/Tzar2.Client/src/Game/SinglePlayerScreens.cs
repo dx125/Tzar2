@@ -231,7 +231,7 @@ public partial class ChooseMapScreen : ArtScreen
 /// <summary>The settings of a custom map chosen on its setup screen (index 0 of every list keeps the map's own).</summary>
 public sealed class CustomMapOptions
 {
-    /// <summary>Own civilization: 0 the map's, then <see cref="SkirmishOptions.Civilizations"/> + 1.</summary>
+    /// <summary>Own civilization: 0 the map's, then <see cref="SkirmishOptions.CivilizationsOf"/> + 1.</summary>
     public int Civilization { get; set; }
 
     /// <summary>Computer difficulty.</summary>
@@ -250,10 +250,10 @@ public sealed class CustomMapOptions
     public int Explore { get; set; }
 
     /// <summary>The match settings these options ask for.</summary>
-    public CustomMapSettings ToSettings(SkirmishAi ai) => new()
+    public CustomMapSettings ToSettings(SkirmishAi ai, Ruleset? rules = null) => new()
     {
         Difficulty = Difficulty,
-        Civilization = Civilization > 0 ? SkirmishOptions.Civilizations[Civilization - 1] : null,
+        Civilization = Civilization > 0 && SkirmishOptions.CivilizationsOf(rules) is var civs && Civilization <= civs.Length ? civs[Civilization - 1] : null,
         StartingResources = StartingResources is >= 0 and <= 2 ? StartingResources : -1,
         PopulationLimit = PopulationLimit > 0 ? SkirmishOptions.PopulationLimits[PopulationLimit - 1] : -1,
         NoFog = NoFog == 0 ? null : NoFog == 1,
@@ -269,6 +269,7 @@ public sealed class CustomMapOptions
 public partial class MapSetupScreen : ArtScreen
 {
     private static readonly Rect2I Description = new(557, 64, 176, 224);
+    private readonly string[] _civilizations;
 
     private readonly CustomMapOptions _options;
     private readonly PresentationCatalog? _catalog;
@@ -278,6 +279,7 @@ public partial class MapSetupScreen : ArtScreen
     public MapSetupScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, CustomMap map, CustomMapOptions options, Image? picture, string? notice = null)
         : base(ui, screen, "art/screens/s_singlesetup/back.t2img")
     {
+        _civilizations = SkirmishOptions.CivilizationsOf(catalog?.Ruleset);
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(options);
         _options = options;
@@ -342,7 +344,7 @@ public partial class MapSetupScreen : ArtScreen
         static int Wrap(int v, int n) => ((v % n) + n) % n;
         switch (slot)
         {
-            case 0: _options.Civilization = Wrap(_options.Civilization + step, SkirmishOptions.Civilizations.Length + 1); break;
+            case 0: _options.Civilization = Wrap(_options.Civilization + step, _civilizations.Length + 1); break;
             case 1: _options.Difficulty = (Difficulty)Wrap((int)_options.Difficulty + step, 3); break;
             case 2: _options.StartingResources = Wrap(_options.StartingResources + step, 4); break;
             case 3: _options.PopulationLimit = Wrap(_options.PopulationLimit + step, SkirmishOptions.PopulationLimits.Length + 1); break;
@@ -361,7 +363,7 @@ public partial class MapSetupScreen : ArtScreen
         string Toggle(int v) => v == 0 ? Map : ShellTexts.YesNo(v == 1).In(_catalog is null ? null : _catalog.Text);
         string[] values =
         [
-            _options.Civilization == 0 ? Map : T($"race_{_options.Civilization}", SkirmishOptions.Civilizations[_options.Civilization - 1]),
+            _options.Civilization == 0 || _options.Civilization > _civilizations.Length ? Map : T($"race_{_options.Civilization}", _civilizations[_options.Civilization - 1]),
             T($"difflvl_{(int)_options.Difficulty}", _options.Difficulty.ToString()),
             T($"resurcs_{_options.StartingResources}", _options.StartingResources.ToString(CultureInfo.InvariantCulture)),
             _options.PopulationLimit == 0 ? Map : SkirmishOptions.PopulationLimits[_options.PopulationLimit - 1].ToString(CultureInfo.InvariantCulture),

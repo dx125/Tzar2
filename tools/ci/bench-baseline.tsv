@@ -3,6 +3,8 @@
 # p50, and the tolerances (factors) check-bench.sh allows: 1.10 / 1.30 from three runs on; provisional rows (fewer runs)
 # 1.25 / 1.50; the AMD EPYC 9V45, whose nightly medians spread up to 11%, 1.20 / 1.50 (b4 1.30 / 1.60).
 # Recorded from 36 probe nightlies of the nightly bench steps on main 729f335 and 45a07e6 (AI: 12) plus this PR (2026-10-18).
+# Gameplay rows re-recorded 2026-10-22 on main 1eb6df4 (16 probe runs, code review item 16): the scenario's workload grew
+# with the walking speeds of ADRs 0171/0172 (more fighting), not the code; see ADR 0080's history.
 # To add or re-record rows see ADR 0080 ("Adding or re-recording a baseline row").
 # B3 has no row: its p50 is dominated by idle ticks (30% spread on one CPU model); B3 is gated by its planning check.
 # name	cpu	runs	p50	p99	normalized p50	p50 tolerance	p99 tolerance
@@ -16,11 +18,11 @@ b4	AMD EPYC 9V45 96-Core Processor	3	0.392	0.729	0.454	1.30	1.60
 b4	AMD EPYC 9V74 80-Core Processor	3	0.558	1.032	0.597	1.10	1.30
 b4	INTEL(R) XEON(R) PLATINUM 8573C	4	0.689	1.150	0.530	1.10	1.30
 b4	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	2	0.724	1.247	0.625	1.25	1.50
-gameplay	AMD EPYC 7763 64-Core Processor	23	2.871	7.937	2.802	1.10	1.30
-gameplay	AMD EPYC 9V45 96-Core Processor	3	1.739	5.036	2.088	1.20	1.50
-gameplay	AMD EPYC 9V74 80-Core Processor	3	2.323	6.332	2.511	1.10	1.30
-gameplay	INTEL(R) XEON(R) PLATINUM 8573C	4	2.841	7.793	2.192	1.10	1.30
-gameplay	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	3	3.173	8.191	2.732	1.10	1.30
+gameplay	AMD EPYC 7763 64-Core Processor	8	2.976	9.325	2.941	1.10	1.30
+gameplay	AMD EPYC 9V45 96-Core Processor	3	1.787	6.088	2.123	1.20	1.50
+gameplay	AMD EPYC 9V74 80-Core Processor	3	3.071	9.747	2.609	1.10	1.30
+gameplay	INTEL(R) XEON(R) PLATINUM 8573C	1	2.835	8.888	2.238	1.25	1.50
+gameplay	Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz	1	3.250	9.430	2.811	1.25	1.50
 s2	AMD EPYC 7763 64-Core Processor	23	2.834	5.700	2.783	1.10	1.30
 s2	AMD EPYC 9V45 96-Core Processor	3	1.804	3.805	2.113	1.20	1.50
 s2	AMD EPYC 9V74 80-Core Processor	3	2.345	4.728	2.523	1.10	1.30

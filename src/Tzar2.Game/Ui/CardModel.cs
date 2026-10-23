@@ -120,6 +120,14 @@ public enum CardAction
     /// <summary>Hire tavern offer <see cref="CardButton.Argument"/> (its slot): a mercenary group or a hero (Tzar2 fills the
     /// original's empty <c>tavern_merc</c> / <c>tavern_hero</c> menus with the offers of the period).</summary>
     Hire,
+
+    /// <summary>The market sells the kingdom's offer <see cref="CardButton.Argument"/> (the item's <c>EntityId.Value</c>; Jewelry,
+    /// TECH-030; Tzar2 fills the original's empty <c>market_items</c> menu).</summary>
+    MarketBuy,
+
+    /// <summary>The market buys item <see cref="CardButton.Argument"/> (its <c>EntityId.Value</c>), carried by one of the
+    /// kingdom's units (the original's empty <c>market_sell</c> menu).</summary>
+    MarketSell,
 }
 
 /// <summary>A button of a command card (for the original: a MENU.INI entry and its ORDERS.INI order).</summary>

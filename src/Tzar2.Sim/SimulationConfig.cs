@@ -232,8 +232,11 @@ public struct PlayerState
     /// <summary>Full crusades preached, each raising the ceiling of <see cref="Crusaders"/>.</summary>
     public byte FullCrusades;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved;
+    /// <summary>
+    /// The experience pooled by Tournaments, below <c>combat.tournamentEvery</c> (TECH-029): when it gets there it empties
+    /// and teaches the kingdom's pupils.
+    /// </summary>
+    public byte KungFuPool;
 
     /// <summary>Researched technologies (bit = technology id).</summary>
     public TechnologyBits Technologies;

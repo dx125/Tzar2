@@ -113,14 +113,14 @@ public static class ScenarioSetup
         }
     }
 
-    // The spells a map's book names by number (its magic type): their order in STRINGS.INI [spell_names] (⚠ HYPOTHESIS,
-    // ADR 0186: the 33 maps' books fit it). Soul Bind is not built.
+    // The spells a map's book names by number (its magic type), in the original's numbering (ReTzar src/world.rs, ADR
+    // 0259: hypnosis is 13, not last as STRINGS.INI [spell_names] suggested).
     private static readonly string[] LegacySpellOrder =
     [
         "spell_firerain", "spell_lightning", "spell_heal", "spell_spawncarpet", "spell_spawnbat", "spell_bless", "spell_freeze",
         "spell_berserk", "spell_soulbind", "spell_cloak", "spell_spawnstonegolem", "spell_magicvision", "raisedead",
-        "spell_turntostone", "spell_whirlpool", "spell_spawndragon", "spell_flamebolt", "spell_raiseexp", "spell_spawnjin",
-        "spell_curse", "spell_hypnotize",
+        "spell_hypnotize", "spell_turntostone", "spell_whirlpool", "spell_spawndragon", "spell_flamebolt", "spell_raiseexp",
+        "spell_spawnjin", "spell_curse",
     ];
 
     // A potion's effect: the first of its stats the map sets (health, level, mana, attack, defence).

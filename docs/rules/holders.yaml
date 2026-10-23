@@ -34,9 +34,10 @@ rules:
     status: tested
   HOLD-008:
     rule: Ships, magic carpets and traders can load units, but only ships and carpets carry them over water.
-    source: [help ITEMS.TXT WI_TRANSPORT]
-    status: partial
-    note: Traders do not load units.
+    source: [help ITEMS.TXT WI_TRANSPORT, 'data TRADER.INI [accept] max_obj_in_holder']
+    status: tested
+    adr: [0252]
+    note: Caravans take 8 infantry units (the import reads TRADER.INI's [accept]); the synthetic tables of CI now have it too.
   HOLD-009:
     rule: A unit inside a holder keeps its items.
     source: [community TDD GAME-10]

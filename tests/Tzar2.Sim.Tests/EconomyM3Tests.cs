@@ -160,19 +160,41 @@ public class EconomyM3Tests
         d.RunUntil(() => false, 160);
         Assert.Equal(Math.Min(40, left + 2), d.World.ResourceStocks.Get(cow).Amount);
 
-        // Butchering an own cow: meat (a Nature node without footprint) that anyone may take, which rots.
+        // Butchering an own cow: its meat falls as Nature's food items without footprint, which rot (NAT-004).
         d.Order(0, CommandKind.Attack, [peon], target: cow);
         d.RunUntil(() => !d.World.Entities.IsAlive(cow), 3000);
-        EntityId meat = OfType(d.World, "comm.meat").Single();
-        Assert.Equal(MapObject.Nature, d.World.Identities.Get(meat).Owner);
-        Assert.Equal(100, d.World.ResourceStocks.Get(meat).Amount);
-        Assert.False(d.World.OccupancyCells.Has(meat));
-        d.Order(0, CommandKind.Harvest, [peon], target: meat);
-        d.RunUntil(() => d.Count(SimEventKind.ResourceDelivered) >= 2, 2000);
-        int expires = d.World.Lifetimes.Get(meat).ExpiresTick;
-        d.Order(0, CommandKind.Stop, [peon]);
-        d.RunUntil(() => !d.World.Entities.IsAlive(meat), 3000);
+        EntityId[] meat = [.. OfType(d.World, "comm.meat")];
+        Assert.True(meat.Length >= 3);
+        Assert.All(meat, m => Assert.Equal(MapObject.Nature, d.World.Identities.Get(m).Owner));
+        Assert.All(meat, m => Assert.InRange(d.World.Items.Get(m).Power, 1, 100));
+        Assert.All(meat, m => Assert.False(d.World.OccupancyCells.Has(m)));
+        int expires = d.World.Lifetimes.Get(meat[0]).ExpiresTick;
+        d.RunUntil(() => !d.World.Entities.IsAlive(meat[0]), 3000);
         Assert.Equal(expires, d.World.Tick.Value - 1);
+    }
+
+    [Fact]
+    [Trait("Rule", "NAT-004")]
+    public void A_cow_grows_meat_until_it_dies_and_any_unit_can_take_the_pieces()
+    {
+        // ReTzar's reading of the original: 300 at the start, 2 a second up to 600, items of at most 100.
+        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("comm.cow", 0, 12, 4), Unit("euro.footman", 0, 10, 4)), ruleset: Classic);
+        EntityId cow = OfType(d.World, "comm.cow").Single();
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        Assert.Equal(300, d.World.MeatStocks.Get(cow).Amount);
+        d.RunUntil(() => false, 10 * 1000 / d.World.Config.TickLengthMilliseconds);
+        Assert.Equal(320, d.World.MeatStocks.Get(cow).Amount);
+        d.World.MeatStocks.Get(cow).Amount = 250;
+        d.Order(0, CommandKind.DebugKill, [cow]);
+        d.Step();
+        int[] pieces = [.. OfType(d.World, "comm.meat").Select(m => d.World.Items.Get(m).Power).OrderBy(p => p)];
+        Assert.Equal([50, 100, 100], pieces);
+        int food = d.World.Players[0].Resources[Resource("food")];
+        EntityId first = OfType(d.World, "comm.meat").First();
+        int power = d.World.Items.Get(first).Power;
+        d.Order(0, CommandKind.PickItem, [footman], target: first);
+        d.RunUntil(() => !d.World.Entities.IsAlive(first), 400);
+        Assert.Equal(food + power, d.World.Players[0].Resources[Resource("food")]); // a soldier brings it in at once
     }
 
     [Fact]

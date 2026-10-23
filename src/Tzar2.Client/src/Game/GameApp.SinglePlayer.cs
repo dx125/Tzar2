@@ -85,7 +85,7 @@ public partial class GameApp
         }
 
         GameSession session;
-        CustomMapSettings settings = resume?.Custom is { } saved ? saved with { Ai = _ai } : (options ?? new CustomMapOptions()).ToSettings(_ai);
+        CustomMapSettings settings = resume?.Custom is { } saved ? saved with { Ai = _ai } : (options ?? new CustomMapOptions()).ToSettings(_ai, _rules);
         try
         {
             session = resume is not null ? resume.ResumeCustomMap(map.Mission, _rules, _ai) : new GameSession(ScenarioMatch.Setup(map.Mission, _rules, custom: settings), _rules);
