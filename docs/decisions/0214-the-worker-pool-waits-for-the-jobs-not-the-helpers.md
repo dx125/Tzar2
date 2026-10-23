@@ -14,7 +14,7 @@ calling thread, then waited until **every released helper** had woken, found no 
 OS had not scheduled yet held up the tick even when the other threads had finished every job. On an idle machine the
 wake-up costs microseconds. On a shared CPU it can cost a whole time slice or more.
 
-The plan was to measure first. `WorkerPoolStressTests` (4 and 8 workers, every core busy) measures the **tail**: the
+The plan was to measure first. `WorkerPoolStressTests` (4 and 8 workers, the CPU kept busy) measures the **tail**: the
 time between a fork's last job and `Run`'s return.
 
 | where | tail p50 / p99 / max |
@@ -42,8 +42,12 @@ The CI runner shows real stalls: the typical fork waits a full time slice for he
   * `Run` allocates nothing and is not re-entrant.
 
   Results stay identical for any worker count; the golden hashes do not move.
-* `WorkerPoolStressTests` stays. It runs alone (its busy threads would starve parallel test classes), caps itself at
-  500 forks or 20 s, and fails if the p99 tail reaches the 50 ms tick.
+* `WorkerPoolStressTests` stays:
+  * it runs alone, so its busy threads do not starve parallel test classes;
+  * it keeps half the cores busy, not all of them, because the other test processes on the CI runner must not starve
+    (#179);
+  * it caps itself at 500 forks or 10 s;
+  * it fails if the p99 tail reaches the 50 ms tick.
 
 ## Alternatives considered
 

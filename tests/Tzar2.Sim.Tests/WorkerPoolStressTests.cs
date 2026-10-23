@@ -29,8 +29,9 @@ public sealed class WorkerPoolStressTests(ITestOutputHelper output)
         using var pool = new DeterministicWorkerPool(workers);
         var job = new SpinJob();
         using var stop = new CancellationTokenSource();
-        // Contention: as many busy threads as there are cores, so the pool's helpers compete for time slices.
-        var burners = new Thread[Environment.ProcessorCount];
+        // Contention: busy threads on half the cores, so the pool's helpers compete for time slices. Not on every core:
+        // CI runs every test assembly at once, and the network tests in the other processes must not starve (#179).
+        var burners = new Thread[Math.Max(1, Environment.ProcessorCount / 2)];
         for (int i = 0; i < burners.Length; i++)
         {
             burners[i] = new Thread(() =>
@@ -48,11 +49,11 @@ public sealed class WorkerPoolStressTests(ITestOutputHelper output)
         double[] totals = new double[Forks];
         try
         {
-            // At most Forks forks or 20 s: on a small runner the contention can slow everything down a lot.
+            // At most Forks forks or 10 s: on a small runner the contention can slow everything down a lot.
             var wall = Stopwatch.StartNew();
             for (int f = 0; f < Forks; f++)
             {
-                if (wall.Elapsed.TotalSeconds > 20)
+                if (wall.Elapsed.TotalSeconds > 10)
                 {
                     Array.Resize(ref tails, f);
                     Array.Resize(ref totals, f);
