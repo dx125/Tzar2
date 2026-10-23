@@ -115,7 +115,12 @@ is one screenshot of the original (GOG v1.10, 1024 × 768), taken on the owner's
    * a conversation with choices, if one comes early.
 
    These confirm where the title, text and picture go in the boxes the art draws.
-8. **Dialogs Tzar2 lacks** (`D_CHAT`, `D_CHOOSEAI`, `D_DIALOG`, `D_MSGWND`, `D_EDIT`, `D_DESYNC`, `D_DISCONNECT`,
+8. **Translucent trees** (HUD-028): a skirmish with units walking under trees, once as normal and once after the `\`
+   key, at the same spot. It shows how the original makes trees see-through. Tzar2 draws them at 45 % opacity, and
+   neither the data nor ReTzar says how the original does it (ReTzar's 50 % is its own choice).
+9. **Selection marks** (HUD-031): one of the player's units, an enemy unit and a cow selected in turn, and a selection
+   box being dragged. `TERRAIN.INI [colors]` gives white for every set, while Tzar2 colours the marks by owner.
+10. **Dialogs Tzar2 lacks** (`D_CHAT`, `D_CHOOSEAI`, `D_DIALOG`, `D_MSGWND`, `D_EDIT`, `D_DESYNC`, `D_DISCONNECT`,
    `D_WAIT4PLAYERS`, `S_TOOL`). Only once their features are built; listed so the art is accounted for.
 
 ## Fixes
