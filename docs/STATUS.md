@@ -210,26 +210,19 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       * a review report (`docs/reviews/2026-…-code-review.md`) with findings ranked by impact;
       * ADRs for the structural changes;
       * the fixes in small PRs, each with its measurements.
-    * **In progress (2026-10-22):** the report is [reviews/2026-10-code-review.md](reviews/2026-10-code-review.md).
-      Measured so far:
-      * the sim: an hour of 4 Hard AIs on 256² runs at 0.19 / 0.70 ms per tick (p50 / p99) with one GC, and does not
-        leak;
-      * the client: the terrain took 1.3 GB of video memory on a huge map (ADR 0210 fixes it), and Godot objects and
-        nodes do not leak between matches.
-
-      Next: the failing nightly Benchmarks, the architecture tests, the civilization list (the `Race` bug), the asset
-      caches and the load off the main thread.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-22 — The code review's first measurements (item 16).**
-  * `t2 bench --sample` reports a long match's tick times, GCs, heap and snapshot size over time.
-  * The client's `--resource-soak` plays matches back to back and logs Godot's memory, object and video-memory
-    counters.
-  * The ranked findings are in [reviews/2026-10-code-review.md](reviews/2026-10-code-review.md).
+* **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
+  * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
+    a string concatenation formats a `double`, `float`, `decimal` or date with the current culture, or an integer with
+    a culture format such as `N0`. CA1305 does not cover these.
+  * It found 48 strings: 35 in the fidelity suite (its verdicts read "37,5 s" under a German or C.UTF-8 locale, which
+    failed a test on macOS), the rest in the CLI and the client.
+  * They now use the invariant culture.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
