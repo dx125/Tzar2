@@ -55,9 +55,14 @@ public sealed class SpriteBank : IDisposable
     private readonly ContentStore _store;
     private readonly Dictionary<string, SheetRef?> _byName = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<SpriteSheet> _sheets = [];
+    private readonly IReadOnlyList<int>? _colourOf;
 
-    /// <summary>Creates an empty bank.</summary>
-    public SpriteBank(ContentStore store) => _store = store;
+    /// <summary>Creates an empty bank; kingdom p is drawn with colour <c>colourOf[p]</c> (null: its own).</summary>
+    public SpriteBank(ContentStore store, IReadOnlyList<int>? colourOf = null)
+    {
+        _store = store;
+        _colourOf = colourOf;
+    }
 
     /// <summary>The uploaded atlas (after <see cref="Upload"/>).</summary>
     public GpuSpriteAtlas? Gpu { get; private set; }
@@ -157,7 +162,7 @@ public sealed class SpriteBank : IDisposable
             Pack();
         }
 
-        Gpu = new GpuSpriteAtlas(Packed!, _store.Palette);
+        Gpu = new GpuSpriteAtlas(Packed!, _store.Palette, _colourOf);
         Packed!.ReleasePages();
     }
 

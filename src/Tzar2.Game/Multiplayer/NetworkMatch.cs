@@ -196,6 +196,13 @@ public sealed partial class NetworkMatch : IDisposable
     public void SetComputerChoice(byte slot, SlotChoice choice)
     {
         ArgumentNullException.ThrowIfNull(choice);
+
+        // The relay refuses anything else (ADR 0160); asking only for what it allows keeps the lobby quiet.
+        if (_lobby is not { LocalIsHost: true } lobby || slot >= lobby.Slots.Count || lobby.Slots[slot].Kind != SlotKind.Computer)
+        {
+            return;
+        }
+
         _client.SetChoice(slot, choice.ToBytes());
     }
 
@@ -377,9 +384,36 @@ public sealed partial class NetworkMatch : IDisposable
         }
 
         byte local = _client.Welcome?.Slot ?? 255;
+        LobbyView? before = _lobby;
         _lobby = new LobbyView(lobby.Code, lobby.Name, settings, lobby.Slots.Select((s, i) => new LobbySlotView(
             (byte)i, (SlotKind)s.State, s.Name, s.Ready, s.Connected, s.PingMs, SlotChoice.Parse(s.Choice), i == lobby.HostSlot, i == local)).ToArray(), lobby.HostSlot == local);
+        AnnounceScripts(before, _lobby);
     }
+
+    // SHELL-017: every player is told when the host changes a computer's strategy (a player chooses his own).
+    private void AnnounceScripts(LobbyView? before, LobbyView after)
+    {
+        if (before is null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < after.Slots.Count && i < before.Slots.Count; i++)
+        {
+            LobbySlotView was = before.Slots[i];
+            LobbySlotView now = after.Slots[i];
+            if (was.Kind == SlotKind.Computer && now.Kind == SlotKind.Computer && was.Choice.AiScript != now.Choice.AiScript)
+            {
+                System($"The host set Computer {i + 1}'s AI script to {ScriptName(now.Choice.AiScript)}.");
+            }
+        }
+    }
+
+    /// <summary>The strategies a kingdom's computer player can follow (AI-001; the first is the default).</summary>
+    public IReadOnlyList<AiScriptOption> AiScripts => _options.Ai.Scripts;
+
+    /// <summary>The name of <paramref name="script"/> as the lobby shows it.</summary>
+    public string ScriptName(string script) => AiScripts.FirstOrDefault(o => o.Script == script)?.Name ?? script;
 
     private void OnLoad(MatchParameters parameters)
     {

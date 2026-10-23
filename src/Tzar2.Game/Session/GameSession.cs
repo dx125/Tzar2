@@ -142,7 +142,7 @@ public sealed class GameSession : IDisposable
                     computers.Add(new AiPlayerSettings
                     {
                         Slot = p.Slot,
-                        Program = setup.Ai.Program,
+                        Program = setup.Ai.ForScript(p.AiScript).Program,
                         Civilization = p.Civilization,
                         Difficulty = SkirmishAi.ToAi(p.Difficulty),
                         Standby = p.Controller == ControllerKind.Human,
