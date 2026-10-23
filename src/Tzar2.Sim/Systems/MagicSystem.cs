@@ -26,6 +26,7 @@ public sealed class MagicSystem : ISimSystem
     private readonly List<Death> _deaths = [];
     private readonly List<EntityId> _done = [];
     private readonly List<EntityId> _casting = [];
+    private readonly List<(EntityId Unit, byte Owner)> _woken = [];
 
     /// <inheritdoc />
     public SimPhase Phase => SimPhase.Spells;
@@ -360,11 +361,25 @@ public sealed class MagicSystem : ISimSystem
                 }
 
                 return;
+            case SpellEffect.Curse:
+                if (world.Entities.IsAlive(target) && world.Positions.Has(target))
+                {
+                    Position p = world.Positions.Get(target);
+                    (x, y) = (p.X, p.Y);
+                }
+
+                CurseAround(world, s, caster, owner, x, y, until);
+                return;
         }
 
         if (!Affects(world, s, owner, target))
         {
             return;
+        }
+
+        if (s.Effect is SpellEffect.Freeze or SpellEffect.Stone or SpellEffect.Confuse or SpellEffect.Hypnotize && IsMagicImmune(world, target))
+        {
+            return; // the Messiah (WAR-010; ReTzar's reading of the original, 0x4ef200)
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(target).Owner, target, caster.Index, 0, s.Id));
@@ -385,14 +400,6 @@ public sealed class MagicSystem : ISimSystem
                 ref StatusEffects st = ref StatusOf(world, target);
                 st.BlessUntil = until;
                 st.BlessPercent = (short)Math.Min(s.Amount, 1000);
-                break;
-            }
-
-            case SpellEffect.Curse:
-            {
-                ref StatusEffects st = ref StatusOf(world, target);
-                st.CurseUntil = until;
-                st.CursePercent = (short)Math.Min(s.Amount, 100);
                 break;
             }
 
@@ -435,6 +442,31 @@ public sealed class MagicSystem : ISimSystem
                 break;
             }
 
+            case SpellEffect.Hypnotize:
+            {
+                // MAG-008 (ReTzar's reading of the original, 0x473887, 0x4e59b2, 0x4e5c4b): the caster's kingdom commands the
+                // unit and it takes the caster's side until the effect ends; a new hypnosis restarts the time and the unit
+                // still goes back to its first kingdom.
+                byte from = world.Identities.Get(target).Owner;
+                if (from == owner || !world.HasPlayer(owner))
+                {
+                    break;
+                }
+
+                ref StatusEffects st = ref StatusOf(world, target);
+                if (st.HypnoUntil <= tick)
+                {
+                    st.HypnoOwner = from;
+                }
+
+                st.HypnoUntil = until;
+                world.StopCasting(target);
+                world.ChangeOwner(target, owner);
+                GameplayCommands.ClearTasks(world, target);
+                Interaction.Halt(world, target);
+                break;
+            }
+
             case SpellEffect.Experience:
                 if (world.Experiences.IndexOf(target) is >= 0 and var xp)
                 {
@@ -473,6 +505,44 @@ public sealed class MagicSystem : ISimSystem
         if (h.Current == 0)
         {
             deaths.Add(new Death(target, caster, owner));
+        }
+    }
+
+    /// <summary>Whether lasting spells do not take on <paramref name="unit"/> (the Messiah; WAR-010).</summary>
+    internal static bool IsMagicImmune(World world, EntityId unit)
+        => (world.TypeOf(unit).Traits.Abilities & AbilityFlags.MagicImmune) != 0;
+
+    // The curse (ReTzar's reading of the original, 0x4e5841): every enemy unit the spell may affect within the caster's
+    // sight of the point (the spell's radius when the caster has gone) loses half its attack and all its defence until
+    // the effect ends. Cursing a cursed unit restarts the time.
+    private static void CurseAround(World world, SpellDefinition s, EntityId caster, byte owner, int x, int y, int until)
+    {
+        long radius = s.RadiusUnits;
+        if (world.Entities.IsAlive(caster) && world.Identities.IndexOf(caster) is >= 0 and var ci)
+        {
+            Identity self = world.Identities.At(ci);
+            radius = world.Stats.Apply(self.Owner, ModifierStat.Sight, self.TypeId, world.Ruleset.EntityTypes[self.TypeId].Traits.SightUnits);
+        }
+
+        long r2 = radius * radius;
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            EntityId e = ids[i];
+            if (e == caster || !Affects(world, s, owner, e) || !world.MayAttack(owner, e) || Interaction.DistanceSquaredTo(world, x, y, e) > r2)
+            {
+                continue;
+            }
+
+            world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(e).Owner, e, caster.Index, 0, s.Id));
+            if (IsMagicImmune(world, e))
+            {
+                continue;
+            }
+
+            ref StatusEffects st = ref StatusOf(world, e);
+            st.CurseUntil = until;
+            st.CursePercent = (short)Math.Min(s.Amount, 100);
         }
     }
 
@@ -642,7 +712,15 @@ public sealed class MagicSystem : ISimSystem
                 Interaction.Halt(world, ids[i]); // a frozen or stone unit stays put
             }
 
-            if (s.FrozenUntil <= tick && s.StoneUntil <= tick && s.CloakUntil <= tick && s.ConfuseUntil <= tick && s.BlessUntil <= tick && s.CurseUntil <= tick)
+            if (s.HypnoUntil > 0 && s.HypnoUntil <= tick)
+            {
+                _woken.Add((ids[i], s.HypnoOwner));
+                s.HypnoUntil = 0;
+                s.HypnoOwner = 0;
+            }
+
+            if (s.FrozenUntil <= tick && s.StoneUntil <= tick && s.CloakUntil <= tick && s.ConfuseUntil <= tick && s.BlessUntil <= tick && s.CurseUntil <= tick
+                && s.HypnoUntil <= tick)
             {
                 _done.Add(ids[i]);
             }
@@ -652,6 +730,20 @@ public sealed class MagicSystem : ISimSystem
         {
             world.Statuses.Remove(e);
         }
+
+        // A hypnotized unit goes back to its kingdom (if it still plays), its orders dropped.
+        foreach ((EntityId unit, byte owner) in _woken)
+        {
+            if (world.Entities.IsAlive(unit) && world.HasPlayer(owner) && world.Identities.Get(unit).Owner != owner)
+            {
+                world.StopCasting(unit);
+                world.ChangeOwner(unit, owner);
+                GameplayCommands.ClearTasks(world, unit);
+                Interaction.Halt(world, unit);
+            }
+        }
+
+        _woken.Clear();
     }
 
     /// <summary>The time between two crusaders arriving at the anchor (500 ms; ReTzar's reading of the original, 0x439d50), in ticks.</summary>

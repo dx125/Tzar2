@@ -235,7 +235,8 @@ public sealed partial class World
             RequireUnit(ids[i], "status");
             if (s.FrozenUntil < 0 || s.StoneUntil < 0 || s.CloakUntil < 0 || s.ConfuseUntil < 0 || s.BlessUntil < 0 || s.CurseUntil < 0
                 || s.FrozenUntil > maxFuture || s.StoneUntil > maxFuture || s.CloakUntil > maxFuture || s.ConfuseUntil > maxFuture || s.BlessUntil > maxFuture
-                || s.CurseUntil > maxFuture || s.BlessPercent is < 0 or > 1000 || s.CursePercent is < 0 or > 100)
+                || s.CurseUntil > maxFuture || s.BlessPercent is < 0 or > 1000 || s.CursePercent is < 0 or > 100
+                || s.HypnoUntil < 0 || s.HypnoUntil > maxFuture || (s.HypnoUntil > 0 && !HasPlayer(s.HypnoOwner)) || s.Reserved0 != 0 || s.Reserved1 != 0)
             {
                 throw Invalid("invalid status effects");
             }

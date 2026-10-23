@@ -98,7 +98,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 |---|---|---|---|---|---|---|---|
 | [Computer opponents](ai.yaml) (AI) | 4 | 1 | 0 | 1 | 0 | 1 | 1 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
-| [Combat](combat.yaml) (WAR) | 14 | 8 | 4 | 0 | 2 | 0 | 0 |
+| [Combat](combat.yaml) (WAR) | 14 | 10 | 4 | 0 | 0 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 22 | 17 | 4 | 0 | 0 | 0 | 1 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 18 | 10 | 1 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 7 | 1 | 1 | 0 | 0 | 0 |
@@ -107,7 +107,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 8 | 0 | 1 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 7 | 14 | 6 | 4 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 10 | 3 | 1 | 1 | 1 | 0 |
-| [Magic, religion and spies](magic.yaml) (MAG) | 21 | 16 | 4 | 0 | 0 | 0 | 1 |
+| [Magic, religion and spies](magic.yaml) (MAG) | 21 | 17 | 4 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 5 | 0 | 1 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 0 | 3 | 2 | 4 | 0 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 338 | 201 | 78 | 23 | 19 | 9 | 8 |
+| **All** | 338 | 204 | 78 | 23 | 17 | 9 | 7 |
 
 ## Not done yet
 
@@ -126,11 +126,6 @@ Missing and partial rules.
 ### Computer opponents
 
 * **AI-001** (partial): Each computer kingdom plays an AI script, chosen per player before the game. *Chosen per player in the multiplayer setup (SHELL-016); the random map screen cannot choose it yet (SHELL-010).* (ADR 0178, 0232)
-
-### Combat
-
-* **WAR-009**: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it.
-* **WAR-010**: The Messiah (campaign) is immune to magic.
 
 ### Selection, mouse and pointers
 
@@ -223,10 +218,6 @@ The sources disagree or say too little.
 ### The screen
 
 * **HUD-031**: Selection marks and the selection box are drawn in the terrain set's selection colour (white in every set). *Tzar2 draws own units green, enemies red and Nature yellow, and the box green; whether the original colours them by owner is to be confirmed.*
-
-### Magic, religion and spies
-
-* **MAG-008**: Hypnotism (Asian, from Concentration) is a spell of the Asian mages. *Neither the manual nor the game's text says what it does; Tzar2 makes it hold the unit like freeze.*
 
 ### Technologies and upgrades
 

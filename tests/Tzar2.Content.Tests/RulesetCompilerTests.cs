@@ -33,7 +33,7 @@ public class RulesetCompilerTests
                 "comm.eagle", "comm.field", "comm.fishing_boat", "comm.fishpatch", "comm.fog_revealer", "comm.galleon",
                 "comm.gate_stone", "comm.gate_wood", "comm.ghost", "comm.ground_object", "comm.hulk", "comm.item", "comm.item_armor", "comm.item_flag",
                 "comm.item_health", "comm.item_magic", "comm.item_plusplus", "comm.item_scroll", "comm.item_soul",
-                "comm.jinn", "comm.magicgateway", "comm.meat", "comm.ork", "comm.res_gold", "comm.res_stone",
+                "comm.jinn", "comm.magicgateway", "comm.meat", "comm.messiah", "comm.ork", "comm.res_gold", "comm.res_stone",
                 "comm.resitem", "comm.skeleton", "comm.tower_stone", "comm.tower_stone2", "comm.tower_wood",
                 "comm.tower_wood2", "comm.tree", "comm.troll", "comm.wall_stone", "comm.wall_wood", "comm.xebec", "euro.academy",
                 "euro.archer", "euro.barrack", "euro.blacksmith", "euro.castle", "euro.cathedral", "euro.crusadeanchor",

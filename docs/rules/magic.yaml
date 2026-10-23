@@ -35,10 +35,11 @@ rules:
     source: [manual Asian technologies (Confusion)]
     status: tested
   MAG-008:
-    rule: Hypnotism (Asian, from Concentration) is a spell of the Asian mages.
-    source: [manual Asian Buildings (Mage Tower)]
-    status: unclear
-    note: Neither the manual nor the game's text says what it does; Tzar2 makes it hold the unit like freeze.
+    rule: Hypnosis gives the unit to the caster's kingdom for 30 s, which commands it and whose side it fights on, while it keeps its own kingdom's colours and population; then it goes back. A new hypnosis restarts the time. Only spell books cast it (v1.10 puts the manual's Hypnotism on no command card).
+    source: [manual Asian Buildings (Mage Tower), data ORDERS.INI spell_hypnotize, 'community ReTzar src/gameplay.rs (0x473887, 0x4e59b2, 0x4e5c4b)']
+    status: tested
+    adr: [0250]
+    note: The original changes only the unit's command and side; Tzar2 hands the unit over, so for those 30 s its attack, defence and hit points follow the caster's technologies.
   MAG-009:
     rule: Priests heal units (with Healing) and bless them (Bless raises their attack for a while); Medicine lets them heal from farther; Arabian priests also exorcise, which Inquisition makes stronger.
     source: [manual Civilizations (Priest), manual Researching Technologies]

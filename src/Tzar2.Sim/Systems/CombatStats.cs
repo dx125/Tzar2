@@ -75,7 +75,8 @@ internal static class CombatStats
         return (int)Math.Min(sum, 1_000_000);
     }
 
-    // Blessing raises attack, a curse lowers attack and defence (percent; GAME-11).
+    // Blessing raises attack; a curse lowers attack by its percent and takes away all defence (GAME-11; ReTzar's reading
+    // of the original, 0x4e5841).
     private static long Status(World world, EntityId entity, long value, bool defence)
     {
         if (world.Statuses.Count == 0 || world.Statuses.IndexOf(entity) is not (>= 0 and var s))
@@ -93,6 +94,11 @@ internal static class CombatStats
 
         if (st.CurseUntil > tick)
         {
+            if (defence)
+            {
+                return 0;
+            }
+
             percent -= st.CursePercent;
         }
 

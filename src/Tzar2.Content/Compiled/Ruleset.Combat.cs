@@ -59,6 +59,11 @@ public sealed partial class Ruleset
         Combat.Validate(_entityTypes.Length, _technologies.Length);
         _spells = [.. combat.Spells ?? []];
         _projectiles = [.. combat.Projectiles ?? []];
+        if (Combat.BansheeSpell >= _spells.Length)
+        {
+            throw new ArgumentException("combat: the banshee spell must be a spell.", nameof(combat));
+        }
+
         if (_spells.Length > MaxSpells || _projectiles.Length > MaxProjectiles)
         {
             throw new ArgumentException($"At most {MaxSpells} spells and {MaxProjectiles} projectiles.", nameof(combat));
@@ -79,7 +84,7 @@ public sealed partial class Ruleset
         for (int i = 0; i < _spells.Length; i++)
         {
             SpellDefinition s = _spells[i] ?? throw new ArgumentException("Null spell.", nameof(combat));
-            if (s.Id != i || string.IsNullOrEmpty(s.Key) || !keys.Add(s.Key) || s.Effect > SpellEffect.Kill || s.Target > SpellTarget.Self
+            if (s.Id != i || string.IsNullOrEmpty(s.Key) || !keys.Add(s.Key) || s.Effect > SpellEffect.Hypnotize || s.Target > SpellTarget.Self
                 || s.Affects > SpellAffects.All || s.ManaCost is < 0 or > 1_000_000 || s.RangeUnits is < 0 or > 64 * 2048
                 || s.CooldownMs is < 0 or > 3_600_000 || s.CastMs is < 0 or > 60_000 || s.Amount is < 0 or > 1_000_000
                 || s.DurationMs is < 0 or > 3_600_000 || s.RadiusUnits is < 0 or > 32 * 2048 || s.Summon < -1 || s.Summon >= _entityTypes.Length
@@ -165,7 +170,7 @@ public sealed partial class Ruleset
             .Add(c.DefenceHalvesPerLevel).Add(c.HeroLevel).Add(c.LeadershipTechnology).Add(c.LeadershipRadiusUnits).Add(c.LeadershipSharePercent)
             .Add(c.HonorTechnology).Add(c.HonorAttackPercent).Add(c.DummyMaxLevel).Add(c.ExitRadiusTiles).Add(c.CraftGoldPerPower)
             .Add(c.CraftMsPerPower).Add(c.CraftMaxPower).Add(c.CraftHealthPerPower).Add(c.CraftManaPerPower).Add(c.CraftPowerPerLevel).Add(c.CraftBookCostPercent).Add(c.CraftBookTimePercent).Add(c.BribeCostPercent).Add(c.CrusadeAnchor).Add(c.Crusader).Add(c.CrusadeStart).Add(c.CrusadeRestart).Add(c.CrusadeCeilingStep).Add(c.CrusadeCeilingMax)
-            .Add(c.CrusadeAnchorRadiusUnits).Add(c.HeroNames.Length);
+            .Add(c.CrusadeAnchorRadiusUnits).Add(c.BansheeSpell).Add(c.BansheeChance).Add(c.BansheeOutOf).Add(c.HeroNames.Length);
         foreach (HeroNames h in c.HeroNames)
         {
             hasher.Add(Encoding.UTF8.GetBytes(h.Civilization)).Add(h.Names.Length);

@@ -302,8 +302,20 @@ public struct StatusEffects : IComponent
     /// <summary>Attack bonus of the blessing (percent).</summary>
     public short BlessPercent;
 
-    /// <summary>Attack and defence malus of the curse (percent).</summary>
+    /// <summary>Attack malus of the curse (percent); a cursed unit has no defence.</summary>
     public short CursePercent;
+
+    /// <summary>Hypnotized until this tick: it obeys the caster's kingdom, then goes back to <see cref="HypnoOwner"/> (MAG-008).</summary>
+    public int HypnoUntil;
+
+    /// <summary>The kingdom a hypnotized unit goes back to.</summary>
+    public byte HypnoOwner;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved0;
+
+    /// <summary>Padding, always 0.</summary>
+    public short Reserved1;
 }
 
 /// <summary>Phase of a cast.</summary>

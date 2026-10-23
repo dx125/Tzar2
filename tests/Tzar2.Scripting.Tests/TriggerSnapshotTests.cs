@@ -117,7 +117,9 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // which changes the kingdoms' civilization indices; then (ADR 0220) scripted orders ignore the owner's state,
             // units aboard are where their holder is, a holder's $cargo is what it holds, and movement slides past corners
             // and treats allies as friends.
-            Assert.Equal("ED7FB20B4124C662", d.Hashes[^1].ToString("X16"));
+            // crusaders, and the gathering technologies raise loads; then (ADR 0250) a synthetic Messiah shifts type ids
+            // and status effects grow (layout 13).
+            Assert.Equal("C0044C14F6F7D53C", d.Hashes[^1].ToString("X16"));
         }
     }
 
