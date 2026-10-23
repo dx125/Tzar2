@@ -200,6 +200,9 @@ public struct FrameEntity
     /// <summary>A named hero (GAME-08).</summary>
     public bool Hero;
 
+    /// <summary>It has a name of its own (a promoted hero, or one the scenario named): the kingdom's list of heroes shows it (HUD-033).</summary>
+    public bool Named;
+
     /// <summary>Carries a spell book: yellow stars float above it (1.09, ITEM-012).</summary>
     public bool CarriesBook;
 
@@ -386,7 +389,10 @@ public readonly record struct FrameQueueEntry(uint Entity, FrameQueueKind Kind, 
 /// <param name="IsDefault">Whether the item is its carrier's default item (Backspace).</param>
 /// <param name="Spell">A book's spell id (its own or its type's), or −1.</param>
 /// <param name="Look">An item's own image (ITEM-016), or null.</param>
-public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth, bool IsItem = false, int Slot = -1, bool IsDefault = false, int Spell = -1, string? Look = null, int Value = 0);
+/// <param name="Value">An item's worth on a market (TECH-030), or 0.</param>
+/// <param name="Hero">A unit promoted to hero or with a name of its own: the kingdom's list of heroes shows it (HUD-033).</param>
+/// <param name="Level">A unit's experience level, or 0.</param>
+public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth, bool IsItem = false, int Slot = -1, bool IsDefault = false, int Spell = -1, string? Look = null, int Value = 0, bool Hero = false, int Level = 0);
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
 /// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>

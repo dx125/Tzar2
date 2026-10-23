@@ -129,6 +129,8 @@ internal static class FrameBuilder
                 e.Hero = (world.Experiences.At(xp).Flags & ExperienceFlags.Hero) != 0;
             }
 
+            e.Named = world.Names.Count > 0 && world.Names.Has(id);
+
             if (world.Holders.IndexOf(id) is >= 0 and var ho && (card is null || identity.Owner == card))
             {
                 e.Inside = world.Holders.At(ho).Count;
@@ -637,7 +639,17 @@ internal static class FrameBuilder
                 value = MarketItems.Value(world, unit);
             }
 
-            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item, slot, isDefault, spell, look, value));
+            bool hero = false;
+            int level = 0;
+            if (!item && world.Experiences.IndexOf(unit) is >= 0 and var xp)
+            {
+                hero = (world.Experiences.At(xp).Flags & ExperienceFlags.Hero) != 0; // the kingdom's list of heroes names it (HUD-033)
+                level = world.Experiences.At(xp).Level;
+            }
+
+            hero |= !item && world.Names.Count > 0 && world.Names.Has(unit);
+
+            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item, slot, isDefault, spell, look, value, hero, level));
         }
 
         frame.HeldCount = n;

@@ -312,6 +312,35 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "HUD-033")]
+    public void The_kingdoms_heroes_include_those_inside_its_buildings_and_select_the_building()
+    {
+        World world = _session.Simulation.World;
+        EntityId castle = Own("euro.castle");
+        EntityId hero = world.Identities.Entities.ToArray().First(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Key == "euro.peon");
+        world.Experiences.Get(hero).Flags |= ExperienceFlags.Hero;
+        world.Experiences.Get(hero).Level = 12;
+        var board = new CommandList();
+        board.Add(CommandKind.Board, [hero], target: castle);
+        _session.Submit(board);
+        for (int i = 0; i < 600 && world.Holders.Get(castle).Count < 1; i++)
+        {
+            _session.Step(1);
+        }
+
+        _session.Step(1);
+        _cards.Menus["kingdom"] = [new CardButton("view_heroes", 'H', CardAction.KingdomList, "heroes", 106, "Heroes")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = new(_session.AcquireFrame(out _)!, [], IsOwn: false);
+        CardSlot heroes = card.Build(none)[0]!.Value;
+        Assert.True(heroes.Enabled);
+        card.Press(none, heroes);
+        CardSlot entry = Assert.Single(card.Build(none), s => s is not null)!.Value;
+        Assert.EndsWith("level 12 (in euro.castle)", entry.Button.Tooltip, StringComparison.Ordinal);
+        Assert.Equal(castle, card.Press(none, entry).Select);
+    }
+
+    [Fact]
     [Trait("Rule", "ORD-015")]
     [Trait("Rule", "HUD-016")]
     public void A_unit_picked_in_the_castle_list_emerges_alone_at_the_clicked_place_and_emerge_alone_lets_all_out()

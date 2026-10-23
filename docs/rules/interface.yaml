@@ -158,9 +158,9 @@ rules:
     note: Also explorer, invader, fighter, cowherd, collector and passenger.
   HUD-033:
     rule: With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help.
-    source: ['data MENU.INI [ownership] [ownership_ai]', 'data ORDERS.INI view_heroes view_spys view_items view_ai']
-    status: partial
-    note: The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. Heroes inside buildings are not listed. The online help opens with P (HUD-020).
+    source: ['data MENU.INI [ownership] [ownership_ai]', 'data ORDERS.INI view_heroes view_spys view_items view_ai', 'community ReTzar src/hud.rs (0x49f1fc, 0x49d590)']
+    status: tested
+    note: The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. A hero is a promoted unit or one with a name of its own; heroes inside the kingdom's buildings are listed too, and their entry selects the building. The online help opens with P (HUD-020). Not done - the original also lists the heroes of kingdom 1 when the player is its ally.
   HUD-034:
     rule: The hint of a category of the build menu lists the letters of the buildings in it.
     source: [owner 2026-10-21 (fourth play-test)]

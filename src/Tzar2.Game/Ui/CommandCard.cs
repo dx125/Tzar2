@@ -904,11 +904,27 @@ public sealed class CommandCard
 
         foreach (FrameEntity e in context.Frame.Entities)
         {
-            bool listed = e.Owner == _me && !e.Remembered && (kind == "heroes" ? e.Hero : kind == "spies" && _rules.EntityTypes[e.TypeId].Traits.World.DetectUnits > 0);
+            // A hero is promoted or has a name of its own (ReTzar 0x49d590).
+            bool listed = e.Owner == _me && !e.Remembered && (kind == "heroes" ? e.Hero || e.Named : kind == "spies" && _rules.EntityTypes[e.TypeId].Traits.World.DetectUnits > 0);
             if (listed)
             {
                 list.Add(new CardButton("unit", '\0', CardAction.SelectUnit, e.Id.Value.ToString(CultureInfo.InvariantCulture), _source.TrainImage(e.TypeId),
                     e.Level > 0 ? $"{_source.Name(e.TypeId)}, level {e.Level}" : _source.Name(e.TypeId)));
+            }
+        }
+
+        if (kind == "heroes")
+        {
+            // Heroes inside the kingdom's buildings are its heroes too (HUD-033; ReTzar 0x49f1fc lists the kingdom's units);
+            // the entry selects the building, whose list shows them.
+            foreach (FrameHeld h in context.Frame.Helds)
+            {
+                if (!h.IsItem && h.Hero && index.TryGetValue(h.Holder, out int c) && context.Frame.Entities[c].Owner == _me)
+                {
+                    ushort holder = context.Frame.Entities[c].TypeId;
+                    list.Add(new CardButton("unit", '\0', CardAction.SelectUnit, h.Holder.ToString(CultureInfo.InvariantCulture), _source.TrainImage(h.TypeId),
+                        $"{_source.Name(h.TypeId)}, level {h.Level} (in {_source.Name(holder)})"));
+                }
             }
         }
 
