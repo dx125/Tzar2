@@ -76,7 +76,15 @@ its order on release (setting `drag_scroll` in `user://game.cfg`). The client's 
 * **Replays**: a corpus recorded on Linux and verified on every OS; **capture harness** self-test on Windows;
   **relay server** Docker image.
 
-`nightly.yml` adds long hash streams, benchmarks, the Windows Godot build and the multiplayer soak.
+`nightly.yml` adds long hash streams, benchmarks, the Windows package and the multiplayer soak.
+
+`windows-package.yml` (ADRs 0241–0243) builds the Windows package: the Godot headless export, code signing when its
+secrets exist, the portable zip and the Inno Setup installer, then starts the exported, installed and unzipped game
+headless and checks that the uninstall keeps the player's data. It runs on PRs that touch packaging, by hand and
+nightly, and only uploads artifacts. Locally on Windows (Godot 4.7.2 .NET with its export
+templates installed): `pwsh tools/package/package-windows.ps1 -Stage export -Godot <Godot console exe> -Version 0.7.0-local`, then
+`-Stage package` (with `-Iscc <ISCC.exe>` for the installer). Release documents (code signing, min-spec plan, closed
+beta): [release/](release/).
 
 **Pinned hashes change on purpose when the rules or a gameplay system change.** Re-pin them in the same PR, with the
 reason in the commit message and in the history comment above the constants:
@@ -84,8 +92,9 @@ reason in the commit message and in the history comment above the constants:
 `ci.yml` come from the same `t2 bench …` command run locally. All OSes and worker counts must agree; if they do not,
 it is a determinism bug, not a re-pin.
 
-**Known flaky:** `Tzar2.Net.Tests.RelayTests` time out now and then on loaded CI runners (issue #62). If only they fail,
-re-run the failed job (`gh run rerun <id> --failed`) and note it on the PR.
+**Relay tests and short timeouts:** `RelayTests` once timed out on loaded runners because peers were dropped while the
+test thread was busy (issue #62, fixed by ADR 0231). A relay test that fails with `member.drop … Timeout` in its log is
+a bug, not a flake: report it with the run id.
 
 ## How changes land
 

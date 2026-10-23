@@ -31,7 +31,7 @@ public class ResearchCompilerTests
         Assert.Equal(10_003, fields.TimeMs); // invented: 10,003 ms + 1,000 per position in the synthetic list
         Assert.Equal(104, fields.Cost[Classic.ResourceId("gold")]);
         Assert.Equal("Synthetic 0", fields.Name);
-        Assert.Equal(["arab", "comm", "euro"], Classic.Civilizations); // euro, plus a few Arabian rows (GAME-10/11 tests)
+        Assert.Equal(["euro", "arab", "asia", "comm"], Classic.Civilizations); // ruleset.civilizations, then the common key (ADR 0211)
         Assert.Equal((1 << 4) - 1, Classic.HudResourceMask); // food, wood, stone, gold; iron hidden (GAME-01)
     }
 

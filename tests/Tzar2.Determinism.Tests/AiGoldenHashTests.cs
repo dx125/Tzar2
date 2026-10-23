@@ -42,15 +42,19 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) footmen and archers strike at the action row of their attack animations: the fights and
     // so the commands change.
+    // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement: the fights and so the commands change.
     // (ADR 0250, 2026-10-22) the curse, hypnosis, the banshee and the Messiah as ReTzar reads them: a synthetic Messiah shifts type ids, status effects grow (hashed layout 13): the commands name the shifted type ids.
-    private const ulong GoldenCommandStream = 0xF2915D2E183DD5C3UL;
+    private const ulong GoldenCommandStream = 0xA10DD058749DF77DUL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
     // (ADR 0190, 2026-10-22) rules from ReTzar's reading of the original: gathered crusaders in the kingdom state, loads raised by the gathering technologies, ship fire rates: the ruleset and the hashes.
-    private const ulong GoldenHashStream = 0x70624785C9BA7574UL;
-    private const ulong GoldenFinalFullHash = 0x89D73BFDA103E81BUL;
+    // (ADR 0211, 2026-10-22) civilizations in the ruleset's order (euro first): the kingdoms' civilization indices, so the
+    // hashes only; the commands are the same.
+    // (ADR 0220, 2026-10-22) movement: the corner slide, allies as friends: the hashes.
+    private const ulong GoldenHashStream = 0x52314D81BA14F900UL;
+    private const ulong GoldenFinalFullHash = 0x40692A075CC3B94BUL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

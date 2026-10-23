@@ -371,7 +371,7 @@ public sealed partial class LegacyTriggerSystem
 
         if (_orders.Count > 0)
         {
-            CommandSystem.ExecuteInTick(_world, _orders);
+            CommandSystem.ExecuteScripted(_world, _orders);
         }
     }
 

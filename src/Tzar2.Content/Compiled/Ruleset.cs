@@ -49,6 +49,9 @@ public sealed partial class Ruleset
     private readonly ushort[] _sortedIds;
     private readonly TechnologyDefinition[] _technologies;
     private readonly UpgradeDefinition[] _upgrades;
+    /// <summary>The common civilization key of rulesets that name none (the original's <c>comm</c>).</summary>
+    public const string DefaultCommonCivilization = "comm";
+
     private readonly string[] _civilizations;
     private readonly OrderGate[] _orderGates;
     private readonly string[] _orderGateKeys;
@@ -67,11 +70,12 @@ public sealed partial class Ruleset
     /// <param name="damageBonuses">Attack bonuses per (attacker type, target type) pair (<c>BONUS.INI</c>); pairs must be unique.</param>
     /// <param name="technologies">Technologies by id (GAME-06).</param>
     /// <param name="upgrades">Upgrades by id (GAME-06).</param>
-    /// <param name="civilizations">Civilization keys (<c>euro</c>, <c>asia</c>, <c>arab</c>, <c>comm</c>).</param>
+    /// <param name="civilizations">Civilization keys in the ruleset's order (ADR 0211: <c>euro</c>, <c>arab</c>, <c>asia</c>, <c>comm</c>).</param>
     /// <param name="orderGates">Orders that need a technology per civilization (<c>TECHTREE [orders]</c>).</param>
     /// <param name="world">World-system constants (null = <see cref="WorldSettings.Default"/>; ADR 0100).</param>
     /// <param name="hudResourceMask">Resource types the HUD shows (bit = id; -1 = all; GAME-01: iron is hidden).</param>
     /// <param name="combat">Combat, experience, holder, item and magic content (GAME-07…11; null = none).</param>
+    /// <param name="commonCivilization">The key of the types every civilization shares (towers, walls, ships, nature: <c>comm</c>).</param>
     /// <exception cref="ArgumentException">The lists are empty, ids do not match positions, keys repeat, or a trait refers to an unknown id.</exception>
     public Ruleset(
         string name,
@@ -90,7 +94,8 @@ public sealed partial class Ruleset
         IReadOnlyList<OrderGate>? orderGates = null,
         int hudResourceMask = -1,
         WorldSettings? world = null,
-        CombatRules? combat = null)
+        CombatRules? combat = null,
+        string commonCivilization = DefaultCommonCivilization)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentNullException.ThrowIfNull(terrainTypes);
@@ -174,6 +179,8 @@ public sealed partial class Ruleset
             }
         }
 
+        ArgumentNullException.ThrowIfNull(commonCivilization);
+        CommonCivilization = commonCivilization;
         _technologies = [.. technologies ?? []];
         _upgrades = [.. upgrades ?? []];
         if (_technologies.Length > MaxTechnologies || _upgrades.Length > MaxUpgrades)
@@ -254,8 +261,18 @@ public sealed partial class Ruleset
     /// <summary>Upgrades by id (GAME-06).</summary>
     public IReadOnlyList<UpgradeDefinition> Upgrades => _upgrades;
 
-    /// <summary>Civilization keys.</summary>
+    /// <summary>
+    /// Civilization keys in the ruleset's order (ADR 0211): a kingdom's civilization is an index into this list. The
+    /// classic ruleset lists the playable ones in the original's race order, then <see cref="CommonCivilization"/>.
+    /// </summary>
     public IReadOnlyList<string> Civilizations => _civilizations;
+
+    /// <summary>The key of the types every civilization shares (<c>comm</c>): never a kingdom's own civilization.</summary>
+    public string CommonCivilization { get; }
+
+    /// <summary>Whether <paramref name="civilization"/> is a kingdom's own civilization: listed, not empty, not the common one.</summary>
+    public bool IsPlayableCivilization(string civilization)
+        => !string.IsNullOrEmpty(civilization) && civilization != CommonCivilization && Array.IndexOf(_civilizations, civilization) >= 0;
 
     /// <summary>Orders that need a technology per civilization (consumed by the systems that implement the orders).</summary>
     public IReadOnlyList<OrderGate> OrderGates => _orderGates;
@@ -748,7 +765,7 @@ public sealed partial class Ruleset
             hasher.Add((int)b.Attacker).Add((int)b.Target).Add(b.BasisPoints);
         }
 
-        hasher.Add(HudResourceMask).Add(_civilizations.Length);
+        hasher.Add(HudResourceMask).Add(Encoding.UTF8.GetBytes(CommonCivilization)).Add(_civilizations.Length);
         foreach (string civ in _civilizations)
         {
             hasher.Add(Encoding.UTF8.GetBytes(civ));
@@ -812,7 +829,7 @@ public sealed partial class Ruleset
             .Add(t.DropOffMask).Add(t.PopulationCost).Add(t.PopulationProvided)
             .AddSpan<ushort>(t.Builds.AsSpan()).AddSpan<ushort>(t.RequiredTypes.AsSpan())
             .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology)).Add(t.ManaCost).Add((byte)t.DropOffAccess).Add(t.AutoGather).Add((byte)t.Placement)
-            .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete)
+            .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete).Add(t.IsSeat)
             .Add(t.SpawnOnDeath).Add(t.LifetimeMs).Add(t.WalkableFootprint);
         AddRequirements(hasher, t.Requirements);
         hasher.Add(t.ManaPool is not null);

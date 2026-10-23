@@ -40,9 +40,10 @@ public sealed class TerrainProfile
     private readonly int[] _depth;
     private readonly uint _pairs;
 
-    private TerrainProfile(MapTerrainSet set, int terrainCount, string pairs, int treeMask, TerrainLayer[] layers)
+    private TerrainProfile(MapTerrainSet set, int terrainCount, string pairs, int treeMask, int treePictures, TerrainLayer[] layers)
     {
         Set = set;
+        TreePictures = treePictures;
         Id = RandomMapNames.SetId(set);
         TerrainCount = terrainCount;
         TreeTerrainMask = treeMask;
@@ -82,27 +83,35 @@ public sealed class TerrainProfile
     /// <summary>Bit <c>1 &lt;&lt; t</c> set for each terrain <c>t</c> trees grow on.</summary>
     public int TreeTerrainMask { get; }
 
+    /// <summary>
+    /// How many pictures of the tree strip may grow on the set's tree terrains: the kinds of <c>[treeterrain]</c> that
+    /// <c>[treename]</c> lists, with their counts (restated from the data: grass and summer stumps, pines and deciduous 29;
+    /// desert stumps, withered trees, cacti, bushes and palms 28, its "Deciduous" being spelt otherwise in the names; winter
+    /// stumps and pines 17). It weighs a tree's chance (WORLD-013).
+    /// </summary>
+    public int TreePictures { get; }
+
     /// <summary>Painting layers, parents before children.</summary>
     public ImmutableArray<TerrainLayer> Layers { get; }
 
     /// <summary>Grassland.</summary>
     public static TerrainProfile Grass { get; } = new(
-        MapTerrainSet.Grass, 8, "01 04 12 13 14 15 16 17 23 24 25 26 27 34 35 36 37 45 46 47", 0b11110,
+        MapTerrainSet.Grass, 8, "01 04 12 13 14 15 16 17 23 24 25 26 27 34 35 36 37 45 46 47", 0b11110, 29,
         [new(2, 1, 700, 20), new(3, 2, 150, 8), new(4, 1, 60, 6)]);
 
     /// <summary>Summer.</summary>
     public static TerrainProfile Summer { get; } = new(
-        MapTerrainSet.Summer, 8, "01 04 12 13 14 15 16 17 23 24 25 26 27 34 35 36 37 45 46 47", 0b11110,
+        MapTerrainSet.Summer, 8, "01 04 12 13 14 15 16 17 23 24 25 26 27 34 35 36 37 45 46 47", 0b11110, 29,
         [new(2, 1, 650, 20), new(4, 2, 120, 8), new(5, 2, 150, 10)]);
 
     /// <summary>Desert.</summary>
     public static TerrainProfile Desert { get; } = new(
-        MapTerrainSet.Desert, 6, "01 02 12 13 14 15 23 24 25 34", 0b11110,
+        MapTerrainSet.Desert, 6, "01 02 12 13 14 15 23 24 25 34", 0b11110, 28,
         [new(2, 1, 350, 16), new(3, 1, 120, 10), new(5, 1, 40, 6)]);
 
     /// <summary>Winter.</summary>
     public static TerrainProfile Winter { get; } = new(
-        MapTerrainSet.Winter, 5, "01 12 13 14 23 24 34", 0b11110,
+        MapTerrainSet.Winter, 5, "01 12 13 14 23 24 34", 0b11110, 17,
         [new(3, 1, 300, 16), new(2, 1, 100, 10), new(4, 2, 250, 6)]);
 
     /// <summary>The profile of <paramref name="set"/>.</summary>
