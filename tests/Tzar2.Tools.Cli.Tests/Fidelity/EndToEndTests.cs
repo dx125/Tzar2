@@ -85,9 +85,12 @@ public class EndToEndTests
 
     private static void Run(string sessionDir, string root, string body, string id, Func<string, FakeGameDriver> driver, VirtualClock? clock = null)
     {
+        // Always a virtual clock (issue #179): with the real one and no sleep, the runner's deadlines (the F11 snapshot,
+        // the load wait) ran in wall time and a loaded CI runner failed a step now and then.
+        clock ??= new VirtualClock();
         var env = new FakeEnvironment(root);
         using var log = new CaptureLog(TextWriter.Null, null);
-        var runner = new CaptureRunner(CaptureRunnerTests.Session(), env, () => driver(env.SnapshotDirectories[0]), sessionDir, log, clock is null ? _ => { } : clock.Advance, clock);
+        var runner = new CaptureRunner(CaptureRunnerTests.Session(), env, () => driver(env.SnapshotDirectories[0]), sessionDir, log, clock.Advance, clock);
         Assert.All(runner.Run([CaptureRunnerTests.Scenario(body, id)]), r => Assert.Equal("ok", r.Status));
     }
 
