@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Godot;
+using Tzar2.Client.Logic;
 using Tzar2.Game.Campaigns;
 using Tzar2.Game.Scenario;
 using Tzar2.Game.Session;
@@ -118,7 +119,7 @@ public partial class GameApp
     {
         if (_original is null)
         {
-            ShowLoading("the campaigns");
+            ShowLoading(LoadingStage.Load);
             _ = AfterFrames(2, () =>
             {
                 _original = OriginalCampaigns();
@@ -146,7 +147,7 @@ public partial class GameApp
     public void StartMission(ICampaignSource source, string? mapId, SaveGame? resume = null)
     {
         ArgumentNullException.ThrowIfNull(source);
-        ShowLoading(source.Campaign.Name);
+        ShowLoading(LoadingStage.NewGame, source.Campaign.Name);
         _ = AfterFrames(2, () => BuildMission(source, mapId, resume));
     }
 
@@ -239,7 +240,7 @@ public partial class GameApp
         switch (save.Kind)
         {
             case SaveKind.Campaign when _original is null:
-                ShowLoading("the campaigns");
+                ShowLoading(LoadingStage.Load);
                 _ = AfterFrames(2, () =>
                 {
                     _original = OriginalCampaigns();
@@ -260,7 +261,7 @@ public partial class GameApp
                 ShowSinglePlayer();
                 return;
             case SaveKind.CustomMap when _customMaps is null:
-                ShowLoading("the maps");
+                ShowLoading(LoadingStage.Load);
                 _ = AfterFrames(2, () =>
                 {
                     _customMaps = OriginalMaps();
@@ -270,7 +271,7 @@ public partial class GameApp
             case SaveKind.CustomMap:
                 if (_customMaps.Find(m => m.Id == save.MapId) is { } map)
                 {
-                    ShowLoading(map.Title);
+                    ShowLoading(LoadingStage.NewGame, map.Title);
                     _ = AfterFrames(2, () => BuildCustomMap(map, null, save));
                     return;
                 }
@@ -279,7 +280,7 @@ public partial class GameApp
                 ShowSinglePlayer();
                 return;
             default:
-                ShowLoading("the saved game");
+                ShowLoading(LoadingStage.Load);
                 _ = AfterFrames(2, () => BuildSkirmish(null, save));
                 return;
         }

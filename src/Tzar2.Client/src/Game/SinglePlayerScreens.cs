@@ -360,7 +360,7 @@ public partial class MapSetupScreen : ArtScreen
     private void Refresh()
     {
         const string Map = "Map";
-        string Toggle(int v) => v == 0 ? Map : v == 1 ? "Yes" : "No";
+        string Toggle(int v) => v == 0 ? Map : ShellTexts.YesNo(v == 1).In(_catalog is null ? null : _catalog.Text);
         string[] values =
         [
             _options.Civilization == 0 || _options.Civilization > _civilizations.Length ? Map : T($"race_{_options.Civilization}", _civilizations[_options.Civilization - 1]),

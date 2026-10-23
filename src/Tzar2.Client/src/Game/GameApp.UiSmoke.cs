@@ -46,7 +46,7 @@ public partial class GameApp
                 ("load-game", () => Show(ShowLoadGame)),
                 ("multiplayer", () => Show(ShowMultiplayer)),
                 ("replays", () => Show(ShowReplays)),
-                ("loading", () => Show(() => ShowLoading("the test map"))),
+                ("loading", () => Show(() => ShowLoading(LoadingStage.NewGame, "Bridge too far"))),
                 ("victory", () => Show(() => ShowResults(MatchOutcome.Victory, SampleStats()))),
                 ("defeat", () => Show(() => ShowResults(MatchOutcome.Defeat, SampleStats()))),
             ];

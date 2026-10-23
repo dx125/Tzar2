@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Godot;
+using Tzar2.Client.Logic;
 using Tzar2.Game.Diagnostics;
 using Tzar2.Game.Session;
 
@@ -34,7 +35,7 @@ public partial class GameApp
             }
 
             ApplyBenchWindow();
-            ShowLoading("the S2 bench map");
+            ShowLoading(LoadingStage.NewGame, "S2 render bench");
             await AfterFrames(2, () => { });
             var load = Stopwatch.StartNew();
             var session = new GameSession(setup, _rules);
