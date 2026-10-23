@@ -157,7 +157,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    (the `rajba` cliff check is settled: only ninjas climb cliffs, WORLD-018).
 10. **Maintainer:** decode UNK-70…80, compare random maps with our generator. Done: the main campaign is 19 of 19
-    (ADR 0220, 2026-10-22). Follow-ups: ninjas climbing walls, peasants gathering resource items (ReTzar).
+    (ADR 0220, 2026-10-22); `bigisland`'s gold now comes by Azim, not a tribute (2026-10-23). Follow-ups: ninjas
+    climbing walls; `v_02` fails on `main` since the batch merge of 2026-10-23 (18 of 19, survey 2026-10-23).
 11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
 12. **Done (2026-10-22):** issue #62 fixed at its cause (ADR 0231); M6 soak 500 of 500 with 0 desyncs; token rotation
@@ -257,6 +258,13 @@ the process decisions that have no ADR.
   * The relay harness has generous timeouts; the keep-alive test sets its own.
   * The memory probe's sampling runs on a manual clock.
   * Loaded Windows runners no longer fail them.
+* **2026-10-23 — Peasants deliver resource items where the scenario wants them (ECO-023, ECO-024; ADR 0220).**
+  From ReTzar: a peasant sent to a store delivers its load there and stops (Return Goods); a scenario's default
+  Object Order on a store is that order; a peasant that changes hands keeps its load. On `bigisland` Azim takes the
+  gold, walks it to the village and leaves it in its storage, so the solver no longer sends kingdom 7 a tribute
+  (it tributes only when no rule gives that kingdom objects). The solver takes such an item with the peasant the rule
+  names, and cheat assistance spares the enemies near a unit a rule waits to see wounded. Survey: main 18 of 19
+  (`v_02` times out, also on `main` since the batch merge), tutorial 7 of 7.
 
 * **2026-10-23 — The batch merge of 46 PRs (#132–#178, without #141).**
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.

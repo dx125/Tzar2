@@ -58,6 +58,20 @@ internal static class GameplayCommands
     public static CommandRejection? Harvest(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         EntityId node = command.Target;
+        if (Interaction.IsCompletedStructure(world, node) && world.Identities.Get(node).Owner == command.Player && world.TypeOf(node).Traits.DropOffMask != 0)
+        {
+            int delivered = 0;
+            foreach (EntityId entity in entities)
+            {
+                if (StartDelivery(world, command.Player, entity, node))
+                {
+                    delivered++;
+                }
+            }
+
+            return delivered > 0 ? null : CommandRejection.NoValidEntities;
+        }
+
         int s = world.ResourceStocks.IndexOf(node);
         if (!world.Entities.IsAlive(node) || s < 0 || world.ResourceStocks.At(s).Amount == 0 || world.Constructions.Has(node)
             || !Interaction.MayHarvest(world, command.Player, node))
@@ -75,6 +89,37 @@ internal static class GameplayCommands
         }
 
         return applied > 0 ? null : CommandRejection.NoValidEntities;
+    }
+
+    /// <summary>
+    /// Sends an own worker with a load to deliver it at <paramref name="store"/>, an own completed drop-off that takes it
+    /// (ECO-023; Return Goods, program 0x35, in ReTzar's reading of the original, 0x4adc20): the store it chose, not the
+    /// nearest. The order ends with the delivery.
+    /// </summary>
+    public static bool StartDelivery(World world, byte player, EntityId entity, EntityId store)
+    {
+        int w = OwnedWorker(world, entity, player);
+        if (w < 0)
+        {
+            return false;
+        }
+
+        ref Worker worker = ref world.Workers.At(w);
+        EntityTypeDefinition type = world.TypeOf(entity);
+        if (worker.CarryAmount == 0 || !world.TypeOf(store).Traits.AcceptsDropOff(worker.CarryResource)
+            || (world.TypeOf(store).Traits.DropOffAccess & Interaction.AccessOf(type)) == 0)
+        {
+            return false;
+        }
+
+        ClearTasks(world, entity);
+        Interaction.Halt(world, entity);
+        worker = ref world.Workers.At(world.Workers.IndexOf(entity));
+        worker.Task = WorkerTask.Harvest;
+        worker.Phase = WorkerPhase.ToDropOff;
+        worker.NodeResource = Worker.NoResource; // nothing to go back to: idle once delivered
+        worker.DropTarget = store.Value;
+        return true;
     }
 
     /// <summary>Gives an own worker that can gather the node's resource the task of harvesting it.</summary>
