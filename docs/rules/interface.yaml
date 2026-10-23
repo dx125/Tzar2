@@ -56,7 +56,7 @@ rules:
     rule: The diplomacy screen (DIPLOMACY, F5) shows each player's civilization and lets you choose ally, enemy or neutral towards him, offer shared vision, resources and unit control, and set allied victory; each button shows whether the other player agreed.
     source: [manual Diplomacy Screen, manual Hot Keys, 'strings STRINGS.INI [diplomacy]']
     status: tested
-    note: On the D_DIPLOMACY art; the screen sends its changes on ACCEPT. Where the parts sit on the panel and which race icon is which civilization are ours.
+    note: On the D_DIPLOMACY art; the screen sends its changes on ACCEPT. Where the parts sit on the panel and which race icon is which civilization are ours. The shared victory check is COMMON CHK: its upper frame is green (offered), the lower one red (not offered), by its pixels.
   HUD-013:
     rule: The tribute screen (TRIBUTE, F6) sends gold, food, stone or wood to another player; a left click on the amount raises it and a right click lowers it; SEND or CANCEL.
     source: [manual The Tribute Screen, manual Hot Keys, 'strings STRINGS.INI [tribute]']

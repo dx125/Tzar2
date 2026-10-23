@@ -313,11 +313,27 @@ public sealed class MapState
         _occupancy[cell]--;
     }
 
-    /// <summary>Adds the dynamic layers to a state hash (base passability is a pure function of map + ruleset).</summary>
-    public void AppendTo(StateHasher hasher)
+    /// <summary>The dynamic layers' arrays for <see cref="AppendTo"/>, in its order (ADR 0215).</summary>
+    public void CollectBulk(Snapshots.BulkHash bulk)
+    {
+        ArgumentNullException.ThrowIfNull(bulk);
+        bulk.Add(_blockers);
+        bulk.Add(_bridges);
+        bulk.Add(_occupancy);
+    }
+
+    /// <summary>
+    /// Adds the dynamic layers to a state hash (base passability is a pure function of map + ruleset); the layers' bytes
+    /// come from <paramref name="bulk"/>, collected by <see cref="CollectBulk"/> (ADR 0215).
+    /// </summary>
+    public void AppendTo(StateHasher hasher, Snapshots.BulkHash bulk)
     {
         ArgumentNullException.ThrowIfNull(hasher);
-        hasher.Add(ObstacleVersion).Add(PassabilityVersion).AddSpan<ushort>(_blockers).AddSpan<byte>(_bridges).AddSpan<int>(_occupancy);
+        ArgumentNullException.ThrowIfNull(bulk);
+        hasher.Add(ObstacleVersion).Add(PassabilityVersion);
+        bulk.AppendNext(hasher);
+        bulk.AppendNext(hasher);
+        bulk.AppendNext(hasher);
     }
 
     /// <summary>

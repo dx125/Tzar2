@@ -199,7 +199,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
     * **Progress:** the test (`--ui-smoke`, CI job `godot-smoke`, ADR 0200) and the findings
       ([reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md)) are done, and the layout findings are fixed (the
       UI chain #135…#177 is merged; after the merge, 0 issues on all 22 displays). The likeness findings wait for the
-      owner's screenshots.
+      owner's screenshots. The diplomacy screen's shared victory check showed COMMON CHK's frames the wrong way round
+      (red when offered); the model now picks the frame (HUD-012).
 16. **Maintainer (owner's order of 2026-10-22): a full code review for performance, resources and memory, and for a
     fork.**
     * **Performance and resources:**
@@ -237,6 +238,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       thread, rules decided by data instead of names in code.
       * 2026-10-23: the host's choice for a computer goes to the relay (issue #190, ADR 0168 amendment). A stale lobby
         view lost it silently.
+      * 2026-10-23: the AI reads the world through read-only views (ADR 0213); an architecture test keeps it off the
+        writable spans.
+      * 2026-10-23: the full state hash hashes its large arrays in 64 KiB chunks on the workers (ADR 0215): 0.56 → 0.18 ms
+        on an s2 world. Only the full hashes are re-pinned.
 
 ## Decision and event log
 

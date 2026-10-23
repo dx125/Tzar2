@@ -14,6 +14,7 @@ namespace Tzar2.Client.Game;
 public partial class DiplomacyDialog : ArtScreen
 {
     private const string Art = "art/screens/d_diplomacy/";
+    private const int CheckSize = 31; // one frame of COMMON chk
     private static readonly string[] Stances = ["allies", "neutral", "enemies"]; // DiplomacyScreen.StanceColumns
     private static readonly string[] Features = ["sh_vision", "sh_res", "cmd_units"]; // DiplomacyScreen.SharingColumns
     private readonly DiplomacyScreen _screen;
@@ -60,8 +61,8 @@ public partial class DiplomacyDialog : ArtScreen
             y += 34;
         }
 
-        // Shared Victory: COMMON chk (two 31 × 31 frames).
-        _check = new TextureRect { Position = Origin + new Vector2I(40, 300), Size = new Vector2(31, 31), MouseFilter = MouseFilterEnum.Stop };
+        // Shared Victory: COMMON chk (two 31 × 31 frames, the model picks one).
+        _check = new TextureRect { Position = Origin + new Vector2I(40, 300), Size = new Vector2(CheckSize, CheckSize), MouseFilter = MouseFilterEnum.Stop };
         _check.GuiInput += e =>
         {
             if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
@@ -145,7 +146,7 @@ public partial class DiplomacyDialog : ArtScreen
 
         if (_check is not null)
         {
-            _check.Texture = Ui.Region("art/screens/common/chk.t2img", new Rect2I(0, _screen.AlliedVictory ? 31 : 0, 31, 31));
+            _check.Texture = Ui.Region("art/screens/common/chk.t2img", new Rect2I(0, _screen.AlliedVictoryFrame * CheckSize, CheckSize, CheckSize));
         }
     }
 }
