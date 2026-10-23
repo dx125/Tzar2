@@ -41,7 +41,7 @@ public class TavernHiringTests
         d.Step();
         Assert.Contains(CommandRejection.RequirementNotMet, d.Rejections()); // Mercenaries first
 
-        ResearchTests.Grant(d, 0, Classic, TavernOffers.MercenariesTechnology);
+        ResearchTests.Grant(d, 0, Classic, Classic.World.MercenariesTechnology);
         TavernOffer offer = TavernOffers.Offer(w, 0, 0)!.Value;
         Assert.False(offer.IsHero);
         Assert.InRange(offer.Count, w.Ruleset.World.MercenaryGroupMin, w.Ruleset.World.MercenaryGroupMax);
@@ -85,7 +85,7 @@ public class TavernHiringTests
         using SimDriver d = Driver();
         World w = d.World;
         int heroSlot = w.Ruleset.World.MercenaryOffers;
-        ResearchTests.Grant(d, 0, Classic, TavernOffers.MercenariesTechnology);
+        ResearchTests.Grant(d, 0, Classic, Classic.World.MercenariesTechnology);
         d.Order(0, CommandKind.Hire, [Tavern(d)], arg0: heroSlot);
         d.Step();
         Assert.Contains(CommandRejection.RequirementNotMet, d.Rejections());
@@ -93,7 +93,7 @@ public class TavernHiringTests
         TavernOffer plain = TavernOffers.Offer(w, 0, 1)!.Value;
         var plainCost = new int[Classic.ResourceTypes.Count];
         TavernOffers.CostOf(w, 0, plain, plainCost);
-        ResearchTests.Grant(d, 0, Classic, TavernOffers.HeroesQuestTechnology, TavernOffers.FameTechnology);
+        ResearchTests.Grant(d, 0, Classic, Classic.World.HeroesTechnology, Classic.World.FameTechnology);
         TavernOffer famous = TavernOffers.Offer(w, 0, 1)!.Value;
         var famousCost = new int[Classic.ResourceTypes.Count];
         TavernOffers.CostOf(w, 0, famous, famousCost);
@@ -126,7 +126,7 @@ public class TavernHiringTests
         Assert.Null(TavernOffers.Offer(a.World, 0, slots));
 
         World w = a.World;
-        ResearchTests.Grant(a, 0, Classic, TavernOffers.MercenariesTechnology);
+        ResearchTests.Grant(a, 0, Classic, Classic.World.MercenariesTechnology);
         a.Order(0, CommandKind.Hire, [Tavern(a)], arg0: -1);
         a.Order(1, CommandKind.Hire, [Tavern(a)], arg0: 0); // not its tavern
         w.Players[0].PopulationCap = w.Players[0].Population; // no room
@@ -163,7 +163,7 @@ public class TavernHiringTests
     public void Hired_offers_survive_a_snapshot_and_continue_identically()
     {
         using SimDriver d = Driver();
-        ResearchTests.Grant(d, 0, Classic, TavernOffers.MercenariesTechnology, TavernOffers.HeroesQuestTechnology);
+        ResearchTests.Grant(d, 0, Classic, Classic.World.MercenariesTechnology, Classic.World.HeroesTechnology);
         d.Order(0, CommandKind.Hire, [Tavern(d)], arg0: 0);
         d.Order(0, CommandKind.Hire, [Tavern(d)], arg0: d.World.Ruleset.World.MercenaryOffers);
         d.Step();

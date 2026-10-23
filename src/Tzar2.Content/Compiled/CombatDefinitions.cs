@@ -226,11 +226,23 @@ public enum SpellEffect : byte
     /// <summary>Damages everything in the radius around the point, in pulses (rain of fire, whirlpool).</summary>
     AreaDamage = 11,
 
-    /// <summary>Lowers attack and defence for a while (curse; spell books only).</summary>
+    /// <summary>
+    /// Halves the attack and takes away the defence of every enemy unit around the point, within the caster's sight, for a
+    /// while (curse: spell books and the ghost's banshee scream; ReTzar's reading of the original, 0x4e5841).
+    /// </summary>
     Curse = 12,
 
     /// <summary>Kills the target at once (ninja murder, soul item_kill; heroes immune).</summary>
     Kill = 13,
+
+    /// <summary>The target obeys the caster's kingdom for a while, then goes back to its own (hypnosis; MAG-008).</summary>
+    Hypnotize = 14,
+
+    /// <summary>
+    /// Binds the target's soul: a <see cref="SpellDefinition.Summon"/> soul item bound to it goes into the caster's
+    /// inventory (ITEM-010; ReTzar's reading of the original, 0x473403).
+    /// </summary>
+    SoulBind = 15,
 }
 
 /// <summary>What a spell is aimed at.</summary>
@@ -306,6 +318,15 @@ public sealed record SpellDefinition(
     /// <summary>How many summons one cast creates (or most corpses raised).</summary>
     public int Count { get; init; } = 1;
 
+    /// <summary>
+    /// The gold a book of this spell is worth per charge, before the half added on top (TECH-030; ReTzar's reading of the
+    /// original, 0x4643e0); a summon is worth its creature's gold.
+    /// </summary>
+    public int BookValue { get; init; }
+
+    /// <summary>When above <see cref="SpellDefinition.DurationMs"/>, a lasting effect lasts a random time up to this (stone: 120-300 s).</summary>
+    public int DurationMaxMs { get; init; }
+
     /// <summary>Whether <paramref name="typeId"/> may be affected (by its type).</summary>
     public bool AffectsType(ushort typeId) => TargetTypes.IsDefaultOrEmpty || TargetTypes.BinarySearch(typeId) >= 0;
 }
@@ -348,6 +369,12 @@ public enum AbilityFlags : byte
 
     /// <summary>A spy takes the look of another kingdom's unit (order <c>impersonate</c>; MAG-012, ADR 0184).</summary>
     Impersonate = 32,
+
+    /// <summary>Lasting spells (freeze, stone, confusion, curse, hypnosis) do not take (the Messiah; WAR-010).</summary>
+    MagicImmune = 64,
+
+    /// <summary>After a blow it may let out a banshee scream, <see cref="CombatSettings.BansheeSpell"/> (the ghost; WAR-009).</summary>
+    Banshee = 128,
 }
 
 /// <summary>Trait <c>ConvertsFrom</c>: a unit made from another in place (Jihad warriors from peasants, priests from monks).</summary>
@@ -471,6 +498,80 @@ public sealed record CombatSettings
     /// <summary>Crusade: the anchor stands at most this far from the cathedral (TDD GAME-11: 4 tiles).</summary>
     public int CrusadeAnchorRadiusUnits { get; init; } = 4 * 2048;
 
+    /// <summary>
+    /// The spell a <see cref="AbilityFlags.Banshee"/> unit casts for free after a blow, or -1 (WAR-009: the ghost curses the
+    /// enemies around it, ReTzar's reading of the original, 0x4ee780).
+    /// </summary>
+    public int BansheeSpell { get; init; } = -1;
+
+    /// <summary>The banshee scream follows a blow when a draw below <see cref="BansheeOutOf"/> is under this (71 of 1001).</summary>
+    public int BansheeChance { get; init; }
+
+    /// <summary>
+    /// The types whose attacks are magic (mages, dragons, the Messiah, priests): the <see cref="AbilityFlags.MagicImmune"/>
+    /// Messiah takes no damage from them (WAR-010; ReTzar's reading of the original, damage category 3), ascending.
+    /// </summary>
+    public ImmutableArray<ushort> MagicAttackers { get; init; } = [];
+
+    /// <summary>The spell a soul item's berserk order casts on its bound unit (ITEM-010), or -1.</summary>
+    public int SoulBerserkSpell { get; init; } = -1;
+
+    /// <summary>
+    /// The experience speeds (percent of a level's cost) the technologies give (Warfare 70, Tactics 50, Sun Tzu 35;
+    /// ReTzar's reading of the original, 0x4d33d0): a kingdom has the lowest of those it researched (each needs the one
+    /// before), 100 without.
+    /// </summary>
+    public ImmutableArray<ExperienceSpeed> ExperienceSpeeds { get; init; } = [];
+
+    /// <summary>Training dummies teach one point of experience for this much damage they take (75; ReTzar, 0x4481e0).</summary>
+    public int DummyDamagePerPoint { get; init; } = 75;
+
+    /// <summary>Each finished building of these types raises its kingdom's level cap by <see cref="LevelCapPerBuilding"/> (academies), ascending.</summary>
+    public ImmutableArray<ushort> LevelCapBuildings { get; init; } = [];
+
+    /// <summary>Levels each <see cref="LevelCapBuildings"/> building adds to the cap (10; ReTzar, 0x401850).</summary>
+    public int LevelCapPerBuilding { get; init; }
+
+    /// <summary>Jewelry (TECH-030): the technology that lets a kingdom's markets sell and buy items, or -1.</summary>
+    public int MarketTechnology { get; init; } = -1;
+
+    /// <summary>Jewelry: the first offer comes this long after the market stands.</summary>
+    public int MarketFirstMs { get; init; } = 1000;
+
+    /// <summary>Jewelry: a new offer comes this often.</summary>
+    public int MarketEveryMs { get; init; } = 60_000;
+
+    /// <summary>Jewelry: the most offers on the list; a new one pushes out the oldest.</summary>
+    public int MarketSize { get; init; } = 8;
+
+    /// <summary>Jewelry: an offer costs this percent of its value in gold (a sale earns 100 %).</summary>
+    public int MarketBuyPercent { get; init; } = 400;
+
+    /// <summary>Jewelry: the kinds an offer is drawn from (each equally likely), each a list of variants (equally likely).</summary>
+    public ImmutableArray<ImmutableArray<MarketVariant>> MarketOffers { get; init; } = [];
+
+    /// <summary>Jewelry: the spells a book on offer is drawn from (equally likely), in the original's numbering.</summary>
+    public ImmutableArray<ushort> MarketBookSpells { get; init; } = [];
+
+    /// <summary>The range of the banshee scream's draw.</summary>
+    public int BansheeOutOf { get; init; } = 1001;
+
+    /// <summary>
+    /// Tournaments (TECH-029; ReTzar's reading of the original, 0x4de900): the technology, or -1. A kingdom that has it
+    /// pools the experience its units learn; each time the pool reaches <see cref="TournamentEvery"/> it empties and
+    /// every <see cref="TournamentPupils"/> unit of the kingdom learns <see cref="TournamentGrant"/>.
+    /// </summary>
+    public int TournamentTechnology { get; init; } = -1;
+
+    /// <summary>Tournaments: the pool that teaches the pupils (75).</summary>
+    public int TournamentEvery { get; init; } = 75;
+
+    /// <summary>Tournaments: what each pupil learns when the pool is full (1).</summary>
+    public int TournamentGrant { get; init; } = 1;
+
+    /// <summary>Tournaments: the types it teaches (Asian peasants, monks, ninjas and priests), ascending.</summary>
+    public ImmutableArray<ushort> TournamentPupils { get; init; } = [];
+
 
     /// <summary>Hero names per civilization (<c>HEROES.INI</c>).</summary>
     public ImmutableArray<HeroNames> HeroNames { get; init; } = [];
@@ -521,6 +622,79 @@ public sealed record CombatSettings
         Check(CrusadeCeilingStep, 0, 1000);
         Check(CrusadeCeilingMax, 0, 1000);
         Check(CrusadeAnchorRadiusUnits, 0, 64 * 2048);
+        Check(BansheeOutOf, 1, 1_000_000);
+        Check(BansheeChance, 0, BansheeOutOf);
+        Check(TournamentTechnology, -1, technologies - 1);
+        Check(TournamentEvery, 1, 255);
+        Check(TournamentGrant, 0, 1_000_000);
+        if (TournamentPupils.IsDefault)
+        {
+            throw new ArgumentException("combat: the tournament pupils must not be default.");
+        }
+
+        if (MagicAttackers.IsDefault)
+        {
+            throw new ArgumentException("combat: the magic attackers must not be default.");
+        }
+
+        Check(DummyDamagePerPoint, 1, 1_000_000);
+        Check(MarketTechnology, -1, technologies - 1);
+        Check(MarketFirstMs, 0, 3_600_000);
+        Check(MarketEveryMs, 1, 3_600_000);
+        Check(MarketSize, 1, 8);
+        Check(MarketBuyPercent, 0, 100_000);
+        if (MarketOffers.IsDefault || MarketBookSpells.IsDefault)
+        {
+            throw new ArgumentException("combat: the market offers must not be default.");
+        }
+
+        foreach (ImmutableArray<MarketVariant> kind in MarketOffers)
+        {
+            if (kind.IsDefaultOrEmpty)
+            {
+                throw new ArgumentException("combat: a market offer kind needs a variant.");
+            }
+
+            foreach (MarketVariant v in kind)
+            {
+                Check(v.Item, 0, typeCount - 1);
+                Check(v.Min, 0, 1_000_000);
+                Check(v.Max, v.Min, 1_000_000);
+            }
+        }
+
+        if (ExperienceSpeeds.IsDefault)
+        {
+            throw new ArgumentException("combat: the experience speeds must not be default.");
+        }
+
+        foreach (ExperienceSpeed speed in ExperienceSpeeds)
+        {
+            Check(speed.Technology, 0, technologies - 1);
+            Check(speed.Percent, 1, 1000);
+        }
+
+        Check(LevelCapPerBuilding, 0, 10_000);
+        if (LevelCapBuildings.IsDefault)
+        {
+            throw new ArgumentException("combat: the level cap buildings must not be default.");
+        }
+
+        foreach (ushort building in LevelCapBuildings)
+        {
+            Check(building, 0, typeCount - 1);
+        }
+
+        foreach (ushort attacker in MagicAttackers)
+        {
+            Check(attacker, 0, typeCount - 1);
+        }
+
+        foreach (ushort pupil in TournamentPupils)
+        {
+            Check(pupil, 0, typeCount - 1);
+        }
+
         if (HeroNames.IsDefault)
         {
             throw new ArgumentException("combat: hero names must not be default.");
@@ -543,3 +717,21 @@ public sealed record CombatSettings
         }
     }
 }
+
+/// <summary>An experience speed a technology gives (<see cref="CombatSettings.ExperienceSpeeds"/>).</summary>
+/// <param name="Technology">The technology id.</param>
+/// <param name="Percent">Percent of a level's cost.</param>
+public sealed record ExperienceSpeed(int Technology, int Percent);
+
+/// <summary>
+/// One variant of a market offer (TECH-030): an item of type <paramref name="Item"/> with the effect, look and a power drawn
+/// from <paramref name="Min"/> to <paramref name="Max"/>; a <paramref name="Book"/> takes a spell from
+/// <see cref="CombatSettings.MarketBookSpells"/> and charges by the time played instead.
+/// </summary>
+/// <param name="Item">The item type id.</param>
+/// <param name="Effect">What it adds (power items and potions).</param>
+/// <param name="Look">1 + the index of its look in the item's looks, 0 = the type's own.</param>
+/// <param name="Min">Least power.</param>
+/// <param name="Max">Most power.</param>
+/// <param name="Book">A spell book.</param>
+public sealed record MarketVariant(ushort Item, ItemEffect Effect, int Look, int Min, int Max, bool Book);

@@ -246,8 +246,15 @@ public partial class MainMenuScreen : ArtScreen
 /// <summary>Skirmish settings chosen on the setup screen.</summary>
 public sealed class SkirmishOptions
 {
-    /// <summary>Civilization keys offered (ruleset order: European, Arabian, Asian).</summary>
-    public static readonly string[] Civilizations = ["euro", "arab", "asia"];
+    /// <summary>
+    /// The civilizations a player may choose: the ruleset's playable ones in its order (ADR 0211; classic: European,
+    /// Arabian, Asian, the original's race numbers 1-3), or those three without a ruleset. A fork adds one in its YAML.
+    /// </summary>
+    public static string[] CivilizationsOf(Tzar2.Content.Compiled.Ruleset? rules)
+    {
+        string[] playable = rules is null ? [] : [.. System.Linq.Enumerable.Where(rules.Civilizations, rules.IsPlayableCivilization)];
+        return playable.Length > 0 ? playable : ["euro", "arab", "asia"];
+    }
 
     /// <summary>Terrain sets offered (random-map terrain sets).</summary>
     public static readonly Content.MapGen.MapTerrainSet[] TerrainSets =
@@ -307,6 +314,7 @@ public sealed class SkirmishOptions
 public partial class SkirmishSetupScreen : ArtScreen
 {
     private const int Slots = 10;
+    private readonly string[] _civilizations;
     private readonly SkirmishOptions _options;
     private readonly PresentationCatalog? _catalog;
     private readonly TextureRect[] _values = new TextureRect[Slots];
@@ -317,6 +325,7 @@ public partial class SkirmishSetupScreen : ArtScreen
     public SkirmishSetupScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, SkirmishOptions options, Func<SkirmishOptions, Image?>? preview = null, string? notice = null)
         : base(ui, screen, "art/screens/s_singlernd/back.t2img")
     {
+        _civilizations = SkirmishOptions.CivilizationsOf(catalog?.Ruleset);
         Notice(notice, new Vector2I(66, 88), 470); // the left panel, x 66-536 of the art
         _options = options;
         _catalog = catalog;
@@ -366,7 +375,7 @@ public partial class SkirmishSetupScreen : ArtScreen
         static int Wrap(int v, int n) => ((v % n) + n) % n;
         switch (slot)
         {
-            case 0: _options.Civilization = Wrap(_options.Civilization + step, SkirmishOptions.Civilizations.Length); break;
+            case 0: _options.Civilization = Wrap(_options.Civilization + step, _civilizations.Length); break;
             case 1: _options.Difficulty = (Difficulty)Wrap((int)_options.Difficulty + step, 3); break;
             case 2: _options.StartingResources = Wrap(_options.StartingResources + step, 4); break;
             case 3: _options.PopulationLimit = Wrap(_options.PopulationLimit + step, SkirmishOptions.PopulationLimits.Length); break;
@@ -389,7 +398,7 @@ public partial class SkirmishSetupScreen : ArtScreen
     {
         string[] values =
         [
-            T($"race_{_options.Civilization + 1}", SkirmishOptions.Civilizations[_options.Civilization]),
+            T($"race_{_options.Civilization + 1}", _civilizations[Math.Min(_options.Civilization, _civilizations.Length - 1)]),
             T($"difflvl_{(int)_options.Difficulty}", _options.Difficulty.ToString()),
             T($"resurcs_{_options.StartingResources}", _options.StartingResources.ToString(CultureInfo.InvariantCulture)),
             SkirmishOptions.PopulationLimits[_options.PopulationLimit].ToString(CultureInfo.InvariantCulture),

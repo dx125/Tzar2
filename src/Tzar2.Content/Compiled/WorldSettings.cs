@@ -56,14 +56,14 @@ public sealed record WorldSettings
     /// <summary>Most of one resource a stockpile can hold; incomes above it are lost (overflow guard).</summary>
     public int StockpileCap { get; init; } = 1_000_000_000;
 
-    /// <summary>Trade profit per tile of distance between the docks, in basis points of the carried amount (UNK-28).</summary>
-    public int TradeProfitPerTileBasisPoints { get; init; } = 100;
+    /// <summary>
+    /// The trade profit across the whole map, in percent of the load (TRADE-001; ReTzar's reading of the original,
+    /// 0x4e7c98): a delivery earns load x tiles between the docks x this / (map side x 100).
+    /// </summary>
+    public int TradeProfitPercent { get; init; } = 40;
 
-    /// <summary>Docks closer than this (in tiles) give no profit (anti trade loop).</summary>
-    public int TradeMinDistanceTiles { get; init; } = 8;
-
-    /// <summary>Most profit of one delivery, in basis points of the carried amount.</summary>
-    public int TradeMaxProfitBasisPoints { get; init; } = 30_000;
+    /// <summary>Docks closer than this (in tiles, the larger of the two axes) give no profit.</summary>
+    public int TradeMinDistanceTiles { get; init; } = 12;
 
     /// <summary>Time a trader spends at a dock to unload and load.</summary>
     public int TradeDockMs { get; init; } = 2_000;
@@ -185,6 +185,21 @@ public sealed record WorldSettings
     /// <summary>Fame: cheaper mercenaries (percent of the price kept).</summary>
     public int FameCostPercent { get; init; } = 75;
 
+    /// <summary>The technology that opens the tavern's mercenaries (empty: none needed).</summary>
+    public string MercenariesTechnology { get; init; } = "te_mercenaries";
+
+    /// <summary>The technology that opens the tavern's heroes (empty: none needed).</summary>
+    public string HeroesTechnology { get; init; } = "te_heroesquest";
+
+    /// <summary>The technology that gives more, better and cheaper mercenaries (empty: none).</summary>
+    public string FameTechnology { get; init; } = "te_fame";
+
+    /// <summary>The technology gambling needs (empty: none needed).</summary>
+    public string GamblingTechnology { get; init; } = "te_gambling";
+
+    /// <summary>The technology loans need (empty: none needed).</summary>
+    public string LoanTechnology { get; init; } = "te_usury";
+
     internal void Validate()
     {
         ArgumentOutOfRangeException.ThrowIfNegative(DefaultSightTiles);
@@ -199,12 +214,10 @@ public sealed record WorldSettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(TributeIntervalMs, 3_600_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxTributeAmount, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(StockpileCap, 1);
-        ArgumentOutOfRangeException.ThrowIfNegative(TradeProfitPerTileBasisPoints);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(TradeProfitPerTileBasisPoints, 100_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(TradeProfitPercent);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(TradeProfitPercent, 100_000);
         ArgumentOutOfRangeException.ThrowIfNegative(TradeMinDistanceTiles);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(TradeMinDistanceTiles, 1024);
-        ArgumentOutOfRangeException.ThrowIfNegative(TradeMaxProfitBasisPoints);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(TradeMaxProfitBasisPoints, 1_000_000);
         ArgumentOutOfRangeException.ThrowIfNegative(TradeDockMs);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(TradeDockMs, 600_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(ConvertRatio, 1);
