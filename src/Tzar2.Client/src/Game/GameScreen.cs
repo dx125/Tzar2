@@ -418,13 +418,7 @@ public partial class GameScreen : Node
             RefreshCard();
         };
         _hud.EyePressed += ToggleInventory;
-        _hud.ChatPressed += () =>
-        {
-            if (!_session.IsMultiplayer)
-            {
-                Message(_catalog.Text("game_scr", "chat", "CHAT") + ": needs multiplayer");
-            }
-        };
+        _hud.ChatPressed += () => ShowChat(null);
     }
 
     /// <inheritdoc/>
@@ -1239,7 +1233,7 @@ public partial class GameScreen : Node
                 _selection.SelectByExperience(OnScreen(), binding.Action == GameAction.SelectAboveAverageExperience);
                 break;
             case GameAction.Chat when !_session.IsMultiplayer:
-                Message("Chat: single player has no chat line yet."); // multiplayer: the overlay's chat line takes Enter
+                ShowChat(null); // multiplayer: the overlay's chat line takes Enter
                 break;
             case GameAction.UseDefaultItem when _frame is not null:
                 Submit(_card.UseDefaultItem(CardNow()));
@@ -2325,6 +2319,43 @@ public partial class GameScreen : Node
     }
 
     // DIPLOMACY and F5 (HUD-012): the stances, the sharing and shared victory towards every other kingdom.
+    // The chat screen (HUD-011): CHAT, and Enter in single player, where its line takes the hm* codes (GAME-19).
+    private void ShowChat(Tzar2.Game.Ui.ChatScreen? keep)
+    {
+        if ((keep is null && GetNodeOrNull("Chat") is not null) || _hud is null || _frame is null)
+        {
+            return;
+        }
+
+        Tzar2.Game.Ui.ChatScreen model = keep ?? new Tzar2.Game.Ui.ChatScreen(_frame, _session.LocalPlayer, _chatTo);
+        var dialog = new ChatDialog(_ui, _hud.Layout.Size, model, _catalog.Text, KingdomName, KingdomColour);
+        var layer = new CanvasLayer { Layer = 3, Name = "Chat" };
+        layer.AddChild(dialog);
+        AddChild(layer);
+        dialog.Closed += () =>
+        {
+            _chatTo = model.To;
+            layer.QueueFree();
+        };
+        dialog.Reopen += () =>
+        {
+            RemoveChild(layer);
+            layer.QueueFree();
+            ShowChat(model);
+        };
+        dialog.Sent += (text, to, mask) =>
+        {
+            _chatTo = to;
+            layer.QueueFree();
+            if (!_session.SubmitChat(text, to, mask))
+            {
+                Message($"{KingdomName(_session.LocalPlayer)}: {text}"); // single player: nobody else reads it
+            }
+        };
+    }
+
+    private ChatTarget _chatTo;
+
     private void ShowDiplomacy()
     {
         if (GetNodeOrNull("Diplomacy") is not null || GetNodeOrNull("Tribute") is not null || _hud is null || _frame is null)
