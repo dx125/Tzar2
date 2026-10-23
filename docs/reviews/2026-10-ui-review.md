@@ -34,6 +34,8 @@ Work queue item 15 (the owner's order of 2026-10-22). ADR 0200 describes the tes
 | 1366 × 768, 1600 × 900, 1920 × 1080, 1920 × 1200, 2560 × 1440, 3440 × 1440, 3840 × 2160 (Wide, every scale) | UI-L2 |
 | the same in Authentic | UI-L2, UI-L3 |
 
+This table is the state when the review was made; the findings' tables below say which are fixed since.
+
 Every other screen fits every display: the menus' 800 × 600 art centred on a logical screen of at least 1024 × 720,
 the dialogs over the HUD, and the Wide HUD cut into anchored pieces (ADR 0177). UI-L4 (conversation) and UI-L5 (random
 map notice) are on every display. The likeness findings below do not depend on the display.
@@ -43,7 +45,7 @@ map notice) are on every display. The likeness findings below do not depend on t
 | Id | Screen | Displays | Finding | Fix |
 |---|---|---|---|---|
 | UI-L1 | game, all in-game dialogs, editor | Authentic in a window under 768 rows (1280 × 720) | Godot's integer stretch does not scale below 1, so the bottom 48 rows of the 1024 × 768 picture are cut: half the card's second row, the minimap's bottom, the dialogs' buttons. | **Fixed:** a window smaller than the logical screen shrinks the picture to fit (fractional stretch, letterboxed; `DisplayMath.Fits`). |
-| UI-L2 | lobby | all | The rows of Godot controls are 30 px apart but 31 px high. The team picker runs into the ready and ping text; "Dropped players" runs into its picker. | Row pitch and columns that fit; see also UI-A7. |
+| UI-L2 | lobby | all | The rows of Godot controls are 30 px apart but 31 px high. The team picker runs into the ready and ping text; "Dropped players" runs into its picker. | Row pitch and columns that fit; see also UI-A7. (A fix for the old lobby was superseded by the lobby on `LobbyScreenModel`, #160; the rebuilt lobby of UI-A7 fixes it.) |
 | UI-L3 | editor: import and campaign windows | 1024 × 768 Wide, every Authentic | The windows are 1152 and 1034 px wide, wider than a 1024-wide screen. | Clamp the windows to the screen. |
 | UI-L4 | conversation | all | Phrases are wrapped to 330 px in a 300 px box (`D_SAY`) and run out of it. | Wrap to the box. |
 | UI-L5 | random map setup | all, without the original AI scripts in the package | The notice that the engine's AI is used is wrapped to the screen, not to the left panel, and runs over the map rows. | Wrap it to the panel. |
