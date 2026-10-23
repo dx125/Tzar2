@@ -13,15 +13,15 @@ rules:
     status: partial
     note: The near market is the trader's nearest own one; the far one is clicked (ADR 0103).
   TRADE-003:
-    rule: Trade can also be done with other kingdoms' markets.
-    source: [manual Trade]
-    status: unclear
-    note: Whether a trader may use another kingdom's market, and who profits, is not known.
+    rule: Trade can also be done with other kingdoms' markets, enemies' too; the trader's kingdom takes the whole profit and the market's kingdom nothing.
+    source: [manual Trade, community ReTzar src/gameplay.rs (0x4a2f36)]
+    status: tested
+    adr: [0252]
   TRADE-004:
-    rule: Asian peasants can trade between markets as caravans do.
-    source: [help ITEMS.TXT HT_TRADE_CARAVANS]
-    status: unclear
-    note: The help names "a caravan or an Asian peasant"; the manual gives the Asian market caravans. Tzar2 trades with caravans and traders only.
+    rule: Asian peasants trade between markets as caravans do (the Asian market makes no caravans), 100 a trip; European caravans carry 500 and Arabian ones 300.
+    source: [help ITEMS.TXT HT_TRADE_CARAVANS, 'data MENU.INI [a_peon] trade', 'data TECHTREE ASIA.INI trade', community ReTzar src/gameplay.rs (0x4e8060)]
+    status: tested
+    adr: [0252]
   TRADE-005:
     rule: The tavern converts resources, ten given for one received, choosing what to give, how much and what to get.
     source: [manual Converting Resources]

@@ -48,9 +48,9 @@ public class TradeTests
             Assert.True(sales.Length >= 2, $"{sales.Length} sales");
             Assert.Equal(wood, sales[0].X); // wood loaded at A, sold at B
             Assert.Equal(gold, sales[1].X); // gold loaded at B, sold at A
-            // Synthetic load 100 (UNVERIFIED), 1% per tile between the docks (UNVERIFIED, UNK-28).
-            Assert.Equal(distance, sales[0].Y);
-            Assert.Equal(100 + distance, sales[0].Arg);
+            // A European caravan carries 500 (TRADE-004), 1% per tile between the docks (UNVERIFIED, UNK-28).
+            Assert.Equal(5 * distance, sales[0].Y);
+            Assert.Equal(500 + (5 * distance), sales[0].Arg);
             profits[index] = sales[0].Y;
             Assert.Equal(sales[0].Y + sales[1].Y, d.World.Kingdoms[0].TradeIncome);
         }
@@ -89,6 +89,71 @@ public class TradeTests
         d.Step();
         Assert.False(w.TradeRoutes.Has(trader));
         Assert.Equal(before, w.Players[0].Resources[wood]); // refunded without profit
+    }
+
+    [Fact]
+    [Trait("Rule", "TRADE-003")]
+    public void A_caravan_trades_with_an_enemys_market_and_its_kingdom_takes_the_profit()
+    {
+        int wood = Resource("wood");
+        using var d = new SimDriver(
+            TestMap(64, 16, Structure("euro.market", 0, 4, 6), Structure("euro.market", 1, 34, 6), Unit("euro.trader", 0, 8, 12)),
+            ruleset: Classic);
+        ResearchTests.Grant(d, 0, Classic, "te_traderoutes");
+        Assert.Equal(Stance.Enemy, d.World.Diplomacy.StanceOf(0, 1));
+        EntityId mine = OfType(d.World, "euro.market", 0).Single();
+        EntityId theirs = OfType(d.World, "euro.market", 1).Single();
+        Position b = d.World.Positions.Get(theirs);
+        int enemyWood = d.World.Players[1].Resources[wood];
+        d.Order(0, CommandKind.Trade, [OfType(d.World, "euro.trader").Single()], b.X, b.Y, target: mine, arg0: wood | (wood << 8), arg1: 100);
+        d.RunUntil(() => d.Count(SimEventKind.TradeDelivered) >= 1, 6000);
+        Assert.Empty(d.Rejections());
+        SimEvent sale = d.Events.First(e => e.Event.Kind == SimEventKind.TradeDelivered).Event;
+        Assert.Equal(0, sale.Player);
+        Assert.True(sale.Y > 0);
+        Assert.Equal(enemyWood, d.World.Players[1].Resources[wood]); // the market's kingdom gets nothing
+    }
+
+    [Fact]
+    [Trait("Rule", "TRADE-004")]
+    public void A_peasant_with_the_trader_trait_trades_between_markets()
+    {
+        // Asian peasants trade instead of caravans (MENU.INI [a_peon] trade; ReTzar 0x4e8060: 100 a trip). The synthetic
+        // tables have no Asian civilization, so a European peasant gets the Asian peasant's trait here; the import's
+        // ^asia.peon is checked on the original's data (OriginTechnologyTests).
+        Content.Compiled.Ruleset rules = ClassicWith("^euro.peon: { Trader: { capacity: 100, access: land, technology: te_traderoutes } }");
+        int wood = Resource("wood");
+        using var d = new SimDriver(
+            TestMap(64, 16, Structure("euro.market", 0, 4, 6), Structure("euro.market", 0, 34, 6), Unit("euro.peon", 0, 8, 12)),
+            ruleset: rules);
+        ResearchTests.Grant(d, 0, rules, "te_traderoutes");
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        EntityId[] markets = [.. OfType(d.World, "euro.market").OrderBy(m => d.World.Positions.Get(m).X)];
+        Position b = d.World.Positions.Get(markets[1]);
+        d.Order(0, CommandKind.Trade, [peon], b.X, b.Y, target: markets[0], arg0: wood | (wood << 8));
+        d.RunUntil(() => d.Count(SimEventKind.TradeDelivered) >= 1, 6000);
+        Assert.Equal(100 + 30, d.Events.First(e => e.Event.Kind == SimEventKind.TradeDelivered).Event.Arg);
+        Assert.True(d.World.TradeRoutes.Has(peon)); // idle work leaves a trading peasant alone
+    }
+
+    [Fact]
+    [Trait("Rule", "HOLD-008")]
+    public void Infantry_boards_a_caravan_rides_with_it_and_gets_off()
+    {
+        using var d = new SimDriver(TestMap(48, 16, Unit("euro.trader", 0, 8, 6), Unit("euro.footman", 0, 6, 6)), ruleset: Classic);
+        EntityId trader = OfType(d.World, "euro.trader").Single();
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        Assert.Equal(9, d.World.HolderCapacity(trader)); // synthetic TRADER.INI max_obj_in_holder (the original: 8), [accept] infantryunits
+        d.Order(0, CommandKind.Board, [footman], target: trader);
+        d.RunUntil(() => d.World.IsHeld(footman), 400);
+        Assert.True(d.World.IsHeld(footman));
+        d.MoveToTile(0, [trader], 30, 6);
+        d.RunUntil(() => d.World.Positions.Get(trader).X > 28 * Map.MapState.UnitsPerTile, 2000);
+        Position at = d.World.Positions.Get(trader);
+        d.Order(0, CommandKind.Unload, [trader], at.X, at.Y);
+        d.RunUntil(() => !d.World.IsHeld(footman), 400);
+        Assert.False(d.World.IsHeld(footman));
+        Assert.True(d.World.Positions.Get(footman).X > 25 * Map.MapState.UnitsPerTile);
     }
 
     [Fact]

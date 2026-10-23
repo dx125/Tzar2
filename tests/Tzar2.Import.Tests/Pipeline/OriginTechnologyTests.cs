@@ -178,6 +178,26 @@ public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposabl
         Assert.Equal((11, 7, 6, 11), (Type("comm.bridge").FootprintWidth, Type("comm.bridge").FootprintHeight, Type("comm.bridge").Turned.Width, Type("comm.bridge").Turned.Height));
     }
 
+    [OriginFact]
+    [Trait("Rule", "TRADE-004")]
+    [Trait("Rule", "HOLD-008")]
+    public void Caravans_carry_500_or_300_asian_peasants_trade_100_and_caravans_load_infantry()
+    {
+        Ruleset rules = CompileFromOrigin();
+        EntityTypeDefinition Type(string key) => rules.EntityTypes.Single(t => t.Key == key);
+        Assert.Equal(500, Type("euro.trader").Traits.World.Trader!.Capacity);
+        Assert.Equal(300, Type("arab.trader").Traits.World.Trader!.Capacity);
+        Assert.Equal(100, Type("asia.peon").Traits.World.Trader!.Capacity);
+        Assert.Null(Type("euro.peon").Traits.World.Trader);
+        foreach (string caravan in new[] { "euro.trader", "arab.trader" })
+        {
+            HolderDefinition holder = Type(caravan).Traits.Holder!;
+            Assert.Equal(8, holder.Capacity);
+            Assert.True(holder.CanHold(Type("euro.footman").Id));
+            Assert.False(holder.CanHold(Type("euro.knight").Id));
+        }
+    }
+
     private Ruleset CompileFromOrigin()
     {
         string origin = OriginPaths.RequireOrigin();
