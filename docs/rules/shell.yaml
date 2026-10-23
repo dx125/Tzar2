@@ -60,8 +60,10 @@ rules:
     note: The original keeps them in tzar.ini [SINGLE_RANDOM]; Tzar2 in user://random-map.cfg, with the kingdoms' rows.
   SHELL-013:
     rule: The random map screen and the multiplayer options let each computer kingdom resign on its own (a flag) or never (a sword).
-    source: [patch 1.09 (TZAR110.TXT)]
-    status: missing
+    source: [patch 1.09 (TZAR110.TXT), data IMAGES/AIRESIGN.BMP, 'community ReTzar src/menu.rs (Screen::Random)']
+    status: tested
+    note: One flag for every computer kingdom of the match. It starts up (the white flag), as Tzar2 played before; the original's first default is UNVERIFIED (ReTzar reads a missing tzar.ini AIRESIGN as the sword). The lobby shows it as a check.
+    adr: [0262]
   SHELL-014:
     rule: The load game screen lists the saved games, filtered by campaign or single player game, and loads or deletes the chosen one.
     source: [manual Load Game Screen]
