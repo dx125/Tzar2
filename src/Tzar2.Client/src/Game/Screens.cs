@@ -441,15 +441,10 @@ public partial class SkirmishSetupScreen : ArtScreen
         var model = _model;
         Tzar2.Game.Session.MatchSettings s = model.Settings;
         string N(int n) => n.ToString(CultureInfo.InvariantCulture);
-        string victory = s.Victory switch
-        {
-            Tzar2.Sim.VictoryCondition.DestroyCastles => T("vcond_1", "Destroy Castles"),
-            Tzar2.Sim.VictoryCondition.TimeLimit => T("vcond_2", "Time Limit"),
-            Tzar2.Sim.VictoryCondition.ScoreLimit => T("vcond_3", "Score Limit"),
-            _ => T("vcond_0", "Standard"),
-        };
+        string[] victories = ["Standard", "Destroy Castles", "Time Limit", "Score Limit"];
+        string victory = T($"vcond_{model.VictoryChoice}", victories[model.VictoryChoice]);
         Option(new Vector2I(66, 369), T("t_num_players", "Number of Players"), N(model.Players), Tzar2.Game.Ui.RandomMapOption.Players);
-        Option(new Vector2I(66, 427), T("t_game_type", "Game Type"), s.GameType == Tzar2.Sim.GameType.Deathmatch ? "Deathmatch" : T("g_type_0", "Standard"), Tzar2.Game.Ui.RandomMapOption.GameType);
+        Option(new Vector2I(66, 427), T("t_game_type", "Game Type"), model.IsDeathmatch ? "Deathmatch" : T("g_type_0", "Standard"), Tzar2.Game.Ui.RandomMapOption.GameType);
         Option(new Vector2I(66, 487), T("t_vict_cond", "Victory Condition"), victory, Tzar2.Game.Ui.RandomMapOption.Victory);
         Option(new Vector2I(270, 369), T("t_poplimit", "Population Limit"), N(s.PopulationLimit), Tzar2.Game.Ui.RandomMapOption.PopulationLimit);
         Option(new Vector2I(270, 427), T("t_diff_lvl", "Difficulty Level"), T($"difflvl_{(int)model.Difficulty}", model.Difficulty.ToString()), Tzar2.Game.Ui.RandomMapOption.Difficulty);
@@ -458,7 +453,7 @@ public partial class SkirmishSetupScreen : ArtScreen
         {
             // The limit's selector (COMMON/SCROLL CTRL) under the victory condition.
             Picture(new Vector2I(66, 538), Ui.Texture(Common + "scroll ctrl.t2img"));
-            string caption = s.Victory == Tzar2.Sim.VictoryCondition.ScoreLimit ? T("t_score_lim", "Score Limit") : T("t_time_lim", "Time Limit (min.)");
+            string caption = model.IsScoreLimit ? T("t_score_lim", "Score Limit") : T("t_time_lim", "Time Limit (min.)");
             Label(new Vector2I(66, 524), caption, Caption);
             Spin(new Vector2I(66, 541), N(model.VictoryLimit), step => model.Change(Tzar2.Game.Ui.RandomMapOption.VictoryLimit, step), arrows: false, width: 191);
         }
@@ -484,10 +479,10 @@ public partial class SkirmishSetupScreen : ArtScreen
         Spin(at, value, step => _model.Change(option, step), arrows: false);
     }
 
-    // A 30 x 30 check box (COMMON/CHK) with its caption to the right.
+    // A 30 x 30 check box (COMMON/CHK: the green light on top, the red one below) with its caption to the right.
     private void Check(Vector2I at, string caption, Tzar2.Game.Ui.RandomMapOption option)
     {
-        Picture(at, Ui.Region(Common + "chk.t2img", new Rect2I(0, _model.IsOn(option) ? 31 : 0, 31, 31)));
+        Picture(at, Ui.Region(Common + "chk.t2img", new Rect2I(0, _model.IsOn(option) ? 0 : 31, 31, 31)));
         Click(new Rect2I(at, new Vector2I(30, 30)), () => _model.Change(option, +1)); // the original's 30 x 30 boxes, 30 apart
         Label(at + new Vector2I(36, 8), caption, Caption);
     }

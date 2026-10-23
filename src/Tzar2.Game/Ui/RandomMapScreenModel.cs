@@ -186,6 +186,15 @@ public sealed class RandomMapScreenModel
     /// <summary>Whether the victory condition has a limit to set (time or score).</summary>
     public bool HasVictoryLimit => Settings.Victory is VictoryCondition.TimeLimit or VictoryCondition.ScoreLimit;
 
+    /// <summary>The victory condition as the original numbers it (<c>vcond_0</c>-<c>vcond_3</c>: standard, destroy castles, time limit, score limit).</summary>
+    public int VictoryChoice => Array.IndexOf(Victories, Settings.Victory);
+
+    /// <summary>Whether the game type is Deathmatch (else Standard).</summary>
+    public bool IsDeathmatch => Settings.GameType == GameType.Deathmatch;
+
+    /// <summary>Whether the limit is a score (else minutes).</summary>
+    public bool IsScoreLimit => Settings.Victory == VictoryCondition.ScoreLimit;
+
     /// <summary>The victory condition's limit: minutes or score.</summary>
     public int VictoryLimit => Settings.Victory == VictoryCondition.ScoreLimit ? Settings.ScoreLimit : Settings.TimeLimitMinutes;
 

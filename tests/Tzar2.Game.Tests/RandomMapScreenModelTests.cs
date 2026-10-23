@@ -60,6 +60,7 @@ public class RandomMapScreenModelTests
         Assert.Equal(180, m.VictoryLimit);
         m.Change(RandomMapOption.Victory, +1);
         Assert.Equal(VictoryCondition.ScoreLimit, m.Settings.Victory);
+        Assert.Equal((3, true, true), (m.VictoryChoice, m.IsScoreLimit, m.IsDeathmatch)); // vcond_3
         Assert.Equal(200, m.VictoryLimit);
         m.Change(RandomMapOption.VictoryLimit, +1);
         Assert.Equal(400, m.Settings.ScoreLimit);
