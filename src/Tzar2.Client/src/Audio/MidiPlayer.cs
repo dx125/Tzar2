@@ -22,7 +22,10 @@ public partial class MidiPlayer : Node
     private string? _soundFontPath;
     private float[] _left = new float[4096];
     private float[] _right = new float[4096];
-    private Vector2[] _frames = new Vector2[4096];
+    // Rendered and pushed in whole chunks of this many frames (11.6 ms; the generator buffers 0.5 s), through one array:
+    // PushBuffer needs an array of the exact length, and slicing a fresh one every frame allocated (code review 2026-10).
+    private const int Chunk = 512;
+    private readonly Vector2[] _frames = new Vector2[Chunk];
 
     /// <summary>The loaded SoundFont, or null.</summary>
     public string? SoundFontPath => _soundFontPath;
@@ -138,23 +141,17 @@ public partial class MidiPlayer : Node
         }
 
         int available = _playback.GetFramesAvailable();
-        while (available > 0)
+        while (available >= Chunk)
         {
-            int n = Math.Min(available, _left.Length);
-            Span<float> left = _left.AsSpan(0, n), right = _right.AsSpan(0, n);
+            Span<float> left = _left.AsSpan(0, Chunk), right = _right.AsSpan(0, Chunk);
             _sequencer.Render(left, right);
-            if (_frames.Length < n)
-            {
-                _frames = new Vector2[n];
-            }
-
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < Chunk; i++)
             {
                 _frames[i] = new Vector2(left[i], right[i]);
             }
 
-            _playback.PushBuffer(n == _frames.Length ? _frames : _frames[..n]);
-            available -= n;
+            _playback.PushBuffer(_frames);
+            available -= Chunk;
         }
     }
 }

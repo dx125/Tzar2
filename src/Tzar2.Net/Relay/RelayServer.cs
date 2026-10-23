@@ -56,6 +56,7 @@ public sealed partial class RelayServer : IDisposable
         {
             AutoRecycle = true,
             DisconnectTimeout = options.DisconnectTimeoutMs,
+            PingInterval = KeepAlive.PingIntervalMs(options.DisconnectTimeoutMs),
             UpdateTime = 1,
             EnableStatistics = true,
             UnconnectedMessagesEnabled = true,
@@ -282,7 +283,9 @@ public sealed partial class RelayServer : IDisposable
             _net.DisconnectPeerForce(stale);
         }
 
+        // Token rotation (ADR 0230): the token this hello carried in plain text is spent; the welcome brings a new one.
         NetPeer peer = request.Accept();
+        slot.Token = NewToken();
         Attach(lobby, slot, peer);
         SendWelcome(lobby, slot);
         Log("member.rejoin", lobby.Code, slot.Index, lobby.Phase.ToString());

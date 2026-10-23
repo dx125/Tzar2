@@ -75,7 +75,8 @@ internal static class CombatStats
         return (int)Math.Min(sum, 1_000_000);
     }
 
-    // Blessing raises attack, a curse lowers attack and defence (percent; GAME-11).
+    // Blessing adds points of attack; freezing and a curse take away all defence, and a curse lowers attack by its percent
+    // (GAME-11; ReTzar's reading of the original, 0x4e5809, 0x432590, 0x4e5841).
     private static long Status(World world, EntityId entity, long value, bool defence)
     {
         if (world.Statuses.Count == 0 || world.Statuses.IndexOf(entity) is not (>= 0 and var s))
@@ -86,27 +87,101 @@ internal static class CombatStats
         StatusEffects st = world.Statuses.At(s);
         int tick = world.Tick.Value;
         int percent = 100;
+        if (defence && st.FrozenUntil > tick)
+        {
+            return 0; // a frozen unit has no defence (ReTzar, 0x432590)
+        }
+
         if (!defence && st.BlessUntil > tick)
         {
-            percent += st.BlessPercent;
+            value += st.BlessPercent; // a blessing adds whole points of attack (ReTzar, 0x4e5809)
         }
 
         if (st.CurseUntil > tick)
         {
+            if (defence)
+            {
+                return 0;
+            }
+
             percent -= st.CursePercent;
         }
 
         return value * Math.Max(0, percent) / 100;
     }
 
-    /// <summary>Experience needed for level <paramref name="level"/>: <c>base × n × (n + 1) / 2</c> (each level costs more).</summary>
-    public static int XpForLevel(CombatSettings settings, int level)
-        => (int)Math.Min((long)settings.LevelBaseXp * level * (level + 1) / 2, int.MaxValue);
+    /// <summary>
+    /// Experience needed for level <paramref name="level"/> (ReTzar's reading of the original, 0x5022e0): the first point
+    /// gives level 1, and level <c>k</c> needs <c>base × k</c> more for the next, so <c>1 + base × n × (n − 1) / 2</c> in all.
+    /// </summary>
+    public static int XpForLevel(CombatSettings settings, int level) => XpForLevel(settings, level, 100);
 
-    /// <summary>The highest level a unit may reach (base cap plus Learning, Heroism...).</summary>
+    /// <summary>
+    /// Experience needed for level <paramref name="level"/> at an experience speed of <paramref name="speedPercent"/>
+    /// (ReTzar's reading of the original, 0x5022e0): level <c>k</c> costs <c>max(1, base × speed × k / 100)</c> points, the
+    /// first point giving level 1.
+    /// </summary>
+    public static int XpForLevel(CombatSettings settings, int level, int speedPercent)
+    {
+        if (speedPercent == 100)
+        {
+            return level <= 0 ? 0 : (int)Math.Min(1 + ((long)settings.LevelBaseXp * level * (level - 1) / 2), int.MaxValue);
+        }
+
+        long total = 0;
+        for (int k = 0; k < Math.Min(level, 100_000) && total < int.MaxValue; k++)
+        {
+            total += Math.Max(1, (long)settings.LevelBaseXp * speedPercent * k / 100);
+        }
+
+        return (int)Math.Min(total, int.MaxValue);
+    }
+
+    /// <summary>Experience needed for <paramref name="entity"/> to reach <paramref name="level"/> at its kingdom's speed.</summary>
+    public static int XpForLevel(World world, EntityId entity, int level)
+        => XpForLevel(world.Ruleset.Combat, level, ExperienceSpeed(world, world.Identities.Get(entity).Owner));
+
+    /// <summary>The kingdom's experience speed: the lowest its technologies give, 100 without (Warfare, Tactics, Sun Tzu).</summary>
+    public static int ExperienceSpeed(World world, byte owner)
+    {
+        int speed = 100;
+        if (world.HasPlayer(owner))
+        {
+            foreach (ExperienceSpeed s in world.Ruleset.Combat.ExperienceSpeeds)
+            {
+                if (world.Players[owner].HasTechnology(s.Technology))
+                {
+                    speed = Math.Min(speed, s.Percent);
+                }
+            }
+        }
+
+        return speed;
+    }
+
+    /// <summary>
+    /// The highest level a unit may reach: the base cap plus Learning and Heroism, plus <c>levelCapPerBuilding</c> for each
+    /// finished academy of its kingdom (ReTzar's reading of the original, 0x401850).
+    /// </summary>
     public static int LevelCap(World world, EntityId entity)
     {
         Identity identity = world.Identities.Get(entity);
-        return Math.Max(0, world.Stats.Apply(identity.Owner, ModifierStat.ExperienceCap, identity.TypeId, world.Ruleset.Combat.BaseLevelCap));
+        CombatSettings c = world.Ruleset.Combat;
+        long buildings = 0;
+        if (c.LevelCapPerBuilding > 0 && !c.LevelCapBuildings.IsDefaultOrEmpty)
+        {
+            ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+            for (int i = 0; i < structures.Length; i++)
+            {
+                Identity s = world.Identities.Get(structures[i]);
+                if (s.Owner == identity.Owner && c.LevelCapBuildings.AsSpan().BinarySearch(s.TypeId) >= 0 && !world.Constructions.Has(structures[i]))
+                {
+                    buildings++;
+                }
+            }
+        }
+
+        long cap = world.Stats.Apply(identity.Owner, ModifierStat.ExperienceCap, identity.TypeId, c.BaseLevelCap) + (buildings * c.LevelCapPerBuilding);
+        return (int)Math.Clamp(cap, 0, 100_000);
     }
 }

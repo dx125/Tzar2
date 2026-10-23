@@ -21,17 +21,15 @@ namespace Tzar2.Import.Tests.Pipeline;
 public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposable
 {
     // What the simulation does with these technologies is in its code (loans, gambling, the tavern, cow poaching,
-    // Leadership and Honor), not in effects, unlocks or gated orders.
+    // Leadership, Honor, Tournaments and the experience speeds of Warfare, Tactics and Sun Tzu), not in effects, unlocks or
+    // gated orders.
     private static readonly HashSet<string> Mechanics =
-        ["te_usury", "te_gambling", "te_mercenaries", "te_heroesquest", "te_fame", "te_cowpoaching", "te_nobility", "te_honor"];
+        ["te_usury", "te_gambling", "te_mercenaries", "te_heroesquest", "te_fame", "te_cowpoaching", "te_nobility", "te_honor", "te_tournaments", "te_warfare", "te_tactics", "te_suntzubook"];
 
-    // Technologies of the data that do nothing in Tzar2 yet: each is a rule of the ledger. (Jewelry gates the Asian
+    // Technologies of the data that do nothing in Tzar2 yet: each is a rule of the ledger (none today). (Jewelry gates the Asian
     // market's item orders, which are missing too: TECH-030. Piracy and Boarding Ram are in the manual and the texts
     // only, not in the data: TECH-031.)
-    private static readonly Dictionary<string, string> Missing = new(StringComparer.Ordinal)
-    {
-        ["te_tournaments"] = "TECH-029",
-    };
+    private static readonly Dictionary<string, string> Missing = new(StringComparer.Ordinal);
 
     private readonly string _work = Path.Combine(Path.GetTempPath(), "tzar2-origin-tech-" + Guid.NewGuid().ToString("N"));
 
@@ -176,6 +174,26 @@ public sealed class OriginTechnologyTests(ITestOutputHelper output) : IDisposabl
         Assert.Equal((7, 1, 1, 6), (Type("comm.gate_wood").FootprintWidth, Type("comm.gate_wood").FootprintHeight, Type("comm.gate_wood").Turned.Width, Type("comm.gate_wood").Turned.Height));
         Assert.Equal((7, 1, 1, 6), (Type("comm.gate_stone").FootprintWidth, Type("comm.gate_stone").FootprintHeight, Type("comm.gate_stone").Turned.Width, Type("comm.gate_stone").Turned.Height));
         Assert.Equal((11, 7, 6, 11), (Type("comm.bridge").FootprintWidth, Type("comm.bridge").FootprintHeight, Type("comm.bridge").Turned.Width, Type("comm.bridge").Turned.Height));
+    }
+
+    [OriginFact]
+    [Trait("Rule", "TRADE-004")]
+    [Trait("Rule", "HOLD-008")]
+    public void Caravans_carry_500_or_300_asian_peasants_trade_100_and_caravans_load_infantry()
+    {
+        Ruleset rules = CompileFromOrigin();
+        EntityTypeDefinition Type(string key) => rules.EntityTypes.Single(t => t.Key == key);
+        Assert.Equal(500, Type("euro.trader").Traits.World.Trader!.Capacity);
+        Assert.Equal(300, Type("arab.trader").Traits.World.Trader!.Capacity);
+        Assert.Equal(100, Type("asia.peon").Traits.World.Trader!.Capacity);
+        Assert.Null(Type("euro.peon").Traits.World.Trader);
+        foreach (string caravan in new[] { "euro.trader", "arab.trader" })
+        {
+            HolderDefinition holder = Type(caravan).Traits.Holder!;
+            Assert.Equal(8, holder.Capacity);
+            Assert.True(holder.CanHold(Type("euro.footman").Id));
+            Assert.False(holder.CanHold(Type("euro.knight").Id));
+        }
     }
 
     private Ruleset CompileFromOrigin()

@@ -74,12 +74,66 @@ public sealed class MapState
                     & terrainMasks[corners[c + stride]] & terrainMasks[corners[c + stride + 1]];
                 if (cliffs[(y * Width) + x] != 0)
                 {
-                    mask &= LocomotorMask.Air;
+                    // Cliffs stop every ground unit but the ninja, who climbs a band of one or two tiles from ground to
+                    // ground, never three (WORLD-018, ADR 0220).
+                    mask &= ThinCliff(map, terrainMasks, x, y) ? LocomotorMask.Air | (mask & LocomotorMask.Climber) : LocomotorMask.Air;
                 }
 
                 _basePassability[(y * Width) + x] = (byte)mask;
             }
         }
+    }
+
+    // Whether a cliff tile lies in a band a climber crosses: along a row, a column or a diagonal, the run of cliff tiles
+    // through it is at most two long and has ground a climber may stand on at both ends (ReTzar 0x4a99a0 refuses a third
+    // cliff cell in a row of steps). The original climbs walls too; walls are not modelled here (ADR 0220).
+    private static bool ThinCliff(MapData map, LocomotorMask[] terrainMasks, int x, int y)
+    {
+        ReadOnlySpan<(int Dx, int Dy)> axes = [(1, 0), (0, 1), (1, 1), (1, -1)];
+        foreach ((int dx, int dy) in axes)
+        {
+            int run = 1;
+            int ax = x - dx, ay = y - dy;
+            while (IsCliff(map, ax, ay) && run <= 2)
+            {
+                run++;
+                ax -= dx;
+                ay -= dy;
+            }
+
+            int bx = x + dx, by = y + dy;
+            while (IsCliff(map, bx, by) && run <= 2)
+            {
+                run++;
+                bx += dx;
+                by += dy;
+            }
+
+            if (run <= 2 && Climbable(map, terrainMasks, ax, ay) && Climbable(map, terrainMasks, bx, by))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsCliff(MapData map, int x, int y)
+        => (uint)x < (uint)map.Width && (uint)y < (uint)map.Height && map.CliffTiles[(y * map.Width) + x] != 0;
+
+    // A tile off the cliff whose four corners let a climber stand.
+    private static bool Climbable(MapData map, LocomotorMask[] terrainMasks, int x, int y)
+    {
+        if ((uint)x >= (uint)map.Width || (uint)y >= (uint)map.Height || map.CliffTiles[(y * map.Width) + x] != 0)
+        {
+            return false;
+        }
+
+        ReadOnlySpan<byte> corners = map.TerrainCorners;
+        int stride = map.Width + 1;
+        int c = (y * stride) + x;
+        return (terrainMasks[corners[c]] & terrainMasks[corners[c + 1]] & terrainMasks[corners[c + stride]] & terrainMasks[corners[c + stride + 1]]
+            & LocomotorMask.Climber) != 0;
     }
 
     /// <summary>The compiled map this state was built from.</summary>

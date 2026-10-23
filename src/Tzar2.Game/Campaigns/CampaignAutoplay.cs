@@ -239,7 +239,7 @@ public static class CampaignAutoplay
     public static bool IsAllowedAssist(CommandKind kind, int arg0) => kind switch
     {
         CommandKind.Move or CommandKind.Attack or CommandKind.Stop or CommandKind.Board or CommandKind.Unload or CommandKind.ScenarioReply => true,
-        CommandKind.PickItem or CommandKind.DropItem or CommandKind.SetDiplomacy => true,
+        CommandKind.PickItem or CommandKind.DropItem or CommandKind.SetDiplomacy or CommandKind.Tribute => true,
         CommandKind.DebugSpawn or CommandKind.DebugKill => true,
         CommandKind.Cheat => arg0 is (int)Sim.Systems.CheatCode.God or (int)Sim.Systems.CheatCode.LargeResources or (int)Sim.Systems.CheatCode.SmallResources,
         _ => false,
@@ -419,25 +419,74 @@ public static class CampaignAutoplay
         }
 
         private bool _protect;
+
+        // Kingdoms whose invulnerability is off while a goal wants one of their heroes wounded.
+        private readonly SortedSet<int> _mortal = [];
+        private readonly Dictionary<int, int> _mortalFor = [];
+
+        private bool Vulnerable(World world, int e, string name, List<EntityId> heroes)
+        {
+            foreach (EntityId hero in heroes)
+            {
+                int owner = world.Identities.Get(hero).Owner;
+                _mortalFor[owner] = e;
+                if (_mortal.Add(owner) && _god.Remove(owner))
+                {
+                    var cheat = new CommandList();
+                    cheat.Add(CommandKind.Cheat, [], 0, 0, default, (int)Sim.Systems.CheatCode.God, 0); // toggles it off
+                    EnsureAllowed(cheat);
+                    session.SubmitAs((byte)owner, cheat);
+                    Note($"invulnerability off for {name}");
+                }
+            }
+
+            Goal = $"{name}: waiting for the scenario to wound its units";
+            return false; // nothing to order: the rest of the solver keeps going
+        }
         private readonly SortedSet<int> _god = [];
 
         private void GrantGod()
         {
             World world = session.Simulation.World;
             byte me = session.LocalPlayer;
+
+            // Invulnerable again once the wound happened (the event came true).
+            if (session.Scenario?.Triggers is { } state)
+            {
+                _mortal.RemoveWhere(k => !_mortalFor.TryGetValue(k, out int e) || (uint)e >= (uint)state.State.EventValues.Length || state.State.EventValues[e]);
+            }
+
             var kingdoms = new SortedSet<int> { me };
             if (session.Scenario?.Triggers is { } triggers)
             {
                 var wanted = new List<int>();
-                foreach (RuleDef rule in scenario.Rules)
+                for (int r = 0; r < scenario.Rules.Length; r++)
                 {
-                    if (rule.Condition.Root is not { } condition || !LosesMe(rule, me))
+                    RuleDef rule = scenario.Rules[r];
+                    if (rule.Condition.Root is not { } condition)
                     {
                         continue;
                     }
 
                     wanted.Clear();
                     Wanted(condition, negated: false, wanted);
+                    if (!LosesMe(rule, me))
+                    {
+                        // An allied kingdom whose unit a pending goal is measured around (the heroes must come to
+                        // Marsim): its units are protected too, or a raid kills the goal (ADR 0220).
+                        foreach (int e in wanted)
+                        {
+                            if (!triggers.State.RuleDisabled[r] && scenario.Events[e] is ObjectInAreaEvent { Area: ObjectArea around }
+                                && Entity(world, triggers, around.ObjectIndex) is { } anchor && world.Identities.Get(anchor).Owner is var keeper
+                                && world.HasPlayer(keeper) && keeper != me && world.Diplomacy.StanceOf(me, keeper) == Sim.Kingdoms.Stance.Ally)
+                            {
+                                kingdoms.Add(keeper);
+                            }
+                        }
+
+                        continue;
+                    }
+
                     foreach (int e in wanted)
                     {
                         if (scenario.Events[e] is ObjectDestroyedEvent { Objects: NamedObjects named })
@@ -456,7 +505,7 @@ public static class CampaignAutoplay
 
             foreach (int k in kingdoms)
             {
-                if (!_god.Add(k))
+                if (_mortal.Contains(k) || !_god.Add(k))
                 {
                     continue;
                 }
@@ -526,14 +575,41 @@ public static class CampaignAutoplay
             }
         }
 
+        // Units of the kingdom the solver created itself (reinforcements, spawned objectives): seen first right after one
+        // of its spawns, near the spawn point. Everything else is the scenario's.
+        private readonly HashSet<uint> _owned = [];
+        private readonly HashSet<uint> _spawned = [];
+        private Position? _spawnPoint;
+
+        private void Census(World world, byte me)
+        {
+            ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+            ReadOnlySpan<Identity> identities = world.Identities.Components;
+            for (int i = 0; i < ids.Length; i++)
+            {
+                if (identities[i].Owner != me || _owned.Contains(ids[i].Value) || _spawned.Contains(ids[i].Value) || !world.Motions.Has(ids[i]))
+                {
+                    continue;
+                }
+
+                bool near = _spawnPoint is { } sp && Math.Abs(Pos(world, ids[i]).X - sp.X) <= 8 * Tile && Math.Abs(Pos(world, ids[i]).Y - sp.Y) <= 8 * Tile;
+                (near ? _spawned : _owned).Add(ids[i].Value);
+            }
+
+            _spawnPoint = null;
+        }
+
         private void Army(World world, byte me)
         {
+            Census(world, me);
             _army.Clear();
             ReadOnlySpan<EntityId> ids = world.Identities.Entities;
             ReadOnlySpan<Identity> identities = world.Identities.Components;
             for (int i = 0; i < ids.Length && _army.Count < 200; i++)
             {
-                if (world.Diplomacy.MayCommand(me, identities[i].Owner) && world.Motions.Has(ids[i]) && world.Ruleset.EntityTypes[identities[i].TypeId].Traits.Armament is not null && !world.IsHeld(ids[i]))
+                // A ship with units aboard or on its way to a shore is a ferry: the army's orders would cancel its trip.
+                if (world.Diplomacy.MayCommand(me, identities[i].Owner) && world.Motions.Has(ids[i]) && world.Ruleset.EntityTypes[identities[i].TypeId].Traits.Armament is not null && !world.IsHeld(ids[i])
+                    && !(world.IsShip(ids[i]) && (world.Dockings.Has(ids[i]) || (world.Holders.IndexOf(ids[i]) is >= 0 and var hold && world.Holders.At(hold).Count > 0))))
                 {
                     _army.Add(ids[i]);
                 }
@@ -665,13 +741,22 @@ public static class CampaignAutoplay
             }
 
             _setters ??= Setters(scenario);
+            _named = null;
             _protected = Scripted(world, me, triggers);
             _props = Props(world, triggers);
             var visited = new HashSet<int>();
             for (int r = 0; r < scenario.Rules.Length; r++)
             {
                 // Never pursue what makes the local kingdom lose.
-                if (triggers.State.RuleDisabled[r] || scenario.Rules[r].Condition.Root is null || LosesMe(scenario.Rules[r], me))
+                if (triggers.State.RuleDisabled[r] || scenario.Rules[r].Condition.Root is not { } condition || LosesMe(scenario.Rules[r], me))
+                {
+                    continue;
+                }
+
+                // A rule whose events the solver once made true without it firing waits for something else (another
+                // rule's work, "!GoldNotTaken"): later rules come first, or the solver walks the same units back and forth
+                // between the two (ADR 0220).
+                if (Waiting(triggers, r, condition))
                 {
                     continue;
                 }
@@ -682,12 +767,168 @@ public static class CampaignAutoplay
                 }
             }
 
+            foreach (int r in _waiting)
+            {
+                if (!triggers.State.RuleDisabled[r] && PursueRule(world, me, triggers, r, 0, visited))
+                {
+                    return true;
+                }
+            }
+
             return false;
+        }
+
+        private readonly SortedSet<int> _waiting = [];
+
+        // Whether rule r waits for more than its events: all of them (not under '!') are true, no variable gate is open,
+        // and it is still enabled. Once seen, a rule stays waiting until it fires.
+        private bool Waiting(Scripting.Legacy.LegacyTriggerSystem triggers, int r, Content.Compiled.Scenario.Expressions.Expr condition)
+        {
+            if (_waiting.Contains(r))
+            {
+                return true;
+            }
+
+            var wanted = new List<int>();
+            Wanted(condition, negated: false, wanted);
+            if (wanted.Count == 0 || wanted.Any(e => !triggers.State.EventValues[e]))
+            {
+                return false;
+            }
+
+            var variables = new List<int>();
+            Variables(condition, negated: false, variables);
+            if (variables.Any(v => (uint)v < (uint)triggers.State.Variables.Length && triggers.State.Variables[v] == 0 && _setters!.ContainsKey(v)))
+            {
+                return false;
+            }
+
+            if (Unwanted(condition).Any(e => triggers.State.EventValues[e] && Lying(session.Simulation.World, triggers, scenario.Events[e]) is not null))
+            {
+                return false; // "!GoldNotTaken": the solver can take the item
+            }
+
+            _waiting.Add(r);
+            return true;
+        }
+
+        private int _lastTribute = int.MinValue / 2;
+
+        // "@gold(k) >= n" (or > n) about another kingdom that is not an enemy: a tribute of what it lacks, a player's order
+        // (ADR 0220); the local kingdom's own stock is topped up by cheat assistance when it is short.
+        private void Tribute(World world, byte me, Content.Compiled.Scenario.Expressions.Expr node)
+        {
+            switch (node)
+            {
+                case Content.Compiled.Scenario.Expressions.UnaryExpr { Op: Content.Compiled.Scenario.Expressions.UnaryOp.Not }:
+                    return; // "!(@gold(7) >= n)" wants less, not more
+                case Content.Compiled.Scenario.Expressions.UnaryExpr u:
+                    Tribute(world, me, u.Operand);
+                    return;
+                case Content.Compiled.Scenario.Expressions.BinaryExpr { Op: Content.Compiled.Scenario.Expressions.BinaryOp.And or Content.Compiled.Scenario.Expressions.BinaryOp.Or } b:
+                    Tribute(world, me, b.Left);
+                    Tribute(world, me, b.Right);
+                    return;
+                case Content.Compiled.Scenario.Expressions.BinaryExpr { Left: Content.Compiled.Scenario.Expressions.CallExpr { Arguments.Length: 1 } c, Right: Content.Compiled.Scenario.Expressions.IntLiteral n } b
+                    when b.Op is Content.Compiled.Scenario.Expressions.BinaryOp.Greater or Content.Compiled.Scenario.Expressions.BinaryOp.GreaterOrEqual
+                    && c.Arguments[0] is Content.Compiled.Scenario.Expressions.IntLiteral { Value: var k } && k - 1 != me && world.HasPlayer(k - 1)
+                    && (world.Players[k - 1].Flags & PlayerFlags.Defeated) == 0 && world.Diplomacy.StanceOf(me, k - 1) != Sim.Kingdoms.Stance.Enemy
+                    && c.Function switch
+                    {
+                        Content.Compiled.Scenario.Expressions.CallKind.Gold => "gold",
+                        Content.Compiled.Scenario.Expressions.CallKind.Wood => "wood",
+                        Content.Compiled.Scenario.Expressions.CallKind.Food => "food",
+                        Content.Compiled.Scenario.Expressions.CallKind.Stone => "stone",
+                        _ => null,
+                    } is { } resource && world.Ruleset.ResourceId(resource) is >= 0 and var id:
+                {
+                    int need = n.Value + (b.Op == Content.Compiled.Scenario.Expressions.BinaryOp.Greater ? 1 : 0) - world.Players[k - 1].Resources[id];
+                    if (need <= 0 || need > world.Ruleset.World.MaxTributeAmount)
+                    {
+                        return;
+                    }
+
+                    if (world.Players[me].Resources[id] < need)
+                    {
+                        if (!options.CheatAssist)
+                        {
+                            return;
+                        }
+
+                        _batch.Add(CommandKind.Cheat, [], 0, 0, default, (int)Sim.Systems.CheatCode.LargeResources, 0);
+                        Assist = Assist == "play" ? "resources" : Assist;
+                    }
+
+                    _lastTribute = _tick;
+                    _batch.Add(CommandKind.Tribute, x: k - 1, arg0: id, arg1: need);
+                    Note($"tribute of {need} {resource} to kingdom {k}");
+                    return;
+                }
+
+                default:
+                    return;
+            }
+        }
+
+        // The value of a part of a condition that the solver cannot change, or null when it may change or is not known
+        // (ADR 0220). Only an enemy kingdom's stockpile counts as fixed (a friend's takes tribute): a rule that waits for
+        // it is left alone, or the solver walks units to its other events again and again, taking them off the next
+        // goal. Events, variables, timers and the local kingdom's resources (cheat assistance) are unknown.
+        private static int? Known(World world, Content.Compiled.Scenario.Expressions.Expr node, byte me)
+        {
+            switch (node)
+            {
+                case Content.Compiled.Scenario.Expressions.IntLiteral n:
+                    return n.Value;
+                case Content.Compiled.Scenario.Expressions.CallExpr { Arguments.Length: 1 } c when c.Arguments[0] is Content.Compiled.Scenario.Expressions.IntLiteral { Value: var k }
+                    && k - 1 != me && world.HasPlayer(k - 1) && world.Diplomacy.StanceOf(me, k - 1) == Sim.Kingdoms.Stance.Enemy && c.Function switch
+                    {
+                        Content.Compiled.Scenario.Expressions.CallKind.Gold => "gold",
+                        Content.Compiled.Scenario.Expressions.CallKind.Wood => "wood",
+                        Content.Compiled.Scenario.Expressions.CallKind.Food => "food",
+                        Content.Compiled.Scenario.Expressions.CallKind.Stone => "stone",
+                        _ => null,
+                    } is { } resource && world.Ruleset.ResourceId(resource) is >= 0 and var id:
+                    return world.Players[k - 1].Resources[id];
+                case Content.Compiled.Scenario.Expressions.UnaryExpr u:
+                    return Known(world, u.Operand, me) is not { } v ? null : u.Op == Content.Compiled.Scenario.Expressions.UnaryOp.Not ? (v == 0 ? 1 : 0) : -v;
+                case Content.Compiled.Scenario.Expressions.BinaryExpr { Op: Content.Compiled.Scenario.Expressions.BinaryOp.And } b:
+                {
+                    int? l = Known(world, b.Left, me);
+                    int? r = Known(world, b.Right, me);
+                    return l == 0 || r == 0 ? 0 : l is not null && r is not null ? 1 : null;
+                }
+
+                case Content.Compiled.Scenario.Expressions.BinaryExpr { Op: Content.Compiled.Scenario.Expressions.BinaryOp.Or } b:
+                {
+                    int? l = Known(world, b.Left, me);
+                    int? r = Known(world, b.Right, me);
+                    return l is { } x && x != 0 || r is { } y && y != 0 ? 1 : l == 0 && r == 0 ? 0 : null;
+                }
+
+                case Content.Compiled.Scenario.Expressions.BinaryExpr b when Known(world, b.Left, me) is { } l && Known(world, b.Right, me) is { } r:
+                    return b.Op switch
+                    {
+                        Content.Compiled.Scenario.Expressions.BinaryOp.Less => l < r ? 1 : 0,
+                        Content.Compiled.Scenario.Expressions.BinaryOp.LessOrEqual => l <= r ? 1 : 0,
+                        Content.Compiled.Scenario.Expressions.BinaryOp.Greater => l > r ? 1 : 0,
+                        Content.Compiled.Scenario.Expressions.BinaryOp.GreaterOrEqual => l >= r ? 1 : 0,
+                        Content.Compiled.Scenario.Expressions.BinaryOp.Equal => l == r ? 1 : 0,
+                        Content.Compiled.Scenario.Expressions.BinaryOp.NotEqual => l != r ? 1 : 0,
+                        Content.Compiled.Scenario.Expressions.BinaryOp.Add => l + r,
+                        Content.Compiled.Scenario.Expressions.BinaryOp.Subtract => l - r,
+                        Content.Compiled.Scenario.Expressions.BinaryOp.Multiply => l * r,
+                        _ => null,
+                    };
+                default:
+                    return null;
+            }
         }
 
         private bool PursueRule(World world, byte me, Scripting.Legacy.LegacyTriggerSystem triggers, int r, int depth, HashSet<int> visited)
         {
-            if (!visited.Add(r) || scenario.Rules[r].Condition.Root is not { } condition)
+            // Nor a rule that waits for something only other kingdoms can do (directly or as another rule's gate).
+            if (!visited.Add(r) || scenario.Rules[r].Condition.Root is not { } condition || Known(world, condition, me) == 0)
             {
                 return false;
             }
@@ -698,6 +939,12 @@ public static class CampaignAutoplay
                 _lastResources = _tick;
                 _batch.Add(CommandKind.Cheat, [], 0, 0, default, (int)Sim.Systems.CheatCode.LargeResources, 0);
                 Assist = Assist == "play" ? "resources" : Assist;
+            }
+
+            // A rule waiting on a friendly kingdom's stockpile ("@gold(7) >= 1000"): the player sends it a tribute.
+            if (_tick - _lastTribute >= 600)
+            {
+                Tribute(world, me, condition);
             }
 
             // Gates first: variables still 0 that some other rule sets, objects some other rule makes appear. While a gate
@@ -758,7 +1005,219 @@ public static class CampaignAutoplay
                 }
             }
 
+            // "!ForceNotToTheEast" (no unit of mine with $x < 380): the kingdom's units go over the line (ADR 0220).
+            foreach (int e in Unwanted(condition))
+            {
+                if (triggers.State.EventValues[e] && scenario.Events[e] is ObjectExpressionEvent { Objects: TypedObjects or CategoryObjects } away
+                    && (Mask(away.Objects) & (1 << me)) != 0 && Line(world, away.Expression.Root) is { } stay && Evacuate(world, me, away, stay))
+                {
+                    return true;
+                }
+            }
+
+            // "!GoldNotTaken" (a named item must stop existing): a unit the kingdom commands picks it up (ADR 0220).
+            foreach (int e in Unwanted(condition))
+            {
+                if (triggers.State.EventValues[e] && Lying(world, triggers, scenario.Events[e]) is { } item && Take(world, me, triggers, scenario.Events[e].Name, item))
+                {
+                    return true;
+                }
+            }
+
             return false;
+        }
+
+        // Every unit of the kingdom that the event counts goes to the other side of its line: walking, ferried, or aboard a
+        // ship that sails there when only water lies beyond. Reinforcements the solver spawned itself are removed instead
+        // (undoing its own assistance; the scenario's units all go).
+        private bool Evacuate(World world, byte me, ObjectExpressionEvent away, (bool Vertical, int Limit, bool Below) stay)
+        {
+            (bool vertical, int limit, bool below) = (stay.Vertical, stay.Below ? stay.Limit + 1 : stay.Limit - 1, !stay.Below);
+            bool Over(Position p)
+            {
+                int c = vertical ? p.Y / Tile : p.X / Tile;
+                return below ? c <= limit : c >= limit;
+            }
+
+            var walkers = new List<EntityId>();
+            var stranded = new List<EntityId>();
+            var undo = new List<EntityId>();
+            var ships = new List<EntityId>();
+            ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+            ReadOnlySpan<Identity> identities = world.Identities.Components;
+            for (int i = 0; i < ids.Length; i++)
+            {
+                EntityId u = ids[i];
+                if (identities[i].Owner >= 32 || (Mask(away.Objects) & (1 << identities[i].Owner)) == 0 || !world.Diplomacy.MayCommand(me, identities[i].Owner) || !(world.Motions.Has(u) || world.IsHeld(u)) || Over(Pos(world, u))
+                    || !(away.Objects is CategoryObjects c ? Scripting.Legacy.LegacyTriggerSystem.InCategory(c.Category, world.Ruleset.EntityTypes[identities[i].TypeId])
+                        : world.Ruleset.EntityTypeId(((TypedObjects)away.Objects).TypeKey) == identities[i].TypeId))
+                {
+                    continue;
+                }
+
+                if (_spawned.Contains(u.Value) && !world.IsHeld(u))
+                {
+                    undo.Add(u);
+                }
+                else if (world.IsShip(u))
+                {
+                    ships.Add(u);
+                }
+                else if (!world.IsHeld(u) && Across(world, u, vertical, limit, below, Pos(world, u)) is { } to)
+                {
+                    _batch.Add(CommandKind.Move, [u], to.X, to.Y);
+                    walkers.Add(u);
+                }
+                else
+                {
+                    stranded.Add(u);
+                }
+            }
+
+            for (int i = 0; i < undo.Count && options.CheatAssist; i += 64)
+            {
+                _batch.Add(CommandKind.DebugKill, undo.GetRange(i, Math.Min(64, undo.Count - i)).ToArray());
+            }
+
+            // Empty ships sail over the line themselves; ships carrying the stranded are the ferries below.
+            foreach (EntityId ship in ships)
+            {
+                bool loaded = world.Holders.IndexOf(ship) is >= 0 and var h && world.Holders.At(h).Count > 0;
+                if (!loaded && !world.Dockings.Has(ship) && WaterBeyond(world, me, ship, vertical, limit, below) is { } sea && Due(ship))
+                {
+                    _batch.Add(CommandKind.Move, [ship], sea.X, sea.Y);
+                }
+            }
+
+            Goal = $"{away.Name}: {walkers.Count} walk, {stranded.Count} to ferry, {undo.Count} reinforcements removed, {ships.Count} ships";
+            if (stranded.Count > 0)
+            {
+                // One ferry load at a time, the ones aboard first.
+                List<EntityId> load = stranded.OrderBy(u => world.IsHeld(u) ? 0 : 1).ThenBy(u => u.Value).Take(20).ToList();
+                Position? beyond = Beyond(world, load[0], vertical, limit, below);
+                bool sail = beyond is null;
+                if ((beyond ?? WaterBeyond(world, me, load[0], vertical, limit, below)) is { } target && Ferry(world, me, away.Name, load, target, sail))
+                {
+                    return true;
+                }
+            }
+
+            if (undo.Count > 0 && options.CheatAssist)
+            {
+                Assist = Assist.StartsWith("god", StringComparison.Ordinal) ? "god+cleared" : "cleared";
+            }
+
+            return walkers.Count > 0 || undo.Count > 0 || ships.Count > 0;
+        }
+
+        // Event references under '!' (the condition wants them false).
+        private static List<int> Unwanted(Content.Compiled.Scenario.Expressions.Expr condition)
+        {
+            var all = new List<int>();
+            var wanted = new List<int>();
+            Events(condition, all);
+            Wanted(condition, negated: false, wanted);
+            all.RemoveAll(wanted.Contains);
+            return all;
+        }
+
+        private static void Events(Content.Compiled.Scenario.Expressions.Expr node, List<int> into)
+        {
+            switch (node)
+            {
+                case Content.Compiled.Scenario.Expressions.EventRef r when !into.Contains(r.EventIndex):
+                    into.Add(r.EventIndex);
+                    break;
+                case Content.Compiled.Scenario.Expressions.UnaryExpr u:
+                    Events(u.Operand, into);
+                    break;
+                case Content.Compiled.Scenario.Expressions.BinaryExpr b:
+                    Events(b.Left, into);
+                    Events(b.Right, into);
+                    break;
+                case Content.Compiled.Scenario.Expressions.SequenceExpr q:
+                    foreach (Content.Compiled.Scenario.Expressions.Expr statement in q.Statements)
+                    {
+                        Events(statement, into);
+                    }
+
+                    break;
+            }
+        }
+
+        // The item an Object Exist event names that lies on the ground (picking it up makes the event false), or null.
+        private static EntityId? Lying(World world, Scripting.Legacy.LegacyTriggerSystem triggers, EventDef e)
+        {
+            if (e is not ObjectExistEvent { Objects: NamedObjects named })
+            {
+                return null;
+            }
+
+            foreach (int index in named.ObjectIndices)
+            {
+                if (Entity(world, triggers, index) is { } item && world.Items.Has(item) && !world.IsHeld(item))
+                {
+                    return item;
+                }
+            }
+
+            return null;
+        }
+
+        private readonly Dictionary<uint, EntityId> _takers = [];
+
+        // The nearest unit the kingdom commands that can hold the item walks to it and picks it up; across water or a
+        // wall it is ferried or breaches first, as for a delivery.
+        private bool Take(World world, byte me, Scripting.Legacy.LegacyTriggerSystem triggers, string name, EntityId item)
+        {
+            Position where = Pos(world, item);
+            EntityId? picker = null;
+            long best = long.MaxValue;
+            ItemDefinition definition = world.Ruleset.EntityTypes[world.Identities.Get(item).TypeId].Traits.Item!;
+            ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+            ReadOnlySpan<Identity> identities = world.Identities.Components;
+
+            // The unit chosen first keeps the job (aboard a ferry it is no longer the nearest, and another would board).
+            if (_takers.TryGetValue(item.Value, out EntityId kept) && world.Entities.IsAlive(kept) && world.Diplomacy.MayCommand(me, world.Identities.Get(kept).Owner)
+                && (world.Motions.Has(kept) || world.IsHeld(kept)))
+            {
+                picker = kept;
+            }
+
+            bool keep = picker is not null;
+            for (int i = 0; i < ids.Length && !keep; i++)
+            {
+                if (world.Diplomacy.MayCommand(me, identities[i].Owner) && world.Motions.Has(ids[i]) && !world.IsHeld(ids[i]) && !world.IsShip(ids[i])
+                    && definition.CanBeHeldBy(identities[i].TypeId) && (definition.Kind == ItemKind.Resource || CanCarry(world, ids[i], item))
+                    && Cost(world, triggers, ids[i], where) is var cost && cost < best)
+                {
+                    best = cost;
+                    picker = ids[i];
+                }
+            }
+
+            if (picker is not { } unit)
+            {
+                Goal = $"{name}: nobody to take the item";
+                return false;
+            }
+
+            _takers[item.Value] = unit;
+
+            var around = new RectArea((where.X / Tile) - 1, (where.Y / Tile) - 1, (where.X / Tile) + 1, (where.Y / Tile) + 1);
+            if (Reach(world, triggers, unit, around, where) is null)
+            {
+                return Breach(world, me, name, [unit], where) || Ferry(world, me, name, [unit], where);
+            }
+
+            if (!world.Errands.Has(unit))
+            {
+                _batch.Add(CommandKind.PickItem, [unit], 0, 0, item);
+            }
+
+            Goal = $"{name}: {world.Ruleset.EntityTypes[world.Identities.Get(unit).TypeId].Key}/{world.Identities.Get(unit).Owner} takes the item at ({where.X / Tile},{where.Y / Tile})";
+            Note($"take an item for {name}");
+            return true;
         }
 
         private Dictionary<int, List<int>>? _setters;
@@ -1012,6 +1471,14 @@ public static class CampaignAutoplay
                             }
                         }
                     }
+
+                    // The object an area event is measured around (the heroes must come to Marsim): killing it, by a
+                    // fight or by clearing, would leave the goal nowhere (ADR 0220).
+                    if (scenario.Events[e] is ObjectInAreaEvent { Area: ObjectArea around } && Entity(world, triggers, around.ObjectIndex) is { } anchor
+                        && !world.Diplomacy.MayCommand(me, world.Identities.Get(anchor).Owner))
+                    {
+                        set.Add(anchor);
+                    }
                 }
             }
 
@@ -1082,7 +1549,7 @@ public static class CampaignAutoplay
 
                 case ObjectInAreaEvent inArea when Target(world, triggers, inArea.Area) is { } point:
                 {
-                    List<EntityId> units = OwnUnits(world, me, triggers, inArea.Objects, point);
+                    List<EntityId> units = OwnUnits(world, me, triggers, inArea.Objects, point, inArea.Name);
                     if (units.Count == 0)
                     {
                         Goal = $"{inArea.Name}: no unit of mine can go";
@@ -1120,6 +1587,13 @@ public static class CampaignAutoplay
                         // the far side, nearest the units' row or column).
                         if (Beyond(world, stranded[0], bound.Vertical, bound.Limit, bound.Below) is not { } beyond)
                         {
+                            // Only water beyond (leave by the west edge, at sea): the units sail over the line aboard
+                            // a ship; a unit aboard is where its ship is (ADR 0220).
+                            if (WaterBeyond(world, me, stranded[0], bound.Vertical, bound.Limit, bound.Below) is { } sea)
+                            {
+                                return Ferry(world, me, line.Name, stranded, sea, sail: true) || moved.Count > 0;
+                            }
+
                             Goal = $"{line.Name}: no ground beyond the line";
                             return moved.Count > 0;
                         }
@@ -1168,6 +1642,18 @@ public static class CampaignAutoplay
                 case ObjectDestroyedEvent { Objects: NamedObjects named } when _army.Count > 0:
                     return Fight(world, me, triggers, e.Name, named, weaken: false);
 
+                // "$health < $WoolinHealth" about a hero of the kingdom (any wound since the health a script recorded): the
+                // scenario wounds him itself (an ambush), so cheat invulnerability must not stand in its way (ADR 0220).
+                // "$health <= 50" (a duel to weaken someone) is left to the fight.
+                case ObjectExpressionEvent { Objects: NamedObjects hurt } w when w.Expression.Root is Content.Compiled.Scenario.Expressions.BinaryExpr
+                    {
+                        Op: Content.Compiled.Scenario.Expressions.BinaryOp.Less,
+                        Left: Content.Compiled.Scenario.Expressions.ReservedVar { Variable: Content.Compiled.Scenario.Expressions.ReservedVariable.Health },
+                        Right: Content.Compiled.Scenario.Expressions.UserVar,
+                    }
+                    && OwnUnits(world, me, triggers, hurt, null) is { Count: > 0 } heroes && heroes.Count == hurt.ObjectIndices.Length:
+                    return Vulnerable(world, Array.IndexOf(scenario.Events.ToArray(), w), w.Name, heroes);
+
                 // An expression about other kingdoms' named objects (typically "$health <= 50"): attack them.
                 case ObjectExpressionEvent { Objects: NamedObjects named } x when _army.Count > 0 && x.Expression.Source.Contains("health", StringComparison.OrdinalIgnoreCase):
                     return Fight(world, me, triggers, x.Name, named, weaken: true);
@@ -1187,6 +1673,7 @@ public static class CampaignAutoplay
                     Position at = _army.Count > 0 ? Pos(world, _army[0]) : MyAnchor(world, me);
                     _lastSpawn = _tick;
                     _batch.Add(CommandKind.DebugSpawn, [], at.X, at.Y, default, type, Math.Clamp(count, 1, 64));
+                    _spawnPoint = at;
                     Assist = Assist == "play" || Assist == "resources" ? "spawned" : Assist;
                     Goal = $"{have.Name}: spawn {count} {world.Ruleset.EntityTypes[type].Key}";
                     return true;
@@ -1256,7 +1743,7 @@ public static class CampaignAutoplay
             {
                 _batch.Add(CommandKind.Move, walkers.ToArray(), walkTo.X, walkTo.Y);
             }
-            else if (walkers.Any(_stuck.Contains) && _army.Where(u => !units.Contains(u)).ToArray() is { Length: > 0 } crowd)
+            else if (walkers.Any(_stuck.Contains) && _army.Where(u => !units.Contains(u) && !world.IsShip(u)).ToArray() is { Length: > 0 } crowd)
             {
                 // Hemmed in by their own kingdom's crowd: the army walks the same way and makes room.
                 _batch.Add(CommandKind.Move, crowd, walkTo.X, walkTo.Y);
@@ -1271,7 +1758,48 @@ public static class CampaignAutoplay
 
             // An area walled in (a small pocket of ground): breach first; otherwise (across water) ferry first.
             bool pocket = Pocket(world, stranded[0], point);
-            return (pocket && Breach(world, me, name, stranded, point)) || Ferry(world, me, name, stranded, point) || (!pocket && Breach(world, me, name, stranded, point)) || walkers.Count > 0;
+            Position landing = area is RectArea && Ground(world, stranded[0], area, point) is { } ground ? ground : point;
+            return (pocket && Breach(world, me, name, stranded, point)) || Ferry(world, me, name, stranded, landing) || (!pocket && Breach(world, me, name, stranded, point)) || walkers.Count > 0;
+        }
+
+        // Ground of the rectangle the unit could stand on (any land, not only the land it is on), nearest to the point:
+        // a ferry lands there, not at the middle of a harbour that is mostly water (ADR 0220).
+        private static Position? Ground(World world, EntityId unit, AreaSpec area, Position point)
+        {
+            if (area is not RectArea r || !world.Navigation.IsBuilt || world.Navigation.ForType(world.Identities.Get(unit).TypeId) is not { } nav)
+            {
+                return null;
+            }
+
+            // Inside the edge first (as walkers aim), then the edge itself (a harbour's only land may be its rim).
+            (int a0, int a1) = r.Right - r.Left >= 2 ? (r.Left + 1, r.Right - 1) : (r.Left, r.Right);
+            (int b0, int b1) = r.Bottom - r.Top >= 2 ? (r.Top + 1, r.Bottom - 1) : (r.Top, r.Bottom);
+            return Ground(nav, a0, b0, a1, b1, point) ?? Ground(nav, r.Left, r.Top, r.Right, r.Bottom, point);
+        }
+
+        private static Position? Ground(Sim.Navigation.NavLayer nav, int x0, int y0, int x1, int y1, Position point)
+        {
+            x0 = Math.Clamp(x0, 0, nav.Width - 1);
+            x1 = Math.Clamp(x1, 0, nav.Width - 1);
+            y0 = Math.Clamp(y0, 0, nav.Height - 1);
+            y1 = Math.Clamp(y1, 0, nav.Height - 1);
+            long best = long.MaxValue;
+            Position? found = null;
+            for (int y = y0; y <= y1; y++)
+            {
+                for (int x = x0; x <= x1; x++)
+                {
+                    int tile = (y * nav.Width) + x;
+                    long d = Distance(new Position(nav.CenterX(tile), nav.CenterY(tile)), point);
+                    if (nav.IsWalkable(x, y) && d < best)
+                    {
+                        best = d;
+                        found = new Position(nav.CenterX(tile), nav.CenterY(tile));
+                    }
+                }
+            }
+
+            return found;
         }
 
         // Whether the ground around the point, as the unit walks, is a pocket closed within 12 tiles of it.
@@ -1469,7 +1997,7 @@ public static class CampaignAutoplay
         // Ferry (ADR 0140): units that cannot walk to the point board one of their kingdom's ships (it sails to the shore
         // nearest them), and the ship unloads them at the shore nearest the point (they walk on to it). Orders are
         // repeated at most every 30 seconds: a new order to the ship drops its pending unload.
-        private bool Ferry(World world, byte me, string name, List<EntityId> stranded, Position point)
+        private bool Ferry(World world, byte me, string name, List<EntityId> stranded, Position point, bool sail = false)
         {
             // Aboard already: unload at the point, once the others have boarded too (or a minute has passed).
             foreach (EntityId u in stranded)
@@ -1477,6 +2005,19 @@ public static class CampaignAutoplay
                 if (world.Helds.IndexOf(u) is >= 0 and var h && EntityId.FromValue(world.Helds.At(h).Holder) is var ship && world.IsShip(ship)
                     && world.Diplomacy.MayCommand(me, world.Identities.Get(ship).Owner))
                 {
+                    if (!Sails(world, ship, point) || Refused(world, ship, point))
+                    {
+                        // Aboard a ship on other water (a lake): out again where it is, then another ship.
+                        if (!world.Dockings.Has(ship) && Due(ship))
+                        {
+                            Position here = Pos(world, ship);
+                            _batch.Add(CommandKind.Unload, [ship], here.X, here.Y);
+                        }
+
+                        Goal = $"{name}: off a ship that cannot reach ({point.X / Tile},{point.Y / Tile})";
+                        return true;
+                    }
+
                     if (stranded.Any(o => !world.IsHeld(o)) && _ferried.TryGetValue(ship.Value, out int boarded) && _tick - boarded < 1200)
                     {
                         // The ones whose boarding gave up (no errand) are sent again, to the same ship.
@@ -1488,16 +2029,18 @@ public static class CampaignAutoplay
                         }
 
                         Goal = $"{name}: waiting for {stranded.Count(o => !world.IsHeld(o))} more to board";
+                        MakeRoom(world, name, stranded, Pos(world, ship));
                         return true;
                     }
 
-                    if (!Due(ship))
+                    if (world.Dockings.Has(ship) || !Due(ship))
                     {
                         Goal = $"{name}: ferrying to ({point.X / Tile},{point.Y / Tile})";
                         return true;
                     }
 
-                    _batch.Add(CommandKind.Unload, [ship], point.X, point.Y);
+                    _batch.Add(sail ? CommandKind.Move : CommandKind.Unload, [ship], point.X, point.Y);
+                    _asked[ship.Value] = (Pos(world, ship), _asked.TryGetValue(ship.Value, out var before) && Distance(before.At, Pos(world, ship)) < (long)Tile * Tile ? before.Times + 1 : 1);
                     Goal = $"{name}: ferry unloads at ({point.X / Tile},{point.Y / Tile})";
                     Note($"ferry to ({point.X / Tile},{point.Y / Tile}) for {name}");
                     return true;
@@ -1513,9 +2056,10 @@ public static class CampaignAutoplay
             {
                 if (!world.Diplomacy.MayCommand(me, identities[i].Owner) || !world.IsShip(ids[i]) || world.IsHeld(ids[i]) || _props.Contains(ids[i])
                     || world.Ruleset.EntityTypes[identities[i].TypeId].Traits.Holder is not { } holder
-                    || holder.Capacity - (world.Holders.IndexOf(ids[i]) is >= 0 and var hs ? world.Holders.At(hs).Count : 0) < stranded.Count)
+                    || holder.Capacity - (world.Holders.IndexOf(ids[i]) is >= 0 and var hs ? world.Holders.At(hs).Count : 0) < stranded.Count
+                    || !Sails(world, ids[i], from) || !Sails(world, ids[i], point) || Refused(world, ids[i], point))
                 {
-                    continue;
+                    continue; // full, or on another water (a lake) than the units or the goal (ADR 0220)
                 }
 
                 Position p = Pos(world, ids[i]);
@@ -1543,10 +2087,81 @@ public static class CampaignAutoplay
             }
 
             Goal = $"{name}: {stranded.Count} units board a ship at ({Pos(world, boat).X / Tile},{Pos(world, boat).Y / Tile})";
+            MakeRoom(world, name, stranded, Pos(world, boat));
             return true;
         }
 
         private int _reboarded = int.MinValue / 2;
+
+        // Unload orders per ship: where it was, and how many it refused there (no dock for that point from its water).
+        private readonly Dictionary<uint, (Position At, int Times)> _asked = [];
+
+        // A ship that was ordered three times to unload for this goal without leaving its place has no dock for it.
+        private bool Refused(World world, EntityId ship, Position point)
+            => _asked.TryGetValue(ship.Value, out var asked) && asked.Times >= 3 && !world.Dockings.Has(ship) && Distance(asked.At, Pos(world, ship)) < (long)Tile * Tile;
+
+        // Whether the ship's water comes within radius tiles of the point (48: the dock search of an unload, Shore.FindDock).
+        private static bool Sails(World world, EntityId ship, Position point, int radius = 48)
+        {
+            if (!world.Navigation.IsBuilt || world.Navigation.ForType(world.Identities.Get(ship).TypeId) is not { } sea)
+            {
+                return true;
+            }
+
+            Position at = Pos(world, ship);
+            int component = sea.ComponentOf(sea.TileOf(at.X, at.Y));
+            if (component < 0)
+            {
+                return true; // between tiles or unknown: do not rule it out
+            }
+
+            int cx = point.X / Tile;
+            int cy = point.Y / Tile;
+            for (int y = Math.Max(0, cy - radius); y <= Math.Min(sea.Height - 1, cy + radius); y++)
+            {
+                for (int x = Math.Max(0, cx - radius); x <= Math.Min(sea.Width - 1, cx + radius); x++)
+                {
+                    if (sea.ComponentOf((y * sea.Width) + x) == component)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+        private int _madeRoom = int.MinValue / 2;
+
+        // Boarders hemmed in by their own kingdom's army (it stands between them and the shore, where a scenario made it
+        // appear): the army steps back inland, away from the ship, so the stuck boarder can pass. A player's order.
+        private void MakeRoom(World world, string name, List<EntityId> stranded, Position ship)
+        {
+            EntityId stuck = EntityId.None;
+            foreach (EntityId u in stranded)
+            {
+                if (!world.IsHeld(u))
+                {
+                    Track(world, u);
+                    stuck = stuck.IsNone && _stuck.Contains(u) ? u : stuck;
+                }
+            }
+
+            EntityId[] crowd = _army.Where(u => !stranded.Contains(u) && !world.IsShip(u)).ToArray(); // ships keep their own orders (a ferry)
+            if (stuck.IsNone || crowd.Length == 0 || _tick - _madeRoom < 600)
+            {
+                return;
+            }
+
+            _madeRoom = _tick;
+            Position at = Pos(world, stuck);
+            long dx = at.X - ship.X;
+            long dy = at.Y - ship.Y;
+            long length = Math.Max(1, Core.Numerics.IntMath.ISqrt((dx * dx) + (dy * dy)));
+            int x = (int)Math.Clamp(at.X + (dx * 8 * Tile / length), Tile / 2, world.Map.WorldWidth - (Tile / 2));
+            int y = (int)Math.Clamp(at.Y + (dy * 8 * Tile / length), Tile / 2, world.Map.WorldHeight - (Tile / 2));
+            _batch.Add(CommandKind.Move, crowd, x, y);
+            Note($"the army makes way for the ferry of {name}");
+        }
 
         // Units of a ferry that are neither aboard nor walking to board.
         private static EntityId[] Unboarding(World world, List<EntityId> units)
@@ -1562,6 +2177,46 @@ public static class CampaignAutoplay
 
             _ferried[ship.Value] = _tick;
             return true;
+        }
+
+        private HashSet<EntityId>? _named;
+
+        // Units the events of the enabled rules name (heroes, messengers), refreshed each decision.
+        private HashSet<EntityId> Named(World world, Scripting.Legacy.LegacyTriggerSystem triggers)
+        {
+            var set = new HashSet<EntityId>();
+            for (int r = 0; r < scenario.Rules.Length; r++)
+            {
+                if (triggers.State.RuleDisabled[r] || scenario.Rules[r].Condition.Root is not { } condition)
+                {
+                    continue;
+                }
+
+                var events = new List<int>();
+                Events(condition, events);
+                foreach (int e in events)
+                {
+                    ObjectSpec? spec = scenario.Events[e] switch
+                    {
+                        ObjectInAreaEvent x => x.Objects,
+                        ObjectDestroyedEvent x => x.Objects,
+                        ObjectsEnterHolderEvent x => x.Objects,
+                        _ => null,
+                    };
+                    if (spec is NamedObjects named)
+                    {
+                        foreach (int index in named.ObjectIndices)
+                        {
+                            if (Entity(world, triggers, index) is { } u && world.Motions.Has(u) && !world.IsShip(u))
+                            {
+                                set.Add(u);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return set;
         }
 
         // "$cargo >= N" about named holders: the nearest free units of the army board each holder short of N.
@@ -1585,7 +2240,9 @@ public static class CampaignAutoplay
                 }
 
                 Position at = Pos(world, holder);
-                List<EntityId> free = _army.Where(u => !taken.Contains(u) && definition.CanHold(world.Identities.Get(u).TypeId))
+                // Not the units a pending goal names (the heroes): as cargo they would be unloaded with it (ADR 0220).
+                _named ??= Named(world, triggers);
+                List<EntityId> free = _army.Where(u => !taken.Contains(u) && !_named.Contains(u) && definition.CanHold(world.Identities.Get(u).TypeId))
                     .OrderBy(u => Distance(Pos(world, u), at)).ThenBy(u => u.Value).Take(missing).ToList();
                 if (free.Count == 0)
                 {
@@ -1636,6 +2293,13 @@ public static class CampaignAutoplay
 
                 if (FoughtByScript(world, target) || StagedByScript(index))
                 {
+                    if (!weaken)
+                    {
+                        // The script kills the ally itself (the uncle): invulnerability the solver granted must not save
+                        // him (ADR 0220).
+                        Vulnerable(world, Array.FindIndex(scenario.Events.ToArray(), ev => ev.Name == name), name, [target]);
+                    }
+
                     Goal = $"{name}: a scripted fight against the ally at ({t.X / Tile},{t.Y / Tile}) is on";
                     Note($"waited for the scripted fight of {name}");
                     return true;
@@ -1769,12 +2433,21 @@ public static class CampaignAutoplay
             EntityId? picker = null;
             long best = long.MaxValue;
             ReadOnlySpan<EntityId> ids = world.Inventories.Entities;
-            for (int i = 0; i < ids.Length; i++)
+
+            // The carrier chosen first keeps the job, also while a ferry takes it to the item (ADR 0220).
+            if (_takers.TryGetValue(item.Value, out EntityId kept) && world.Entities.IsAlive(kept) && world.Inventories.Has(kept)
+                && world.Diplomacy.MayCommand(me, world.Identities.Get(kept).Owner) && (world.Motions.Has(kept) || world.IsHeld(kept)) && CanCarry(world, kept, item))
+            {
+                picker = kept;
+            }
+
+            bool keep = picker is not null;
+            for (int i = 0; i < ids.Length && !keep; i++)
             {
                 if (world.Diplomacy.MayCommand(me, world.Identities.Get(ids[i]).Owner) && !world.IsHeld(ids[i]) && world.Motions.Has(ids[i])
-                    && CanCarry(world, ids[i], item) && Distance(Pos(world, ids[i]), where) < best)
+                    && CanCarry(world, ids[i], item) && Cost(world, triggers, ids[i], where) is var cost && cost < best)
                 {
-                    best = Distance(Pos(world, ids[i]), where);
+                    best = cost;
                     picker = ids[i];
                 }
             }
@@ -1784,6 +2457,8 @@ public static class CampaignAutoplay
                 Goal = $"{goal.Name}: nobody to carry the item";
                 return false;
             }
+
+            _takers[item.Value] = unit;
 
             var around = new RectArea((where.X / Tile) - 1, (where.Y / Tile) - 1, (where.X / Tile) + 1, (where.Y / Tile) + 1);
             if (Reach(world, triggers, unit, around, where) is null)
@@ -1795,6 +2470,15 @@ public static class CampaignAutoplay
             Goal = $"{goal.Name}: {world.Ruleset.EntityTypes[world.Identities.Get(unit).TypeId].Key}/{world.Identities.Get(unit).Owner} at ({Pos(world, unit).X / Tile},{Pos(world, unit).Y / Tile}) picks the item up at ({where.X / Tile},{where.Y / Tile})";
             Note($"carry an item for {goal.Name}");
             return true;
+        }
+
+        // How far a unit is from an item it would fetch: a unit that can walk there comes before every unit that cannot
+        // (a ninja climbs to a book on a cliff-ringed ledge, WORLD-018), then the nearest.
+        private static long Cost(World world, Scripting.Legacy.LegacyTriggerSystem triggers, EntityId unit, Position where)
+        {
+            var around = new RectArea((where.X / Tile) - 1, (where.Y / Tile) - 1, (where.X / Tile) + 1, (where.Y / Tile) + 1);
+            long d = Distance(Pos(world, unit), where);
+            return Reach(world, triggers, unit, around, where) is null ? (long.MaxValue / 2) + Math.Min(d, long.MaxValue / 4) : d;
         }
 
         private static bool CanCarry(World world, EntityId unit, EntityId item)
@@ -1869,6 +2553,60 @@ public static class CampaignAutoplay
             return null;
         }
 
+        // Water beyond the line that one of the kingdom's ships can sail to, nearest the unit's row (or column), within 32
+        // tiles of the line.
+        private static Position? WaterBeyond(World world, byte me, EntityId unit, bool vertical, int limit, bool below)
+        {
+            if (!world.Navigation.IsBuilt)
+            {
+                return null;
+            }
+
+            Position at = Pos(world, unit);
+            ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+            ReadOnlySpan<Identity> identities = world.Identities.Components;
+            for (int i = 0; i < ids.Length; i++)
+            {
+                if (!world.IsShip(ids[i]) || !world.Diplomacy.MayCommand(me, identities[i].Owner) || world.Navigation.ForType(identities[i].TypeId) is not { } sea)
+                {
+                    continue;
+                }
+
+                Position s = Pos(world, ids[i]);
+                int component = sea.ComponentOf(sea.TileOf(s.X, s.Y));
+                int size = vertical ? sea.Height : sea.Width;
+                int other = vertical ? at.X / Tile : at.Y / Tile;
+                int otherSize = vertical ? sea.Width : sea.Height;
+                for (int d = 0; d < otherSize && component >= 0; d++)
+                {
+                    foreach (int o in new[] { other - d, other + d })
+                    {
+                        if (o < 0 || o >= otherSize)
+                        {
+                            continue;
+                        }
+
+                        for (int step = 0; step < 32; step++)
+                        {
+                            int line = below ? limit - step : limit + step;
+                            if (line < 0 || line >= size)
+                            {
+                                break;
+                            }
+
+                            int tile = vertical ? (line * sea.Width) + o : (o * sea.Width) + line;
+                            if (sea.ComponentOf(tile) == component)
+                            {
+                                return new Position(sea.CenterX(tile), sea.CenterY(tile));
+                            }
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
         // The reachable tile on the far side of the line nearest to the unit's row (or column).
         private static Position? Across(World world, EntityId unit, bool vertical, int limit, bool below, Position at)
         {
@@ -1930,7 +2668,9 @@ public static class CampaignAutoplay
             _ => null,
         };
 
-        private List<EntityId> OwnUnits(World world, byte me, Scripting.Legacy.LegacyTriggerSystem triggers, ObjectSpec spec, Position? target)
+        private readonly Dictionary<string, List<EntityId>> _assigned = new(StringComparer.Ordinal);
+
+        private List<EntityId> OwnUnits(World world, byte me, Scripting.Legacy.LegacyTriggerSystem triggers, ObjectSpec spec, Position? target, string? goal = null)
         {
             var units = new List<EntityId>();
             if (spec is NamedObjects named)
@@ -1943,6 +2683,12 @@ public static class CampaignAutoplay
                     }
                 }
             }
+            else if (goal is not null && _assigned.TryGetValue(goal, out List<EntityId>? kept)
+                && kept.All(u => world.Entities.IsAlive(u) && world.Diplomacy.MayCommand(me, world.Identities.Get(u).Owner) && (world.IsHeld(u) || (world.Motions.Has(u) && !_stuck.Contains(u)))))
+            {
+                // The units sent first keep the goal, also aboard a ferry (else the next nearest board too, ADR 0220).
+                units.AddRange(kept);
+            }
             else if ((Mask(spec) & (1 << me)) != 0 && _army.Count > 0 && target is { } at)
             {
                 // "So many of my units": the ones nearest to the target, as many as the count asks (at least one); the
@@ -1950,7 +2696,8 @@ public static class CampaignAutoplay
                 var nearest = new List<(long Distance, int Index)>(_army.Count);
                 for (int i = 0; i < _army.Count; i++)
                 {
-                    if (_stuck.Contains(_army[i]))
+                    // Ships ferry the walkers; they are not walkers themselves (a galleon would try to board a ship).
+                    if (_stuck.Contains(_army[i]) || world.IsShip(_army[i]))
                     {
                         continue;
                     }
@@ -1966,6 +2713,11 @@ public static class CampaignAutoplay
                 for (int i = 0; i < Math.Min(wanted, nearest.Count); i++)
                 {
                     units.Add(_army[nearest[i].Index]);
+                }
+
+                if (goal is not null)
+                {
+                    _assigned[goal] = [.. units];
                 }
             }
 
@@ -2100,6 +2852,7 @@ public static class CampaignAutoplay
 
             Position at = where ?? Pos(world, _army[0]);
             _batch.Add(CommandKind.DebugSpawn, [], at.X, at.Y, default, type, 10);
+            _spawnPoint = at;
         }
 
         private void Clear(World world, byte me)
