@@ -59,6 +59,9 @@ public enum CardAction
     /// <summary>Select the next idle peasant.</summary>
     NextIdle,
 
+    /// <summary>Open the online help (the kingdom's card, P; HUD-020, HUD-033).</summary>
+    OnlineHelp,
+
     /// <summary>Show the quest log.</summary>
     Quests,
 
@@ -327,6 +330,7 @@ public enum CardDialogKind
 /// <param name="ShowQuests">Show the quest log.</param>
 /// <param name="DeleteSelected">Delete the selection (as the Delete key).</param>
 /// <param name="Select">Select this unit and show it (an entry of a kingdom list).</param>
+/// <param name="ShowHelp">Open the online help.</param>
 public sealed record CardPress(
     CommandList? Commands = null,
     OrderMode? Mode = null,
@@ -337,7 +341,8 @@ public sealed record CardPress(
     bool NextIdlePeasant = false,
     bool ShowQuests = false,
     bool DeleteSelected = false,
-    EntityId? Select = null)
+    EntityId? Select = null,
+    bool ShowHelp = false)
 {
     /// <summary>Nothing to do (the card may have changed menu or page).</summary>
     public static CardPress Nothing { get; } = new();

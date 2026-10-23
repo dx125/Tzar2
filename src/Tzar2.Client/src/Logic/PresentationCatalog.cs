@@ -357,6 +357,7 @@ public sealed class PresentationCatalog : ICardSource
             "become_jihad_warrior" => (CardAction.Become, "jihad_warrior"),
             "attack_ground" => (CardAction.AttackGround, string.Empty),
             "next_idle_peon" => (CardAction.NextIdle, string.Empty),
+            "online_help" => (CardAction.OnlineHelp, string.Empty),
             "view_quests" => (CardAction.Quests, string.Empty),
             "uncloak" => (CardAction.Uncloak, string.Empty),
             "impersonate" => (CardAction.Impersonate, string.Empty),

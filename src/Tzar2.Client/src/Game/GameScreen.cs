@@ -61,6 +61,7 @@ public partial class GameScreen : Node
     private double _slowFrameLogged = double.MinValue;
     private readonly Ruleset _rules;
     private readonly PresentationCatalog _catalog;
+    private Tzar2.Game.Ui.OnlineHelp? _help; // read from the package the first time the help opens
     private readonly CommandCard _card;
     private readonly HotkeyTable _hotkeys = new();
     private readonly SelectionModel _selection;
@@ -1483,6 +1484,11 @@ public partial class GameScreen : Node
             CenterOn(_frame.Entities[at].X, _frame.Entities[at].Y);
         }
 
+        if (press.ShowHelp)
+        {
+            ShowHelp(null);
+        }
+
         if (press.ShowQuests)
         {
             ShowQuests();
@@ -2373,6 +2379,39 @@ public partial class GameScreen : Node
     // The colour a kingdom plays with (SHELL-016: chosen in the multiplayer setup, else its slot's).
     private int ColourOf(int kingdom) => kingdom < _session.Setup.Players.Count ? _session.Setup.Players[kingdom].ColourIndex : kingdom;
 
+    // The online help (HUD-020; SHELL-021 opens it at the hot keys); a single player game waits while it is open.
+    private void ShowHelp(Tzar2.Game.Ui.HelpCategory? chapter)
+    {
+        if (GetNodeOrNull("Help") is not null || _hud is null)
+        {
+            return;
+        }
+
+        if (_help is null)
+        {
+            string Read(string path) => _store.Vfs.Exists(path) ? System.Text.Encoding.UTF8.GetString(_store.Read(path)) : string.Empty;
+            _help = new Tzar2.Game.Ui.OnlineHelp(HelpText.Sections(Read(HelpText.ItemsPath)), HelpText.HotKeyLines(Read(HelpText.HotKeysPath)));
+        }
+
+        if (chapter is { } c)
+        {
+            _help.Open(c);
+        }
+
+        IniTable labels = _store.Vfs.Exists(HelpText.LabelsPath) ? IniTable.Parse(_store.Read(HelpText.LabelsPath)) : IniTable.Empty;
+        bool paused = _session.Paused;
+        _session.Paused = !_session.IsMultiplayer || paused;
+        var screen = new HelpScreen(_ui, _hud.Layout.Size, _help, labels);
+        var layer = new CanvasLayer { Layer = 3, Name = "Help" };
+        layer.AddChild(screen);
+        AddChild(layer);
+        screen.Closed += () =>
+        {
+            _session.Paused = paused;
+            layer.QueueFree();
+        };
+    }
+
     private void ShowMenu()
     {
         if (GetNodeOrNull("GameMenu") is not null || _hud is null)
@@ -2409,6 +2448,9 @@ public partial class GameScreen : Node
                     break;
                 case GameMenuChoice.Restart:
                     RestartRequested?.Invoke();
+                    break;
+                case GameMenuChoice.Instructions:
+                    ShowHelp(Tzar2.Game.Ui.HelpCategory.HotKeys);
                     break;
                 case GameMenuChoice.Options:
                     ShowOptions();
