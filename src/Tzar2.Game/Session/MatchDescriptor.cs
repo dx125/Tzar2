@@ -17,6 +17,12 @@ public enum MapSourceKind : byte
 
     /// <summary>A random map (<see cref="RandomMapSource"/>).</summary>
     RandomMap = 2,
+
+    /// <summary>
+    /// A custom map with its scenario (SHELL-018; ADR 0233), named by <see cref="MatchSettings.CustomMapId"/> and
+    /// identified by <see cref="MatchSettings.CustomMapHash"/>: every peer must have it.
+    /// </summary>
+    CustomMap = 3,
 }
 
 /// <summary>
@@ -26,8 +32,8 @@ public enum MapSourceKind : byte
 /// </summary>
 public sealed record MatchSettings
 {
-    /// <summary>Format version.</summary>
-    public const byte Version = 1;
+    /// <summary>Format version (2 adds the custom map; settings without one are still written as 1).</summary>
+    public const byte Version = 2;
 
     /// <summary>The ruleset name.</summary>
     public string Ruleset { get; init; } = "classic";
@@ -104,10 +110,26 @@ public sealed record MatchSettings
     /// <summary>AI assistance for the humans (the lobby's "AI Assist"; ADR 0183).</summary>
     public bool AiAssist { get; init; }
 
+    /// <summary>The custom map's id (its file name) with <see cref="MapSourceKind.CustomMap"/>, for the lobby and messages.</summary>
+    public string CustomMapId { get; init; } = string.Empty;
+
+    /// <summary>The custom map's content hash (<see cref="Campaigns.CustomMapEntry.Hash"/>): what peers look it up by.</summary>
+    public ulong CustomMapHash { get; init; }
+
+    /// <summary>
+    /// USE MAP SETTINGS (SHELL-018): a custom map keeps its game type, victory, starting stockpiles and population
+    /// limit; only No Fog, Explore, day and night and weather come from the lobby. Off: the lobby's apply.
+    /// </summary>
+    public bool UseMapSettings { get; init; } = true;
+
     /// <summary>The map source these settings describe.</summary>
-    public IMapSource MapSource() => Map == MapSourceKind.TestMap
-        ? new SkirmishTestMap(TestMapSize)
-        : new RandomMapSource(MapType, Terrain, MapSize, Resources, Features);
+    /// <exception cref="InvalidOperationException">A custom map: its source is the map itself (<see cref="MatchDescriptor.ToSetup"/>).</exception>
+    public IMapSource MapSource() => Map switch
+    {
+        MapSourceKind.TestMap => new SkirmishTestMap(TestMapSize),
+        MapSourceKind.RandomMap => new RandomMapSource(MapType, Terrain, MapSize, Resources, Features),
+        _ => throw new InvalidOperationException("A custom map is played from the map itself."),
+    };
 
     /// <summary>The encoded settings.</summary>
     public byte[] ToBytes()
@@ -119,7 +141,8 @@ public sealed record MatchSettings
 
     internal void Write(BinaryBufferWriter w)
     {
-        w.WriteByte(Version);
+        bool custom = Map == MapSourceKind.CustomMap;
+        w.WriteByte(custom ? Version : (byte)1);
         w.WriteString(Ruleset);
         w.WriteByte((byte)Map);
         w.WriteVarUInt64((ulong)TestMapSize);
@@ -138,7 +161,16 @@ public sealed record MatchSettings
         w.WriteByte((byte)((NoFog ? 1 : 0) | (Explored ? 2 : 0) | (DayNight ? 4 : 0) | (Weather ? 8 : 0) | (CheatsAllowed ? 16 : 0) | (Ranked ? 32 : 0) | (AiAssist ? 64 : 0)));
         w.WriteUInt64(ResumeSnapshotHash);
         w.WriteVarInt64(SpeedPercent);
+        if (custom)
+        {
+            w.WriteString(CustomMapId.Length <= MaxMapIdLength ? CustomMapId : CustomMapId[..MaxMapIdLength]);
+            w.WriteUInt64(CustomMapHash);
+            w.WriteByte(UseMapSettings ? (byte)1 : (byte)0);
+        }
     }
+
+    /// <summary>Longest custom map id kept.</summary>
+    public const int MaxMapIdLength = 64;
 
     /// <summary>Decodes settings.</summary>
     /// <exception cref="InvalidDataException">Malformed, another version, or a value out of range.</exception>
@@ -151,7 +183,8 @@ public sealed record MatchSettings
 
     internal static MatchSettings Read(ref BinaryBufferReader r)
     {
-        if (r.ReadByte() != Version)
+        byte version = r.ReadByte();
+        if (version is not (1 or Version))
         {
             throw new InvalidDataException("Unsupported match settings version.");
         }
@@ -174,7 +207,22 @@ public sealed record MatchSettings
         byte flags = r.ReadByte();
         ulong resume = r.ReadUInt64();
         int speed = (int)Bounded(r.ReadVarInt64(), 25, 400);
-        if (map is not (MapSourceKind.TestMap or MapSourceKind.RandomMap) || type > RandomMapType.Dry || terrain > MapTerrainSet.Winter
+        string mapId = string.Empty;
+        ulong mapHash = 0;
+        bool useMap = true;
+        if (version == Version)
+        {
+            mapId = r.ReadString(MaxMapIdLength * 4);
+            mapHash = r.ReadUInt64();
+            byte use = r.ReadByte();
+            useMap = use == 1;
+            if (map != MapSourceKind.CustomMap || use > 1 || mapId.Length == 0 || mapId.Length > MaxMapIdLength)
+            {
+                throw new InvalidDataException("Custom map settings out of range.");
+            }
+        }
+
+        if (map is not (MapSourceKind.TestMap or MapSourceKind.RandomMap) && !(map == MapSourceKind.CustomMap && version == Version) || type > RandomMapType.Dry || terrain > MapTerrainSet.Winter
             || size > RandomMapSize.RealWorld || resources > MapResourceLevel.High || victory > VictoryCondition.NotSpecified
             || gameType > GameType.Deathmatch || flags > 127 || ruleset.Length == 0)
         {
@@ -209,6 +257,9 @@ public sealed record MatchSettings
             ResumeSnapshotHash = resume,
             SpeedPercent = speed,
             AiAssist = (flags & 64) != 0,
+            CustomMapId = mapId,
+            CustomMapHash = mapHash,
+            UseMapSettings = useMap,
         };
     }
 
@@ -219,22 +270,39 @@ public sealed record MatchSettings
         value >= min && value <= max ? value : throw new InvalidDataException($"Value {value} outside [{min}, {max}].");
 }
 
-/// <summary>A lobby slot's own choices (the relay's per-slot choice blob): civilization, team and, for computers, difficulty.</summary>
+/// <summary>
+/// A lobby slot's own choices (the relay's per-slot choice blob): civilization, team, for computers the difficulty, the
+/// colour and the strategy of its computer player (SHELL-016, SHELL-017).
+/// </summary>
 /// <param name="Civilization">Civilization key of the ruleset.</param>
 /// <param name="Team">Team 0 (none) to 8.</param>
 /// <param name="Difficulty">Computer difficulty.</param>
-public sealed record SlotChoice(string Civilization, byte Team, Difficulty Difficulty)
+/// <param name="AiScript">The strategy of the kingdom's computer player (<see cref="AiScriptOption.Script"/>; <c>""</c>: the default).</param>
+/// <param name="Colour">The wanted colour 0-7, or 255 for the first free one.</param>
+public sealed record SlotChoice(string Civilization, byte Team, Difficulty Difficulty, string AiScript = "", byte Colour = SlotChoice.AnyColour)
 {
+    /// <summary>No colour wanted: the first free one.</summary>
+    public const byte AnyColour = 255;
+
+    /// <summary>Longest script name kept.</summary>
+    public const int MaxScriptLength = 32;
+
     /// <summary>The default choice for a fresh slot.</summary>
     public static SlotChoice Default { get; } = new("euro", 0, Difficulty.Normal);
 
-    /// <summary>The encoded choice.</summary>
+    /// <summary>The encoded choice (the colour and the script only when set, so older choices keep their bytes).</summary>
     public byte[] ToBytes()
     {
-        var w = new BinaryBufferWriter(24);
+        var w = new BinaryBufferWriter(64);
         w.WriteString(Civilization.Length <= 16 ? Civilization : Civilization[..16]);
         w.WriteByte(Team);
         w.WriteByte((byte)Difficulty);
+        if (AiScript.Length > 0 || Colour != AnyColour)
+        {
+            w.WriteByte(Colour);
+            w.WriteString(AiScript.Length <= MaxScriptLength ? AiScript : AiScript[..MaxScriptLength]);
+        }
+
         return w.ToArray();
     }
 
@@ -252,8 +320,16 @@ public sealed record SlotChoice(string Civilization, byte Team, Difficulty Diffi
             string civ = r.ReadString(16);
             byte team = r.ReadByte();
             byte difficulty = r.ReadByte();
-            return team <= 8 && difficulty <= (byte)Difficulty.Hard && civ.Length > 0 && r.IsAtEnd
-                ? new SlotChoice(civ, team, (Difficulty)difficulty)
+            byte colour = AnyColour;
+            string script = string.Empty;
+            if (!r.IsAtEnd)
+            {
+                colour = r.ReadByte();
+                script = r.ReadString(MaxScriptLength * 4);
+            }
+
+            return team <= 8 && difficulty <= (byte)Difficulty.Hard && civ.Length > 0 && r.IsAtEnd && (colour < 8 || colour == AnyColour) && script.Length <= MaxScriptLength
+                ? new SlotChoice(civ, team, (Difficulty)difficulty, script, colour)
                 : Default;
         }
         catch (InvalidDataException)
@@ -264,7 +340,9 @@ public sealed record SlotChoice(string Civilization, byte Team, Difficulty Diffi
 }
 
 /// <summary>One kingdom of a <see cref="MatchDescriptor"/>.</summary>
-public sealed record MatchPlayer(byte Slot, string Name, string Civilization, ControllerKind Controller, Difficulty Difficulty, byte Team);
+/// <param name="AiScript">The strategy of its computer player (<c>""</c>: the match's).</param>
+/// <param name="Colour">Its colour 0-7, or 255 for its slot's.</param>
+public sealed record MatchPlayer(byte Slot, string Name, string Civilization, ControllerKind Controller, Difficulty Difficulty, byte Team, string AiScript = "", byte Colour = 255);
 
 /// <summary>
 /// Everything needed to rebuild a match's <see cref="MatchSetup"/> on another machine (ADR 0162, 0164): the settings
@@ -289,8 +367,22 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             w.WriteByte(p.Team);
         }
 
+        // Colours and strategies (SHELL-016, SHELL-017) follow the kingdoms only when one is set, so descriptions
+        // (and replay headers) without them keep their bytes.
+        if (Players.Any(p => p.AiScript.Length > 0 || p.Colour != 255))
+        {
+            w.WriteByte(ChoicesMarker);
+            foreach (MatchPlayer p in Players)
+            {
+                w.WriteByte(p.Colour);
+                w.WriteString(p.AiScript.Length <= SlotChoice.MaxScriptLength ? p.AiScript : p.AiScript[..SlotChoice.MaxScriptLength]);
+            }
+        }
+
         return w.ToArray();
     }
+
+    private const byte ChoicesMarker = 0xC5;
 
     /// <summary>Decodes a description.</summary>
     /// <exception cref="InvalidDataException">Malformed.</exception>
@@ -321,6 +413,26 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             players.Add(new MatchPlayer(slot, name, civ, (ControllerKind)controller, (Difficulty)difficulty, team));
         }
 
+        if (!r.IsAtEnd)
+        {
+            if (r.ReadByte() != ChoicesMarker)
+            {
+                throw new InvalidDataException("Trailing bytes.");
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                byte colour = r.ReadByte();
+                string script = r.ReadString(SlotChoice.MaxScriptLength * 4);
+                if (colour is >= 8 and not 255)
+                {
+                    throw new InvalidDataException("Invalid colour in the match description.");
+                }
+
+                players[i] = players[i] with { Colour = colour, AiScript = script };
+            }
+        }
+
         return r.IsAtEnd ? new MatchDescriptor(settings, players.MoveToImmutable()) : throw new InvalidDataException("Trailing bytes.");
     }
 
@@ -331,15 +443,21 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
     /// The setup of this match. <paramref name="localSlot"/> is the slot this machine plays (null for a replay or a
     /// headless check); with <paramref name="multiplayer"/> every human kingdom gets a standby AI (REQ-NET-07).
     /// </summary>
+    /// <exception cref="InvalidDataException">A custom map: use the overload that finds it.</exception>
     public MatchSetup ToSetup(SkirmishAi ai, bool multiplayer, byte? localSlot)
     {
         ArgumentNullException.ThrowIfNull(ai);
         MatchSettings s = Settings;
+        if (s.Map == MapSourceKind.CustomMap)
+        {
+            throw new InvalidDataException($"The match was played on the custom map '{s.CustomMapId}'; it is needed to rebuild it.");
+        }
+
         return new MatchSetup
         {
             Ruleset = s.Ruleset,
             Map = s.MapSource(),
-            Players = [.. Players.Select(p => new PlayerSetup(p.Slot, p.Civilization, p.Controller, p.Difficulty))],
+            Players = [.. Players.Select(p => new PlayerSetup(p.Slot, p.Civilization, p.Controller, p.Difficulty, p.AiScript, p.Colour))],
             Seed = s.Seed,
             StartingResources = s.StartingResources,
             PopulationLimit = s.PopulationLimit,
@@ -360,6 +478,23 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             LocalSlot = localSlot,
             Descriptor = this,
         };
+    }
+
+    /// <summary>
+    /// The setup of this match, finding a custom map (SHELL-018; ADR 0233) with <paramref name="maps"/> by its hash.
+    /// </summary>
+    /// <exception cref="InvalidDataException">A custom map that <paramref name="maps"/> does not have.</exception>
+    public MatchSetup ToSetup(SkirmishAi ai, bool multiplayer, byte? localSlot, Content.Compiled.Ruleset ruleset, Func<ulong, Campaigns.MissionContent?>? maps)
+    {
+        ArgumentNullException.ThrowIfNull(ruleset);
+        if (Settings.Map != MapSourceKind.CustomMap)
+        {
+            return ToSetup(ai, multiplayer, localSlot);
+        }
+
+        Campaigns.MissionContent mission = maps?.Invoke(Settings.CustomMapHash)
+            ?? throw new InvalidDataException($"This machine does not have the custom map '{Settings.CustomMapId}' (or has another version of it).");
+        return Campaigns.ScenarioMatch.Multiplayer(mission, ruleset, this, ai, multiplayer, localSlot);
     }
 
     /// <summary>The description of <paramref name="setup"/>, or null when its map cannot be described (scenario or campaign maps).</summary>
@@ -401,6 +536,6 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             AiAssist = setup.AiAssist,
         };
         return new MatchDescriptor(settings, [.. setup.Players.Select(p => new MatchPlayer(
-            p.Slot, names?.Invoke(p.Slot) ?? string.Empty, p.Civilization, p.Controller, p.Difficulty, (byte)((setup.Teams >> (p.Slot * 4)) & 0xF)))]);
+            p.Slot, names?.Invoke(p.Slot) ?? string.Empty, p.Civilization, p.Controller, p.Difficulty, (byte)((setup.Teams >> (p.Slot * 4)) & 0xF), p.AiScript, p.Colour))]);
     }
 }

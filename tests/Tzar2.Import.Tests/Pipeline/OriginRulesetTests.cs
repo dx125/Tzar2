@@ -133,7 +133,7 @@ public sealed class OriginRulesetTests(ITestOutputHelper output) : IDisposable
 
         Assert.Equal(87, classic.Technologies.Count);
         Assert.Equal(12, classic.Upgrades.Count);
-        Assert.Equal(["arab", "asia", "comm", "euro"], classic.Civilizations);
+        Assert.Equal(["euro", "arab", "asia", "comm"], classic.Civilizations); // ADR 0211
 
         // Every building row of every civilization table is a type.
         foreach (string file in Directory.EnumerateFiles(Path.Combine(origin, "DATA"), "* BUILDINGS.TXT"))

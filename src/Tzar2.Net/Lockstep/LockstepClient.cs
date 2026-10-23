@@ -159,6 +159,7 @@ public sealed class LockstepClient : IDisposable
             UpdateTime = 1,
             EnableStatistics = true,
             DisconnectTimeout = options.DisconnectTimeoutMs,
+            PingInterval = KeepAlive.PingIntervalMs(options.DisconnectTimeoutMs),
             ChannelsCount = 2,
         };
         if (!_net.Start())

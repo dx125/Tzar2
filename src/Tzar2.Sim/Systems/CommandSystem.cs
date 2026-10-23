@@ -40,10 +40,11 @@ public sealed partial class CommandSystem : ISimSystem
         }
     }
 
-    private static CommandRejection? Apply(World world, in Command command, ReadOnlySpan<EntityId> entities)
+    private static CommandRejection? Apply(World world, in Command command, ReadOnlySpan<EntityId> entities, bool scripted = false)
     {
-        if (!world.HasPlayer(command.Player) || (world.Players[command.Player].Flags & PlayerFlags.Active) == 0
-            || (world.Players[command.Player].Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious)) != 0)
+        // A scenario's own orders move objects whatever the state of their kingdom (ADR 0220).
+        if (!world.HasPlayer(command.Player) || (!scripted && ((world.Players[command.Player].Flags & PlayerFlags.Active) == 0
+            || (world.Players[command.Player].Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious)) != 0)))
         {
             return CommandRejection.InvalidPlayer;
         }
