@@ -184,6 +184,19 @@ public sealed partial class World
             }
         }
 
+        ids = Learned.Entities;
+        int learnable = Math.Min(Ruleset.Spells.Count, LearnedSpells.Capacity);
+        ulong known = learnable == 64 ? ulong.MaxValue : (1UL << learnable) - 1;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            ulong mask = Learned.Components[i].Mask;
+            RequireUnit(ids[i], "learned spells");
+            if (!Manas.Has(ids[i]) || mask == 0 || (mask & ~known) != 0)
+            {
+                throw Invalid("invalid learned spells");
+            }
+        }
+
         ids = Projectiles.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
@@ -272,7 +285,7 @@ public sealed partial class World
             bool idle = c.Phase == CastPhase.None;
             bool spellOk = idle
                 ? c.Spell == Projectile.NoSpell && c.Target == 0 && c.Book == 0 && c.CastLeftMs == 0 && c.X == 0 && c.Y == 0 && c.MoveTick == -1
-                : c.Spell < Ruleset.Spells.Count && (c.Book == 0 ? t.CanCast(c.Spell) : BookHolds(ids[i], c.Book, c.Spell));
+                : c.Spell < Ruleset.Spells.Count && (c.Book == 0 ? t.CanCast(c.Spell) || HasLearned(ids[i], c.Spell) : BookHolds(ids[i], c.Book, c.Spell));
             if ((t.Spells.IsDefaultOrEmpty && t.InventorySlots == 0) || c.Phase > CastPhase.Casting || !spellOk || c.CastLeftMs is < 0 or > 60_000
                 || c.ReadyTick > maxFuture || c.MoveTick < -1 || c.MoveTick > tick || c.Reserved != 0 || !Map.ContainsPoint(c.X, c.Y))
             {

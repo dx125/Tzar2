@@ -171,6 +171,8 @@ public sealed class CommandCard
             var button = new CardButton("item", '\0', CardAction.InventoryItem, h.Slot.ToString(CultureInfo.InvariantCulture), _source.ItemIcon(h.TypeId, h.Look), name);
             string how = IsSoul(h.TypeId)
                 ? "Left click: kill the bound unit (Ctrl: send it berserk); right click: drop; Alt + click: the default item"
+                : h.Spell >= 0
+                ? "Left click: cast it (Ctrl: learn the spell, for a unit with mana); right click: drop; Alt + click: the default item"
                 : "Left click: use (Ctrl: at once); right click: drop; Alt + click: the default item";
             slots.Add(new CardSlot(button, true, h.IsDefault, string.Empty, Description: how));
         }
@@ -239,6 +241,19 @@ public sealed class CommandCard
         if (OpenMenu is null && !e.Id.IsNone && ((_rules.EntityTypes[e.TypeId].Traits.Abilities & AbilityFlags.Impersonate) != 0 || e.SpyType >= 0))
         {
             buttons.AddRange(_source.AbilityButtons("impersonate")); // the spy's impersonate and reveal (MAG-012)
+        }
+
+        if (OpenMenu is null && e.LearnedSpells != 0 && context.Selection.Count == 1)
+        {
+            // Spells learned from books join a lone unit's own card (ITEM-019; ReTzar 0x4e3fb0).
+            for (int s = 0; s < Math.Min(_rules.Spells.Count, 64); s++)
+            {
+                if ((e.LearnedSpells & (1UL << s)) != 0 && !buttons.Exists(b => b.Action == CardAction.Spell && SpellOf(b) == s)
+                    && _source.OrderButton(_rules.Spells[s].Key) is { Action: CardAction.Spell } learned)
+                {
+                    buttons.Add(learned);
+                }
+            }
         }
 
         buttons = [.. buttons.Where(b => !Hidden(context, b, e))];
@@ -770,7 +785,8 @@ public sealed class CommandCard
             t.Item is not null,
             t.GainsExperience ? e.Level : -1,
             e.X,
-            e.Y);
+            e.Y,
+            e.LearnedSpells);
     }
 
     // An item of the open inventory (HUD-018): right click drops it, Alt + click makes it the default item, a click uses
@@ -813,7 +829,15 @@ public sealed class CommandCard
             return new CardPress(Commands: list);
         }
 
-        if (!ctrl && spell >= 0 && spell < _rules.Spells.Count && _rules.Spells[spell].Target != SpellTarget.Self)
+        if (ctrl && spell >= 0)
+        {
+            // Ctrl + click uses a book with no target: a unit with a mana pool learns its spell (ITEM-019; the original's
+            // item_use_instant, ReTzar 0x4a1c58).
+            list.Add(CommandKind.UseItem, [_carrier], target: _carrier, arg0: slot, arg1: 1);
+            return new CardPress(Commands: list);
+        }
+
+        if (spell >= 0 && spell < _rules.Spells.Count && _rules.Spells[spell].Target != SpellTarget.Self)
         {
             return new CardPress(Mode: OrderMode.UseItem, ModeArgument: slot + 1);
         }
@@ -1046,7 +1070,7 @@ public sealed class CommandCard
     // The spell of a card button: its key, or (the ninjas' cloak and murder, raise dead) its order's name.
     private int SpellOf(CardButton b) => _rules.SpellId(b.Argument) is >= 0 and var id ? id : _rules.SpellId(b.Order);
 
-    private bool CanCast(EntityInfo e, int spell) => spell is >= 0 and <= ushort.MaxValue && _rules.EntityTypes[e.TypeId].Traits.CanCast((ushort)spell);
+    private bool CanCast(EntityInfo e, int spell) => (spell is >= 0 and < 64 && (e.LearnedSpells & (1UL << spell)) != 0) || spell is >= 0 and <= ushort.MaxValue && _rules.EntityTypes[e.TypeId].Traits.CanCast((ushort)spell);
 
     // ---- the buttons --------------------------------------------------------------------------------------------------
 

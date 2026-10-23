@@ -29,6 +29,7 @@ namespace Tzar2.Game.Input;
 /// <param name="Level">Experience level (GAME-08), or -1 for what gains none.</param>
 /// <param name="X">World X.</param>
 /// <param name="Y">World Y.</param>
+/// <param name="LearnedSpells">The spells it learned from books (ITEM-019): bit n = spell n.</param>
 public readonly record struct EntityInfo(
     EntityId Id,
     ushort TypeId,
@@ -52,7 +53,8 @@ public readonly record struct EntityInfo(
     bool IsItem = false,
     int Level = -1,
     int X = 0,
-    int Y = 0);
+    int Y = 0,
+    ulong LearnedSpells = 0);
 
 /// <summary>
 /// The local selection and control groups with the original's mouse semantics (Appendix E.6, HK.TXT): click, Shift+click

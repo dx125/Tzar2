@@ -455,13 +455,39 @@ internal static class CombatMagicCommands
                         return CommandRejection.InvalidArgument;
                     }
 
-                    return StartCast(world, unit, (ushort)spell, item, command.Target, command.X, command.Y);
+                    // Arg1 1: used with no target (ITEM-019, ReTzar 0x4640f0): a unit with a mana pool learns the book's spell.
+                    return command.Arg1 == 1 ? Learn(world, unit, item, spell) : StartCast(world, unit, (ushort)spell, item, command.Target, command.X, command.Y);
                 default:
                     return CommandRejection.InvalidArgument; // weapons, armor, flags work while carried
             }
         }
 
         return CommandRejection.NoValidEntities;
+    }
+
+    // ITEM-019 (ReTzar 0x4640f0, ADR 0266): a book used with no target teaches its spell to a holder with a mana pool that
+    // does not know it yet, and is used up whatever its charges. The spell then joins the unit's card and is cast with
+    // the unit's own mana, behind the same research as for those who know it by nature.
+    private static CommandRejection? Learn(World world, EntityId unit, EntityId book, int spell)
+    {
+        if (world.Manas.IndexOf(unit) < 0 || world.TypeOf(unit).Traits.ManaPool is null || spell >= LearnedSpells.Capacity
+            || world.TypeOf(unit).Traits.CanCast((ushort)spell) || world.HasLearned(unit, spell))
+        {
+            return CommandRejection.InvalidArgument;
+        }
+
+        if (world.Learned.IndexOf(unit) is >= 0 and var l)
+        {
+            world.Learned.At(l).Mask |= 1UL << spell;
+        }
+        else
+        {
+            world.Learned.Set(unit, new LearnedSpells { Mask = 1UL << spell });
+        }
+
+        world.Events.Emit(new SimEvent(SimEventKind.ItemUsed, world.Identities.Get(unit).Owner, book, unit.Index, spell, world.Identities.Get(book).TypeId));
+        world.Destroy(book);
+        return null;
     }
 
     // A potion (or "plusplus"): levels, attack, defence, health, mana for good; the potion is used up. A potion with its

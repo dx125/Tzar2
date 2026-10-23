@@ -120,7 +120,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), orders shown only while their condition holds (the quest order: HUD-029), the loan orders' hints tell what the tavern lends (TRADE-008), F4's scoreboard and clock (DIP-008), the chat screen (D_CHAT: everyone, allies, enemies or picked kingdoms with their stance; the cheat codes in single player: HUD-010, HUD-011), the menu screens' help ball and hints (LOCAL/HELP.INI: SHELL-026), the fished patch's blue selection and the selection view's kingdom, level and power (HUD-025, HUD-016), tests for the last untested magic rules (MAG-006, MAG-010, MAG-011, MAG-018), the trade window's source and destination markets (TRADE-002), the order target's blink as the original's (CTRL-017), map objects' own item properties (map.bin version 3, ADR 0264), the random map generator's items as the original's (ITEM-017, ADR 0264), a spell book's own pool and endless charges (ITEM-018, ADR 0265), scenario counts over several kingdoms as one total (SCN-001), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), orders shown only while their condition holds (the quest order: HUD-029), the loan orders' hints tell what the tavern lends (TRADE-008), F4's scoreboard and clock (DIP-008), the chat screen (D_CHAT: everyone, allies, enemies or picked kingdoms with their stance; the cheat codes in single player: HUD-010, HUD-011), the menu screens' help ball and hints (LOCAL/HELP.INI: SHELL-026), the fished patch's blue selection and the selection view's kingdom, level and power (HUD-025, HUD-016), tests for the last untested magic rules (MAG-006, MAG-010, MAG-011, MAG-018), the trade window's source and destination markets (TRADE-002), the order target's blink as the original's (CTRL-017), map objects' own item properties (map.bin version 3, ADR 0264), the random map generator's items as the original's (ITEM-017, ADR 0264), a spell book's own pool and endless charges (ITEM-018, ADR 0265), scenario counts over several kingdoms as one total (SCN-001), no wait between spells but the mana and spells learned from books (MAG-025, ITEM-019; ADR 0266), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -290,6 +290,21 @@ the process decisions that have no ADR.
   * heroes inside the kingdom's buildings. Their entry selects the building, whose list shows them.
 
   The frame's held units carry hero and level. No hash changes.
+* **2026-10-23 — Casters wait only for mana; units learn spells from books (ADR 0266; MAG-025, ITEM-019).** ReTzar
+  reads no wait between a caster's spells but its mana (0x4e1c30), so the classic spells lose their UNVERIFIED
+  cooldowns (1.5–5 s). The field stays for other rulesets.
+
+  A book used with no target teaches its spell to a holder with a mana pool that does not know it, and is used up
+  (0x4640f0). In Tzar2 that is Ctrl + click on the book in the inventory. The spell joins a lone unit's card (0x4e3fb0)
+  and still needs its research.
+  * New store `game.learned`, a 64-spell mask: hashed layout 18, snapshot 20.
+  * Every golden, the trigger mission and the CI bench hashes are re-pinned.
+  * The origin spell test now orders only idle casters and keeps them alive: without waits, confused knights reached
+    them.
+
+  Open:
+  * a caster short of mana should wait for it rather than refuse (0x4e1c30, the maximum raised to the cost);
+  * the computer's units learning and using the books they pick up (0x464280).
 * **2026-10-23 — The paused agent's open work landed; STATUS consolidated.** The maintainer agent paused with ten open
   PRs and three branches without one. Claude merged each with `main` and moved the STATUS edits into this update. It
   re-measured the golden pins where two PRs met:

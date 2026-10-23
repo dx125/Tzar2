@@ -183,11 +183,68 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-019")]
+    public void A_unit_with_mana_learns_a_books_spell_and_casts_it_as_its_own()
+    {
+        // ReTzar 0x4640f0: a book used with no target teaches its spell to a holder with a mana pool that does not know it;
+        // the book is used up. The spell then costs the unit's own mana and needs the same research.
+        using var d = new SimDriver(
+            TestMap(32, 12, Unit("euro.mage", 0, 4, 4), Item("comm.item_magic", 5, 4), Unit("euro.footman", 0, 4, 8), Item("comm.item_magic", 5, 8), Unit("euro.footman", 1, 10, 4)),
+            ruleset: Classic);
+        Ruleset rules = d.World.Ruleset;
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId footman = OfType(d.World, "euro.footman", 0).Single();
+        EntityId enemy = OfType(d.World, "euro.footman", 1).Single();
+        EntityId[] books = [.. OfType(d.World, "comm.item_magic").OrderBy(b => d.World.Positions.Get(b).Y)];
+        EntityTraits traits = d.World.TypeOf(mage).Traits;
+        int spell = Enumerable.Range(0, rules.Spells.Count).First(s => !traits.CanCast((ushort)s) && rules.Spells[s].Target == SpellTarget.Unit
+            && rules.Spells[s].Effect != SpellEffect.Heal);
+        int gate = rules.OrderTechnology(rules.Spells[spell].Key, "euro");
+        if (gate >= 0)
+        {
+            Grant(d.World, 0, rules.Technologies[gate].Key);
+        }
+
+        d.Order(1, CommandKind.SetStance, [enemy], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.SetStance, [mage, footman], arg0: (int)CombatStance.HoldFire);
+        foreach (EntityId b in books)
+        {
+            d.World.Items.Get(b).Spell = (ushort)(spell + 1);
+        }
+
+        Pick(d, mage, books[0]);
+        Pick(d, footman, books[1]);
+        int rejected = d.Rejections().Count;
+        d.Order(0, CommandKind.CastSpell, [mage], target: enemy, arg0: spell);
+        d.Step();
+        Assert.Equal(rejected + 1, d.Rejections().Count); // not yet its spell
+
+        d.Order(0, CommandKind.UseItem, [mage], target: mage, arg0: 0, arg1: 1);
+        d.Step();
+        Assert.True(d.World.HasLearned(mage, spell));
+        Assert.False(d.World.Entities.IsAlive(books[0])); // used up, whatever its charges
+        Assert.Equal(spell, Of(d, SimEventKind.ItemUsed).Last().Y);
+
+        d.World.Manas.Get(mage).MilliMana = 90_000;
+        d.Order(0, CommandKind.CastSpell, [mage], target: enemy, arg0: spell);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 400);
+        Assert.Equal(1, d.Count(SimEventKind.SpellCast));
+        Assert.True(d.World.Manas.Get(mage).MilliMana < 90_000); // its own mana
+
+        // A unit without a mana pool cannot learn; a unit that knows the spell already cannot learn it again.
+        rejected = d.Rejections().Count;
+        d.Order(0, CommandKind.UseItem, [footman], target: footman, arg0: 0, arg1: 1);
+        d.Step();
+        Assert.Equal(rejected + 1, d.Rejections().Count);
+        Assert.True(d.World.Entities.IsAlive(books[1]));
+    }
+
+    [Fact]
     [Trait("Rule", "ITEM-018")]
     public void A_map_book_may_never_run_out_and_waits_its_own_pool()
     {
         // ADR 0265: a book without limited charges is endless; one that needs mana waits its own pool (6 s here) instead of
-        // the type's 10 s. The caster still waits the spell's own recast (fire rain 5 s, Tzar2's UNVERIFIED value).
+        // the type's 10 s. The caster itself waits for nothing (no spell has a cooldown, ADR 0266).
         using var d = new SimDriver(TestMap(32, 16, Unit("euro.footman", 0, 4, 4), Item("comm.item_magic", 5, 4)), ruleset: Classic);
         EntityId footman = OfType(d.World, "euro.footman").Single();
         EntityId book = OfType(d.World, "comm.item_magic").Single();
@@ -203,7 +260,7 @@ public class ItemTests
             d.Order(0, CommandKind.UseItem, [footman], (12 * Tile) + use, 8 * Tile, arg0: 0);
             d.RunUntil(() => d.Count(SimEventKind.SpellCast) == use + 1, 400);
             Assert.Equal(use + 1, d.Count(SimEventKind.SpellCast));
-            d.RunUntil(() => false, 5_500 / tickMs); // past the spell's recast, not yet the pool
+            d.RunUntil(() => false, 5_500 / tickMs); // not yet the pool
             int rejected = NotReady();
             d.Order(0, CommandKind.UseItem, [footman], 12 * Tile, 8 * Tile, arg0: 0);
             d.Step();
@@ -214,13 +271,12 @@ public class ItemTests
         Assert.True(d.World.Entities.IsAlive(book)); // never used up
         Assert.Equal(charges, d.World.Items.Get(book).Charges);
 
-        // An own pool of 0 (the record does not need mana): only the spell's recast, never the type's 10 s.
+        // An own pool of 0 (the record does not need mana): no wait at all, never the type's 10 s.
         d.World.Items.Get(book).CooldownMs = 0;
         d.RunUntil(() => false, 6_000 / tickMs);
         int casts = d.Count(SimEventKind.SpellCast);
         d.Order(0, CommandKind.UseItem, [footman], 12 * Tile, 8 * Tile, arg0: 0);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == casts + 1, 400);
-        d.RunUntil(() => false, 5_500 / tickMs);
         int before = NotReady();
         d.Order(0, CommandKind.UseItem, [footman], 13 * Tile, 8 * Tile, arg0: 0);
         d.Step();

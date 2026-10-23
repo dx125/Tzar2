@@ -167,6 +167,39 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "ITEM-019")]
+    public void A_spell_learned_from_a_book_joins_a_lone_units_card()
+    {
+        World world = _session.Simulation.World;
+        EntityId footman = Own("euro.footman");
+        Position at = world.Positions.Get(footman);
+        EntityId mage = world.Spawn((ushort)Rules.Value.EntityTypeId("euro.mage"), 0, at.X + 4096, at.Y);
+        EntityTraits traits = world.TypeOf(mage).Traits;
+        int spell = Enumerable.Range(0, Rules.Value.Spells.Count).First(s => !traits.CanCast((ushort)s));
+        string key = Rules.Value.Spells[spell].Key;
+        EntityId book = world.Spawn((ushort)Rules.Value.EntityTypeId("comm.item_magic"), 255, at.X + 6144, at.Y);
+        world.Items.Get(book).Spell = (ushort)(spell + 1);
+        var pick = new CommandList();
+        pick.Add(CommandKind.PickItem, [mage], target: book);
+        _session.Submit(pick);
+        for (int i = 0; i < 400 && !world.Helds.Has(book); i++)
+        {
+            _session.Step(1);
+        }
+
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        _cards.Menus["e_mage"] = [];
+        Assert.True(card.ToggleInventory(Context([mage])));
+        _session.Submit(card.Press(Context([mage]), card.Build(Context([mage]))[0]!.Value, ctrl: true).Commands!);
+        _session.Step(2);
+        Assert.True(world.HasLearned(mage, spell));
+        card.ToggleInventory(Context([mage]));
+
+        Assert.Contains(card.Build(Context([mage])), s => s is { } slot && slot.Button.Order == key && slot.Enabled);
+        Assert.DoesNotContain(card.Build(Context([mage, footman])), s => s is { } slot && slot.Button.Order == key); // a lone unit's own card only
+    }
+
+    [Fact]
     [Trait("Rule", "HUD-017")]
     [Trait("Rule", "HUD-018")]
     public void The_eye_opens_the_carriers_inventory_where_clicks_use_drop_or_make_the_default_item()
@@ -211,7 +244,9 @@ public sealed class CommandCardTests : IDisposable
         PlannedCommand planned = OrderResolver.WithMode(OrderMode.UseItem, [SelectionTests.Unit(1, owner: 0)], null, 100, 100, KeyMods.None, 0, aim.ModeArgument).Single();
         Assert.Equal(1, planned.Arg0);
         Assert.Equal(-1, OrderResolver.WithMode(OrderMode.UseItem, [SelectionTests.Unit(1, owner: 0)], null, 100, 100, KeyMods.None, 0).Single().Arg0); // the card's use: the default item
-        Assert.Equal(CommandKind.UseItem, card.Press(Context([other, footman]), items[1]!.Value, ctrl: true).Commands![0].Kind);
+        Command learn = card.Press(Context([other, footman]), items[1]!.Value, ctrl: true).Commands![0];
+        Assert.Equal((CommandKind.UseItem, 1, 1), (learn.Kind, learn.Arg0, learn.Arg1)); // Ctrl: used with no target, it teaches its spell (ITEM-019)
+        Assert.StartsWith("Left click: cast it (Ctrl: learn the spell", items[1]!.Value.Description, StringComparison.Ordinal);
 
         Assert.Equal((CommandKind.DropItem, 1), (card.Press(Context([other, footman]), items[1]!.Value, right: true).Commands![0].Kind, card.Press(Context([other, footman]), items[1]!.Value, right: true).Commands![0].Arg0));
         _session.Submit(card.Press(Context([other, footman]), items[1]!.Value, alt: true).Commands!);
@@ -671,6 +706,8 @@ public sealed class CommandCardTests : IDisposable
         public string? KingdomMenu(bool aiAssist) => aiAssist ? "kingdom_ai" : "kingdom";
 
         public IReadOnlyList<CardButton> AbilityButtons(string ability) => ability == "impersonate" ? Card("spy_add") : [];
+
+        public CardButton? OrderButton(string order) => rules.SpellId(order) >= 0 ? new CardButton(order, '\0', CardAction.Spell, order, 7, order) : null;
 
         public string? MenuVariant(string? menu, string state) => menu is not null && Menus.ContainsKey(menu + "_" + state) ? menu + "_" + state : null;
 
