@@ -80,8 +80,8 @@ rules:
   CTRL-017:
     rule: An order on an object (a building to enter, repair or attack) is confirmed by an animation around the object.
     source: [owner 2026-10-20 (third play-test)]
-    status: partial
-    note: Tzar2 blinks the object's selection corners three times; which animation the original plays is not identified.
+    status: tested
+    note: As ReTzar reads the original (0x5008c0, 0x502a3b, 0x4f2528) the target shows a one-pixel frame one pixel inside its selection, on at 0, 200 and 400 ms for 100 ms each; red for an attack, a capture and the card's orders, blue for a guard, green for the other right clicks.
     adr: [0179]
   CTRL-018:
     rule: The ghost of a building being placed has no fill and wears the kingdom's colours; only the cells that block it turn red.

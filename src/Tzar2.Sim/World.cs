@@ -682,7 +682,7 @@ public sealed partial class World
                 ? PlaceStructure(typeId, o.Owner, o.X / MapState.UnitsPerTile, o.Y / MapState.UnitsPerTile, rotated: (o.Flags & MapObjectFlags.Rotated) != 0, mirrored: (o.Flags & MapObjectFlags.Mirrored) != 0)
                 : Spawn(typeId, o.Owner, o.X, o.Y);
             _mapObjectEntities[objectIndex++] = placed;
-            if (o.HasExtras)
+            if (o.HasExtras || o.Item is not null)
             {
                 ApplyMapObjectExtras(placed, o);
             }
@@ -726,6 +726,33 @@ public sealed partial class World
         if (o.Amount > 0 && ResourceStocks.Has(entity))
         {
             ResourceStocks.Get(entity).Amount = o.Amount;
+        }
+
+        // An item's own properties (ADR 0264), set as the magic workshop sets a crafted item's (ITEM-016); unknown keys
+        // keep the type's spell or image.
+        if (o.Item is { } mi && Items.Has(entity) && TypeOf(entity).Traits.Item is { } def)
+        {
+            ref ItemState item = ref Items.Get(entity);
+            item.Effect = mi.Effect;
+            if (mi.Power > 0)
+            {
+                item.Power = mi.Power;
+            }
+
+            if (mi.Charges > 0)
+            {
+                item.Charges = mi.Charges;
+            }
+
+            if (mi.Spell.Length > 0 && Ruleset.SpellId(mi.Spell) is >= 0 and var spell)
+            {
+                item.Spell = (ushort)(spell + 1);
+            }
+
+            if (mi.Look.Length > 0 && def.Looks.IndexOf(mi.Look) is >= 0 and var look)
+            {
+                item.Look = (byte)(look + 1);
+            }
         }
     }
 
