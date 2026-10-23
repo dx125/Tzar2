@@ -37,13 +37,15 @@ rules:
     source: [manual Common Buildings]
     status: tested
   WAR-009:
-    rule: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it.
-    source: [guide Unit Discussion]
-    status: missing
+    rule: A ghost may let out a banshee scream that lowers the attack and defence of the enemies around it. After each blow, in 71 draws of 1001, it casts a free curse on the enemy units within its sight; the curse halves their attack and takes all their defence for 30 s, and leaves out golems, siege engines, carpets, ships, ghosts, skeletons and fishing boats.
+    source: [guide Unit Discussion, 'community ReTzar src/gameplay.rs (0x4ee780, 0x4e5841, 0x2719)']
+    status: tested
+    adr: [0250]
   WAR-010:
-    rule: The Messiah (campaign) is immune to magic.
-    source: [guide Campaign Discussion (Mission 18)]
-    status: missing
+    rule: The Messiah (campaign) is immune to magic. Freeze, turn to stone, confusion, hypnosis and the curse do not take on it, and magic deals it no damage, spells and souls or the attacks of mages, dragons, priests and the Messiah.
+    source: [guide Campaign Discussion (Mission 18), 'community ReTzar src/gameplay.rs (0x4ef200, apply_damage category 3)']
+    status: tested
+    adr: [0250, 0255]
   WAR-011:
     rule: Units with a bonus against other kinds, as listed in the guide, (footmen against pikemen, archers and jihad warriors; orcs against hand-to-hand units; ronin against peasants; satraps and samurai against machines; warships against warships; cannon and rocket towers against warships) get it from the bonus table.
     source: [guide Unit Discussion, data BONUS.INI]

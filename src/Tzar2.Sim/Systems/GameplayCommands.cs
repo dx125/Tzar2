@@ -476,6 +476,23 @@ internal static class GameplayCommands
         return queued > 0 ? null : reason;
     }
 
+    /// <summary>
+    /// The share of its cost a cancelled site gives back (BLD-020; ReTzar's reading of the original, 0x41d6a8): all of
+    /// <paramref name="full"/> before any work, then <c>f = (1000 T - 1000 p) / (2 T)</c> per mille of it, truncated: half
+    /// of what is left to build.
+    /// </summary>
+    internal static int SiteRefundBasisPoints(int full, int totalMs, int progressMs)
+    {
+        if (progressMs <= 0 || totalMs <= 0)
+        {
+            return full;
+        }
+
+        long t = totalMs;
+        long f = Math.Max(0, ((1000 * t) - (1000L * Math.Min(progressMs, totalMs))) / (2 * t));
+        return (int)(full * f / 1000);
+    }
+
     public static CommandRejection? Cancel(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         int cancelled = 0;
@@ -489,7 +506,9 @@ internal static class GameplayCommands
             if (world.Constructions.Has(entity))
             {
                 ushort typeId = world.Identities.Get(entity).TypeId;
-                ResearchRules.RefundFor(world, command.Player, world.Ruleset.EntityTypes[typeId], world.Constructions.Get(entity).Paid, world.Ruleset.Gameplay.ConstructionRefundBasisPoints);
+                Construction site = world.Constructions.Get(entity);
+                int share = SiteRefundBasisPoints(world.Ruleset.Gameplay.ConstructionRefundBasisPoints, site.TotalMs, site.ProgressMs);
+                ResearchRules.RefundFor(world, command.Player, world.Ruleset.EntityTypes[typeId], site.Paid, share);
                 world.Events.Emit(new SimEvent(SimEventKind.ConstructionCancelled, command.Player, entity, 0, 0, typeId));
                 world.Destroy(entity);
                 cancelled++;

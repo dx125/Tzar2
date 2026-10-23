@@ -76,19 +76,20 @@ rules:
   SHELL-016:
     rule: In the multiplayer setup each player has a ready flag (red or green), a colour, an AI script, a civilization and a team; settings can only change while not ready; there is a chat; only the creator has PLAY, active when everyone is ready.
     source: [manual Multiplayer Setup Screen]
-    status: partial
-    note: The colour and the AI script cannot be chosen.
-    adr: [0168]
+    status: tested
+    note: The AI script is the strategy of the kingdom's computer player (the standby AI of a player, ADR 0163), from AI.INI. Two wishes for one colour go to the lower slot (ADR 0232).
+    adr: [0168, 0232]
   SHELL-017:
     rule: Only the player himself chooses his AI script in the multiplayer screen, and every player is told when the host changes one.
     source: [patch 1.05 (TZAR110.TXT)]
-    status: missing
+    status: tested
+    adr: [0232]
   SHELL-018:
     rule: The multiplayer settings choose a random or a custom map, the random map's options, the game type, the difficulty, the victory condition, the starting resources, No Fog, Explore, the population limit, and day and night and weather; with MAP SETTINGS only No Fog, Explore, day and night and weather can change.
     source: [manual Multiplayer Settings Screen]
-    status: partial
-    note: The game type, the victory condition and the random map's resources and options cannot be set.
-    adr: [0168]
+    status: tested
+    note: The difficulty is set per computer slot. A custom map is not sent; every player needs his own copy, found by its content hash (ADR 0233). The game types are Standard and Deathmatch (TDD); the multiplayer strings' King of the Hill and Capture the Flag are out of scope (decided 2026-10-22).
+    adr: [0168, 0232, 0233]
   SHELL-019:
     rule: The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears.
     source: [manual Preferences Screen]
