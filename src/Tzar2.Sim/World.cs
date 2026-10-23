@@ -880,7 +880,7 @@ public sealed partial class World
                 }
             }
 
-            if (player.Reserved != 0 || player.Crusaders > Ruleset.Combat.CrusadeCeilingMax + Ruleset.Combat.CrusadeStart || player.Civilization < 0 || (player.Civilization >= Ruleset.Civilizations.Count && player.Civilization != 0))
+            if (player.KungFuPool >= Ruleset.Combat.TournamentEvery || player.Crusaders > Ruleset.Combat.CrusadeCeilingMax + Ruleset.Combat.CrusadeStart || player.Civilization < 0 || (player.Civilization >= Ruleset.Civilizations.Count && player.Civilization != 0))
             {
                 throw Invalid("invalid civilization");
             }

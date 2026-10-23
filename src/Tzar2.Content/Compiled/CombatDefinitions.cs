@@ -495,6 +495,22 @@ public sealed record CombatSettings
     /// <summary>The range of the banshee scream's draw.</summary>
     public int BansheeOutOf { get; init; } = 1001;
 
+    /// <summary>
+    /// Tournaments (TECH-029; ReTzar's reading of the original, 0x4de900): the technology, or -1. A kingdom that has it
+    /// pools the experience its units learn; each time the pool reaches <see cref="TournamentEvery"/> it empties and
+    /// every <see cref="TournamentPupils"/> unit of the kingdom learns <see cref="TournamentGrant"/>.
+    /// </summary>
+    public int TournamentTechnology { get; init; } = -1;
+
+    /// <summary>Tournaments: the pool that teaches the pupils (75).</summary>
+    public int TournamentEvery { get; init; } = 75;
+
+    /// <summary>Tournaments: what each pupil learns when the pool is full (1).</summary>
+    public int TournamentGrant { get; init; } = 1;
+
+    /// <summary>Tournaments: the types it teaches (Asian peasants, monks, ninjas and priests), ascending.</summary>
+    public ImmutableArray<ushort> TournamentPupils { get; init; } = [];
+
 
     /// <summary>Hero names per civilization (<c>HEROES.INI</c>).</summary>
     public ImmutableArray<HeroNames> HeroNames { get; init; } = [];
@@ -547,6 +563,19 @@ public sealed record CombatSettings
         Check(CrusadeAnchorRadiusUnits, 0, 64 * 2048);
         Check(BansheeOutOf, 1, 1_000_000);
         Check(BansheeChance, 0, BansheeOutOf);
+        Check(TournamentTechnology, -1, technologies - 1);
+        Check(TournamentEvery, 1, 255);
+        Check(TournamentGrant, 0, 1_000_000);
+        if (TournamentPupils.IsDefault)
+        {
+            throw new ArgumentException("combat: the tournament pupils must not be default.");
+        }
+
+        foreach (ushort pupil in TournamentPupils)
+        {
+            Check(pupil, 0, typeCount - 1);
+        }
+
         if (HeroNames.IsDefault)
         {
             throw new ArgumentException("combat: hero names must not be default.");
