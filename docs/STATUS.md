@@ -247,6 +247,9 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       * 2026-10-23: the worker pool waits for the jobs, not for the helpers it woke (ADR 0214). On the CI macOS runner
         under contention, the median fork had waited a 10 ms slice for idle helpers.
       * 2026-10-23: a test checks that the relay and the clients hand their ping interval to LiteNetLib (ADR 0231).
+      * 2026-10-23: `legacy.referenceDataHash` re-pinned to 7F4CCBEEEC76AD36, the value main has produced since #139: #168
+        moved it unpinned and #133/#139 pinned values measured on stale branches. Import tests with `TZAR2_ORIGIN` pass;
+        importer PRs now run them after merging main (DEVELOPMENT.md, AGENTS.md).
 
 ## Decision and event log
 
