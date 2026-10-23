@@ -529,9 +529,7 @@ te_heroism: { Technology: { effects: [{ stat: experienceCap, add: 1000, category
 # te_nobility (Leadership) and te_honor act through combat.leadership* / combat.honor* (GAME-08, ADR 0092).
 # Warfare, Tactics and Sun Tzu set the experience a level needs to 70, 50 and 35 % (ReTzar, 0x4d33d0); they come in
 # that order, so as gains they add up to 1/0.7, 1/0.5 and 1/0.35 (ADR 0191).
-te_warfare: { Technology: { effects: [{ stat: experienceGain, percent: 43, category: unit }] } }
-te_tactics: { Technology: { effects: [{ stat: experienceGain, percent: 57, category: unit }] } }
-te_suntzubook: { Technology: { effects: [{ stat: experienceGain, percent: 86, category: unit }] } }
+# Warfare, Tactics and Sun Tzu set the experience speed (combat.experienceSpeeds).
 te_bodybuilding: { Technology: { effects: [{ stat: healthPerLevel, add: 5, category: unit }] } }     # UNVERIFIED (UNK-23)
 te_philosophy: { Technology: { effects: [{ stat: startingLevel, add: 2, classes: [monk, priest] }] } }   # ReTzar: monks and priests start at level 2 (ADR 0191)
 te_landingtactics: { Technology: { effects: [{ stat: holderCapacity, percent: 50, groups: [ships] }] } } # help HT_USE_SHIPS: 50 % more units
@@ -562,9 +560,16 @@ combat:
   # GAME-08 experience. Manual (ch. 6 Hints): "each experience point adds one point to the attack and half a point to the
   # defense"; strategy guide: "as each experience level is earned, the next level requires more effort" and
   # "Researching Learning allows your units to gain experience" (so no levels before Learning).
-  experiencePerDamagePercent: 100     # UNVERIFIED (UNK-23): experience per point of damage dealt to an enemy
-  experiencePerKill: 0                # UNVERIFIED (UNK-23)
-  levelBaseXp: 100                    # UNVERIFIED (UNK-23): level n needs 100 x n x (n + 1) / 2 experience
+  # Experience (ReTzar's reading of the original, 0x5022e0, 0x504f20, 0x4481e0, 0x401850): a kill gives one point (none for
+  # damage); the first point gives level 1 and level k needs k more for the next (Warfare, Tactics and Sun Tzu make it
+  # cheaper: experienceGain); a dummy gives a point for every 75 of damage, up to level 8; each academy adds 10 to the cap.
+  experiencePerDamagePercent: 0
+  experiencePerKill: 1
+  levelBaseXp: 1
+  dummyDamagePerPoint: 75
+  experienceSpeeds: { te_warfare: 70, te_tactics: 50, te_suntzubook: 35 }
+  levelCapBuildings: { classes: [academy] }
+  levelCapPerBuilding: 10
   baseLevelCap: 0                     # strategy guide: Learning allows experience; te_learning / te_heroism raise the cap
   attackPerLevel: 1                   # manual
   defenceHalvesPerLevel: 1            # manual: half a point per level (truncated: UNVERIFIED rounding, UNK-08)
@@ -574,7 +579,7 @@ combat:
   leadershipSharePercent: 100         # ReTzar: the whole of it (ADR 0191)
   honorTechnology: te_honor           # manual: Honor "increases the attack damage of heroes, when fighting other heroes"
   honorAttackPercent: 50              # ReTzar: +50 % hero against hero (ADR 0191)
-  dummyMaxLevel: 3                    # UNVERIFIED (UNK-23): training dummies teach the first levels only
+  dummyMaxLevel: 8                    # ReTzar (0x4df884): training on the dummy ends at level 8
   heroNames: legacy                   # DATA/HEROES.INI
   # GAME-09 holders.
   exitRadiusTiles: 3                  # UNVERIFIED: units leaving a holder take free tiles this close
@@ -658,8 +663,8 @@ spell_turntostone: { new: true, Spell: { effect: stone, durationMs: 15000, mana:
 spell_berserk: { new: true, Spell: { effect: confuse, durationMs: 20000, mana: 50, range: 8, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
 spell_magicvision: { new: true, Spell: { effect: reveal, summon: comm.fog_revealer, mana: 40, range: 30, cooldownMs: 5000, castMs: 500 } }
 # Mastery (TECH-028; ReTzar's reading of the original, 0x473bf0): an Asian priest teaches an Asian peasant, monk, ninja or
-# priest of a lower level than its own one point of experience (100 here, a level's worth: UNVERIFIED, UNK-23).
-spell_raiseexp: { new: true, Spell: { effect: experience, amount: 100, mana: 50, range: 6, cooldownMs: 3000, castMs: 500, targets: { civ: asia, classes: [peon, monk, ninja, priest] } } }
+# priest of a lower level than its own one point of experience; range 1 and mana 10 (0x4721e0, 0x4723e0).
+spell_raiseexp: { new: true, Spell: { effect: experience, amount: 1, mana: 10, range: 1, cooldownMs: 3000, castMs: 500, targets: { civ: asia, classes: [peon, monk, ninja, priest] } } }
 # The curse and hypnosis (ReTzar's reading of the original, 0x4e5841, 0x473887): the curse halves the attack and takes the
 # defence of every enemy unit within the caster's sight of the point for 30 s; hypnosis hands the unit to the caster's
 # kingdom for 30 s. The curse leaves out what the original calls machines (0x2719: golems, siege engines, carpets, ships,

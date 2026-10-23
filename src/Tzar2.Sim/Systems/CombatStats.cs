@@ -105,14 +105,78 @@ internal static class CombatStats
         return value * Math.Max(0, percent) / 100;
     }
 
-    /// <summary>Experience needed for level <paramref name="level"/>: <c>base × n × (n + 1) / 2</c> (each level costs more).</summary>
-    public static int XpForLevel(CombatSettings settings, int level)
-        => (int)Math.Min((long)settings.LevelBaseXp * level * (level + 1) / 2, int.MaxValue);
+    /// <summary>
+    /// Experience needed for level <paramref name="level"/> (ReTzar's reading of the original, 0x5022e0): the first point
+    /// gives level 1, and level <c>k</c> needs <c>base × k</c> more for the next, so <c>1 + base × n × (n − 1) / 2</c> in all.
+    /// </summary>
+    public static int XpForLevel(CombatSettings settings, int level) => XpForLevel(settings, level, 100);
 
-    /// <summary>The highest level a unit may reach (base cap plus Learning, Heroism...).</summary>
+    /// <summary>
+    /// Experience needed for level <paramref name="level"/> at an experience speed of <paramref name="speedPercent"/>
+    /// (ReTzar's reading of the original, 0x5022e0): level <c>k</c> costs <c>max(1, base × speed × k / 100)</c> points, the
+    /// first point giving level 1.
+    /// </summary>
+    public static int XpForLevel(CombatSettings settings, int level, int speedPercent)
+    {
+        if (speedPercent == 100)
+        {
+            return level <= 0 ? 0 : (int)Math.Min(1 + ((long)settings.LevelBaseXp * level * (level - 1) / 2), int.MaxValue);
+        }
+
+        long total = 0;
+        for (int k = 0; k < Math.Min(level, 100_000) && total < int.MaxValue; k++)
+        {
+            total += Math.Max(1, (long)settings.LevelBaseXp * speedPercent * k / 100);
+        }
+
+        return (int)Math.Min(total, int.MaxValue);
+    }
+
+    /// <summary>Experience needed for <paramref name="entity"/> to reach <paramref name="level"/> at its kingdom's speed.</summary>
+    public static int XpForLevel(World world, EntityId entity, int level)
+        => XpForLevel(world.Ruleset.Combat, level, ExperienceSpeed(world, world.Identities.Get(entity).Owner));
+
+    /// <summary>The kingdom's experience speed: the lowest its technologies give, 100 without (Warfare, Tactics, Sun Tzu).</summary>
+    public static int ExperienceSpeed(World world, byte owner)
+    {
+        int speed = 100;
+        if (world.HasPlayer(owner))
+        {
+            foreach (ExperienceSpeed s in world.Ruleset.Combat.ExperienceSpeeds)
+            {
+                if (world.Players[owner].HasTechnology(s.Technology))
+                {
+                    speed = Math.Min(speed, s.Percent);
+                }
+            }
+        }
+
+        return speed;
+    }
+
+    /// <summary>
+    /// The highest level a unit may reach: the base cap plus Learning and Heroism, plus <c>levelCapPerBuilding</c> for each
+    /// finished academy of its kingdom (ReTzar's reading of the original, 0x401850).
+    /// </summary>
     public static int LevelCap(World world, EntityId entity)
     {
         Identity identity = world.Identities.Get(entity);
-        return Math.Max(0, world.Stats.Apply(identity.Owner, ModifierStat.ExperienceCap, identity.TypeId, world.Ruleset.Combat.BaseLevelCap));
+        CombatSettings c = world.Ruleset.Combat;
+        long buildings = 0;
+        if (c.LevelCapPerBuilding > 0 && !c.LevelCapBuildings.IsDefaultOrEmpty)
+        {
+            ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+            for (int i = 0; i < structures.Length; i++)
+            {
+                Identity s = world.Identities.Get(structures[i]);
+                if (s.Owner == identity.Owner && c.LevelCapBuildings.AsSpan().BinarySearch(s.TypeId) >= 0 && !world.Constructions.Has(structures[i]))
+                {
+                    buildings++;
+                }
+            }
+        }
+
+        long cap = world.Stats.Apply(identity.Owner, ModifierStat.ExperienceCap, identity.TypeId, c.BaseLevelCap) + (buildings * c.LevelCapPerBuilding);
+        return (int)Math.Clamp(cap, 0, 100_000);
     }
 }

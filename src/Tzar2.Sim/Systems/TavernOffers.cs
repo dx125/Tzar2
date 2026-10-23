@@ -175,7 +175,7 @@ public static class TavernOffers
         if (xp.Level < offer.Level)
         {
             xp.Level = (ushort)Math.Min(offer.Level, ushort.MaxValue);
-            xp.Xp = Math.Max(xp.Xp, CombatStats.XpForLevel(world.Ruleset.Combat, offer.Level));
+            xp.Xp = Math.Max(xp.Xp, CombatStats.XpForLevel(world, unit, offer.Level));
         }
 
         Identity identity = world.Identities.Get(unit);

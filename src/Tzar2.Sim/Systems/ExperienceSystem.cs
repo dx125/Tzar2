@@ -146,11 +146,12 @@ public sealed class ExperienceSystem : ISimSystem
     {
         ref Experience x = ref world.Experiences.At(index);
         int cap = CombatStats.LevelCap(world, unit);
-        int ceiling = CombatStats.XpForLevel(settings, Math.Min(cap, 100_000));
+        int speed = CombatStats.ExperienceSpeed(world, world.Identities.Get(unit).Owner);
+        int ceiling = CombatStats.XpForLevel(settings, Math.Min(cap, 100_000), speed);
         x.Xp = (int)Math.Min(Math.Min((long)x.Xp + x.PendingXp, ceiling), int.MaxValue);
         x.PendingXp = 0;
         int level = x.Level;
-        while (level < cap && level < 10_000 && x.Xp >= CombatStats.XpForLevel(settings, level + 1))
+        while (level < cap && level < 10_000 && x.Xp >= CombatStats.XpForLevel(settings, level + 1, speed))
         {
             level++;
         }

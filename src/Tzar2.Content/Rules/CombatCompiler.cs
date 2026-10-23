@@ -26,7 +26,7 @@ internal sealed class CombatCompiler
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
-        "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell",
+        "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell", "dummyDamagePerPoint", "experienceSpeeds", "levelCapBuildings", "levelCapPerBuilding",
     ];
 
     private static readonly string[] SpellTraits = ["Legacy", "Spell"];
@@ -145,7 +145,7 @@ internal sealed class CombatCompiler
             spells.Add(CompileSpell((ushort)i, _spellEntries[i], types, research));
         }
 
-        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells) }, spells, _projectiles);
+        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), LevelCapBuildings = Filter(research, "levelCapBuildings"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells) }, spells, _projectiles);
     }
 
     private static EntityTypeDefinition WithTraits(EntityTypeDefinition t, EntityTraits traits)
@@ -314,6 +314,9 @@ internal sealed class CombatCompiler
             BansheeChance = Range("bansheeChance", d.BansheeChance, 0, bansheeOutOf),
             BansheeOutOf = bansheeOutOf,
             TournamentTechnology = Technology("tournamentTechnology", research),
+            DummyDamagePerPoint = Range("dummyDamagePerPoint", d.DummyDamagePerPoint, 1, 1_000_000),
+            ExperienceSpeeds = Speeds(research),
+            LevelCapPerBuilding = Range("levelCapPerBuilding", d.LevelCapPerBuilding, 0, 10_000),
             TournamentEvery = Range("tournamentEvery", d.TournamentEvery, 1, 255),
             TournamentGrant = Range("tournamentGrant", d.TournamentGrant, 0, 1_000_000),
         };
@@ -513,6 +516,32 @@ internal sealed class CombatCompiler
 
         string source = _settings.FieldSource(Section, field);
         return research.Filter("combat." + field, RulesetCompiler.Map(node, source, "combat." + field), source);
+    }
+
+    // combat.experienceSpeeds: { technology: percent }, in file order.
+    private ImmutableArray<ExperienceSpeed> Speeds(ResearchIds research)
+    {
+        if (_settings.Field(Section, "experienceSpeeds") is not { } node)
+        {
+            return [];
+        }
+
+        string source = _settings.FieldSource(Section, "experienceSpeeds");
+        var list = new List<ExperienceSpeed>();
+        foreach (KeyValuePair<string, YamlNode> e in RulesetCompiler.Map(node, source, "combat.experienceSpeeds").Entries)
+        {
+            int percent = RulesetCompiler.Int(e.Value, source, "combat.experienceSpeeds." + e.Key);
+            if (research.Technology(e.Key) is { } id)
+            {
+                list.Add(new ExperienceSpeed(id, percent is >= 1 and <= 1000 ? percent : throw new RulesException(source, e.Value.Line, $"combat.experienceSpeeds.{e.Key} must be 1..1000")));
+            }
+            else
+            {
+                _diagnostics.Add($"combat.experienceSpeeds: unknown technology '{e.Key}'");
+            }
+        }
+
+        return [.. list];
     }
 
     private int SpellOf(string field, List<SpellDefinition> spells)

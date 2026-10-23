@@ -95,8 +95,8 @@ rules:
     rule: Warfare, Tactics and Sun Tzu's Book (Asians) make units learn faster.
     source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: A level needs 70, 50 and 35 % of the experience (here as gains of 43, 57 and 86 % that add up).
-    adr: [0191]
+    note: A level needs 70, 50 and 35 % of the points; each needs the one before, and the kingdom has the lowest (combat.experienceSpeeds).
+    adr: [0191, 0258]
   TECH-018:
     rule: Body Building makes hit points grow as a unit gains experience.
     source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
