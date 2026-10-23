@@ -523,7 +523,7 @@ public static class MapGenValidator
     private static Dictionary<string, MapObjectRole> RoleLookup(MapGenCatalog catalog)
     {
         var roles = new Dictionary<string, MapObjectRole>(StringComparer.Ordinal);
-        for (MapObjectRole r = MapObjectRole.Castle; r <= MapObjectRole.GroundPatch; r++)
+        for (MapObjectRole r = MapObjectRole.Castle; (int)r < MapGenCatalog.RoleCount; r++)
         {
             if (catalog.Kind(r) is not { } kind)
             {
