@@ -39,8 +39,9 @@ rules:
     note: The time before the loan grows and any interest are placeholders (UNK-28).
   TRADE-008:
     rule: The amount the tavern will lend shows in the bottom left corner of the view.
-    source: [manual Getting A Loan]
-    status: missing
+    source: [manual Getting A Loan, 'strings STRINGS3.INI [misc] getloan3, retloan3']
+    status: tested
+    note: The loan orders' hints say it in the original's words, "Obtain loan 1000 of Gold" and "Return your loan - 1000 of Gold", with the limit a due raise included. Tzar2 shows hints in the order's tooltip box instead of the original's line at the bottom left of the view (HUD-001, the owner's choice).
   TRADE-009:
     rule: With Mercenaries the tavern hires small groups of soldiers, and with Heroes' Quest heroes; Fame brings more and better mercenaries, cheaper and more experienced; they gather in the tavern over time, of all races.
     source: [manual Researching Technologies, help ITEMS.TXT HT_REQRUIT]
