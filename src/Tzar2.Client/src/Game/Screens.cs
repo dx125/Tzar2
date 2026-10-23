@@ -39,6 +39,9 @@ public abstract partial class ArtScreen : Control
     private readonly ColorRect _backdrop;
     private readonly Vector2I _artSize;
 
+    /// <summary>The size of the background art (500 × 320 when it is missing).</summary>
+    protected Vector2I ArtSize => _artSize;
+
     /// <summary>The UI assets.</summary>
     protected UiAssets Ui { get; }
 
@@ -100,15 +103,18 @@ public abstract partial class ArtScreen : Control
         return button;
     }
 
-    /// <summary>A warning line (e.g. the AI fell back to the engine default), wrapped to the screen width.</summary>
-    protected void Notice(string? text, Vector2I at)
+    /// <summary>
+    /// A warning line (e.g. the AI fell back to the engine default), wrapped to <paramref name="width"/> (default: to the
+    /// screen's right edge), so it stays on its panel (UI-L5).
+    /// </summary>
+    protected void Notice(string? text, Vector2I at, int width = 0)
     {
         if (string.IsNullOrEmpty(text))
         {
             return;
         }
 
-        int max = Math.Max(200, (int)Size.X - Origin.X - at.X - 40);
+        int max = width > 0 ? width : Math.Max(200, (int)Size.X - Origin.X - at.X - 40);
         var line = new System.Text.StringBuilder();
         int y = 0;
         foreach (string word in text.Split(' '))
@@ -320,7 +326,7 @@ public partial class SkirmishSetupScreen : ArtScreen
         : base(ui, screen, "art/screens/s_singlernd/back.t2img")
     {
         _civilizations = SkirmishOptions.CivilizationsOf(catalog?.Ruleset);
-        Notice(notice, new Vector2I(66, 88));
+        Notice(notice, new Vector2I(66, 88), 470); // the left panel, x 66-536 of the art
         _options = options;
         _catalog = catalog;
         _preview = preview;
