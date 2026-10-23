@@ -30,15 +30,6 @@ public readonly record struct TavernOffer(ushort TypeId, int Count, int Level, b
 /// </remarks>
 public static class TavernOffers
 {
-    /// <summary>The Mercenaries technology key.</summary>
-    public const string MercenariesTechnology = "te_mercenaries";
-
-    /// <summary>The Heroes' Quest technology key.</summary>
-    public const string HeroesQuestTechnology = "te_heroesquest";
-
-    /// <summary>The Fame technology key.</summary>
-    public const string FameTechnology = "te_fame";
-
     /// <summary>The tavern period of <paramref name="tick"/>.</summary>
     public static int PeriodAt(World world, int tick)
     {
@@ -73,7 +64,7 @@ public static class TavernOffers
         ulong roll = SplitMix64.Mix(world.Config.MatchSeed ^ 0x7A7E_0000_0000_0000UL ^ ((ulong)player << 40) ^ ((ulong)period << 8) ^ (ulong)slot);
         ushort type = pool[(int)(roll % (ulong)pool.Length)];
         bool hero = slot >= w.MercenaryOffers;
-        bool fame = HasTechnology(world, player, FameTechnology);
+        bool fame = HasTechnology(world, player, world.Ruleset.World.FameTechnology);
         if (hero)
         {
             return new TavernOffer(type, 1, world.Ruleset.Combat.HeroLevel, true);
@@ -91,7 +82,7 @@ public static class TavernOffers
         WorldSettings w = world.Ruleset.World;
         EntityTypeDefinition type = world.Ruleset.EntityTypes[offer.TypeId];
         long percent = offer.IsHero ? w.HeroCostPercent
-            : (long)w.MercenaryCostPercent * (HasTechnology(world, player, FameTechnology) ? w.FameCostPercent : 100) / 100;
+            : (long)w.MercenaryCostPercent * (HasTechnology(world, player, w.FameTechnology) ? w.FameCostPercent : 100) / 100;
         into.Clear();
         for (int r = 0; r < type.Traits.Cost.Length && r < into.Length; r++)
         {
@@ -121,7 +112,7 @@ public static class TavernOffers
         }
 
         bool heroSlot = slot >= world.Ruleset.World.MercenaryOffers;
-        if (!HasTechnology(world, player, heroSlot ? HeroesQuestTechnology : MercenariesTechnology))
+        if (!HasTechnology(world, player, heroSlot ? world.Ruleset.World.HeroesTechnology : world.Ruleset.World.MercenariesTechnology))
         {
             return CommandRejection.RequirementNotMet;
         }
@@ -184,7 +175,7 @@ public static class TavernOffers
         if (xp.Level < offer.Level)
         {
             xp.Level = (ushort)Math.Min(offer.Level, ushort.MaxValue);
-            xp.Xp = Math.Max(xp.Xp, CombatStats.XpForLevel(world.Ruleset.Combat, offer.Level));
+            xp.Xp = Math.Max(xp.Xp, CombatStats.XpForLevel(world, unit, offer.Level));
         }
 
         Identity identity = world.Identities.Get(unit);

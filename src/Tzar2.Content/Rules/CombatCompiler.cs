@@ -26,6 +26,8 @@ internal sealed class CombatCompiler
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
+        "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell", "dummyDamagePerPoint", "experienceSpeeds", "levelCapBuildings", "levelCapPerBuilding",
+        "marketTechnology", "marketFirstMs", "marketEveryMs", "marketSize", "marketBuyPercent", "marketOffers", "marketBookSpells",
     ];
 
     private static readonly string[] SpellTraits = ["Legacy", "Spell"];
@@ -33,7 +35,7 @@ internal sealed class CombatCompiler
     private static readonly string[] SpellFields =
     [
         "effect", "target", "affects", "mana", "range", "cooldownMs", "castMs", "amount", "durationMs", "radius", "summon", "projectile",
-        "pulseMs", "count", "targets",
+        "pulseMs", "count", "targets", "bookValue", "durationMaxMs",
     ];
 
     private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire"];
@@ -144,7 +146,7 @@ internal sealed class CombatCompiler
             spells.Add(CompileSpell((ushort)i, _spellEntries[i], types, research));
         }
 
-        return new CombatRules(Settings(types, researchIds, legacy), spells, _projectiles);
+        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), LevelCapBuildings = Filter(research, "levelCapBuildings"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells), MarketOffers = Offers(types), MarketBookSpells = BookSpells(spells) }, spells, _projectiles);
     }
 
     private static EntityTypeDefinition WithTraits(EntityTypeDefinition t, EntityTraits traits)
@@ -163,7 +165,7 @@ internal sealed class CombatCompiler
                 LocomotorMask mask = LocomotorMask.None;
                 foreach (string loco in RulesDocument.StringList(k.Value, source, $"combat.unitKeywords.{k.Key}"))
                 {
-                    mask |= RulesetCompiler.ParseLocomotor(loco, source, k.Value.Line).ToMask();
+                    mask |= RulesetCompiler.ParseLocomotor(loco, source, k.Value.Line).Family();
                 }
 
                 map[k.Key] = mask;
@@ -262,9 +264,20 @@ internal sealed class CombatCompiler
         }
     }
 
-    private CombatSettings Settings(List<EntityTypeDefinition> types, ResearchIds research, LegacyTables? legacy)
+    private CombatSettings Settings(List<EntityTypeDefinition> types, ResearchIds research, LegacyTables? legacy, List<SpellDefinition> spells)
     {
         CombatSettings d = CombatSettings.Default;
+        int bansheeSpell = -1;
+        if (_settings.Scalar(Section, "bansheeSpell") is { } bansheeKey)
+        {
+            bansheeSpell = spells.FindIndex(s => s.Key == bansheeKey);
+            if (bansheeSpell < 0)
+            {
+                _diagnostics.Add($"combat.bansheeSpell: unknown spell '{bansheeKey}'");
+            }
+        }
+
+        int bansheeOutOf = Range("bansheeOutOf", d.BansheeOutOf, 1, 1_000_000);
         return d with
         {
             ExperiencePerDamagePercent = Range("experiencePerDamagePercent", d.ExperiencePerDamagePercent, 0, 100_000),
@@ -298,6 +311,20 @@ internal sealed class CombatCompiler
             CrusadeCeilingMax = Range("crusadeCeilingMax", d.CrusadeCeilingMax, 0, 1000),
             CrusadeAnchorRadiusUnits = Range("crusadeAnchorRadiusTiles", d.CrusadeAnchorRadiusUnits / UnitsPerTile, 0, 64) * UnitsPerTile,
             HeroNames = HeroNameLists(legacy),
+            BansheeSpell = bansheeSpell,
+            BansheeChance = Range("bansheeChance", d.BansheeChance, 0, bansheeOutOf),
+            BansheeOutOf = bansheeOutOf,
+            TournamentTechnology = Technology("tournamentTechnology", research),
+            DummyDamagePerPoint = Range("dummyDamagePerPoint", d.DummyDamagePerPoint, 1, 1_000_000),
+            MarketTechnology = Technology("marketTechnology", research),
+            MarketFirstMs = Range("marketFirstMs", d.MarketFirstMs, 0, 3_600_000),
+            MarketEveryMs = Range("marketEveryMs", d.MarketEveryMs, 1, 3_600_000),
+            MarketSize = Range("marketSize", d.MarketSize, 1, 8),
+            MarketBuyPercent = Range("marketBuyPercent", d.MarketBuyPercent, 0, 100_000),
+            ExperienceSpeeds = Speeds(research),
+            LevelCapPerBuilding = Range("levelCapPerBuilding", d.LevelCapPerBuilding, 0, 10_000),
+            TournamentEvery = Range("tournamentEvery", d.TournamentEvery, 1, 255),
+            TournamentGrant = Range("tournamentGrant", d.TournamentGrant, 0, 1_000_000),
         };
     }
 
@@ -400,6 +427,8 @@ internal sealed class CombatCompiler
             "areaDamage" => SpellEffect.AreaDamage,
             "curse" => SpellEffect.Curse,
             "kill" => SpellEffect.Kill,
+            "hypnotize" => SpellEffect.Hypnotize,
+            "soulBind" => SpellEffect.SoulBind,
             _ => throw new RulesException(spell.Source, spell.Line, $"{Where("effect")}: unknown effect '{effectText}'"),
         };
         SpellTarget target = (Str("target") ?? DefaultTarget(effect)) switch
@@ -443,7 +472,7 @@ internal sealed class CombatCompiler
             }
         }
 
-        if (effect is SpellEffect.Summon or SpellEffect.RaiseDead or SpellEffect.Reveal && summon < 0)
+        if (effect is SpellEffect.Summon or SpellEffect.RaiseDead or SpellEffect.Reveal or SpellEffect.SoulBind && summon < 0)
         {
             throw new RulesException(spell.Source, spell.Line, $"{e.Key}: a {effectText} spell needs Spell.summon");
         }
@@ -455,7 +484,7 @@ internal sealed class CombatCompiler
             target,
             affects,
             Int("mana", 0, 1_000_000),
-            Int("range", 0, 64) * UnitsPerTile,
+            Int("range", 0, 1024) * UnitsPerTile, // magic vision reaches anywhere (1024 tiles)
             Int("cooldownMs", 0, 3_600_000),
             Int("castMs", 0, 60_000),
             Int("amount", 0, 1_000_000),
@@ -467,6 +496,8 @@ internal sealed class CombatCompiler
         {
             PulseMs = Math.Max(1, Int("pulseMs", 1000, 60_000)),
             Count = Math.Clamp(Int("count", 1, 64), 1, 64),
+            BookValue = Int("bookValue", 0, 1_000_000),
+            DurationMaxMs = Int("durationMaxMs", 0, 3_600_000),
         };
     }
 
@@ -482,6 +513,142 @@ internal sealed class CombatCompiler
         SpellEffect.AreaDamage => "all",
         _ => "enemy",
     };
+
+    // A type filter (classes, civ...) of the combat settings: combat.tournamentPupils, combat.magicAttackers.
+    private ImmutableArray<ushort> Filter(ResearchCompiler research, string field)
+    {
+        if (_settings.Field(Section, field) is not { } node)
+        {
+            return [];
+        }
+
+        string source = _settings.FieldSource(Section, field);
+        return research.Filter("combat." + field, RulesetCompiler.Map(node, source, "combat." + field), source);
+    }
+
+    // combat.experienceSpeeds: { technology: percent }, in file order.
+    private ImmutableArray<ExperienceSpeed> Speeds(ResearchIds research)
+    {
+        if (_settings.Field(Section, "experienceSpeeds") is not { } node)
+        {
+            return [];
+        }
+
+        string source = _settings.FieldSource(Section, "experienceSpeeds");
+        var list = new List<ExperienceSpeed>();
+        foreach (KeyValuePair<string, YamlNode> e in RulesetCompiler.Map(node, source, "combat.experienceSpeeds").Entries)
+        {
+            int percent = RulesetCompiler.Int(e.Value, source, "combat.experienceSpeeds." + e.Key);
+            if (research.Technology(e.Key) is { } id)
+            {
+                list.Add(new ExperienceSpeed(id, percent is >= 1 and <= 1000 ? percent : throw new RulesException(source, e.Value.Line, $"combat.experienceSpeeds.{e.Key} must be 1..1000")));
+            }
+            else
+            {
+                _diagnostics.Add($"combat.experienceSpeeds: unknown technology '{e.Key}'");
+            }
+        }
+
+        return [.. list];
+    }
+
+    // combat.marketOffers: a list of kinds, each a list of "item effect look min-max" (a book: "item spells look").
+    private ImmutableArray<ImmutableArray<MarketVariant>> Offers(List<EntityTypeDefinition> types)
+    {
+        if (_settings.Field(Section, "marketOffers") is not { } node)
+        {
+            return [];
+        }
+
+        string source = _settings.FieldSource(Section, "marketOffers");
+        var kinds = ImmutableArray.CreateBuilder<ImmutableArray<MarketVariant>>();
+        foreach (YamlNode kindNode in RulesetCompiler.Seq(node, source, "combat.marketOffers").Items)
+        {
+            var variants = ImmutableArray.CreateBuilder<MarketVariant>();
+            foreach (string text in RulesDocument.StringList(kindNode, source, "combat.marketOffers[]"))
+            {
+                string[] parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                int item = parts.Length > 0 ? types.FindIndex(t => t.Key == parts[0]) : -1;
+                if (parts.Length is < 3 or > 4 || item < 0 || types[item].Traits.Item is not { } def)
+                {
+                    throw new RulesException(source, kindNode.Line, $"combat.marketOffers: '{text}' is not 'item effect look min-max' of an item");
+                }
+
+                int look = def.Looks.IndexOf(parts[2]) + 1;
+                if (look == 0)
+                {
+                    throw new RulesException(source, kindNode.Line, $"combat.marketOffers: '{parts[2]}' is not a look of {parts[0]}");
+                }
+
+                if (parts[1] == "spells")
+                {
+                    variants.Add(new MarketVariant((ushort)item, ItemEffect.Default, look, 0, 0, true));
+                    continue;
+                }
+
+                ItemEffect effect = parts[1] switch
+                {
+                    "attack" => ItemEffect.Attack,
+                    "defence" => ItemEffect.Defence,
+                    "health" => ItemEffect.Health,
+                    "levels" => ItemEffect.Levels,
+                    "mana" => ItemEffect.Mana,
+                    _ => throw new RulesException(source, kindNode.Line, $"combat.marketOffers: unknown effect '{parts[1]}'"),
+                };
+                string[] range = parts.Length == 4 ? parts[3].Split('-') : ["1", "1"];
+                if (range.Length != 2 || !int.TryParse(range[0], System.Globalization.CultureInfo.InvariantCulture, out int min)
+                    || !int.TryParse(range[1], System.Globalization.CultureInfo.InvariantCulture, out int max) || min < 0 || max < min)
+                {
+                    throw new RulesException(source, kindNode.Line, $"combat.marketOffers: '{text}' has no 'min-max'");
+                }
+
+                variants.Add(new MarketVariant((ushort)item, effect, look, min, max, false));
+            }
+
+            kinds.Add(variants.ToImmutable());
+        }
+
+        return kinds.ToImmutable();
+    }
+
+    private ImmutableArray<ushort> BookSpells(List<SpellDefinition> spells)
+    {
+        if (_settings.Field(Section, "marketBookSpells") is not { } node)
+        {
+            return [];
+        }
+
+        string source = _settings.FieldSource(Section, "marketBookSpells");
+        var ids = ImmutableArray.CreateBuilder<ushort>();
+        foreach (string key in RulesDocument.StringList(node, source, "combat.marketBookSpells"))
+        {
+            int id = spells.FindIndex(s => s.Key == key);
+            if (id < 0)
+            {
+                throw new RulesException(source, node.Line, $"combat.marketBookSpells: unknown spell '{key}'");
+            }
+
+            ids.Add((ushort)id);
+        }
+
+        return ids.ToImmutable();
+    }
+
+    private int SpellOf(string field, List<SpellDefinition> spells)
+    {
+        if (_settings.Scalar(Section, field) is not { } key)
+        {
+            return -1;
+        }
+
+        int id = spells.FindIndex(s => s.Key == key);
+        if (id < 0)
+        {
+            _diagnostics.Add($"combat.{field}: unknown spell '{key}'");
+        }
+
+        return id;
+    }
 
     private int Range(string field, int fallback, int min, int max)
     {

@@ -38,6 +38,9 @@ public sealed partial class World
     /// <summary>The points units walk after their current move (ORD-005).</summary>
     public ComponentStore<WaypointQueue> WaypointQueues { get; private set; } = null!;
 
+    /// <summary>The kingdom's market holding its items on offer (Jewelry, TECH-030).</summary>
+    public ComponentStore<MarketStock> MarketStocks { get; private set; } = null!;
+
     /// <summary>Units' errands: boarding, pick-up, give, bribe, conversion (hot).</summary>
     public ComponentStore<Errand> Errands { get; private set; } = null!;
 
@@ -90,6 +93,7 @@ public sealed partial class World
         CrusaderLinks = Components.RegisterHot<CrusaderOf>("game.crusader");
         Disguises = Components.RegisterHot<Disguise>("game.disguise");
         WaypointQueues = Components.RegisterHot<WaypointQueue>("game.waypoints");
+        MarketStocks = Components.RegisterHot<MarketStock>("game.market");
     }
 
     /// <summary>
@@ -134,6 +138,13 @@ public sealed partial class World
     public bool IsConfused(EntityId entity)
         => Statuses.Count != 0 && Statuses.IndexOf(entity) is >= 0 and var s && Statuses.At(s).ConfuseUntil > Tick.Value;
 
+    /// <summary>
+    /// The kingdom a hypnotized unit belongs to and goes back to, or -1 (MAG-008): it keeps that kingdom's colours and
+    /// counts in its population while it obeys the caster's.
+    /// </summary>
+    public int HypnotizedFrom(EntityId entity)
+        => Statuses.Count != 0 && Statuses.IndexOf(entity) is >= 0 and var s && Statuses.At(s).HypnoUntil > Tick.Value ? Statuses.At(s).HypnoOwner : -1;
+
     /// <summary>Whether a unit is a named hero.</summary>
     public bool IsHero(EntityId entity)
         => Experiences.IndexOf(entity) is >= 0 and var x && (Experiences.At(x).Flags & ExperienceFlags.Hero) != 0;
@@ -167,7 +178,7 @@ public sealed partial class World
             var xp = new Experience { Level = (ushort)Math.Min(start, ushort.MaxValue) };
             if (start > 0)
             {
-                xp.Xp = CombatStats.XpForLevel(Ruleset.Combat, start);
+                xp.Xp = CombatStats.XpForLevel(Ruleset.Combat, start, CombatStats.ExperienceSpeed(this, owner));
             }
 
             Experiences.Set(entity, xp);
@@ -440,6 +451,31 @@ public sealed partial class World
     // (a ship at sea) they go down with it.
     private void BeforeDestroyCombatMagic(EntityId entity)
     {
+        if (MarketStocks.Count != 0 && MarketStocks.Has(entity))
+        {
+            Systems.MarketItems.Clear(this, entity); // the offers go with their market (TECH-030)
+        }
+
+        // The soul items bound to a unit go with it (ITEM-010; ReTzar's reading of the original, 0x4e219f).
+        if (Items.Count != 0 && !Items.Has(entity))
+        {
+            Span<uint> gems = stackalloc uint[16];
+            int found = 0;
+            ReadOnlySpan<EntityId> items = Items.Entities;
+            for (int i = 0; i < items.Length && found < gems.Length; i++)
+            {
+                if (Items.Components[i].Bound == entity.Value)
+                {
+                    gems[found++] = items[i].Value;
+                }
+            }
+
+            for (int k = 0; k < found; k++)
+            {
+                Destroy(EntityId.FromValue(gems[k]));
+            }
+        }
+
         if (Inventories.Count != 0 && Inventories.IndexOf(entity) is >= 0 and var inv && Inventories.At(inv).Count > 0)
         {
             Inventory items = Inventories.At(inv);
@@ -499,6 +535,11 @@ public sealed partial class World
     // owner's units out; a bribed unit leaves the holder of its previous owner.
     private void AfterChangeOwnerCombatMagic(EntityId entity)
     {
+        if (MarketStocks.Count != 0 && MarketStocks.Has(entity))
+        {
+            Systems.MarketItems.Clear(this, entity); // the offers were its old kingdom's (TECH-030)
+        }
+
         Errands.Remove(entity);
         StopCasting(entity);
         CrusaderLinks.Remove(entity);

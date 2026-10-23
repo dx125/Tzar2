@@ -371,7 +371,7 @@ public readonly record struct FrameQueueEntry(uint Entity, FrameQueueKind Kind, 
 /// <param name="IsDefault">Whether the item is its carrier's default item (Backspace).</param>
 /// <param name="Spell">A book's spell id (its own or its type's), or −1.</param>
 /// <param name="Look">An item's own image (ITEM-016), or null.</param>
-public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth, bool IsItem = false, int Slot = -1, bool IsDefault = false, int Spell = -1, string? Look = null);
+public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth, bool IsItem = false, int Slot = -1, bool IsDefault = false, int Spell = -1, string? Look = null, int Value = 0);
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
 /// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>

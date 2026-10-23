@@ -28,15 +28,23 @@ internal sealed class MultiplayerHarness : IDisposable
 
     public List<NetworkMatch> Matches { get; } = [];
 
+    /// <summary>The computer players' scripts every peer uses.</summary>
+    public SkirmishAi Ai { get; init; } = SkirmishAi.EngineDefault;
+
+    /// <summary>The custom maps every peer has (unless <see cref="Options"/> is given others).</summary>
+    public IReadOnlyList<Campaigns.CustomMapEntry> CustomMaps { get; init; } = [];
+
     /// <summary>When false, the relay is not updated (no new ticks close; peers converge on the last closed tick).</summary>
     public bool RelayRunning { get; set; } = true;
 
-    public NetworkMatchOptions Options(string name, string? saveDirectory = null) => new()
+    public NetworkMatchOptions Options(string name, string? saveDirectory = null, IReadOnlyList<Campaigns.CustomMapEntry>? maps = null) => new()
     {
         Host = "127.0.0.1",
         Port = Relay.Port,
         PlayerName = name,
         Ruleset = HumanVsAiTests.SyntheticRules,
+        Ai = Ai,
+        CustomMaps = maps ?? CustomMaps,
         GameVersion = "test",
         SaveDirectory = saveDirectory ?? SaveDirectory,
         AutoAcceptSaves = true,

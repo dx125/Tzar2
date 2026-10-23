@@ -14,7 +14,15 @@
     <Error Text="Tzar2OverflowPolicy must be Throw or Saturate, not '$(Tzar2OverflowPolicy)'." />
   </Target>
 
-  <ItemGroup Condition="'$(Tzar2Deterministic)' == 'true' or '$(Tzar2NoIO)' == 'true'">
+  <!--
+    Every project under src/ (but the analyzers themselves) gets T2C001 (CultureAnalyzer): interpolated strings must not
+    format numbers or dates with the machine's culture. The determinism rules stay opt-in (DeterminismAnalyzer).
+  -->
+  <PropertyGroup>
+    <Tzar2Analyzed Condition="'$(Tzar2Deterministic)' == 'true' or '$(Tzar2NoIO)' == 'true'">true</Tzar2Analyzed>
+    <Tzar2Analyzed Condition="'$(MSBuildProjectName)' != 'Tzar2.Analyzers' and $([System.String]::Copy('$(MSBuildProjectDirectory)/').StartsWith('$(MSBuildThisFileDirectory)src'))">true</Tzar2Analyzed>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(Tzar2Analyzed)' == 'true'">
     <ProjectReference Include="$(MSBuildThisFileDirectory)src/Tzar2.Analyzers/Tzar2.Analyzers.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"
