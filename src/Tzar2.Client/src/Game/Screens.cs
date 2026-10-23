@@ -15,7 +15,7 @@ namespace Tzar2.Client.Game;
 public abstract partial class ArtScreen : Control
 {
     /// <summary>Creates a screen of <paramref name="screen"/> size with <paramref name="background"/> centred.</summary>
-    protected ArtScreen(UiAssets ui, Vector2I screen, string background, bool dim = false)
+    protected ArtScreen(UiAssets ui, Vector2I screen, string background, bool dim = false, Vector2I? missing = null)
     {
         Ui = ui;
         Size = screen;
@@ -23,7 +23,7 @@ public abstract partial class ArtScreen : Control
         _backdrop = new ColorRect { Size = screen, Color = dim ? new Color(0, 0, 0, 0.45f) : Colors.Black, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_backdrop);
         ImageTexture? back = ui.Texture(background);
-        Vector2I size = back is null ? new Vector2I(500, 320) : new Vector2I(back.GetWidth(), back.GetHeight());
+        Vector2I size = back is null ? missing ?? new Vector2I(500, 320) : new Vector2I(back.GetWidth(), back.GetHeight());
         _artSize = size;
         Origin = (screen - size) / 2;
         if (back is not null)
@@ -537,9 +537,12 @@ public enum GameMenuChoice
 
     /// <summary>LOAD GAME.</summary>
     Load,
+
+    /// <summary>INSTRUCTIONS (SHELL-021): the online help's hot keys.</summary>
+    Instructions,
 }
 
-/// <summary>The in-game menu (<c>D_MENU</c>; its labels are baked into the bitmap, UNK-15): load, save, options, restart, quit, back.</summary>
+/// <summary>The in-game menu (<c>D_MENU</c>; its labels are baked into the bitmap, UNK-15): instructions, load, save, options, restart, quit, back.</summary>
 public partial class GameMenu : ArtScreen
 {
     /// <summary>Creates the menu.</summary>
@@ -547,6 +550,7 @@ public partial class GameMenu : ArtScreen
         : base(ui, screen, "art/screens/d_menu/back.t2img", dim: true)
     {
         var size = new Vector2I(150, 25);
+        Area(new Rect2I(new Vector2I(63, 46), size), () => Closed?.Invoke(GameMenuChoice.Instructions)); // ReTzar's place of INSTRUCTIONS
         Area(new Rect2I(new Vector2I(63, 86), size), () => Closed?.Invoke(GameMenuChoice.Load));
         Area(new Rect2I(new Vector2I(63, 126), size), () => Closed?.Invoke(GameMenuChoice.Save));
         Area(new Rect2I(new Vector2I(63, 166), size), () => Closed?.Invoke(GameMenuChoice.Options));
