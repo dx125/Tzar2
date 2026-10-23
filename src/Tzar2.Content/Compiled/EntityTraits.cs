@@ -321,6 +321,12 @@ public sealed partial record EntityTraits
     /// </summary>
     public bool IsSeat { get; init; }
 
+    /// <summary>
+    /// Whether the type is a kingdom's starting worker (trait <c>StartingWorker</c>; classic: the peasant): map builders
+    /// place it next to the seat (<see cref="Ruleset.StartingWorkerTypeId"/>). A fork names its own in data.
+    /// </summary>
+    public bool IsStartingWorker { get; init; }
+
     /// <summary>Whether the type is a wall segment that can be placed by dragging a line (GAME-03).</summary>
     public bool IsWall { get; init; }
 
