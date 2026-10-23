@@ -199,6 +199,27 @@ public sealed class MapData
             }
         }
 
+        // Added the same way (ADR 0264): maps without items hash as before.
+        bool items = false;
+        foreach (MapObject o in _objects)
+        {
+            items |= o.Item is not null;
+        }
+
+        if (items)
+        {
+            foreach (MapObject o in _objects)
+            {
+                hasher.Add(o.Item is null ? (byte)0 : (byte)1);
+                if (o.Item is { } item)
+                {
+                    hasher.Add((byte)item.Effect).Add(item.Power).Add(item.Charges)
+                        .Add(item.Spell.Length).Add(Encoding.UTF8.GetBytes(item.Spell))
+                        .Add(item.Look.Length).Add(Encoding.UTF8.GetBytes(item.Look));
+                }
+            }
+        }
+
         // Added after HashVersion 2 without bumping it: maps without a terrain set hash exactly as before.
         if (TerrainSet is not null)
         {
@@ -231,12 +252,35 @@ public readonly record struct MapObject(string TypeKey, byte Owner, int X, int Y
     /// <summary>Resource amount of a resource object (gold or stone rock, fish patch), or 0 for the type's default.</summary>
     public int Amount { get; init; }
 
+    /// <summary>An item's own properties (map.bin v3; ADR 0264), or null for the type's.</summary>
+    public MapItem? Item { get; init; }
+
     /// <summary>Whether any of <see cref="Flags"/>, <see cref="Facing"/> and <see cref="Amount"/> is set (map.bin v2, hash).</summary>
     public bool HasExtras => Flags != MapObjectFlags.None || Facing != 0 || Amount != 0;
 
     /// <summary>A structure placed with its footprint's top-left at tile (<paramref name="tileX"/>, <paramref name="tileY"/>).</summary>
     public static MapObject AtTile(string typeKey, byte owner, int tileX, int tileY)
         => new(typeKey, owner, tileX * MapData.UnitsPerTile, tileY * MapData.UnitsPerTile);
+}
+
+/// <summary>
+/// The properties of one item on a map (ADR 0264), as the magic workshop gives the items it makes (ITEM-016): the
+/// original's random map generator makes each item this way (ReTzar 0x4b5c50). Keys rather than ids keep the map valid
+/// across rulesets; an unknown key is the type's own.
+/// </summary>
+/// <param name="Effect">What it adds; <see cref="ItemEffect.Default"/>: the type's.</param>
+/// <param name="Power">Its power (a weapon's attack, a shield's defence, a potion's amount), or 0 for the type's.</param>
+/// <param name="Charges">A spell book's uses, or 0 for the type's.</param>
+/// <param name="Spell">A spell book's spell key, or empty for the type's.</param>
+/// <param name="Look">One of the type's <see cref="ItemDefinition.Looks"/>, or empty for the type's own image.</param>
+public sealed record MapItem(ItemEffect Effect = ItemEffect.Default, int Power = 0, int Charges = 0, string Spell = "", string Look = "")
+{
+    /// <summary>The longest key map.bin takes.</summary>
+    public const int MaxKeyLength = 64;
+
+    /// <summary>Whether the values are in range (map.bin, the editor).</summary>
+    public bool IsValid => Effect <= ItemEffect.Mana && Power is >= 0 and <= 1_000_000 && Charges is >= 0 and <= 1_000_000
+        && Spell is not null && Look is not null && Spell.Length <= MaxKeyLength && Look.Length <= MaxKeyLength;
 }
 
 /// <summary>Placement variants of a map object (TDD §18.2 "Buildings": gates and bridges; ADR 0152).</summary>
