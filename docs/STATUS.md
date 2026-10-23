@@ -216,19 +216,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-22 — A match loads on a worker thread (code review, item 16).**
-  * Sprite decoding and packing, the terrain's layout and its composition into the tile atlas now run on a worker
-    thread. The loading screen stays up and responsive meanwhile.
-  * The main thread only uploads, which takes 60–80 ms. Before, it froze for the whole load: 4 s for an original map
-    on the review machine, 12 s for a real-world map.
-
-* **2026-10-22 — Terrain from a deduplicated tile atlas (ADR 0210; code review, item 16).**
-  * Every distinct 32 × 32 composed tile is stored once. A chunk keeps a slot per tile and frame instead of a
-    512 × 512 texture per animation frame.
-  * On a huge map, video memory falls from 1.3 GB to 0.28 GB and the managed heap at match start from 1.37 GB to
-    0.38 GB.
-  * A real-world 512² map needs 332 MB of video memory instead of about 2.7 GB of terrain textures.
-  * The pixels drawn are the same.
+* **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
+  * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
+    a string concatenation formats a `double`, `float`, `decimal` or date with the current culture, or an integer with
+    a culture format such as `N0`. CA1305 does not cover these.
+  * It found 48 strings: 35 in the fidelity suite (its verdicts read "37,5 s" under a German or C.UTF-8 locale, which
+    failed a test on macOS), the rest in the CLI and the client.
+  * They now use the invariant culture.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
