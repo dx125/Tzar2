@@ -197,8 +197,9 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
       Ask the owner for screenshots of the original's screens that are not in the art yet.
     * **Progress:** the test (`--ui-smoke`, CI job `godot-smoke`, ADR 0200) and the findings
-      ([reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md)) are done. Fixes are in progress, and the
-      screenshots are asked of the owner.
+      ([reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md)) are done, and the layout findings are fixed (the
+      UI chain #135…#177 is merged; after the merge, 0 issues on all 22 displays). The likeness findings wait for the
+      owner's screenshots.
 16. **Maintainer (owner's order of 2026-10-22): a full code review for performance, resources and memory, and for a
     fork.**
     * **Performance and resources:**
