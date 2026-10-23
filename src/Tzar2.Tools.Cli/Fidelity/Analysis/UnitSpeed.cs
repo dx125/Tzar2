@@ -118,7 +118,7 @@ internal static class UnitSpeed
     {
         if (fit.DurationSeconds < MinimumSeconds || fit.DistancePixels < MinimumPixels)
         {
-            return $"too short ({fit.DurationSeconds:0.0} s, {fit.DistancePixels:0} px; needs {MinimumSeconds:0} s and {MinimumPixels:0} px)";
+            return string.Create(CultureInfo.InvariantCulture, $"too short ({fit.DurationSeconds:0.0} s, {fit.DistancePixels:0} px; needs {MinimumSeconds:0} s and {MinimumPixels:0} px)");
         }
 
         int ordered = burst switch { "west" => -1, "east" => 1, _ => 0 };

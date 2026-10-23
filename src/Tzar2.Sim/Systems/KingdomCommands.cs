@@ -204,12 +204,12 @@ internal static class KingdomCommands
         => world.Entities.IsAlive(dock) && world.Identities.Has(dock) && (world.TypeOf(dock).Traits.World.TradeDock & access) != 0
             && !world.Constructions.Has(dock);
 
-    /// <summary>Whether a kingdom's traders may use the dock: its own, or a mutual ally's (manual: trade with other kingdoms).</summary>
+    /// <summary>
+    /// Whether a kingdom's traders may use the dock: any kingdom's, enemies' too (TRADE-003; ReTzar's reading of the
+    /// original's trade dialog, 0x4a2f36, names both markets of any owner). The profit goes to the trader's kingdom.
+    /// </summary>
     public static bool TradesWith(World world, int owner, EntityId dock)
-    {
-        byte dockOwner = world.Identities.Get(dock).Owner;
-        return world.HasPlayer(dockOwner) && (dockOwner == owner || world.Diplomacy.AreMutualAllies(owner, dockOwner));
-    }
+        => owner >= 0 && world.Identities.Has(dock);
 
     public static CommandRejection? Convert(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
@@ -255,7 +255,7 @@ internal static class KingdomCommands
             return CommandRejection.InvalidArgument;
         }
 
-        if (!HasTechnology(world, command.Player, "te_gambling"))
+        if (!HasTechnology(world, command.Player, world.Ruleset.World.GamblingTechnology))
         {
             return CommandRejection.RequirementNotMet;
         }
@@ -292,7 +292,7 @@ internal static class KingdomCommands
             return CommandRejection.InvalidArgument;
         }
 
-        if (!HasTechnology(world, command.Player, "te_usury"))
+        if (!HasTechnology(world, command.Player, world.Ruleset.World.LoanTechnology))
         {
             return CommandRejection.RequirementNotMet;
         }

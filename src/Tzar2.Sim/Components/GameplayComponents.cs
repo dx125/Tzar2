@@ -173,6 +173,17 @@ public struct Worker : IComponent
     public const byte NoResource = 0xFF;
 }
 
+/// <summary>The meat a living animal has grown (NAT-004; trait <c>SpawnOnDeath.piece</c>).</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct MeatStock : IComponent
+{
+    /// <summary>Meat it leaves when it dies.</summary>
+    public int Amount;
+
+    /// <summary>Time toward the next second of growth.</summary>
+    public int Ms;
+}
+
 /// <summary>What is left in a resource node (trait <c>ResourceNode</c>); -1 = unlimited (fields).</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct ResourceStock : IComponent

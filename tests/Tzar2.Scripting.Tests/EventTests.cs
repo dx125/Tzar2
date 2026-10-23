@@ -196,6 +196,22 @@ public class EventTests
     }
 
     [Fact]
+    public void Race_numbers_civilizations_as_the_original_does()
+    {
+        // The original numbers 1 European, 2 Arabian, 3 Asian (its maps' race byte); ADR 0211 orders the classic
+        // ruleset's civilizations so. Before it the list was sorted and $race read 4 for a European, 1 for an Arabian.
+        var b = new ScenarioBuilder();
+        int euro = b.Unit("euro.footman", 0, 3, 3);
+        int arab = b.Unit("arab.peon", 1, 9, 9);
+        b.Event(new ObjectExpressionEvent("e", Any(euro), b.Expr("$race == 1")));
+        b.Event(new ObjectExpressionEvent("a", Any(arab), b.Expr("$race == 2")));
+        b.Rule("1", b.Action(new KeepRuleAction("k1")), b.Action(new ExpressionAction("w", b.Expr("$r = e + a"))));
+        using TriggerDriver d = b.Start();
+        d.Step();
+        Assert.Equal(2, d.Variable("r"));
+    }
+
+    [Fact]
     public void Unknown_events_are_false_and_hidden_objects_are_neither_destroyed_nor_existing()
     {
         var b = new ScenarioBuilder();

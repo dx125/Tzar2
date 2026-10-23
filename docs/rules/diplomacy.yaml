@@ -44,4 +44,4 @@ rules:
     rule: Computer kingdoms resign on their own when their AI flag allows it.
     source: [patch 1.09 (TZAR110.TXT), data AI/RESIGN.AI]
     status: tested
-    note: The lobby flag cannot be set yet (SHELL-013), so computer kingdoms may always resign. An AI assisting a human never resigns for it.
+    note: The lobby flag cannot be set yet (SHELL-013), so computer kingdoms of random maps may always resign; those of a scenario or campaign map never do (the flag is only on the random map and multiplayer screens and is off for a campaign mission: ReTzar src/world.rs GameRules.ai_resign; ADR 0220). An AI assisting a human never resigns for it.
