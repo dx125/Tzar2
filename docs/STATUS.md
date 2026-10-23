@@ -251,8 +251,10 @@ the process decisions that have no ADR.
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
   * Golden and bench hashes were re-pinned where the PRs met: the civilization order (ADR 0211), the movement of
     ADR 0220, the ledger chain (ADRs 0250–0261) and the rules decided by data instead of names in code.
-  * `HumanVsAiTests`' Archipelagos time limit is now 18 minutes. WORLD-013's forests (ADR 0201) and ADR 0220's
-    movement together delay the first sea landing to between 16 and 18 minutes.
+  * `HumanVsAiTests`' Archipelagos check plays 20 minutes (#182; first set to 18 in the batch, with a wrong reason). The
+    landed wave has hit after 17 minutes since WORLD-015 (#126): 17.2 on `main` before the forests, 18.4 with them.
+    The 14 minutes passed only on a xebec's shots at the human's woodcutters, which ADR 0220's corner slide moved out
+    of range with the forests (ADR 0220, Consequences).
   * The lobby fix UI-L2 (#140) was superseded by the `LobbyScreenModel` lobby (#160, ADR 0232), and then by the
     lobby rebuilt on the original's art (#177), which also takes #166's custom maps and limits and the ruleset's
     civilizations (#174).
