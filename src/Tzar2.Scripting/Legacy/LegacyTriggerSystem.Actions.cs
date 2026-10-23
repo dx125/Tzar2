@@ -358,6 +358,9 @@ public sealed partial class LegacyTriggerSystem
                 }
             }
 
+            // Executed here, in a batch of their own: the deliveries are one command per peasant (each targets the
+            // store), the moves below are grouped per kingdom and sent as a second batch. A peasant is in one batch or the
+            // other, never both (it leaves `units` above), so nothing is ordered twice.
             if (_orders.Count > 0)
             {
                 CommandSystem.ExecuteScripted(_world, _orders);

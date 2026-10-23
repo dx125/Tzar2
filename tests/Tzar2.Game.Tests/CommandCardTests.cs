@@ -365,6 +365,39 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "HUD-029")]
+    public void The_quest_order_shows_only_while_there_are_quests()
+    {
+        _cards.Menus["kingdom"] =
+        [
+            new CardButton("nextidle", 'N', CardAction.NextIdle, string.Empty, 82, "Next idle peasant"),
+            new CardButton("view_quests", 'Q', CardAction.Quests, string.Empty, 245, "View Current Quests") { Enable = "QuestCount" }, // ORDERS.INI ENABLE through EQUATIONS.INI
+            new CardButton("view_unknown", 'U', CardAction.NextIdle, string.Empty, 1, "Unknown condition") { Enable = "SomethingElse" },
+        ];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = Context([]) with { IsOwn = false, HasQuests = true };
+        Assert.Equal(["nextidle", "view_unknown"], card.Build(none).Where(s => s is not null).Select(s => s!.Value.Button.Order));
+        Assert.Null(card.SlotOfKey(none, 'Q'));
+        CardContext quests = none with { QuestCount = 2 };
+        Assert.Equal(["nextidle", "view_quests", "view_unknown"], card.Build(quests).Where(s => s is not null).Select(s => s!.Value.Button.Order));
+        Assert.True(card.Press(quests, card.SlotOfKey(quests, 'Q')!.Value).ShowQuests);
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-033")]
+    [Trait("Rule", "HUD-020")]
+    public void The_kingdom_card_opens_the_online_help()
+    {
+        _cards.Menus["kingdom"] = [new CardButton("onlinehelp", 'P', CardAction.OnlineHelp, string.Empty, -1, "Online help")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = Context([]) with { IsOwn = false };
+        card.Build(none);
+        CardSlot help = card.SlotOfKey(none, 'P')!.Value; // P, the original's key (MENU.INI [ownership])
+        Assert.True(help.Enabled);
+        Assert.True(card.Press(none, help).ShowHelp);
+    }
+
+    [Fact]
     [Trait("Rule", "AI-004")]
     [Trait("Rule", "HUD-033")]
     public void With_nothing_selected_the_kingdom_card_shows_and_AI_assistance_is_asked_for_and_lit()

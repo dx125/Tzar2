@@ -56,6 +56,31 @@ come back as one line he can paste.
   `full_hash:0.3/5.4,visibility:1.2/3.6,movement:1.5/2.4,ai:0.6/2.0`: the slowest ticks are the ones that also compute
   the full-state hash. The owner's Windows numbers decide; a Debug build is several times slower (sim p99 82 ms), so
   measure only packaged (ExportRelease) builds.
+* **Re-run on `main` fb8aa49 (2026-10-23)**, after the terrain atlas (#138), the freed pages and stopped shadow
+  viewports (#161) and loading on a worker thread (#172); same MacBook, Release assemblies, 60 s per run, six runs
+  while other agents' builds kept the load average between 5 and 41:
+
+  | Run | Load avg | Resolution | FPS | 1 % low | Frame p99 | Sim p50 | Sim p99 | Load | RAM | VRAM | S2 |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | 1 | 44 → 23 | 1920 × 1080 | 239.2 | 81.8 | 10.0 ms | 2.9 ms | 41.6 ms | 2.7 s | 0.82 GB | 0.38 GB | n/a |
+  | 2 | 6 → 41 | 1920 × 1080 | 239.0 | 72.4 | 10.9 ms | 5.9 ms | 109.8 ms | 3.0 s | 1.54 GB | 0.38 GB | n/a |
+  | 3 | 41 → 35 | 2560 × 1440 | 238.8 | 70.7 | 13.3 ms | 3.3 ms | 10.6 ms | 7.3 s | 1.10 GB | 0.38 GB | PASS |
+  | 4 | 30 → 15 | 2560 × 1440 | 239.5 | 76.4 | 11.5 ms | 2.6 ms | 18.8 ms | 2.4 s | 1.39 GB | 0.38 GB | FAIL |
+  | 5 | 15 → 11 | 2560 × 1440 | 239.1 | 75.4 | 11.4 ms | 2.8 ms | 10.8 ms | 2.4 s | 1.21 GB | 0.38 GB | PASS |
+  | 6 | 11 → 10 | 1920 × 1080 | 238.7 | 71.0 | 12.7 ms | 2.6 ms | 11.0 ms | 2.4 s | 1.49 GB | 0.38 GB | n/a |
+
+  * **Render:** about 239 FPS in every run at both resolutions. This looks like a ceiling of the Mac's frame loop,
+    not of the GPU. The 1 % low is 71–82 FPS and frame p99 10–13 ms.
+  * **Memory and load:** VRAM fell from 3.10 to **0.38 GB**, under TDD §21's 1.5 GB. Load time is 2.3–3.0 s, with
+    one run at 7.3 s.
+  * **Sim:** p50 is 2.6–3.3 ms. p99 is 10.6–11.0 ms in the quieter runs and 16–110 ms when other processes take the
+    cores.
+  * **Phases:** the section that dominates the slowest ticks changes from run to run (movement, the AI, visibility,
+    the full hash). That points to preemption by other processes, not to one costly section.
+  * **Verdict:** a dedicated PC is needed for the sim half of S2; the owner's Windows run decides.
 * The owner's runs come with exact commands (docs/STATUS.md work queue item 13 and the min-spec plan).
 * Follow-ups: a per-system breakdown of the real game's tick (the `t2 bench` sections inside the client), and the
   bench as an optional nightly job once a runner with a GPU exists.
+* **Amendment (2026-10-23, code review item 16, #204):** the bench gives its kingdoms the ruleset's civilization order
+  (classic: euro, arab, asia; before: euro, asia, arab). The match changed with that commit, so bench numbers from
+  before #204 are not directly comparable with later ones.

@@ -56,7 +56,7 @@ rules:
     rule: The diplomacy screen (DIPLOMACY, F5) shows each player's civilization and lets you choose ally, enemy or neutral towards him, offer shared vision, resources and unit control, and set allied victory; each button shows whether the other player agreed.
     source: [manual Diplomacy Screen, manual Hot Keys, 'strings STRINGS.INI [diplomacy]']
     status: tested
-    note: On the D_DIPLOMACY art; the screen sends its changes on ACCEPT. Where the parts sit on the panel and which race icon is which civilization are ours.
+    note: On the D_DIPLOMACY art; the screen sends its changes on ACCEPT. Where the parts sit on the panel and which race icon is which civilization are ours. The shared victory check is COMMON CHK: its upper frame is green (offered), the lower one red (not offered), by its pixels.
   HUD-013:
     rule: The tribute screen (TRIBUTE, F6) sends gold, food, stone or wood to another player; a left click on the amount raises it and a right click lowers it; SEND or CANCEL.
     source: [manual The Tribute Screen, manual Hot Keys, 'strings STRINGS.INI [tribute]']
@@ -94,9 +94,9 @@ rules:
     note: A card of more than eight orders gets pages of eight, turned by the arrows (ORDERS left, right) above and below the eye.
   HUD-020:
     rule: The question mark on the orders bar opens the online help, whose topics explain every unit, building and technology and how to play.
-    source: [manual The Orders Bar, data ORDERS.INI onlinehelp, help ITEMS.TXT]
-    status: missing
-    note: The help's 407 topics are in the original's HELP/ITEMS.TXT.
+    source: [manual The Orders Bar, data ORDERS.INI onlinehelp, help ITEMS.TXT, help HK.TXT, help HELP_STR.INI, data HELP/HELP_SCR]
+    status: tested
+    note: The kingdom's card opens it (P, MENU.INI [ownership]; the original's onlinehelp has no picture, Tzar2 shows it as a button). Chapters on the left (technologies, units, buildings, items, commands, how to, what is, hot keys), the topic's picture, title and text in the large panel, its links (built in, researched in, requires, allows, see also, what a building makes) in the middle one, the civilization selector and the pointer's hint in the bottom one; BACK goes through the pages seen. Where the original puts these on HELP_SCR/BACKGR is UNVERIFIED (no screenshot of its help); the orders bar's question mark itself is not drawn yet.
   HUD-021:
     rule: A selected castle or outpost shows, under its own health, a bar of the health of the units inside.
     source: [guide Important tips]
@@ -137,8 +137,8 @@ rules:
   HUD-029:
     rule: An order shows only when its condition holds; the quest order only when there are quests.
     source: [data ORDERS.INI enable, data EQUATIONS.INI]
-    status: missing
-    note: The quest order is always there.
+    status: tested
+    note: The card reads an order's ENABLE through EQUATIONS.INI; the one condition the data has, QuestCount (view_quests), hides the quest order while no quest is open. A condition the card does not know keeps its order.
   HUD-030:
     rule: The minimap paints terrains, trees and cliffs in the colours of the terrain set's data.
     source: ['data TERRAIN.INI [minidatargb]']
@@ -159,7 +159,7 @@ rules:
     rule: With nothing selected the card offers the kingdom's lists of heroes, spies and items, the quests, AI assistance, the next idle peasant and the online help.
     source: ['data MENU.INI [ownership] [ownership_ai]', 'data ORDERS.INI view_heroes view_spys view_items view_ai']
     status: partial
-    note: The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. Heroes inside buildings are not listed. The online help is missing.
+    note: The kingdom's card shows with nothing selected. The quests, AI assistance, the next idle peasant and the lists of heroes, spies (and ninjas) and carried items work; an entry selects the unit (an item, its carrier) and shows it. Heroes inside buildings are not listed. The online help opens with P (HUD-020).
   HUD-034:
     rule: The hint of a category of the build menu lists the letters of the buildings in it.
     source: [owner 2026-10-21 (fourth play-test)]

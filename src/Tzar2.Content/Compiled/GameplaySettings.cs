@@ -68,6 +68,12 @@ public sealed record GameplaySettings
     /// <summary>Time between two target scans of an idle armed unit (§8.9: staggered acquisition).</summary>
     public int AcquireIntervalMs { get; init; } = 200;
 
+    /// <summary>
+    /// An auto-acquired target (or one of an attack-move) further than this percent of the attacker's sight radius is
+    /// dropped (UNVERIFIED; 200: twice the sight).
+    /// </summary>
+    public int AutoChaseLeashPercent { get; init; } = 200;
+
     /// <summary>Radius in tiles in which a worker looks for another node of the same resource when its node is gone.</summary>
     public int NodeSearchRadiusTiles { get; init; } = 12;
 
@@ -222,6 +228,8 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MeleeReachUnits, 8 * 2048);
         ArgumentOutOfRangeException.ThrowIfLessThan(AcquireIntervalMs, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(AcquireIntervalMs, 60_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(AutoChaseLeashPercent, 100);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(AutoChaseLeashPercent, 10_000);
         ArgumentOutOfRangeException.ThrowIfNegative(NodeSearchRadiusTiles);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(NodeSearchRadiusTiles, 64);
         ArgumentOutOfRangeException.ThrowIfNegative(ConstructionRefundBasisPoints);

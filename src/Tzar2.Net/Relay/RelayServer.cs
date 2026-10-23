@@ -67,6 +67,9 @@ public sealed partial class RelayServer : IDisposable
     /// <summary>Counters for monitoring.</summary>
     public RelayMetrics Metrics { get; } = new();
 
+    /// <summary>The transport's keep-alive settings as LiteNetLib got them: (disconnect timeout, ping interval) in ms.</summary>
+    internal (int TimeoutMs, int PingIntervalMs) Transport => (_net.DisconnectTimeout, _net.PingInterval);
+
     /// <summary>The bound UDP port.</summary>
     public int Port => _net.LocalPort;
 

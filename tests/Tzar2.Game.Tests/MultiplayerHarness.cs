@@ -16,7 +16,9 @@ internal sealed class MultiplayerHarness : IDisposable
     public MultiplayerHarness(string? saveDirectory = null)
     {
         SaveDirectory = saveDirectory;
-        Relay = new RelayServer(new RelayOptions { StartDelayMs = 50, DisconnectTimeoutMs = 1_000, DesyncCollectMs = 5_000, DesyncSink = Sink, Log = e => RelayLog.Add(e) });
+        // Issue #179: a 1 s relay timeout dropped members of loaded Windows runners while the tests pumped; peers leave by
+        // disconnecting here, never by timing out, so 10 s keeps the tests' meaning.
+        Relay = new RelayServer(new RelayOptions { StartDelayMs = 50, DisconnectTimeoutMs = 10_000, DesyncCollectMs = 5_000, DesyncSink = Sink, Log = e => RelayLog.Add(e) });
         Relay.Start();
     }
 

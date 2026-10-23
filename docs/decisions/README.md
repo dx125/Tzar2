@@ -139,6 +139,9 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0210](0210-draw-terrain-from-a-deduplicated-tile-atlas.md) | Draw terrain from a deduplicated tile atlas | Accepted | 2026-10-22 |
 | [0211](0211-civilizations-are-an-ordered-list-in-the-ruleset.md) | Civilizations are an ordered list in the ruleset | Accepted | 2026-10-22 |
 | [0212](0212-the-client-sees-the-session-frames-and-ui-models-only.md) | The client sees the session, its frames and the UI models, never the running engines | Accepted | 2026-10-23 |
+| [0213](0213-the-ai-reads-the-world-through-read-only-views.md) | The AI reads the world through read-only views | Accepted | 2026-10-23 |
+| [0214](0214-the-worker-pool-waits-for-the-jobs-not-the-helpers.md) | The worker pool waits for the jobs, not for the helpers it woke | Accepted | 2026-10-23 |
+| [0215](0215-full-state-hash-bulk-arrays-in-parallel-chunks.md) | Hash the full state's large arrays in fixed chunks, in parallel | Accepted | 2026-10-23 |
 | [0220](0220-main-campaign-completable-scenario-engine-fixes-and-solver.md) | Make the main campaign completable: scenario-engine fixes and a stronger solver | Accepted | 2026-10-22 |
 | [0230](0230-rotate-the-session-token-on-every-rejoin.md) | Rotate the session token on every rejoin; encrypt the handshake with Noise later | Accepted | 2026-10-22 |
 | [0231](0231-keep-alive-pings-five-times-per-disconnect-timeout.md) | Ping five times per disconnect timeout on LiteNetLib's thread, so a busy game thread does not drop a peer | Accepted | 2026-10-22 |
@@ -162,3 +165,5 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0259](0259-jewelry-markets-sell-and-buy-items.md) | Let the markets sell and buy items under Jewelry, as the original does | Accepted | 2026-10-22 |
 | [0260](0260-spell-ranges-and-mana-as-the-original-dispatches-them.md) | Give spells the original's ranges and mana | Accepted | 2026-10-22 |
 | [0261](0261-spell-magnitudes-as-the-original-casts-them.md) | Give spells the original's strength, duration and area | Accepted | 2026-10-22 |
+| [0262](0262-ai-resign-flag-in-the-match-settings.md) | Carry the AI resign flag in the match settings, format version 3 | Accepted | 2026-10-23 |
+| [0263](0263-fire-rain-and-whirlpool-as-the-original-casts-them.md) | Fire rain and the whirlpool as the original casts them | Accepted | 2026-10-23 |

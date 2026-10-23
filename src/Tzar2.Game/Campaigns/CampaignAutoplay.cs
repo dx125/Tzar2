@@ -2960,16 +2960,21 @@ public static class CampaignAutoplay
 
         // The units a rule still to come waits to see hurt ("WoolinIsWounded": $health < $WoolinHealth, when that is all
         // it lacks): the scenario's own enemies must land that blow, so cheat assistance spares the enemies near them.
+        private readonly List<EntityId> _wounded = [];
+        private readonly List<int> _woundEvents = [];
+        private readonly List<int> _woundVariables = [];
+
         private List<EntityId> AwaitingWounds(World world)
         {
-            var units = new List<EntityId>();
+            // Buffers reused across calls (once a second with cheat assistance on).
+            List<EntityId> units = _wounded;
+            List<int> wanted = _woundEvents, variables = _woundVariables;
+            units.Clear();
             if (session.Scenario?.Triggers is not { } triggers)
             {
                 return units;
             }
 
-            var wanted = new List<int>();
-            var variables = new List<int>();
             for (int r = 0; r < scenario.Rules.Length; r++)
             {
                 if (triggers.State.RuleDisabled[r] || scenario.Rules[r].Condition.Root is not { } condition)
