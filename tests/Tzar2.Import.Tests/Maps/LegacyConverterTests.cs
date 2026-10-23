@@ -135,7 +135,7 @@ public class LegacyConverterTests
         Assert.True((s.ObjectAt(2).Flags & ObjectFlags.Rescue) != 0);
 
         KingdomDef k1 = s.Kingdoms[0];
-        Assert.Equal((3, 4, Civilization.European, true), (k1.StartTileX, k1.StartTileY, k1.Civilization, k1.SharedVictory));
+        Assert.Equal((3, 4, "euro", true), (k1.StartTileX, k1.StartTileY, k1.Civilization, k1.SharedVictory));
         Assert.Equal((300, 400, 100, 200), (k1.Food, k1.Wood, k1.Gold, k1.Stone));
         Assert.Equal(PlayerType.AiOnly, s.Kingdoms[1].PlayerType);
         DiplomacyDef d12 = s.Diplomacy.Single(d => d.From == 1 && d.To == 2);

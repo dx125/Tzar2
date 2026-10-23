@@ -164,12 +164,8 @@ public static class ScenarioMatch
         for (int p = 0; p < players; p++)
         {
             KingdomDef? k = Kingdom(s, p + 1);
-            string civ = (k?.Civilization ?? Civilization.European) switch
-            {
-                Civilization.Arabian => "arab",
-                Civilization.Asian => "asia",
-                _ => "euro",
-            };
+            // The kingdom's civilization key, else (random / not set) the ruleset's first playable one (ADR 0211).
+            string civ = k?.Civilization is { Length: > 0 } key ? key : FirstPlayable(ruleset);
             if (p == human && custom?.Civilization is { } chosen)
             {
                 civ = chosen;
@@ -177,7 +173,7 @@ public static class ScenarioMatch
 
             if (ruleset.EntityTypeId(civ + ".castle") < 0)
             {
-                civ = "euro";
+                civ = FirstPlayable(ruleset);
             }
 
             list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue ? ControllerKind.Passive : ControllerKind.Computer, custom?.Difficulty ?? Difficulty.Normal);
@@ -339,6 +335,20 @@ public static class ScenarioMatch
 
     /// <summary>Match start: stockpiles and diplomacy of the scenario's kingdoms, then the campaign carry-over.</summary>
     // mapStockpiles: the kingdoms start with the map's stockpiles (false: a starting-resource level was chosen).
+    // The ruleset's first playable civilization with a castle (classic: euro).
+    private static string FirstPlayable(Ruleset ruleset)
+    {
+        foreach (string c in ruleset.Civilizations)
+        {
+            if (ruleset.IsPlayableCivilization(c) && ruleset.EntityTypeId(c + ".castle") >= 0)
+            {
+                return c;
+            }
+        }
+
+        return "euro";
+    }
+
     private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, bool mapStockpiles = true) : IMatchPreparation
     {
         public void Prepare(Simulation simulation, LegacyTriggerSystem? triggers)
