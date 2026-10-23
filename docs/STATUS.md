@@ -185,9 +185,6 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       * a STATUS log line.
 
       Ask the owner for screenshots of the original's screens that are not in the art yet.
-    * **Progress:** the test (`--ui-smoke`, CI job `godot-smoke`, ADR 0200) and the findings
-      ([reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md)) are done. Fixes are in progress, and the
-      screenshots are asked of the owner.
 16. **Maintainer (owner's order of 2026-10-22): a full code review for performance, resources and memory, and for a
     fork.**
     * **Performance and resources:**
@@ -219,16 +216,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-22 — The UI review's test and findings (work queue 15, ADR 0200).** A headless UI smoke test opens 35
-  screens and dialogs of the shell, the game and the editor at 22 displays (1024 × 768 to 3840 × 2160, Wide at every
-  interface scale and Authentic). It fails when a control leaves the window or covers another. A new CI job
-  (`godot-smoke`, Linux) runs it and the other client smoke tests. Findings per screen and display:
-  [reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md). Six layout findings, among them Authentic in a
-  720-row window cutting off the HUD's bottom. Twenty-one likeness findings: texts not from STRINGS.INI, the
-  multiplayer screens on borrowed art, the scenario dialogs off their boxes. Six requests for the owner's screenshots
-  and one decision (the main menu against its carved slots). Fixes follow in small PRs. Fixed: UI-L1 (a window
-  smaller than the logical screen shrinks the picture), UI-L2 (the lobby's rows), UI-L3 (the editor's windows on 1024-wide screens), UI-L4 and UI-L5 (text wrapped to its box): no open layout
-  finding is left.
+* **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
+  * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
+    a string concatenation formats a `double`, `float`, `decimal` or date with the current culture, or an integer with
+    a culture format such as `N0`. CA1305 does not cover these.
+  * It found 48 strings: 35 in the fidelity suite (its verdicts read "37,5 s" under a German or C.UTF-8 locale, which
+    failed a test on macOS), the rest in the CLI and the client.
+  * They now use the invariant culture.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
