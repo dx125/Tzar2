@@ -67,7 +67,7 @@ public sealed record ScenarioModel(
         number,
         "Kingdom " + number.ToString(System.Globalization.CultureInfo.InvariantCulture),
         string.Empty,
-        Civilization.European,
+        string.Empty,
         number == 1 ? PlayerType.HumanOrAi : PlayerType.AiOnly,
         true,
         0,
