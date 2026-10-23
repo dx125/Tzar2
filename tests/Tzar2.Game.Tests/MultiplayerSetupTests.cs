@@ -114,7 +114,8 @@ public sealed class MultiplayerSetupTests
         // What the panel shows follows the settings, and only the host may change them.
         LobbySetting victory = Assert.Single(model.Settings, s => s.Key == LobbySettingKey.Victory);
         Assert.Equal(0, victory.Selected);
-        Assert.All(model.Settings, s => Assert.True(s.Enabled));
+        // (The custom map choice needs maps; the limits follow their victory condition: MultiplayerCustomMapTests.)
+        Assert.All(model.Settings.Where(s => s.Key is not (LobbySettingKey.MapSource or LobbySettingKey.TimeLimit or LobbySettingKey.ScoreLimit)), s => Assert.True(s.Enabled));
         var shown = new LobbyScreenModel(Lobby(localIsHost: true, settings: new MatchSettings { GameType = GameType.Deathmatch, PopulationLimit = 500, Explored = true }), Scripts);
         Assert.Equal(1, shown.Settings.Single(s => s.Key == LobbySettingKey.GameType).Selected);
         Assert.Equal("500", shown.Settings.Single(s => s.Key == LobbySettingKey.PopulationLimit).Items[shown.Settings.Single(s => s.Key == LobbySettingKey.PopulationLimit).Selected]);

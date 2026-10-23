@@ -18,10 +18,14 @@ internal readonly record struct LobbySlotData(SlotState State, string Name, byte
 /// <summary>How a lobby becomes a match: its occupied slots, in slot order, are the kingdoms (ADR 0162).</summary>
 internal static class LobbyDescription
 {
-    /// <summary>The description of the match, and the relay slot of each kingdom and back (255 = none).</summary>
-    /// <exception cref="InvalidDataException">The lobby does not fit the saved game being resumed, or the ruleset has no castle.</exception>
+    /// <summary>
+    /// The description of the match, and the relay slot of each kingdom and back (255 = none). On a custom map with
+    /// <paramref name="customKingdoms"/> kingdoms (ADR 0233), lobby slot k plays kingdom k; a kingdom whose slot is open
+    /// or closed stays on the map, played by nobody.
+    /// </summary>
+    /// <exception cref="InvalidDataException">The lobby does not fit the saved game being resumed or the custom map, or the ruleset has no castle.</exception>
     public static (MatchDescriptor Descriptor, byte[] SimSlotOf, byte[] LobbySlotOf) Build(
-        MatchSettings settings, IReadOnlyList<LobbySlotData> slots, Ruleset ruleset, MultiplayerSave? save)
+        MatchSettings settings, IReadOnlyList<LobbySlotData> slots, Ruleset ruleset, MultiplayerSave? save, int customKingdoms = 0)
     {
         var players = ImmutableArray.CreateBuilder<MatchPlayer>();
         byte[] simOf = Enumerable.Repeat((byte)255, Limits.MaxSlots).ToArray();
@@ -29,7 +33,20 @@ internal static class LobbyDescription
         for (int i = 0; i < slots.Count && i < Limits.MaxSlots; i++)
         {
             LobbySlotData s = slots[i];
-            if (s.State is not (SlotState.Human or SlotState.Computer))
+            bool occupied = s.State is SlotState.Human or SlotState.Computer;
+            if (customKingdoms > 0 && i >= customKingdoms && occupied)
+            {
+                throw new InvalidDataException($"The map has {customKingdoms} kingdoms; slot {i + 1} is not one of them.");
+            }
+
+            if (customKingdoms > 0 && i < customKingdoms && !occupied)
+            {
+                players.Add(new MatchPlayer((byte)players.Count, string.Empty, string.Empty, ControllerKind.Passive, Difficulty.Normal, 0));
+                lobbyOf.Add(255);
+                continue;
+            }
+
+            if (!occupied)
             {
                 continue;
             }
@@ -48,6 +65,12 @@ internal static class LobbyDescription
             string civ = ruleset.EntityTypeId(choice.Civilization + ".castle") >= 0 ? choice.Civilization : FirstCivilization(ruleset);
             ControllerKind controller = s.State == SlotState.Human ? ControllerKind.Human : ControllerKind.Computer;
             players.Add(new MatchPlayer(sim, s.State == SlotState.Human ? s.Name : string.Empty, civ, controller, choice.Difficulty, choice.Team, choice.AiScript, choice.Colour));
+        }
+
+        for (int k = players.Count; k < customKingdoms; k++)
+        {
+            players.Add(new MatchPlayer((byte)k, string.Empty, string.Empty, ControllerKind.Passive, Difficulty.Normal, 0));
+            lobbyOf.Add(255);
         }
 
         // Colours (SHELL-016): wanted ones first, in slot order (the first slot keeps a colour two slots want), then

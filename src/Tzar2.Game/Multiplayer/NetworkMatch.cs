@@ -54,15 +54,24 @@ public sealed partial class NetworkMatch : IDisposable
         _driver = new LockstepDriver(this, client);
     }
 
-    /// <summary>Connects to the relay and creates a lobby; this player hosts it.</summary>
-    public static NetworkMatch Create(NetworkMatchOptions options, string lobbyName, int slots, bool isPublic)
+    /// <summary>
+    /// Connects to the relay and creates a lobby with <paramref name="slots"/> slots; this player hosts it. Slots from
+    /// <paramref name="openSlots"/> on start closed (the lobby screen opens them for a map with more kingdoms).
+    /// </summary>
+    public static NetworkMatch Create(NetworkMatchOptions options, string lobbyName, int slots, bool isPublic, int? openSlots = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
         ArgumentOutOfRangeException.ThrowIfLessThan(slots, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(slots, Limits.MaxSlots);
-        return new NetworkMatch(options, LockstepClient.Create(ClientOptions(options), new LobbyCreate(lobbyName, (byte)slots, isPublic)));
+        return new NetworkMatch(options, LockstepClient.Create(ClientOptions(options), new LobbyCreate(lobbyName, (byte)slots, isPublic)))
+        {
+            _closeFrom = Math.Clamp(openSlots ?? slots, 1, slots),
+        };
     }
+
+    // The first slot to close once the lobby exists (Create's openSlots), or int.MaxValue when done.
+    private int _closeFrom = int.MaxValue;
 
     /// <summary>Connects to the relay and joins the lobby with <paramref name="code"/>.</summary>
     public static NetworkMatch Join(NetworkMatchOptions options, string code)
@@ -388,6 +397,18 @@ public sealed partial class NetworkMatch : IDisposable
         _lobby = new LobbyView(lobby.Code, lobby.Name, settings, lobby.Slots.Select((s, i) => new LobbySlotView(
             (byte)i, (SlotKind)s.State, s.Name, s.Ready, s.Connected, s.PingMs, SlotChoice.Parse(s.Choice), i == lobby.HostSlot, i == local)).ToArray(), lobby.HostSlot == local);
         AnnounceScripts(before, _lobby);
+        if (_lobby.LocalIsHost && _closeFrom < _lobby.Slots.Count)
+        {
+            for (int i = _closeFrom; i < _lobby.Slots.Count; i++)
+            {
+                if (_lobby.Slots[i].Kind == SlotKind.Open)
+                {
+                    _client.SetSlot((byte)i, SlotState.Closed);
+                }
+            }
+
+            _closeFrom = int.MaxValue;
+        }
     }
 
     // SHELL-017: every player is told when the host changes a computer's strategy (a player chooses his own).
@@ -408,6 +429,12 @@ public sealed partial class NetworkMatch : IDisposable
             }
         }
     }
+
+    /// <summary>The custom maps this machine can play in a lobby (SHELL-018; ADR 0233).</summary>
+    public IReadOnlyList<Campaigns.CustomMapEntry> CustomMaps => _options.CustomMaps;
+
+    // A custom map by its hash: peers look the host's choice up in their own maps (ADR 0233).
+    private Campaigns.MissionContent? FindMap(ulong hash) => _options.CustomMaps.FirstOrDefault(m => m.Hash == hash)?.Mission;
 
     /// <summary>The strategies a kingdom's computer player can follow (AI-001; the first is the default).</summary>
     public IReadOnlyList<AiScriptOption> AiScripts => _options.Ai.Scripts;
@@ -436,7 +463,7 @@ public sealed partial class NetworkMatch : IDisposable
 
             _descriptor = Describe(lobby, settings, save);
             byte local = SimSlot(_client.Welcome!.Slot);
-            _setup = _descriptor.ToSetup(_options.Ai, multiplayer: true, localSlot: local == 255 ? null : local);
+            _setup = _descriptor.ToSetup(_options.Ai, multiplayer: true, localSlot: local == 255 ? null : local, _options.Ruleset, FindMap);
             if (_client.Phase == ClientPhase.Resuming)
             {
                 return; // a rejoin: the match comes from a peer's snapshot (OnResume)
@@ -482,7 +509,8 @@ public sealed partial class NetworkMatch : IDisposable
     private MatchDescriptor Describe(LobbyState lobby, MatchSettings settings, MultiplayerSave? save)
     {
         (MatchDescriptor descriptor, byte[] simOf, byte[] lobbyOf) = LobbyDescription.Build(
-            settings, lobby.Slots.Select(s => new LobbySlotData(s.State, s.Name, s.Choice)).ToArray(), _options.Ruleset, save);
+            settings, lobby.Slots.Select(s => new LobbySlotData(s.State, s.Name, s.Choice)).ToArray(), _options.Ruleset, save,
+            settings.Map == MapSourceKind.CustomMap && FindMap(settings.CustomMapHash) is { } map ? Campaigns.ScenarioMatch.KingdomCount(map, _options.Ruleset.MaxPlayers) : 0);
         simOf.CopyTo(_simSlotOf, 0);
         _lobbySlotOf = lobbyOf;
         return descriptor;

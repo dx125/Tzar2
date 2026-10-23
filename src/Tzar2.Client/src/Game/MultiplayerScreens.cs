@@ -318,7 +318,7 @@ public partial class LobbyScreen : ArtScreen
 
     private void Rebuild(LobbyView lobby)
     {
-        var model = new LobbyScreenModel(lobby, _match.AiScripts);
+        var model = new LobbyScreenModel(lobby, _match.AiScripts, _match.CustomMaps);
         _title.Text = $"{lobby.Name}   —   code {lobby.Code}{(lobby.LocalIsHost ? "   (you host)" : string.Empty)}";
         foreach (Node child in _rows.GetChildren())
         {
@@ -338,10 +338,10 @@ public partial class LobbyScreen : ArtScreen
         AddSettings(lobby, model);
         LobbySlotView? me = lobby.Slots.FirstOrDefault(s => s.IsLocal);
         _ready.Visible = !lobby.LocalIsHost;
-        _ready.Disabled = me is null;
+        _ready.Disabled = me is null || !model.HasMap;
         _start.Visible = lobby.LocalIsHost;
         _start.Disabled = !model.CanStart;
-        _status.Text = me is { Ready: true } && !lobby.LocalIsHost ? "You are ready (your choices are locked)." : string.Empty;
+        _status.Text = model.MapNotice ?? (me is { Ready: true } && !lobby.LocalIsHost ? "You are ready (your choices are locked)." : string.Empty);
     }
 
     private void AddRow(LobbyView lobby, LobbySlotView slot, LobbyRow row, LobbyScreenModel model, int y)
@@ -441,13 +441,24 @@ public partial class LobbyScreen : ArtScreen
             if (setting.IsCheck)
             {
                 var box = new CheckBox { Position = new Vector2(0, y), Text = setting.Caption, ButtonPressed = setting.Selected == 1, Disabled = !setting.Enabled };
-                box.Toggled += v => _match.SetSettings(model.Apply(key, v ? 1 : 0));
+                box.Toggled += v => model.Choose(_match, key, v ? 1 : 0);
                 _hostPanel.AddChild(box);
                 y += 28;
                 continue;
             }
 
-            Option(setting.Caption, setting.Items, setting.Selected, setting.Enabled, i => _match.SetSettings(model.Apply(key, i)), ref y);
+            if (setting.IsNumber)
+            {
+                // The original's value field (time or score limit).
+                _hostPanel.AddChild(new Label { Position = new Vector2(0, y + 2), Text = setting.Caption, MouseFilter = MouseFilterEnum.Ignore });
+                var number = new SpinBox { Position = new Vector2(104, y), Size = new Vector2(110, 24), MinValue = setting.Min, MaxValue = setting.Max, Value = setting.Selected, Editable = setting.Enabled };
+                number.ValueChanged += v => model.Choose(_match, key, (int)v);
+                _hostPanel.AddChild(number);
+                y += 30;
+                continue;
+            }
+
+            Option(setting.Caption, setting.Items, setting.Selected, setting.Enabled, i => model.Choose(_match, key, i), ref y);
         }
 
         Option("Dropped players", ["computer takes over", "neutral", "defeated"], (int)_drop, lobby.LocalIsHost, i => _drop = (DropRule)i, ref y);
