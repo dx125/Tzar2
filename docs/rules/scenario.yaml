@@ -1,0 +1,14 @@
+schema: tzar2-rules/1
+prefix: SCN
+title: Scenario scripts
+rules:
+  SCN-001:
+    rule: A count of objects by type or category over several kingdoms adds up the objects of all of them and compares the total with the count; the specification's Any or All plays no part in it.
+    source: ['community ReTzar src/gameplay/scripting.rs (select: a selection by class counts the listed kingdoms together)']
+    status: tested
+    note: saa12's "belowfiftytroops" (military units of kingdoms 1 and 6, at most 50) spawned 70 reinforcements every second for as long as the player alone had fewer than 50, thousands of units, while the counts were compared per kingdom (UNK-54).
+  SCN-002:
+    rule: A rule tests its condition again every second; a rule with Keep Rule runs its actions again each second its condition holds.
+    source: ['community ReTzar src/gameplay/scripting.rs (PERIOD 1000 ms, 0x4b6a70, 0x4bd770)']
+    status: tested
+    note: TriggerOptions.IntervalMs, 1000 ms.

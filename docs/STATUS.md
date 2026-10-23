@@ -265,6 +265,11 @@ Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisi
 the process decisions that have no ADR.
 
 * **2026-10-23 — Chat screen (HUD-010, HUD-011).** CHAT (and Enter in single player) opens D_CHAT at ReTzar's places: the line, ALL, ALLY, ENEMY and CUSTOM, whose large window lists the other kingdoms with a check, their colour, name and a stance shield. The engine-free ChatScreen gives the line, recipients and mask to GameSession.SubmitChat, so single player can type the cheat codes again. Multiplayer's Enter keeps the overlay's chat line. No hash changes.
+* **2026-10-23 — Scenario counts add up the masked kingdoms (SCN-001; ReTzar).** A count by type or category over
+  several kingdoms is one total, not a test per kingdom joined by Any or All (UNK-54's placeholder). saa12's "Help"
+  (military units of kingdoms 1 and 6 at most 50, Keep Rule) had spawned 70 units a second for as long as the player
+  alone had fewer than 50: 3,215 units by tick 741. Rules retest each second (SCN-002, as before). New ledger chapter
+  `scenario.yaml`.
 
 * **2026-10-23 — F4's scoreboard and clock (DIP-008).** F4 now steps from nothing to the scoreboard and the clock, the clock alone, and back, as ReTzar reads the original (0x4f2903): the game time at the view's top right, one line per kingdom (name, own/team score, the best first, defeated struck through, its colour) above the bottom right corner. The engine-free ScoreBoard model orders and averages; the score itself stays the placeholder of UNK-29. No hash changes.
 
