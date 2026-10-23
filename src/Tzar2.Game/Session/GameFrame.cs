@@ -490,7 +490,7 @@ public readonly record struct KingdomStatistics(
     long TributeReceived)
 {
     /// <summary>The statistics of a sim kingdom state.</summary>
-    public static KingdomStatistics From(in Tzar2.Sim.Kingdoms.KingdomState k) => new(
+    internal static KingdomStatistics From(in Tzar2.Sim.Kingdoms.KingdomState k) => new(
         k.UnitsTrained, k.UnitsKilled, k.UnitsLost, k.BuildingsBuilt, k.BuildingsLost, k.BuildingsDestroyed, k.BuildingsCaptured,
         k.TechnologiesResearched, k.GatheredTotal, k.TradeIncome, k.TributeSent, k.TributeReceived);
 }
