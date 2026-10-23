@@ -15,7 +15,7 @@ namespace Tzar2.Client.Game;
 public abstract partial class ArtScreen : Control
 {
     /// <summary>Creates a screen of <paramref name="screen"/> size with <paramref name="background"/> centred.</summary>
-    protected ArtScreen(UiAssets ui, Vector2I screen, string background, bool dim = false)
+    protected ArtScreen(UiAssets ui, Vector2I screen, string background, bool dim = false, Vector2I? missing = null)
     {
         Ui = ui;
         Size = screen;
@@ -23,7 +23,7 @@ public abstract partial class ArtScreen : Control
         _backdrop = new ColorRect { Size = screen, Color = dim ? new Color(0, 0, 0, 0.45f) : Colors.Black, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_backdrop);
         ImageTexture? back = ui.Texture(background);
-        Vector2I size = back is null ? new Vector2I(500, 320) : new Vector2I(back.GetWidth(), back.GetHeight());
+        Vector2I size = back is null ? missing ?? new Vector2I(500, 320) : new Vector2I(back.GetWidth(), back.GetHeight());
         _artSize = size;
         Origin = (screen - size) / 2;
         if (back is not null)
@@ -320,17 +320,14 @@ public sealed class SkirmishOptions
 /// included, are the original's as ReTzar reads its constructor and its labels.
 /// What the screen set is kept in <c>user://random-map.cfg</c>.
 /// </summary>
-public partial class SkirmishSetupScreen : ArtScreen
+public partial class SkirmishSetupScreen : SetupScreen
 {
     private const string Art = "art/screens/s_singlernd/";
-    private const string Common = "art/screens/common/";
     private const string SavePath = "user://random-map.cfg";
-    private static readonly Color Caption = new(0.85f, 0.85f, 0.75f);
 
     private readonly Tzar2.Game.Ui.RandomMapScreenModel _model;
     private readonly SkirmishOptions _options;
     private readonly PresentationCatalog? _catalog;
-    private readonly Control _layer;
 
     /// <summary>Creates the screen.</summary>
     public SkirmishSetupScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, SkirmishOptions options, System.Collections.Generic.IReadOnlyList<AiScriptOption> scripts, string? notice = null)
@@ -340,8 +337,6 @@ public partial class SkirmishSetupScreen : ArtScreen
         _options = options;
         _catalog = catalog;
         _model = new Tzar2.Game.Ui.RandomMapScreenModel(SkirmishOptions.CivilizationsOf(catalog?.Ruleset), scripts, Load());
-        _layer = new Control { MouseFilter = MouseFilterEnum.Ignore, Position = Origin }; // moves with the art (Resize)
-        AddChild(_layer);
         Notice(notice, new Vector2I(66, 304), 470); // below the kingdoms' rows
         const string Btn = Art + "btn.t2img";
         Button(new Vector2I(556, 499), new Vector2I(210, 27), Btn, T("play", "PLAY"), () =>
@@ -399,13 +394,9 @@ public partial class SkirmishSetupScreen : ArtScreen
         }
     }
 
-    private void Refresh()
+    /// <inheritdoc/>
+    protected override void DrawLayer()
     {
-        foreach (Node child in _layer.GetChildren())
-        {
-            child.QueueFree();
-        }
-
         Rows();
         Options();
     }
@@ -417,22 +408,15 @@ public partial class SkirmishSetupScreen : ArtScreen
         {
             Tzar2.Game.Ui.RandomMapRow row = model.Rows[i];
             int y = 35 * i, index = i;
-            Picture(new Vector2I(62, 20 + y), Ui.Texture(Art + "row back.t2img"));
-            Picture(new Vector2I(73, 31 + y), Ui.Region(Common + "color bars.t2img", new Rect2I(0, row.Colour * 13, 13, 13)));
-            Click(new Rect2I(73, 31 + y, 13, 13), () => model.ChangeRow(index, Tzar2.Game.Ui.RandomMapRowField.Colour, +1));
             string name = i == 0 ? "Player" : row.Script > 0 ? model.Scripts[row.Script].Name : $"Computer {i}";
-            Label(new Vector2I(110, 30 + y), Fit(name, 160, UiAssets.SmallFont), Colors.White);
+            string civ = model.CivilizationOf(row) is { } key ? T($"race_{row.Civilization}", key) : T("race_0", "RANDOM");
+            KingdomRow(i, Art + "row back.t2img", row.Colour, Fit(name, 160, UiAssets.SmallFont), civ, row.Team, (field, step) => model.ChangeRow(index, field, step), true);
             if (i > 0)
             {
                 // The computer's AI button (COMMON/AI: dim, lit once it has a script of its own); each press the next script.
                 Picture(new Vector2I(273, 26 + y), Ui.Region(Common + "ai.t2img", new Rect2I(0, row.Script > 0 ? 20 : 0, 20, 20)));
                 Click(new Rect2I(273, 26 + y, 20, 20), () => model.ChangeRow(index, Tzar2.Game.Ui.RandomMapRowField.Script, +1));
             }
-
-            string civ = model.CivilizationOf(row) is { } key ? T($"race_{row.Civilization}", key) : T("race_0", "RANDOM");
-            Spin(new Vector2I(311, 23 + y), civ, step => model.ChangeRow(index, Tzar2.Game.Ui.RandomMapRowField.Civilization, step), arrows: true);
-            Picture(new Vector2I(511, 31 + y), Ui.Region(Common + "teams.t2img", new Rect2I(0, ((row.Team + 4) % 5) * 13, 13, 13)));
-            Click(new Rect2I(511, 31 + y, 13, 13), () => model.ChangeRow(index, Tzar2.Game.Ui.RandomMapRowField.Team, +1));
         }
     }
 
@@ -452,10 +436,8 @@ public partial class SkirmishSetupScreen : ArtScreen
         if (model.HasVictoryLimit)
         {
             // The limit's selector (COMMON/SCROLL CTRL) under the victory condition.
-            Picture(new Vector2I(66, 538), Ui.Texture(Common + "scroll ctrl.t2img"));
-            string caption = model.IsScoreLimit ? T("t_score_lim", "Score Limit") : T("t_time_lim", "Time Limit (min.)");
-            Label(new Vector2I(68, 527), caption, Caption);
-            Spin(new Vector2I(66, 541), N(model.VictoryLimit), step => model.Change(Tzar2.Game.Ui.RandomMapOption.VictoryLimit, step), arrows: false, width: 191);
+            LimitSelector(model.IsScoreLimit ? T("t_score_lim", "Score Limit") : T("t_time_lim", "Time Limit (min.)"), N(model.VictoryLimit),
+                step => model.Change(Tzar2.Game.Ui.RandomMapOption.VictoryLimit, step), true);
         }
 
         // The AI resign flag (AIRESIGN.BMP, 2 x 2 frames of 32: the white flag on top, the swords below; the right
@@ -476,67 +458,11 @@ public partial class SkirmishSetupScreen : ArtScreen
         Check(new Vector2I(564, 411), new Vector2I(610, 423), T("t_gateways", "Gateways"), Tzar2.Game.Ui.RandomMapOption.Gateways);
     }
 
-    // A baked 180 x 27 spin of the art with its caption.
     private void Option(Vector2I at, Vector2I captionAt, string caption, string value, Tzar2.Game.Ui.RandomMapOption option)
-    {
-        Label(captionAt, caption, Caption);
-        Spin(at, value, step => _model.Change(option, step), arrows: false);
-    }
+        => Option(at, captionAt, caption, value, step => _model.Change(option, step), true);
 
-    // A 30 x 30 check box (COMMON/CHK: the green light on top, the red one below) with its caption to the right.
     private void Check(Vector2I at, Vector2I captionAt, string caption, Tzar2.Game.Ui.RandomMapOption option)
-    {
-        Picture(at, Ui.Region(Common + "chk.t2img", new Rect2I(0, _model.IsOn(option) ? 0 : 31, 31, 31)));
-        Click(new Rect2I(at, new Vector2I(30, 30)), () => _model.Change(option, +1)); // the original's 30 x 30 boxes, 30 apart
-        Label(captionAt, caption, Caption);
-    }
-
-    // A spin: arrows at both ends (drawn from COMMON/BTN LEFT and RIGHT where the art has none), the value between them.
-    private void Spin(Vector2I at, string value, Action<int> change, bool arrows, int width = 180)
-    {
-        const int Arrow = 27;
-        if (arrows)
-        {
-            Picture(at, Ui.Region(Common + "btn left.t2img", new Rect2I(0, 0, Arrow, Arrow)));
-            Picture(at + new Vector2I(width - Arrow, 0), Ui.Region(Common + "btn right.t2img", new Rect2I(0, 0, Arrow, Arrow)));
-        }
-
-        Click(new Rect2I(at, new Vector2I(Arrow, Arrow)), () => change(-1));
-        Click(new Rect2I(at + new Vector2I(width - Arrow, 0), new Vector2I(Arrow, Arrow)), () => change(+1));
-        Click(new Rect2I(at + new Vector2I(Arrow, 0), new Vector2I(width - (2 * Arrow), Arrow)), () => change(+1));
-        string shown = Fit(value, width - (2 * Arrow) - 6, UiAssets.SmallFont);
-        if (Ui.Text(shown, UiAssets.SmallFont, Colors.White) is { } t)
-        {
-            Picture(at + new Vector2I((width - t.GetWidth()) / 2, (Arrow - t.GetHeight()) / 2), t);
-        }
-    }
-
-    private void Label(Vector2I at, string text, Color colour)
-    {
-        if (Ui.Text(text, UiAssets.SmallFont, colour) is { } t)
-        {
-            Picture(at, t);
-        }
-    }
-
-    private void Picture(Vector2I at, Texture2D? texture)
-    {
-        if (texture is not null)
-        {
-            _layer.AddChild(new TextureRect { Texture = texture, Position = at, MouseFilter = MouseFilterEnum.Ignore });
-        }
-    }
-
-    private void Click(Rect2I rect, Action pressed)
-    {
-        var button = new Button { Position = rect.Position, Size = rect.Size, Flat = true, Modulate = new Color(1, 1, 1, 0.02f) };
-        button.Pressed += () =>
-        {
-            pressed();
-            Callable.From(Refresh).CallDeferred();
-        };
-        _layer.AddChild(button);
-    }
+        => Check(at, captionAt, caption, _model.IsOn(option), () => _model.Change(option, +1), true);
 }
 
 /// <summary>
@@ -611,9 +537,12 @@ public enum GameMenuChoice
 
     /// <summary>LOAD GAME.</summary>
     Load,
+
+    /// <summary>INSTRUCTIONS (SHELL-021): the online help's hot keys.</summary>
+    Instructions,
 }
 
-/// <summary>The in-game menu (<c>D_MENU</c>; its labels are baked into the bitmap, UNK-15): load, save, options, restart, quit, back.</summary>
+/// <summary>The in-game menu (<c>D_MENU</c>; its labels are baked into the bitmap, UNK-15): instructions, load, save, options, restart, quit, back.</summary>
 public partial class GameMenu : ArtScreen
 {
     /// <summary>Creates the menu.</summary>
@@ -621,6 +550,7 @@ public partial class GameMenu : ArtScreen
         : base(ui, screen, "art/screens/d_menu/back.t2img", dim: true)
     {
         var size = new Vector2I(150, 25);
+        Area(new Rect2I(new Vector2I(63, 46), size), () => Closed?.Invoke(GameMenuChoice.Instructions)); // ReTzar's place of INSTRUCTIONS
         Area(new Rect2I(new Vector2I(63, 86), size), () => Closed?.Invoke(GameMenuChoice.Load));
         Area(new Rect2I(new Vector2I(63, 126), size), () => Closed?.Invoke(GameMenuChoice.Save));
         Area(new Rect2I(new Vector2I(63, 166), size), () => Closed?.Invoke(GameMenuChoice.Options));

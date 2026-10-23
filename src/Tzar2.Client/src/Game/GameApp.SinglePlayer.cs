@@ -20,7 +20,7 @@ public partial class GameApp
 
     private List<CustomMap>? _customMaps;
     private int _customMapIndex;
-    private readonly CustomMapOptions _customOptions = new();
+    private ulong _customStarts; // draws the RANDOM civilizations of a custom map's setup
 
     /// <summary>Shows the single-player menu.</summary>
     public void ShowSinglePlayer()
@@ -60,14 +60,15 @@ public partial class GameApp
 
     private void ShowMapSetup(CustomMap map)
     {
-        var screen = new MapSetupScreen(_ui!, _catalog, Screen, map, _customOptions, MapPreview(map.Mission.Map, 256), _ai.Notice);
-        screen.Play += options => StartCustomMap(map, options);
+        var model = new Tzar2.Game.Ui.CustomMapScreenModel(map.Mission, SkirmishOptions.CivilizationsOf(_rules));
+        var screen = new MapSetupScreen(_ui!, _catalog, Screen, map, model, _ai.Notice);
+        screen.Play += chosen => StartCustomMap(map, chosen.ToSettings(_ai, map.Mission.Map.ContentHash + _customStarts++));
         screen.Back += ShowCustomMaps;
         Replace(screen, music: null);
     }
 
     /// <summary>Starts <paramref name="map"/> with <paramref name="options"/> (the loading screen at once, the match a frame later).</summary>
-    public void StartCustomMap(CustomMap map, CustomMapOptions options)
+    public void StartCustomMap(CustomMap map, CustomMapSettings options)
     {
         ArgumentNullException.ThrowIfNull(map);
         ArgumentNullException.ThrowIfNull(options);
@@ -76,7 +77,7 @@ public partial class GameApp
     }
 
     // A custom map started with its options, or continued from a save (whose setup it carries).
-    private void BuildCustomMap(CustomMap map, CustomMapOptions? options, SaveGame? resume)
+    private void BuildCustomMap(CustomMap map, CustomMapSettings? options, SaveGame? resume)
     {
         if (_rules is null)
         {
@@ -85,7 +86,7 @@ public partial class GameApp
         }
 
         GameSession session;
-        CustomMapSettings settings = resume?.Custom is { } saved ? saved with { Ai = _ai } : (options ?? new CustomMapOptions()).ToSettings(_ai, _rules);
+        CustomMapSettings settings = resume?.Custom is { } saved ? saved with { Ai = _ai } : (options ?? new CustomMapSettings()) with { Ai = _ai };
         try
         {
             session = resume is not null ? resume.ResumeCustomMap(map.Mission, _rules, _ai) : new GameSession(ScenarioMatch.Setup(map.Mission, _rules, custom: settings), _rules);
@@ -101,7 +102,7 @@ public partial class GameApp
         screen.Finished += (outcome, stats) =>
         {
             SaveReplay(session, "custom");
-            ShowResults(outcome, stats, () => StartCustomMap(map, options ?? new CustomMapOptions()), ShowSinglePlayer);
+            ShowResults(outcome, stats, () => StartCustomMap(map, settings), ShowSinglePlayer);
         };
         screen.QuitRequested += () =>
         {
@@ -116,7 +117,7 @@ public partial class GameApp
             }
             else
             {
-                StartCustomMap(map, options!);
+                StartCustomMap(map, settings);
             }
         };
         screen.Saves = Saves;

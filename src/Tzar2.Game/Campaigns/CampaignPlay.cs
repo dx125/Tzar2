@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
@@ -99,7 +100,62 @@ public sealed record CustomMapSettings
 
     /// <summary>The computer kingdoms' strategy script (the original <c>random.ais</c> of the package).</summary>
     public SkirmishAi Ai { get; init; } = SkirmishAi.EngineDefault;
+
+    /// <summary>
+    /// The kingdoms that take part, the player's included (SHELL-007), or 0 for all of the map's. The player and the
+    /// first others in kingdom order stay; the others' objects are not created (ReTzar: the original's loader).
+    /// </summary>
+    public int Players { get; init; }
+
+    /// <summary>The victory condition, or null for the map's.</summary>
+    public Sim.VictoryCondition? Victory { get; init; }
+
+    /// <summary>The game type, or null for the map's.</summary>
+    public Sim.GameType? GameType { get; init; }
+
+    /// <summary>The score limit of a score-limit victory, or null for the match default.</summary>
+    public int? ScoreLimit { get; init; }
+
+    /// <summary>The time limit in minutes of a time-limit victory, or null for the match default.</summary>
+    public int? TimeLimitMinutes { get; init; }
+
+    /// <summary>
+    /// Each kingdom's own choices on the setup screen (SHELL-006): civilization, colour and team; a kingdom without an
+    /// entry keeps the map's.
+    /// </summary>
+    public System.Collections.Immutable.ImmutableArray<CustomKingdom> Kingdoms { get; init; } = [];
+
+    /// <summary>The choices of kingdom <paramref name="slot"/>, or null.</summary>
+    public CustomKingdom? KingdomAt(int slot)
+    {
+        foreach (CustomKingdom k in Kingdoms)
+        {
+            if (k.Slot == slot)
+            {
+                return k;
+            }
+        }
+
+        return null;
+    }
+
+    /// <inheritdoc />
+    public bool Equals(CustomMapSettings? other) => other is not null && Difficulty == other.Difficulty && Civilization == other.Civilization
+        && StartingResources == other.StartingResources && PopulationLimit == other.PopulationLimit && NoFog == other.NoFog
+        && Explored == other.Explored && ReferenceEquals(Ai, other.Ai) && Players == other.Players && Victory == other.Victory
+        && GameType == other.GameType && ScoreLimit == other.ScoreLimit && TimeLimitMinutes == other.TimeLimitMinutes
+        && Kingdoms.SequenceEqual(other.Kingdoms);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => HashCode.Combine(Difficulty, Civilization, StartingResources, PopulationLimit, Players, Victory, Kingdoms.Length);
 }
+
+/// <summary>A kingdom's choices on the setup of a custom map (SHELL-006).</summary>
+/// <param name="Slot">The kingdom (0-7).</param>
+/// <param name="Civilization">Its civilization key, or null for the map's.</param>
+/// <param name="Colour">Its colour 0-7, or 255 for its slot's.</param>
+/// <param name="Team">Its team 1-4, or 0 for none (the map's diplomacy).</param>
+public sealed record CustomKingdom(byte Slot, string? Civilization, byte Colour = 255, byte Team = 0);
 
 /// <summary>
 /// Builds the match of a scenario map (ADR 0133): kingdoms from the scenario's kingdom table (the first active
@@ -160,7 +216,9 @@ public static class ScenarioMatch
         }
 
         human = Math.Max(0, human);
+        HashSet<int>? left = Taking(s, mission.Map, players, human, rescue, custom?.Players ?? 0);
         var list = new PlayerSetup[players];
+        var converted = new HashSet<int>(); // the kingdoms whose civilization the setup chose
         for (int p = 0; p < players; p++)
         {
             KingdomDef? k = Kingdom(s, p + 1);
@@ -169,6 +227,13 @@ public static class ScenarioMatch
             if (p == human && custom?.Civilization is { } chosen)
             {
                 civ = chosen;
+                converted.Add(p);
+            }
+
+            if (custom?.KingdomAt(p)?.Civilization is { } own)
+            {
+                civ = own;
+                converted.Add(p);
             }
 
             if (!ruleset.CanFoundKingdom(civ))
@@ -176,24 +241,33 @@ public static class ScenarioMatch
                 civ = FirstPlayable(ruleset);
             }
 
-            list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue ? ControllerKind.Passive : ControllerKind.Computer, custom?.Difficulty ?? Difficulty.Normal);
+            bool absent = p != human && p != rescue && left is not null && !left.Contains(p);
+            list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue || absent ? ControllerKind.Passive : ControllerKind.Computer,
+                custom?.Difficulty ?? Difficulty.Normal, Colour: custom?.KingdomAt(p)?.Colour ?? 255);
+        }
+
+        // The objects of the kingdoms left out are not created; a kingdom given another civilization takes it for its
+        // units and buildings where the ruleset has the same class for it (ReTzar: the original's custom map loader).
+        map = Kingdoms(map, ruleset, list, converted);
+        ulong teams = 0;
+        foreach (CustomKingdom k in custom?.Kingdoms ?? [])
+        {
+            if (k.Slot < players && k.Team is >= 1 and <= 8)
+            {
+                teams |= (ulong)k.Team << (k.Slot * 4);
+            }
         }
 
         var hasher = new StateHasher();
         hasher.Add(map.ContentHash).Add(s.ContentHash);
-        return new MatchSetup
+        var setup = new MatchSetup
         {
             Map = new FixedMapSource(s.Properties.Title.Length > 0 ? s.Properties.Title : map.Name, map),
             Players = list,
             Seed = hasher.GetCurrentHash(),
-            Victory = s.Properties.Victory switch
-            {
-                ScenarioVictory.Standard => Sim.VictoryCondition.Standard,
-                ScenarioVictory.DestroyCastle => Sim.VictoryCondition.DestroyCastles,
-                ScenarioVictory.ScoreLimit => Sim.VictoryCondition.ScoreLimit,
-                ScenarioVictory.TimeLimit => Sim.VictoryCondition.TimeLimit,
-                _ => Sim.VictoryCondition.NotSpecified,
-            },
+            Victory = custom?.Victory ?? MapVictory(s.Properties.Victory),
+            GameType = custom?.GameType ?? Sim.GameType.Standard,
+            Teams = teams,
             PopulationLimit = custom is { PopulationLimit: > 0 } ? custom.PopulationLimit : s.Properties.PopulationLimit > 0 ? s.Properties.PopulationLimit : -1,
             StartingResources = custom is { StartingResources: >= 0 } ? custom.StartingResources : -1,
             NoFog = custom?.NoFog ?? s.Properties.NoFog,
@@ -202,7 +276,12 @@ public static class ScenarioMatch
             Ai = custom?.Ai ?? SkirmishAi.EngineDefault,
             ComputerAi = computerAi,
             CheatsAllowed = cheats,
-            Preparation = new Preparation(s, carry, (byte)human, rescue, mapStockpiles: custom is not { StartingResources: >= 0 }),
+            Preparation = new Preparation(s, carry, (byte)human, rescue, mapStockpiles: custom is not { StartingResources: >= 0 }, Absent(left, list), teams),
+        };
+        return setup with
+        {
+            ScoreLimit = custom?.ScoreLimit ?? setup.ScoreLimit,
+            TimeLimitMinutes = custom?.TimeLimitMinutes ?? setup.TimeLimitMinutes,
         };
     }
 
@@ -279,6 +358,118 @@ public static class ScenarioMatch
         };
     }
 
+    /// <summary>The victory condition a map's properties name.</summary>
+    public static Sim.VictoryCondition MapVictory(ScenarioVictory victory) => victory switch
+    {
+        ScenarioVictory.Standard => Sim.VictoryCondition.Standard,
+        ScenarioVictory.DestroyCastle => Sim.VictoryCondition.DestroyCastles,
+        ScenarioVictory.ScoreLimit => Sim.VictoryCondition.ScoreLimit,
+        ScenarioVictory.TimeLimit => Sim.VictoryCondition.TimeLimit,
+        _ => Sim.VictoryCondition.NotSpecified,
+    };
+
+    /// <summary>
+    /// The kingdoms of <paramref name="mission"/> that a player can see on its setup (SHELL-006): the active ones, by
+    /// slot; the local player's is the first Human-or-AI one.
+    /// </summary>
+    public static IReadOnlyList<(int Slot, KingdomDef? Kingdom, bool Human)> SetupKingdoms(MissionContent mission, int max = 8)
+    {
+        ArgumentNullException.ThrowIfNull(mission);
+        ScenarioData s = mission.Scenario;
+        int players = KingdomCount(mission, max);
+        int human = -1;
+        foreach (KingdomDef k in s.Kingdoms)
+        {
+            if (k.Active && k.PlayerType == PlayerType.HumanOrAi && k.Number is >= 1 and <= 8 && k.Number <= players && (human < 0 || k.Number - 1 < human))
+            {
+                human = k.Number - 1;
+            }
+        }
+
+        human = Math.Max(0, human);
+        var list = new List<(int, KingdomDef?, bool)>();
+        for (int p = 0; p < players; p++)
+        {
+            if (TakesPart(s, mission.Map, p))
+            {
+                list.Add((p, Kingdom(s, p + 1), p == human));
+            }
+        }
+
+        return list;
+    }
+
+    // The kingdoms that take part when only `count` of them should (0: all): the player and the first others in
+    // kingdom order. Null: all of them.
+    private static HashSet<int>? Taking(ScenarioData s, MapData map, int players, int human, int rescue, int count)
+    {
+        if (count <= 0)
+        {
+            return null;
+        }
+
+        var left = new HashSet<int> { human };
+        for (int p = 0; p < players && left.Count < count; p++)
+        {
+            if (p != rescue && TakesPart(s, map, p))
+            {
+                left.Add(p);
+            }
+        }
+
+        return left;
+    }
+
+    // A kingdom of the map takes part: active in the scenario, or (without an entry) owning objects on the map.
+    private static bool TakesPart(ScenarioData s, MapData map, int p) => Kingdom(s, p + 1) is { } k
+        ? k.Active
+        : map.Objects.Any(o => o.Owner == p);
+
+    // The kingdoms left out on the setup: the computer slots not kept (the passive ones the setup made).
+    private static HashSet<int>? Absent(HashSet<int>? left, PlayerSetup[] players)
+    {
+        if (left is null)
+        {
+            return null;
+        }
+
+        var absent = new HashSet<int>();
+        foreach (PlayerSetup p in players)
+        {
+            if (!left.Contains(p.Slot) && p.Controller == ControllerKind.Passive)
+            {
+                absent.Add(p.Slot);
+            }
+        }
+
+        return absent;
+    }
+
+    internal static MapData Kingdoms(MapData map, Ruleset ruleset, PlayerSetup[] players, HashSet<int> converted)
+    {
+        var objects = ImmutableArray.CreateBuilder<MapObject>(map.Objects.Length);
+        bool changed = false;
+        foreach (MapObject o in map.Objects)
+        {
+            MapObject kept = o;
+            if (converted.Contains(o.Owner) && o.TypeKey.IndexOf('.', StringComparison.Ordinal) is > 0 and var dot)
+            {
+                string civ = players[o.Owner].Civilization;
+                string prefix = o.TypeKey[..dot];
+                string other = civ + o.TypeKey[dot..];
+                if (prefix != civ && prefix != "comm" && ruleset.IsPlayableCivilization(prefix) && ruleset.EntityTypeId(other) >= 0)
+                {
+                    kept = o with { TypeKey = other };
+                    changed = true;
+                }
+            }
+
+            objects.Add(kept);
+        }
+
+        return changed ? new MapData(map.Name, map.Width, map.Height, map.TerrainCorners, map.HeightCorners, map.CliffTiles, objects.ToImmutable(), map.TerrainSet, map.SetTerrainCorners) : map;
+    }
+
     private static int FreeInactive(ScenarioData s, MapData map, int players)
     {
         for (int p = players - 1; p >= 0; p--)
@@ -339,11 +530,28 @@ public static class ScenarioMatch
     private static string FirstPlayable(Ruleset ruleset)
         => ruleset.FirstKingdomCivilization ?? throw new System.IO.InvalidDataException($"Ruleset '{ruleset.Name}' has no civilization with a seat.");
 
-    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, bool mapStockpiles = true) : IMatchPreparation
+    // absent: kingdoms left out on the setup (SHELL-007), whose map objects are not created; teams: the setup's teams
+    // (SHELL-006), allied over the map's diplomacy.
+    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, bool mapStockpiles = true, HashSet<int>? absent = null, ulong teams = 0) : IMatchPreparation
     {
         public void Prepare(Simulation simulation, LegacyTriggerSystem? triggers)
         {
             World world = simulation.World;
+            if (absent is { Count: > 0 })
+            {
+                // The objects stay in the map's list (the scenario names them by index), but do not exist: as if never
+                // created (ReTzar: the original's loader leaves them out; those Not Appear stay for Appear Object).
+                ReadOnlySpan<EntityId> entities = world.MapObjectEntities;
+                for (int i = 0; i < entities.Length; i++)
+                {
+                    bool notAppear = i < scenario.ObjectCount && (scenario.ObjectAt(i).Flags & ObjectFlags.NotAppear) != 0;
+                    if (!notAppear && absent.Contains(world.Map.Data.Objects[i].Owner) && world.Entities.IsAlive(entities[i]))
+                    {
+                        world.Destroy(entities[i]);
+                    }
+                }
+            }
+
             int[] resources = [world.Ruleset.ResourceId("food"), world.Ruleset.ResourceId("wood"), world.Ruleset.ResourceId("gold"), world.Ruleset.ResourceId("stone")];
             foreach (KingdomDef k in scenario.Kingdoms)
             {
@@ -389,6 +597,19 @@ public static class ScenarioMatch
                     && world.Diplomacy.StanceOf(b, a) == SimStance.Ally)
                 {
                     ScenarioOperations.SetDiplomacy(world, b, a, SimStance.Ally, world.Diplomacy.OffersOf(b, a) | Sharing.UnitControl);
+                }
+            }
+
+            // The setup's teams ally over the map's diplomacy, as at the start of any match with teams (ReTzar).
+            for (int a = 0; a < world.Players.Length && teams != 0; a++)
+            {
+                for (int b = 0; b < world.Players.Length; b++)
+                {
+                    int team = (int)((teams >> (a * 4)) & 0xF);
+                    if (a != b && team != 0 && team == (int)((teams >> (b * 4)) & 0xF))
+                    {
+                        ScenarioOperations.SetDiplomacy(world, a, b, SimStance.Ally, Sharing.Vision | Sharing.Victory);
+                    }
                 }
             }
 
