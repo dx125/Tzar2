@@ -36,8 +36,9 @@ public static class RenderBench
     public static MatchSetup? Setup(Ruleset rules, SkirmishAi ai, RandomMapSize size = RandomMapSize.RealWorld, int units = Units)
     {
         ArgumentNullException.ThrowIfNull(rules);
-        string[] civs = new[] { "euro", "asia", "arab" }.Where(c => rules.EntityTypeId(c + ".castle") >= 0).ToArray();
-        if (civs.Length == 0)
+        // The ruleset's order (classic: euro, arab, asia); before the code review of 2026-10 it was euro, asia, arab (ADR 0244).
+        IReadOnlyList<string> civs = rules.KingdomCivilizations;
+        if (civs.Count == 0)
         {
             return null;
         }
@@ -45,7 +46,7 @@ public static class RenderBench
         var players = new PlayerSetup[Math.Min(Players, MapGenerator.MaxPlayersFor(size))];
         for (int i = 0; i < players.Length; i++)
         {
-            players[i] = new PlayerSetup((byte)i, civs[i % civs.Length], i == 0 ? ControllerKind.Human : ControllerKind.Computer, Difficulty.Hard);
+            players[i] = new PlayerSetup((byte)i, civs[i % civs.Count], i == 0 ? ControllerKind.Human : ControllerKind.Computer, Difficulty.Hard);
         }
 
         return new MatchSetup
