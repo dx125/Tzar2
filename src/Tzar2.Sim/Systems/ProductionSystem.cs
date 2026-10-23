@@ -61,7 +61,8 @@ public sealed class ProductionSystem : ISimSystem
             }
 
             EntityTraits t = types[identities[i].TypeId].Traits;
-            players[owner].Population += t.PopulationCost;
+            int counted = world.HypnotizedFrom(ids[i]) is >= 0 and var from && from < players.Length ? from : owner; // MAG-008
+            players[counted].Population += t.PopulationCost;
             if (t.PopulationProvided > 0 && !world.Constructions.Has(ids[i]))
             {
                 players[owner].PopulationCap += world.Stats.Apply(owner, ModifierStat.PopulationProvided, identities[i].TypeId, t.PopulationProvided);

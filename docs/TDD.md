@@ -985,7 +985,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-79 | Second part of Player Win/Lose's `next map|?` text | Editor experiment | P3 |
 | UNK-80 | Trigger area rectangles: inclusive or exclusive right/bottom; rectangles past the map edge | Editor experiment | P2 |
 | UNK-82 | Object facing in maps: assumed to use the sprite direction order (0 = south, counter-clockwise) ([wmp.md §4.2](formats/wmp.md)) | Editor experiment (TAB-rotate a unit, save) | P3 |
-| UNK-81 | Cliff passability: whether every tile of a 2×2 cliff piece blocks, and how units cross cliff rings ([wmp.md §5](formats/wmp.md)) | Captures in the original (walk a unit along a cliff ring) | P1 |
+| UNK-81 | Cliff passability: whether every tile of a 2×2 cliff piece blocks, and how units cross cliff rings ([wmp.md §5](formats/wmp.md)) | **Settled** 2026-10-22 by the owner: cliffs stop every ground unit but the ninja (WORLD-018, ADR 0220) | P1 |
 
 ---
 

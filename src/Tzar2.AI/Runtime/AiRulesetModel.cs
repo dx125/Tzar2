@@ -199,10 +199,10 @@ public sealed class AiRulesetModel
         };
     }
 
-    /// <summary>Whether a type belongs to the civilization (its own types and the common ones, <c>comm</c> or none).</summary>
+    /// <summary>Whether a type belongs to the civilization (its own types and the common ones: <see cref="Ruleset.CommonCivilization"/> or none).</summary>
     public bool IsOfCivilization(int typeId, string civilizationKey)
     {
         string civ = Ruleset.EntityTypes[typeId].Traits.Civilization;
-        return civ.Length == 0 || string.Equals(civ, "comm", StringComparison.Ordinal) || string.Equals(civ, civilizationKey, StringComparison.Ordinal);
+        return civ.Length == 0 || string.Equals(civ, Ruleset.CommonCivilization, StringComparison.Ordinal) || string.Equals(civ, civilizationKey, StringComparison.Ordinal);
     }
 }

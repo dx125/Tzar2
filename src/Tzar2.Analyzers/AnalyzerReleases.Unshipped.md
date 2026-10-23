@@ -11,3 +11,4 @@ T2D003 | Determinism | Error | DeterminismAnalyzer, wall-clock time
 T2D004 | Determinism | Error | DeterminismAnalyzer, unordered collection iteration
 T2D005 | Determinism | Error | DeterminismAnalyzer, runtime code generation
 T2D006 | Determinism | Error | DeterminismAnalyzer, file or network I/O
+T2C001 | Globalization | Error | CultureAnalyzer, interpolated string formatted with the current culture
