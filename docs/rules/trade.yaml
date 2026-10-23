@@ -11,8 +11,8 @@ rules:
   TRADE-002:
     rule: A trade is set up by picking the starting market or harbor and its goods, the far one and its goods, and the amount, then START.
     source: [manual Performing Trade]
-    status: partial
-    note: The near market is the trader's nearest own one; the far one is clicked (ADR 0103).
+    status: tested
+    note: The trade window's two market cells pick the source and the destination on the map (D_TRADE tr_srcobj, tr_dstobj); without a picked source the route starts at the trader's nearest own market, without a destination TRADE asks for a click (ADR 0103). Where the cells sit on the horizontal panel is UNVERIFIED.
   TRADE-003:
     rule: Trade can also be done with other kingdoms' markets, enemies' too; the trader's kingdom takes the whole profit and the market's kingdom nothing.
     source: [manual Trade, community ReTzar src/gameplay.rs (0x4a2f36)]

@@ -112,8 +112,10 @@ jobs:
   benchmarks:
     # TDD §21 nightly gates (ADR 0080), each through tools/ci/check-bench.sh on the medians of three runs: an absolute
     # budget on the tick p99 (<= 12 ms; the 4-vCPU runner is weaker than the 6-core reference CPU of §4.3) and relative
-    # ones against tools/ci/bench-baseline.tsv for the runner's CPU model (runners come with different CPUs): p50 within
-    # 10% and p99 within 30% of the row (provisional rows and an unknown CPU model are looser and warn). Gating: s2 (the
+    # ones against tools/ci/bench-baseline.tsv for the runner's CPU model (runners come with different CPUs), on the
+    # calibration-normalized times (runners of one model differ in speed; ADR 0080 amendment 1): p50 within 10% and p99
+    # within 30% of the row (provisional rows and an unknown CPU model are looser and warn). A failing gate does not stop
+    # the later ones. Gating: s2 (the
     # §4.3 S2 proxy: 4,000 units on 512², 8 players, AI-like order rate), B3 (500 move orders planned within 3 ticks),
     # B4 (no stuck units, corpses never change passability; ADR 0026), gameplay (resources delivered, fights happen;
     # ADR 0039) and ai (8 legacy AIs: every AI gathers, builds, trains and fights; ADR 0052; one 20-minute run, checked
@@ -137,6 +139,7 @@ jobs:
           done
           tools/ci/check-bench.sh s2 12 bench-s2-1.txt bench-s2-2.txt bench-s2-3.txt
       - name: B3 maze mass move (t2 bench, 500 orders on a 512² maze)
+        if: ${{ !cancelled() }} # every gate reports, even after an earlier one failed (ADR 0080 amendment 1)
         run: |
           set -euo pipefail
           for scenario in b3 b3-groups; do
@@ -144,6 +147,7 @@ jobs:
             tools/ci/check-bench.sh "$scenario" 12 "bench-$scenario.txt"
           done
       - name: Gameplay economy and combat at scale (t2 bench, 8 kingdoms, 2,400 soldiers, 480 peasants)
+        if: ${{ !cancelled() }} # every gate reports, even after an earlier one failed (ADR 0080 amendment 1)
         run: |
           set -euo pipefail
           for run in 1 2 3; do
@@ -151,11 +155,13 @@ jobs:
           done
           tools/ci/check-bench.sh gameplay 12 bench-gameplay-1.txt bench-gameplay-2.txt bench-gameplay-3.txt
       - name: AI against AI (t2 bench, 8 legacy AIs on 256², 20 minutes of game time; ADR 0051/0052)
+        if: ${{ !cancelled() }} # every gate reports, even after an earlier one failed (ADR 0080 amendment 1)
         run: |
           set -euo pipefail
           dotnet run -c Release --no-build --project src/Tzar2.Tools.Cli -- bench --scenario ai --players 8 --ticks 24000 --workers 4 | tee bench-ai.txt
           tools/ci/check-bench.sh ai 12 bench-ai.txt
       - name: B4 mass death then traffic (t2 bench)
+        if: ${{ !cancelled() }} # every gate reports, even after an earlier one failed (ADR 0080 amendment 1)
         run: |
           set -euo pipefail
           for run in 1 2 3; do
@@ -163,6 +169,7 @@ jobs:
           done
           tools/ci/check-bench.sh b4 12 bench-b4-1.txt bench-b4-2.txt bench-b4-3.txt
       - name: Synthetic stress, informational (t2 bench, 16 orders/player/tick, churn 2)
+        if: ${{ !cancelled() }} # every gate reports, even after an earlier one failed (ADR 0080 amendment 1)
         run: |
           set -euo pipefail
           for run in 1 2 3; do

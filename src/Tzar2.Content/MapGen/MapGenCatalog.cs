@@ -9,10 +9,10 @@ namespace Tzar2.Content.MapGen;
 /// <summary>What a placed object is for; the catalog maps each role to an entity type.</summary>
 public enum MapObjectRole : byte
 {
-    /// <summary>A kingdom's castle (key template with <c>{civ}</c>).</summary>
+    /// <summary>A kingdom's castle: bound to a ruleset, its seat (trait <c>Seat</c>); else the key template with <c>{civ}</c>.</summary>
     Castle = 0,
 
-    /// <summary>A kingdom's starting peasant (key template with <c>{civ}</c>).</summary>
+    /// <summary>A kingdom's starting peasant: bound to a ruleset, its starting worker (trait <c>StartingWorker</c>); else the key template.</summary>
     Peasant,
 
     /// <summary>A tree (one per tile, §9.1).</summary>
@@ -70,8 +70,15 @@ public readonly record struct MapObjectKind(string KeyTemplate, int Width, int H
     /// <summary>Whether the object blocks the tiles under it.</summary>
     public bool HasFootprint => Width > 0 && Height > 0;
 
+    /// <summary>
+    /// Keys per civilization that take the template's place: a catalog bound to a ruleset names each civilization's seat
+    /// and starting worker by their traits (code review 2026-10, for a fork), not by <c>&lt;civ&gt;.castle</c>.
+    /// </summary>
+    public ImmutableSortedDictionary<string, string>? Keys { get; init; }
+
     /// <summary>The ruleset key for <paramref name="civilization"/>.</summary>
-    public string KeyFor(string civilization) => KeyTemplate.Replace("{civ}", civilization, StringComparison.Ordinal);
+    public string KeyFor(string civilization)
+        => Keys is not null && Keys.TryGetValue(civilization, out string? key) ? key : KeyTemplate.Replace("{civ}", civilization, StringComparison.Ordinal);
 }
 
 /// <summary>
@@ -158,8 +165,10 @@ public sealed class MapGenCatalog
     public MapObjectKind? Kind(MapObjectRole role) => (uint)role < RoleCount ? _kinds[(int)role] : null;
 
     /// <summary>
-    /// This catalog for <paramref name="ruleset"/>: civilizations whose castle and peasant types exist, roles whose type
-    /// exists (for every kept civilization), footprints from the ruleset's types.
+    /// This catalog for <paramref name="ruleset"/>: civilizations with a castle and a peasant, roles whose type exists
+    /// (for every kept civilization), footprints from the ruleset's types. The castle is the civilization's seat and the
+    /// peasant its starting worker (<see cref="Ruleset.SeatTypeId"/>, <see cref="Ruleset.StartingWorkerTypeId"/>); a
+    /// ruleset without those traits falls back to the key templates.
     /// </summary>
     /// <exception cref="ArgumentException">No civilization has both a castle and a peasant type in the ruleset.</exception>
     public MapGenCatalog RestrictTo(Ruleset ruleset)
@@ -192,13 +201,19 @@ public sealed class MapGenCatalog
 
             int width = 0, height = 0;
             bool all = true;
+            var keys = ImmutableSortedDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
             foreach (string civ in civs)
             {
-                int id = ruleset.EntityTypeId(kind.KeyFor(civ));
+                int id = TypeOf(ruleset, (MapObjectRole)r, civ);
                 if (id < 0)
                 {
                     all = false;
                     break;
+                }
+
+                if ((MapObjectRole)r is MapObjectRole.Castle or MapObjectRole.Peasant)
+                {
+                    keys[civ] = ruleset.EntityTypes[id].Key;
                 }
 
                 // One footprint per role for every civilization: the envelope (widest × tallest) covers each of them.
@@ -209,13 +224,29 @@ public sealed class MapGenCatalog
 
             if (all)
             {
-                kinds[r] = kind with { Width = width, Height = height };
+                kinds[r] = kind with { Width = width, Height = height, Keys = keys.Count > 0 ? keys.ToImmutable() : null };
             }
         }
 
         return new MapGenCatalog(civs, kinds, StartingPeasants);
     }
 
-    private bool Exists(Ruleset ruleset, MapObjectRole role, string civ)
-        => Kind(role) is { } kind && ruleset.EntityTypeId(kind.KeyFor(civ)) >= 0;
+    private bool Exists(Ruleset ruleset, MapObjectRole role, string civ) => TypeOf(ruleset, role, civ) >= 0;
+
+    // The type the role places for civ: the seat or the starting worker when the ruleset marks one, else the template's key.
+    private int TypeOf(Ruleset ruleset, MapObjectRole role, string civ)
+    {
+        if (Kind(role) is not { } kind)
+        {
+            return -1;
+        }
+
+        int marked = role switch
+        {
+            MapObjectRole.Castle => ruleset.SeatTypeId(civ),
+            MapObjectRole.Peasant => ruleset.StartingWorkerTypeId(civ),
+            _ => -1,
+        };
+        return marked >= 0 ? marked : ruleset.EntityTypeId(kind.KeyFor(civ));
+    }
 }

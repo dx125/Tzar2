@@ -105,3 +105,12 @@ rules:
     rule: A peasant can tend more than one cow, milking them in turn and taking the milk to the farm or the castle.
     source: [help ITEMS.TXT HT_TEND_COWS]
     status: implemented
+  ECO-023:
+    rule: A peasant with a load sent to one of its kingdom's stores (a right click on it) delivers the load there, not at the nearest store, and the order ends. A scenario's default Object Order on a store is that right click.
+    source: ['community ReTzar src/gameplay.rs (Return Goods, program 0x35, 0x4adc20)', 'community ReTzar src/gameplay/scripting.rs (default order, 0x4bb1a4)']
+    status: tested
+    note: bigisland's "Azim leaves gold" puts the gold into the village's stockpile this way. Tzar2 has no right click for it in the client yet; the Harvest command on a store does it. The other default orders stay a move (UNK-57).
+  ECO-024:
+    rule: A peasant that changes hands keeps the load it carries; only its task ends.
+    source: ['community ReTzar src/gameplay.rs (transfer_owner, 0x5050a0)']
+    status: tested

@@ -132,12 +132,14 @@ public sealed class SkirmishTestMap : IMapSource
             PlayerSetup player = setup.Players[p];
             (int bx, int by) = bases[p];
             string civ = player.Civilization;
-            Place(ruleset, objects, used, n, civ + ".castle", player.Slot, bx, by);
-            EntityTypeDefinition castle = ruleset.EntityTypes[ruleset.EntityTypeId(civ + ".castle")];
+            // The seat and the starting worker the ruleset marks (classic: the castle and the peasant).
+            EntityTypeDefinition castle = ruleset.EntityTypes[ruleset.SeatTypeId(civ)];
+            string worker = ruleset.EntityTypes[ruleset.StartingWorkerTypeId(civ)].Key;
+            Place(ruleset, objects, used, n, castle.Key, player.Slot, bx, by);
             int below = by + castle.FootprintHeight + 1;
             for (int w = 0; w < StartPeasants; w++)
             {
-                PlaceUnit(ruleset, objects, used, n, civ + ".peon", player.Slot, bx + (w % 4), below + (w / 4));
+                PlaceUnit(ruleset, objects, used, n, worker, player.Slot, bx + (w % 4), below + (w / 4));
             }
 
             for (int f = 0; f < StartFootmen; f++)
