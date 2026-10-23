@@ -51,6 +51,18 @@ public class ClientLogicTests
     }
 
     [Fact]
+    public void The_first_run_import_has_its_option_and_writes_into_the_users_data()
+    {
+        ViewerArgs args = ViewerArgs.Parse(["--import", @"E:\Games\Tzar", "--smoke"]);
+        Assert.Equal(@"E:\Games\Tzar", args.Import);
+        Assert.True(args.IsAutomated);
+        Assert.False(ViewerArgs.Parse([]).IsAutomated);
+        Assert.True(ViewerArgs.Parse(["--autoplay", "shots"]).IsAutomated);
+        Assert.Contains("--import", ViewerArgs.Usage, StringComparison.Ordinal);
+        Assert.Equal(System.IO.Path.Combine("u", "import"), FirstRunImport.OutputDirectory("u"));
+    }
+
+    [Fact]
     public void The_render_bench_has_its_options()
     {
         ViewerArgs bench = ViewerArgs.Parse(["--bench-render", "--bench-seconds", "60", "--resolution", "1920x1080", "--fullscreen"]);

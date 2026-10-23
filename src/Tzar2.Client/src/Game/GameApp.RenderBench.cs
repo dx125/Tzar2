@@ -38,7 +38,7 @@ public partial class GameApp
             await AfterFrames(2, () => { });
             var load = Stopwatch.StartNew();
             var session = new GameSession(setup, _rules);
-            session.SpeedIndex = Array.IndexOf(GameSession.SpeedSteps, 100);
+            session.SpeedIndex = GameSession.SpeedSteps.IndexOf(100);
             var phases = new PhaseTimes();
             session.Phases = phases;
             var screen = new GameScreen(_store, _ui!, session, "grass", _args.SoundFont, _settings) { KeepSpeed = true };

@@ -495,7 +495,7 @@ public partial class ReplayBrowserScreen : ArtScreen
         _list = new ItemList { Position = Origin + new Vector2I(66, 80), Size = new Vector2(460, 460) };
         foreach (string f in _files)
         {
-            _list.AddItem($"{System.IO.Path.GetFileNameWithoutExtension(f)}   {System.IO.File.GetLastWriteTime(f):yyyy-MM-dd HH:mm}");
+            _list.AddItem(string.Create(CultureInfo.InvariantCulture, $"{System.IO.Path.GetFileNameWithoutExtension(f)}   {System.IO.File.GetLastWriteTime(f):yyyy-MM-dd HH:mm}"));
         }
 
         _list.ItemActivated += i => Play?.Invoke(_files[(int)i]);

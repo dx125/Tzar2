@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Diagnostics;
 using System.Threading;
@@ -33,7 +34,7 @@ namespace Tzar2.Game.Session;
 public sealed class GameSession : IDisposable
 {
     /// <summary>Game speeds in percent of the classic tick rate (the original's <c>+</c>/<c>-</c> keys step through them).</summary>
-    public static readonly int[] SpeedSteps = [25, 50, 75, 100, 150, 200, 300];
+    public static readonly ImmutableArray<int> SpeedSteps = [25, 50, 75, 100, 150, 200, 300];
 
     private readonly object _gate = new();
     private readonly CommandList[] _pending;

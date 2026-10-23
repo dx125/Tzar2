@@ -13,6 +13,7 @@ public sealed record ViewerArgs
     public const string Usage =
         "Tzar2 client (M3: skirmish; asset viewer)\n"
         + "  --package <path>     imported package (.t2pkg from 't2 import', or an unpacked folder)\n"
+        + "  --import <folder>    import the original game from <folder> into the user's data first (first-run import)\n"
         + "  --viewer             open the asset viewer instead of the game\n"
         + "  --skirmish           start a skirmish directly (skips the menus)\n"
         + "  --editor [file]      open the scenario editor (optionally a .t2map)\n"
@@ -28,7 +29,10 @@ public sealed record ViewerArgs
         + "  --resolution <WxH>   window size of the render bench (default 2560x1440, the S2 resolution)\n"
         + "  --fullscreen         the render bench in exclusive fullscreen at the monitor's resolution\n"
         + "  --mp-smoke           host a LAN match against a computer headless, then play its replay, and quit\n"
-        + "  --ticks <n>          ticks for --game-smoke and --mp-smoke (default 300)\n"
+        + "  --resource-soak <f>  play --matches skirmishes of --ticks ticks each at top speed, back to the menu after each,\n"
+        + "                       and write the engine's memory, object and video-memory counters over time to <f> (TSV)\n"
+        + "  --matches <n>        matches of --resource-soak (default 3)\n"
+        + "  --ticks <n>          ticks for --game-smoke, --mp-smoke and --resource-soak (default 300)\n"
         + "  --seed <n>           match seed\n"
         + "  --map-type <type>    random map type (random, archipelagos, island, continental, lakes, dry)\n"
         + "  --map-size <size>    random map size (tiny ... enormous), or a number: the test map's side in tiles\n"
@@ -42,6 +46,12 @@ public sealed record ViewerArgs
 
     /// <summary>Package path given on the command line, or null.</summary>
     public string? Package { get; init; }
+
+    /// <summary>An original install to import before anything else (<c>--import</c>), or null.</summary>
+    public string? Import { get; init; }
+
+    /// <summary>Whether a scripted run (smoke, capture, autoplay) is the mode: nothing asks the player anything.</summary>
+    public bool IsAutomated => Smoke || CaptureDir is not null || AutoplayDir is not null || GameSmoke || MultiplayerSmoke || EditorSmoke;
 
     /// <summary>SoundFont path given on the command line, or null.</summary>
     public string? SoundFont { get; init; }
@@ -75,6 +85,12 @@ public sealed record ViewerArgs
 
     /// <summary>Headless multiplayer smoke test: a LAN host, a match against a computer, then its replay (ADR 0168).</summary>
     public bool MultiplayerSmoke { get; init; }
+
+    /// <summary>Resource soak output file (TSV), or null.</summary>
+    public string? ResourceSoak { get; init; }
+
+    /// <summary>Matches of the resource soak.</summary>
+    public int Matches { get; init; } = 3;
 
     /// <summary>The S2 render bench (<c>--bench-render</c>, ADR 0244).</summary>
     public bool BenchRender { get; init; }
@@ -155,6 +171,9 @@ public sealed record ViewerArgs
                 case "--package":
                     result = result with { Package = Value() };
                     break;
+                case "--import":
+                    result = result with { Import = Value() };
+                    break;
                 case "--soundfont":
                     result = result with { SoundFont = Value() };
                     break;
@@ -221,6 +240,12 @@ public sealed record ViewerArgs
                     break;
                 case "--mp-smoke":
                     result = result with { MultiplayerSmoke = true };
+                    break;
+                case "--resource-soak":
+                    result = result with { ResourceSoak = Value(), Skirmish = true };
+                    break;
+                case "--matches":
+                    result = result with { Matches = Number(Value(), 1, 1000, 3) };
                     break;
                 case "--ticks":
                     result = result with { Ticks = Number(Value(), 1, 1_000_000, 300) };
