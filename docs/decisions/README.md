@@ -134,3 +134,30 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0190](0190-rules-read-from-the-originals-code-by-retzar.md) | Take the rules ReTzar read from the original's code, never ReTzar's code | Accepted | 2026-10-22 |
 | [0191](0191-technology-effects-as-the-original-computes-them.md) | Give technologies the effects the original's research handlers compute | Accepted | 2026-10-22 |
 | [0192](0192-gates-and-bridges-take-the-cells-of-their-pictures.md) | Gates and bridges take the cells of their pictures, either way | Accepted | 2026-10-22 |
+| [0200](0200-a-ui-smoke-test-audits-every-screen-at-every-display.md) | Audit every screen at every display in a headless UI smoke test | Accepted | 2026-10-22 |
+| [0201](0201-random-maps-grow-the-originals-forests.md) | Grow a random map's forests the way the original does | Accepted | 2026-10-22 |
+| [0210](0210-draw-terrain-from-a-deduplicated-tile-atlas.md) | Draw terrain from a deduplicated tile atlas | Accepted | 2026-10-22 |
+| [0211](0211-civilizations-are-an-ordered-list-in-the-ruleset.md) | Civilizations are an ordered list in the ruleset | Accepted | 2026-10-22 |
+| [0220](0220-main-campaign-completable-scenario-engine-fixes-and-solver.md) | Make the main campaign completable: scenario-engine fixes and a stronger solver | Accepted | 2026-10-22 |
+| [0230](0230-rotate-the-session-token-on-every-rejoin.md) | Rotate the session token on every rejoin; encrypt the handshake with Noise later | Accepted | 2026-10-22 |
+| [0231](0231-keep-alive-pings-five-times-per-disconnect-timeout.md) | Ping five times per disconnect timeout on LiteNetLib's thread, so a busy game thread does not drop a peer | Accepted | 2026-10-22 |
+| [0232](0232-each-kingdom-chooses-its-colour-and-ai-script-in-the-lobby.md) | Each kingdom chooses its colour and AI script in the lobby; the host sets every map and game option | Accepted | 2026-10-22 |
+| [0233](0233-custom-maps-in-multiplayer-are-found-by-hash.md) | Play custom maps in multiplayer from every peer's own copy, found by its content hash | Accepted | 2026-10-22 |
+| [0234](0234-a-noise-handshake-for-the-relay-protocol.md) | Encrypt the relay protocol with a Noise NK or XX handshake carried by LiteNetLib's connect request | Proposed | 2026-10-22 |
+| [0240](0240-m7-windows-beta-plan.md) | Plan M7 (Windows beta) as seven deliverables with measured exit criteria | Accepted | 2026-10-22 |
+| [0241](0241-windows-package-inno-setup-and-first-run-import.md) | Package Windows with a Godot headless export, a zip and an Inno Setup installer, and import on first run | Accepted | 2026-10-22 |
+| [0242](0242-code-signing-is-a-pipeline-step-skipped-without-secrets.md) | Sign in the pipeline with Azure Trusted Signing or a PFX, and skip signing without secrets | Accepted (with notes) | 2026-10-22 |
+| [0243](0243-opt-in-crash-reports-over-the-sentry-protocol.md) | Report crashes opt-in over the Sentry protocol, with sessions for the crash-free rate | Accepted (with notes) | 2026-10-22 |
+| [0244](0244-render-bench-in-the-client.md) | Measure S2 in the real client with a render bench that prints one line | Accepted | 2026-10-22 |
+| [0250](0250-the-curse-hypnosis-the-banshee-and-the-messiah.md) | Curse, hypnotize, scream and resist magic as the original's code does | Accepted | 2026-10-22 |
+| [0251](0251-cancelled-sites-broken-loads-and-the-computers-repairs.md) | Refund cancelled sites, drop broken-off loads and leave repairs to idle peasants, as the original does | Accepted | 2026-10-22 |
+| [0252](0252-trade-with-any-market-and-asian-peasants-as-traders.md) | Trade with any kingdom's market, and let Asian peasants trade | Accepted | 2026-10-22 |
+| [0253](0253-tournaments-and-mastery-share-experience-as-the-original-does.md) | Share experience through Tournaments and Mastery as the original does | Accepted | 2026-10-22 |
+| [0254](0254-healing-freezing-and-raise-dead-skip-machines.md) | Make healing, freezing and raise dead skip machines and the bodiless | Accepted | 2026-10-22 |
+| [0255](0255-soul-items-are-bound-to-a-unit.md) | Bind soul items to a unit, and spare the Messiah all magic damage | Accepted | 2026-10-22 |
+| [0256](0256-cows-grow-meat-that-falls-as-food-items.md) | Let cows grow meat that falls as food items | Accepted | 2026-10-22 |
+| [0257](0257-trade-profit-as-the-original-computes-it.md) | Compute the trade profit as the original does | Accepted | 2026-10-22 |
+| [0258](0258-experience-on-the-originals-scale.md) | Count experience on the original's scale: a point per kill | Accepted | 2026-10-22 |
+| [0259](0259-jewelry-markets-sell-and-buy-items.md) | Let the markets sell and buy items under Jewelry, as the original does | Accepted | 2026-10-22 |
+| [0260](0260-spell-ranges-and-mana-as-the-original-dispatches-them.md) | Give spells the original's ranges and mana | Accepted | 2026-10-22 |
+| [0261](0261-spell-magnitudes-as-the-original-casts-them.md) | Give spells the original's strength, duration and area | Accepted | 2026-10-22 |
