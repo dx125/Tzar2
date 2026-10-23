@@ -166,11 +166,17 @@ public static class FrameBuilder
                 e.Job = JobOf(world.Ruleset, worker, node);
                 if (!moving && worker.Phase == WorkerPhase.Gathering)
                 {
-                    e.Activity = node is { Traits.Category: EntityCategory.Unit } ? UnitActivity.Milk : GatherActivity(world.Ruleset, worker.NodeResource);
+                    e.Activity = node is { Traits.Category: EntityCategory.Unit } ? UnitActivity.Milk
+                        : node is { Traits.LegacyClass: "meat" } ? UnitActivity.Meat // PRES-005
+                        : GatherActivity(world.Ruleset, worker.NodeResource);
                 }
                 else if (!moving && worker.Phase is WorkerPhase.Building or WorkerPhase.Repairing)
                 {
                     e.Activity = UnitActivity.Build; // repairing looks and sounds like building (the fourth play-test)
+                }
+                else if (!moving && worker.Phase == WorkerPhase.Capturing)
+                {
+                    e.Activity = UnitActivity.Capture; // PRES-005
                 }
             }
 
@@ -214,6 +220,11 @@ public static class FrameBuilder
                     e.Activity = UnitActivity.Attack;
                     e.SwingMs = Math.Clamp(arm.CooldownMs - combat.CooldownMs, 0, arm.CooldownMs);
                 }
+            }
+
+            if (!moving && world.Casters.Count > 0 && world.Casters.IndexOf(id) is >= 0 and var caster && world.Casters.At(caster).CastLeftMs > 0)
+            {
+                e.Activity = UnitActivity.Cast; // PRES-005
             }
 
             int f = world.Footprints.IndexOf(id);

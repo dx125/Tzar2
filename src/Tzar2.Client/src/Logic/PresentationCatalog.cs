@@ -54,6 +54,21 @@ public enum UnitAnim
 
     /// <summary>Walking with meat (<c>image_carrymeat</c>).</summary>
     CarryMeat,
+
+    /// <summary>Digging to capture a building (<c>image_capture</c>, PRES-005).</summary>
+    Capture,
+
+    /// <summary>Cutting meat (<c>image_meat</c>).</summary>
+    Meat,
+
+    /// <summary>Casting (<c>image_spell</c>).</summary>
+    Spell,
+
+    /// <summary>The second attack swing (<c>image_attack2</c>).</summary>
+    Attack2,
+
+    /// <summary>The third attack swing (<c>image_attack3</c>).</summary>
+    Attack3,
 }
 
 /// <summary>How an entity type looks and sounds, from the user's imported object INIs (never shipped).</summary>
@@ -110,6 +125,8 @@ public sealed class PresentationCatalog : ICardSource
         (UnitAnim.Base, "image"), (UnitAnim.Idle, "image_idle"), (UnitAnim.Attack, "image_attack"), (UnitAnim.Die, "image_die"),
         (UnitAnim.Chop, "image_chop"), (UnitAnim.Mine, "image_mine"), (UnitAnim.Farm, "image_dig"), (UnitAnim.Build, "image_build"),
         (UnitAnim.Milk, "image_milk"), (UnitAnim.CarryMilk, "image_carrymilk"), (UnitAnim.CarryMeat, "image_carrymeat"),
+        (UnitAnim.Capture, "image_capture"), (UnitAnim.Meat, "image_meat"), (UnitAnim.Spell, "image_spell"),
+        (UnitAnim.Attack2, "image_attack2"), (UnitAnim.Attack3, "image_attack3"),
     ];
 
     // Carrying sprites the object INIs do not list: IMAGES.INI names them after the walk image (e_peon_tree, e_peon_gold...).

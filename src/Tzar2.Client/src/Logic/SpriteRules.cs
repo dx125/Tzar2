@@ -22,6 +22,14 @@ public static class SpriteRules
         => directions < 8 || startCol == 0 ? column : (column + startCol) & 7;
 
     /// <summary>
+    /// The picture of blow number <paramref name="blow"/> (PRES-005): half of a unit's blows use its second swing when it
+    /// has one (<c>image_attack2</c>; the original draws at random, 0x4e5720, ReTzar's reading; Tzar2 alternates by a
+    /// hash of the blow, which the simulation never sees).
+    /// </summary>
+    public static UnitAnim Swing(bool hasSecond, uint blow)
+        => hasSecond && ((blow * 2246822519u) >> 31) == 1 ? UnitAnim.Attack2 : UnitAnim.Attack;
+
+    /// <summary>
     /// The frame of a swing <paramref name="elapsed"/> frames after it began, in a picture starting at IMAGES.INI
     /// <c>startrow</c> (PRES-008; ReTzar's reading, 0x5017f0: a picture set on row r shows r first, then runs on and wraps).
     /// </summary>
