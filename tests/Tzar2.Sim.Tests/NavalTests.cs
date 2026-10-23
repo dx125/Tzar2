@@ -258,6 +258,7 @@ public class NavalTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-018")]
     public void Crusaders_who_die_inside_a_ship_end_the_crusade()
     {
         // Patch notes: crusade anchor updates when crusaders die inside ships/buildings (TDD §5.1).

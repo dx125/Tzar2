@@ -194,9 +194,10 @@ public static class AiBuildPlacement
     {
         MapState map = world.Map;
         bool water = false;
-        for (int j = y - PlacementQueries.CoastReachTiles; j < y + h + PlacementQueries.CoastReachTiles && !water; j++)
+        int reach = world.Ruleset.EntityTypes[typeId].Traits.CoastReachTiles;
+        for (int j = y - reach; j < y + h + reach && !water; j++)
         {
-            for (int i = x - PlacementQueries.CoastReachTiles; i < x + w + PlacementQueries.CoastReachTiles && !water; i++)
+            for (int i = x - reach; i < x + w + reach && !water; i++)
             {
                 water = map.ContainsTile(i, j) && map.IsPassable(Locomotor.Ship, i, j);
             }

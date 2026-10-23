@@ -157,7 +157,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    (the `rajba` cliff check is settled: only ninjas climb cliffs, WORLD-018).
 10. **Maintainer:** decode UNK-70…80, compare random maps with our generator. Done: the main campaign is 19 of 19
-    (ADR 0220, 2026-10-22). Follow-ups: ninjas climbing walls, peasants gathering resource items (ReTzar).
+    (ADR 0220, 2026-10-22); `bigisland`'s gold now comes by Azim, not a tribute (2026-10-23). Follow-ups: ninjas
+    climbing walls; `v_02` fails on `main` since the batch merge of 2026-10-23 (18 of 19, survey 2026-10-23).
 11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
 12. **Done (2026-10-22):** issue #62 fixed at its cause (ADR 0231); M6 soak 500 of 500 with 0 desyncs; token rotation
@@ -256,6 +257,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         the ruleset with the same values; only the ruleset hash is re-pinned.
       * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
         client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
+      * 2026-10-23: a harbor's reach to the water is `Building.coastReachTiles` (2), one value for the sim, the AI and the
+        build ghost instead of two constants; only the ruleset hash is re-pinned.
 17. **Maintainer (the coordinator moved it ahead of M8, 2026-10-23; ADR 0264):** the random map generator's items as
     the original makes them (ReTzar 0x4b5c50): spell books of a random spell with 1 to 5 charges, bows, shields and
     swords of 5 to 15, potions of 10 to 50 or 2 to 8. It needs item properties on `MapObject` (map.bin and its hash)
@@ -269,6 +272,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — Ninjas climb walls as they climb cliffs (WORLD-018; ReTzar 0x4a99a0).** A wall piece (not a gate or
+  a tower) is open to the climber when the band of wall or cliff tiles through it is one or two thick, from ground to
+  ground. The climber keeps its own navigation layer on every map, since walls are built later. Goldens and bench hashes
+  are unchanged; survey main 18 of 19 (`v_02`, as on `main`), tutorial 7 of 7.
 * **2026-10-23 — Fish patches and the selection view (HUD-025, HUD-016).** The patch the player's boats fish gets a blue selection (patch 1.05; the frame now carries each worker's work target). The selection view names the kingdom, shows every experienced unit's LEVEL (but traders') and an item's POWER, as ReTzar reads the original. ITEM-015 is unclear: the original's random map generator makes its items itself (work queue 17, deferred to M8). No hash changes.
 
 * **2026-10-23 — Menu hints (SHELL-026).** The help ball of the original (BTN_HELP_B, BTN_HELP_S on the load and save windows) turns hint mode on and off on the campaign, custom map, custom setup, random map, options, load and save screens; the control under the pointer then shows its LOCAL/HELP.INI text in the original's box (MenuHelp in Tzar2.Game.Ui; the keys are ReTzar's reading of the controls' names). No hash changes.
@@ -313,6 +320,13 @@ the process decisions that have no ADR.
   * The relay harness has generous timeouts; the keep-alive test sets its own.
   * The memory probe's sampling runs on a manual clock.
   * Loaded Windows runners no longer fail them.
+* **2026-10-23 — Peasants deliver resource items where the scenario wants them (ECO-023, ECO-024; ADR 0220).**
+  From ReTzar: a peasant sent to a store delivers its load there and stops (Return Goods); a scenario's default
+  Object Order on a store is that order; a peasant that changes hands keeps its load. On `bigisland` Azim takes the
+  gold, walks it to the village and leaves it in its storage, so the solver no longer sends kingdom 7 a tribute
+  (it tributes only when no rule gives that kingdom objects). The solver takes such an item with the peasant the rule
+  names, and cheat assistance spares the enemies near a unit a rule waits to see wounded. Survey: main 18 of 19
+  (`v_02` times out, also on `main` since the batch merge), tutorial 7 of 7.
 
 * **2026-10-23 — The batch merge of 46 PRs (#132–#178, without #141).**
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
