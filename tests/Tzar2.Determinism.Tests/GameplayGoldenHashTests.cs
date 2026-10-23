@@ -72,7 +72,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
     // (ADR 0260, 2026-10-22) spells take the original's ranges and mana (ReTzar's dispatch tables): the gameplay bot's casters cast less.
     // (ADR 0261, 2026-10-22) the spells' strength, durations and areas as ReTzar reads them (lightning 150, freeze and confusion by area, bless +5).
-    private const ulong GoldenRulesetHash = 0x2115B4FFC7505589UL;
+    // (ADR 0263, 2026-10-23) fire rain and the whirlpool as the original casts them (the spell fields square, scatter, delayMs, moveMs): only the ruleset hash moves, the scenario casts neither.
+    private const ulong GoldenRulesetHash = 0xFD4AC4D644AC6925UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.

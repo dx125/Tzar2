@@ -551,6 +551,12 @@ internal static class CombatMagicCommands
             return CommandRejection.OutOfMap;
         }
 
+        // A wandering area (the whirlpool) forms only on water, its whole square (ReTzar 0x4733c4).
+        if (s.MoveMs > 0 && !MagicSystem.SquareOnWater(world, x / MapState.UnitsPerTile, y / MapState.UnitsPerTile, s.RadiusUnits / MapState.UnitsPerTile))
+        {
+            return CommandRejection.InvalidTarget;
+        }
+
         if (!world.Casters.Has(caster))
         {
             world.Casters.Set(caster, new Caster { Spell = Projectile.NoSpell, MoveTick = -1 });
