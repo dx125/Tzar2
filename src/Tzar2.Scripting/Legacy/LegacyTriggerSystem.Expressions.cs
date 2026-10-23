@@ -342,7 +342,10 @@ public sealed partial class LegacyTriggerSystem
             case ReservedVariable.InHolder:
                 return _world.IsHeld(e) ? 1 : 0;
             case ReservedVariable.Cargo:
-                return _world.Workers.Has(e) ? _world.Workers.Get(e).CarryAmount : 0;
+                // What is aboard or inside, a hero's items too; nothing for an object with no room (ReTzar 0x4b8c76:
+                // the count of the holder's list; "HulksLoaded: $cargo >= 10"; ADR 0220).
+                return (_world.Holders.IndexOf(e) is >= 0 and var h ? _world.Holders.At(h).Count : 0)
+                    + (_world.Inventories.IndexOf(e) is >= 0 and var inv ? _world.Inventories.At(inv).Count : 0);
             case ReservedVariable.Race:
                 // The original numbers 1 European, 2 Arabian, 3 Asian: the classic ruleset lists its civilizations in that
                 // order (ADR 0211; before it the list was sorted and Race read 1 Arabian, 2 Asian, 4 European).

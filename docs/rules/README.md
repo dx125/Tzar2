@@ -116,8 +116,8 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 29 | 3 | 1 | 2 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 5 | 1 | 1 | 1 | 0 | 2 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 15 | 7 | 5 | 1 | 0 | 2 | 0 |
-| **All** | 335 | 194 | 78 | 26 | 20 | 9 | 8 |
+| [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
+| **All** | 338 | 198 | 78 | 25 | 20 | 9 | 8 |
 
 ## Not done yet
 
@@ -207,10 +207,6 @@ Missing and partial rules.
 * **TRADE-002** (partial): A trade is set up by picking the starting market or harbor and its goods, the far one and its goods, and the amount, then START. *The near market is the trader's nearest own one; the far one is clicked (ADR 0103).*
 * **TRADE-008**: The amount the tavern will lend shows in the bottom left corner of the view.
 
-### Terrain and movement
-
-* **WORLD-013** (partial): A random map grows as many trees as its terrain set's data gives for its size. *Tzar2's generator uses its own forest density (ADR 0060).*
-
 ## Unclear
 
 The sources disagree or say too little.
@@ -277,7 +273,7 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 144 used, 4 restated by hand, 18 not needed and 46 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 144 used, 5 restated by hand, 18 not needed and 45 to do.
 
 To do:
 
@@ -312,7 +308,6 @@ To do:
 * `IMAGES/TERRAIN/*.IMAGES.INI` `ruinpoints`: meaning not decoded
 * `IMAGES/TERRAIN/*.TERRAIN.INI` `colors`: the colour of selection marks (HUD-031)
 * `IMAGES/TERRAIN/*.TERRAIN.INI` `minidatargb`: the minimap's colours of terrains, trees and cliffs (HUD-030)
-* `IMAGES/TERRAIN/*.TERRAIN.INI` `randomtreeset`: how many trees a random map grows, by map size (WORLD-013)
 * `IMAGES/TERRAIN/*.TERRAIN.INI` `treename`: the kinds of trees in the sheet (PRES-009)
 * `LOCAL/HELP.INI` (the whole file): the hints of the menu screens' controls (SHELL-026).
 * `LOCAL/STRINGS.INI` `adds`: messages such as "Build more houses" (HUD-026)
