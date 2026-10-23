@@ -134,6 +134,9 @@ public sealed class NetworkMatchOptions
     /// <summary>Where multiplayer saves are written and found (null: saves are kept in memory only).</summary>
     public string? SaveDirectory { get; init; }
 
+    /// <summary>The custom maps this machine has (SHELL-018; ADR 0233): a lobby on one of them needs it on every peer.</summary>
+    public IReadOnlyList<Campaigns.CustomMapEntry> CustomMaps { get; init; } = [];
+
     /// <summary>Consent to every save proposal automatically (headless peers).</summary>
     public bool AutoAcceptSaves { get; init; }
 

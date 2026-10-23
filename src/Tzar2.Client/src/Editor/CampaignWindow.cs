@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Godot;
@@ -155,7 +156,7 @@ public partial class CampaignWindow : Window
             File.Move(path + ".tmp", path, overwrite: true);
             _campaign.MarkSaved();
             _path = path;
-            _screen.Status($"Saved campaign {path} ({bytes.Length:N0} bytes).");
+            _screen.Status(string.Create(CultureInfo.InvariantCulture, $"Saved campaign {path} ({bytes.Length:N0} bytes)."));
             _dirty = true;
             return true;
         }

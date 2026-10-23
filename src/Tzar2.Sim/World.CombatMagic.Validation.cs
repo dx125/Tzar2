@@ -24,7 +24,7 @@ public sealed partial class World
             Experience x = Experiences.Components[i];
             RequireUnit(ids[i], "experience");
             if (!TypeOf(ids[i]).Traits.GainsExperience || x.Xp < 0 || x.PendingXp != 0 || x.Level > 10_000 || x.BonusAttack is < 0 or > 100_000
-                || x.BonusDefence is < 0 or > 100_000 || x.Flags > ExperienceFlags.Hero || x.Reserved != 0
+                || x.BonusDefence is < 0 or > 100_000 || x.Flags > ExperienceFlags.Hero || x.DummyCarry >= Ruleset.Combat.DummyDamagePerPoint
                 || ((x.Flags & ExperienceFlags.Hero) != 0 && x.Level < settings.HeroLevel))
             {
                 throw Invalid("invalid experience");
@@ -44,7 +44,7 @@ public sealed partial class World
 
             if (Items.Has(ids[i]))
             {
-                if (!Inventories.Has(holder) || h.RequestSerial != 0)
+                if ((!Inventories.Has(holder) && Systems.MarketItems.IndexInStock(this, holder, ids[i]) < 0) || h.RequestSerial != 0)
                 {
                     throw Invalid("an item held by something without an inventory");
                 }
@@ -156,9 +156,30 @@ public sealed partial class World
             ItemState s = Items.Components[i];
             if (!Identities.Has(ids[i]) || TypeOf(ids[i]).Traits.Item is not { } itemDef || s.Power is < 0 or > 1_000_000 || s.Charges is < 0 or > 1_000_000 || s.ReadyTick > maxFuture
                 || s.Spell > Ruleset.Spells.Count || s.Effect > ItemEffect.Mana || s.Look > itemDef.Looks.Length
-                || Combats.Has(ids[i]) || Motions.Has(ids[i]))
+                || Combats.Has(ids[i]) || Motions.Has(ids[i])
+                || (s.Bound != 0 && (itemDef.Kind != ItemKind.Soul || !Entities.IsAlive(EntityId.FromValue(s.Bound)) || Items.Has(EntityId.FromValue(s.Bound)))))
             {
                 throw Invalid("invalid item");
+            }
+        }
+
+        ids = MarketStocks.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            MarketStock m = MarketStocks.Components[i];
+            if (!Footprints.Has(ids[i]) || m.Count > Ruleset.Combat.MarketSize || m.Reserved0 != 0 || m.Reserved1 != 0 || m.NextTick < 0
+                || m.NextTick > tick + Math.Max(Ruleset.Combat.MarketEveryMs, Ruleset.Combat.MarketFirstMs))
+            {
+                throw Invalid("invalid market stock");
+            }
+
+            for (int k = 0; k < Ruleset.InventoryLimit; k++)
+            {
+                EntityId item = EntityId.FromValue(m.Items[k]);
+                if (k < m.Count ? !Items.Has(item) || Helds.IndexOf(item) is not (>= 0 and var hi) || Helds.At(hi).Holder != ids[i].Value : m.Items[k] != 0)
+                {
+                    throw Invalid("invalid market stock");
+                }
             }
         }
 
@@ -235,7 +256,8 @@ public sealed partial class World
             RequireUnit(ids[i], "status");
             if (s.FrozenUntil < 0 || s.StoneUntil < 0 || s.CloakUntil < 0 || s.ConfuseUntil < 0 || s.BlessUntil < 0 || s.CurseUntil < 0
                 || s.FrozenUntil > maxFuture || s.StoneUntil > maxFuture || s.CloakUntil > maxFuture || s.ConfuseUntil > maxFuture || s.BlessUntil > maxFuture
-                || s.CurseUntil > maxFuture || s.BlessPercent is < 0 or > 1000 || s.CursePercent is < 0 or > 100)
+                || s.CurseUntil > maxFuture || s.BlessPercent is < 0 or > 1000 || s.CursePercent is < 0 or > 100
+                || s.HypnoUntil < 0 || s.HypnoUntil > maxFuture || (s.HypnoUntil > 0 && !HasPlayer(s.HypnoOwner)) || s.Reserved0 != 0 || s.Reserved1 != 0)
             {
                 throw Invalid("invalid status effects");
             }

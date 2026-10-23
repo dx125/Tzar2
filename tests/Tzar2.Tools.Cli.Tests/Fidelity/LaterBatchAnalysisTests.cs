@@ -101,7 +101,7 @@ public class LaterBatchAnalysisTests
               - {subject: spell_lightning, phases: [{sample: tgt-series, start: 50, end: 10, rate_per_min: -400, steps: 1, step_values: ["-{{I(Engine.Rule("spell_lightning", "Spell", "amount")!.Value)}}x1"]}]}
               - {subject: mage, phases: [{sample: mana-series, start: 70, end: 100, rate_per_min: {{I(Engine.Rule("gameplay", "manaRegenPerMinute")!.Value)}}, steps: 30}]}
               - {subject: loan, phases: [{sample: gold-series, start: 1000, end: 2000, rate_per_min: 3000, steps: 1, step_values: ["{{I(Engine.Rule("world", "loanStartAmount")!.Value)}}x1"]}]}
-              - {subject: trade, load: "100", distance_tiles: "8", phases: [{sample: gold-series, start: 1000, end: 1008, rate_per_min: 2, steps: 1, step_values: ["{{I(100 * Engine.Rule("world", "tradeProfitPerTileBasisPoints")!.Value * 8 / 10000)}}x1"]}]}
+              - {subject: trade, load: "500", distance_tiles: "64", map_tiles: "128", phases: [{sample: gold-series, start: 1000, end: 1100, rate_per_min: 2, steps: 1, step_values: ["{{I(500 * 64 * Engine.Rule("world", "tradeProfitPercent")!.Value / (128 * 100))}}x1"]}]}
               - {subject: gamble, odds: "2", phases: [{sample: gold-series, start: 1000, end: 960, rate_per_min: -10, steps: 40, step_values: ["-100x22", "100x18"]}]}
             """);
         double perKill = (50.0 * Engine.Ruleset.Combat.ExperiencePerDamagePercent / 100) + Engine.Ruleset.Combat.ExperiencePerKill;

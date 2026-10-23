@@ -238,7 +238,7 @@ internal static class FidelitySuite
         new("m2.level-effects", "22.3", "m2-gameplay", "UNK-23", "Attack and defence per experience level (selection panel)", LevelEffects),
         new("m2.healing", "22.3", "m2-gameplay", "UNK-24", "Healing inside the castle = Holder.healPerMinute", Healing),
         new("m3.capture-time", "22.3", "m3-gameplay", "UNK-19", "Capture time = RESISTANCE / (capturePointsPerSecond x peasants)", CaptureTime),
-        new("m3.trade-profit", "22.3", "m3-gameplay", "UNK-28", "Trade profit per delivery = load x tradeProfitPerTile x tiles", TradeProfit),
+        new("m3.trade-profit", "22.3", "m3-gameplay", "UNK-28", "Trade profit per delivery = load x tiles x tradeProfitPercent / (map side x 100)", TradeProfit),
         new("m3.loan-growth", "22.3", "m3-gameplay", "UNK-28", "The first loan = world.loanStartAmount", LoanGrowth),
         new("m3.gambling", "22.3", "m3-gameplay", "UNK-28", "Gambling win share = (1 - edge) / odds (40 bets or more)", Gambling),
         new("m3.spell-effects", "22.3", "m3-gameplay", "UNK-26", "Lightning damage = spell_lightning amount", SpellEffects),
@@ -363,7 +363,7 @@ internal static class FidelitySuite
         }
 
         double keep = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) / 32.0;
-        return Verdict(Math.Abs((1 - strength) - keep) <= 1 / 32.0, $"original keeps {keep:0.###} of each channel, the client {1 - strength:0.###}");
+        return Verdict(Math.Abs((1 - strength) - keep) <= 1 / 32.0, string.Create(CultureInfo.InvariantCulture, $"original keeps {keep:0.###} of each channel, the client {1 - strength:0.###}"));
     }
 
     private static CheckResult ShadowOverlap(FactsIndex f, EngineModel e)
@@ -377,13 +377,13 @@ internal static class FidelitySuite
         double twice = FactsIndex.Number(facts.Get("double_application_pairs")) ?? 0;
         if (single < 500)
         {
-            return Pending($"too few shadowed pixels ({single})");
+            return Pending(string.Create(CultureInfo.InvariantCulture, $"too few shadowed pixels ({single})"));
         }
 
         double share = twice / single;
         return share is > 0.1 and < 0.3
-            ? Pending($"ambiguous: {share:P0} of the pairs darkened twice")
-            : Verdict(share <= 0.1, $"{twice} doubly against {single} singly darkened pairs ({share:P1}); the client darkens once");
+            ? Pending(string.Create(CultureInfo.InvariantCulture, $"ambiguous: {share:P0} of the pairs darkened twice"))
+            : Verdict(share <= 0.1, string.Create(CultureInfo.InvariantCulture, $"{twice} doubly against {single} singly darkened pairs ({share:P1}); the client darkens once"));
     }
 
     private static CheckResult PlayerColourUi(FactsIndex f, EngineModel e)
@@ -442,7 +442,7 @@ internal static class FidelitySuite
             .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Unit} {c.Measured:0.#} px/s (engine {e.PixelsPerSecondOf(c.Unit)?.ToString("0.#", CultureInfo.InvariantCulture) ?? "none"})"))
             .ToList();
         return Verdict(off.Count == 0, off.Count == 0
-            ? $"{classes.Count} classes within {SpeedTolerance:P0} of the engine's speed"
+            ? string.Create(CultureInfo.InvariantCulture, $"{classes.Count} classes within {SpeedTolerance:P0} of the engine's speed")
             : $"misses: {string.Join(", ", off.Take(6))}");
     }
 
@@ -463,8 +463,8 @@ internal static class FidelitySuite
             double period = FactsIndex.Number(m.Get("period_ms_median"))!.Value;
             double slack = Math.Max(TimeTolerance * expected, 2 * (FactsIndex.Number(m.Get("sample_interval_ms")) ?? 0));
             return Math.Abs(period - expected) > slack;
-        }).Select(m => $"{FactsIndex.Text(m.Get("trial"))} {FactsIndex.Number(m.Get("period_ms_median")):0} ms").Distinct().ToList();
-        return Verdict(off.Count == 0, off.Count == 0 ? $"{series.Count} series within tolerance of {e.AttackCycleMs} / RATE" : $"misses: {string.Join(", ", off)}");
+        }).Select(m => string.Create(CultureInfo.InvariantCulture, $"{FactsIndex.Text(m.Get("trial"))} {FactsIndex.Number(m.Get("period_ms_median")):0} ms")).Distinct().ToList();
+        return Verdict(off.Count == 0, off.Count == 0 ? string.Create(CultureInfo.InvariantCulture, $"{series.Count} series within tolerance of {e.AttackCycleMs} / RATE") : $"misses: {string.Join(", ", off)}");
     }
 
     private static CheckResult DamagePerHit(FactsIndex f, EngineModel e)
@@ -508,8 +508,8 @@ internal static class FidelitySuite
 
         // Each load against the engine's load from that kind of node (cows carry their own, ADR 0170).
         var off = loads.Where(m => (int)FactsIndex.Number(m.Get("load"))! != (e.PeasantLoadFrom(FactsIndex.Text(m.Get("target"))) ?? engine))
-            .Select(m => $"{FactsIndex.Text(m.Get("resource")) ?? FactsIndex.Text(m.Get("target"))} {FactsIndex.Number(m.Get("load"))} (engine {e.PeasantLoadFrom(FactsIndex.Text(m.Get("target"))) ?? engine})").ToList();
-        string carried = string.Join(", ", loads.Select(m => $"{FactsIndex.Text(m.Get("resource")) ?? FactsIndex.Text(m.Get("target"))} {FactsIndex.Number(m.Get("load"))}"));
+            .Select(m => string.Create(CultureInfo.InvariantCulture, $"{FactsIndex.Text(m.Get("resource")) ?? FactsIndex.Text(m.Get("target"))} {FactsIndex.Number(m.Get("load"))} (engine {e.PeasantLoadFrom(FactsIndex.Text(m.Get("target"))) ?? engine})")).ToList();
+        string carried = string.Join(", ", loads.Select(m => string.Create(CultureInfo.InvariantCulture, $"{FactsIndex.Text(m.Get("resource")) ?? FactsIndex.Text(m.Get("target"))} {FactsIndex.Number(m.Get("load"))}")));
         return Verdict(off.Count == 0, off.Count == 0 ? $"{loads.Count} loads match the engine: {carried}" : $"measured {string.Join(", ", off)}");
     }
 
@@ -521,7 +521,7 @@ internal static class FidelitySuite
         }
 
         int engine = e.Ruleset.Gameplay.PopulationLimit;
-        return Verdict((int)measured == engine, $"setup screen {measured}, engine {engine}");
+        return Verdict((int)measured == engine, string.Create(CultureInfo.InvariantCulture, $"setup screen {measured}, engine {engine}"));
     }
 
     private static IEnumerable<YamlMapping> Timings(FactsIndex f, string measure) =>
@@ -537,7 +537,7 @@ internal static class FidelitySuite
 
         double expected = FactsIndex.Number(m.Get("expected_s"))!.Value * EngineModel.MsPerTimeUnit / 1000.0;
         double measured = FactsIndex.Number(m.Get("interval_s_median"))!.Value;
-        return Verdict(Within(measured, expected, TimeTolerance), $"{FactsIndex.Text(m.Get("subject"))}: {measured:0.##} s measured, engine {expected:0.##} s");
+        return Verdict(Within(measured, expected, TimeTolerance), string.Create(CultureInfo.InvariantCulture, $"{FactsIndex.Text(m.Get("subject"))}: {measured:0.##} s measured, engine {expected:0.##} s"));
     }
 
     private static CheckResult BuildTime(FactsIndex f, EngineModel e)
@@ -550,7 +550,7 @@ internal static class FidelitySuite
             double full = FactsIndex.Number(bar.Get("expected_s"))!.Value * EngineModel.MsPerTimeUnit / 1000.0;
             double rate = FactsIndex.Number(bar.Get("one_builder_full_s"))!.Value;
             return Verdict(Within(rate, full, TimeTolerance),
-                $"{FactsIndex.Text(bar.Get("subject"))}: one builder fills the health bar in {rate:0.##} s, engine {full:0.##} s");
+                string.Create(CultureInfo.InvariantCulture, $"{FactsIndex.Text(bar.Get("subject"))}: one builder fills the health bar in {rate:0.##} s, engine {full:0.##} s"));
         }
 
         var m = Timings(f, "build").FirstOrDefault(x => FactsIndex.Number(x.Get("last_event_s")) is not null && FactsIndex.Number(x.Get("expected_s")) is not null);
@@ -576,7 +576,7 @@ internal static class FidelitySuite
         double measured = FactsIndex.Number(m.Get("last_event_s"))!.Value - walk;
         double slack = Math.Max(TimeTolerance * expected, 1.0);   // 10 % or one second (two panel frames)
         return Verdict(Math.Abs(measured - expected) <= slack,
-            $"{FactsIndex.Text(m.Get("subject"))}: {measured:0.#} s after a {walk:0.#} s walk at {speed:0.#} px/s, engine {expected:0.#} s");
+            string.Create(CultureInfo.InvariantCulture, $"{FactsIndex.Text(m.Get("subject"))}: {measured:0.#} s after a {walk:0.#} s walk at {speed:0.#} px/s, engine {expected:0.#} s"));
     }
 
     private static (double X, double Y)? Point(YamlNode? node)
@@ -660,7 +660,7 @@ internal static class FidelitySuite
             bool ok = expected == 0.5 ? Math.Abs(share - 0.5) <= 0.25 : Math.Abs(share - expected) <= 0.05;
             if (!ok)
             {
-                off.Add($"{FactsIndex.Text(m.Get("trial"))}: a wins {share:P0}, engine {expected:P0}");
+                off.Add(string.Create(CultureInfo.InvariantCulture, $"{FactsIndex.Text(m.Get("trial"))}: a wins {share:P0}, engine {expected:P0}"));
             }
         }
 
@@ -705,7 +705,7 @@ internal static class FidelitySuite
 
         double v = AttackTiming.Median([.. group.Select(m => Num(m, "px_per_s"))]);
         string observed = Within(v, slow, SpeedTolerance) ? "slowest" : Within(v, fast, SpeedTolerance) ? "own" : "other";
-        return Verdict(observed == e.GroupMoveSpeed, $"group {v:0.#} px/s, pikeman {slow:0.#}, knight {fast:0.#}: original '{observed}', engine '{e.GroupMoveSpeed}'");
+        return Verdict(observed == e.GroupMoveSpeed, string.Create(CultureInfo.InvariantCulture, $"group {v:0.#} px/s, pikeman {slow:0.#}, knight {fast:0.#}: original '{observed}', engine '{e.GroupMoveSpeed}'"));
     }
 
     private static CheckResult GatherTime(FactsIndex f, EngineModel e)
@@ -731,7 +731,7 @@ internal static class FidelitySuite
             string resource = FactsIndex.Text(m.Get("resource")) ?? "wood";
             if (e.PeasantGatherMs(resource) is not { } engine || !Within(perUnitMs, engine, 0.15))
             {
-                off.Add($"{resource}: {perUnitMs:0} ms per unit measured, engine {e.PeasantGatherMs(resource)?.ToString(CultureInfo.InvariantCulture) ?? "none"}");
+                off.Add(string.Create(CultureInfo.InvariantCulture, $"{resource}: {perUnitMs:0} ms per unit measured, engine {e.PeasantGatherMs(resource)?.ToString(CultureInfo.InvariantCulture) ?? "none"}"));
             }
         }
 
@@ -747,7 +747,7 @@ internal static class FidelitySuite
         }
 
         double expected = Num(m, "expected_s"), measured = Num(m, "last_event_s");
-        return Verdict(Math.Abs(measured - expected) <= Math.Max(TimeTolerance * expected, 1.0), $"{FactsIndex.Text(m.Get("subject"))}: {measured:0.#} s measured, engine (TIME) {expected:0.#} s");
+        return Verdict(Math.Abs(measured - expected) <= Math.Max(TimeTolerance * expected, 1.0), string.Create(CultureInfo.InvariantCulture, $"{FactsIndex.Text(m.Get("subject"))}: {measured:0.#} s measured, engine (TIME) {expected:0.#} s"));
     }
 
     private static CheckResult RepairRate(FactsIndex f, EngineModel e)
@@ -816,7 +816,7 @@ internal static class FidelitySuite
         double perKill = AttackTiming.Median([.. values.Zip(values.Skip(1), (a, b) => b - a)]);
         // Engine: a kill of a peasant (50 HP) gives its damage x ExperiencePerDamagePercent plus ExperiencePerKill.
         double engine = (50.0 * e.Ruleset.Combat.ExperiencePerDamagePercent / 100) + e.Ruleset.Combat.ExperiencePerKill;
-        return Verdict(Within(perKill, engine, 0.05), $"{perKill:0.#} per peasant killed, engine {engine:0.#}");
+        return Verdict(Within(perKill, engine, 0.05), string.Create(CultureInfo.InvariantCulture, $"{perKill:0.#} per peasant killed, engine {engine:0.#}"));
     }
 
     private static CheckResult LevelEffects(FactsIndex f, EngineModel e)
@@ -827,7 +827,7 @@ internal static class FidelitySuite
         }
 
         double engineAttack = e.Ruleset.Combat.AttackPerLevel, engineDefence = 0.5 * e.Ruleset.Combat.DefenceHalvesPerLevel;
-        return Verdict(Math.Abs(attack - engineAttack) < 0.01 && Math.Abs(defence - engineDefence) < 0.01, $"+{attack} attack, +{defence} defence per level; engine +{engineAttack}, +{engineDefence}");
+        return Verdict(Math.Abs(attack - engineAttack) < 0.01 && Math.Abs(defence - engineDefence) < 0.01, string.Create(CultureInfo.InvariantCulture, $"+{attack} attack, +{defence} defence per level; engine +{engineAttack}, +{engineDefence}"));
     }
 
     private static CheckResult Healing(FactsIndex f, EngineModel e)
@@ -840,7 +840,7 @@ internal static class FidelitySuite
 
         double engine = e.Rule("^class.castle", "Holder", "healPerMinute") ?? double.NaN;
         double measured = AttackTiming.Median([.. rates]);
-        return Verdict(Within(measured, engine, 0.15), $"{measured:0} HP/min in the castle, engine {engine:0}");
+        return Verdict(Within(measured, engine, 0.15), string.Create(CultureInfo.InvariantCulture, $"{measured:0} HP/min in the castle, engine {engine:0}"));
     }
 
     private static CheckResult CaptureTime(FactsIndex f, EngineModel e)
@@ -859,17 +859,17 @@ internal static class FidelitySuite
             double measured = FactsIndex.Number(m.Get("events_s") is YamlSequence s && s.Items.Count > 0 ? s.Items[0] : null) ?? Num(m, "last_event_s");
             if (!Within(measured, expected, 0.30))
             {
-                off.Add($"{Num(m, "n")} peasant(s): {measured:0.#} s, engine {expected:0.#} s");
+                off.Add(string.Create(CultureInfo.InvariantCulture, $"{Num(m, "n")} peasant(s): {measured:0.#} s, engine {expected:0.#} s"));
             }
         }
 
-        return Verdict(off.Count == 0, off.Count == 0 ? $"{times.Count} captures within 30 % of RESISTANCE / ({rate} x peasants)" : string.Join("; ", off));
+        return Verdict(off.Count == 0, off.Count == 0 ? string.Create(CultureInfo.InvariantCulture, $"{times.Count} captures within 30 % of RESISTANCE / ({rate} x peasants)") : string.Join("; ", off));
     }
 
     private static CheckResult TradeProfit(FactsIndex f, EngineModel e)
     {
         var steps = Counters(f, "trade").Select(c => (Counter: c, Phase: PhaseOf(c, "gold-series"))).Where(x => x.Phase is not null && Num(x.Phase!, "steps") >= 1).ToList();
-        if (steps.Count == 0 || steps.Any(x => FactsIndex.Number(x.Counter.Get("load")) is null))
+        if (steps.Count == 0 || steps.Any(x => FactsIndex.Number(x.Counter.Get("load")) is null || FactsIndex.Number(x.Counter.Get("map_tiles")) is null))
         {
             return Pending("no trade delivery with a known load yet (trade, batch I: a discovery run first)");
         }
@@ -877,11 +877,11 @@ internal static class FidelitySuite
         var off = new List<string>();
         foreach ((YamlMapping c, YamlMapping? p) in steps)
         {
-            double expected = Num(c, "load") * (e.Rule("world", "tradeProfitPerTileBasisPoints") ?? 100) * Num(c, "distance_tiles") / 10_000;
+            double expected = Num(c, "load") * Num(c, "distance_tiles") * (e.Rule("world", "tradeProfitPercent") ?? 40) / (Num(c, "map_tiles") * 100);
             double measured = FirstStep(p!);
             if (!Within(measured, expected, 0.15))
             {
-                off.Add($"{measured} per delivery, engine {expected:0}");
+                off.Add(string.Create(CultureInfo.InvariantCulture, $"{measured} per delivery, engine {expected:0}"));
             }
         }
 
@@ -901,7 +901,7 @@ internal static class FidelitySuite
 
         double measured = loan.Max(FirstStep);
         double engine = e.Rule("world", "loanStartAmount") ?? double.NaN;
-        return Verdict(Math.Abs(measured - engine) < 0.5, $"first loan {measured:0}, engine {engine:0}");
+        return Verdict(Math.Abs(measured - engine) < 0.5, string.Create(CultureInfo.InvariantCulture, $"first loan {measured:0}, engine {engine:0}"));
     }
 
     private static CheckResult Gambling(FactsIndex f, EngineModel e)
@@ -918,7 +918,7 @@ internal static class FidelitySuite
             .Where(v => double.Parse(v.Split('x')[0], CultureInfo.InvariantCulture) > 0).Sum(v => int.Parse(v.Split('x')[1], CultureInfo.InvariantCulture)) ?? 0);
         double expected = (1 - ((e.Rule("world", "gambleHouseEdgePercent") ?? 10) / 100)) / odds;
         double sigma = Math.Sqrt(expected * (1 - expected) / total);
-        return Verdict(Math.Abs((wins / (double)total) - expected) <= 2 * sigma, $"{wins} of {total} won at odds {odds}, engine {expected:P1}");
+        return Verdict(Math.Abs((wins / (double)total) - expected) <= 2 * sigma, string.Create(CultureInfo.InvariantCulture, $"{wins} of {total} won at odds {odds}, engine {expected:P1}"));
     }
 
     private static CheckResult SpellEffects(FactsIndex f, EngineModel e)
@@ -932,7 +932,7 @@ internal static class FidelitySuite
         double largest = hits.Max(p => (p.Get("step_values") as YamlSequence)?.Items.Select(FactsIndex.Text).OfType<string>()
             .Select(v => -double.Parse(v.Split('x')[0], CultureInfo.InvariantCulture)).DefaultIfEmpty(0).Max() ?? 0);
         double engine = e.Rule("spell_lightning", "Spell", "amount") ?? double.NaN;
-        return Verdict(Within(largest, engine, 0.10), $"largest hit {largest:0}, engine lightning {engine:0}");
+        return Verdict(Within(largest, engine, 0.10), string.Create(CultureInfo.InvariantCulture, $"largest hit {largest:0}, engine lightning {engine:0}"));
     }
 
     private static CheckResult ManaRegeneration(FactsIndex f, EngineModel e)
@@ -945,7 +945,7 @@ internal static class FidelitySuite
 
         double engine = e.Rule("gameplay", "manaRegenPerMinute") ?? double.NaN;
         double measured = AttackTiming.Median([.. rates]);
-        return Verdict(Within(measured, engine, 0.15), $"{measured:0.#} mana/min, engine {engine:0}");
+        return Verdict(Within(measured, engine, 0.15), string.Create(CultureInfo.InvariantCulture, $"{measured:0.#} mana/min, engine {engine:0}"));
     }
 
     private static CheckResult TechnologyEffects(FactsIndex f, EngineModel e)
@@ -961,7 +961,7 @@ internal static class FidelitySuite
         double after = -FirstStep(phase);
         double measuredPercent = (after / before - 1) * 100;
         double engine = e.Rule("te_feudalism", "Technology", "effects", "0", "percent") ?? double.NaN;
-        return Verdict(Math.Abs(measuredPercent - engine) <= 2, $"peasant cost {before:0} -> {after:0} ({measuredPercent:+0;-0} %), engine {engine:+0;-0} %");
+        return Verdict(Math.Abs(measuredPercent - engine) <= 2, string.Create(CultureInfo.InvariantCulture, $"peasant cost {before:0} -> {after:0} ({measuredPercent:+0;-0} %), engine {engine:+0;-0} %"));
     }
 
     private static CheckResult FieldDecay(FactsIndex f, EngineModel e)
@@ -974,7 +974,7 @@ internal static class FidelitySuite
 
         double start = Num(phase, "first_step_s"), rate = -Num(phase, "rate_per_min") * Num(phase, "duration_s") / Math.Max(1, Num(phase, "duration_s") - start);
         double engineStart = (e.Rule("^class.field", "Decay", "afterMs") ?? double.NaN) / 1000, engineRate = e.Rule("^class.field", "Decay", "healthPerMinute") ?? double.NaN;
-        return Verdict(Math.Abs(start - engineStart) <= 15 && Within(rate, engineRate, 0.15), $"decay from {start:0} s at {rate:0.#} HP/min; engine {engineStart:0} s, {engineRate:0} HP/min");
+        return Verdict(Math.Abs(start - engineStart) <= 15 && Within(rate, engineRate, 0.15), string.Create(CultureInfo.InvariantCulture, $"decay from {start:0} s at {rate:0.#} HP/min; engine {engineStart:0} s, {engineRate:0} HP/min"));
     }
 
     private static CheckResult Fire(FactsIndex f, EngineModel e)
@@ -999,12 +999,12 @@ internal static class FidelitySuite
 
             if (burns != share < threshold && Math.Abs(share - threshold) > 0.05)
             {
-                off.Add($"left at {share:P0}: {(burns ? "burns" : "does not burn")}");
+                off.Add(string.Create(CultureInfo.InvariantCulture, $"left at {share:P0}: {(burns ? "burns" : "does not burn")}"));
             }
         }
 
         bool rateOk = burning.Count == 0 || Within(AttackTiming.Median([.. burning]), engineRate, 0.15);
-        return Verdict(off.Count == 0 && rateOk, $"{string.Join(", ", off.DefaultIfEmpty("threshold consistent"))}; burn {(burning.Count == 0 ? "-" : AttackTiming.Median([.. burning]).ToString("0", CultureInfo.InvariantCulture))} HP/min, engine below {threshold:P0} at {engineRate} HP/min");
+        return Verdict(off.Count == 0 && rateOk, string.Create(CultureInfo.InvariantCulture, $"{string.Join(", ", off.DefaultIfEmpty("threshold consistent"))}; burn {(burning.Count == 0 ? "-" : AttackTiming.Median([.. burning]).ToString("0", CultureInfo.InvariantCulture))} HP/min, engine below {threshold:P0} at {engineRate} HP/min"));
     }
 
     private static CheckResult Score(FactsIndex f, EngineModel e)
@@ -1017,7 +1017,7 @@ internal static class FidelitySuite
         double Get(string k) => FactsIndex.Number(m.Get(k)) ?? 0;
         double engine = Math.Floor(Get("gathered") / (e.Rule("world", "scoreGatherDivisor") ?? 10)) + Math.Floor(Get("killed_value") / (e.Rule("world", "scoreKillDivisor") ?? 10)) +
                         Math.Floor(Get("built_value") / (e.Rule("world", "scoreBuildDivisor") ?? 10)) + (Get("technologies") * (e.Rule("world", "scorePerTechnology") ?? 100));
-        return Verdict(Math.Abs(total - engine) < 0.5, $"end screen {total:0}, engine formula on its parts {engine:0}");
+        return Verdict(Math.Abs(total - engine) < 0.5, string.Create(CultureInfo.InvariantCulture, $"end screen {total:0}, engine formula on its parts {engine:0}"));
     }
 
     private static CheckResult MapgenStatistics(FactsIndex f, EngineModel e)
@@ -1047,7 +1047,7 @@ internal static class FidelitySuite
             double theirGold = AttackTiming.Median([.. byType.Select(m => Num(m, "gold_per_kingdom"))]);
             if (!Within(ourSpacing, theirSpacing, 0.25) || !Within(ourGold, theirGold, 0.5))
             {
-                off.Add($"{byType.Key}: spacing {ourSpacing:0.00} vs {theirSpacing:0.00}, gold/kingdom {ourGold:0.#} vs {theirGold:0.#}");
+                off.Add(string.Create(CultureInfo.InvariantCulture, $"{byType.Key}: spacing {ourSpacing:0.00} vs {theirSpacing:0.00}, gold/kingdom {ourGold:0.#} vs {theirGold:0.#}"));
             }
         }
 
@@ -1066,7 +1066,7 @@ internal static class FidelitySuite
 
         double measured = FactsIndex.Number(m.Get("day_length_s"))!.Value;
         double engine = e.Ruleset.World.DayLengthMs / 1000.0;
-        return Verdict(Within(measured, engine, TimeTolerance), $"{measured:0} s measured, engine {engine:0} s");
+        return Verdict(Within(measured, engine, TimeTolerance), string.Create(CultureInfo.InvariantCulture, $"{measured:0} s measured, engine {engine:0} s"));
     }
 
     private static CheckResult NightShare(FactsIndex f, EngineModel e)
@@ -1078,6 +1078,6 @@ internal static class FidelitySuite
 
         WorldSettings w = e.Ruleset.World;
         double engine = (((w.NightEndMinute - w.NightStartMinute) % 1440) + 1440) % 1440 / 1440.0;
-        return Verdict(Math.Abs(measured - engine) <= 0.05, $"{measured:0.###} measured, engine {engine:0.###}");
+        return Verdict(Math.Abs(measured - engine) <= 0.05, string.Create(CultureInfo.InvariantCulture, $"{measured:0.###} measured, engine {engine:0.###}"));
     }
 }
