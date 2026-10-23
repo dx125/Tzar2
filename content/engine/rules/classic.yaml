@@ -103,9 +103,10 @@ world:
   maxTributeAmount: 100000            # engine bound: most of one resource in one tribute
   stockpileCap: 1000000000            # engine bound: overflow guard of every stockpile
   # GAME-14 trade and tavern (ADR 0103; UNK-28).
-  tradeProfitPerTileBasisPoints: 100  # UNVERIFIED (UNK-28): profit per tile between the docks (1% of the load per tile)
-  tradeMinDistanceTiles: 8            # UNVERIFIED: closer docks give no profit (anti trade loop)
-  tradeMaxProfitPercent: 300          # UNVERIFIED: most profit of one delivery
+  # TRADE-001 (ReTzar's reading of the original, 0x4e7c98, 0x454e40): a delivery earns load x tiles x 40 / (map side x
+  # 100), the tiles being the larger axis between the markets' centres, none under 12.
+  tradeProfitPercent: 40
+  tradeMinDistanceTiles: 12
   tradeDockMs: 2000                   # UNVERIFIED: time to unload and load at a dock
   convertRatio: 10                    # manual ch. 5 §7: "you give ten times more than you receive"
   gambleOdds: [2, 3, 5, 10]           # UNVERIFIED (UNK-28): the proportions a player may choose

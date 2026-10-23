@@ -4,9 +4,10 @@ title: Trade, tavern and loans
 rules:
   TRADE-001:
     rule: With Trade Routes, traders, caravans and ships trade between two markets or two harbors, carrying chosen goods each way; the profit grows with the distance and the load, and the player picks which resource the profit is paid in.
-    source: [manual Trade, help ITEMS.TXT HT_TRADE_CARAVANS, help ITEMS.TXT HT_TRADE_SHIPS]
+    source: [manual Trade, help ITEMS.TXT HT_TRADE_CARAVANS, help ITEMS.TXT HT_TRADE_SHIPS, 'community ReTzar src/gameplay.rs (0x4e7c98, 0x454e40)']
     status: tested
-    note: The profit formula is a placeholder (UNK-28).
+    adr: [0257]
+    note: A delivery earns load x tiles x 40 / (map side x 100), the tiles counted on the larger axis between the markets, none under 12 tiles; Trade Taxes and Banking add 2 and 3 to the 40 (TECH-023, TECH-024). How the original loads a caravan bit by bit (1000 / markets a step) is not modelled.
   TRADE-002:
     rule: A trade is set up by picking the starting market or harbor and its goods, the far one and its goods, and the amount, then START.
     source: [manual Performing Trade]

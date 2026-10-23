@@ -67,7 +67,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0254, 2026-10-22) healing, freezing and raise dead skip machines and the bodiless: the ruleset hash only.
     // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
     // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
-    private const ulong GoldenRulesetHash = 0xB6A74A695BA960D9UL;
+    // (ADR 0257, 2026-10-22) the trade profit as the original computes it (load x tiles x 40 / (map side x 100), none under 12).
+    private const ulong GoldenRulesetHash = 0x4D13B483908436AFUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -78,8 +79,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0211, 2026-10-22) civilizations in the ruleset's order: the kingdoms' civilization indices, so the hashes.
     // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement (kingdoms 0 and 1 are allies here): the
     // stream and the final hash.
-    private const ulong GoldenHashStream = 0x65B388391177E73DUL;
-    private const ulong GoldenFinalFullHash = 0x18008365C1DC5E5CUL;
+    private const ulong GoldenHashStream = 0x1733B8ADCE0E5B0DUL;
+    private const ulong GoldenFinalFullHash = 0x81410B229E20067AUL;
 
     private const int Ticks = 1600;
 

@@ -12,8 +12,8 @@ public sealed partial class Ruleset
     {
         WorldSettings w = World;
         hasher.Add(w.DefaultSightTiles).Add(w.NightSightBasisPoints).Add(w.MemoryRefreshTicks).Add(w.DiplomacyChangeIntervalMs)
-            .Add(w.TributeIntervalMs).Add(w.MaxTributeAmount).Add(w.StockpileCap).Add(w.TradeProfitPerTileBasisPoints)
-            .Add(w.TradeMinDistanceTiles).Add(w.TradeMaxProfitBasisPoints).Add(w.TradeDockMs).Add(w.ConvertRatio)
+            .Add(w.TributeIntervalMs).Add(w.MaxTributeAmount).Add(w.StockpileCap).Add(w.TradeProfitPercent)
+            .Add(w.TradeMinDistanceTiles).Add(w.TradeDockMs).Add(w.ConvertRatio)
             .AddSpan<int>(w.GambleOdds.AsSpan()).Add(w.GambleHouseEdgeBasisPoints).Add(w.MaxGambleStake).Add(w.LoanStartAmount)
             .Add(w.LoanStepAmount).Add(w.LoanGrowDelayMs).Add(w.LoanInterestBasisPoints).Add(w.ClaimReachUnits).Add(w.ClaimIntervalMs)
             .Add(w.GuardRadiusTiles).Add(w.WanderRadiusTiles).Add(w.WanderIntervalMs).Add(w.DayLengthMs).Add(w.DayStartMinute)

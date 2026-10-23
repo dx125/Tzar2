@@ -48,9 +48,10 @@ public class TradeTests
             Assert.True(sales.Length >= 2, $"{sales.Length} sales");
             Assert.Equal(wood, sales[0].X); // wood loaded at A, sold at B
             Assert.Equal(gold, sales[1].X); // gold loaded at B, sold at A
-            // A European caravan carries 500 (TRADE-004), 1% per tile between the docks (UNVERIFIED, UNK-28).
-            Assert.Equal(5 * distance, sales[0].Y);
-            Assert.Equal(500 + (5 * distance), sales[0].Arg);
+            // A European caravan carries 500 (TRADE-004); profit = load x tiles x 40 / (map side x 100) (TRADE-001).
+            int profit = 500 * distance * 40 / (64 * 100);
+            Assert.Equal(profit, sales[0].Y);
+            Assert.Equal(500 + profit, sales[0].Arg);
             profits[index] = sales[0].Y;
             Assert.Equal(sales[0].Y + sales[1].Y, d.World.Kingdoms[0].TradeIncome);
         }
@@ -75,7 +76,7 @@ public class TradeTests
             Route(near, wood, wood);
             near.RunUntil(() => near.Count(SimEventKind.TradeDelivered) >= 1, 3000);
             SimEvent sale = near.Events.First(e => e.Event.Kind == SimEventKind.TradeDelivered).Event;
-            Assert.Equal(0, sale.Y); // closer than tradeMinDistanceTiles: no profit (anti trade loop)
+            Assert.Equal(0, sale.Y); // closer than 12 tiles: no profit (TRADE-001)
         }
 
         using SimDriver d = Markets(30);
@@ -132,7 +133,7 @@ public class TradeTests
         Position b = d.World.Positions.Get(markets[1]);
         d.Order(0, CommandKind.Trade, [peon], b.X, b.Y, target: markets[0], arg0: wood | (wood << 8));
         d.RunUntil(() => d.Count(SimEventKind.TradeDelivered) >= 1, 6000);
-        Assert.Equal(100 + 30, d.Events.First(e => e.Event.Kind == SimEventKind.TradeDelivered).Event.Arg);
+        Assert.Equal(100 + (100 * 30 * 40 / (64 * 100)), d.Events.First(e => e.Event.Kind == SimEventKind.TradeDelivered).Event.Arg);
         Assert.True(d.World.TradeRoutes.Has(peon)); // idle work leaves a trading peasant alone
     }
 
