@@ -102,7 +102,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Construction and repair](construction.yaml) (BLD) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 18 | 10 | 1 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 8 | 1 | 0 | 0 | 0 | 0 |
-| [Resources and gathering](economy.yaml) (ECO) | 22 | 17 | 5 | 0 | 0 | 0 | 0 |
+| [Resources and gathering](economy.yaml) (ECO) | 24 | 19 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 13 | 15 | 2 | 1 | 2 | 1 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 8 | 1 | 1 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 341 | 241 | 79 | 7 | 1 | 9 | 4 |
+| **All** | 343 | 243 | 79 | 7 | 1 | 9 | 4 |
 
 ## Not done yet
 

@@ -438,8 +438,9 @@ public sealed partial class World
     }
 
     /// <summary>
-    /// Changes the owner of a live entity (GAME-04 capture, cow poaching): its queue is lost, its fight ends, its hit
-    /// points follow the new owner's technologies (damage taken stays taken), capture progress on it is dropped.
+    /// Changes the owner of a live entity (GAME-04 capture, cow poaching): its queue is lost, its fight and its task end
+    /// (a peasant keeps its load), its hit points follow the new owner's technologies (damage taken stays taken), capture
+    /// progress on it is dropped.
     /// </summary>
     public void ChangeOwner(EntityId entity, byte newOwner)
     {
@@ -466,7 +467,9 @@ public sealed partial class World
 
         if (Workers.IndexOf(entity) is >= 0 and var w)
         {
-            Workers.At(w) = new Worker { CarryResource = Worker.NoResource, NodeResource = Worker.NoResource };
+            // The task ends; the load stays with the unit (ECO-024, ReTzar's reading of the original, 0x5050a0).
+            Worker old = Workers.At(w);
+            Workers.At(w) = new Worker { CarryAmount = old.CarryAmount, CarryResource = old.CarryResource, NodeResource = Worker.NoResource };
         }
 
         CaptureStates.Remove(entity);
