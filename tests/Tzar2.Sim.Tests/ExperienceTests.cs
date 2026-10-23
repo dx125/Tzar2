@@ -16,7 +16,7 @@ namespace Tzar2.Sim.Tests;
 /// <summary>GAME-08 (ADR 0092): experience from combat, levels and their effects, learning technologies, heroes, persistence.</summary>
 public class ExperienceTests
 {
-    // A strong footman (attack 100) against an enemy castle: 100 x 1000 / 1700 = 58 damage and experience per hit.
+    // A strong footman (attack 100): one blow kills a peasant.
     private static readonly Ruleset Strong = ClassicWith("euro.footman: { Armament: { attack: 100 } }");
 
     private static SimDriver FootmanAtCastle(Ruleset rules, params string[] technologies)
@@ -30,6 +30,27 @@ public class ExperienceTests
         d.Order(0, CommandKind.Attack, [.. OfType(d.World, "euro.footman")], target: OfType(d.World, "euro.castle").Single());
         return d;
     }
+
+    // Credits <paramref name="n"/> kills of enemy peasants to <paramref name="killer"/> through the death step, then lets the
+    // experience step run (a kill is one point: ReTzar's reading of the original, 0x504f20).
+    private static void Kills(SimDriver d, EntityId killer, int n, int victimOwner = 1)
+    {
+        Position at = d.PositionOf(killer);
+        var deaths = new System.Collections.Generic.List<Death>();
+        for (int k = 0; k < n; k++)
+        {
+            bool locked = d.World.IsLocked;
+            d.World.IsLocked = false;
+            EntityId victim = d.Spawn(Id(d.World.Ruleset, "euro.peon"), (byte)victimOwner, (at.X / Tile) + 1, (at.Y / Tile) + 1);
+            d.World.Healths.Get(victim).Current = 0;
+            deaths.Add(new Death(victim, killer, d.World.Identities.Get(killer).Owner));
+            CombatSystem.ProcessDeaths(d.World, deaths);
+            d.World.IsLocked = locked;
+            d.Step();
+        }
+    }
+
+    private const int Tile = Map.MapState.UnitsPerTile;
 
     [Fact]
     [Trait("Rule", "TECH-005")]
@@ -45,66 +66,98 @@ public class ExperienceTests
 
     [Fact]
     [Trait("Rule", "EXP-003")]
-    public void Hits_on_an_ally_give_no_experience_but_hits_on_an_enemy_do()
+    public void Kills_of_allies_give_no_experience_but_kills_of_enemies_do()
     {
-        // 1.05: units cannot gain experience from ally units (confusion, a rain of fire or a scripted fight hit them).
+        // 1.05: units cannot gain experience from ally units; damage gives none at all (ReTzar, 0x504f20).
         using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.footman", 1, 8, 4), Unit("euro.footman", 2, 12, 4)), players: 3, ruleset: Classic);
+        Grant(d.World, 0, "te_learning");
         d.Order(0, CommandKind.SetDiplomacy, [], x: 1, arg0: (int)Kingdoms.Stance.Ally);
         d.Step();
         EntityId attacker = OfType(d.World, "euro.footman", 0).Single();
         ushort type = d.World.Identities.Get(attacker).TypeId;
-        var hit = new HitRecord(attacker, OfType(d.World, "euro.footman", 1).Single(), 0, type, 10, 10, 100, DamageClass.Sword, false);
-        CombatSystem.Credit(d.World, hit, 1, 10);
-        Assert.Equal(0, d.World.Experiences.Get(attacker).PendingXp);
-        CombatSystem.Credit(d.World, hit with { Target = OfType(d.World, "euro.footman", 2).Single() }, 2, 10);
-        Assert.True(d.World.Experiences.Get(attacker).PendingXp > 0);
+        var hit = new HitRecord(attacker, OfType(d.World, "euro.footman", 2).Single(), 0, type, 10, 10, 100, DamageClass.Sword, false);
+        CombatSystem.Credit(d.World, hit, 2, 10);
+        Assert.Equal(0, d.World.Experiences.Get(attacker).PendingXp); // a blow teaches nothing
+        Kills(d, attacker, 1, victimOwner: 1);
+        Assert.Equal(0, d.World.Experiences.Get(attacker).Xp);
+        Kills(d, attacker, 1, victimOwner: 2);
+        Assert.Equal(1, d.World.Experiences.Get(attacker).Xp);
     }
 
     [Fact]
     [Trait("Rule", "EXP-001")]
     [Trait("Rule", "EXP-002")]
-    public void Experience_follows_the_damage_dealt_and_levels_cost_more_each_time()
+    public void Each_kill_is_a_point_and_each_level_costs_as_many_points_as_it_is_high()
     {
-        using SimDriver d = FootmanAtCastle(Strong, "te_learning");
+        // ReTzar's reading of the original (0x5022e0): the first point gives level 1, level k needs k more.
+        using var d = new SimDriver(
+            TestMap(32, 16, [Unit("euro.footman", 0, 6, 7), .. Enumerable.Range(0, 7).Select(i => Unit("euro.peon", 1, 8, 4 + i))]),
+            ruleset: Strong);
+        Grant(d.World, 0, "te_learning");
         EntityId footman = OfType(d.World, "euro.footman").Single();
-        d.RunUntil(() => d.World.Experiences.Get(footman).Level >= 2, 2000);
-        Experience x = d.World.Experiences.Get(footman);
-        Assert.Equal(2, x.Level);
-        Assert.InRange(x.Xp, 300, 599); // level 1 at 100, 2 at 300, 3 at 600
-        int[] levels = [.. Of(d, SimEventKind.LevelUp).Where(e => e.Entity == footman).Select(e => e.X)];
-        Assert.Equal([1, 2], levels);
+        EntityId[] peons = [.. OfType(d.World, "euro.peon")];
+        d.Order(1, CommandKind.SetStance, peons, arg0: (int)CombatStance.HoldFire);
+        int attack = CombatStats.Attack(d.World, footman, d.World.TypeOf(footman), d.World.TypeOf(footman).Traits.Armament!);
+        foreach (EntityId peon in peons)
+        {
+            d.Order(0, CommandKind.Attack, [footman], target: peon);
+            d.RunUntil(() => !d.World.Entities.IsAlive(peon), 2000);
+            d.Step();
+        }
 
-        // +1 attack per level: 102 x 1000 / 1700 = 60 after level 2 (58 at level 0); +1/2 defence per level.
-        d.RunUntil(() => Of(d, SimEventKind.Damaged).Any(e => e.Arg == 60), 400);
-        Assert.Contains(Of(d, SimEventKind.Damaged), e => e.Arg == 60);
-        Assert.Equal(2 + 1, CombatStats.Defence(d.World, footman, d.World.TypeOf(footman)));
+        Experience x = d.World.Experiences.Get(footman);
+        Assert.Equal(7, x.Xp);
+        int[] levels = [.. Of(d, SimEventKind.LevelUp).Where(e => e.Entity == footman).Select(e => e.X)];
+        Assert.Equal([1, 2, 3, 4], levels); // after 1, 2, 4 and 7 kills
+        Assert.Equal([0, 1, 2, 4, 7], Enumerable.Range(0, 5).Select(n => CombatStats.XpForLevel(d.World.Ruleset.Combat, n)));
+
+        // +1 attack per level, +1/2 defence per level.
+        Assert.Equal(attack + 4, CombatStats.Attack(d.World, footman, d.World.TypeOf(footman), d.World.TypeOf(footman).Traits.Armament!));
+        Assert.Equal(2 + 2, CombatStats.Defence(d.World, footman, d.World.TypeOf(footman)));
     }
 
     [Fact]
     [Trait("Rule", "TECH-014")]
     public void The_level_cap_holds_until_Heroism()
     {
-        using SimDriver d = FootmanAtCastle(Strong, "te_learning");
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4)), ruleset: Classic);
+        Grant(d.World, 0, "te_learning");
         EntityId footman = OfType(d.World, "euro.footman").Single();
-        d.RunUntil(() => false, 3000);
-        Assert.Equal(4, d.World.Experiences.Get(footman).Level); // te_learning: +4 levels (UNVERIFIED)
+        Kills(d, footman, 20);
+        Assert.Equal(4, d.World.Experiences.Get(footman).Level); // te_learning: +4 levels (ReTzar, ADR 0191)
         Assert.Equal(CombatStats.XpForLevel(d.World.Ruleset.Combat, 4), d.World.Experiences.Get(footman).Xp);
+        Grant(d.World, 0, "te_heroism");
+        Kills(d, footman, 4);
+        Assert.Equal(5, d.World.Experiences.Get(footman).Level);
+    }
+
+    [Fact]
+    [Trait("Rule", "EXP-001")]
+    public void Each_academy_raises_the_level_cap_by_ten()
+    {
+        // ReTzar's reading of the original (0x401850): a finished academy adds 10 to its kingdom's cap.
+        using var d = new SimDriver(TestMap(32, 16, Structure("euro.academy", 0, 10, 4), Unit("euro.footman", 0, 4, 4)), ruleset: Classic);
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        Assert.Equal(10, CombatStats.LevelCap(d.World, footman));
+        Grant(d.World, 0, "te_learning");
+        Assert.Equal(14, CombatStats.LevelCap(d.World, footman));
     }
 
     [Fact]
     [Trait("Rule", "TECH-017")]
     public void Warfare_speeds_up_learning()
     {
-        using SimDriver slow = FootmanAtCastle(Strong, "te_learning");
-        using SimDriver fast = FootmanAtCastle(Strong, "te_learning", "te_warfare");
-        slow.RunUntil(() => slow.Count(SimEventKind.Damaged) == 1, 1000);
-        fast.RunUntil(() => fast.Count(SimEventKind.Damaged) == 1, 1000);
-        slow.Step();
-        fast.Step();
-        int a = slow.World.Experiences.Get(OfType(slow.World, "euro.footman").Single()).Xp;
-        int b = fast.World.Experiences.Get(OfType(fast.World, "euro.footman").Single()).Xp;
-        Assert.Equal(58, a);
-        Assert.Equal(58 * 143 / 100, b); // a level needs 70 % (ReTzar, ADR 0191)
+        // A level costs 70 % with Warfare (ReTzar, ADR 0191): level 4 after 5 kills, not 7.
+        using var slow = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4)), ruleset: Classic);
+        using var fast = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4)), ruleset: Classic);
+        Grant(slow.World, 0, "te_learning");
+        Grant(fast.World, 0, "te_learning");
+        Grant(fast.World, 0, "te_warfare");
+        Kills(slow, OfType(slow.World, "euro.footman").Single(), 5);
+        Kills(fast, OfType(fast.World, "euro.footman").Single(), 5);
+        Assert.Equal(3, slow.World.Experiences.Get(OfType(slow.World, "euro.footman").Single()).Level);
+        Assert.Equal(4, fast.World.Experiences.Get(OfType(fast.World, "euro.footman").Single()).Level);
+        Assert.Equal(70, CombatStats.ExperienceSpeed(fast.World, 0));
     }
 
     [Fact]
@@ -122,7 +175,11 @@ public class ExperienceTests
         d.Order(0, CommandKind.Attack, [footman], target: dummy);
         d.RunUntil(() => false, 2000);
         Assert.Equal(5100, Hp(d, dummy)); // dummies take no damage
-        Assert.Equal(3, d.World.Experiences.Get(footman).Level); // combat.dummyMaxLevel
+        Assert.Equal(4, d.World.Experiences.Get(footman).Level); // Learning's cap before the dummies' level 8
+        Grant(d.World, 0, "te_heroism");
+        d.Order(0, CommandKind.Attack, [footman], target: dummy);
+        d.RunUntil(() => false, 4000);
+        Assert.Equal(8, d.World.Experiences.Get(footman).Level); // a point per 75 of damage, up to level 8 (ReTzar, 0x4df884)
     }
 
     [Fact]
@@ -134,8 +191,11 @@ public class ExperienceTests
         Grant(d.World, 0, "te_learning");
         Grant(d.World, 0, "te_bodybuilding");
         EntityId[] footmen = [.. OfType(d.World, "euro.footman")];
-        d.Order(0, CommandKind.Attack, footmen, target: OfType(d.World, "euro.castle").Single());
-        d.RunUntil(() => footmen.All(f => d.World.IsHero(f)), 3000);
+        foreach (EntityId f in footmen)
+        {
+            Kills(d, f, 2);
+        }
+
         Assert.All(footmen, f => Assert.True(d.World.IsHero(f)));
         Assert.Equal(["Synthia", "Testor"], footmen.Select(f => d.World.Names.Get(f).Value).OrderBy(n => n));
         Assert.Equal(2, d.Count(SimEventKind.HeroPromoted));
@@ -154,11 +214,11 @@ public class ExperienceTests
         EntityId footman = OfType(d.World, "euro.footman").Single();
         EntityId archer = OfType(d.World, "euro.archer").Single();
         d.Order(0, CommandKind.SetStance, [archer], arg0: (int)CombatStance.HoldFire);
-        d.Order(0, CommandKind.Attack, [footman], target: OfType(d.World, "euro.castle").Single());
-        d.RunUntil(() => d.World.IsHero(footman), 2000);
+        Kills(d, footman, 1);
+        Assert.True(d.World.IsHero(footman));
         int before = d.World.Experiences.Get(archer).Xp;
-        d.RunUntil(() => d.World.Experiences.Get(archer).Xp > before, 200);
-        Assert.InRange(d.World.Experiences.Get(archer).Xp - before, 55, 62); // the whole of a blow of about 58 (ReTzar, ADR 0191), not half
+        Kills(d, footman, 1);
+        Assert.Equal(1, d.World.Experiences.Get(archer).Xp - before); // the whole of the hero's point (ReTzar, ADR 0191), not half
     }
 
     [Fact]
@@ -170,7 +230,7 @@ public class ExperienceTests
         Grant(d.World, 0, "te_philosophy");
         EntityId footman = d.Spawn(Id(rules, "euro.footman"), 0, 4, 4);
         Assert.Equal(2, d.World.Experiences.Get(footman).Level);
-        Assert.Equal(300, d.World.Experiences.Get(footman).Xp);
+        Assert.Equal(2, d.World.Experiences.Get(footman).Xp); // XpForLevel(2)
     }
 
     [Fact]
@@ -183,8 +243,8 @@ public class ExperienceTests
         EntityId footman = OfType(d.World, "euro.footman").Single();
         d.Order(0, CommandKind.PickItem, [footman], target: OfType(d.World, "comm.item").Single());
         d.RunUntil(() => d.World.Inventories.Get(footman).Count == 1, 400);
-        d.Order(0, CommandKind.Attack, [footman], target: OfType(d.World, "euro.castle").Single());
-        d.RunUntil(() => d.World.IsHero(footman), 3000);
+        Kills(d, footman, 2);
+        Assert.True(d.World.IsHero(footman));
 
         var records = PersistentHeroes.Capture(d.World, 0);
         PersistentHero hero = Assert.Single(records);

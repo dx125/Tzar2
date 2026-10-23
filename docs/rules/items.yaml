@@ -42,10 +42,11 @@ rules:
     source: [patch 1.05 (TZAR110.TXT)]
     status: tested
   ITEM-010:
-    rule: A soul item kills a unit or makes it go berserk; a hero is not killed.
-    source: [data ORDERS.INI item_kill item_berserk, community TDD GAME-10]
-    status: partial
-    note: The simulation does it; the card's item_kill and item_berserk orders do nothing yet.
+    rule: A soul item kills a unit or makes it go berserk. Soul Bind leaves the target with its owner and puts a soul bound to it in the caster's inventory; item_kill strikes the bound unit dead (heroes too), item_berserk sends it berserk for 20 s, and the soul stays; it goes when its unit dies. A soul bound to nobody does nothing.
+    source: [data ORDERS.INI item_kill item_berserk, 'data MENU.INI [item_soul]', 'community ReTzar src/gameplay.rs (0x473403, 0x465340, 0x4e219f)']
+    status: tested
+    adr: [0255]
+    note: The TDD's "a hero is not killed" came from no source; the original's soul strikes 10,000. A soul on the ground can be commanded by anyone in the original; Tzar2's orders come from the inventory only (a click kills, Ctrl + click sends berserk).
   ITEM-011:
     rule: The items of a dead unit fall to the ground.
     source: [community TDD GAME-10]

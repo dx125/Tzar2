@@ -108,6 +108,7 @@ public sealed class CombatSystem : ISimSystem
         foreach (HitRecord hit in _hits)
         {
             Apply(world, hit, _deaths);
+            Banshee(world, hit, _deaths);
         }
 
         ProcessDeaths(world, _deaths);
@@ -532,13 +533,23 @@ public sealed class CombatSystem : ISimSystem
         bool attackerAlive = world.Entities.IsAlive(hit.Attacker) && world.Identities.Has(hit.Attacker);
         if ((targetType.Traits.Abilities & AbilityFlags.TrainingDummy) != 0 && victim.Owner == hit.Owner)
         {
-            // Training (Tactics): no damage; the attacker learns up to the dummies' level.
+            // Training (Tactics): no damage; the attacker learns a point for every dummyDamagePerPoint its blows would deal, up
+            // to the dummies' level (ReTzar's reading of the original, 0x4481e0, 0x4df884: 75 and level 8).
             if (attackerAlive && world.Experiences.IndexOf(hit.Attacker) is >= 0 and var dx && world.Experiences.At(dx).Level < world.Ruleset.Combat.DummyMaxLevel)
             {
-                world.Experiences.At(dx).PendingXp += Math.Max(1, (int)((long)hit.Attack * world.Ruleset.Combat.ExperiencePerDamagePercent / 100));
+                ref Experience trainee = ref world.Experiences.At(dx);
+                long total = trainee.DummyCarry + (long)Damage(world, hit, targetType);
+                int per = world.Ruleset.Combat.DummyDamagePerPoint;
+                trainee.PendingXp += (int)Math.Min(total / per, 1_000_000);
+                trainee.DummyCarry = (byte)Math.Min(total % per, 255);
             }
 
             return;
+        }
+
+        if ((targetType.Traits.Abilities & AbilityFlags.MagicImmune) != 0 && world.Ruleset.Combat.MagicAttackers.AsSpan().BinarySearch(hit.AttackerType) >= 0)
+        {
+            return; // the Messiah takes no magic: mages, dragons, priests (WAR-010)
         }
 
         int dealt = Damage(world, hit, targetType);
@@ -588,6 +599,23 @@ public sealed class CombatSystem : ISimSystem
                 }
             }
         }
+    }
+
+    // WAR-009 (ReTzar's reading of the original, 0x4ee780): after its blow a ghost, in 71 draws of 1001, lets out a banshee
+    // scream, a free curse on the enemies around it.
+    private static void Banshee(World world, in HitRecord hit, List<Death> deaths)
+    {
+        CombatSettings settings = world.Ruleset.Combat;
+        if (settings.BansheeSpell < 0 || hit.Spell != Projectile.NoSpell
+            || (world.Ruleset.EntityTypes[hit.AttackerType].Traits.Abilities & AbilityFlags.Banshee) == 0
+            || !world.Entities.IsAlive(hit.Attacker) || !world.Positions.Has(hit.Attacker)
+            || world.Rng.Combat.NextInt(settings.BansheeOutOf) >= settings.BansheeChance)
+        {
+            return;
+        }
+
+        Position at = world.Positions.Get(hit.Attacker);
+        MagicSystem.ApplyEffect(world, (ushort)settings.BansheeSpell, hit.Attacker, hit.Owner, EntityId.None, at.X, at.Y, deaths);
     }
 
     // The damage formula (UNK-08 placeholder, ADR 0038): attack (rolled up to max_damage), BONUS.INI, Honor, defence,
