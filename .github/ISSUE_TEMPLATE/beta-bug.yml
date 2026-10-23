@@ -1,0 +1,93 @@
+name: Beta bug
+description: A problem in a Tzar2 beta build (closed beta, M7; docs/release/closed-beta.md).
+title: "[beta] "
+labels: ["bug", "beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing. Please never attach files of the original game (no files from your TZAR folder, no
+        screenshots of the original): only Tzar2's own logs, replays and screenshots.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The line in version.txt in the game folder (or the main menu's bottom-left corner).
+      placeholder: Tzar2 0.7.0-beta.12+0123456789ab
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Where
+      options:
+        - First start / import
+        - Main menu or settings
+        - Skirmish
+        - Campaign
+        - Multiplayer
+        - Editor
+        - Install or uninstall
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did
+      description: Steps, as exact as you can.
+      placeholder: |
+        1. Started a skirmish on a large continental map, 4 kingdoms
+        2. Sent 20 knights across the bridge
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected (what the original game does)
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often
+      options:
+        - Every time
+        - Sometimes
+        - Once
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: How bad (your view)
+      options:
+        - Crash, lost saves, desync, or the game does not start (P0)
+        - Breaks play, no workaround (P1)
+        - Wrong but playable (P2)
+        - Polish or a wish (P3)
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: |
+        Drag in: the run's log folder, zipped (%APPDATA%\Godot\app_userdata\Tzar2\logs\<date-time>\); the replay
+        (the newest .t2rep in ...\Tzar2\replays\, or crash-replay.t2rep in the log folder); a screenshot if it is visual.
+    validations:
+      required: false
+  - type: input
+    id: pc
+    attributes:
+      label: PC
+      description: Windows version, CPU, graphics card, screen resolution.
+      placeholder: Windows 11 24H2, Ryzen 5 3600, GTX 1060 6 GB, 2560x1440
+    validations:
+      required: false
