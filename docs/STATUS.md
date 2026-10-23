@@ -235,6 +235,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       Done since (log below): the nightly Benchmarks' gameplay rows re-recorded, the architecture tests' four gaps,
       the civilization list (ADR 0211, the `Race` bug), the asset caches cleared in the menu, the load off the main
       thread, rules decided by data instead of names in code.
+      * 2026-10-23: the host's choice for a computer goes to the relay (issue #190, ADR 0168 amendment). A stale lobby
+        view lost it silently.
 
 ## Decision and event log
 
