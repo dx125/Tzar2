@@ -237,6 +237,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       thread, rules decided by data instead of names in code.
       * 2026-10-23: the host's choice for a computer goes to the relay (issue #190, ADR 0168 amendment). A stale lobby
         view lost it silently.
+      * 2026-10-23: the AI reads the world through read-only views (ADR 0213); an architecture test keeps it off the
+        writable spans.
 
 ## Decision and event log
 

@@ -293,7 +293,7 @@ public sealed class AiSkirmishScenario : IBenchScenario
         int n = 0;
         for (int i = 0; i < world.Identities.Count; i++)
         {
-            if (world.Identities.Components[i].Owner == player && world.IsShip(world.Identities.Entities[i]))
+            if (world.Identities.View[i].Owner == player && world.IsShip(world.Identities.Entities[i]))
             {
                 n++;
             }

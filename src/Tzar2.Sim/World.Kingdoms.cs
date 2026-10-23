@@ -32,6 +32,9 @@ public sealed partial class World
     /// <summary>Per-kingdom world state by slot: statistics, loan, cheats, outcome (GAME-13/14/17/19).</summary>
     public Span<KingdomState> Kingdoms => _kingdoms;
 
+    /// <summary>Per-kingdom world state by slot, read-only (the AI and other readers; ADR 0213).</summary>
+    public ReadOnlySpan<KingdomState> KingdomsView => _kingdoms;
+
     /// <summary>Trade routes of trading units (hot; GAME-14).</summary>
     public ComponentStore<TradeRoute> TradeRoutes { get; private set; } = null!;
 
