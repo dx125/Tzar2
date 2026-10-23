@@ -69,6 +69,15 @@ public sealed class DiplomacyScreen
     /// <summary>Shared victory (the check box): offered to every kingdom; it holds between two allies that both offer it.</summary>
     public bool AlliedVictory { get; set; }
 
+    /// <summary>The frame of the shared victory check (COMMON <c>chk</c>) when offered: the green one, on top.</summary>
+    public const int CheckOnFrame = 0;
+
+    /// <summary>The frame of the shared victory check when not offered: the red one, under the green.</summary>
+    public const int CheckOffFrame = 1;
+
+    /// <summary>The frame of the shared victory check.</summary>
+    public int AlliedVictoryFrame => AlliedVictory ? CheckOnFrame : CheckOffFrame;
+
     /// <summary>Chooses the stance towards the kingdom of <paramref name="row"/>.</summary>
     public void Choose(DiplomacyRow row, Stance stance)
     {
