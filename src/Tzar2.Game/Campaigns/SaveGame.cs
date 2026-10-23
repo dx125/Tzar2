@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Immutable;
 using System.IO;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Serialization;
 using Tzar2.Game.Session;
+using Tzar2.Sim;
 
 namespace Tzar2.Game.Campaigns;
 
@@ -32,8 +34,11 @@ public enum SaveKind : byte
 /// <param name="Snapshot">The sim snapshot.</param>
 public sealed record SaveGame(string CampaignId, string MapId, string Label, int Tick, CampaignProgress? Progress, byte[] Snapshot)
 {
-    /// <summary>Format version (2: the kind, a custom map's setup or a skirmish's description; 1 is still read).</summary>
-    public const int Version = 2;
+    /// <summary>
+    /// Format version (2: the kind, a custom map's setup or a skirmish's description; 3: a custom map's kingdoms and game
+    /// options, SHELL-006 and SHELL-007, written only when the setup chose them; 1 and 2 are still read).
+    /// </summary>
+    public const int Version = 3;
 
     /// <summary>What the save continues.</summary>
     public SaveKind Kind { get; init; }
@@ -80,7 +85,9 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
     {
         var w = new BinaryBufferWriter(Snapshot.Length + 4096);
         w.WriteUInt32(Magic);
-        w.WriteVarUInt64(Version);
+        CustomMapSettings? chosen = Kind == SaveKind.CustomMap ? Custom ?? new CustomMapSettings() : null;
+        bool extras = chosen is not null && HasExtras(chosen);
+        w.WriteVarUInt64(extras ? (ulong)Version : 2);
         w.WriteString(CampaignId);
         w.WriteString(MapId);
         w.WriteString(Label);
@@ -95,6 +102,22 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
             w.WriteVarInt64(c.PopulationLimit);
             w.WriteByte(c.NoFog is { } fog ? (byte)(fog ? 2 : 1) : (byte)0);
             w.WriteByte(c.Explored is { } explored ? (byte)(explored ? 2 : 1) : (byte)0);
+            if (extras)
+            {
+                w.WriteByte((byte)c.Players);
+                w.WriteByte(c.Victory is { } v ? (byte)((int)v + 1) : (byte)0);
+                w.WriteByte(c.GameType is { } g ? (byte)((int)g + 1) : (byte)0);
+                w.WriteVarInt64(c.ScoreLimit ?? -1);
+                w.WriteVarInt64(c.TimeLimitMinutes ?? -1);
+                w.WriteByte((byte)c.Kingdoms.Length);
+                foreach (CustomKingdom k in c.Kingdoms)
+                {
+                    w.WriteByte(k.Slot);
+                    w.WriteString(k.Civilization ?? string.Empty);
+                    w.WriteByte(k.Colour);
+                    w.WriteByte(k.Team);
+                }
+            }
         }
         else if (Kind == SaveKind.Skirmish)
         {
@@ -168,6 +191,10 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
                     NoFog = fog == 0 ? null : fog == 2,
                     Explored = explored == 0 ? null : explored == 2,
                 };
+                if (version >= 3)
+                {
+                    custom = ReadExtras(ref r, custom);
+                }
             }
             else if (kind == SaveKind.Skirmish)
             {
@@ -214,6 +241,45 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
         }
 
         return new SaveGame(campaign, map, label, (int)tick, progress, snapshot) { Kind = kind, Custom = custom, Descriptor = descriptor };
+    }
+
+    private static bool HasExtras(CustomMapSettings c) => c.Players > 0 || c.Victory is not null || c.GameType is not null
+        || c.ScoreLimit is not null || c.TimeLimitMinutes is not null || !c.Kingdoms.IsEmpty;
+
+    private static CustomMapSettings ReadExtras(ref BinaryBufferReader r, CustomMapSettings custom)
+    {
+        byte players = r.ReadByte(), victory = r.ReadByte(), gameType = r.ReadByte();
+        long score = r.ReadVarInt64(), time = r.ReadVarInt64();
+        int count = r.ReadByte();
+        if (players > 8 || victory > (byte)VictoryCondition.NotSpecified + 1 || gameType > (byte)GameType.Deathmatch + 1
+            || score is < -1 or 0 or > 100_000_000 || time is < -1 or 0 or > 10_000 || count > 8)
+        {
+            throw new InvalidDataException("Invalid custom map setup.");
+        }
+
+        var kingdoms = ImmutableArray.CreateBuilder<CustomKingdom>(count);
+        for (int i = 0; i < count; i++)
+        {
+            byte slot = r.ReadByte();
+            string civ = r.ReadString(64);
+            byte colour = r.ReadByte(), team = r.ReadByte();
+            if (slot > 7 || (colour > 7 && colour != 255) || team > 8)
+            {
+                throw new InvalidDataException("Invalid custom map kingdom.");
+            }
+
+            kingdoms.Add(new CustomKingdom(slot, civ.Length > 0 ? civ : null, colour, team));
+        }
+
+        return custom with
+        {
+            Players = players,
+            Victory = victory == 0 ? null : (VictoryCondition)(victory - 1),
+            GameType = gameType == 0 ? null : (GameType)(gameType - 1),
+            ScoreLimit = score < 0 ? null : (int)score,
+            TimeLimitMinutes = time < 0 ? null : (int)time,
+            Kingdoms = kingdoms.MoveToImmutable(),
+        };
     }
 
     /// <summary>A custom map's save continued on <paramref name="mission"/> (the map it names), with the loading client's AI.</summary>
