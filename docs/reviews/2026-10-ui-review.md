@@ -36,6 +36,12 @@ Work queue item 15 (the owner's order of 2026-10-22). ADR 0200 describes the tes
 
 This table is the state when the review was made; the findings' tables below say which are fixed since.
 
+**After the merge of the UI chain (2026-10-23, main fb8aa49):** the smoke test on the original's package finds no issue
+on any of the 22 displays (792 audits), and the lobby (UI-L2, rebuilt on the original's art in #177 and moved onto the
+model's `Choose` with #166 and #174) keeps its rows and settings apart on every display. One drift: the crash-report
+question of the first start (ADR 0243, #132) opened over every screen of the smoke test, because `--ui-smoke` was not
+counted as a scripted run; it is now, as are `--bench-render` and `--resource-soak`.
+
 Every other screen fits every display: the menus' 800 × 600 art centred on a logical screen of at least 1024 × 720,
 the dialogs over the HUD, and the Wide HUD cut into anchored pieces (ADR 0177). UI-L4 (conversation) and UI-L5 (random
 map notice) are on every display. The likeness findings below do not depend on the display.

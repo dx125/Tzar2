@@ -197,8 +197,9 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
       Ask the owner for screenshots of the original's screens that are not in the art yet.
     * **Progress:** the test (`--ui-smoke`, CI job `godot-smoke`, ADR 0200) and the findings
-      ([reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md)) are done. Fixes are in progress, and the
-      screenshots are asked of the owner.
+      ([reviews/2026-10-ui-review.md](reviews/2026-10-ui-review.md)) are done, and the layout findings are fixed (the
+      UI chain #135…#177 is merged; after the merge, 0 issues on all 22 displays). The likeness findings wait for the
+      owner's screenshots.
 16. **Maintainer (owner's order of 2026-10-22): a full code review for performance, resources and memory, and for a
     fork.**
     * **Performance and resources:**
@@ -241,6 +242,12 @@ Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisi
 the process decisions that have no ADR.
 
 * **2026-10-23 — Random map screen.** S_SINGLERND now draws an engine-free RandomMapScreenModel (Tzar2.Game.Ui): per-kingdom colour, AI script, civilization (or RANDOM, drawn from the seed) and team, game type, victory condition with its limit, map resources and the five map options; the match it describes runs through MatchDescriptor.ToSetup. Positions from ReTzar's reading of the original; caption places UNVERIFIED. The map preview is dropped (the map options take its place); the AI button steps through the scripts until D_CHOOSEAI is built. SHELL-013 (AI resign flag) waits: it needs a per-match flag in MatchSettings.
+
+* **2026-10-23 — Network and probe tests poll until a deadline (issue #179).**
+  * The server test now polls for the Welcome and the lobby listing.
+  * The relay harness has generous timeouts; the keep-alive test sets its own.
+  * The memory probe's sampling runs on a manual clock.
+  * Loaded Windows runners no longer fail them.
 
 * **2026-10-23 — The batch merge of 46 PRs (#132–#178, without #141).**
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
