@@ -216,10 +216,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-22 — The S2 render bench (ADR 0244, M7 D6).** `--bench-render` plays the S2 scenario (512² random map,
-  eight Hard AIs, 4,000 units, day/night and weather, no fog) with V-Sync off and prints one `RENDER-BENCH` line:
-  FPS, frame and sim tick percentiles, memory, load time and the S2 verdict. First run on an M5 MacBook at 1080p:
-  120 FPS, sim p99 14.8 ms (above the 12 ms budget), VRAM 3.1 GB; the owner's Windows runs decide.
+* **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
+  * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
+    a string concatenation formats a `double`, `float`, `decimal` or date with the current culture, or an integer with
+    a culture format such as `N0`. CA1305 does not cover these.
+  * It found 48 strings: 35 in the fidelity suite (its verdicts read "37,5 s" under a German or C.UTF-8 locale, which
+    failed a test on macOS), the rest in the CLI and the client.
+  * They now use the invariant culture.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
