@@ -464,6 +464,8 @@ public sealed class CommandCard
                 return Commands(CommandKind.ConvertUnit, OwnIds(selected, e => e.IsMobile), arg0: into);
             case CardAction.NextIdle:
                 return new CardPress(NextIdlePeasant: true);
+            case CardAction.OnlineHelp:
+                return new CardPress(ShowHelp: true);
             case CardAction.Uncloak:
                 return Commands(CommandKind.Uncloak, OwnIds(selected, e => e.IsMobile));
             case CardAction.Impersonate:

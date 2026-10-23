@@ -388,6 +388,20 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "HUD-033")]
+    [Trait("Rule", "HUD-020")]
+    public void The_kingdom_card_opens_the_online_help()
+    {
+        _cards.Menus["kingdom"] = [new CardButton("onlinehelp", 'P', CardAction.OnlineHelp, string.Empty, -1, "Online help")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = Context([]) with { IsOwn = false };
+        card.Build(none);
+        CardSlot help = card.SlotOfKey(none, 'P')!.Value; // P, the original's key (MENU.INI [ownership])
+        Assert.True(help.Enabled);
+        Assert.True(card.Press(none, help).ShowHelp);
+    }
+
+    [Fact]
     [Trait("Rule", "AI-004")]
     [Trait("Rule", "HUD-033")]
     public void With_nothing_selected_the_kingdom_card_shows_and_AI_assistance_is_asked_for_and_lit()

@@ -110,6 +110,12 @@ a bug, not a flake: report it with the run id.
 * Stacked PRs conflict easily after squash merges: merge the base, then retarget the next PR to `main` and check that
   it still merges cleanly before relying on its old CI run.
 * Every PR keeps [STATUS.md](STATUS.md) true: milestone state, work queue, and a log line for decisions.
+* **A PR that touches the importer, the converters, the formats, the `legacy:` section of `classic.yaml` or the
+  templates the importer fills (`^class.*`, `^<civ>.*`)** runs the local-only tests with `TZAR2_ORIGIN` set (see
+  above) before it is merged, and says so in its description. CI cannot run them. Measure `legacy.referenceDataHash`
+  **after merging `main` into the branch**, not before: #133 and #139 pinned values from branches made before #168
+  moved the hash, so main never produced them and the clean install warned "modified installation" for days
+  (2026-10-23).
 * AI-assisted commits end with a `Co-Authored-By:` line naming the model.
 
 ## Rules that keep the project correct
