@@ -250,6 +250,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       * 2026-10-23: `legacy.referenceDataHash` re-pinned to 7F4CCBEEEC76AD36, the value main has produced since #139: #168
         moved it unpinned and #133/#139 pinned values measured on stale branches. Import tests with `TZAR2_ORIGIN` pass;
         importer PRs now run them after merging main (DEVELOPMENT.md, AGENTS.md).
+      * 2026-10-23: whether a civilization can found a kingdom is asked of the ruleset (its Seat), not of a type named
+        "<civ>.castle"; the render bench takes the ruleset's civilization order (ADR 0244 amendment).
 
 ## Decision and event log
 
