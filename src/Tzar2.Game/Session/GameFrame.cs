@@ -39,6 +39,9 @@ public enum UnitActivity : byte
 
     /// <summary>Casting a spell (PRES-005).</summary>
     Cast = 10,
+
+    /// <summary>A ninja's murder (PRES-005, MAG-028).</summary>
+    Murder = 11,
 }
 
 /// <summary>What a worker carries, for its carrying sprite (the original's <c>_tree</c>, <c>_gold</c>, <c>_milk</c>... images).</summary>

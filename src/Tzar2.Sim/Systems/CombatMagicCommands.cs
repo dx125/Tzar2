@@ -553,6 +553,28 @@ internal static class CombatMagicCommands
         return applied > 0 ? null : last;
     }
 
+    // MAG-028 (ReTzar 0x4eb950): a unit that can murder, with at least combat.murderBlowMana mana, ordered to attack a unit,
+    // murders it instead of its first blow.
+    internal static bool TryMurderBlow(World world, EntityId unit, EntityId target)
+    {
+        int threshold = world.Ruleset.Combat.MurderBlowMana;
+        if (threshold <= 0 || MagicSystem.ManaOf(world, unit) < threshold)
+        {
+            return false;
+        }
+
+        foreach (ushort spell in world.TypeOf(unit).Traits.Spells)
+        {
+            if (world.Ruleset.Spells[spell].Effect == SpellEffect.Murder)
+            {
+                Position at = world.Positions.Get(target);
+                return StartCast(world, unit, spell, EntityId.None, target, at.X, at.Y) is null;
+            }
+        }
+
+        return false;
+    }
+
     private static CommandRejection? StartCast(World world, EntityId caster, ushort spell, EntityId book, EntityId target, int x, int y)
     {
         switch (MagicSystem.CanCast(world, caster, spell, book))

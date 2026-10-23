@@ -573,6 +573,7 @@ combat:
   experiencePerKill: 1
   levelBaseXp: 1
   levelStepXp: -1                     # each level costs this much more than the one before; -1: as levelBaseXp (the original)
+  murderBlowMana: 60                  # a ninja with this much mana murders the unit it attacks with its first blow (ReTzar 0x4eb950)
   dummyDamagePerPoint: 75
   experienceSpeeds: { te_warfare: 70, te_tactics: 50, te_suntzubook: 35 }
   levelCapBuildings: { classes: [academy] }
@@ -715,7 +716,7 @@ spell_curse:
 spell_hypnotize: { new: true, Spell: { bookValue: 30, effect: hypnotize, durationMs: 30000, mana: 50, range: 8, castMs: 500, targets: { category: unit } } }   # books only
 raisedead: { new: true, Spell: { target: self, bookValue: 10, effect: raiseDead, summon: comm.skeleton, count: 64, radius: 8, mana: 70, range: 8, castMs: 1000, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat, bat, mage, dwarf, ork, jinn, dragon] } } }   # targets: the corpses that rise
 cloak: { new: true, Spell: { effect: cloak, target: self, durationMs: 60000 } }                       # ninjas (ADR 0095)
-murder: { new: true, Spell: { effect: kill, mana: 50, range: 0, castMs: 500, targets: { category: unit } } }   # ninjas; heroes are immune
+murder: { new: true, Spell: { effect: murder, amount: 15, affects: all, mana: 50, range: 0, castMs: 500, targets: { category: unit } } }   # ninjas: one blow of 15 times the attack, all the mana spent, any unit (ReTzar 0x4e076a, 0x437250; ADR 0268); the mana it needs is UNVERIFIED
 
 # ---- items (GAME-10, ADR 0094): defaults of each kind; a map can give single items other values (M4 converter) ------
 comm.item: { Item: { power: 3 } }                                           # weapon: +3 attack, UNVERIFIED (UNK-25)

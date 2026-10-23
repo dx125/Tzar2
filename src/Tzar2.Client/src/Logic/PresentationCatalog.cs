@@ -69,6 +69,9 @@ public enum UnitAnim
 
     /// <summary>The third attack swing (<c>image_attack3</c>).</summary>
     Attack3,
+
+    /// <summary>The ninja's murder (<c>image_murder</c>, PRES-005).</summary>
+    Murder,
 }
 
 /// <summary>How an entity type looks and sounds, from the user's imported object INIs (never shipped).</summary>
@@ -126,7 +129,7 @@ public sealed class PresentationCatalog : ICardSource
         (UnitAnim.Chop, "image_chop"), (UnitAnim.Mine, "image_mine"), (UnitAnim.Farm, "image_dig"), (UnitAnim.Build, "image_build"),
         (UnitAnim.Milk, "image_milk"), (UnitAnim.CarryMilk, "image_carrymilk"), (UnitAnim.CarryMeat, "image_carrymeat"),
         (UnitAnim.Capture, "image_capture"), (UnitAnim.Meat, "image_meat"), (UnitAnim.Spell, "image_spell"),
-        (UnitAnim.Attack2, "image_attack2"), (UnitAnim.Attack3, "image_attack3"),
+        (UnitAnim.Attack2, "image_attack2"), (UnitAnim.Attack3, "image_attack3"), (UnitAnim.Murder, "image_murder"),
     ];
 
     // Carrying sprites the object INIs do not list: IMAGES.INI names them after the walk image (e_peon_tree, e_peon_gold...).

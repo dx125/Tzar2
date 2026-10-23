@@ -243,6 +243,12 @@ public enum SpellEffect : byte
     /// inventory (ITEM-010; ReTzar's reading of the original, 0x473403).
     /// </summary>
     SoulBind = 15,
+
+    /// <summary>
+    /// The ninja's murder (MAG-028; ReTzar 0x4e076a): one blow of the caster's attack times <see cref="SpellDefinition.Amount"/>,
+    /// through the target's defence like any blow; the caster spends all its mana. Not magic: the Messiah takes it.
+    /// </summary>
+    Murder = 16,
 }
 
 /// <summary>What a spell is aimed at.</summary>
@@ -544,6 +550,12 @@ public sealed record CombatSettings
     /// </summary>
     public int BansheeSpell { get; init; } = -1;
 
+    /// <summary>
+    /// A unit that can murder and has at least this much mana, ordered to attack a unit, murders it with its first blow
+    /// (MAG-028; ReTzar 0x4eb950: a ninja with 60); 0, the default, never.
+    /// </summary>
+    public int MurderBlowMana { get; init; }
+
     /// <summary>The banshee scream follows a blow when a draw below <see cref="BansheeOutOf"/> is under this (71 of 1001).</summary>
     public int BansheeChance { get; init; }
 
@@ -636,6 +648,7 @@ public sealed record CombatSettings
         Check(ExperiencePerKill, 0, 1_000_000);
         Check(LevelBaseXp, 1, 1_000_000);
         Check(LevelStepXp, -1, 1_000_000);
+        Check(MurderBlowMana, 0, 1_000_000);
         Check(BaseLevelCap, 0, 10_000);
         Check(AttackPerLevel, 0, 10_000);
         Check(DefenceHalvesPerLevel, 0, 10_000);

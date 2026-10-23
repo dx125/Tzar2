@@ -241,7 +241,8 @@ internal static class FrameBuilder
 
             if (!moving && world.Casters.Count > 0 && world.Casters.IndexOf(id) is >= 0 and var caster && world.Casters.At(caster).CastLeftMs > 0)
             {
-                e.Activity = UnitActivity.Cast; // PRES-005
+                ushort casting = world.Casters.At(caster).Spell;
+                e.Activity = casting < world.Ruleset.Spells.Count && world.Ruleset.Spells[casting].Effect == SpellEffect.Murder ? UnitActivity.Murder : UnitActivity.Cast; // PRES-005
             }
 
             int f = world.Footprints.IndexOf(id);

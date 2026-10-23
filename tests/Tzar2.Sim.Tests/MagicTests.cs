@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
@@ -46,6 +47,66 @@ public class MagicTests
         Cast(d, mage, "spell_lightning", enemies[1]); // at once
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
         Assert.False(d.World.Entities.IsAlive(enemies[1]));
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-028")]
+    [Trait("Rule", "MAG-014")]
+    public void A_ninjas_murder_is_one_blow_of_fifteen_times_its_attack_spends_its_mana_and_takes_the_messiah()
+    {
+        // ReTzar 0x4e076a; the guide's mission 18: "8-10 cloaked Ninja set to murder him" (not magic, so the Messiah takes it).
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("comm.messiah", 1, 6, 4)), ruleset: Ninjas);
+        Ruleset rules = d.World.Ruleset;
+        EntityId ninja = OfType(d.World, "euro.footman").Single();
+        EntityId messiah = OfType(d.World, "comm.messiah").Single();
+        GrantOrder(d, "murder", "euro");
+        d.Order(1, CommandKind.SetStance, [messiah], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.SetStance, [ninja], arg0: (int)CombatStance.HoldFire);
+        d.World.Manas.Get(ninja).MilliMana = 100_000;
+        EntityTypeDefinition killer = d.World.TypeOf(ninja), victim = d.World.TypeOf(messiah);
+        long blow = (long)CombatStats.Attack(d.World, ninja, killer, killer.Traits.Armament!) * 15;
+        int expected = (int)((blow * (10_000 + rules.BonusBasisPoints(killer.Id, victim.Id)) / 10_000) - CombatStats.Defence(d.World, messiah, victim));
+        int before = Hp(d, messiah);
+        Cast(d, ninja, "murder", messiah);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 400);
+        Assert.Equal(1, d.Count(SimEventKind.SpellCast));
+        Assert.Equal(before - Math.Max(expected, rules.Gameplay.MinimumDamage), Hp(d, messiah));
+        Assert.Equal(0, Mana(d, ninja)); // all of it
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-028")]
+    public void A_ninja_with_sixty_mana_ordered_to_attack_a_unit_murders_it_with_its_first_blow()
+    {
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("euro.knight", 1, 6, 4), Unit("euro.knight", 1, 6, 8)), ruleset: Ninjas);
+        EntityId ninja = OfType(d.World, "euro.footman").Single();
+        EntityId[] knights = [.. OfType(d.World, "euro.knight").OrderBy(k => d.PositionOf(k).Y)];
+        GrantOrder(d, "murder", "euro");
+        d.Order(1, CommandKind.SetStance, knights, arg0: (int)CombatStance.HoldFire);
+        d.World.Manas.Get(ninja).MilliMana = 60_000;
+        d.Order(0, CommandKind.Attack, [ninja], target: knights[0]);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 400);
+        Assert.Equal(Spell(d.World.Ruleset, "murder"), Of(d, SimEventKind.SpellCast).Single().Arg);
+        Assert.Equal(0, Mana(d, ninja));
+
+        // Below 60 the attack is a plain one.
+        d.World.Manas.Get(ninja).MilliMana = 59_000;
+        int hp = Hp(d, knights[1]);
+        d.Order(0, CommandKind.Attack, [ninja], target: knights[1]);
+        d.RunUntil(() => Hp(d, knights[1]) < hp, 600);
+        Assert.True(Hp(d, knights[1]) < hp);
+        Assert.Equal(1, d.Count(SimEventKind.SpellCast));
+    }
+
+    // The synthetic tables have no ninja: a footman that can murder, with a pool.
+    private static readonly Ruleset Ninjas = ClassicWith("euro.footman: { Spellcaster: { spells: [murder] }, ManaPool: { max: 100 } }");
+
+    private static void GrantOrder(SimDriver d, string order, string civilization)
+    {
+        if (d.World.Ruleset.OrderTechnology(order, civilization) is >= 0 and var gate)
+        {
+            Grant(d.World, 0, d.World.Ruleset.Technologies[gate].Key);
+        }
     }
 
     [Theory]
