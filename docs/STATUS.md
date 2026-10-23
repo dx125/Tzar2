@@ -256,6 +256,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         the ruleset with the same values; only the ruleset hash is re-pinned.
       * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
         client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
+      * 2026-10-23: the review doc has the second "for a fork" sweep: a ranked list of nine findings, what #204, #205 and
+        #211 did, and what remains (UI fallbacks, the client's per-civilization art, map builders by key, some caps).
 
 ## Decision and event log
 
