@@ -102,7 +102,7 @@ public class EconomyM3Tests
         EntityId mage = OfType(d.World, "euro.mage").Single();
         Assert.Equal(90_000, d.World.Manas.Get(mage).MilliMana); // starts full (max_manna 90, synthetic)
         d.World.Manas.Get(mage).MilliMana = 0;
-        d.RunUntil(() => false, 600); // 30 s at 60 mana per minute (UNVERIFIED)
+        d.RunUntil(() => false, 300); // 15 s at 2 mana a second (ReTzar 0x502ea2, MAG-026)
         Assert.Equal(30_000, d.World.Manas.Get(mage).MilliMana);
         d.RunUntil(() => false, 2400);
         Assert.Equal(90_000, d.World.Manas.Get(mage).MilliMana); // capped

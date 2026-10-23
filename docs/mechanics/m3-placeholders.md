@@ -41,8 +41,8 @@ Shift + Delete; what each technology does (not how much).
 | Ship level order | level N needs level N−1 (`after`) | YAML | — | upgrade menus `e_galleon2…` (data) confirm the order; per-ship effects need capture |
 | Iron Mining / Ore Flotation targets | iron rocks (`res_iron`) — no such object exists | YAML | UNK-14 | play: is there any iron source? |
 | Research/upgrade refund on cancel | 100% | YAML `gameplay.researchRefundPercent` | — | cancel captures |
-| Mana regeneration | 60 per minute for every pool | YAML `gameplay.manaRegenPerMinute` | UNK-26 | mana bar captures |
-| Concentration | +50% mana regeneration | YAML | UNK-26 | same |
+| Mana regeneration | **ReTzar's reading (ADR 0267):** 2 a second for a kingdom's caster, 1 for Nature's | YAML `gameplay.manaRegenPerMinute`, `combat.natureManaRegenPercent` | UNK-26 | a mana bar capture would confirm it |
+| Concentration | **+4 a second (+200 % of 2; ReTzar 0x502ea2, ADRs 0191, 0267)** | YAML | UNK-26 | same |
 | Cow milk | the cow's `max_manna` is the food it holds (⚠ HYPOTHESIS) | import `legacy.milkClasses` | UNK-17 | milk a cow dry, count the food |
 | Milk regrowth | 1 unit per 4 s, kept when empty | YAML `^class.cow.ResourceNode` | UNK-17 | captures of a cow over time |
 | Milking a dry cow | the milker fills the pail at another food node nearby (another cow, a field) and waits by the dry cow for its milk to regrow only when there is none (play-test 2026-10-20; before, it carried home one or two units a trip; waiting always starved the Hard AI's economy) | `EconomySystem.Gather`, `WorkerSystem` | UNK-17 | a peasant on one cow for 5 min: the size of each delivery |
@@ -213,7 +213,7 @@ when the building is hit; catapult stones can be stepped away from.
 | A map book's spell | magic type = index in STRINGS.INI `[spell_names]` (⚠ HYPOTHESIS) | `ScenarioSetup.LegacySpellOrder` | ITEM-016 | the editor shows a book's spell |
 | Spell magnitudes | cast times; **no cooldowns (ADR 0266);** **range, mana, amounts, durations and areas of the other spells, fire rain and the whirlpool from ReTzar (ADRs 0260, 0261, 0263)** | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
 | Spell damage | no defence, no bonus | code (`MagicSystem`) | UNK-26 | captures |
-| Summon mana above the pool | costs at most the caster's whole pool (golem 600m, dragon 800m vs `max_manna` 100; ⚠ HYPOTHESIS) | code (`MagicSystem.ManaCost`) | UNK-26 | summon captures |
+| Summon mana above the pool | **the creature's whole mana; the caster's pool is raised to it (ReTzar 0x4e1c30, ADR 0267)** (golem 600m, dragon 800m vs `max_manna` 100) | code (`MagicSystem.ManaCost`) | UNK-26 | summon captures |
 | Medicine | **+2 tiles of healing range (ReTzar, ADR 0260)** | YAML `te_medicine` | — | captures |
 | Inquisition | +50% attack of priests (exorcism) | YAML `te_inquisition` | UNK-26 | captures |
 | Crusade | **ReTzar's reading of the original (ADR 0190):** 16 gathered at the start, one per cathedral every 12/8/4/1 s by the time played, ceiling 16 + 4 per full crusade (36), one arriving every 500 ms, 4 again after the crusaders died | YAML `combat.crusade*`; `MagicSystem` | UNK-26 | a crusade capture would confirm it |
