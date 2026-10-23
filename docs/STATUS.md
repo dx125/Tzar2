@@ -252,6 +252,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         importer PRs now run them after merging main (DEVELOPMENT.md, AGENTS.md).
       * 2026-10-23: whether a civilization can found a kingdom is asked of the ruleset (its Seat), not of a type named
         "<civ>.castle"; the render bench takes the ruleset's civilization order (ADR 0244 amendment).
+      * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
+        client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
 
 ## Decision and event log
 
