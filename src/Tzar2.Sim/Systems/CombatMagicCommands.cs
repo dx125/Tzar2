@@ -225,7 +225,7 @@ internal static class CombatMagicCommands
     private static bool CanBeImpersonated(World world, byte player, EntityId target)
         => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var t && !world.IsHeld(target)
             && world.Identities.At(t).Owner != player && world.HasPlayer(world.Identities.At(t).Owner)
-            && world.TypeOf(target) is { IsMobile: true, Locomotor: Locomotor.Foot or Locomotor.Mounted } type && type.Traits.Category == EntityCategory.Unit
+            && world.TypeOf(target) is { IsMobile: true, Locomotor: Locomotor.Foot or Locomotor.Mounted or Locomotor.Climber } type && type.Traits.Category == EntityCategory.Unit
             && type.Traits.ResourceNode is null;
 
     public static CommandRejection? PickItem(World world, in Command command, ReadOnlySpan<EntityId> entities)

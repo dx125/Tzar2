@@ -129,6 +129,35 @@ made to test distance before the status and diplomacy lookups); it is inside the
 kept. One earlier nightly on f2dcf04 failed s2 on an EPYC 9V74 (p50 2.897 ms, normalized 2.409 vs 2.523 ms, i.e. a
 slow runner); the re-run on the same commit and the six probes passed.
 
+**2026-10-22, the gameplay rows re-recorded (code review, item 16).** The nightly failed on gameplay from 10-22, on
+the EPYC 7763: p50 3.198 against a limit of 3.158 ms, and p99 10.38 against 10.32. It failed on s2 on 10-19 (4.41 ms)
+and on 10-20 (an EPYC 9V74).
+
+A bisect ran on one EPYC 7763 runner: 28 main commits, #64 to #131, three runs of each scenario per commit.
+
+* **s2 is flat:** p50 2.69–2.80 ms and p99 4.6–5.2 ms on every commit. Its failures were slow runners. Some 9V74
+  hosts are about 30 % slower than others on every scenario: s2 at 2.28 against 2.96–3.04 ms, normalized the same.
+* **gameplay moves only where the scenario's own play changes:**
+  * p50 3.01 ms at #64 rose to 3.17 at #66 (SPEED 4 walks 40 px/s, ADR 0171) and to 3.28 at #69 (speeds per class,
+    ADR 0172). p99 went from 8.1 to 11.3 ms.
+  * At the same steps the scenario's counts changed: kills 1,200 → 1,655, entities 4,249 → 3,815. Units walk at their
+    measured speeds, so more of them meet and fight.
+  * Later rules brought it down again: 2.95 ms after unit bodies (#126). No commit costs time on its own.
+  * So the cost is the intended workload, not a regression.
+
+The rows were re-recorded on main 1eb6df4 from 16 probe runs (each the median of three, like a nightly):
+
+| CPU model | Probe runs | p50 / p99 (ms), was | Tolerance |
+|---|---|---|---|
+| EPYC 7763 | 8 | 2.976 / 9.325, was 2.871 / 7.937 | 1.10 / 1.30 |
+| EPYC 9V45 | 3 | 1.787 / 6.088 | 1.20 / 1.50 |
+| EPYC 9V74 | 3 | 3.071 / 9.747 | 1.10 / 1.30 |
+| Xeon 8573C | 1 | 2.835 / 8.888 | provisional, 1.25 / 1.50 |
+| Xeon 8370C | 1 | 3.250 / 9.430 | provisional, 1.25 / 1.50 |
+
+The s2 rows are kept. The 9V74's slow hosts remain a source of s2 flakes; its rows may need the 9V45's looser
+tolerances if they recur.
+
 ## Alternatives considered
 
 * **Keep the order flood as the gate:** it measures a load no match produces (each player re-ordering 16 units 20

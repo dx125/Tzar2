@@ -66,4 +66,14 @@ public static class Descriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "Sim, Scripting and AI consume only compiled Ruleset and MapData objects and never perform I/O (REQ-ARCH-01).");
+
+    /// <summary>T2C001: an interpolated string formats a culture-sensitive value with the machine's culture.</summary>
+    public static readonly DiagnosticDescriptor CultureFormatting = new(
+        id: "T2C001",
+        title: "Interpolated string formats with the current culture",
+        messageFormat: "This hole formats a '{0}' with the machine's culture; build the string with CultureInfo.InvariantCulture (string.Create, FormattableString.Invariant)",
+        category: "Globalization",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Output that changes with the machine's locale breaks reports, facts and hashes made from it; CA1305 does not cover interpolation.");
 }
