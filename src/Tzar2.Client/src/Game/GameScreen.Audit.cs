@@ -17,7 +17,7 @@ public partial class GameScreen
     public static readonly string[] AuditDialogs =
     [
         "game-menu", "options", "save", "load", "diplomacy", "tribute", "gamble", "exchange", "trade", "craft",
-        "message", "story", "quests", "conversation",
+        "message", "story", "quests", "conversation", "scores",
     ];
 
     // Sample scenario texts, long enough to wrap (our own words).
@@ -38,6 +38,10 @@ public partial class GameScreen
         {
             case "game-menu":
                 ShowMenu();
+                return true;
+            case "scores":
+                _scoreView = Tzar2.Game.Ui.ScoreView.ScoresAndClock; // F4's scoreboard over the view
+                _scoresDrawn = null;
                 return true;
             case "options":
                 ShowOptions();
@@ -103,6 +107,7 @@ public partial class GameScreen
         _open = null;
         _storyPause = false;
         _session.Paused = false;
+        _scoreView = Tzar2.Game.Ui.ScoreView.None;
     }
 
     private void AddAuditLayer(Control dialog)

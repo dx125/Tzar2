@@ -119,7 +119,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), F4's scoreboard and clock (DIP-008), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -249,6 +249,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-23 — F4's scoreboard and clock (DIP-008).** F4 now steps from nothing to the scoreboard and the clock, the clock alone, and back, as ReTzar reads the original (0x4f2903): the game time at the view's top right, one line per kingdom (name, own/team score, the best first, defeated struck through, its colour) above the bottom right corner. The engine-free ScoreBoard model orders and averages; the score itself stays the placeholder of UNK-29. No hash changes.
 
 * **2026-10-23 — The AI resign flag (SHELL-013; ADR 0262).** MatchSettings.AiResign (the white flag by default, as before) reaches each computer's MayResign; the random map screen draws AIRESIGN.BMP and the lobby an "AI may resign" check. The sword is written as match settings version 3, so an older build refuses it at the version check; the flag up keeps the version 1 and 2 bytes, and no hash changes.
 

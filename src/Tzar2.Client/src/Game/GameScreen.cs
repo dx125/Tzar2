@@ -644,21 +644,43 @@ public partial class GameScreen : Node
         return frame.DayMinute / 1440f;
     }
 
-    // F4 (GAME-17): every kingdom's score and statistics from the sim.
-    private void ShowScores()
+    // F4 (DIP-008): the clock, with the scoreboard of the kingdoms that play (not the passive one), redrawn when it changes.
+    private void ShowScores(GameFrame frame)
     {
-        if (_frame is null)
+        if (_hud is null)
         {
             return;
         }
 
-        for (int p = 0; p < _frame.Players.Length; p++)
+        string? clock = _scoreView == Tzar2.Game.Ui.ScoreView.None ? null : Tzar2.Game.Ui.ScoreBoard.Clock((long)frame.Tick.Value * frame.TickMs);
+        var lines = new List<(string, Color, bool)>();
+        if (_scoreView == Tzar2.Game.Ui.ScoreView.ScoresAndClock)
         {
-            KingdomStatistics k = _frame.Players[p].Statistics;
-            Message($"Kingdom {p + 1}: score {_frame.Players[p].Score}, trained {k.UnitsTrained}, killed {k.UnitsKilled}, lost {k.UnitsLost}, "
-                + $"built {k.BuildingsBuilt}, destroyed {k.BuildingsDestroyed}, gathered {k.GatheredTotal}");
+            var kingdoms = new List<Tzar2.Game.Ui.ScoreKingdom>();
+            for (int p = 0; p < frame.Players.Length && p < _session.Setup.Players.Count; p++)
+            {
+                if (_session.Setup.Players[p].Controller != ControllerKind.Passive)
+                {
+                    kingdoms.Add(new(p, frame.Players[p].Score, (int)((_session.Setup.Teams >> (p * 4)) & 0xF), frame.Players[p].Defeated));
+                }
+            }
+
+            foreach (Tzar2.Game.Ui.ScoreRow row in Tzar2.Game.Ui.ScoreBoard.Rows(kingdoms))
+            {
+                lines.Add((Tzar2.Game.Ui.ScoreBoard.Line(KingdomName(row.Kingdom), row), KingdomColour(row.Kingdom), row.Defeated));
+            }
+        }
+
+        string key = clock + "|" + string.Join("|", lines);
+        if (key != _scoresDrawn)
+        {
+            _scoresDrawn = key;
+            _hud.SetScores(clock, lines);
         }
     }
+
+    private Tzar2.Game.Ui.ScoreView _scoreView;
+    private string? _scoresDrawn;
 
     private WorldOptions Barred()
     {
@@ -1073,7 +1095,8 @@ public partial class GameScreen : Node
                 ShowMenu();
                 break;
             case GameAction.Scores:
-                ShowScores();
+                _scoreView = Tzar2.Game.Ui.ScoreBoard.Next(_scoreView);
+                _scoresDrawn = null;
                 break;
             case GameAction.Objectives when _session.Scenario is not null:
                 ShowQuests();
@@ -1849,6 +1872,7 @@ public partial class GameScreen : Node
         _hud.SetClock(phase);
         _messages.RemoveAll(m => m.Until < _now);
         _hud.SetMessages(_messages.ConvertAll(m => m.Text));
+        ShowScores(frame);
         _hud.SetStatus(frame.Paused || _session.Paused ? _catalog.Text("viewmsg", "pause", "PAUSED") : frame.SpeedPercent != 100 ? $"Speed {frame.SpeedPercent} %" : string.Empty);
         _hud.SetSelection(Describe(frame));
         if (_now >= _minimapDue)
