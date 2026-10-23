@@ -119,7 +119,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), orders shown only while their condition holds (the quest order: HUD-029), the loan orders' hints tell what the tavern lends (TRADE-008), F4's scoreboard and clock (DIP-008), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), orders shown only while their condition holds (the quest order: HUD-029), the loan orders' hints tell what the tavern lends (TRADE-008), F4's scoreboard and clock (DIP-008), the chat screen (D_CHAT: everyone, allies, enemies or picked kingdoms with their stance; the cheat codes in single player: HUD-010, HUD-011), the menu screens' help ball and hints (LOCAL/HELP.INI: SHELL-026), the fished patch's blue selection and the selection view's kingdom, level and power (HUD-025, HUD-016), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -157,7 +157,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 9. **Operator:** TzarEdit diff session (maps `base`, `a1`–`e1` for UNK-70…80); 20 random maps from TzarEdit (RE-10);
    (the `rajba` cliff check is settled: only ninjas climb cliffs, WORLD-018).
 10. **Maintainer:** decode UNK-70…80, compare random maps with our generator. Done: the main campaign is 19 of 19
-    (ADR 0220, 2026-10-22). Follow-ups: ninjas climbing walls, peasants gathering resource items (ReTzar).
+    (ADR 0220, 2026-10-22); `bigisland`'s gold now comes by Azim, not a tribute (2026-10-23). Follow-ups: ninjas
+    climbing walls; `v_02` fails on `main` since the batch merge of 2026-10-23 (18 of 19, survey 2026-10-23).
 11. **Maintainer:** M5 `acc-fx` and the M4 corpus criterion: run locally with the FX Gold campaigns kept in `Origin/`
     (Russian translations, never committed) and find a community map corpus.
 12. **Done (2026-10-22):** issue #62 fixed at its cause (ADR 0231); M6 soak 500 of 500 with 0 desyncs; token rotation
@@ -256,6 +257,11 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         the ruleset with the same values; only the ruleset hash is re-pinned.
       * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
         client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
+17. **Maintainer (the coordinator moved it ahead of M8, 2026-10-23; ADR 0264):** the random map generator's items as
+    the original makes them (ReTzar 0x4b5c50): spell books of a random spell with 1 to 5 charges, bows, shields and
+    swords of 5 to 15, potions of 10 to 50 or 2 to 8. It needs item properties on `MapObject` (map.bin and its hash)
+    and changes the generator's hashes. RES.INI's TreasuryItem, WeaponItem, ArmourItem and PotionItem are not what the
+    generator reads (ITEM-015 unclear).
       * 2026-10-23: the review doc has the second "for a fork" sweep: a ranked list of nine findings, what #204, #205 and
         #211 did, and what remains (UI fallbacks, the client's per-civilization art, map builders by key, some caps).
 
@@ -268,6 +274,12 @@ the process decisions that have no ADR.
   a tower) is open to the climber when the band of wall or cliff tiles through it is one or two thick, from ground to
   ground. The climber keeps its own navigation layer on every map, since walls are built later. Goldens and bench hashes
   are unchanged; survey main 18 of 19 (`v_02`, as on `main`), tutorial 7 of 7.
+* **2026-10-23 — Fish patches and the selection view (HUD-025, HUD-016).** The patch the player's boats fish gets a blue selection (patch 1.05; the frame now carries each worker's work target). The selection view names the kingdom, shows every experienced unit's LEVEL (but traders') and an item's POWER, as ReTzar reads the original. ITEM-015 is unclear: the original's random map generator makes its items itself (work queue 17, deferred to M8). No hash changes.
+
+* **2026-10-23 — Menu hints (SHELL-026).** The help ball of the original (BTN_HELP_B, BTN_HELP_S on the load and save windows) turns hint mode on and off on the campaign, custom map, custom setup, random map, options, load and save screens; the control under the pointer then shows its LOCAL/HELP.INI text in the original's box (MenuHelp in Tzar2.Game.Ui; the keys are ReTzar's reading of the controls' names). No hash changes.
+
+* **2026-10-23 — Chat screen (HUD-010, HUD-011).** CHAT (and Enter in single player) opens D_CHAT at ReTzar's places: the line, ALL, ALLY, ENEMY and CUSTOM, whose large window lists the other kingdoms with a check, their colour, name and a stance shield. The engine-free ChatScreen gives the line, recipients and mask to GameSession.SubmitChat, so single player can type the cheat codes again. Multiplayer's Enter keeps the overlay's chat line. No hash changes.
+
 * **2026-10-23 — F4's scoreboard and clock (DIP-008).** F4 now steps from nothing to the scoreboard and the clock, the clock alone, and back, as ReTzar reads the original (0x4f2903): the game time at the view's top right, one line per kingdom (name, own/team score, the best first, defeated struck through, its colour) above the bottom right corner. The engine-free ScoreBoard model orders and averages; the score itself stays the placeholder of UNK-29. No hash changes.
 
 * **2026-10-23 — Loan hints (TRADE-008).** The tavern's loan orders say what it lends and what is to return in the original's words (STRINGS3 getloan3, retloan3); the frame carries each kingdom's loan limit (a due raise included), the amount due and its resource. The hint shows in Tzar2's tooltip box, not the original's bottom-left line (HUD-001). No hash changes.
@@ -306,6 +318,13 @@ the process decisions that have no ADR.
   * The relay harness has generous timeouts; the keep-alive test sets its own.
   * The memory probe's sampling runs on a manual clock.
   * Loaded Windows runners no longer fail them.
+* **2026-10-23 — Peasants deliver resource items where the scenario wants them (ECO-023, ECO-024; ADR 0220).**
+  From ReTzar: a peasant sent to a store delivers its load there and stops (Return Goods); a scenario's default
+  Object Order on a store is that order; a peasant that changes hands keeps its load. On `bigisland` Azim takes the
+  gold, walks it to the village and leaves it in its storage, so the solver no longer sends kingdom 7 a tribute
+  (it tributes only when no rule gives that kingdom objects). The solver takes such an item with the peasant the rule
+  names, and cheat assistance spares the enemies near a unit a rule waits to see wounded. Survey: main 18 of 19
+  (`v_02` times out, also on `main` since the batch merge), tutorial 7 of 7.
 
 * **2026-10-23 — The batch merge of 46 PRs (#132–#178, without #141).**
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
