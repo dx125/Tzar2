@@ -9,7 +9,8 @@ namespace Tzar2.Scripting.Legacy;
 
 /// <summary>
 /// The scenario properties of placed objects (Appendix C.2; ADR 0130): name, and the "use default" overrides of health,
-/// max health, attack, defence, mana, level and resistance. Applied at match start and when a Not Appear object appears.
+/// max health, attack, defence, mana, level and resistance, and an item's own properties (a book's pool and charges,
+/// ADR 0265). Applied at match start and when a Not Appear object appears.
 /// </summary>
 public static class ScenarioSetup
 {
@@ -69,8 +70,7 @@ public static class ScenarioSetup
 
         // Item properties (Appendix C.2 "Items"; ADR 0186): a power item's attack or defence and a potion's one effect
         // come from the object's own stats, a book's spell from its magic type, the look from the item's name; else the
-        // magnitude (resource amount) and a spell book's charges. Scroll texts and spell-book cooldowns are not applied
-        // yet (UNK-67).
+        // magnitude (resource amount) and a spell book's charges. Scroll texts are the presenter's (UNK-67).
         if (info.Item is { } item && world.Items.Has(entity))
         {
             ref ItemState state = ref world.Items.Get(entity);
@@ -95,6 +95,23 @@ public static class ScenarioSetup
             if (item.Charges is { } charges)
             {
                 state.Charges = Math.Clamp(charges, 0, 1_000_000);
+            }
+
+            // A book's own pool and endless charges (+0x62 to +0x66; ADR 0265): a book without limited charges never runs
+            // out; one that needs mana waits its time restriction (a pool of N at one point a second, UNVERIFIED), one
+            // that does not, nothing. Records without these fields keep the type's.
+            if (def.Kind == ItemKind.SpellBook)
+            {
+                if (item.LimitedCharges == false)
+                {
+                    state.Flags |= ItemStateFlags.Endless;
+                }
+
+                if (item.NeedsMana is { } pool)
+                {
+                    state.Flags |= ItemStateFlags.OwnCooldown;
+                    state.CooldownMs = pool ? Math.Clamp((item.CooldownSeconds ?? 0) * 1000, 0, 3_600_000) : 0;
+                }
             }
 
             if (def.Kind == ItemKind.SpellBook && item.MagicType is >= 0 and var magic && magic < LegacySpellOrder.Length

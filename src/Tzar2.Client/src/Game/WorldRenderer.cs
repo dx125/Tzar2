@@ -8,6 +8,7 @@ using Tzar2.Content.Compiled;
 using Tzar2.Content.Terrain;
 using Tzar2.Core.Ids;
 using Tzar2.Game.Session;
+using Tzar2.Game.Ui;
 using RS = Godot.RenderingServer;
 
 namespace Tzar2.Client.Game;
@@ -79,6 +80,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly byte[] _lightBytes;
     private readonly List<Pickable> _pickables = [];
     private readonly HashSet<uint> _selected = [];
+    private HashSet<uint> _fished = [];
     private readonly Dictionary<uint, (int X, int Y)> _shotStart = [];
     private readonly Dictionary<uint, (int X, int Y)> _shotPrevious = [];
     private readonly Dictionary<uint, (int X, int Y, ShotLook? Look)> _shotCurrent = [];
@@ -86,7 +88,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly List<uint> _shotGone = [];
     private readonly List<(SheetRef Sheet, int X, int Y, long StartMs)> _bursts = [];
     private long _timeMs;
-    private (int X, int Y, uint Target, long StartMs)? _order;
+    private (int X, int Y, uint Target, long StartMs, BlinkColour Colour)? _order;
     private bool _lightsValid;
 
     // The blows each unit has struck, counted when its swing starts again (PRES-005's alternate swings).
@@ -164,15 +166,12 @@ public sealed class WorldRenderer : IDisposable
     /// <summary>Instances drawn in the last frame.</summary>
     public int DrawnSprites => _ground.Count + _objects.Count;
 
-    /// <summary>How long the marks of an order's target flash (three blinks).</summary>
-    public const int ConfirmMs = 720;
-
     /// <summary>
-    /// Confirms an order the player gave: on <paramref name="target"/> its marks flash; on the ground (no target) the
-    /// original's red cross turns and shrinks at (<paramref name="x"/>, <paramref name="y"/>) (world units). Game time:
-    /// it waits with the pause.
+    /// Confirms an order the player gave: <paramref name="target"/> blinks in <paramref name="colour"/>
+    /// (<see cref="OrderBlink"/>, CTRL-017); on the ground (no target) the original's red cross turns and shrinks at
+    /// (<paramref name="x"/>, <paramref name="y"/>) (world units). Game time: it waits with the pause.
     /// </summary>
-    public void ConfirmOrder(int x, int y, EntityId target) => _order = (x, y, target.Value, _timeMs);
+    public void ConfirmOrder(int x, int y, EntityId target, BlinkColour colour = BlinkColour.Green) => _order = (x, y, target.Value, _timeMs, colour);
 
     /// <summary>Draws <paramref name="frame"/>.</summary>
     public void Render(
@@ -220,6 +219,8 @@ public sealed class WorldRenderer : IDisposable
         {
             _selected.Add(id.Value);
         }
+
+        _fished = Tzar2.Game.Ui.WorkMarks.FishedPatches(frame, _rules, localPlayer); // HUD-025
 
         byte[] fog = frame.Visibility;
         bool useFog = options.Fog && fog.Length == MapWidth * MapHeight;
@@ -752,6 +753,12 @@ public sealed class WorldRenderer : IDisposable
             ref readonly FrameEntity e = ref entities[p.Index];
             bool selected = _selected.Contains(e.Id.Value);
             EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
+            if (!selected && _fished.Contains(e.Id.Value))
+            {
+                // Patch 1.05: a blue selection around the fish patch the player's boats are fishing (HUD-025).
+                Corners(_marksOver, p.Rect, new Color(0.3f, 0.55f, 1f));
+            }
+
             if (!selected && !(options.AllHealthBars && e.MaxHealth > 0 && def.Traits.Category is EntityCategory.Unit or EntityCategory.Building))
             {
                 continue;
@@ -862,8 +869,8 @@ public sealed class WorldRenderer : IDisposable
         }
     }
 
-    // The confirmation of the last order: the target's marks blink three times, or the red cross plays where the ground
-    // was clicked (the original's anims\cursor; ⚠ the blink of a target is ours: the original's is not captured).
+    // The confirmation of the last order: the target blinks (OrderBlink, CTRL-017), or the red cross plays where the
+    // ground was clicked (the original's anims\cursor).
     private void DrawOrder(GameFrame frame, byte localPlayer)
     {
         if (_order is not { } order)
@@ -874,13 +881,13 @@ public sealed class WorldRenderer : IDisposable
         long age = _timeMs - order.StartMs;
         if (order.Target != 0)
         {
-            if (age >= ConfirmMs)
+            if (age >= OrderBlink.DurationMs)
             {
                 _order = null;
                 return;
             }
 
-            if ((age / (ConfirmMs / 6)) % 2 != 0)
+            if (!OrderBlink.On(age))
             {
                 return;
             }
@@ -899,8 +906,18 @@ public sealed class WorldRenderer : IDisposable
                 Rect2 r = def.HasFootprint && e.TileX >= 0
                     ? new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, fw) * TilePixels, Math.Max(1, fh) * TilePixels)
                     : p.Rect;
-                Color mark = e.Owner == localPlayer ? new Color(0.25f, 1f, 0.25f) : e.Owner >= 8 ? new Color(1f, 1f, 0.4f) : new Color(1f, 0.3f, 0.25f);
-                Corners(_marksOver, r.Grow(2), mark);
+                // A one-pixel frame one pixel inside the selection's rectangle (0x4f2528).
+                Color blink = order.Colour switch
+                {
+                    BlinkColour.Red => new Color(1f, 0f, 0f),
+                    BlinkColour.Blue => new Color(0f, 0f, 1f),
+                    _ => new Color(0f, 1f, 0f),
+                };
+                Vector2 corner = r.Position + Vector2.One, size = (r.Size - (Vector2.One * 2)).Max(Vector2.One);
+                RS.CanvasItemAddRect(_marksOver, new Rect2(corner, new Vector2(size.X, 1)), blink);
+                RS.CanvasItemAddRect(_marksOver, new Rect2(corner.X, corner.Y + size.Y - 1, size.X, 1), blink);
+                RS.CanvasItemAddRect(_marksOver, new Rect2(corner, new Vector2(1, size.Y)), blink);
+                RS.CanvasItemAddRect(_marksOver, new Rect2(corner.X + size.X - 1, corner.Y, 1, size.Y), blink);
                 return;
             }
 

@@ -262,9 +262,17 @@ internal sealed partial class MapBuilder
             Scatter(MapObjectRole.GroundPatch, LandTiles() / 800, 0, footprint: false);
         }
 
-        if ((f & MapFeatures.MagicItems) != 0 && Has(MapObjectRole.Item))
+        if ((f & MapFeatures.MagicItems) != 0)
         {
-            Scatter(MapObjectRole.Item, _players * 2, Math.Max(20, _s / 5), footprint: false);
+            // The original's three item classes in its table's order, R(1, 10) + side / 32 of each (ReTzar 0x4b5b14;
+            // ADR 0264); each made as 0x4b5c50 makes it (ItemFor). How far from the castles is ours.
+            foreach (MapObjectRole role in (ReadOnlySpan<MapObjectRole>)[MapObjectRole.Weapon, MapObjectRole.Book, MapObjectRole.Potion])
+            {
+                if (Has(role))
+                {
+                    Scatter(role, _rng.NextInt(1, 11) + (_s / 32), Math.Max(20, _s / 5), footprint: false);
+                }
+            }
         }
     }
 
@@ -648,7 +656,59 @@ internal sealed partial class MapBuilder
     private void PutUnit(MapObjectRole role, MapObjectKind kind, byte owner, int tx, int ty, string civ)
     {
         int half = MapData.UnitsPerTile / 2;
-        _objects.Add(new MapObject(kind.KeyFor(civ), owner, (tx * MapData.UnitsPerTile) + half, (ty * MapData.UnitsPerTile) + half));
+        _objects.Add(new MapObject(kind.KeyFor(civ), owner, (tx * MapData.UnitsPerTile) + half, (ty * MapData.UnitsPerTile) + half) { Item = ItemFor(role) });
         _roleCounts[(int)role]++;
+    }
+
+    // The original's spell books' spells (0x58e788 into the spell table 0x58a2f0): cloak, flamebolt, turn to stone,
+    // lightning, raise dead, bless, heal (ReTzar's reading; ADR 0264).
+    private static readonly string[] BookSpells = ["spell_cloak", "spell_flamebolt", "spell_turntostone", "spell_lightning", "raisedead", "spell_bless", "spell_heal"];
+
+    // An item of the original's generator (0x4b5c50–0x4b6150, ReTzar's reading; ADR 0264), or null for other roles.
+    private MapItem? ItemFor(MapObjectRole role)
+    {
+        switch (role)
+        {
+            case MapObjectRole.Book:
+            {
+                // A picture, a spell, 1–5 charges, and a value of 1–3 kept as the book's power (⚠ UNVERIFIED its use).
+                string look = "item_book" + (_rng.NextInt(3) + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                int power = 1 + _rng.NextInt(3);
+                string spell = BookSpells[_rng.NextInt(BookSpells.Length)];
+                return new MapItem(ItemEffect.Default, power, 1 + _rng.NextInt(5), spell, look);
+            }
+
+            case MapObjectRole.Weapon:
+            {
+                // R(2, 4): a bow (its ranged attack), a shield (its defence) or a sword (its attack), 5–15.
+                int kind = 2 + _rng.NextInt(3);
+                string look = kind switch
+                {
+                    2 => "item_bow" + (_rng.NextInt(3) + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    3 => "item_shield" + (_rng.NextInt(3) + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    _ => ((string[])["item_sword", "item_sword1", "item_sword2", "item_sword3"])[_rng.NextInt(4)],
+                };
+                return new MapItem(kind == 3 ? ItemEffect.Defence : ItemEffect.Attack, 5 + _rng.NextInt(11), 0, string.Empty, look);
+            }
+
+            case MapObjectRole.Potion:
+            {
+                // R(0, 1) picks the descriptor: health or mana 10–50, or levels, attack or defence 2–8.
+                int kind = _rng.NextInt(2) == 1 ? 2 + _rng.NextInt(3) : _rng.NextInt(2);
+                (string look, ItemEffect effect) = kind switch
+                {
+                    0 => ("item_potion2", ItemEffect.Health),
+                    1 => ("item_potion4", ItemEffect.Mana),
+                    2 => ("item_potion3", ItemEffect.Levels),
+                    3 => ("item_potion7", ItemEffect.Attack),
+                    _ => ("item_potion6", ItemEffect.Defence),
+                };
+                int power = kind < 2 ? 10 + _rng.NextInt(41) : 2 + _rng.NextInt(7);
+                return new MapItem(effect, power, 0, string.Empty, look);
+            }
+
+            default:
+                return null;
+        }
     }
 }

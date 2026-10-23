@@ -76,6 +76,38 @@ public class ItemTests
     }
 
     [Fact]
+    [Trait("Rule", "ECO-023")]
+    public void A_peasant_delivers_its_load_at_the_store_it_is_sent_to()
+    {
+        using var d = new SimDriver(
+            TestMap(40, 12, Structure("euro.castle", 0, 2, 2), Structure("euro.storage", 0, 30, 2), Unit("euro.peon", 0, 8, 8), Item("comm.resitem", 9, 8)),
+            ruleset: Classic);
+        int goldId = Resource("gold");
+        int gold = d.World.Players[0].Resources[goldId];
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        Pick(d, peon, OfType(d.World, "comm.resitem").Single());
+        Assert.Equal(100, d.World.Workers.Get(peon).CarryAmount); // on its way to the nearest store, the castle
+
+        // Sent to the storage instead.
+        EntityId storage = OfType(d.World, "euro.storage").Single();
+        d.Order(0, CommandKind.Harvest, [peon], target: storage);
+        d.RunUntil(() => d.World.Workers.Get(peon).CarryAmount == 0, 3000);
+        Assert.Equal(gold + 100, d.World.Players[0].Resources[goldId]);
+        Assert.Equal(storage.Index, d.Events.Last(e => e.Event.Kind == SimEventKind.ResourceDelivered).Event.Y);
+        for (int t = 0; t < 100; t++)
+        {
+            d.Step();
+        }
+
+        Assert.Equal(WorkerTask.None, d.World.Workers.Get(peon).Task); // the order ends with the delivery
+
+        // A peasant with nothing to deliver is not sent.
+        d.Order(0, CommandKind.Harvest, [peon], target: storage);
+        d.Step();
+        Assert.Contains(CommandRejection.NoValidEntities, d.Rejections());
+    }
+
+    [Fact]
     [Trait("Rule", "ITEM-006")]
     [Trait("Rule", "NAT-004")]
     public void Resource_items_go_to_the_stockpile_and_a_peasant_carries_them_home()
@@ -148,6 +180,53 @@ public class ItemTests
 
         Assert.False(d.World.Entities.IsAlive(book)); // spent
         Assert.Equal(0, d.World.Inventories.Get(footman).Count);
+    }
+
+    [Fact]
+    [Trait("Rule", "ITEM-018")]
+    public void A_map_book_may_never_run_out_and_waits_its_own_pool()
+    {
+        // ADR 0265: a book without limited charges is endless; one that needs mana waits its own pool (6 s here) instead of
+        // the type's 10 s. The caster still waits the spell's own recast (fire rain 5 s, Tzar2's UNVERIFIED value).
+        using var d = new SimDriver(TestMap(32, 16, Unit("euro.footman", 0, 4, 4), Item("comm.item_magic", 5, 4)), ruleset: Classic);
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId book = OfType(d.World, "comm.item_magic").Single();
+        ref ItemState state = ref d.World.Items.Get(book);
+        state.Flags = ItemStateFlags.Endless | ItemStateFlags.OwnCooldown;
+        state.CooldownMs = 6_000;
+        int charges = state.Charges;
+        Pick(d, footman, book);
+        int tickMs = d.World.Config.TickLengthMilliseconds;
+        int NotReady() => d.Rejections().Count(r => r == CommandRejection.SpellNotReady);
+        for (int use = 0; use < 5; use++) // more casts than the type's three charges
+        {
+            d.Order(0, CommandKind.UseItem, [footman], (12 * Tile) + use, 8 * Tile, arg0: 0);
+            d.RunUntil(() => d.Count(SimEventKind.SpellCast) == use + 1, 400);
+            Assert.Equal(use + 1, d.Count(SimEventKind.SpellCast));
+            d.RunUntil(() => false, 5_500 / tickMs); // past the spell's recast, not yet the pool
+            int rejected = NotReady();
+            d.Order(0, CommandKind.UseItem, [footman], 12 * Tile, 8 * Tile, arg0: 0);
+            d.Step();
+            Assert.Equal(rejected + 1, NotReady()); // its own pool refills first
+            d.RunUntil(() => false, 1_000 / tickMs); // 6.5 s: the pool is full, the type's 10 s are not over
+        }
+
+        Assert.True(d.World.Entities.IsAlive(book)); // never used up
+        Assert.Equal(charges, d.World.Items.Get(book).Charges);
+
+        // An own pool of 0 (the record does not need mana): only the spell's recast, never the type's 10 s.
+        d.World.Items.Get(book).CooldownMs = 0;
+        d.RunUntil(() => false, 6_000 / tickMs);
+        int casts = d.Count(SimEventKind.SpellCast);
+        d.Order(0, CommandKind.UseItem, [footman], 12 * Tile, 8 * Tile, arg0: 0);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == casts + 1, 400);
+        d.RunUntil(() => false, 5_500 / tickMs);
+        int before = NotReady();
+        d.Order(0, CommandKind.UseItem, [footman], 13 * Tile, 8 * Tile, arg0: 0);
+        d.Step();
+        Assert.Equal(before, NotReady());
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == casts + 2, 400);
+        Assert.Equal(casts + 2, d.Count(SimEventKind.SpellCast));
     }
 
     [Fact]

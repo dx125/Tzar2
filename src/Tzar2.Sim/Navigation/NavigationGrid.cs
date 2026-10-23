@@ -31,13 +31,14 @@ public sealed class NavigationGrid
         _map = map;
         _typeLayer = new byte[ruleset.EntityTypes.Count];
 
-        // Locomotor equivalence classes on this map: equal base passability bits on every tile.
+        // Locomotor equivalence classes on this map: equal base passability bits on every tile. The climber keeps its own:
+        // walls built later open to it alone (WORLD-018).
         Span<int> classOf = stackalloc int[LocomotorExtensions.Count];
         ReadOnlySpan<byte> passability = map.BasePassability;
         for (int l = 0; l < LocomotorExtensions.Count; l++)
         {
             classOf[l] = l;
-            for (int k = 0; k < l; k++)
+            for (int k = 0; k < l && l != (int)Locomotor.Climber; k++)
             {
                 if (classOf[k] == k && SameColumn(passability, (Locomotor)k, (Locomotor)l))
                 {

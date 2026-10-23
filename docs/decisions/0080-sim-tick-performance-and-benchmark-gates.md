@@ -190,3 +190,40 @@ tolerances if they recur.
 
 * The S2 order rate (2 group orders of 24 units per second per AI player) is accepted for now (coordinator,
   2026-10-18); retune it from AI telemetry once the M3 AI plays matches.
+
+## Amendment 1 (2026-10-23): the relative gates compare calibration-normalized times; every gate runs
+
+**Context.** The nightly `Benchmarks` job failed four nights out of five (nightlies #37, #39–#41). Replaying the gate
+on the last twelve nightlies' logs showed why:
+
+* Runners of one CPU model differ in speed from night to night. On the AMD EPYC 9V74, s2's median p50 was 1.27 times
+  its row's (nightly #41) and 1.24 times (#37). Its calibration-normalized p50 was 0.98 and 0.97 times the row's
+  normalized p50: the runner was slow that night, not the code.
+* The first failing gate stopped the job (each step runs `set -e`, and later steps skip after a failure). So from
+  2026-10-22 on, b4, gameplay, ai and stress were not checked at all on the nights s2 failed.
+
+**Decision.**
+
+1. The relative checks of `tools/ci/check-bench.sh` compare **normalized** times with the row for the runner's CPU
+   model, with the row's tolerances as before:
+   * normalized p50 ≤ the row's normalized p50 × the p50 tolerance;
+   * normalized p99 ≤ the row's normalized p99 × the p99 tolerance. The row has no normalized p99 column; it is the
+     row's p99 scaled as its p50 was (p99 × normalized p50 / p50).
+
+   Same-model rows stay, because normalization still leaves 34–50 % between models. Within one model it now takes out
+   the runner's speed of the night. The absolute budget (p99 ≤ 12 ms) stays on raw times: it is about the runner the
+   players' machines are compared with. The rows' format and the way they are recorded do not change. The log prints
+   the raw times next to the baselines.
+2. Every gate step after the first runs `if: !cancelled()`, so a failing gate no longer hides the others.
+
+**Evidence** (the twelve nightlies before this amendment, replayed):
+* The old rule failed s2 on #37 and #41 and b4 on #40.
+* The new one passes s2 on #37 and #41 (normalized 0.97/1.05 and 0.98/1.06 of the row) and still fails:
+  * b4 on #40 (1.13 normalized as raw), which is a real step or a noisy row; the next nightlies will tell;
+  * the real regression of 2026-10-19 (s2 1.56 times the row, raw and normalized).
+
+**Consequences.**
+* A 10 % slowdown of the median tick is caught as before.
+* A slow runner no longer fails the night.
+* Normalization adds the calibration's own noise: ±3 % between runs on one machine, measured on the owner's PC on
+  2026-10-23.

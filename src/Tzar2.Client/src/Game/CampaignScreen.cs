@@ -64,6 +64,15 @@ public partial class CampaignScreen : ArtScreen
         Area(PreviousArrow, () => Turn(-1));
         Area(NextArrow, () => Turn(1));
         Select(0);
+
+        // SHELL-026: the original's names of these controls (ReTzar's reading).
+        Hint(CampaignList, "CN_CAMPAIGNS");
+        Hint(About, "CN_CAMPAIGN_DESCRIPTION");
+        Hint(Missions, "CN_ENTRY_MISSONS");
+        Hint(Briefing, "CN_ENTRY_MISSONS_DESCRIPTION");
+        Hint(new Rect2I(BackSlot, size), "CN_BACK");
+        Hint(new Rect2I(PlaySlot, size), "CN_PLAY");
+        HelpBall(k => catalog?.Text("HELP", k, k) ?? k);
     }
 
     /// <summary>PLAY: the campaign and the map chosen (null: its current map).</summary>

@@ -107,6 +107,47 @@ public class InfrastructureTests
         Assert.False(Locomotor.Foot.IsA(Locomotor.Climber));
     }
 
+    [Theory]
+    [Trait("Rule", "WORLD-018")]
+    [InlineData(1, false, true)]
+    [InlineData(2, false, true)]
+    [InlineData(3, false, false)]
+    [InlineData(1, true, false)] // a house stands on the wall tile too: not a climb
+    public void Only_a_climber_crosses_a_wall_band_and_only_one_or_two_tiles_thick(int thick, bool house, bool climbs)
+    {
+        // A wall from edge to edge across a 9 x 4 map, `thick` columns wide from column 3 (ReTzar 0x4a99a0).
+        var state = new MapState(new MapData("wall", 9, 4, new byte[10 * 5], [], []), TestWorlds.Ruleset);
+        for (int y = 0; y < 4; y++)
+        {
+            for (int x = 3; x < 3 + thick; x++)
+            {
+                state.AddBlocker(x, y, wall: true);
+            }
+        }
+
+        if (house)
+        {
+            state.AddBlocker(3, 1); // another building on the wall tile
+        }
+
+        Assert.False(state.IsPassable(Locomotor.Foot, 3, 1));
+        Assert.False(state.IsPassable(Locomotor.Mounted, 3, 1));
+        Assert.Equal(climbs, state.IsPassable(Locomotor.Climber, 3, 1));
+
+        // Pulled down, the wall frees everyone; the version tells the navigation.
+        int version = state.PassabilityVersion;
+        for (int y = 0; y < 4; y++)
+        {
+            for (int x = 3; x < 3 + thick; x++)
+            {
+                state.RemoveBlocker(x, y, wall: true);
+            }
+        }
+
+        Assert.True(state.PassabilityVersion > version);
+        Assert.Equal(!house, state.IsPassable(Locomotor.Foot, 3, 1));
+    }
+
     [Fact]
     public void Map_layers_scale_to_1024_tiles()
     {

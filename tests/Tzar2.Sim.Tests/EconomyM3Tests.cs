@@ -74,6 +74,25 @@ public class EconomyM3Tests
     ];
 
     [Fact]
+    public void A_harbors_reach_to_the_water_is_data()
+    {
+        // Code review 2026-10 (item 16, for a fork): the reach was a constant in Sim, the AI and the build ghost; it is
+        // Building.coastReachTiles now (classic 2). On this coast the ships' water is two tiles beyond column 9 (the
+        // first '~' column is shore): the 3-wide harbor fits at column 7 with a reach of 2, not 1, and at column 6
+        // only with 3.
+        foreach ((int reach, bool at7, bool at6) in new[] { (2, true, false), (1, false, false), (3, true, true) })
+        {
+            Ruleset rules = reach == 2 ? Classic : ClassicWith($"euro.harbor: {{ Building: {{ coastReachTiles: {reach} }} }}");
+            ushort harbor = (ushort)rules.EntityTypeId("euro.harbor");
+            Assert.Equal(reach, rules.EntityTypes[harbor].Traits.CoastReachTiles);
+            using var d = new SimDriver(AsciiMap(Coast), ruleset: rules);
+            Assert.Equal((at7, at6), (Systems.PlacementQueries.CanPlace(d.World, harbor, 7, 2), Systems.PlacementQueries.CanPlace(d.World, harbor, 6, 2)));
+        }
+
+        Assert.ThrowsAny<System.Exception>(() => ClassicWith("euro.harbor: { Building: { coastReachTiles: 17 } }"));
+    }
+
+    [Fact]
     [Trait("Rule", "MAG-001")]
     public void Iron_is_a_resource_but_not_in_the_hud_and_casters_regain_mana()
     {

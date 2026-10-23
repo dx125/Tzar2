@@ -58,8 +58,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
     // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
     // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
-    private const ulong GoldenHashStream = 0xD34D782F9466FB23UL;
-    private const ulong GoldenFinalFullHash = 0x3CC86AE5406653FCUL;
+    // (ADR 0265, 2026-10-23) a spell book keeps its own pool and may be endless (item state grows, hashed layout 17, snapshot 19): the hashes.
+    private const ulong GoldenHashStream = 0x970C5A463E55BBCDUL;
+    private const ulong GoldenFinalFullHash = 0x4F607348CD7DB30EUL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

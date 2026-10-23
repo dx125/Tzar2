@@ -285,7 +285,7 @@ internal static class MapGenCommand
         json.WriteNumber("landTiles", map.Stats.LandTiles);
         json.WriteNumber("waterTiles", map.Stats.WaterTiles);
         json.WriteNumber("cliffTiles", map.Stats.CliffTiles);
-        for (MapObjectRole r = MapObjectRole.Castle; r <= MapObjectRole.GroundPatch; r++)
+        for (MapObjectRole r = MapObjectRole.Castle; (int)r < MapGenCatalog.RoleCount; r++)
         {
             json.WriteNumber(r.ToString(), map.Stats.Count(r));
         }
@@ -354,7 +354,7 @@ internal static class MapGenCommand
             }
 
             var roles = new Dictionary<string, MapObjectRole>(StringComparer.Ordinal);
-            for (MapObjectRole r = MapObjectRole.Castle; r <= MapObjectRole.GroundPatch; r++)
+            for (MapObjectRole r = MapObjectRole.Castle; (int)r < MapGenCatalog.RoleCount; r++)
             {
                 if (map.Options.Catalog.Kind(r) is { } kind)
                 {
@@ -382,7 +382,7 @@ internal static class MapGenCommand
                     MapObjectRole.Gateway => [230, 0, 230],
                     MapObjectRole.Tower => [200, 30, 30],
                     MapObjectRole.TownHouse => [210, 130, 40],
-                    MapObjectRole.Item => [255, 90, 210],
+                    MapObjectRole.Item or MapObjectRole.Weapon or MapObjectRole.Book or MapObjectRole.Potion => [255, 90, 210],
                     MapObjectRole.GroundObject => [95, 95, 95],
                     _ => [0, 0, 0],
                 };

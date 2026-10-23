@@ -206,7 +206,10 @@ public class MapGenTests
         GeneratedMap all = MapGenerator.Generate(options with { Features = MapFeatures.All, Size = RandomMapSize.Large });
         Assert.True(all.Stats.Count(MapObjectRole.Gateway) > 0);
         Assert.True(all.Stats.Count(MapObjectRole.Tower) > 0);
-        Assert.True(all.Stats.Count(MapObjectRole.Item) > 0);
+        Assert.True(all.Stats.Count(MapObjectRole.Item) > 0); // the guarded towns'
+        Assert.True(all.Stats.Count(MapObjectRole.Weapon) > 0);
+        Assert.True(all.Stats.Count(MapObjectRole.Book) > 0);
+        Assert.True(all.Stats.Count(MapObjectRole.Potion) > 0);
         Assert.True(all.Stats.CliffTiles > 0);
     }
 
@@ -388,5 +391,44 @@ public class MapGenTests
         ImmutableArray<StartPosition> bad = [map.Starts[0], map.Starts[1] with { TileX = 500 }];
         Assert.Contains(MapGenValidator.Validate(map.Map, bad, map.Options, map.ResolvedType), i => i.Contains("off the map", StringComparison.Ordinal));
         Assert.Throws<ArgumentNullException>(() => MapGenerator.Generate(new MapGenOptions { Catalog = null! }));
+    }
+    [Fact]
+    [Trait("Rule", "ITEM-017")]
+    public void The_generator_makes_its_items_as_the_original()
+    {
+        GeneratedMap map = MapGenerator.Generate(new MapGenOptions { Type = RandomMapType.Continental, Size = RandomMapSize.Huge, Players = 4, Seed = 0x17, Features = MapFeatures.All });
+        int side = map.Map.Width;
+        string[] spells = ["spell_cloak", "spell_flamebolt", "spell_turntostone", "spell_lightning", "raisedead", "spell_bless", "spell_heal"];
+        foreach ((MapObjectRole role, string key) in new[] { (MapObjectRole.Weapon, "comm.item_plusplus"), (MapObjectRole.Book, "comm.item_magic"), (MapObjectRole.Potion, "comm.item_health") })
+        {
+            MapObject[] items = [.. map.Map.Objects.ToArray().Where(o => o.TypeKey == key)];
+            Assert.Equal(items.Length, map.Stats.Count(role));
+            Assert.InRange(items.Length, 1, 10 + (side / 32)); // R(1, 10) + side / 32, as far as there is room
+            Assert.All(items, o => Assert.NotNull(o.Item));
+        }
+
+        foreach (MapObject o in map.Map.Objects.ToArray().Where(o => o.Item is not null))
+        {
+            MapItem item = o.Item!;
+            switch (o.TypeKey)
+            {
+                case "comm.item_magic":
+                    Assert.Contains(item.Spell, spells);
+                    Assert.Contains(item.Look, (string[])["item_book1", "item_book2", "item_book3"]);
+                    Assert.InRange(item.Charges, 1, 5);
+                    Assert.InRange(item.Power, 1, 3);
+                    break;
+                case "comm.item_plusplus":
+                    Assert.InRange(item.Power, 5, 15);
+                    Assert.Equal(item.Look.StartsWith("item_shield", StringComparison.Ordinal) ? ItemEffect.Defence : ItemEffect.Attack, item.Effect);
+                    break;
+                default:
+                    Assert.Equal("comm.item_health", o.TypeKey);
+                    Assert.InRange(item.Power, item.Effect is ItemEffect.Health or ItemEffect.Mana ? 10 : 2, item.Effect is ItemEffect.Health or ItemEffect.Mana ? 50 : 8);
+                    break;
+            }
+        }
+
+        Assert.Equal(Tzar2.Content.Maps.MapBinary.ItemsVersion, BitConverter.ToUInt16(Tzar2.Content.Maps.MapBinary.Write(map.Map), 4));
     }
 }

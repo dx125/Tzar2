@@ -54,6 +54,7 @@ public sealed partial class Ruleset
 
     private readonly string[] _civilizations;
     private readonly int[] _seats;
+    private readonly int[] _workers;
     private readonly OrderGate[] _orderGates;
     private readonly string[] _orderGateKeys;
     private readonly int[] _orderGateIndex;
@@ -218,9 +219,11 @@ public sealed partial class Ruleset
 
         Array.Sort(_sortedKeys, _sortedIds, StringComparer.Ordinal);
         _seats = new int[_civilizations.Length];
+        _workers = new int[_civilizations.Length];
         for (int c = 0; c < _civilizations.Length; c++)
         {
             _seats[c] = Array.FindIndex(_entityTypes, t => t.Traits.IsSeat && t.Traits.Civilization == _civilizations[c]);
+            _workers[c] = Array.FindIndex(_entityTypes, t => t.Traits.IsStartingWorker && t.Traits.Civilization == _civilizations[c]);
         }
 
         Name = name;
@@ -289,6 +292,16 @@ public sealed partial class Ruleset
     {
         int c = Array.IndexOf(_civilizations, civilization);
         return c < 0 ? -1 : _seats[c];
+    }
+
+    /// <summary>
+    /// The type id of <paramref name="civilization"/>'s starting worker, the lowest-id type of that civilization with trait
+    /// <c>StartingWorker</c> (classic: its peasant), or -1.
+    /// </summary>
+    public int StartingWorkerTypeId(string civilization)
+    {
+        int c = Array.IndexOf(_civilizations, civilization);
+        return c < 0 ? -1 : _workers[c];
     }
 
     /// <summary>Whether a kingdom can be of <paramref name="civilization"/>: playable and with a seat.</summary>
@@ -854,8 +867,8 @@ public sealed partial class Ruleset
             .AddSpan<int>(t.Cost.AsSpan()).Add(t.BuildTimeMs).Add(t.SightUnits).Add(t.Defence).Add(t.Resistance)
             .Add(t.DropOffMask).Add(t.PopulationCost).Add(t.PopulationProvided)
             .AddSpan<ushort>(t.Builds.AsSpan()).AddSpan<ushort>(t.RequiredTypes.AsSpan())
-            .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology)).Add(t.ManaCost).Add((byte)t.DropOffAccess).Add(t.AutoGather).Add((byte)t.Placement)
-            .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete).Add(t.IsSeat)
+            .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology)).Add(t.ManaCost).Add((byte)t.DropOffAccess).Add(t.AutoGather).Add((byte)t.Placement).Add(t.CoastReachTiles)
+            .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete).Add(t.IsSeat).Add(t.IsStartingWorker)
             .Add(t.SpawnOnDeath).Add(t.LifetimeMs).Add(t.WalkableFootprint)
             .Add(t.Meat?.Start ?? -1).Add(t.Meat?.PerSecond ?? -1).Add(t.Meat?.Max ?? -1).Add(t.Meat?.Piece ?? -1);
         AddRequirements(hasher, t.Requirements);

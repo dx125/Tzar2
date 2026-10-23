@@ -93,6 +93,8 @@ public partial class GameScreen : Node
     private CardDialog? _dialog;
     private EntityId _dialogFor;
     private (int Goods, int Load)? _route; // a trade route waiting for the far market's click
+    private readonly EntityId[] _tradeDocks = [EntityId.None, EntityId.None]; // the trade window's picked source and destination (TRADE-002)
+    private int _pickingDock = -1; // the trade window's market cell waiting for a click on the map, or -1
     private ushort _placing = ushort.MaxValue;
     private int _facing; // the placement ghost's facing: 0, 2 turned by 90° (gates and bridges); 1, 3 a gate facing the other way (CTRL-024, BLD-019)
     private int _eventCursor = -1;
@@ -812,10 +814,16 @@ public partial class GameScreen : Node
                     return;
                 }
 
+                if (_pickingDock >= 0 && _dialog is TradeDialog tradeDialog)
+                {
+                    PickDock(e.Position, tradeDialog);
+                    return;
+                }
+
                 if (_mode != OrderMode.None)
                 {
                     (int x, int y) = ToWorld(e.Position);
-                    SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument, OnScreen()), x, y);
+                    SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(e.Position), x, y, mods, _session.LocalPlayer, _modeArgument, OnScreen()), x, y, _mode);
                     if ((mods & KeyMods.Shift) == 0)
                     {
                         _mode = OrderMode.None;
@@ -905,7 +913,7 @@ public partial class GameScreen : Node
             // Emerge and unload, patrol, guard and attack: a right click gives the place or the object too, and with Shift
             // the order waits for more (the manual ch. 5 §2.3, the owner 2026-10-21; ORD-015, ORD-006, CTRL-026, CTRL-027).
             (int ux, int uy) = ToWorld(position);
-            SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument, OnScreen()), ux, uy);
+            SendAndConfirm(OrderResolver.WithMode(_mode, ModeSelection(), PickAt(position), ux, uy, mods, _session.LocalPlayer, _modeArgument, OnScreen()), ux, uy, _mode);
             if ((mods & KeyMods.Shift) == 0 || _mode == OrderMode.Unload)
             {
                 _mode = OrderMode.None;
@@ -979,7 +987,8 @@ public partial class GameScreen : Node
 
     // Sends the orders of a click in the world and confirms them where they go: the target's marks flash, or the
     // original's red cross plays on the clicked ground (play-test of 2026-10-20).
-    private void SendAndConfirm(IReadOnlyList<PlannedCommand> orders, int x, int y)
+    // Sends the orders and confirms them on the map; mode: the card's order mode they were given in (none: a right click).
+    private void SendAndConfirm(IReadOnlyList<PlannedCommand> orders, int x, int y, OrderMode mode = OrderMode.None)
     {
         if (orders.Count == 0)
         {
@@ -997,7 +1006,7 @@ public partial class GameScreen : Node
             }
         }
 
-        _world?.ConfirmOrder(x, y, target);
+        _world?.ConfirmOrder(x, y, target, OrderBlink.Of(mode, orders));
     }
 
     private void Send(IReadOnlyList<PlannedCommand> orders)
@@ -1540,9 +1549,30 @@ public partial class GameScreen : Node
                 break;
             case CardDialogKind.Trade:
                 var trade = new TradeDialog(_ui);
+                (_tradeDocks[0], _tradeDocks[1], _pickingDock) = (EntityId.None, EntityId.None, -1);
+                trade.PickMarket += which =>
+                {
+                    _pickingDock = which;
+                    Message(which == 0 ? "Trade: click the market or harbor to start at." : "Trade: click the far market or harbor.");
+                };
                 trade.Route += (here, there, load) =>
                 {
-                    _route = (_rules.ResourceId(here) | (_rules.ResourceId(there) << 8), load);
+                    int goods = _rules.ResourceId(here) | (_rules.ResourceId(there) << 8);
+                    _pickingDock = -1;
+                    if (!_tradeDocks[1].IsNone)
+                    {
+                        (CommandList? commands, string? message) = _card.Trade(CardNow(), _tradeDocks[1], goods, load, _tradeDocks[0]);
+                        if (message is not null)
+                        {
+                            Message(message);
+                        }
+
+                        Submit(commands);
+                        CloseDialog();
+                        return;
+                    }
+
+                    _route = (goods, load);
                     CloseDialog();
                     Message("Trade: click the far market or harbor.");
                 };
@@ -1623,6 +1653,20 @@ public partial class GameScreen : Node
         _hud?.ShowDialog(null);
     }
 
+    // The trade window's source or destination: a market or harbor of the traders' kind under the pointer (TRADE-002).
+    private void PickDock(Vector2 screen, TradeDialog dialog)
+    {
+        if (PickAt(screen) is not { } dock || !_card.IsTradeDock(CardNow(), dock.Id))
+        {
+            Message("Trade: that is not a market of this trader's kind.");
+            return;
+        }
+
+        _tradeDocks[_pickingDock] = dock.Id;
+        dialog.ShowMarket(_pickingDock, _ui.PlayerCell("art/icons/icons.t2img", _catalog.Type(dock.TypeId).Portrait(false), dock.Owner < 8 ? dock.Owner : -1));
+        _pickingDock = -1;
+    }
+
     // The far market of a trade route: a market or harbor under the pointer.
     private void PickMarket(Vector2 screen, (int Goods, int Load) route)
     {
@@ -1638,7 +1682,7 @@ public partial class GameScreen : Node
             return;
         }
 
-        (CommandList? commands, string? message) = _card.Trade(CardNow(), far.Id, route.Goods, route.Load);
+        (CommandList? commands, string? message) = _card.Trade(CardNow(), far.Id, route.Goods, route.Load, _tradeDocks[0]);
         if (message is not null)
         {
             Message(message);
@@ -1897,7 +1941,7 @@ public partial class GameScreen : Node
         FrameEntity e = frame.Entities[lead];
         TypeVisual v = _catalog.Type(e.TypeId);
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
-        string owner = e.Owner < 8 ? SpritePage.PlayerNames[ColourOf(e.Owner)] : string.Empty;
+        string owner = e.Owner < 8 ? KingdomName(e.Owner) : string.Empty; // KINGDOM: its name (HUD-016)
         var strip = new List<StripItem>();
         _insideShown.Clear();
         if (_selection.Selected.Count > 1)
@@ -1956,9 +2000,15 @@ public partial class GameScreen : Node
             stats.Add(("art/icons/defence.t2img", HudText.Number(t.Defence)));
         }
 
-        if (t.GainsExperience && e.Owner == _session.LocalPlayer)
+        if (t.GainsExperience && t.LegacyClass != "trader")
         {
-            stats.Add(("art/icons/level.t2img", HudText.Number(e.Level))); // LEVEL (manual: The Selection View; HUD-016)
+            // LEVEL of every unit, the enemy's too, but traders (ReTzar's reading of the original's view; HUD-016).
+            stats.Add(("art/icons/level.t2img", HudText.Number(e.Level)));
+        }
+
+        if (e.ItemPower > 0)
+        {
+            stats.Add(("art/icons/power.t2img", HudText.Number(e.ItemPower))); // POWER of an item on the ground (HUD-016)
         }
 
         if (t.Category == EntityCategory.Building && t.Resistance > 0)

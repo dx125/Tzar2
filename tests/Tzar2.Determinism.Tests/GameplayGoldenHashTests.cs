@@ -75,7 +75,15 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0263, 2026-10-23) fire rain and the whirlpool as the original casts them (the spell fields square, scatter, delayMs, moveMs): only the ruleset hash moves, the scenario casts neither.
     // (code review, 2026-10-23) the crusade gathering pace, the crusaders' arrival and the chase leash read from the ruleset
     // with the same values (three new settings): the ruleset hash only, the match is the same.
-    private const ulong GoldenRulesetHash = 0x1EE829B846D92165UL;
+    // (code review, 2026-10-23) the experience curve's step is a setting (combat.levelStepXp, -1: as levelBaseXp, the
+    // original's curve): the ruleset hash only, every level costs what it did.
+    // (code review, 2026-10-23) a harbor's reach to the water is a field of its Building trait (coastReachTiles 2, was a
+    // constant in Sim, the AI and the build ghost): the ruleset hash only. With both settings (#225 merged after #226) the
+    // ruleset hash is the value below.
+    // (code review, 2026-10-23) the trait StartingWorker marks the peasants (map builders take the seat and the starting
+    // worker by their traits): the ruleset hash only, maps and the match are the same.
+    // With the three settings above (#226, #225, then this change) the ruleset hash is the value below.
+    private const ulong GoldenRulesetHash = 0xEC86DF057E128AE5UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -88,8 +96,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // stream and the final hash.
     // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
     // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
-    private const ulong GoldenHashStream = 0x05AB4D4DEB89E38FUL;
-    private const ulong GoldenFinalFullHash = 0x2E60EAFBC3458F9BUL;
+    // (ADR 0265, 2026-10-23) a spell book keeps its own pool and may be endless (item state grows, hashed layout 17, snapshot 19): the hashes.
+    private const ulong GoldenHashStream = 0x85BB15267C16C14BUL;
+    private const ulong GoldenFinalFullHash = 0x975F49CF2E7E3AABUL;
 
     private const int Ticks = 1600;
 

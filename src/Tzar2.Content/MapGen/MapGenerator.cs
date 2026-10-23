@@ -166,7 +166,7 @@ internal sealed partial class MapBuilder
     private readonly int[] _sy;
     private readonly int[] _coast;      // naval: tile index of each start's harbor spot
     private readonly List<MapObject> _objects = [];
-    private readonly int[] _roleCounts = new int[(int)MapObjectRole.GroundPatch + 1];
+    private readonly int[] _roleCounts = new int[MapGenCatalog.RoleCount];
     private readonly List<string> _notes = [];
     private Xoshiro256StarStar _rng;
     private int[] _label = [];
