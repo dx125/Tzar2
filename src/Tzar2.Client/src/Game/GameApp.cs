@@ -80,7 +80,7 @@ public partial class GameApp : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
-        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke);
+        ApplyDisplay(window: !_args.GameSmoke && _args.AutoplayDir is null && !_args.MultiplayerSmoke && _args.ResourceSoak is null && !_args.BenchRender);
         _ui = new UiAssets(_store);
         try
         {
@@ -102,7 +102,11 @@ public partial class GameApp : Node
             GD.PrintErr("The classic ruleset does not compile from this package: " + e.Message);
         }
 
-        if (_args.MultiplayerSmoke)
+        if (_args.BenchRender)
+        {
+            _ = RenderBenchAsync();
+        }
+        else if (_args.MultiplayerSmoke)
         {
             ShowMainMenu();
             _ = MultiplayerSmokeAsync();
@@ -117,6 +121,10 @@ public partial class GameApp : Node
             else if (_args.AutoplayDir is { } dir)
             {
                 _ = new AutoplayDriver(this, dir).RunAsync();
+            }
+            else if (_args.ResourceSoak is { } soak)
+            {
+                _ = ResourceSoakAsync(soak);
             }
         }
         else if (_args.Editor)
@@ -236,6 +244,10 @@ public partial class GameApp : Node
         menu.Settings += ShowSettings;
         menu.Quit += () => GetTree().Quit();
         Replace(menu, music: "music/intro.mid");
+
+        // Back in the menu no match holds the decoded sheets and images (the UI keeps its own textures): drop them, so
+        // they do not pile up over matches of other civilizations and terrain sets (code review 2026-10, item 16).
+        _store.ClearCaches();
     }
 
     /// <summary>Shows SETTINGS (ADR 0177): changes are saved and applied at once.</summary>
@@ -386,7 +398,7 @@ public partial class GameApp : Node
             session.SpeedIndex = GameSession.SpeedSteps.Length - 1;
         }
 
-        var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null };
+        var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null || _args.ResourceSoak is not null };
         screen.Finished += (outcome, stats) =>
         {
             SaveReplay(session, "skirmish");

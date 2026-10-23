@@ -158,6 +158,13 @@ public class ViewerAssetTests
         AtlasCell unit = atlas.GetCell(0, 0);
         Assert.Equal((PixelFormat.Indexed8, 0, 240, 2, 2, 1, 1), (unit.Format, unit.PaletteRow, unit.PlayerFirst, unit.Width, unit.Height, unit.OffsetX, unit.OffsetY));
         Assert.True(atlas.GetCell(0, 1).IsEmpty);
+
+        // Once uploaded, the pixels go; the cell lookups the renderer and hit tests use stay.
+        SpriteAtlas released = SpriteAtlas.Build([units, building, overlay], pageSize: 8);
+        released.ReleasePages();
+        Assert.True(released.PagesReleased);
+        Assert.Empty(released.Pages(PixelFormat.Indexed8));
+        Assert.Equal(unit, released.GetCell(0, 0));
         Assert.Equal(1, atlas.GetCell(2, 3).PaletteRow);
         Assert.Equal(0x0020, atlas.GetCell(1, 0).ShadowColour);
 

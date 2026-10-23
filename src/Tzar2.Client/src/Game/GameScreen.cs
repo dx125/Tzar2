@@ -222,7 +222,7 @@ public partial class GameScreen : Node
         // Sprites of the civilizations in the match (REQ-GFX-05): the kingdoms' and those of every object on the map (the
         // original maps give a kingdom buildings and units of other civilizations).
         _bank = new SpriteBank(_store);
-        var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { "comm", string.Empty };
+        var civs = new HashSet<string>(_session.Setup.Players.Select(p => p.Civilization)) { _rules.CommonCivilization, string.Empty };
         foreach (MapObject o in _session.Map.Objects)
         {
             if (_rules.EntityTypeId(o.TypeKey) is >= 0 and var placed)
@@ -325,7 +325,7 @@ public partial class GameScreen : Node
             Accept(first);
             foreach (FrameEntity e in first.Entities)
             {
-                if (e.Owner == _session.LocalPlayer && _catalog.Type(e.TypeId).Class == "castle")
+                if (e.Owner == _session.LocalPlayer && _rules.EntityTypes[e.TypeId].Traits.IsSeat)
                 {
                     CenterOn(e.X, e.Y);
                     break;
@@ -1244,8 +1244,8 @@ public partial class GameScreen : Node
         var ids = new List<EntityId>();
         foreach (EntityInfo e in SelectedInfos())
         {
-            string cls = _catalog.Type(e.TypeId).Class;
-            if (e.Owner == _session.LocalPlayer && (important || cls != "castle"))
+            // A protected type (classic: the castle, GAME-04) goes only with Shift + Del.
+            if (e.Owner == _session.LocalPlayer && (important || !_rules.EntityTypes[e.TypeId].Traits.ProtectedDelete))
             {
                 ids.Add(e.Id);
             }
@@ -2181,7 +2181,7 @@ public partial class GameScreen : Node
     private void Screenshot()
     {
         Image image = GetViewport().GetTexture().GetImage();
-        string path = ProjectSettings.GlobalizePath($"user://screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png");
+        string path = ProjectSettings.GlobalizePath(string.Create(CultureInfo.InvariantCulture, $"user://screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png"));
         image.SavePng(path);
         Message("Screenshot " + path);
     }
