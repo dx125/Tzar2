@@ -15,10 +15,11 @@ rules:
     source: [community TDD GAME-15]
     status: tested
   NAT-004:
-    rule: Cows can be slaughtered, and their meat collected by peasants or other units.
-    source: [help ITEMS.TXT HT_TEND_COWS]
-    status: partial
-    note: Peasants collect the meat; other units do not.
+    rule: Cows can be slaughtered, and their meat collected by peasants or other units. A cow grows meat from 300 by 2 a second up to 600; when it dies the meat falls as food items of at most 100, which a peasant carries home as its load and any other unit picks up.
+    source: [help ITEMS.TXT HT_TEND_COWS, 'community ReTzar src/gameplay.rs (cow_meat, 0x464f60)']
+    status: tested
+    adr: [0256]
+    note: In the original another unit carries the item in its bag and drops it into a castle or storage; Tzar2 brings it to the stockpile at once, as it does every resource item (ITEM-006).
   NAT-005:
     rule: The clock globe turns through day and night; a day lasts 37.5 minutes and a game starts at 10:00.
     source: [manual The Clock, capture capture-20261019-195053]

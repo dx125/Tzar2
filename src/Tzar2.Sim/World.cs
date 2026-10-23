@@ -64,6 +64,7 @@ public sealed partial class World
         Manas = Components.RegisterHot<ManaState>("game.mana");
         Lifetimes = Components.RegisterHot<Lifetime>("game.lifetime");
         RepairProgresses = Components.RegisterHot<RepairProgress>("game.repair");
+        MeatStocks = Components.RegisterHot<MeatStock>("game.meat");
         RegisterCombatMagicStores();
         RegisterNavalStores();
         Stats = new PlayerStats(ruleset, config.PlayerCount);
@@ -166,6 +167,9 @@ public sealed partial class World
     /// <summary>Repair bookkeeping of entities being repaired (hot; GAME-03).</summary>
     public ComponentStore<RepairProgress> RepairProgresses { get; }
 
+    /// <summary>The meat living animals have grown (NAT-004).</summary>
+    public ComponentStore<MeatStock> MeatStocks { get; }
+
     /// <summary>Technology effects per player and type (derived from <see cref="PlayerState.Technologies"/>; not state).</summary>
     public PlayerStats Stats { get; }
 
@@ -228,7 +232,7 @@ public sealed partial class World
     {
         Identity identity = Identities.Get(entity);
         string civ = Ruleset.EntityTypes[identity.TypeId].Traits.Civilization;
-        return civ.Length > 0 && civ != "comm" ? civ : PlayerCivilization(identity.Owner);
+        return civ.Length > 0 && civ != Ruleset.CommonCivilization ? civ : PlayerCivilization(identity.Owner);
     }
 
     /// <summary>The civilization key of a player (empty for Nature or a ruleset without civilizations).</summary>
@@ -726,7 +730,7 @@ public sealed partial class World
         int fallback = 0;
         for (int i = 0; i < Ruleset.Civilizations.Count; i++)
         {
-            if (Ruleset.Civilizations[i] != "comm")
+            if (Ruleset.Civilizations[i] != Ruleset.CommonCivilization)
             {
                 fallback = i;
                 break;
@@ -744,7 +748,7 @@ public sealed partial class World
         {
             int owner = identities[i].Owner;
             string civ = Ruleset.EntityTypes[identities[i].TypeId].Traits.Civilization;
-            if (!HasPlayer(owner) || assigned[owner] || civ.Length == 0 || civ == "comm")
+            if (!HasPlayer(owner) || assigned[owner] || civ.Length == 0 || civ == Ruleset.CommonCivilization)
             {
                 continue;
             }
@@ -793,6 +797,25 @@ public sealed partial class World
                     Owner = identity.Owner,
                     Kind = ruin ? DecalKind.Ruin : DecalKind.Corpse,
                 });
+            }
+
+            if (type.Traits.SpawnOnDeath >= 0 && type.Traits.Meat is { } meat)
+            {
+                // NAT-004 (ReTzar, the cow's death): the meat it grew falls as items of at most a piece each.
+                int left = MeatStocks.IndexOf(entity) is >= 0 and var ms ? MeatStocks.At(ms).Amount : meat.Start;
+                Destroy(entity);
+                while (left > 0 && Entities.RemainingCapacity >= 1)
+                {
+                    int piece = Math.Min(left, meat.Piece);
+                    left -= piece;
+                    EntityId item = Spawn((ushort)type.Traits.SpawnOnDeath, MapObject.Nature, position.X, position.Y);
+                    if (Items.IndexOf(item) is >= 0 and var it)
+                    {
+                        Items.At(it).Power = piece;
+                    }
+                }
+
+                return true;
             }
 
             if (type.Traits.SpawnOnDeath >= 0 && Entities.RemainingCapacity >= 1)
@@ -880,7 +903,7 @@ public sealed partial class World
                 }
             }
 
-            if (player.Reserved != 0 || player.Crusaders > Ruleset.Combat.CrusadeCeilingMax + Ruleset.Combat.CrusadeStart || player.Civilization < 0 || (player.Civilization >= Ruleset.Civilizations.Count && player.Civilization != 0))
+            if (player.KungFuPool >= Ruleset.Combat.TournamentEvery || player.Crusaders > Ruleset.Combat.CrusadeCeilingMax + Ruleset.Combat.CrusadeStart || player.Civilization < 0 || (player.Civilization >= Ruleset.Civilizations.Count && player.Civilization != 0))
             {
                 throw Invalid("invalid civilization");
             }
@@ -1073,6 +1096,16 @@ public sealed partial class World
                 || (node.Amount >= 0 && stocks[i].Amount > node.Amount) || stocks[i].RegenMs < 0 || stocks[i].RegenMs > Math.Max(node.RegenMs, 0))
             {
                 throw Invalid("invalid resource stock");
+            }
+        }
+
+        ids = MeatStocks.Entities;
+        Span<MeatStock> meats = MeatStocks.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (TypeOf(ids[i]).Traits.Meat is not { } meat || meats[i].Amount < 0 || meats[i].Amount > meat.Max || meats[i].Ms is < 0 or >= 1000)
+            {
+                throw Invalid("invalid meat stock");
             }
         }
 
@@ -1376,6 +1409,11 @@ public sealed partial class World
         if (t.ResourceNode is { } node)
         {
             ResourceStocks.Set(entity, new ResourceStock { Amount = node.Amount });
+        }
+
+        if (t.Meat is { } meat)
+        {
+            MeatStocks.Set(entity, new MeatStock { Amount = Math.Min(meat.Start, meat.Max) }); // NAT-004
         }
 
         if (player && t.Producer is not null)

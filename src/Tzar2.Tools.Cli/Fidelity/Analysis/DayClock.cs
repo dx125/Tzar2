@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
 using Tzar2.Tools.Cli.Fidelity.Imaging;
@@ -101,7 +102,7 @@ internal static class DayClock
                 e.Add("brightness", cycle.Clean ? "clean" : "noisy");
                 if (!cycle.Clean)
                 {
-                    notes.Add($"{trial.Trial}: brightness crossings less than {MinimumCrossingGapSeconds:0} s apart (units or buildings in the view); no brightness figures");
+                    notes.Add(string.Create(CultureInfo.InvariantCulture, $"{trial.Trial}: brightness crossings less than {MinimumCrossingGapSeconds:0} s apart (units or buildings in the view); no brightness figures"));
                 }
 
                 if (hour is null && cycle.DayLength is { } day)
