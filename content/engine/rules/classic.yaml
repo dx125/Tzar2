@@ -265,6 +265,7 @@ legacy:
 
 # Peasants (manual §5.4: build, repair, capture, harvest...).
 ^class.peon:
+  StartingWorker: {}                  # map builders put a kingdom's peasants next to its seat
   Mobile: { pixelsPerSecond: 40 }    # VERIFIED (ADR 0172)
   Armament: { autoAcquire: false }    # UNVERIFIED: idle peasants do not start fights
   Builder: { civilizations: [own, comm] }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tzar2.Content.Compiled;
+using Tzar2.Content.MapGen;
 using Tzar2.Content.Rules;
 using Tzar2.Content.Vfs;
 using Xunit;
@@ -324,6 +325,34 @@ public class RulesetCompilerTests
         Assert.Equal(("te_banking", string.Empty), (fork.World.LoanTechnology, fork.World.GamblingTechnology));
         Assert.True(fork.EntityTypes[fork.EntityTypeId("euro.house")].Traits.IsSeat);
         Assert.NotEqual(classic.ContentHash, fork.ContentHash);
+    }
+
+    [Fact]
+    public void Map_builders_take_the_seat_and_the_starting_worker_from_the_ruleset()
+    {
+        // Code review 2026-10 (item 16, for a fork): map generation and the test maps placed "<civ>.castle" and
+        // "<civ>.peon". The trait StartingWorker marks the peasant as Seat marks the castle; a catalog bound to a ruleset
+        // names both by their traits. In classic they are exactly those keys, so maps do not change.
+        Ruleset classic = SyntheticLegacyContent.CompileRuleset();
+        int[] workers = [.. classic.EntityTypes.Where(t => t.Traits.IsStartingWorker).Select(t => (int)t.Id)];
+        int[] peons = [.. classic.Civilizations.Select(c => classic.EntityTypeId(c + ".peon")).Where(id => id >= 0)];
+        Assert.Equal(peons.Order(), workers.Order());
+        MapGenCatalog bound = MapGenCatalog.Classic.RestrictTo(classic);
+        foreach (string civ in bound.Civilizations)
+        {
+            Assert.Equal(classic.EntityTypeId(civ + ".peon"), classic.StartingWorkerTypeId(civ));
+            Assert.Equal(civ + ".castle", bound.Kind(MapObjectRole.Castle)!.Value.KeyFor(civ));
+            Assert.Equal(civ + ".peon", bound.Kind(MapObjectRole.Peasant)!.Value.KeyFor(civ));
+        }
+
+        // A fork whose European kingdom starts from a house with footmen as its workers.
+        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        {
+            OverrideTexts = [new("fork.yaml", "euro.castle: { -Seat: }\neuro.house: { Seat: {} }\neuro.peon: { -StartingWorker: }\neuro.footman: { StartingWorker: {} }")],
+        });
+        MapGenCatalog forked = MapGenCatalog.Classic.RestrictTo(fork);
+        Assert.Equal(("euro.house", "euro.footman"), (forked.Kind(MapObjectRole.Castle)!.Value.KeyFor("euro"), forked.Kind(MapObjectRole.Peasant)!.Value.KeyFor("euro")));
+        Assert.Equal("arab.castle", forked.Kind(MapObjectRole.Castle)!.Value.KeyFor("arab"));
     }
 
     [Fact]

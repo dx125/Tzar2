@@ -302,7 +302,11 @@ public partial class ExchangeDialog : CardDialog
 /// <summary>
 /// A trade route (order <c>trade</c> of caravans, merchant ships and Asian peasants; GAME-14 <c>Trade</c>): the goods
 /// loaded at the near market, the goods brought back from the far one, the load per trip ("full" = the trader's
-/// capacity); TRADE asks for the far market, CANCEL.
+/// capacity); TRADE asks for the far market, CANCEL. The two market cells pick the source and the destination on the
+/// map (the manual's Performing Trade, D_TRADE's <c>tr_srcobj</c> and <c>tr_dstobj</c>; TRADE-002): with a picked
+/// destination TRADE starts the route at once, without one it asks for the far market; without a picked source the
+/// route starts at the trader's nearest own market. Where the market cells sit on the horizontal panel is ours
+/// (⚠ UNVERIFIED: the original's vertical panel stacks them by their goods).
 /// </summary>
 public partial class TradeDialog : CardDialog
 {
@@ -310,6 +314,7 @@ public partial class TradeDialog : CardDialog
     private readonly TextureRect _here;
     private readonly TextureRect _there;
     private readonly TextureRect _load;
+    private readonly TextureRect[] _markets = new TextureRect[2];
     private int _hereIndex = 2;
     private int _thereIndex;
     private int _loadIndex;
@@ -333,6 +338,13 @@ public partial class TradeDialog : CardDialog
             _loadIndex = Wrap(_loadIndex + s, Loads.Length);
             Refresh();
         });
+        for (int k = 0; k < _markets.Length; k++)
+        {
+            int which = k;
+            _markets[k] = Cell(new Rect2I(16 + (k * 56), 68, 42, 42), _ => PickMarket?.Invoke(which));
+            AddChildBelow(_markets[k], new Vector2I(13 + (k * 56), 65));
+        }
+
         Button(new Vector2I(128, 68), "trade", () => Route?.Invoke(Resources[_hereIndex], Resources[_thereIndex], Loads[_loadIndex]));
         Button(new Vector2I(184, 68), "cancel", Close);
         Refresh();
@@ -340,6 +352,20 @@ public partial class TradeDialog : CardDialog
 
     /// <summary>TRADE: the goods loaded here, the goods loaded there, the load per trip (0 = full).</summary>
     public event Action<string, string, int>? Route;
+
+    /// <summary>A market cell was pressed: 0 asks for the source on the map, 1 for the destination.</summary>
+    public event Action<int>? PickMarket;
+
+    /// <summary>Shows <paramref name="picture"/> (the picked market's portrait) in market cell <paramref name="which"/>.</summary>
+    public void ShowMarket(int which, Texture2D? picture) => _markets[which].Texture = picture;
+
+    // The cell's empty frame, D_TRADE's OBJECT art, under the picked market's portrait.
+    private void AddChildBelow(TextureRect cell, Vector2I at)
+    {
+        var frame = new TextureRect { Position = at, Size = new Vector2(48, 48), Texture = Ui.Texture($"art/screens/{Folder}/object.t2img"), MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(frame);
+        MoveChild(frame, cell.GetIndex());
+    }
 
     private void Refresh()
     {
