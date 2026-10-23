@@ -88,6 +88,10 @@ public sealed class WorldRenderer : IDisposable
     private long _timeMs;
     private (int X, int Y, uint Target, long StartMs)? _order;
     private bool _lightsValid;
+    private readonly TerrainGrid _grid;
+
+    /// <summary>Where trees and their shadows are drawn and which pictures grow where (PRES-009; set by the game screen from the terrain set's data).</summary>
+    public TreeLayout Trees { get; set; } = TreeLayout.Default;
     private ImageTexture? _lightPatternTexture;
 
     /// <summary>Creates the renderer for a match; the terrain is <paramref name="composed"/> already, or composed here.</summary>
@@ -100,6 +104,7 @@ public sealed class WorldRenderer : IDisposable
         _root = RS.CanvasItemCreate();
         RS.CanvasItemSetParent(_root, canvas);
         _terrain = composed is null ? new TerrainLayer(_root, 10, set, grid, load) : new TerrainLayer(_root, 10, composed);
+        _grid = grid;
         _ground = new SpriteRenderer(host, _root, 20);
         _marksUnder = Item(25);
         _objects = new SpriteRenderer(host, _root, 30);
@@ -322,11 +327,19 @@ public sealed class WorldRenderer : IDisposable
             var footprint = new Rect2(left, top, width * TilePixels, height * TilePixels);
             if (def.Key == "comm.tree" && _bank.Trees is { } trees)
             {
-                // Living trees are cells 8..26 of the strip (stumps and bushes first, dead trees last); ⚠ placement
-                // within the tile (trunk at the cell's bottom centre) is assumed, TREES.INI pos_tree is not decoded.
-                int cell = 8 + (int)(phase % 19u);
-                var at = new Vector2I(left + (TilePixels / 2) - 48, top + TilePixels - 124);
-                AddSheet(options.TranslucentTrees ? _translucent : _objects, trees, at, cell, 0, -1, (uint)(foot + 4096) << 6, shadows: true);
+                // PRES-009: a picture of the kinds that grow on the tile's terrain ([treename], [treeterrain]), the tree
+                // and its shadow placed by their anchors ([trees] pos_tree, pos_shadow).
+                int cell = Trees.Picture(_grid[Math.Clamp(e.TileX, 0, _grid.Width), Math.Clamp(e.TileY, 0, _grid.Height)], phase);
+                (int tx, int ty) = Trees.TreeOrigin(e.TileX, e.TileY);
+                var at = new Vector2I(tx, ty);
+                SpriteRenderer layer = options.TranslucentTrees ? _translucent : _objects;
+                Add(layer, trees, at, cell, 0, -1, (uint)(foot + 4096) << 6, shadowOnly: false);
+                if (trees.Shadow is { } treeShadow)
+                {
+                    (int sx, int sy) = Trees.ShadowOrigin(e.TileX, e.TileY);
+                    Add(layer, treeShadow, new Vector2I(sx, sy), cell, 0, -1, (uint)(foot + 4096) << 6, shadowOnly: true);
+                }
+
                 var treeBox = new Rect2(at.X + 24, at.Y + 8, 48, 112);
                 _pickables.Add(new Pickable(index, treeBox, foot, treeBox));
                 return;

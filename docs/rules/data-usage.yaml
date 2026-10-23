@@ -146,14 +146,13 @@ files:
   - path: IMAGES/TERRAIN/*.TERRAIN.INI
     reader: Tzar2.Import and Tzar2.Content (terrain sets, tiles, ambient sounds)
     account: sections
-    used: [minidatargb, sounds, terrain, terrainfiles, terrainname, terrainsize, trees]
+    used: [minidatargb, sounds, terrain, terrainfiles, terrainname, terrainsize, treename, trees]
     restated:
       randomterrainset: the random map's terrain layers (Tzar2.Content TerrainProfile, ADR 0060; semantics unknown)
       randomtreeset: the forest field and the chances of a tree by map side (Tzar2.Content Forests, WORLD-013, ADR 0201)
       treeterrain: the terrains trees grow on (Tzar2.Content TerrainProfile, ADR 0060)
     todo:
       colors: the colour of selection marks (HUD-031)
-      treename: the kinds of trees in the sheet (PRES-009)
   - path: LOCAL/HELP.INI
     account: unused
     reason: "todo: the hints of the menu screens' controls (SHELL-026)."
