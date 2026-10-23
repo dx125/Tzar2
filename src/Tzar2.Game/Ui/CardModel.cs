@@ -256,6 +256,12 @@ public interface ICardSource
     /// </summary>
     IReadOnlyList<CardButton> AbilityButtons(string ability);
 
+    /// <summary>
+    /// The button of one order (ORDERS.INI) outside any menu, without a letter: a spell a unit learned from a book joins
+    /// its card this way (ITEM-019). Null when there is no such order.
+    /// </summary>
+    CardButton? OrderButton(string order) => null;
+
     /// <summary>The civilization an entity type belongs to (empty for the common ones).</summary>
     string Civilization(ushort typeId);
 

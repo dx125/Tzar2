@@ -85,7 +85,7 @@ public sealed class MagicSystem : ISimSystem
         EntityTraits traits = world.TypeOf(caster).Traits;
         if (book.IsNone)
         {
-            if (!traits.CanCast(spell))
+            if (!traits.CanCast(spell) && !world.HasLearned(caster, spell))
             {
                 return CommandRejectionReason.Unknown;
             }

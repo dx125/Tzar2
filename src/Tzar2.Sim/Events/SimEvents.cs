@@ -194,7 +194,10 @@ public enum SimEventKind : ushort
     /// <summary>An item was dropped on the ground (Entity = item, X, Y = where, Arg = item type id).</summary>
     ItemDropped = 30,
 
-    /// <summary>An item was used (Entity = item, X = user index, Arg = item type id); a scroll's text is shown on this.</summary>
+    /// <summary>
+    /// An item was used (Entity = item, X = user index, Arg = item type id); a scroll's text is shown on this. A book that taught
+    /// its spell (ITEM-019) gives the spell in Y.
+    /// </summary>
     ItemUsed = 31,
 
     /// <summary>A spell took effect (Entity = caster, X = target index or -1, Y = (target X / 64) | (target Y / 64) &lt;&lt; 16, Arg = spell id).</summary>
