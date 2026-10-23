@@ -85,6 +85,12 @@ public sealed record MatchFingerprint(ulong RulesetHash, ulong MapHash, ulong Se
             h.Add(0x4141).Add(1);
         }
 
+        // The AI resign flag lowered (the sword, SHELL-013; ADR 0262); matches with the flag up hash as before.
+        if (!setup.AiResign)
+        {
+            h.Add(0x4152).Add(0);
+        }
+
         // The scenario and the trigger settings are part of the match (ADR 0130); plain skirmishes hash as before.
         if (setup.Scenario is { } scenario)
         {

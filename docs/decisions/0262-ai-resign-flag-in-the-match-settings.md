@@ -34,6 +34,8 @@ read misaligned bytes.
   Other bits are refused. So descriptions, lobby blobs and replay headers with the flag up keep their bytes. An older
   client given the sword stops at the version check: "Unsupported match settings version". This build says that a
   newer Tzar2 made the match.
+* **Fingerprint.** `MatchFingerprint.Of` hashes the flag only when it is lowered, following the pattern of AI Assist.
+  Peers that disagree are refused, and matches with the flag up keep their fingerprint (mp-review).
 * **Screens.** The random map screen draws `AIRESIGN.BMP` at (471, 427), as ReTzar reads the original. The flag is in
   the screen's kept settings. The lobby shows "AI may resign" as a check.
 * **Default.** The flag starts up, as Tzar2 has played so far. ReTzar reads a missing `tzar.ini AIRESIGN` as the sword.

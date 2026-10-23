@@ -116,6 +116,19 @@ public sealed class ScenarioSessionTests
     }
 
     [Fact]
+    [Trait("Rule", "SHELL-013")]
+    public void The_sword_is_part_of_the_match_fingerprint_the_flag_keeps_it()
+    {
+        (MatchSetup setup, ScenarioBuilder b) = Mission();
+        MatchSetup skirmish = setup with { Scenario = null };
+        MatchFingerprint flag = MatchFingerprint.Of(skirmish, Classic, b.Map());
+        MatchFingerprint sword = MatchFingerprint.Of(skirmish with { AiResign = false }, Classic, b.Map());
+        Assert.NotEqual(flag.SettingsHash, sword.SettingsHash);
+        Assert.Throws<MatchMismatchException>(() => flag.EnsureCompatible(sword));
+        Assert.Equal(flag, MatchFingerprint.Of(skirmish with { AiResign = true }, Classic, b.Map()));
+    }
+
+    [Fact]
     public void The_scenario_is_part_of_the_match_fingerprint()
     {
         (MatchSetup setup, ScenarioBuilder b) = Mission();
