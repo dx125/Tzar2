@@ -38,6 +38,7 @@ public partial class GameApp : Node
     private int _loadings;
     private Vector2I _window;
     private Node? _current;
+    private GameScreen? _pending;
     private MidiPlayer? _menuMusic;
 
     /// <summary>Creates the mode over an opened package.</summary>
@@ -522,6 +523,17 @@ public partial class GameApp : Node
 
     private void Replace(Node next, string? music)
     {
+        // A match is prepared on a worker thread while the current screen (the loading screen) stays up and answers;
+        // a later Replace supersedes a match still preparing (code review 2026-10, item 16).
+        _pending?.QueueFree();
+        _pending = null;
+        if (next is GameScreen game && !game.IsPrepared)
+        {
+            _pending = game;
+            _ = ShowWhenPrepared(game, music);
+            return;
+        }
+
         if (_current is not null)
         {
             RemoveChild(_current);
@@ -544,6 +556,27 @@ public partial class GameApp : Node
         }
 
         PlayMenuMusic(music);
+    }
+
+    private async System.Threading.Tasks.Task ShowWhenPrepared(GameScreen game, string? music)
+    {
+        try
+        {
+            await game.Prepare();
+        }
+#pragma warning disable CA1031 // any failure: _Ready rethrows it
+        catch (Exception e)
+#pragma warning restore CA1031
+        {
+            // _Ready rethrows it on the main thread, where the screen's own error handling and the crash log see it.
+            GD.PrintErr("Match preparation failed: " + e.Message);
+        }
+
+        if (_pending == game)
+        {
+            _pending = null;
+            Replace(game, music);
+        }
     }
 
     private void PlayMenuMusic(string? track)
