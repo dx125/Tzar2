@@ -347,6 +347,8 @@ public sealed partial class LegacyTriggerSystem
                 return (_world.Holders.IndexOf(e) is >= 0 and var h ? _world.Holders.At(h).Count : 0)
                     + (_world.Inventories.IndexOf(e) is >= 0 and var inv ? _world.Inventories.At(inv).Count : 0);
             case ReservedVariable.Race:
+                // The original numbers 1 European, 2 Arabian, 3 Asian: the classic ruleset lists its civilizations in that
+                // order (ADR 0211; before it the list was sorted and Race read 1 Arabian, 2 Asian, 4 European).
                 return _world.HasPlayer(identity.Owner) ? _world.Players[identity.Owner].Civilization + 1 : 0;
             case ReservedVariable.UnderFog:
                 return UnderFog(e) ? 1 : 0;

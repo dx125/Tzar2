@@ -177,18 +177,48 @@ public static class RulesetCompiler
         List<TechnologyDefinition> technologies = research.Technologies(technologyEntries, orderGates);
         List<UpgradeDefinition> upgrades = research.Upgrades(upgradeEntries);
         CombatRules combatRules = combat.Compile(types, context.PendingSpecs, research, researchIds, legacy, groups);
-        var civilizations = new SortedSet<string>(StringComparer.Ordinal);
+        // Civilizations (ADR 0211): ruleset.civilizations in its order, then ruleset.commonCivilization, then any other
+        // key the types or order gates use (sorted). Without the field: every key, sorted (rulesets before ADR 0211).
+        var used = new SortedSet<string>(StringComparer.Ordinal);
         foreach (EntityTypeDefinition t in types)
         {
             if (t.Traits.Civilization.Length > 0)
             {
-                civilizations.Add(t.Traits.Civilization);
+                used.Add(t.Traits.Civilization);
             }
         }
 
         foreach (OrderGate g in orderGates)
         {
-            civilizations.Add(g.Civilization);
+            used.Add(g.Civilization);
+        }
+
+        string common = settings.Scalar("ruleset", "commonCivilization") ?? Ruleset.DefaultCommonCivilization;
+        var civilizations = new List<string>();
+        if (settings.Field("ruleset", "civilizations") is { } listed)
+        {
+            foreach (string civ in RulesDocument.StringList(listed, settings.FieldSource("ruleset", "civilizations"), "ruleset.civilizations"))
+            {
+                if (civ == common || civilizations.Contains(civ))
+                {
+                    throw new RulesException(settings.FieldSource("ruleset", "civilizations"), listed.Line, $"ruleset.civilizations: '{civ}' is listed twice or is the common civilization");
+                }
+
+                civilizations.Add(civ);
+            }
+
+            if (used.Contains(common))
+            {
+                civilizations.Add(common);
+            }
+        }
+
+        foreach (string civ in used)
+        {
+            if (!civilizations.Contains(civ))
+            {
+                civilizations.Add(civ);
+            }
         }
 
         int hudMask = -1;
@@ -221,7 +251,8 @@ public static class RulesetCompiler
                 orderGates: orderGates,
                 hudResourceMask: hudMask,
                 world: WorldReader.Build(settings, gameplaySettings),
-                combat: combatRules);
+                combat: combatRules,
+                commonCivilization: common);
             return new CompiledRuleset(ruleset, diagnostics, warnings, legacyHash);
         }
         catch (ArgumentException ex)

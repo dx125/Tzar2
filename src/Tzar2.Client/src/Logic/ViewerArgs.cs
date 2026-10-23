@@ -24,6 +24,10 @@ public sealed record ViewerArgs
         + "  --editor-import <f>  a .wmp/.wcm the editor smoke test imports through the converter UI\n"
         + "  --autoplay <dir>     play a scripted skirmish, write screenshots into <dir> and quit\n"
         + "  --game-smoke         run a skirmish headless for --ticks ticks and quit (exit code 0 = OK)\n"
+        + "  --bench-render       the S2 render bench (ADR 0244): 512² map, 8 Hard AIs, 4,000 units; prints one RENDER-BENCH line\n"
+        + "  --bench-seconds <n>  seconds the render bench measures (default 120, after 15 s of warm-up)\n"
+        + "  --resolution <WxH>   window size of the render bench (default 2560x1440, the S2 resolution)\n"
+        + "  --fullscreen         the render bench in exclusive fullscreen at the monitor's resolution\n"
         + "  --mp-smoke           host a LAN match against a computer headless, then play its replay, and quit\n"
         + "  --resource-soak <f>  play --matches skirmishes of --ticks ticks each at top speed, back to the menu after each,\n"
         + "                       and write the engine's memory, object and video-memory counters over time to <f> (TSV)\n"
@@ -87,6 +91,18 @@ public sealed record ViewerArgs
 
     /// <summary>Matches of the resource soak.</summary>
     public int Matches { get; init; } = 3;
+
+    /// <summary>The S2 render bench (<c>--bench-render</c>, ADR 0244).</summary>
+    public bool BenchRender { get; init; }
+
+    /// <summary>Seconds the render bench measures.</summary>
+    public int BenchSeconds { get; init; } = 120;
+
+    /// <summary>The render bench's window size (default 2560 × 1440).</summary>
+    public (int Width, int Height) Resolution { get; init; } = (2560, 1440);
+
+    /// <summary>The render bench in exclusive fullscreen.</summary>
+    public bool Fullscreen { get; init; }
 
     /// <summary>Ticks of the game smoke test.</summary>
     public int Ticks { get; init; } = 300;
@@ -196,6 +212,31 @@ public sealed record ViewerArgs
                     break;
                 case "--game-smoke":
                     result = result with { GameSmoke = true, Skirmish = true };
+                    break;
+                case "--bench-render":
+                    result = result with { BenchRender = true };
+                    break;
+                case "--bench-seconds":
+                    result = result with { BenchSeconds = Number(Value(), 1, 3600, 120) };
+                    break;
+                case "--fullscreen":
+                    result = result with { Fullscreen = true };
+                    break;
+                case "--resolution":
+                    string? resolution = Value();
+                    string[] parts = (resolution ?? string.Empty).Split('x', 'X');
+                    if (parts.Length == 2
+                        && int.TryParse(parts[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int w)
+                        && int.TryParse(parts[1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int h)
+                        && w is >= 640 and <= 7680 && h is >= 480 and <= 4320)
+                    {
+                        result = result with { Resolution = (w, h) };
+                    }
+                    else if (resolution is not null)
+                    {
+                        errors.Add($"--resolution needs WIDTHxHEIGHT, not '{resolution}'");
+                    }
+
                     break;
                 case "--mp-smoke":
                     result = result with { MultiplayerSmoke = true };

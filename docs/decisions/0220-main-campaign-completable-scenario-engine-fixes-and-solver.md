@@ -97,12 +97,6 @@ captures beat it.
 
 * Goldens move: movement (allies, corner slide), the trigger engine (held units, cargo, scripted orders), scenario AI
   resignation and the ninja's locomotor (ruleset hash). They are re-pinned in the same PR.
-* `HumanVsAiTests` on Archipelagos plays 20 minutes, not 14 (2026-10-23). With the forests of ADR 0201 the
-  corner slide moves where the Hard AI parks its xebec (tile 26,37 instead of 32,41), out of range of the human's
-  woodcutters, and the 14-minute run saw no hit. Those shots were the only hits before 14 minutes: the first landed
-  wave hits at 17.2 minutes on `main` before the forests, 18.4 with them and 17.6 with this ADR. It has been
-  after 14 minutes since the original's bodies (WORLD-015, #126); before #126, from #118, it never hit within
-  24 minutes. This ADR does not delay it.
 * `t2 campaign run --survey` on the GOG install (2026-10-22): main campaign 19 of 19, tutorial 7 of 7 (STATUS M4).
 * Follow-ups: ninjas climbing walls; peasants gathering resource items (ReTzar program 0x1e), which would let
   `bigisland` deliver its gold without a tribute.
