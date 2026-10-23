@@ -36,7 +36,13 @@ public enum Difficulty
 /// <param name="Civilization">Civilization key of the ruleset (<c>euro</c>, <c>asia</c>, <c>arab</c>).</param>
 /// <param name="Controller">Human or computer.</param>
 /// <param name="Difficulty">Computer difficulty.</param>
-public sealed record PlayerSetup(byte Slot, string Civilization, ControllerKind Controller, Difficulty Difficulty = Difficulty.Normal);
+/// <param name="AiScript">The strategy of its computer player (<see cref="SkirmishAi.Scripts"/>; <c>""</c>: the match's).</param>
+/// <param name="Colour">Its colour ramp 0-7 (SHELL-016), or 255 for <see cref="Slot"/>'s.</param>
+public sealed record PlayerSetup(byte Slot, string Civilization, ControllerKind Controller, Difficulty Difficulty = Difficulty.Normal, string AiScript = "", byte Colour = 255)
+{
+    /// <summary>The colour ramp the kingdom is drawn with.</summary>
+    public int ColourIndex => Colour < 8 ? Colour : Slot;
+}
 
 /// <summary>
 /// A single-player skirmish (TDD §7.2 <c>Tzar2.Game</c>: match setup): the ruleset, the map, the kingdoms and the lobby
@@ -165,7 +171,7 @@ public sealed record MatchSetup
                 {
                     if (p.Controller == ControllerKind.Computer || (Multiplayer && p.Controller == ControllerKind.Human))
                     {
-                        list.Add(new Replay.ReplayAiProgram(p.Slot, Ai.ContentHash));
+                        list.Add(new Replay.ReplayAiProgram(p.Slot, Ai.ForScript(p.AiScript).ContentHash));
                     }
                 }
             }

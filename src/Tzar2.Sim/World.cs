@@ -232,7 +232,7 @@ public sealed partial class World
     {
         Identity identity = Identities.Get(entity);
         string civ = Ruleset.EntityTypes[identity.TypeId].Traits.Civilization;
-        return civ.Length > 0 && civ != "comm" ? civ : PlayerCivilization(identity.Owner);
+        return civ.Length > 0 && civ != Ruleset.CommonCivilization ? civ : PlayerCivilization(identity.Owner);
     }
 
     /// <summary>The civilization key of a player (empty for Nature or a ruleset without civilizations).</summary>
@@ -730,7 +730,7 @@ public sealed partial class World
         int fallback = 0;
         for (int i = 0; i < Ruleset.Civilizations.Count; i++)
         {
-            if (Ruleset.Civilizations[i] != "comm")
+            if (Ruleset.Civilizations[i] != Ruleset.CommonCivilization)
             {
                 fallback = i;
                 break;
@@ -748,7 +748,7 @@ public sealed partial class World
         {
             int owner = identities[i].Owner;
             string civ = Ruleset.EntityTypes[identities[i].TypeId].Traits.Civilization;
-            if (!HasPlayer(owner) || assigned[owner] || civ.Length == 0 || civ == "comm")
+            if (!HasPlayer(owner) || assigned[owner] || civ.Length == 0 || civ == Ruleset.CommonCivilization)
             {
                 continue;
             }

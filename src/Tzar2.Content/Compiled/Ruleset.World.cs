@@ -22,7 +22,9 @@ public sealed partial class Ruleset
             .Add(w.VictoryIntervalTicks).Add(Encoding.UTF8.GetBytes(w.DeathmatchStartingResources)).Add(w.CheatSmallResources)
             .Add(w.CheatLargeResources).Add(w.TavernRefreshMs).Add(w.MercenaryOffers).Add(w.HeroOffers).Add(w.MercenaryGroupMin)
             .Add(w.MercenaryGroupMax).Add(w.MercenaryCostPercent).Add(w.HeroCostPercent).Add(w.MercenaryLevel).Add(w.FameGroupBonus)
-            .Add(w.FameLevelBonus).Add(w.FameCostPercent).Add(w.Weather.Length);
+            .Add(w.FameLevelBonus).Add(w.FameCostPercent).Add(Encoding.UTF8.GetBytes(w.MercenariesTechnology))
+            .Add(Encoding.UTF8.GetBytes(w.HeroesTechnology)).Add(Encoding.UTF8.GetBytes(w.FameTechnology))
+            .Add(Encoding.UTF8.GetBytes(w.GamblingTechnology)).Add(Encoding.UTF8.GetBytes(w.LoanTechnology)).Add(w.Weather.Length);
         foreach (TerrainWeather t in w.Weather)
         {
             hasher.Add(Encoding.UTF8.GetBytes(t.TerrainSet)).Add((byte)t.Kind);

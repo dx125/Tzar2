@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Tzar2.Content.Compiled;
 
 namespace Tzar2.Content.Editing;
@@ -303,10 +304,10 @@ public sealed class Occupancy
 public static class Brushes
 {
     /// <summary>The six terrain brush sizes (corner square side), Appendix C / §18.2 "6 brush sizes".</summary>
-    public static readonly int[] TerrainSizes = [1, 2, 3, 5, 7, 9];
+    public static readonly ImmutableArray<int> TerrainSizes = [1, 2, 3, 5, 7, 9];
 
     /// <summary>The five tree brush radii in tiles (§18.2 "5 tree brushes").</summary>
-    public static readonly int[] TreeRadii = [0, 1, 2, 3, 5];
+    public static readonly ImmutableArray<int> TreeRadii = [0, 1, 2, 3, 5];
 
     /// <summary>The corners a terrain brush of size index <paramref name="size"/> covers around corner (<paramref name="cx"/>, <paramref name="cy"/>).</summary>
     public static IEnumerable<(int X, int Y)> Corners(int cx, int cy, int size)
