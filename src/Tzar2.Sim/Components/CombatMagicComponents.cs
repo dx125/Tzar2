@@ -284,7 +284,7 @@ public struct AreaEffect : IComponent
     /// <summary>Time left.</summary>
     public int RemainingMs;
 
-    /// <summary>Time accumulated toward the next pulse.</summary>
+    /// <summary>Time accumulated toward the next pulse (below zero while a delayed first pulse waits, SpellDefinition.DelayMs).</summary>
     public int PulseAccumMs;
 
     /// <summary>The caster (<c>EntityId.Value</c>; credited while alive).</summary>

@@ -56,6 +56,7 @@ gameplay:
   interactionTouchPx: 12              # UNVERIFIED (UNK-17/18): the same while still walking there: units go up to the wall
                                       # (owner play-test 2026-10-20: they stood a tile away from what they worked on)
   acquireIntervalMs: 200              # UNVERIFIED: target scan cadence of idle armed units
+  autoChaseLeashPercent: 200          # UNVERIFIED: an auto-acquired target further than this share of the sight radius is dropped
   nodeSearchRadiusTiles: 12           # UNVERIFIED (UNK-17): where a worker looks for the next node of a resource
   queueCapacity: 24                   # different items queued per building at once; any number of each (ADR 0180)
   constructionRefundPercent: 100      # BLD-020 (ReTzar, 0x41d6a8): all of it before any work, then half of what is left to build
@@ -613,6 +614,8 @@ combat:
   crusadeRestart: 4
   crusadeCeilingStep: 4
   crusadeCeilingMax: 36
+  crusadeGather: { 0: 12, 15: 8, 20: 4, 30: 1 }   # MAG-017: from minute -> one crusader per cathedral every N s
+  crusaderArrivalMs: 500              # MAG-016 (ReTzar, 0x439d50): between two crusaders arriving at the anchor
   crusadeAnchorRadiusTiles: 4         # TDD GAME-11: anchor <= 4 tiles from the cathedral
   # WAR-009 (ReTzar's reading of the original, 0x4ee780): after its blow a ghost curses the enemies around it, for free,
   # in 71 draws of 1001.
@@ -682,8 +685,8 @@ spell_spawnstonegolem: { new: true, Spell: { effect: summon, summon: comm.troll,
 spell_spawndragon: { new: true, Spell: { effect: summon, summon: comm.dragon, range: 4, cooldownMs: 5000, castMs: 1000 } }
 spell_spawncarpet: { new: true, Spell: { effect: summon, summon: comm.carpet, range: 4, cooldownMs: 5000, castMs: 1000 } }
 spell_spawnjin: { new: true, Spell: { effect: summon, summon: comm.jinn, range: 4, cooldownMs: 5000, castMs: 1000 } }
-spell_firerain: { new: true, Spell: { bookValue: 50, effect: areaDamage, amount: 10, radius: 2, durationMs: 5000, pulseMs: 1000, mana: 100, range: 14, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too
-spell_whirlpool: { new: true, Spell: { bookValue: 20, effect: areaDamage, affects: enemy, amount: 30, radius: 2, durationMs: 6000, pulseMs: 1000, mana: 50, range: 16, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"
+spell_firerain: { new: true, Spell: { bookValue: 50, effect: areaDamage, amount: 40, radius: 2, square: 1, scatter: 2, pulseMs: 170, delayMs: 375, durationMs: 3775, mana: 100, range: 14, cooldownMs: 5000, castMs: 500 } }   # manual: hits own units too; twenty fireballs of 40 on 5 x 5 tiles (ReTzar 0x472ddb, 0x450820)
+spell_whirlpool: { new: true, Spell: { bookValue: 20, effect: areaDamage, amount: 20, radius: 1, square: 1, pulseMs: 250, moveMs: 2000, durationMs: 30000, mana: 50, range: 16, cooldownMs: 5000, castMs: 500, targets: { locomotor: ship } } }   # manual: "to destroy ships"; 20 to every ship on 3 x 3 tiles each 250 ms, moving (ReTzar 0x4fd0e0)
 spell_flamebolt: { new: true, Spell: { bookValue: 30, effect: damage, amount: 60, mana: 50, range: 18, cooldownMs: 2000, castMs: 500, projectile: flame_bolt } }
 spell_turntostone: { new: true, Spell: { durationMaxMs: 300000, bookValue: 10, effect: stone, durationMs: 120000, mana: 50, range: 20, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }
 spell_berserk: { new: true, Spell: { radius: 2, bookValue: 30, effect: confuse, durationMs: 20000, mana: 70, range: 12, cooldownMs: 5000, castMs: 500, targets: { category: unit } } }   # manual: Confusion, "hostile to all"
