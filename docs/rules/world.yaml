@@ -72,3 +72,21 @@ rules:
     status: tested
     adr: [0188]
     note: A land unit's body is 7/16 of its object box (14 px for 32 x 32), so units keep 28 px apart and rest one to a tile, 32 px apart, as batch K measured; a compact group keeps its formation. The terrain keeps the old 7 px footprint, and units coming the other way squeeze past with it. A crowd around one target is not measured.
+  WORLD-016:
+    rule: Units of mutually allied kingdoms push idle ones aside and queue behind moving ones, as if they belonged to the same kingdom.
+    source: ['community ReTzar src/gameplay/movement.rs (the step code tests no owner)']
+    status: tested
+    adr: [0220]
+    note: The original's steps make no difference between kingdoms; the rebuild keeps enemies as hard obstacles (ADR 0025) and treats mutual allies as its own kingdom's units. Without it, heroes walking through an allied village bounce off its peasants.
+  WORLD-017:
+    rule: A unit that meets a blocked corner almost head-on slides past it at the step's full length, not only its tiny sideways part.
+    source: [community observed in the rebuild (galleons at a coast corner)]
+    status: tested
+    adr: [0220]
+    note: The threshold is 4x ratio (cross-component > 4 * along-component). UNVERIFIED against the original.
+  WORLD-018:
+    rule: Cliffs stop every ground unit except the ninja, who climbs over a band of one or two cliff tiles from ground to ground, never three.
+    source: ['owner 2026-10-22 (rajba: only ninjas reach the mage plateau; original footage https://youtu.be/CxPm7ja1ujI?t=955)', 'community ReTzar src/gameplay/pathing.rs (0x4a99a0)']
+    status: tested
+    adr: [0220]
+    note: The ninja has its own locomotor, climber, which is infantry everywhere else ("foot" in data and technologies includes it). A cliff tile is open to it when, along a row, a column or a diagonal, its cliff run is at most two tiles with climbable ground at both ends; the original decides per step, so walking along the top of a long band is possible here and not there. The original's ninja climbs walls too (ReTzar); walls are not done yet.
