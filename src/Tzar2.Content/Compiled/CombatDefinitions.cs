@@ -495,6 +495,16 @@ public sealed record CombatSettings
     /// <summary>Crusade: the highest ceiling of the gathered crusaders.</summary>
     public int CrusadeCeilingMax { get; init; } = 36;
 
+    /// <summary>
+    /// Crusade: how often each finished cathedral gathers a crusader, by the time played (MAG-017; ReTzar's reading of the
+    /// original, 0x422ca0): every 12 s from the start, 8 s from minute 15, 4 s from 20, every second from 30. Ascending
+    /// minutes, the first from 0.
+    /// </summary>
+    public ImmutableArray<CrusadeGatherStep> CrusadeGather { get; init; } = [new(0, 12), new(15, 8), new(20, 4), new(30, 1)];
+
+    /// <summary>Crusade: the time between two crusaders arriving at the anchor (500 ms; ReTzar's reading of the original, 0x439d50).</summary>
+    public int CrusaderArrivalMs { get; init; } = 500;
+
     /// <summary>Crusade: the anchor stands at most this far from the cathedral (TDD GAME-11: 4 tiles).</summary>
     public int CrusadeAnchorRadiusUnits { get; init; } = 4 * 2048;
 
@@ -663,6 +673,18 @@ public sealed record CombatSettings
             }
         }
 
+        if (CrusadeGather.IsDefaultOrEmpty || CrusadeGather[0].FromMinute != 0)
+        {
+            throw new ArgumentException("combat: the crusade gathering steps must start at minute 0.");
+        }
+
+        for (int i = 0; i < CrusadeGather.Length; i++)
+        {
+            Check(CrusadeGather[i].FromMinute, i == 0 ? 0 : CrusadeGather[i - 1].FromMinute + 1, 100_000);
+            Check(CrusadeGather[i].EverySeconds, 1, 3600);
+        }
+
+        Check(CrusaderArrivalMs, 1, 60_000);
         if (ExperienceSpeeds.IsDefault)
         {
             throw new ArgumentException("combat: the experience speeds must not be default.");
@@ -717,6 +739,9 @@ public sealed record CombatSettings
         }
     }
 }
+
+/// <summary>From <paramref name="FromMinute"/> of the time played, a cathedral gathers a crusader every <paramref name="EverySeconds"/> (<see cref="CombatSettings.CrusadeGather"/>).</summary>
+public sealed record CrusadeGatherStep(int FromMinute, int EverySeconds);
 
 /// <summary>An experience speed a technology gives (<see cref="CombatSettings.ExperienceSpeeds"/>).</summary>
 /// <param name="Technology">The technology id.</param>

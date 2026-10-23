@@ -299,6 +299,34 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-017")]
+    public void The_crusade_gathering_pace_is_data()
+    {
+        // Code review 2026-10 (item 16, for a fork): the steps were literals in MagicSystem. Classic keeps the original's.
+        Assert.Equal(
+            [new CrusadeGatherStep(0, 12), new CrusadeGatherStep(15, 8), new CrusadeGatherStep(20, 4), new CrusadeGatherStep(30, 1)],
+            Classic.Combat.CrusadeGather.ToArray());
+        Assert.Equal(500, Classic.Combat.CrusaderArrivalMs);
+
+        // A fork gathers every 3 s: two cathedrals bring 4 more in 6 s instead of 24.
+        Ruleset fork = ClassicWith("combat: { crusadeGather: { 0: 3 } }");
+        using var d = new SimDriver(TestMap(40, 20, Structure("euro.cathedral", 0, 4, 4), Structure("euro.cathedral", 0, 4, 12)), ruleset: fork);
+        d.World.Players[0].Resources[Resource("gold")] = 5000;
+        d.World.Players[0].Resources[Resource("food")] = 5000;
+        EntityId cathedral = OfType(d.World, "euro.cathedral").First();
+        d.Order(0, CommandKind.PreachCrusade, [cathedral], 11 * Tile, 6 * Tile);
+        d.RunUntil(() => OfType(d.World, "euro.crusader").Count() == 16, 400);
+        d.Order(0, CommandKind.DebugKill, [.. OfType(d.World, "euro.crusader")]);
+        d.RunUntil(() => d.World.Crusades.Count == 0, 20);
+        Assert.Equal(4, d.World.Players[0].Crusaders);
+        d.RunUntil(() => false, 6 * 20);
+        Assert.Equal(8, d.World.Players[0].Crusaders);
+
+        Assert.ThrowsAny<System.Exception>(() => ClassicWith("combat: { crusadeGather: { 5: 3 } }"));
+        Assert.ThrowsAny<System.Exception>(() => ClassicWith("combat: { crusadeGather: { 0: 3, 20: 2, 10: 1 } }"));
+    }
+
+    [Fact]
     [Trait("Rule", "FOG-005")]
     public void An_invisible_unit_that_drinks_a_potion_is_seen_again()
     {

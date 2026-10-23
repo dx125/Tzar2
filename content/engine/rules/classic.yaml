@@ -56,6 +56,7 @@ gameplay:
   interactionTouchPx: 12              # UNVERIFIED (UNK-17/18): the same while still walking there: units go up to the wall
                                       # (owner play-test 2026-10-20: they stood a tile away from what they worked on)
   acquireIntervalMs: 200              # UNVERIFIED: target scan cadence of idle armed units
+  autoChaseLeashPercent: 200          # UNVERIFIED: an auto-acquired target further than this share of the sight radius is dropped
   nodeSearchRadiusTiles: 12           # UNVERIFIED (UNK-17): where a worker looks for the next node of a resource
   queueCapacity: 24                   # different items queued per building at once; any number of each (ADR 0180)
   constructionRefundPercent: 100      # BLD-020 (ReTzar, 0x41d6a8): all of it before any work, then half of what is left to build
@@ -609,6 +610,8 @@ combat:
   crusadeRestart: 4
   crusadeCeilingStep: 4
   crusadeCeilingMax: 36
+  crusadeGather: { 0: 12, 15: 8, 20: 4, 30: 1 }   # MAG-017: from minute -> one crusader per cathedral every N s
+  crusaderArrivalMs: 500              # MAG-016 (ReTzar, 0x439d50): between two crusaders arriving at the anchor
   crusadeAnchorRadiusTiles: 4         # TDD GAME-11: anchor <= 4 tiles from the cathedral
   # WAR-009 (ReTzar's reading of the original, 0x4ee780): after its blow a ghost curses the enemies around it, for free,
   # in 71 draws of 1001.

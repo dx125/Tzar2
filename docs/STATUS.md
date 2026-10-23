@@ -246,6 +246,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         end-to-end test runs on a virtual clock (issue #179).
       * 2026-10-23: the worker pool waits for the jobs, not for the helpers it woke (ADR 0214). On the CI macOS runner
         under contention, the median fork had waited a 10 ms slice for idle helpers.
+      * 2026-10-23: the crusade gathering pace, the crusaders' arrival interval and the chase leash moved from code to
+        the ruleset with the same values; only the ruleset hash is re-pinned.
 
 ## Decision and event log
 

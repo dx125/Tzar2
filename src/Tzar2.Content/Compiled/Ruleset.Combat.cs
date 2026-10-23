@@ -190,6 +190,12 @@ public sealed partial class Ruleset
             hasher.Add(speed.Technology).Add(speed.Percent);
         }
 
+        hasher.Add(c.CrusaderArrivalMs).Add(c.CrusadeGather.Length);
+        foreach (CrusadeGatherStep step in c.CrusadeGather)
+        {
+            hasher.Add(step.FromMinute).Add(step.EverySeconds);
+        }
+
         foreach (HeroNames h in c.HeroNames)
         {
             hasher.Add(Encoding.UTF8.GetBytes(h.Civilization)).Add(h.Names.Length);
