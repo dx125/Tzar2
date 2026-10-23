@@ -24,7 +24,10 @@ public sealed record ViewerArgs
         + "  --autoplay <dir>     play a scripted skirmish, write screenshots into <dir> and quit\n"
         + "  --game-smoke         run a skirmish headless for --ticks ticks and quit (exit code 0 = OK)\n"
         + "  --mp-smoke           host a LAN match against a computer headless, then play its replay, and quit\n"
-        + "  --ticks <n>          ticks for --game-smoke and --mp-smoke (default 300)\n"
+        + "  --resource-soak <f>  play --matches skirmishes of --ticks ticks each at top speed, back to the menu after each,\n"
+        + "                       and write the engine's memory, object and video-memory counters over time to <f> (TSV)\n"
+        + "  --matches <n>        matches of --resource-soak (default 3)\n"
+        + "  --ticks <n>          ticks for --game-smoke, --mp-smoke and --resource-soak (default 300)\n"
         + "  --seed <n>           match seed\n"
         + "  --map-type <type>    random map type (random, archipelagos, island, continental, lakes, dry)\n"
         + "  --map-size <size>    random map size (tiny ... enormous), or a number: the test map's side in tiles\n"
@@ -71,6 +74,12 @@ public sealed record ViewerArgs
 
     /// <summary>Headless multiplayer smoke test: a LAN host, a match against a computer, then its replay (ADR 0168).</summary>
     public bool MultiplayerSmoke { get; init; }
+
+    /// <summary>Resource soak output file (TSV), or null.</summary>
+    public string? ResourceSoak { get; init; }
+
+    /// <summary>Matches of the resource soak.</summary>
+    public int Matches { get; init; } = 3;
 
     /// <summary>Ticks of the game smoke test.</summary>
     public int Ticks { get; init; } = 300;
@@ -180,6 +189,12 @@ public sealed record ViewerArgs
                     break;
                 case "--mp-smoke":
                     result = result with { MultiplayerSmoke = true };
+                    break;
+                case "--resource-soak":
+                    result = result with { ResourceSoak = Value(), Skirmish = true };
+                    break;
+                case "--matches":
+                    result = result with { Matches = Number(Value(), 1, 1000, 3) };
                     break;
                 case "--ticks":
                     result = result with { Ticks = Number(Value(), 1, 1_000_000, 300) };
