@@ -15,7 +15,7 @@ namespace Tzar2.Game.Session;
 /// <c>RenderSnapshot</c> (activity, loads, progress) so the client needs nothing else; when the sim's render snapshot
 /// grows these fields, this class becomes a copy of it.
 /// </summary>
-public static class FrameBuilder
+internal static class FrameBuilder
 {
     /// <summary>Fills <paramref name="frame"/>.</summary>
     /// <param name="frame">The frame to overwrite.</param>

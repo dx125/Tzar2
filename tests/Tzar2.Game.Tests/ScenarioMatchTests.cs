@@ -45,7 +45,7 @@ public sealed class ScenarioMatchTests
         b.Structure("euro.castle", 0, 4, 4);
         b.Structure("euro.castle", 1, 30, 20);
         ScenarioData plain = b.Scenario();
-        KingdomDef Kingdom(int number, PlayerType type) => new(number, $"k{number}", string.Empty, Civilization.European, type, true, 1234, 567, 89, 10, string.Empty, true, true, false, 0, 0,
+        KingdomDef Kingdom(int number, PlayerType type) => new(number, $"k{number}", string.Empty, "euro", type, true, 1234, 567, 89, 10, string.Empty, true, true, false, 0, 0,
             EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty, EquatableArray<string>.Empty);
         var scenario = new ScenarioData(
             plain.Properties with { PopulationLimit = 120 },

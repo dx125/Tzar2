@@ -38,7 +38,7 @@ public class PackageTests
             .Add(MapObject.AtTile("comm.tree", MapObject.Nature, 2, 2), null, out _));
         doc.Apply("Scenario", s => s.WithScenario(m => (m with { Properties = m.Properties with { Title = "The Ford", Author = "Tzar2 tests", Description = "Cross the river." } })
             .WithKingdom(ScenarioModel.DefaultKingdom(1) with { StartTileX = 4, StartTileY = 10, Gold = 200 })
-            .WithKingdom(ScenarioModel.DefaultKingdom(2) with { Civilization = Civilization.Asian })
+            .WithKingdom(ScenarioModel.DefaultKingdom(2) with { Civilization = "asia" })
             .WithDiplomacy(new DiplomacyDef(1, 2, Stance.Enemy, false, false, false))
             .AddEvent(new ObjectInAreaEvent("FarBank", new NamedObjects(new[] { hero }, Quantifier.All), new RectArea(14, 6, 20, 14)), out _)
             .AddEvent(new ObjectDestroyedEvent("HouseDown", new NamedObjects(new[] { house }, Quantifier.All)), out _)

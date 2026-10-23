@@ -180,7 +180,7 @@ public class ScenarioTests
             new MapProperties("Title", "Me", "Desc", GameType.Standard, VictoryCondition.DestroyCastle, 200, 2, true, false),
             2,
             ImmutableArray.Create(new ObjectInfo("hero", "The Hero", ObjectFlags.Persistent | ObjectFlags.Rescue, Level: 3), ObjectInfo.Plain with { Item = new ItemInfo("scroll", Text: "Hi", Image: new ResourceRef("user/s.png"), ScrollTimeMs: 10000, AutoClose: true) }),
-            ImmutableArray.Create(new KingdomDef(1, "K", "T", Civilization.Asian, PlayerType.HumanOrAi, true, 100, 200, 300, 400, "", true, false, true, 5, 6, ImmutableArray.Create("e_tower"), default, default, default, ImmutableArray.Create("te_x"))),
+            ImmutableArray.Create(new KingdomDef(1, "K", "T", "asia", PlayerType.HumanOrAi, true, 100, 200, 300, 400, "", true, false, true, 5, 6, ImmutableArray.Create("e_tower"), default, default, default, ImmutableArray.Create("te_x"))),
             ImmutableArray.Create(new DiplomacyDef(1, 2, Stance.Ally, true, false, true)),
             scope.Variables.ToImmutableArray(),
             events,

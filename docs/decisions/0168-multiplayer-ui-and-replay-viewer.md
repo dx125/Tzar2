@@ -57,3 +57,10 @@ replay viewer (seek, speed, perspective).
 * Not yet: map transfer through the relay (scenario maps in multiplayer), spectator slots (G-08), observer stats overlay,
   the original's chat-recipient dialog, location pings (Ctrl+Enter), authentic dialog layouts.
 * G-01 (immediate local feedback for orders under input delay) stays with the game screen's existing order markers.
+
+## Amendment (2026-10-23): the host's choice for a computer goes to the relay
+
+`NetworkMatch.SetComputerChoice` used to send nothing unless the host's own view of the lobby showed a computer in the
+slot. That view can lag one broadcast behind, for example when a player joins while the host adds a computer, so a
+host's click could be lost without a trace (issue #190). The client now sends the host's choice, and the relay checks
+the slot: it already refuses a wrong one with a notice, which the host sees as a system line.

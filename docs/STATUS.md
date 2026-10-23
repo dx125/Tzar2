@@ -165,7 +165,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 13. **Maintainer:** M7 (ADR 0240). Done: package, installer, first-run import, signing step, crash reports (ADRs
     0241–0243), the render bench (D6, ADR 0244). **Owner:** pick the crash server and the signing route (ADRs 0242,
     0243); run the sim bench and the installed build ([min-spec-tuning.md](release/min-spec-tuning.md), requests 1
-    and 2), and `--bench-render` on Windows.
+    and 2), and `--bench-render` on Windows (the command: min-spec-tuning.md, "The render bench").
 14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
     and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
     place themselves by the layout.
@@ -235,6 +235,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       Done since (log below): the nightly Benchmarks' gameplay rows re-recorded, the architecture tests' four gaps,
       the civilization list (ADR 0211, the `Race` bug), the asset caches cleared in the menu, the load off the main
       thread, rules decided by data instead of names in code.
+      * 2026-10-23: the host's choice for a computer goes to the relay (issue #190, ADR 0168 amendment). A stale lobby
+        view lost it silently.
       * 2026-10-23: the full state hash hashes its large arrays in 64 KiB chunks on the workers (ADR 0215): 0.56 → 0.18 ms
         on an s2 world. Only the full hashes are re-pinned.
 
@@ -246,6 +248,11 @@ the process decisions that have no ADR.
 * **2026-10-23 — Quitting, resigning and disconnecting ask first (SHELL-027).** The main menu's QUIT asks "Exit Tzar", the game
   menu's QUIT asks to resign alone and to disconnect in multiplayer, in the original's D_MSGWND window with its words
   (STRINGS.INI [q]); the model is `Tzar2.Game.Ui.Confirmations`. No hash changes.
+
+* **2026-10-23 — The client sees the session, its frames and the UI models only (ADR 0212; code review, item 16).**
+  * `GameSession.Simulation` and `Ai`, `FrameBuilder` and the match-preparation hook are now internal to Game and its
+    hosts.
+  * An architecture test checks the client contract's public surface.
 
 * **2026-10-23 — Network and probe tests poll until a deadline (issue #179).**
   * The server test now polls for the Welcome and the lobby listing.
