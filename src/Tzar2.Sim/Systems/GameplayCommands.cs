@@ -20,9 +20,6 @@ internal static class GameplayCommands
     /// <summary>Most units one <see cref="CommandKind.Train"/> may queue per producer.</summary>
     public const int MaxTrainCount = ProducerDefinition.MaxQueueCapacity;
 
-    /// <summary>How far from a coastal building (harbor) the water for its ships may be, in tiles.</summary>
-    public const int CoastReachTiles = 2;
-
     /// <summary>Clears what a unit was doing for its own reasons before a new order (worker task, fight).</summary>
     public static void ClearTasks(World world, EntityId unit, CombatMode newMode = CombatMode.None)
     {
@@ -847,10 +844,11 @@ internal static class GameplayCommands
 
         if (type.Traits.Placement == PlacementKind.Coast)
         {
-            // Water for ships within two tiles of the footprint (a shore tile between land and water may carry neither).
-            for (int y = tileY - CoastReachTiles; y < tileY + h + CoastReachTiles; y++)
+            // Water for ships within the type's reach of the footprint (a shore tile between land and water may carry neither).
+            int reach = type.Traits.CoastReachTiles;
+            for (int y = tileY - reach; y < tileY + h + reach; y++)
             {
-                for (int x = tileX - CoastReachTiles; x < tileX + w + CoastReachTiles; x++)
+                for (int x = tileX - reach; x < tileX + w + reach; x++)
                 {
                     if (map.IsPassable(Locomotor.Ship, x, y))
                     {
