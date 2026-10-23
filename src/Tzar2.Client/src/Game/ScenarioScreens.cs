@@ -300,3 +300,47 @@ public partial class StoryScreen : ScenarioDialog
         }
     }
 }
+
+/// <summary>
+/// A yes-or-no question (<c>D_MSGWND</c>): the title and the question centred in the art's boxes, Yes and No in its
+/// button slots (SHELL-027; <see cref="Tzar2.Game.Ui.Confirmations"/>). Enter answers yes, Esc no.
+/// </summary>
+public partial class ConfirmDialog : ScenarioDialog
+{
+    /// <summary>Creates the dialog.</summary>
+    public ConfirmDialog(UiAssets ui, Vector2I screen, Tzar2.Game.Ui.Confirmation question)
+        : base(ui, screen, "art/screens/d_msgwnd/back.t2img")
+    {
+        ArtBox title = DialogBoxes.QuestionTitle;
+        Text(new Vector2I(title.X + ((title.Width - Ui.Measure(question.Title, UiAssets.BoldFont)) / 2), title.Y), question.Title, UiAssets.BoldFont);
+        ArtBox body = DialogBoxes.QuestionText;
+        List<string> lines = Wrap(question.Question, body.Width);
+        for (int i = 0; i < Math.Min(lines.Count, body.Height / 14); i++)
+        {
+            Text(new Vector2I(body.X + ((body.Width - Ui.Measure(lines[i], UiAssets.SmallFont)) / 2), body.Y + (i * 14)), lines[i], UiAssets.SmallFont, Colors.White);
+        }
+
+        ArtBox yes = DialogBoxes.QuestionYes, no = DialogBoxes.QuestionNo;
+        Button(new Vector2I(yes.X, yes.Y), new Vector2I(yes.Width, yes.Height), "art/screens/d_msgwnd/btn.t2img", question.Yes, () => Answer(true));
+        Button(new Vector2I(no.X, no.Y), new Vector2I(no.Width, no.Height), "art/screens/d_msgwnd/btn.t2img", question.No, () => Answer(false));
+    }
+
+    /// <summary>Raised with the answer, once.</summary>
+    public event Action<bool>? Answered;
+
+    /// <inheritdoc/>
+    public override void _GuiInput(InputEvent @event)
+    {
+        if (@event is InputEventKey { Pressed: true, Keycode: Key.Escape or Key.Enter } key)
+        {
+            Answer(key.Keycode == Key.Enter);
+        }
+    }
+
+    private void Answer(bool yes)
+    {
+        Answered?.Invoke(yes);
+        Answered = null;
+        Close();
+    }
+}

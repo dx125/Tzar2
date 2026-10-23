@@ -433,8 +433,7 @@ public static class NewMap
             m = m with { Properties = m.Properties with { Title = name ?? generated.Map.Name } };
             foreach (StartPosition p in generated.Starts)
             {
-                Civilization civ = p.Civilization switch { "arab" => Civilization.Arabian, "asia" => Civilization.Asian, _ => Civilization.European };
-                m = m.UpdateKingdom(p.Player + 1, k => k with { Civilization = civ, StartTileX = p.TileX, StartTileY = p.TileY });
+                m = m.UpdateKingdom(p.Player + 1, k => k with { Civilization = p.Civilization, StartTileX = p.TileX, StartTileY = p.TileY });
             }
 
             return m;

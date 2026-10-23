@@ -83,8 +83,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0211, 2026-10-22) civilizations in the ruleset's order: the kingdoms' civilization indices, so the hashes.
     // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement (kingdoms 0 and 1 are allies here): the
     // stream and the final hash.
-    private const ulong GoldenHashStream = 0x68B2B58C6475AAF6UL;
-    private const ulong GoldenFinalFullHash = 0x60C02C75A1395F44UL;
+    // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
+    // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
+    private const ulong GoldenHashStream = 0x05AB4D4DEB89E38FUL;
+    private const ulong GoldenFinalFullHash = 0x2E60EAFBC3458F9BUL;
 
     private const int Ticks = 1600;
 

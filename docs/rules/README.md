@@ -96,7 +96,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 
 | Chapter | Rules | Tested | Implemented | Partial | Missing | Deviation | Unclear |
 |---|---|---|---|---|---|---|---|
-| [Computer opponents](ai.yaml) (AI) | 4 | 2 | 0 | 1 | 0 | 1 | 0 |
+| [Computer opponents](ai.yaml) (AI) | 4 | 3 | 0 | 0 | 0 | 1 | 0 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 10 | 4 | 0 | 0 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
@@ -112,20 +112,16 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 4 | 3 | 2 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
-| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 6 | 10 | 6 | 4 | 2 | 0 |
+| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 10 | 10 | 4 | 2 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 341 | 224 | 78 | 18 | 10 | 9 | 2 |
+| **All** | 341 | 229 | 78 | 15 | 8 | 9 | 2 |
 
 ## Not done yet
 
 Missing and partial rules.
-
-### Computer opponents
-
-* **AI-001** (partial): Each computer kingdom plays an AI script, chosen per player before the game. *Chosen per player in the multiplayer setup (SHELL-016); the random map screen cannot choose it yet (SHELL-010).* (ADR 0178, 0232)
 
 ### Selection, mouse and pointers
 
@@ -164,14 +160,10 @@ Missing and partial rules.
 
 * **SHELL-006** (partial): The setup of a custom map shows the players with their names and colours and lets each choose the European, Arabian or Asian civilization. *Only the player's own civilization can be chosen; the computer kingdoms keep the map's.*
 * **SHELL-007** (partial): On the setup of a custom map the map's own settings apply until USE MAP SETTINGS is unchecked; then the number of kingdoms, game type, victory condition, difficulty, starting resources, No Fog and Explore can be changed. *Each option has a "map" choice instead of the one checkbox; the number of kingdoms, the game type and the victory condition cannot be changed.*
-* **SHELL-010** (partial): The random map screen sets for each player an AI script (the small button by the name), the civilization, the number of kingdoms, the game type (Standard or Deathmatch), the victory condition, the difficulty, the starting resources, No Fog and Explore. *The AI script, the computer kingdoms' civilizations, the game type and the victory condition cannot be chosen.*
-* **SHELL-011** (partial): A random map has a size (Medium, Large, Huge, Enormous, Real World), a type (Random, Archipelagos, Dry, Island, Continental, Lakes), a terrain set (Grass, Desert, Summer, Winter) and map resources (Low, Normal, High), and may have a guarded town, animals, gateways, magic items and cliffs. *Size, type and terrain set are offered; map resources and the five options are not on the screen.*
-* **SHELL-012**: The settings of the random map screen are kept for the next time.
 * **SHELL-013**: The random map screen and the multiplayer options let each computer kingdom resign on its own (a flag) or never (a sword).
 * **SHELL-019** (partial): The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears. *The checks by the sound and music volumes turn them off, as in the options' art; CD audio is shown and stays off (Tzar2 plays MIDI); the hardware cursor is the system's pointer. When the menu bar appears is missing, the path depth is dropped on purpose (TDD ORIG-03), and where weather and day/night sit waits for the owner's screenshot (UI review question 3).*
 * **SHELL-021** (partial): The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game. *Instructions are missing.* (ADR 0187)
 * **SHELL-026**: The controls of the menu screens explain themselves in a hint line.
-* **SHELL-027**: Quitting, resigning and disconnecting ask for confirmation.
 
 ### Trade, tavern and loans
 
@@ -223,7 +215,7 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 6 not read, and of the names in the others 156 used, 5 restated by hand, 18 not needed and 33 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 6 not read, and of the names in the others 157 used, 5 restated by hand, 18 not needed and 32 to do.
 
 To do:
 
@@ -252,7 +244,6 @@ To do:
 * `LOCAL/STRINGS.INI` `defmsg`: the hint line's description of orders (HUD-001)
 * `LOCAL/STRINGS.INI` `msg`: the game's messages in the original's words (HUD-026)
 * `LOCAL/STRINGS.INI` `peons`: a working peasant named by its job, woodcutter, farmer, miner, builder (HUD-032)
-* `LOCAL/STRINGS.INI` `q`: the confirmations of quit, resign and disconnect (SHELL-027)
 * `LOCAL/STRINGS.INI` `wnd_message`: the message window's button (HUD-026)
 * `LOCAL/STRINGS.INI` `wnd_quests`: the quest window's texts (HUD-026)
 * `LOCAL/STRINGS2.INI` `chooseai`: the AI script dialog (SHELL-010)

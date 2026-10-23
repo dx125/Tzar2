@@ -34,7 +34,7 @@ public sealed class ProductionExecutor : IAiExecutor
 
         World world = context.World;
         AiCensusPlayer player = context.Player;
-        ref readonly PlayerState state = ref world.Players[context.Slot];
+        ref readonly PlayerState state = ref world.PlayersView[context.Slot];
         int room = state.PopulationCap - state.Population - player.QueuedPopulation;
         foreach (AiGoal goal in context.Goals)
         {

@@ -720,13 +720,25 @@ public sealed class Visibility
 
     // ----- hashing and snapshots ---------------------------------------------------------------------------------
 
-    // Hashes what snapshots store (capacity-independent: only non-empty stamps and records) plus the visible bitsets.
-    internal void AppendTo(StateHasher hasher)
+    // The bitsets for AppendTo, in its order (ADR 0215).
+    internal void CollectBulk(Snapshots.BulkHash bulk)
+    {
+        for (int p = 0; p < _players; p++)
+        {
+            bulk.Add(_explored[p]);
+            bulk.Add(_visible[p]);
+        }
+    }
+
+    // Hashes what snapshots store (capacity-independent: only non-empty stamps and records) plus the visible bitsets,
+    // whose bytes come from the bulk hash (CollectBulk, ADR 0215).
+    internal void AppendTo(StateHasher hasher, Snapshots.BulkHash bulk)
     {
         hasher.Add(_players);
         for (int p = 0; p < _players; p++)
         {
-            hasher.AddSpan<ulong>(_explored[p]).AddSpan<ulong>(_visible[p]);
+            bulk.AppendNext(hasher);
+            bulk.AppendNext(hasher);
             Ghost[] memory = _memory[p];
             for (int i = 0; i < memory.Length; i++)
             {

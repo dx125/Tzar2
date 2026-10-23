@@ -95,8 +95,11 @@ public sealed partial class World
     /// <summary>The match's RNG streams.</summary>
     public RngStreams Rng { get; internal set; }
 
-    /// <summary>Per-player state, by slot.</summary>
+    /// <summary>Per-player state, by slot (writable: the systems).</summary>
     public Span<PlayerState> Players => _players;
+
+    /// <summary>Per-player state, by slot, read-only (the AI and other readers; ADR 0213).</summary>
+    public ReadOnlySpan<PlayerState> PlayersView => _players;
 
     /// <summary>Events of the current tick (output, not state).</summary>
     public SimEventStream Events { get; } = new();

@@ -255,7 +255,7 @@ public sealed class NavalExecutor : IAiExecutor
             return;
         }
 
-        ref readonly PlayerState player = ref world.Players[context.Slot];
+        ref readonly PlayerState player = ref world.PlayersView[context.Slot];
         int room = player.PopulationCap - player.Population - context.Player.QueuedPopulation;
         int bestType = -1;
         long bestScore = long.MinValue;
@@ -552,7 +552,7 @@ public sealed class NavalExecutor : IAiExecutor
             free[k] = world.HolderCapacity(ship) - world.Holders.Get(ship).Count;
         }
 
-        ReadOnlySpan<Errand> errands = world.Errands.Components;
+        ReadOnlySpan<Errand> errands = world.Errands.View;
         for (int i = 0; i < errands.Length; i++)
         {
             if (errands[i].Kind == ErrandKind.Board && state.Transports.IndexOf(errands[i].Target) is >= 0 and var k)

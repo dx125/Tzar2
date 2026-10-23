@@ -51,6 +51,20 @@ public sealed class DiplomacyScreenTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "HUD-012")]
+    public void The_shared_victory_check_is_green_when_offered_and_red_when_not()
+    {
+        // COMMON CHK holds two frames: the green one on top, the red one under it (measured by its pixels).
+        var screen = new DiplomacyScreen(Frame(), 0);
+        Assert.False(screen.AlliedVictory);
+        Assert.Equal(DiplomacyScreen.CheckOffFrame, screen.AlliedVictoryFrame);
+        Assert.Equal(1, DiplomacyScreen.CheckOffFrame);
+        screen.AlliedVictory = true;
+        Assert.Equal(DiplomacyScreen.CheckOnFrame, screen.AlliedVictoryFrame);
+        Assert.Equal(0, DiplomacyScreen.CheckOnFrame);
+    }
+
+    [Fact]
     [Trait("Rule", "HUD-013")]
     public void The_tribute_screen_steps_amounts_within_the_stockpile_and_sends_them_all_at_once()
     {

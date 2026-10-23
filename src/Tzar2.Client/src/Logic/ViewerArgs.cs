@@ -53,8 +53,9 @@ public sealed record ViewerArgs
     /// <summary>An original install to import before anything else (<c>--import</c>), or null.</summary>
     public string? Import { get; init; }
 
-    /// <summary>Whether a scripted run (smoke, capture, autoplay) is the mode: nothing asks the player anything.</summary>
-    public bool IsAutomated => Smoke || CaptureDir is not null || AutoplayDir is not null || GameSmoke || MultiplayerSmoke || EditorSmoke;
+    /// <summary>Whether a scripted run (smoke, capture, autoplay, bench, soak) is the mode: nothing asks the player anything.</summary>
+    public bool IsAutomated => Smoke || CaptureDir is not null || AutoplayDir is not null || GameSmoke || MultiplayerSmoke
+        || EditorSmoke || UiSmoke || BenchRender || ResourceSoak is not null;
 
     /// <summary>SoundFont path given on the command line, or null.</summary>
     public string? SoundFont { get; init; }

@@ -86,6 +86,9 @@ public sealed class ComponentStore<T> : SparseSet<T>, IComponentStore
     /// <summary>The dense component data, parallel to <see cref="SparseSet{T}.Entities"/>, writable in place.</summary>
     public Span<T> Components => DenseSpan;
 
+    /// <summary>The dense component data, read-only (the AI and other readers; ADR 0213).</summary>
+    public ReadOnlySpan<T> View => DenseSpan;
+
     /// <inheritdoc />
     public bool RemoveEntity(EntityId entity) => Remove(entity);
 
@@ -145,6 +148,9 @@ public sealed class ColdComponentStore<T> : SparseSet<T>, IComponentStore
 
     /// <summary>The dense component data, parallel to <see cref="SparseSet{T}.Entities"/>.</summary>
     public ReadOnlySpan<T> Components => DenseSpan;
+
+    /// <summary>The dense component data (as <see cref="Components"/>; the name every store shares, ADR 0213).</summary>
+    public ReadOnlySpan<T> View => DenseSpan;
 
     /// <inheritdoc />
     public bool RemoveEntity(EntityId entity) => Remove(entity);
