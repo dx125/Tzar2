@@ -257,6 +257,12 @@ public struct FrameEntity
     /// <summary>Attack target of an armed entity, or none.</summary>
     public EntityId Target;
 
+    /// <summary>An item's power on the ground (a potion's health, a weapon's attack; the selection view's POWER, HUD-016), or 0.</summary>
+    public int ItemPower;
+
+    /// <summary>The node or site a worker works (a fishing boat's fish patch, HUD-025), or none; may be stale.</summary>
+    public EntityId WorkTarget;
+
     /// <summary>A structure out of sight, drawn as the local kingdom last saw it (GAME-12); its state may be stale.</summary>
     public bool Remembered;
 #pragma warning restore CA1051
@@ -425,6 +431,15 @@ public struct FramePlayer
 
     /// <summary>AI assistance the kingdom has asked for: bit 1 economy, bit 2 war (ADR 0183).</summary>
     public byte AiAssist;
+
+    /// <summary>What the tavern lends now (TRADE-008): the limit, a raise whose time has come included.</summary>
+    public int LoanLimit;
+
+    /// <summary>The loan to return, or 0.</summary>
+    public int LoanDue;
+
+    /// <summary>The resource of the loan taken (a resource type id), or -1 for none.</summary>
+    public int LoanResource;
 
     /// <summary>The kingdom's civilization key (the diplomacy screen's race icon), or empty.</summary>
     public string? Civilization;

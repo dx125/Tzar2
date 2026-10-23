@@ -142,6 +142,7 @@ public sealed class PresentationCatalog : ICardSource
     private readonly IniTable _sounds;
     private readonly IniTable _strings;
     private readonly IniTable _icons;
+    private readonly IniTable _hints;
     private readonly IniTable _equations;
     private readonly Dictionary<string, string[]> _keyClasses = new(StringComparer.OrdinalIgnoreCase);
 
@@ -161,6 +162,7 @@ public sealed class PresentationCatalog : ICardSource
         _sounds = Load("tables/data/sounds.ini.json");
         _strings = Load("tables/local/strings.ini.json");
         _icons = Load("tables/data/icons.ini.json");
+        _hints = Load("tables/local/help.ini.json");
         _equations = Load("tables/data/equations.ini.json");
         IniTable keys = Load("tables/data/keys.ini.json");
         if (keys.Section("Ctrl") is { } ctrl)
@@ -197,10 +199,10 @@ public sealed class PresentationCatalog : ICardSource
     /// <summary>The visual of type <paramref name="typeId"/>.</summary>
     public TypeVisual Type(ushort typeId) => _types[typeId];
 
-    /// <summary>A STRINGS.INI text, or <paramref name="fallback"/>.</summary>
+    /// <summary>A STRINGS.INI text (section <c>HELP</c>: a hint of LOCAL/HELP.INI, SHELL-026), or <paramref name="fallback"/>.</summary>
     public string Text(string section, string key, string fallback)
     {
-        string? s = _strings.Get(section, key);
+        string? s = string.Equals(section, "HELP", StringComparison.Ordinal) ? _hints.Get("HELP", key) : _strings.Get(section, key);
         if (string.IsNullOrEmpty(s))
         {
             return fallback;

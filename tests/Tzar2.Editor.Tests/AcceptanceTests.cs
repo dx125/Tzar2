@@ -211,12 +211,62 @@ public sealed class AcceptanceTests(ITestOutputHelper output)
         ? []
         : Directory.EnumerateFiles(root, "*.wcm", SearchOption.AllDirectories).Order(StringComparer.Ordinal);
 
+    // The base package to play on: TZAR2_PACKAGE, else one imported once per run from TZAR2_ORIGIN into a temporary
+    // folder, else none. The original's missions are never played on the synthetic ruleset (code review 2026-10): it lacks
+    // their types, so saa12's reinforcements failed 512 times and the outcomes meant nothing.
+    private static readonly Lazy<string?> BasePackage = new(FindOrImportPackage);
+
+    private static string? FindOrImportPackage()
+    {
+        if (Environment.GetEnvironmentVariable("TZAR2_PACKAGE") is { Length: > 0 } given)
+        {
+            return File.Exists(given) ? given : throw new InvalidOperationException($"TZAR2_PACKAGE is set but '{given}' does not exist.");
+        }
+
+        if (OriginPaths.Origin is not { } origin)
+        {
+            return null;
+        }
+
+        string folder = Path.Combine(Path.GetTempPath(), "tzar2-acceptance-" + Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            try
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+            catch (IOException)
+            {
+            }
+        };
+        Import.Pipeline.ImportResult result;
+        try
+        {
+            result = Import.Pipeline.ImportPipeline.Run(new Import.Pipeline.ImportOptions { OriginPath = origin, OutputDirectory = folder });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new InvalidOperationException($"Importing TZAR2_ORIGIN ('{origin}') for the campaigns failed: {ex.Message}", ex);
+        }
+
+        return result.Report.Succeeded && File.Exists(result.PackagePath)
+            ? result.PackagePath
+            : throw new InvalidOperationException($"Importing TZAR2_ORIGIN ('{origin}') for the campaigns failed:\n{result.Report.ToText(40)}");
+    }
+
     // Converts every campaign under root through the converter UI's session and checks §18.6's expectations.
     private void ConvertAndPlay(string root, bool play)
     {
-        // With the imported base package (TZAR2_PACKAGE) the original's own ruleset and AI are used, as in the game.
-        string? packagePath = Environment.GetEnvironmentVariable("TZAR2_PACKAGE");
-        using Content.Vfs.PackageSource? package = packagePath is { Length: > 0 } && File.Exists(packagePath) ? Content.Vfs.PackageSource.Open(packagePath) : null;
+        // The original's own ruleset and AI, as in the game (BasePackage). Without either variable only conversion runs,
+        // on the synthetic ruleset, and the output says so; playing needs the real rules.
+        string? packagePath = BasePackage.Value;
+        if (packagePath is null)
+        {
+            Assert.False(play, "Playing the original's campaigns needs the real rules: set TZAR2_PACKAGE or TZAR2_ORIGIN.");
+            output.WriteLine("No TZAR2_PACKAGE or TZAR2_ORIGIN: converting on the synthetic ruleset (types the original has and it lacks are reported as missing).");
+        }
+
+        using Content.Vfs.PackageSource? package = packagePath is null ? null : Content.Vfs.PackageSource.Open(packagePath);
         Ruleset ruleset = package is null ? Fixtures.Classic : RulesetLoader.Compile(package).Ruleset;
         SkirmishAi? ai = package is null ? null : SkirmishAi.Resolve(package);
         var session = new LegacyImportSession { Settings = new ImportSettings { Ruleset = ruleset } };
@@ -250,7 +300,12 @@ public sealed class AcceptanceTests(ITestOutputHelper output)
                     output.WriteLine($"{doc.State.Id}/{r.MapId}: {(r.Completed ? "completed" : "NOT completed")} ({r.Result}, {r.Assist}, {r.Ticks} ticks, {r.Faults} faults)");
                 }
 
-                Assert.True(report.Missions.All(r => r.Completed), string.Join("\n", report.Missions.Select(r => $"{r.MapId}: {r.Result} {r.Assist} {r.Trace}")));
+                // A map counts by its last attempt: a lost first try (no cheat assistance) is retried, as in `t2 campaign run`.
+                // A map that no attempt completes still fails; so does one whose first attempt did not even run.
+                IGrouping<string, MissionReport>[] maps = [.. report.Missions.GroupBy(r => r.MapId)];
+                Assert.True(maps.All(g => g.First().Ticks > 0), string.Join("\n", maps.Where(g => g.First().Ticks <= 0).Select(g => $"{g.Key}: the first attempt did not run")));
+                MissionReport[] last = [.. maps.Select(g => g.Last())];
+                Assert.True(last.All(r => r.Completed), string.Join("\n", last.Where(r => !r.Completed).Select(r => $"{r.MapId}: {r.Result} {r.Assist} {r.Trace}")));
             }
         }
     }

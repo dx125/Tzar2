@@ -420,13 +420,7 @@ public partial class GameScreen : Node
             RefreshCard();
         };
         _hud.EyePressed += ToggleInventory;
-        _hud.ChatPressed += () =>
-        {
-            if (!_session.IsMultiplayer)
-            {
-                Message(_catalog.Text("game_scr", "chat", "CHAT") + ": needs multiplayer");
-            }
-        };
+        _hud.ChatPressed += () => ShowChat(null);
     }
 
     /// <inheritdoc/>
@@ -647,21 +641,43 @@ public partial class GameScreen : Node
         return frame.DayMinute / 1440f;
     }
 
-    // F4 (GAME-17): every kingdom's score and statistics from the sim.
-    private void ShowScores()
+    // F4 (DIP-008): the clock, with the scoreboard of the kingdoms that play (not the passive one), redrawn when it changes.
+    private void ShowScores(GameFrame frame)
     {
-        if (_frame is null)
+        if (_hud is null)
         {
             return;
         }
 
-        for (int p = 0; p < _frame.Players.Length; p++)
+        string? clock = _scoreView == Tzar2.Game.Ui.ScoreView.None ? null : Tzar2.Game.Ui.ScoreBoard.Clock((long)frame.Tick.Value * frame.TickMs);
+        var lines = new List<(string, Color, bool)>();
+        if (_scoreView == Tzar2.Game.Ui.ScoreView.ScoresAndClock)
         {
-            KingdomStatistics k = _frame.Players[p].Statistics;
-            Message($"Kingdom {p + 1}: score {_frame.Players[p].Score}, trained {k.UnitsTrained}, killed {k.UnitsKilled}, lost {k.UnitsLost}, "
-                + $"built {k.BuildingsBuilt}, destroyed {k.BuildingsDestroyed}, gathered {k.GatheredTotal}");
+            var kingdoms = new List<Tzar2.Game.Ui.ScoreKingdom>();
+            for (int p = 0; p < frame.Players.Length && p < _session.Setup.Players.Count; p++)
+            {
+                if (_session.Setup.Players[p].Controller != ControllerKind.Passive)
+                {
+                    kingdoms.Add(new(p, frame.Players[p].Score, (int)((_session.Setup.Teams >> (p * 4)) & 0xF), frame.Players[p].Defeated));
+                }
+            }
+
+            foreach (Tzar2.Game.Ui.ScoreRow row in Tzar2.Game.Ui.ScoreBoard.Rows(kingdoms))
+            {
+                lines.Add((Tzar2.Game.Ui.ScoreBoard.Line(KingdomName(row.Kingdom), row), KingdomColour(row.Kingdom), row.Defeated));
+            }
+        }
+
+        string key = clock + "|" + string.Join("|", lines);
+        if (key != _scoresDrawn)
+        {
+            _scoresDrawn = key;
+            _hud.SetScores(clock, lines);
         }
     }
+
+    private Tzar2.Game.Ui.ScoreView _scoreView;
+    private string? _scoresDrawn;
 
     private WorldOptions Barred()
     {
@@ -1082,7 +1098,8 @@ public partial class GameScreen : Node
                 ShowMenu();
                 break;
             case GameAction.Scores:
-                ShowScores();
+                _scoreView = Tzar2.Game.Ui.ScoreBoard.Next(_scoreView);
+                _scoresDrawn = null;
                 break;
             case GameAction.Objectives when _session.Scenario is not null:
                 ShowQuests();
@@ -1224,7 +1241,7 @@ public partial class GameScreen : Node
                 _selection.SelectByExperience(OnScreen(), binding.Action == GameAction.SelectAboveAverageExperience);
                 break;
             case GameAction.Chat when !_session.IsMultiplayer:
-                Message("Chat: single player has no chat line yet."); // multiplayer: the overlay's chat line takes Enter
+                ShowChat(null); // multiplayer: the overlay's chat line takes Enter
                 break;
             case GameAction.UseDefaultItem when _frame is not null:
                 Submit(_card.UseDefaultItem(CardNow()));
@@ -1898,6 +1915,7 @@ public partial class GameScreen : Node
         _hud.SetClock(phase);
         _messages.RemoveAll(m => m.Until < _now);
         _hud.SetMessages(_messages.ConvertAll(m => m.Text));
+        ShowScores(frame);
         _hud.SetStatus(frame.Paused || _session.Paused ? _catalog.Text("viewmsg", "pause", "PAUSED") : frame.SpeedPercent != 100 ? $"Speed {frame.SpeedPercent} %" : string.Empty);
         _hud.SetSelection(Describe(frame));
         if (_now >= _minimapDue)
@@ -1922,7 +1940,7 @@ public partial class GameScreen : Node
         FrameEntity e = frame.Entities[lead];
         TypeVisual v = _catalog.Type(e.TypeId);
         EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
-        string owner = e.Owner < 8 ? SpritePage.PlayerNames[ColourOf(e.Owner)] : string.Empty;
+        string owner = e.Owner < 8 ? KingdomName(e.Owner) : string.Empty; // KINGDOM: its name (HUD-016)
         var strip = new List<StripItem>();
         _insideShown.Clear();
         if (_selection.Selected.Count > 1)
@@ -1981,9 +1999,15 @@ public partial class GameScreen : Node
             stats.Add(("art/icons/defence.t2img", HudText.Number(t.Defence)));
         }
 
-        if (t.GainsExperience && e.Owner == _session.LocalPlayer)
+        if (t.GainsExperience && t.LegacyClass != "trader")
         {
-            stats.Add(("art/icons/level.t2img", HudText.Number(e.Level))); // LEVEL (manual: The Selection View; HUD-016)
+            // LEVEL of every unit, the enemy's too, but traders (ReTzar's reading of the original's view; HUD-016).
+            stats.Add(("art/icons/level.t2img", HudText.Number(e.Level)));
+        }
+
+        if (e.ItemPower > 0)
+        {
+            stats.Add(("art/icons/power.t2img", HudText.Number(e.ItemPower))); // POWER of an item on the ground (HUD-016)
         }
 
         if (t.Category == EntityCategory.Building && t.Resistance > 0)
@@ -2344,6 +2368,43 @@ public partial class GameScreen : Node
     }
 
     // DIPLOMACY and F5 (HUD-012): the stances, the sharing and shared victory towards every other kingdom.
+    // The chat screen (HUD-011): CHAT, and Enter in single player, where its line takes the hm* codes (GAME-19).
+    private void ShowChat(Tzar2.Game.Ui.ChatScreen? keep)
+    {
+        if ((keep is null && GetNodeOrNull("Chat") is not null) || _hud is null || _frame is null)
+        {
+            return;
+        }
+
+        Tzar2.Game.Ui.ChatScreen model = keep ?? new Tzar2.Game.Ui.ChatScreen(_frame, _session.LocalPlayer, _chatTo);
+        var dialog = new ChatDialog(_ui, _hud.Layout.Size, model, _catalog.Text, KingdomName, KingdomColour);
+        var layer = new CanvasLayer { Layer = 3, Name = "Chat" };
+        layer.AddChild(dialog);
+        AddChild(layer);
+        dialog.Closed += () =>
+        {
+            _chatTo = model.To;
+            layer.QueueFree();
+        };
+        dialog.Reopen += () =>
+        {
+            RemoveChild(layer);
+            layer.QueueFree();
+            ShowChat(model);
+        };
+        dialog.Sent += (text, to, mask) =>
+        {
+            _chatTo = to;
+            layer.QueueFree();
+            if (!_session.SubmitChat(text, to, mask))
+            {
+                Message($"{KingdomName(_session.LocalPlayer)}: {text}"); // single player: nobody else reads it
+            }
+        };
+    }
+
+    private ChatTarget _chatTo;
+
     private void ShowDiplomacy()
     {
         if (GetNodeOrNull("Diplomacy") is not null || GetNodeOrNull("Tribute") is not null || _hud is null || _frame is null)

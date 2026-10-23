@@ -90,6 +90,7 @@ public partial class Hud : Control
     private readonly MinimapFrame _minimapFrame;
     private readonly Control _tooltip;
     private readonly TextureRect _status;
+    private readonly Control _scores;
     private CardSlot?[] _card = new CardSlot?[HudLayout.CardSlots];
     private CardDialog? _dialog;
     private int _clockFrame = -1;
@@ -188,6 +189,7 @@ public partial class Hud : Control
 
         _tooltip = Add(new Control { MouseFilter = MouseFilterEnum.Ignore, Visible = false });
         _status = Add(new TextureRect { Position = new Vector2(layout.View.End.X - 220, layout.View.Position.Y + 8), MouseFilter = MouseFilterEnum.Ignore });
+        _scores = Add(new Control { Position = layout.View.Position, Size = layout.View.Size, MouseFilter = MouseFilterEnum.Ignore });
     }
 
     /// <summary>The presentation catalog.</summary>
@@ -423,6 +425,54 @@ public partial class Hud : Control
         for (int i = 0; i < _messages.Length; i++)
         {
             _messages[i].Texture = i < lines.Count ? _ui.Text(lines[i], UiAssets.BoldFont, new Color(1f, 0.95f, 0.7f)) : null;
+        }
+    }
+
+    /// <summary>
+    /// F4's clock and scoreboard over the view (DIP-008; ReTzar 0x4f2903): the clock at its top right, the lines above
+    /// its bottom right corner, each ending 12 pixels left of the kingdom's colour square, a defeated one struck through,
+    /// in the small font with a shadow. Null clock: nothing.
+    /// </summary>
+    public void SetScores(string? clock, IReadOnlyList<(string Text, Color Colour, bool Struck)> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+        foreach (Node child in _scores.GetChildren())
+        {
+            child.QueueFree();
+        }
+
+        if (clock is null)
+        {
+            return;
+        }
+
+        Vector2 size = _scores.Size;
+        var text = new Color(1f, 0.95f, 0.7f);
+        void Shadowed(string s, Vector2 at)
+        {
+            if (_ui.Text(s, UiAssets.SmallFont, Colors.Black) is { } shadow && _ui.Text(s, UiAssets.SmallFont, text) is { } t)
+            {
+                var front = new TextureRect { Texture = t, Position = at, MouseFilter = MouseFilterEnum.Ignore };
+                front.AddChild(new TextureRect { Texture = shadow, Position = Vector2.One, ShowBehindParent = true, MouseFilter = MouseFilterEnum.Ignore });
+                _scores.AddChild(front);
+            }
+        }
+
+        Shadowed(clock, new Vector2(size.X - 80, 10));
+        float top = size.Y - 10 - (20 * lines.Count);
+        for (int k = 0; k < lines.Count; k++)
+        {
+            (string line, Color colour, bool struck) = lines[k];
+            float y = top + (20 * k);
+            int w = _ui.Measure(line, UiAssets.SmallFont);
+            float x = size.X - 22 - w;
+            Shadowed(line, new Vector2(x, y));
+            if (struck)
+            {
+                _scores.AddChild(new ColorRect { Position = new Vector2(x, y + 6), Size = new Vector2(w + 1, 1), Color = text, MouseFilter = MouseFilterEnum.Ignore });
+            }
+
+            _scores.AddChild(new ColorRect { Position = new Vector2(size.X - 20, y + 4), Size = new Vector2(4, 4), Color = colour, MouseFilter = MouseFilterEnum.Ignore });
         }
     }
 
