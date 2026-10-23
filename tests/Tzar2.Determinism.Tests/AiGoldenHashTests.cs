@@ -53,8 +53,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0211, 2026-10-22) civilizations in the ruleset's order (euro first): the kingdoms' civilization indices, so the
     // hashes only; the commands are the same.
     // (ADR 0220, 2026-10-22) movement: the corner slide, allies as friends: the hashes.
-    private const ulong GoldenHashStream = 0x52314D81BA14F900UL;
-    private const ulong GoldenFinalFullHash = 0x40692A075CC3B94BUL;
+    // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
+    private const ulong GoldenHashStream = 0xA31386B4A5B769F3UL;
+    private const ulong GoldenFinalFullHash = 0xEE0BBB0A0FFD9427UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

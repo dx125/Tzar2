@@ -237,6 +237,12 @@ public enum SpellEffect : byte
 
     /// <summary>The target obeys the caster's kingdom for a while, then goes back to its own (hypnosis; MAG-008).</summary>
     Hypnotize = 14,
+
+    /// <summary>
+    /// Binds the target's soul: a <see cref="SpellDefinition.Summon"/> soul item bound to it goes into the caster's
+    /// inventory (ITEM-010; ReTzar's reading of the original, 0x473403).
+    /// </summary>
+    SoulBind = 15,
 }
 
 /// <summary>What a spell is aimed at.</summary>
@@ -492,6 +498,15 @@ public sealed record CombatSettings
     /// <summary>The banshee scream follows a blow when a draw below <see cref="BansheeOutOf"/> is under this (71 of 1001).</summary>
     public int BansheeChance { get; init; }
 
+    /// <summary>
+    /// The types whose attacks are magic (mages, dragons, the Messiah, priests): the <see cref="AbilityFlags.MagicImmune"/>
+    /// Messiah takes no damage from them (WAR-010; ReTzar's reading of the original, damage category 3), ascending.
+    /// </summary>
+    public ImmutableArray<ushort> MagicAttackers { get; init; } = [];
+
+    /// <summary>The spell a soul item's berserk order casts on its bound unit (ITEM-010), or -1.</summary>
+    public int SoulBerserkSpell { get; init; } = -1;
+
     /// <summary>The range of the banshee scream's draw.</summary>
     public int BansheeOutOf { get; init; } = 1001;
 
@@ -569,6 +584,16 @@ public sealed record CombatSettings
         if (TournamentPupils.IsDefault)
         {
             throw new ArgumentException("combat: the tournament pupils must not be default.");
+        }
+
+        if (MagicAttackers.IsDefault)
+        {
+            throw new ArgumentException("combat: the magic attackers must not be default.");
+        }
+
+        foreach (ushort attacker in MagicAttackers)
+        {
+            Check(attacker, 0, typeCount - 1);
         }
 
         foreach (ushort pupil in TournamentPupils)

@@ -196,6 +196,9 @@ public struct ItemState : IComponent
 
     /// <summary>1 + the index of its image in <see cref="ItemDefinition.Looks"/>; 0: the type's own (ITEM-016).</summary>
     public byte Look;
+
+    /// <summary>A soul item's bound unit (<c>EntityId.Value</c>; ITEM-010), 0 = none.</summary>
+    public uint Bound;
 }
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091): an entity with this component only (no identity, never a target).</summary>

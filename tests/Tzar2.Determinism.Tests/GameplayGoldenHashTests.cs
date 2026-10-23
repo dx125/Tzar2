@@ -65,7 +65,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0252, 2026-10-22) caravans carry 500 (European) or 300 (Arabian) and load 8 infantry, trade with any market: the ruleset, the stream and the final hash.
     // (ADR 0253, 2026-10-22) Tournaments pools experience for the Asian pupils, Mastery teaches only lower levels: the ruleset hash only.
     // (ADR 0254, 2026-10-22) healing, freezing and raise dead skip machines and the bodiless: the ruleset hash only.
-    private const ulong GoldenRulesetHash = 0x96F7F8CD8E6F0A5CUL;
+    // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
+    private const ulong GoldenRulesetHash = 0xA7064BD6D6614889UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -76,8 +77,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0211, 2026-10-22) civilizations in the ruleset's order: the kingdoms' civilization indices, so the hashes.
     // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement (kingdoms 0 and 1 are allies here): the
     // stream and the final hash.
-    private const ulong GoldenHashStream = 0x2A7EDCB40DB710C6UL;
-    private const ulong GoldenFinalFullHash = 0x01A907B1F1097C9DUL;
+    private const ulong GoldenHashStream = 0x1BA03F9E580E7C3FUL;
+    private const ulong GoldenFinalFullHash = 0x450994E991EBABA8UL;
 
     private const int Ticks = 1600;
 

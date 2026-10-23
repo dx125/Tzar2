@@ -119,7 +119,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // and treats allies as friends.
             // crusaders, and the gathering technologies raise loads; then (ADR 0250) a synthetic Messiah shifts type ids
             // and status effects grow (layout 13).
-            Assert.Equal("C0044C14F6F7D53C", d.Hashes[^1].ToString("X16"));
+            // then: (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
+            Assert.Equal("4D9F28DD67B3B3F9", d.Hashes[^1].ToString("X16"));
         }
     }
 

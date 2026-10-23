@@ -26,7 +26,7 @@ internal sealed class CombatCompiler
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
-        "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils",
+        "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell",
     ];
 
     private static readonly string[] SpellTraits = ["Legacy", "Spell"];
@@ -145,7 +145,7 @@ internal sealed class CombatCompiler
             spells.Add(CompileSpell((ushort)i, _spellEntries[i], types, research));
         }
 
-        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Pupils(research) }, spells, _projectiles);
+        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells) }, spells, _projectiles);
     }
 
     private static EntityTypeDefinition WithTraits(EntityTypeDefinition t, EntityTraits traits)
@@ -419,6 +419,7 @@ internal sealed class CombatCompiler
             "curse" => SpellEffect.Curse,
             "kill" => SpellEffect.Kill,
             "hypnotize" => SpellEffect.Hypnotize,
+            "soulBind" => SpellEffect.SoulBind,
             _ => throw new RulesException(spell.Source, spell.Line, $"{Where("effect")}: unknown effect '{effectText}'"),
         };
         SpellTarget target = (Str("target") ?? DefaultTarget(effect)) switch
@@ -462,7 +463,7 @@ internal sealed class CombatCompiler
             }
         }
 
-        if (effect is SpellEffect.Summon or SpellEffect.RaiseDead or SpellEffect.Reveal && summon < 0)
+        if (effect is SpellEffect.Summon or SpellEffect.RaiseDead or SpellEffect.Reveal or SpellEffect.SoulBind && summon < 0)
         {
             throw new RulesException(spell.Source, spell.Line, $"{e.Key}: a {effectText} spell needs Spell.summon");
         }
@@ -502,16 +503,32 @@ internal sealed class CombatCompiler
         _ => "enemy",
     };
 
-    // combat.tournamentPupils: a type filter (classes, civ...) of the units Tournaments teaches.
-    private ImmutableArray<ushort> Pupils(ResearchCompiler research)
+    // A type filter (classes, civ...) of the combat settings: combat.tournamentPupils, combat.magicAttackers.
+    private ImmutableArray<ushort> Filter(ResearchCompiler research, string field)
     {
-        if (_settings.Field(Section, "tournamentPupils") is not { } node)
+        if (_settings.Field(Section, field) is not { } node)
         {
             return [];
         }
 
-        string source = _settings.FieldSource(Section, "tournamentPupils");
-        return research.Filter("combat.tournamentPupils", RulesetCompiler.Map(node, source, "combat.tournamentPupils"), source);
+        string source = _settings.FieldSource(Section, field);
+        return research.Filter("combat." + field, RulesetCompiler.Map(node, source, "combat." + field), source);
+    }
+
+    private int SpellOf(string field, List<SpellDefinition> spells)
+    {
+        if (_settings.Scalar(Section, field) is not { } key)
+        {
+            return -1;
+        }
+
+        int id = spells.FindIndex(s => s.Key == key);
+        if (id < 0)
+        {
+            _diagnostics.Add($"combat.{field}: unknown spell '{key}'");
+        }
+
+        return id;
     }
 
     private int Range(string field, int fallback, int min, int max)

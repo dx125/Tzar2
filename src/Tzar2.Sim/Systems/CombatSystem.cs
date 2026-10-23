@@ -542,6 +542,11 @@ public sealed class CombatSystem : ISimSystem
             return;
         }
 
+        if ((targetType.Traits.Abilities & AbilityFlags.MagicImmune) != 0 && world.Ruleset.Combat.MagicAttackers.AsSpan().BinarySearch(hit.AttackerType) >= 0)
+        {
+            return; // the Messiah takes no magic: mages, dragons, priests (WAR-010)
+        }
+
         int dealt = Damage(world, hit, targetType);
         if (world.Holders.Count != 0 && world.Holders.IndexOf(hit.Target) is >= 0 and var hs && world.Holders.At(hs).Count > 0 && targetType.Traits.Holder is { } holder)
         {

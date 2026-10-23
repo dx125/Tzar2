@@ -377,7 +377,7 @@ public sealed class MagicSystem : ISimSystem
             return;
         }
 
-        if (s.Effect is SpellEffect.Freeze or SpellEffect.Stone or SpellEffect.Confuse or SpellEffect.Hypnotize && IsMagicImmune(world, target))
+        if (s.Effect is SpellEffect.Freeze or SpellEffect.Stone or SpellEffect.Confuse or SpellEffect.Hypnotize or SpellEffect.Kill && IsMagicImmune(world, target))
         {
             return; // the Messiah (WAR-010; ReTzar's reading of the original, 0x4ef200)
         }
@@ -467,6 +467,9 @@ public sealed class MagicSystem : ISimSystem
                 break;
             }
 
+            case SpellEffect.SoulBind:
+                BindSoul(world, caster, target, s);
+                break;
             case SpellEffect.Experience:
                 if (world.Experiences.IndexOf(target) is >= 0 and var xp)
                 {
@@ -487,7 +490,8 @@ public sealed class MagicSystem : ISimSystem
     // Spell damage: the amount, without defence or bonuses (UNVERIFIED, UNK-26); stone and units inside holders are immune.
     private static void Damage(World world, EntityId caster, byte owner, EntityId target, int amount, List<Death> deaths)
     {
-        if (amount <= 0 || world.IsStone(target) || world.IsHeld(target) || world.IsInvulnerable(world.Identities.Get(target).Owner))
+        if (amount <= 0 || world.IsStone(target) || world.IsHeld(target) || world.IsInvulnerable(world.Identities.Get(target).Owner)
+            || IsMagicImmune(world, target)) // spells are magic: the Messiah takes none (WAR-010)
         {
             return;
         }
@@ -521,6 +525,57 @@ public sealed class MagicSystem : ISimSystem
         return world.Experiences.IndexOf(target) is >= 0 and var t && world.Experiences.At(t).Level < teacher;
     }
 
+    // Soul Bind (ITEM-010; ReTzar's reading of the original, 0x473403): the target keeps its owner; a soul item bound to it
+    // goes into the caster's inventory, if there is room.
+    private static void BindSoul(World world, EntityId caster, EntityId target, SpellDefinition s)
+    {
+        if (!world.Entities.IsAlive(caster) || world.Inventories.IndexOf(caster) is not (>= 0 and var inv)
+            || world.Inventories.At(inv).Count >= world.TypeOf(caster).Traits.InventorySlots || world.Entities.RemainingCapacity < 1)
+        {
+            return;
+        }
+
+        Position at = world.Positions.Get(caster);
+        EntityId gem = world.Spawn((ushort)s.Summon, Content.Compiled.MapObject.Nature, at.X, at.Y);
+        world.Items.Get(gem).Bound = target.Value;
+        world.PutInInventory(caster, gem);
+        world.Events.Emit(new SimEvent(SimEventKind.Summoned, world.Identities.Get(caster).Owner, gem, caster.Index, 0, s.Summon));
+    }
+
+    /// <summary>
+    /// A soul item's orders (ITEM-010; ReTzar's reading of the original, 0x465340): item_kill strikes its bound unit with
+    /// 10,000 magic damage, item_berserk casts <c>combat.soulBerserkSpell</c>'s confusion on it. The item stays.
+    /// </summary>
+    internal static bool SoulOrder(World world, EntityId holder, EntityId gem, bool berserk)
+    {
+        EntityId bound = EntityId.FromValue(world.Items.Get(gem).Bound);
+        if (world.Items.Get(gem).Bound == 0 || !world.Entities.IsAlive(bound) || !world.Healths.Has(bound))
+        {
+            return false;
+        }
+
+        byte owner = world.Identities.Get(holder).Owner;
+        if (berserk)
+        {
+            int spell = world.Ruleset.Combat.SoulBerserkSpell;
+            if (spell >= 0 && !IsMagicImmune(world, bound))
+            {
+                SpellDefinition s = world.Ruleset.Spells[spell];
+                int tickMs = world.Config.TickLengthMilliseconds;
+                ref StatusEffects st = ref StatusOf(world, bound);
+                st.ConfuseUntil = world.Tick.Value + Math.Max(1, (s.DurationMs + tickMs - 1) / tickMs);
+                world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(bound).Owner, bound, holder.Index, 0, s.Id));
+            }
+
+            return true;
+        }
+
+        var deaths = new List<Death>(1);
+        Damage(world, holder, owner, bound, 10_000, deaths);
+        CombatSystem.ProcessDeaths(world, deaths);
+        return true;
+    }
+
     /// <summary>Whether lasting spells do not take on <paramref name="unit"/> (the Messiah; WAR-010).</summary>
     internal static bool IsMagicImmune(World world, EntityId unit)
         => (world.TypeOf(unit).Traits.Abilities & AbilityFlags.MagicImmune) != 0;
@@ -547,11 +602,12 @@ public sealed class MagicSystem : ISimSystem
                 continue;
             }
 
-            world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(e).Owner, e, caster.Index, 0, s.Id));
             if (IsMagicImmune(world, e))
             {
                 continue;
             }
+
+            world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(e).Owner, e, caster.Index, 0, s.Id));
 
             ref StatusEffects st = ref StatusOf(world, e);
             st.CurseUntil = until;

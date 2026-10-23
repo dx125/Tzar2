@@ -410,8 +410,10 @@ internal static class CombatMagicCommands
                 case ItemKind.Scroll:
                     world.Events.Emit(new SimEvent(SimEventKind.ItemUsed, command.Player, item, unit.Index, 0, world.Identities.Get(item).TypeId));
                     return null;
-                case ItemKind.SpellBook:
                 case ItemKind.Soul:
+                    // ITEM-010: Arg1 0 = item_kill, 1 = item_berserk, on the bound unit; an unbound soul does nothing.
+                    return MagicSystem.SoulOrder(world, unit, item, command.Arg1 == 1) ? null : CommandRejection.InvalidArgument;
+                case ItemKind.SpellBook:
                     if (world.ItemSpell(item) is not (>= 0 and var spell))
                     {
                         return CommandRejection.InvalidArgument;

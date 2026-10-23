@@ -169,7 +169,10 @@ public sealed class CommandCard
             }
 
             var button = new CardButton("item", '\0', CardAction.InventoryItem, h.Slot.ToString(CultureInfo.InvariantCulture), _source.ItemIcon(h.TypeId, h.Look), name);
-            slots.Add(new CardSlot(button, true, h.IsDefault, string.Empty, Description: "Left click: use (Ctrl: at once); right click: drop; Alt + click: the default item"));
+            string how = IsSoul(h.TypeId)
+                ? "Left click: kill the bound unit (Ctrl: send it berserk); right click: drop; Alt + click: the default item"
+                : "Left click: use (Ctrl: at once); right click: drop; Alt + click: the default item";
+            slots.Add(new CardSlot(button, true, h.IsDefault, string.Empty, Description: how));
         }
 
         return slots;
@@ -718,6 +721,9 @@ public sealed class CommandCard
     // An item of the open inventory (HUD-018): right click drops it, Alt + click makes it the default item, a click uses
     // it: an item whose spell needs a target waits for a click on the world (the mode's argument is slot + 1), unless
     // Ctrl makes it instant.
+    private bool IsSoul(ushort typeId)
+        => typeId < _rules.EntityTypes.Count && _rules.EntityTypes[typeId].Traits.Item is { Kind: ItemKind.Soul };
+
     private CardPress PressItem(CardContext context, int slot, bool right, bool alt, bool ctrl)
     {
         var list = new CommandList();
@@ -734,12 +740,22 @@ public sealed class CommandCard
         }
 
         int spell = -1;
+        bool soul = false;
         foreach (FrameHeld h in context.Frame.Helds)
         {
             if (h.IsItem && h.Holder == _carrier.Value && h.Slot == slot)
             {
                 spell = h.Spell;
+                soul = IsSoul(h.TypeId);
             }
+        }
+
+        if (soul)
+        {
+            // ITEM-010 (MENU.INI [item_soul] item_kill K, item_berserk B): a click kills the bound unit, Ctrl + click
+            // sends it berserk.
+            list.Add(CommandKind.UseItem, [_carrier], target: _carrier, arg0: slot, arg1: ctrl ? 1 : 0);
+            return new CardPress(Commands: list);
         }
 
         if (!ctrl && spell >= 0 && spell < _rules.Spells.Count && _rules.Spells[spell].Target != SpellTarget.Self)

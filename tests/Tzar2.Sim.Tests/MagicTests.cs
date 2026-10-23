@@ -319,32 +319,55 @@ public class MagicTests
     }
 
     [Fact]
-    [Trait("Rule", "MAG-014")]
-    public void A_soul_kills_a_unit_but_not_a_hero()
+    [Trait("Rule", "ITEM-010")]
+    public void Soul_bind_puts_a_bound_soul_in_the_bag_which_sends_its_unit_berserk_or_kills_it_and_goes_with_it()
     {
+        // ReTzar's reading of the original (0x473403, 0x465340, 0x4e219f): a hero dies like any unit.
         using var d = new SimDriver(
-            TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("comm.item_soul", MapObject.Nature, 5, 4), Unit("comm.item_soul", MapObject.Nature, 5, 5), Unit("euro.footman", 1, 6, 4), Unit("euro.knight", 1, 6, 6)),
+            TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("comm.item_magic", MapObject.Nature, 5, 4), Unit("euro.knight", 1, 8, 4)),
             ruleset: Classic);
         EntityId footman = OfType(d.World, "euro.footman", 0).Single();
-        EntityId victim = OfType(d.World, "euro.footman", 1).Single();
+        EntityId book = OfType(d.World, "comm.item_magic").Single();
         EntityId hero = OfType(d.World, "euro.knight").Single();
         d.Order(0, CommandKind.SetStance, [footman], arg0: (int)CombatStance.HoldFire);
-        d.Order(1, CommandKind.SetStance, [victim, hero], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [hero], arg0: (int)CombatStance.HoldFire);
         d.World.Experiences.Get(hero).Level = (ushort)d.World.Ruleset.Combat.HeroLevel;
         d.World.Experiences.Get(hero).Flags = ExperienceFlags.Hero;
-        foreach (EntityId soul in OfType(d.World, "comm.item_soul").ToArray())
-        {
-            d.Order(0, CommandKind.PickItem, [footman], target: soul);
-            d.RunUntil(() => d.World.IsHeld(soul), 200);
-        }
+        d.Order(0, CommandKind.PickItem, [footman], target: book);
+        d.RunUntil(() => d.World.IsHeld(book), 200);
+        d.World.Items.Get(book).Spell = (ushort)(Spell(d.World.Ruleset, "spell_soulbind") + 1);
+        Position at = d.PositionOf(hero);
+        d.Order(0, CommandKind.UseItem, [footman], at.X, at.Y, hero, arg0: 0);
+        d.RunUntil(() => OfType(d.World, "comm.item_soul").Any(), 400);
+        EntityId soul = OfType(d.World, "comm.item_soul").Single();
+        Assert.Equal(hero.Value, d.World.Items.Get(soul).Bound);
+        Assert.Equal(footman.Value, d.World.Helds.Get(soul).Holder);
+        Assert.Equal(1, d.World.Identities.Get(hero).Owner); // it keeps its owner
+        int slot = d.World.Inventories.Get(footman).Count - 1;
 
-        d.Order(0, CommandKind.UseItem, [footman], target: hero, arg0: 0);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
-        Assert.True(d.World.Entities.IsAlive(hero)); // heroes are immune to murder (UNVERIFIED)
-        Assert.Equal(1, d.World.Inventories.Get(footman).Count); // a soul is used once
-        d.RunUntil(() => false, 200); // murder's cooldown
-        d.Order(0, CommandKind.UseItem, [footman], target: victim, arg0: 0);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 400);
-        Assert.False(d.World.Entities.IsAlive(victim));
+        d.Order(0, CommandKind.UseItem, [footman], target: footman, arg0: slot, arg1: 1); // item_berserk
+        d.Step();
+        Assert.True(d.World.IsConfused(hero));
+        Assert.True(d.World.Entities.IsAlive(soul)); // the soul stays
+
+        d.Order(0, CommandKind.UseItem, [footman], target: footman, arg0: slot, arg1: 0); // item_kill
+        d.Step();
+        Assert.False(d.World.Entities.IsAlive(hero));
+        Assert.False(d.World.Entities.IsAlive(soul)); // it goes with its unit
+    }
+
+    [Fact]
+    [Trait("Rule", "ITEM-010")]
+    public void A_soul_bound_to_nobody_does_nothing()
+    {
+        using var d = new SimDriver(TestMap(24, 12, Unit("euro.footman", 0, 4, 4), Unit("comm.item_soul", MapObject.Nature, 5, 4)), ruleset: Classic);
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId soul = OfType(d.World, "comm.item_soul").Single();
+        d.Order(0, CommandKind.PickItem, [footman], target: soul);
+        d.RunUntil(() => d.World.IsHeld(soul), 200);
+        d.Order(0, CommandKind.UseItem, [footman], target: footman, arg0: 0);
+        d.Step();
+        Assert.Contains(CommandRejection.InvalidArgument, d.Rejections());
+        Assert.True(d.World.Entities.IsAlive(soul));
     }
 }
