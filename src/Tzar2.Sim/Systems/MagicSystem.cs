@@ -337,9 +337,19 @@ public sealed class MagicSystem : ISimSystem
         SpellDefinition s = world.Ruleset.Spells[spell];
         int tick = world.Tick.Value;
         int tickMs = world.Config.TickLengthMilliseconds;
-        int until = tick + Math.Max(1, (s.DurationMs + tickMs - 1) / tickMs);
+        int durationMs = s.DurationMaxMs > s.DurationMs ? s.DurationMs + world.Rng.Misc.NextInt(s.DurationMaxMs - s.DurationMs + 1) : s.DurationMs;
+        int until = tick + Math.Max(1, (durationMs + tickMs - 1) / tickMs);
         switch (s.Effect)
         {
+            case SpellEffect.Bless or SpellEffect.Freeze or SpellEffect.Confuse when s.RadiusUnits > 0:
+                if (world.Entities.IsAlive(target) && world.Positions.Has(target))
+                {
+                    Position c = world.Positions.Get(target);
+                    (x, y) = (c.X, c.Y);
+                }
+
+                StatusAround(world, s, caster, owner, x, y, until, deaths);
+                return;
             case SpellEffect.Summon:
                 Summon(world, caster, owner, s, x, y);
                 return;
@@ -397,14 +407,11 @@ public sealed class MagicSystem : ISimSystem
             }
 
             case SpellEffect.Bless:
-            {
-                ref StatusEffects st = ref StatusOf(world, target);
-                st.BlessUntil = until;
-                st.BlessPercent = (short)Math.Min(s.Amount, 1000);
-                break;
-            }
-
             case SpellEffect.Freeze:
+            case SpellEffect.Confuse:
+                ApplyStatus(world, s, caster, owner, target, until, deaths);
+                break;
+
             case SpellEffect.Stone:
             {
                 ref StatusEffects st = ref StatusOf(world, target);
@@ -427,19 +434,6 @@ public sealed class MagicSystem : ISimSystem
             {
                 ref StatusEffects st = ref StatusOf(world, target);
                 st.CloakUntil = s.DurationMs > 0 ? until : tick + (3_600_000 / tickMs); // "until it attacks": an hour at most (fits the restore bound)
-                break;
-            }
-
-            case SpellEffect.Confuse:
-            {
-                ref StatusEffects st = ref StatusOf(world, target);
-                st.ConfuseUntil = until;
-                if (world.Combats.IndexOf(target) is >= 0 and var cb)
-                {
-                    world.Combats.At(cb).Target = 0;
-                    world.Combats.At(cb).Mode = CombatMode.None;
-                }
-
                 break;
             }
 
@@ -575,6 +569,80 @@ public sealed class MagicSystem : ISimSystem
         Damage(world, holder, owner, bound, 10_000, deaths);
         CombatSystem.ProcessDeaths(world, deaths);
         return true;
+    }
+
+    // Blessing, freezing and confusion on the units around the point, within the spell's radius counted in tiles on the
+    // larger axis (ReTzar's reading of the original: bless ±4 on units not hostile to the caster, 0x4e5809; freeze ±3 on
+    // every unit, 0x432590; confusion ±2 on every unit but the caster, 0x473250).
+    private static void StatusAround(World world, SpellDefinition s, EntityId caster, byte owner, int x, int y, int until, List<Death> deaths)
+    {
+        long r = s.RadiusUnits;
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        Span<uint> hit = stackalloc uint[256];
+        int n = 0;
+        for (int i = 0; i < ids.Length && n < hit.Length; i++)
+        {
+            EntityId e = ids[i];
+            Identity identity = world.Identities.Get(e);
+            if (e == caster || !world.Entities.IsAlive(e) || world.Ruleset.EntityTypes[identity.TypeId].Traits.Category != EntityCategory.Unit
+                || !s.AffectsType(identity.TypeId) || world.IsHeld(e) || world.Healths.IndexOf(e) is not (>= 0 and var h) || world.Healths.At(h).Current <= 0)
+            {
+                continue;
+            }
+
+            Position p = world.Positions.Get(e);
+            if (Math.Max(Math.Abs((long)p.X - x), Math.Abs((long)p.Y - y)) > r
+                || (s.Effect == SpellEffect.Bless && identity.Owner != owner && world.MayAttack(owner, e)))
+            {
+                continue;
+            }
+
+            hit[n++] = e.Value;
+        }
+
+        for (int k = 0; k < n; k++)
+        {
+            ApplyStatus(world, s, caster, owner, EntityId.FromValue(hit[k]), until, deaths);
+        }
+    }
+
+    // One unit blessed (+amount attack), frozen (stopped, no defence, up to amount damage short of death) or confused.
+    private static void ApplyStatus(World world, SpellDefinition s, EntityId caster, byte owner, EntityId target, int until, List<Death> deaths)
+    {
+        if (s.Effect != SpellEffect.Bless && IsMagicImmune(world, target))
+        {
+            return;
+        }
+
+        world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(target).Owner, target, caster.Index, 0, s.Id));
+        ref StatusEffects st = ref StatusOf(world, target);
+        switch (s.Effect)
+        {
+            case SpellEffect.Bless:
+                st.BlessUntil = until;
+                st.BlessPercent = (short)Math.Min(s.Amount, 1000);
+                break;
+            case SpellEffect.Freeze:
+                st.FrozenUntil = Math.Max(st.FrozenUntil, until);
+                GameplayCommands.ClearTasks(world, target);
+                world.StopCasting(target);
+                Interaction.Halt(world, target);
+                if (s.Amount > 0 && world.Healths.Get(target).Current > 1)
+                {
+                    Damage(world, caster, owner, target, Math.Min(s.Amount, world.Healths.Get(target).Current - 1), deaths);
+                }
+
+                break;
+            case SpellEffect.Confuse:
+                st.ConfuseUntil = until;
+                if (world.Combats.IndexOf(target) is >= 0 and var cb)
+                {
+                    world.Combats.At(cb).Target = 0;
+                    world.Combats.At(cb).Mode = CombatMode.None;
+                }
+
+                break;
+        }
     }
 
     /// <summary>Whether lasting spells do not take on <paramref name="unit"/> (the Messiah; WAR-010).</summary>

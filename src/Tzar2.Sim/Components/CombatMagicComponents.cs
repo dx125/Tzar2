@@ -322,7 +322,7 @@ public struct StatusEffects : IComponent
     /// <summary>Cursed until this tick.</summary>
     public int CurseUntil;
 
-    /// <summary>Attack bonus of the blessing (percent).</summary>
+    /// <summary>Attack bonus of the blessing (points).</summary>
     public short BlessPercent;
 
     /// <summary>Attack malus of the curse (percent); a cursed unit has no defence.</summary>
