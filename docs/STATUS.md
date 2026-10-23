@@ -240,6 +240,9 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — The AI reads the world through read-only views (ADR 0213; code review, item 16).** An architecture
+  test keeps the AI off the writable spans of players, kingdoms and components.
+
 * **2026-10-23 — The batch merge of 46 PRs (#132–#178, without #141).**
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
   * Golden and bench hashes were re-pinned where the PRs met: the civilization order (ADR 0211), the movement of

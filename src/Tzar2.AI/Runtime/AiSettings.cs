@@ -159,7 +159,7 @@ public static class AiTechnologies
     {
         public AiTechnologyState StateOf(World world, byte player, string key, int technologyId)
             => technologyId < 0 || !world.HasPlayer(player) ? AiTechnologyState.Unsupported
-                : world.Players[player].HasTechnology(technologyId) ? AiTechnologyState.Researched : AiTechnologyState.NotResearched;
+                : world.PlayersView[player].HasTechnology(technologyId) ? AiTechnologyState.Researched : AiTechnologyState.NotResearched;
     }
 
     private sealed class NoTechnologies : IAiTechnologies
