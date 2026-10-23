@@ -245,6 +245,12 @@ the process decisions that have no ADR.
     hosts.
   * An architecture test checks the client contract's public surface.
 
+* **2026-10-23 — Network and probe tests poll until a deadline (issue #179).**
+  * The server test now polls for the Welcome and the lobby listing.
+  * The relay harness has generous timeouts; the keep-alive test sets its own.
+  * The memory probe's sampling runs on a manual clock.
+  * Loaded Windows runners no longer fail them.
+
 * **2026-10-23 — The batch merge of 46 PRs (#132–#178, without #141).**
   * STATUS.md and the generated ADR index were left out of all 46 PRs and are rewritten here, in one change.
   * Golden and bench hashes were re-pinned where the PRs met: the civilization order (ADR 0211), the movement of

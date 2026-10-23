@@ -99,22 +99,35 @@ public sealed class ServerTests : IDisposable
         using LockstepClient client = LockstepClient.Create(
             new LockstepClientOptions { Host = "127.0.0.1", Port = host.UdpPort, GameVersion = "1.0", Name = "ana" },
             new LobbyCreate("Public game", 4, true));
+        // Issue #179: poll until a generous deadline instead of fixed waits (a loaded Windows runner missed a 5 s Welcome
+        // and a 400 ms listing refresh); the happy path takes as long as before.
         var watch = Stopwatch.StartNew();
-        while (client.Welcome is null && watch.ElapsedMilliseconds < 5_000)
+        while (client.Welcome is null && watch.ElapsedMilliseconds < 30_000)
         {
             client.Poll();
             Thread.Sleep(2);
         }
 
         Assert.NotNull(client.Welcome);
-        await System.Threading.Tasks.Task.Delay(400); // the listing refreshes every 250 ms
         using var http = new HttpClient { BaseAddress = new Uri($"http://localhost:{httpPort}/") };
         Assert.Equal("ok\n", await http.GetStringAsync("healthz"));
-        using JsonDocument lobbies = JsonDocument.Parse(await http.GetStringAsync("lobbies"));
+        string listing = "[]", metrics = string.Empty;
+        for (watch.Restart(); watch.ElapsedMilliseconds < 30_000; await System.Threading.Tasks.Task.Delay(50))
+        {
+            client.Poll(); // the client keeps its connection while the listing refreshes (every 250 ms)
+            listing = await http.GetStringAsync("lobbies");
+            metrics = await http.GetStringAsync("metrics");
+            using JsonDocument now = JsonDocument.Parse(listing);
+            if (now.RootElement.GetArrayLength() == 1 && metrics.Contains("tzar2_lobbies 1\n", StringComparison.Ordinal))
+            {
+                break;
+            }
+        }
+
+        using JsonDocument lobbies = JsonDocument.Parse(listing);
         JsonElement lobby = Assert.Single(lobbies.RootElement.EnumerateArray());
         Assert.Equal(client.Welcome!.Code, lobby.GetProperty("code").GetString());
         Assert.Equal("lobby", lobby.GetProperty("phase").GetString());
-        string metrics = await http.GetStringAsync("metrics");
         Assert.Contains("tzar2_lobbies 1\n", metrics, StringComparison.Ordinal);
         Assert.Contains("# TYPE tzar2_desyncs_total counter", metrics, StringComparison.Ordinal);
         Assert.Equal(System.Net.HttpStatusCode.NotFound, (await http.GetAsync("nothing")).StatusCode);

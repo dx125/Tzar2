@@ -333,13 +333,15 @@ public sealed class RelayTests
         // Issue #62: the keep-alive must not depend on the game thread pumping. A loaded CI runner (or a client loading a
         // map) can leave Poll and Update uncalled for longer than the disconnect timeout; LiteNetLib's own pings then
         // have to keep the connection, so they must come several times per timeout, not once per second.
-        using var h = new RelayHarness();
+        using var h = new RelayHarness(o => o.DisconnectTimeoutMs = 2_000, clientTimeoutMs: 3_000);
         TestPeer host = h.Create(slots: 2);
         h.Pump(() => host.Welcome is not null);
         TestPeer guest = h.Join(host.Welcome!.Code);
         h.Pump(() => guest.Welcome is not null && host.Lobby?.Slots[1].State == SlotState.Human);
 
-        System.Threading.Thread.Sleep(2_500); // nobody pumps: longer than the relay's (1 s) and the clients' (2 s) timeout
+        // Nobody pumps for longer than the relay's (2 s) and the clients' (3 s) timeout. Issue #179: with 1 s and 2 s a
+        // loaded Windows runner starved LiteNetLib's own pings past the relay's timeout.
+        System.Threading.Thread.Sleep(4_000);
 
         guest.Client.SetReady(true);
         h.Pump(() => host.Lobby!.Slots[1].Ready, what: "ready after the stall");
