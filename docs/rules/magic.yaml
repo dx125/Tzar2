@@ -29,7 +29,7 @@ rules:
   MAG-006:
     rule: Raise the dead works on corpses, never on buildings.
     source: [patch 1.05 (TZAR110.TXT)]
-    status: implemented
+    status: tested
   MAG-007:
     rule: Confusion makes the units it hits hostile to everyone for a while.
     source: [manual Asian technologies (Confusion)]
@@ -47,12 +47,13 @@ rules:
   MAG-010:
     rule: Priests are very good against mages and magic creatures.
     source: [manual Hints About Gameplay, guide Unit Discussion]
-    status: implemented
-    note: From the bonus table.
+    status: tested
+    note: From BONUS.INI (the test reads an imported package, local only).
   MAG-011:
     rule: Asian priests are made from monks.
     source: [manual Asian Units (Priest)]
-    status: implemented
+    status: tested
+    note: ConvertsFrom monk, order become_priest (the test reads an imported package, local only); the conversion itself is the Jihad warriors' (MAG-019).
   MAG-012:
     rule: Spies (with Espionage) can impersonate any man of another kingdom, of any civilization, from next to him; not machines, flyers or magic creatures. The spy becomes that unit, with all its stats, under its own player's control, and the spy itself is gone; its old kingdom still sees one of its own. Revealing turns it back into a spy. Fighting keeps the disguise; a spy of the copied kingdom unmasks it when it comes close enough in front of it, towers do not.
     source: [manual European Units (Spy), data ORDERS.INI impersonate reveal_self, 'data MENU.INI [spy_add]', help ITEMS.TXT C_IMPERSONATE C_REVEAL, 'data BONUS.INI [groups] machines ships magic_creatures', owner 2026-10-21 (answers), owner 2026-10-21 (disguise meter), capture capture-20261021-203846, owner 2026-10-21 (impersonation takes the unit over), owner 2026-10-21 (a spy unmasks only what it faces), owner 2026-10-22 (unmasked from 4 tiles at a meter of 8), capture capture-20261022-011438]
@@ -88,8 +89,8 @@ rules:
   MAG-018:
     rule: A crusader dying in a ship or a building, or impersonated by a spy who then reveals himself, is counted out of the crusade.
     source: [patch 1.06 (TZAR110.TXT)]
-    status: implemented
-    note: Deaths in ships and buildings count; a spy in a crusader's look never joins a crusade (ADR 0184), so its reveal leaves the count right.
+    status: tested
+    note: Deaths in ships and buildings count (the test: a ship); a spy in a crusader's look never joins a crusade (ADR 0184), so its reveal leaves the count right.
   MAG-019:
     rule: With Fanaticism and Jihad, Arabian peasants become Jihad warriors.
     source: [manual Arabian Units (Jihad Warrior)]
