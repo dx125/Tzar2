@@ -24,9 +24,9 @@ rules:
     note: The original's dummy loses the hit points; Tzar2's takes no damage and counts what the blows would deal.
   EXP-005:
     rule: Very experienced units become heroes and can be named.
-    source: [manual Production Of Units]
-    status: partial
-    note: Units become named heroes at level 12 with Heroism; the player cannot name them.
+    source: [manual Production Of Units, 'community ReTzar src/gameplay.rs (0x506d60)']
+    status: unclear
+    note: Units become heroes at level 12 with Heroism and take the next name of HEROES.INI, as ReTzar reads the original's promotion (0x506d60); Tzar2 does the same. Neither the original's data nor ReTzar show a way for the player to type a name, so the manual's "can name" may mean only this; a play-test on the owner's PC (select a level-12 hero, click its name or press Enter) settles it.
   EXP-006:
     rule: Heroes keep their experience from one campaign mission to the next.
     source: [community TDD GAME-08]

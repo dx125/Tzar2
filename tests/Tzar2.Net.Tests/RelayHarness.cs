@@ -15,12 +15,14 @@ internal sealed class RelayHarness : IDisposable
 {
     public const string Version = "test-1";
 
-    // Issue #179: a 1 s relay and a 2 s client timeout dropped members on loaded Windows runners (several CI jobs at
-    // once) before a test got going. The defaults are generous; the keep-alive test sets its own, tighter ones.
-    public RelayHarness(Action<RelayOptions>? configure = null, int clientTimeoutMs = 8_000)
+    // Issue #179: the harness's timeouts are not what these tests check, and loaded Windows runners (every test assembly
+    // at once on 4 vCPUs) starved whole test processes past them: the relay dropped members with "member.drop Timeout"
+    // during the setup while the test was pumping, at 1 s, 2 s and even the product's 5 s. 10 s and 15 s leave the tests
+    // their meaning (members leave by disconnecting, never by timing out); the keep-alive test sets its own.
+    public RelayHarness(Action<RelayOptions>? configure = null, int clientTimeoutMs = 15_000)
     {
         ClientTimeoutMs = clientTimeoutMs;
-        Options = new RelayOptions { StartDelayMs = 50, DisconnectTimeoutMs = 5_000, DesyncCollectMs = 3_000, Log = e => LogLines.Add(e) };
+        Options = new RelayOptions { StartDelayMs = 50, DisconnectTimeoutMs = 10_000, DesyncCollectMs = 3_000, Log = e => LogLines.Add(e) };
         configure?.Invoke(Options);
         Relay = new RelayServer(Options);
         Relay.Start();

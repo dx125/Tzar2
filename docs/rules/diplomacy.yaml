@@ -28,12 +28,12 @@ rules:
     rule: The victory conditions are standard (the last kingdom standing), destroy the castle, a score limit, a time limit, or none.
     source: [manual Single Player Setup Screen, community TDD GAME-17]
     status: tested
-    note: The setup screens cannot choose them (SHELL-007).
+    note: The random map screen, the custom map setup (without the map's settings) and the multiplayer lobby choose them (SHELL-007, SHELL-010).
   DIP-007:
     rule: A Deathmatch game starts every kingdom rich.
     source: [manual Random Map Screen (game type)]
     status: implemented
-    note: The starting level (High) is a placeholder; the setup screens cannot choose Deathmatch (SHELL-010).
+    note: The starting level (High) is a placeholder. The random map screen and the multiplayer lobby choose Deathmatch (SHELL-010).
   DIP-008:
     rule: F4 shows the scores.
     source: [manual Hot Keys]
@@ -44,4 +44,4 @@ rules:
     rule: Computer kingdoms resign on their own when their AI flag allows it.
     source: [patch 1.09 (TZAR110.TXT), data AI/RESIGN.AI]
     status: tested
-    note: The lobby flag cannot be set yet (SHELL-013), so computer kingdoms of random maps may always resign; those of a scenario or campaign map never do (the flag is only on the random map and multiplayer screens and is off for a campaign mission: ReTzar src/world.rs GameRules.ai_resign; ADR 0220). An AI assisting a human never resigns for it.
+    note: On random maps and in multiplayer the AI resign flag decides (SHELL-013); computer kingdoms of a scenario or campaign map never resign (the flag is only on the random map and multiplayer screens and is off for a campaign mission: ReTzar src/world.rs GameRules.ai_resign; ADR 0220). An AI assisting a human never resigns for it.

@@ -72,7 +72,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
     // (ADR 0260, 2026-10-22) spells take the original's ranges and mana (ReTzar's dispatch tables): the gameplay bot's casters cast less.
     // (ADR 0261, 2026-10-22) the spells' strength, durations and areas as ReTzar reads them (lightning 150, freeze and confusion by area, bless +5).
-    private const ulong GoldenRulesetHash = 0x2115B4FFC7505589UL;
+    // (ADR 0263, 2026-10-23) fire rain and the whirlpool as the original casts them (the spell fields square, scatter, delayMs, moveMs): only the ruleset hash moves, the scenario casts neither.
+    // (code review, 2026-10-23) the crusade gathering pace, the crusaders' arrival and the chase leash read from the ruleset
+    // with the same values (three new settings): the ruleset hash only, the match is the same.
+    private const ulong GoldenRulesetHash = 0x1EE829B846D92165UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -83,8 +86,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0211, 2026-10-22) civilizations in the ruleset's order: the kingdoms' civilization indices, so the hashes.
     // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement (kingdoms 0 and 1 are allies here): the
     // stream and the final hash.
-    private const ulong GoldenHashStream = 0x68B2B58C6475AAF6UL;
-    private const ulong GoldenFinalFullHash = 0x60C02C75A1395F44UL;
+    // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
+    // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
+    private const ulong GoldenHashStream = 0x05AB4D4DEB89E38FUL;
+    private const ulong GoldenFinalFullHash = 0x2E60EAFBC3458F9BUL;
 
     private const int Ticks = 1600;
 

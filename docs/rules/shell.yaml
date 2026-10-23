@@ -27,14 +27,14 @@ rules:
     status: implemented
   SHELL-006:
     rule: The setup of a custom map shows the players with their names and colours and lets each choose the European, Arabian or Asian civilization.
-    source: [manual Single Player Setup Screen]
-    status: partial
-    note: Only the player's own civilization can be chosen; the computer kingdoms keep the map's.
+    source: [manual Single Player Setup Screen, 'community ReTzar src/menu.rs (Screen::Setup), src/world.rs (GameSetup)']
+    status: tested
+    note: Each kingdom of the map has a row: colour, name, civilization (RANDOM is drawn at the start) and team 1-4. A team allies over the map's diplomacy. A kingdom given another civilization takes it for its units and buildings where the ruleset has their class for it (ReTzar reads the original's loader). With the map's settings the rows keep the map's choices.
   SHELL-007:
     rule: On the setup of a custom map the map's own settings apply until USE MAP SETTINGS is unchecked; then the number of kingdoms, game type, victory condition, difficulty, starting resources, No Fog and Explore can be changed.
-    source: [manual Single Player Setup Screen]
-    status: partial
-    note: Each option has a "map" choice instead of the one checkbox; the number of kingdoms, the game type and the victory condition cannot be changed.
+    source: [manual Single Player Setup Screen, 'strings STRINGS.INI [sp_setupmap]', 'community ReTzar src/menu.rs (Screen::Setup), src/world.rs (GameSetup)']
+    status: tested
+    note: With the map's settings the difficulty is the map's. Without them, Starting Resources has Default (the map's stockpiles), and fewer kingdoms leave out the last ones in kingdom order with their objects (Not Appear objects stay for Appear Object). The original keeps some options locked by the map's header (ReTzar setup_locks); Tzar2 opens all of them (UNVERIFIED which header values lock).
   SHELL-008:
     rule: The difficulty of the computer kingdoms is Easy, Normal or Hard.
     source: [manual Single Player Setup Screen]
@@ -45,22 +45,25 @@ rules:
     status: implemented
   SHELL-010:
     rule: The random map screen sets for each player an AI script (the small button by the name), the civilization, the number of kingdoms, the game type (Standard or Deathmatch), the victory condition, the difficulty, the starting resources, No Fog and Explore.
-    source: [manual Random Map Screen]
-    status: partial
-    note: The AI script, the computer kingdoms' civilizations, the game type and the victory condition cannot be chosen.
+    source: [manual Random Map Screen, 'strings STRINGS.INI [sp_setuprnd]', 'community ReTzar src/menu.rs (Screen::Random)']
+    status: tested
+    note: Each kingdom also has a colour and a team (1-4). The victory condition's time limit runs 30-180 minutes by 30 and its score limit 200-2,000 by 200 (ReTzar). The AI button steps through the scripts; the original opens a list (D_CHOOSEAI, still to build). The captions sit where the original writes them (ReTzar), and Number of Players shows its range ("(2 - 6)"); the map preview of the old screen is gone, the five map options are in its place.
   SHELL-011:
     rule: A random map has a size (Medium, Large, Huge, Enormous, Real World), a type (Random, Archipelagos, Dry, Island, Continental, Lakes), a terrain set (Grass, Desert, Summer, Winter) and map resources (Low, Normal, High), and may have a guarded town, animals, gateways, magic items and cliffs.
-    source: [manual Random Map Screen]
-    status: partial
-    note: Size, type and terrain set are offered; map resources and the five options are not on the screen.
+    source: [manual Random Map Screen, 'community ReTzar src/menu.rs (Screen::Random)']
+    status: tested
+    note: Tiny and Small are offered too. The original's defaults (ReTzar, tzar.ini [SINGLE_RANDOM]) have the guarded town, animals, magic items and gateways on and cliffs off; the original's random terrain set is not offered.
   SHELL-012:
     rule: The settings of the random map screen are kept for the next time.
-    source: [patch 1.09 (TZAR110.TXT)]
-    status: missing
+    source: [patch 1.09 (TZAR110.TXT), 'community ReTzar src/menu.rs (Screen::Random)']
+    status: tested
+    note: The original keeps them in tzar.ini [SINGLE_RANDOM]; Tzar2 in user://random-map.cfg, with the kingdoms' rows.
   SHELL-013:
     rule: The random map screen and the multiplayer options let each computer kingdom resign on its own (a flag) or never (a sword).
-    source: [patch 1.09 (TZAR110.TXT)]
-    status: missing
+    source: [patch 1.09 (TZAR110.TXT), data IMAGES/AIRESIGN.BMP, 'community ReTzar src/menu.rs (Screen::Random)']
+    status: tested
+    note: One flag for every computer kingdom of the match. It starts up (the white flag), as Tzar2 played before; the original's first default is UNVERIFIED (ReTzar reads a missing tzar.ini AIRESIGN as the sword). The lobby shows it as a check.
+    adr: [0262]
   SHELL-014:
     rule: The load game screen lists the saved games, filtered by campaign or single player game, and loads or deletes the chosen one.
     source: [manual Load Game Screen]
@@ -103,9 +106,9 @@ rules:
   SHELL-021:
     rule: The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game.
     source: [manual Menu Screen, manual Hot Keys]
-    status: partial
+    status: tested
     adr: [0187]
-    note: Instructions are missing.
+    note: INSTRUCTIONS (at the top of D_MENU, where ReTzar puts it) opens the online help at its hot keys (HK.TXT), as ReTzar does; what the original's "floating screen" of directives shows is UNVERIFIED.
   SHELL-022:
     rule: F2 opens the save dialog and F3 the load dialog.
     source: [manual Hot Keys]

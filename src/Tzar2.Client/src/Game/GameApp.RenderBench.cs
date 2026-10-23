@@ -177,7 +177,7 @@ public partial class GameApp
         var castles = new SortedDictionary<int, (int X, int Y)>();
         foreach (FrameEntity e in frame.Entities)
         {
-            if (!castles.ContainsKey(e.Owner) && _rules!.EntityTypes[e.TypeId].Key.EndsWith(".castle", StringComparison.Ordinal))
+            if (!castles.ContainsKey(e.Owner) && _rules!.EntityTypes[e.TypeId].Traits.IsSeat)
             {
                 castles[e.Owner] = (e.X, e.Y);
             }

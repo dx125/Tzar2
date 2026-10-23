@@ -59,6 +59,9 @@ public enum CardAction
     /// <summary>Select the next idle peasant.</summary>
     NextIdle,
 
+    /// <summary>Open the online help (the kingdom's card, P; HUD-020, HUD-033).</summary>
+    OnlineHelp,
+
     /// <summary>Show the quest log.</summary>
     Quests,
 
@@ -137,7 +140,15 @@ public enum CardAction
 /// <param name="Argument">Class to train or build, the submenu's name, a technology, a resource...</param>
 /// <param name="ImageIndex">Cell of the order buttons' sheet, or −1.</param>
 /// <param name="Tooltip">The order's name for people (STRINGS.INI <c>[orders_names]</c>).</param>
-public sealed record CardButton(string Order, char Hotkey, CardAction Action, string Argument, int ImageIndex, string Tooltip);
+public sealed record CardButton(string Order, char Hotkey, CardAction Action, string Argument, int ImageIndex, string Tooltip)
+{
+    /// <summary>
+    /// The condition the button shows under (ORDERS.INI <c>ENABLE</c>, resolved through EQUATIONS.INI; HUD-029), or empty
+    /// for always: <c>QuestCount</c>, the quest order only while there are quests. A condition the card does not know
+    /// keeps the button.
+    /// </summary>
+    public string Enable { get; init; } = string.Empty;
+}
 
 /// <summary>One item of a card button's price in its tooltip.</summary>
 /// <param name="Icon">The icon asset (a resource's, or the hourglass).</param>
@@ -273,6 +284,7 @@ public interface ICardSource
 /// <param name="Mode">The order waiting for a click on the world.</param>
 /// <param name="ModeArgument">Its argument (a spell).</param>
 /// <param name="HasQuests">Whether the map has a quest log.</param>
+/// <param name="QuestCount">The quests open now (EQUATIONS.INI <c>QuestCount</c>; HUD-029).</param>
 /// <param name="Picked">The unit picked in the list of those inside the selected building (ORD-015), or none.</param>
 /// <param name="AiAssist">Whether the match offers AI assistance (ADR 0183).</param>
 public sealed record CardContext(
@@ -285,7 +297,8 @@ public sealed record CardContext(
     int ModeArgument = 0,
     bool HasQuests = false,
     EntityId Picked = default,
-    bool AiAssist = false);
+    bool AiAssist = false,
+    int QuestCount = 0);
 
 /// <summary>A dialog a card button opens in the card's place.</summary>
 public enum CardDialogKind
@@ -317,6 +330,7 @@ public enum CardDialogKind
 /// <param name="ShowQuests">Show the quest log.</param>
 /// <param name="DeleteSelected">Delete the selection (as the Delete key).</param>
 /// <param name="Select">Select this unit and show it (an entry of a kingdom list).</param>
+/// <param name="ShowHelp">Open the online help.</param>
 public sealed record CardPress(
     CommandList? Commands = null,
     OrderMode? Mode = null,
@@ -327,7 +341,8 @@ public sealed record CardPress(
     bool NextIdlePeasant = false,
     bool ShowQuests = false,
     bool DeleteSelected = false,
-    EntityId? Select = null)
+    EntityId? Select = null,
+    bool ShowHelp = false)
 {
     /// <summary>Nothing to do (the card may have changed menu or page).</summary>
     public static CardPress Nothing { get; } = new();

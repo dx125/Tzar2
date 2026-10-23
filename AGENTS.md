@@ -32,7 +32,9 @@ Non-negotiable:
 * Branch, PR, green CI, squash merge; no force-pushes to shared branches. Merge only when every check has finished:
   `gh pr checks --watch` can return before all checks are registered, so count them (16 today) and see none pending.
 * Before you finish: `dotnet build Tzar2.sln` and `dotnet test Tzar2.sln -c Release` pass, and **docs/STATUS.md is
-  updated** (milestones, work queue, a log line for any decision).
+  updated** (milestones, work queue, a log line for any decision). A change to the importer, a converter, the formats,
+  `classic.yaml`'s `legacy:` section or its imported templates also runs the tests with `TZAR2_ORIGIN` set, after
+  merging `main` (CI cannot; DEVELOPMENT.md § How changes land).
 
 Things only the product owner can do (on the Windows PC with the original game): capture batches, sessions in the
 original editor, local-only tests that need the original files. Ask for them with exact commands and say how long

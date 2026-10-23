@@ -32,8 +32,16 @@ public enum MapSourceKind : byte
 /// </summary>
 public sealed record MatchSettings
 {
-    /// <summary>Format version (2 adds the custom map; settings without one are still written as 1).</summary>
-    public const byte Version = 2;
+    /// <summary>
+    /// Format version: 2 adds the custom map, 3 the AI resign flag (SHELL-013; ADR 0262). Settings are written in the
+    /// lowest version that holds them (1 without a custom map, 2 with one, 3 when computers never resign), so older
+    /// descriptions and replay headers keep their bytes and an older client refuses only what it could not play right.
+    /// </summary>
+    public const byte Version = 3;
+
+    private const byte CustomMapVersion = 2;
+    private const byte ExtrasCustomMap = 1;
+    private const byte ExtrasNeverResign = 2;
 
     /// <summary>The ruleset name.</summary>
     public string Ruleset { get; init; } = "classic";
@@ -122,6 +130,12 @@ public sealed record MatchSettings
     /// </summary>
     public bool UseMapSettings { get; init; } = true;
 
+    /// <summary>
+    /// The AI resign flag of the random map and multiplayer screens (patch 1.09; SHELL-013): the white flag (true) lets
+    /// computer kingdoms resign on their own, the sword (false) never.
+    /// </summary>
+    public bool AiResign { get; init; } = true;
+
     /// <summary>The map source these settings describe.</summary>
     /// <exception cref="InvalidOperationException">A custom map: its source is the map itself (<see cref="MatchDescriptor.ToSetup"/>).</exception>
     public IMapSource MapSource() => Map switch
@@ -142,7 +156,8 @@ public sealed record MatchSettings
     internal void Write(BinaryBufferWriter w)
     {
         bool custom = Map == MapSourceKind.CustomMap;
-        w.WriteByte(custom ? Version : (byte)1);
+        byte version = !AiResign ? Version : custom ? CustomMapVersion : (byte)1;
+        w.WriteByte(version);
         w.WriteString(Ruleset);
         w.WriteByte((byte)Map);
         w.WriteVarUInt64((ulong)TestMapSize);
@@ -161,6 +176,11 @@ public sealed record MatchSettings
         w.WriteByte((byte)((NoFog ? 1 : 0) | (Explored ? 2 : 0) | (DayNight ? 4 : 0) | (Weather ? 8 : 0) | (CheatsAllowed ? 16 : 0) | (Ranked ? 32 : 0) | (AiAssist ? 64 : 0)));
         w.WriteUInt64(ResumeSnapshotHash);
         w.WriteVarInt64(SpeedPercent);
+        if (version == Version)
+        {
+            w.WriteByte((byte)((custom ? ExtrasCustomMap : 0) | (AiResign ? 0 : ExtrasNeverResign)));
+        }
+
         if (custom)
         {
             w.WriteString(CustomMapId.Length <= MaxMapIdLength ? CustomMapId : CustomMapId[..MaxMapIdLength]);
@@ -184,9 +204,9 @@ public sealed record MatchSettings
     internal static MatchSettings Read(ref BinaryBufferReader r)
     {
         byte version = r.ReadByte();
-        if (version is not (1 or Version))
+        if (version is not (1 or CustomMapVersion or Version))
         {
-            throw new InvalidDataException("Unsupported match settings version.");
+            throw new InvalidDataException("Unsupported match settings version (a newer Tzar2 made this match).");
         }
 
         string ruleset = r.ReadString(64);
@@ -210,7 +230,14 @@ public sealed record MatchSettings
         string mapId = string.Empty;
         ulong mapHash = 0;
         bool useMap = true;
-        if (version == Version)
+        byte extras = version == Version ? r.ReadByte() : version == CustomMapVersion ? ExtrasCustomMap : (byte)0;
+        if (extras > (ExtrasCustomMap | ExtrasNeverResign))
+        {
+            throw new InvalidDataException("Match settings extras out of range.");
+        }
+
+        bool hasCustom = (extras & ExtrasCustomMap) != 0;
+        if (hasCustom)
         {
             mapId = r.ReadString(MaxMapIdLength * 4);
             mapHash = r.ReadUInt64();
@@ -222,7 +249,7 @@ public sealed record MatchSettings
             }
         }
 
-        if (map is not (MapSourceKind.TestMap or MapSourceKind.RandomMap) && !(map == MapSourceKind.CustomMap && version == Version) || type > RandomMapType.Dry || terrain > MapTerrainSet.Winter
+        if ((map == MapSourceKind.CustomMap) != hasCustom || map is not (MapSourceKind.TestMap or MapSourceKind.RandomMap or MapSourceKind.CustomMap) || type > RandomMapType.Dry || terrain > MapTerrainSet.Winter
             || size > RandomMapSize.RealWorld || resources > MapResourceLevel.High || victory > VictoryCondition.NotSpecified
             || gameType > GameType.Deathmatch || flags > 127 || ruleset.Length == 0)
         {
@@ -257,6 +284,7 @@ public sealed record MatchSettings
             ResumeSnapshotHash = resume,
             SpeedPercent = speed,
             AiAssist = (flags & 64) != 0,
+            AiResign = (extras & ExtrasNeverResign) == 0,
             CustomMapId = mapId,
             CustomMapHash = mapHash,
             UseMapSettings = useMap,
@@ -473,6 +501,7 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             CheatsAllowed = s.CheatsAllowed && !s.Ranked,
             Ranked = s.Ranked,
             AiAssist = s.AiAssist,
+            AiResign = s.AiResign,
             Ai = ai,
             Multiplayer = multiplayer,
             LocalSlot = localSlot,
@@ -534,6 +563,7 @@ public sealed record MatchDescriptor(MatchSettings Settings, ImmutableArray<Matc
             CheatsAllowed = setup.CheatsAllowed,
             Ranked = setup.Ranked,
             AiAssist = setup.AiAssist,
+            AiResign = setup.AiResign,
         };
         return new MatchDescriptor(settings, [.. setup.Players.Select(p => new MatchPlayer(
             p.Slot, names?.Invoke(p.Slot) ?? string.Empty, p.Civilization, p.Controller, p.Difficulty, (byte)((setup.Teams >> (p.Slot * 4)) & 0xF), p.AiScript, p.Colour))]);

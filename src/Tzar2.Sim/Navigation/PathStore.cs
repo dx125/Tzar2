@@ -26,6 +26,7 @@ public sealed class PathStore
     private int[][] _points = [];
     private Stack<int[]>?[] _free = [];
     private int[] _lengths = [];
+    private readonly byte[] _hashBuffer = new byte[16 * 1024];
 
     /// <summary>Plan buffers created or grown so far (diagnostics).</summary>
     public int BuffersAllocated { get; private set; }
@@ -121,14 +122,36 @@ public sealed class PathStore
     public void AppendTo(StateHasher hasher)
     {
         ArgumentNullException.ThrowIfNull(hasher);
+        // The bytes of hasher.Add(i).AddSpan<int>(path) for every path, encoded into a buffer and appended in batches: the
+        // same hash, without thousands of tiny appends (code review 2026-10, the full hash's slowest part).
+        int used = 0;
         for (int i = 0; i < _lengths.Length; i++)
         {
-            if (_lengths[i] > 0)
+            if (_lengths[i] <= 0)
             {
-                hasher.Add(i).AddSpan<int>(Get(i));
+                continue;
             }
+
+            ReadOnlySpan<byte> points = System.Runtime.InteropServices.MemoryMarshal.AsBytes(Get(i));
+            if (used + 12 + points.Length > _hashBuffer.Length)
+            {
+                hasher.AddEncoded(_hashBuffer.AsSpan(0, used));
+                used = 0;
+            }
+
+            if (12 + points.Length > _hashBuffer.Length)
+            {
+                hasher.Add(i).Add(points);
+                continue;
+            }
+
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(_hashBuffer.AsSpan(used), i);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt64LittleEndian(_hashBuffer.AsSpan(used + 4), points.Length);
+            points.CopyTo(_hashBuffer.AsSpan(used + 12));
+            used += 12 + points.Length;
         }
 
+        hasher.AddEncoded(_hashBuffer.AsSpan(0, used));
         hasher.Add(-1);
     }
 

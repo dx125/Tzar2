@@ -460,6 +460,8 @@ public sealed class CommandCard
                 return Commands(CommandKind.ConvertUnit, OwnIds(selected, e => e.IsMobile), arg0: into);
             case CardAction.NextIdle:
                 return new CardPress(NextIdlePeasant: true);
+            case CardAction.OnlineHelp:
+                return new CardPress(ShowHelp: true);
             case CardAction.Uncloak:
                 return Commands(CommandKind.Uncloak, OwnIds(selected, e => e.IsMobile));
             case CardAction.Impersonate:
@@ -1131,6 +1133,12 @@ public sealed class CommandCard
     // do orders a technology unlocks (TECHTREE [orders]: bribe, spells, loans...) until it is researched.
     private bool Hidden(CardContext context, CardButton b, in FrameEntity lead)
     {
+        // HUD-029: a button with a condition shows only while it holds (the one the data has: QuestCount).
+        if (string.Equals(b.Enable.Trim(), "QuestCount", StringComparison.OrdinalIgnoreCase) && context.QuestCount <= 0)
+        {
+            return true;
+        }
+
         int gate = _rules.OrderTechnology(b.Order, lead.Id.IsNone ? string.Empty : _source.Civilization(lead.TypeId));
         if (gate >= 0 && !Me(context).HasTechnology(gate))
         {

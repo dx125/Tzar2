@@ -108,6 +108,12 @@ public sealed record MatchSetup
     public bool AiAssist { get; init; }
 
     /// <summary>
+    /// Whether computer kingdoms may resign on their own (the AI resign flag, SHELL-013; ADR 0262). Off: they never do.
+    /// Scenario maps never resign either way (ADR 0220).
+    /// </summary>
+    public bool AiResign { get; init; } = true;
+
+    /// <summary>
     /// A multiplayer match (ADR 0162): several human kingdoms, each with a standby AI that takes over when its human
     /// drops (REQ-NET-07; ADR 0163). Part of the match fingerprint.
     /// </summary>
@@ -221,9 +227,9 @@ public sealed record MatchSetup
                 throw new ArgumentException($"Player {i} has slot {Players[i].Slot}; slots must be 0..n-1 in order.", nameof(ruleset));
             }
 
-            if (ruleset.EntityTypeId(Players[i].Civilization + ".castle") < 0)
+            if (!ruleset.CanFoundKingdom(Players[i].Civilization))
             {
-                throw new ArgumentException($"Civilization '{Players[i].Civilization}' has no castle in ruleset '{ruleset.Name}'.", nameof(ruleset));
+                throw new ArgumentException($"Civilization '{Players[i].Civilization}' is not playable or has no seat (castle) in ruleset '{ruleset.Name}'.", nameof(ruleset));
             }
 
             humans += Players[i].Controller == ControllerKind.Human ? 1 : 0;

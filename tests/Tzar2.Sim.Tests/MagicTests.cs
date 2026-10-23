@@ -177,26 +177,102 @@ public class MagicTests
     {
         using var d = new SimDriver(
             AsciiMap(["..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~"],
-                Unit("euro.mage", 0, 1, 1), Unit("euro.footman", 0, 6, 2), Unit("euro.footman", 1, 6, 3), Unit("comm.galleon", 1, 12, 3), Unit("euro.footman", 1, 9, 3)),
+                Unit("euro.mage", 0, 1, 1), Unit("euro.footman", 0, 6, 2), Unit("euro.footman", 1, 6, 3), Unit("comm.galleon", 1, 12, 3), Unit("euro.footman", 1, 0, 5)),
             ruleset: ClassicWith("euro.mage: { ManaPool: { max: 200 } }")); // fire rain costs 100 (ReTzar), above the synthetic mage's 90
         EntityId mage = OfType(d.World, "euro.mage").Single();
         EntityId own = OfType(d.World, "euro.footman", 0).Single();
+        EntityId shore = OfType(d.World, "euro.footman", 1).Single(f => d.PositionOf(f).X / Tile == 0); // out of the fireballs' reach
+        EntityId enemy = OfType(d.World, "euro.footman", 1).Single(f => d.PositionOf(f).X / Tile == 6);
         d.Order(0, CommandKind.SetStance, [mage, own], arg0: (int)CombatStance.HoldFire);
         d.Order(1, CommandKind.SetStance, [.. OfType(d.World, "euro.footman", 1), .. OfType(d.World, "comm.galleon")], arg0: (int)CombatStance.HoldFire);
         d.World.Manas.Get(mage).MilliMana = 200_000;
         Cast(d, mage, "spell_firerain", default, (6 * Tile) + 1024, 3 * Tile);
         d.RunUntil(() => d.World.AreaEffects.Count == 0 && d.Count(SimEventKind.SpellCast) == 1, 400);
-        Assert.True(Hp(d, own) < 70); // the manual: "including your own"
-        Assert.True(Hp(d, OfType(d.World, "euro.footman", 1).First()) < 70);
+        Assert.False(d.World.Entities.IsAlive(own) && Hp(d, own) == 70); // the manual: "including your own"
+        Assert.False(d.World.Entities.IsAlive(enemy) && Hp(d, enemy) == 70);
 
         EntityId ship = OfType(d.World, "comm.galleon").Single();
-        EntityId shore = OfType(d.World, "euro.footman", 1).Single(f => d.PositionOf(f).X / Tile == 9);
         d.RunUntil(() => false, 120);
         d.World.Manas.Get(mage).MilliMana = 90_000;
-        Cast(d, mage, "spell_whirlpool", default, 11 * Tile, (3 * Tile) + 1024);
-        d.RunUntil(() => d.World.AreaEffects.Count == 0 && d.Count(SimEventKind.SpellCast) == 2, 600);
-        Assert.True(Hp(d, ship) < 1150);
+        Cast(d, mage, "spell_whirlpool", default, 12 * Tile, (3 * Tile) + 1024);
+        d.RunUntil(() => d.World.AreaEffects.Count == 0 && d.Count(SimEventKind.SpellCast) == 2, 1000);
+        Assert.False(d.World.Entities.IsAlive(ship) && Hp(d, ship) == 1150);
         Assert.Equal(70, Hp(d, shore));
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-024")]
+    public void Fire_rain_is_twenty_fireballs_of_40_that_start_falling_after_545_ms()
+    {
+        // A ship under the point: every fireball's 5 x 5 tiles meet it, wherever within 2 tiles it falls (ReTzar 0x472ddb).
+        using var d = new SimDriver(
+            AsciiMap(["~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~"],
+                Unit("comm.galleon", 0, 1, 1), Unit("comm.galleon", 1, 8, 3)),
+            ruleset: Classic);
+        EntityId target = OfType(d.World, "comm.galleon", 1).Single();
+        d.Order(0, CommandKind.SetStance, [.. OfType(d.World, "comm.galleon", 0)], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [target], arg0: (int)CombatStance.HoldFire);
+        d.Step();
+        int hp = Hp(d, target);
+        var s = d.World.Ruleset.Spells[Spell(d.World.Ruleset, "spell_firerain")];
+        Assert.Equal((40, 170, 375, 3775), (s.Amount, s.PulseMs, s.DelayMs, s.DurationMs));
+        var p = d.PositionOf(target);
+        d.World.AreaEffects.Set(d.World.Entities.Create(), new AreaEffect { X = p.X, Y = p.Y, RemainingMs = s.DurationMs, PulseAccumMs = -s.DelayMs, Spell = s.Id, Owner = 0 });
+        d.RunUntil(() => false, (540 / 50) - 1);
+        Assert.Equal(hp, Hp(d, target)); // nothing has fallen yet
+        d.RunUntil(() => d.World.AreaEffects.Count == 0, 200);
+        Assert.Equal(hp - (20 * 40), Hp(d, target));
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-024")]
+    public void A_whirlpool_hurts_the_ships_on_its_3_by_3_tiles_wanders_on_the_water_and_lasts_30_s()
+    {
+        using var d = new SimDriver(
+            AsciiMap(["~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~", "~~~~~~~~~~~~~~~~"],
+                Unit("comm.galleon", 0, 15, 0), Unit("comm.galleon", 1, 7, 3)),
+            ruleset: Classic);
+        EntityId target = OfType(d.World, "comm.galleon", 1).Single();
+        d.Order(0, CommandKind.SetStance, [.. OfType(d.World, "comm.galleon", 0)], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [target], arg0: (int)CombatStance.HoldFire);
+        d.Step();
+        var s = d.World.Ruleset.Spells[Spell(d.World.Ruleset, "spell_whirlpool")];
+        Assert.Equal((20, 250, 2000, 30_000), (s.Amount, s.PulseMs, s.MoveMs, s.DurationMs));
+        var p = d.PositionOf(target);
+        EntityId pool = d.World.Entities.Create();
+        d.World.AreaEffects.Set(pool, new AreaEffect { X = p.X, Y = p.Y, RemainingMs = s.DurationMs, Spell = s.Id, Owner = 0 });
+        int hp = Hp(d, target);
+        d.RunUntil(() => false, 5); // 250 ms: the first pulse
+        Assert.Equal(hp - 20, Hp(d, target));
+        var moves = new System.Collections.Generic.HashSet<(int, int)>();
+        int ticks = 5 + d.RunUntil(() =>
+        {
+            if (d.World.AreaEffects.Has(pool))
+            {
+                AreaEffect a = d.World.AreaEffects.Get(pool);
+                moves.Add((a.X, a.Y));
+                Assert.Equal(0, (a.X - p.X) % Tile); // whole tiles
+            }
+
+            return !d.World.AreaEffects.Has(pool);
+        }, 700);
+        Assert.Equal(30_000 / 50, ticks); // gone after 30 s
+        Assert.True(moves.Count > 1); // it wandered
+        Assert.True(!d.World.Entities.IsAlive(target) || (hp - Hp(d, target)) % 20 == 0);
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-024")]
+    public void A_whirlpool_forms_only_where_its_square_is_water()
+    {
+        using var d = new SimDriver(
+            AsciiMap(["..........~~~~~~", "..........~~~~~~", "..........~~~~~~", "..........~~~~~~"], Unit("euro.mage", 0, 1, 1)),
+            ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        d.World.Manas.Get(mage).MilliMana = 90_000;
+        Cast(d, mage, "spell_whirlpool", default, (10 * Tile) + 1024, (1 * Tile) + 1024); // its 3 x 3 tiles take the shore
+        d.Step();
+        Assert.Contains(CommandRejection.InvalidTarget, d.Rejections());
     }
 
     [Fact]
@@ -296,6 +372,34 @@ public class MagicTests
         Assert.Equal(8, OfType(d.World, "euro.crusader").Count()); // fewer than a full crusade
         Assert.Equal(1, d.World.Players[0].FullCrusades); // not a full one: the ceiling stays 20
         Assert.Equal(20, Systems.MagicSystem.CrusadeCeiling(d.World, 0));
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-017")]
+    public void The_crusade_gathering_pace_is_data()
+    {
+        // Code review 2026-10 (item 16, for a fork): the steps were literals in MagicSystem. Classic keeps the original's.
+        Assert.Equal(
+            [new CrusadeGatherStep(0, 12), new CrusadeGatherStep(15, 8), new CrusadeGatherStep(20, 4), new CrusadeGatherStep(30, 1)],
+            Classic.Combat.CrusadeGather.ToArray());
+        Assert.Equal(500, Classic.Combat.CrusaderArrivalMs);
+
+        // A fork gathers every 3 s: two cathedrals bring 4 more in 6 s instead of 24.
+        Ruleset fork = ClassicWith("combat: { crusadeGather: { 0: 3 } }");
+        using var d = new SimDriver(TestMap(40, 20, Structure("euro.cathedral", 0, 4, 4), Structure("euro.cathedral", 0, 4, 12)), ruleset: fork);
+        d.World.Players[0].Resources[Resource("gold")] = 5000;
+        d.World.Players[0].Resources[Resource("food")] = 5000;
+        EntityId cathedral = OfType(d.World, "euro.cathedral").First();
+        d.Order(0, CommandKind.PreachCrusade, [cathedral], 11 * Tile, 6 * Tile);
+        d.RunUntil(() => OfType(d.World, "euro.crusader").Count() == 16, 400);
+        d.Order(0, CommandKind.DebugKill, [.. OfType(d.World, "euro.crusader")]);
+        d.RunUntil(() => d.World.Crusades.Count == 0, 20);
+        Assert.Equal(4, d.World.Players[0].Crusaders);
+        d.RunUntil(() => false, 6 * 20);
+        Assert.Equal(8, d.World.Players[0].Crusaders);
+
+        Assert.ThrowsAny<System.Exception>(() => ClassicWith("combat: { crusadeGather: { 5: 3 } }"));
+        Assert.ThrowsAny<System.Exception>(() => ClassicWith("combat: { crusadeGather: { 0: 3, 20: 2, 10: 1 } }"));
     }
 
     [Fact]

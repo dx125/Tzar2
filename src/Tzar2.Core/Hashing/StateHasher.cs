@@ -94,6 +94,17 @@ public sealed class StateHasher
     /// <see cref="Add(ReadOnlySpan{byte})"/> (the prefix is the length in bytes). <typeparamref name="T"/>
     /// MUST NOT contain padding bytes or references to other memory, or the hash is not reproducible.
     /// </summary>
+    /// <summary>
+    /// Appends bytes as they are, without a length prefix: for a caller that encodes a run of <see cref="Add(int)"/>,
+    /// <see cref="Add(long)"/> and length-prefixed spans into its own buffer and appends it in one call. The hash is the
+    /// same as those calls would give (xxHash64 streams), only cheaper for many small values.
+    /// </summary>
+    public StateHasher AddEncoded(ReadOnlySpan<byte> encoded)
+    {
+        _hash.Append(encoded);
+        return this;
+    }
+
     public StateHasher AddSpan<T>(ReadOnlySpan<T> values)
         where T : unmanaged
         => Add(MemoryMarshal.AsBytes(values));
@@ -114,4 +125,7 @@ public sealed class StateHasher
 
     /// <summary>One-shot xxHash64 of <paramref name="bytes"/>.</summary>
     public static ulong Hash(ReadOnlySpan<byte> bytes, long seed = 0) => XxHash64.HashToUInt64(bytes, seed);
+
+    /// <summary>The xxHash3 of one chunk of a large array (the full-state hash's bulk part, ADR 0215).</summary>
+    public static ulong HashChunk(ReadOnlySpan<byte> bytes) => XxHash3.HashToUInt64(bytes);
 }
