@@ -1189,9 +1189,9 @@ public static class CampaignAutoplay
             {
                 if (world.Diplomacy.MayCommand(me, identities[i].Owner) && world.Motions.Has(ids[i]) && !world.IsHeld(ids[i]) && !world.IsShip(ids[i])
                     && definition.CanBeHeldBy(identities[i].TypeId) && (definition.Kind == ItemKind.Resource || CanCarry(world, ids[i], item))
-                    && Distance(Pos(world, ids[i]), where) < best)
+                    && Cost(world, triggers, ids[i], where) is var cost && cost < best)
                 {
-                    best = Distance(Pos(world, ids[i]), where);
+                    best = cost;
                     picker = ids[i];
                 }
             }
@@ -2445,9 +2445,9 @@ public static class CampaignAutoplay
             for (int i = 0; i < ids.Length && !keep; i++)
             {
                 if (world.Diplomacy.MayCommand(me, world.Identities.Get(ids[i]).Owner) && !world.IsHeld(ids[i]) && world.Motions.Has(ids[i])
-                    && CanCarry(world, ids[i], item) && Distance(Pos(world, ids[i]), where) < best)
+                    && CanCarry(world, ids[i], item) && Cost(world, triggers, ids[i], where) is var cost && cost < best)
                 {
-                    best = Distance(Pos(world, ids[i]), where);
+                    best = cost;
                     picker = ids[i];
                 }
             }
@@ -2470,6 +2470,15 @@ public static class CampaignAutoplay
             Goal = $"{goal.Name}: {world.Ruleset.EntityTypes[world.Identities.Get(unit).TypeId].Key}/{world.Identities.Get(unit).Owner} at ({Pos(world, unit).X / Tile},{Pos(world, unit).Y / Tile}) picks the item up at ({where.X / Tile},{where.Y / Tile})";
             Note($"carry an item for {goal.Name}");
             return true;
+        }
+
+        // How far a unit is from an item it would fetch: a unit that can walk there comes before every unit that cannot
+        // (a ninja climbs to a book on a cliff-ringed ledge, WORLD-018), then the nearest.
+        private static long Cost(World world, Scripting.Legacy.LegacyTriggerSystem triggers, EntityId unit, Position where)
+        {
+            var around = new RectArea((where.X / Tile) - 1, (where.Y / Tile) - 1, (where.X / Tile) + 1, (where.Y / Tile) + 1);
+            long d = Distance(Pos(world, unit), where);
+            return Reach(world, triggers, unit, around, where) is null ? (long.MaxValue / 2) + Math.Min(d, long.MaxValue / 4) : d;
         }
 
         private static bool CanCarry(World world, EntityId unit, EntityId item)

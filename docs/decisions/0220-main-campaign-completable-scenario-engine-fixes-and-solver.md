@@ -3,7 +3,8 @@
 * **Status:** Accepted
 * **Date:** 2026-10-22
 * **Deciders:** maintainer agent (work queue item 10)
-* **Related:** ADRs 0025, 0130, 0134, 0135, 0146, 0188; DIP-009, SHELL-013, GAME-09, ITEM-006; UNK-43, UNK-64, UNK-81
+* **Related:** ADRs 0025, 0130, 0134, 0135, 0146, 0188, 0190; DIP-009, SHELL-013, GAME-09, ITEM-006, WORLD-016…018;
+  UNK-43, UNK-64, UNK-81
 
 ## Context
 
@@ -18,30 +19,40 @@ reported 17 of 19. That number was inflated. Since DIP-009 (#128) every computer
 
 With resignation fixed, the honest count was 15 of 19: `alex1`, `bigisland`, `vsaa` and `rajba` failed. They fail
 deep inside long scripted chains with ferries, deliveries, wounds and evacuations. The `rajba` mage plateau is sealed
-by cliffs (UNK-81).
+by cliffs (UNK-81). The owner settled UNK-81 on 2026-10-22: in the original, cliffs stop every ground unit except
+ninjas, and the intended way onto `rajba`'s plateau is ninjas (original footage: https://youtu.be/CxPm7ja1ujI?t=955).
+
+Where the original's files say nothing, ReTzar's reading of its code is taken by default (owner, 2026-10-22; ADR 0190);
+captures beat it.
 
 ## Decision
 
 **Engine (the engine was wrong or a placeholder had a better reading):**
 
 * **Scenario kingdoms never resign.** The resign flag exists only on the random-map and multiplayer screens (1.09,
-  SHELL-013), so `GameSession` gives the AI `MayResign = setup.Scenario is null`. UNVERIFIED.
+  SHELL-013) and is off for a campaign mission (ReTzar `GameRules.ai_resign`), so `GameSession` gives the AI
+  `MayResign = setup.Scenario is null`.
 * **A scenario's Object Orders move units whatever the state of their kingdom.** The new
   `CommandSystem.ExecuteScripted` runs the in-tick validation without the "player active and not defeated" check.
-* **A unit inside a holder is in an area where its holder is.** Positions follow the holder (GAME-09). `alex1`'s
-  `ShipsNearHarbor` names the heroes together with hulks in a harbour that is almost all water. UNVERIFIED.
-* **`$cargo` of a holder is the number of objects it holds.** For a worker it stays the carried load. Evidence:
-  `SomeoneInGalleon: $cargo > 0` and `HulksLoaded: $cargo >= 10`. UNK-64 stays UNVERIFIED.
-* **Movement: mutual allies are friends.** Their units shove idle ones aside, queue behind each other and no longer
-  bounce off each other like enemies (ADR 0025 meant enemies). This is the `Frame.Friends` table in `MovementSystem`.
-* **Movement: a unit that meets a blocked corner almost head-on slides past at the step's full length.** A galleon
-  wedged on a coast corner moved 1 unit per tick sideways and was pulled back by each re-plan.
-* **UNK-81 candidate, off by default:** `LegacyConversionOptions.Unk81HalfCliffs` (`t2 campaign run
-  --unk81-half-cliffs`). It opens the left column of vertical cliff runs (piece shape 6). This is a measurement aid
-  only and needs the owner's in-game check. It is the simplest single-shape rule that opens the `rajba` plateau along a
-  long, corridor-like route. The cliff atlases (`18.BMP`, `19.BMP`) put most of a run's rock in one row or column of its
-  2 × 2 piece, which supports some half-piece rule, but not which half. The maps' tile words also show that bit 4, not
-  bit 0, is the column inside a piece (wmp.md §5 corrected).
+* **A unit inside a holder is in an area where its holder is.** What a holder holds takes its cell (ReTzar 0x500a50),
+  and the area event tests positions only. `alex1`'s `ShipsNearHarbor` names the heroes together with hulks in a
+  harbour that is almost all water.
+* **`$cargo` is what is aboard or inside, a hero's items too; nothing for an object with no room** (ReTzar 0x4b8c76).
+  `SomeoneInGalleon: $cargo > 0`, `HulksLoaded: $cargo >= 10`.
+* **Movement: mutual allies are friends (WORLD-016).** Their units shove idle ones aside, queue behind each other and
+  no longer bounce off each other like enemies. The original's steps test no owner (ReTzar); the rebuild keeps
+  enemies as hard obstacles (ADR 0025). This is the `Frame.Friends` table in `MovementSystem`.
+* **Movement: a unit that meets a blocked corner almost head-on slides past at the step's full length (WORLD-017).**
+  A galleon wedged on a coast corner moved 1 unit per tick sideways and was pulled back by each re-plan. This is a
+  rebuild artifact (the original steps tile to tile), not a rule of the original.
+* **Cliffs stop every ground unit but the ninja (WORLD-018, UNK-81 settled).** The ninja gets its own locomotor,
+  `climber`. It is infantry everywhere else: data and technology effects that name "foot" include it
+  (`LocomotorExtensions.Family`, `IsA`). A cliff tile is open to a climber when, along a row, a column or a diagonal,
+  the cliff run through it is one or two tiles long with climbable ground at both ends. ReTzar (0x4a99a0) climbs a
+  first cliff cell, crosses a second, and never takes a third in a row. The original decides this per step, so here a
+  climber can walk along the top of a long, thin band and there it cannot. The original's ninja also climbs walls;
+  walls are not done yet. The importer gives the class `ninja` this locomotor, because no data file says it. The
+  maps' tile words also show that bit 4, not bit 0, is the column inside a cliff piece (wmp.md §5 corrected).
 
 **Solver (`CampaignAutoplay`; it still only reads trigger state and issues allowed commands):**
 
@@ -67,6 +78,7 @@ by cliffs (UNK-81).
   * Unload orders wait while a docking is under way.
   * Units sail over a coordinate line at sea (`$x <= 5`: leave by the west edge).
 * **Protection:**
+  * Fetching an item, the solver prefers a unit that can walk to it: a ninja climbs to the book on `rajba`'s ledge.
   * The object an area goal is measured around (Marsim) is never attacked or cleared.
   * On retries its allied kingdom gets `hmgod`.
   * `$health < $Var` about the kingdom's own hero (an ambush must wound him) switches invulnerability off until the
@@ -74,27 +86,17 @@ by cliffs (UNK-81).
 
 ## Alternatives considered
 
-* **Peasants carry picked-up resource items to a storage** (`bigisland`'s quest: "let him take it, then return him
-  to the village's storage"). This needs a carried load that survives a change of owner and a "default" order that
-  delivers. That is three speculative engine changes, so the tribute stands in. The question is open below.
 * **Deleting the player's own units to empty the west of the map:** rejected. The solver removes only the units it
   spawned.
-* **A per-variant cliff orientation rule:** the variant does not encode the side (variant 1 is used for both west and
-  east walls in `rajba`), so a geometric guess would be no better founded.
+* **A half-piece cliff rule** (an earlier version of this ADR, behind a switch): every cliff tile blocking except
+  part of each piece. The owner's check showed that the plateau is meant for ninjas, so the switch was removed.
+* **Peasants carry picked-up resource items to a storage:** ReTzar confirms it (a peasant's right click on a resource
+  item is Gather, program 0x1e). It is not done here; the tribute stands in for `bigisland`'s gold (follow-up).
 
 ## Consequences
 
-* Goldens move: movement (allies, corner slide), the trigger engine (held units, cargo, scripted orders) and scenario
-  AI resignation. They are re-pinned in the same PR.
-* `t2 campaign run --survey` on the GOG install (2026-10-22): main campaign 18 of 19 by default and 19 of 19 with
-  `--unk81-half-cliffs`; tutorial 7 of 7 (STATUS M4).
-* Revisit when the owner settles UNK-81 (screenshot below), and when captures show how area events and `$cargo` treat
-  units aboard.
-
-## Questions for the product owner
-
-* **UNK-81, rajba:** in the original, open `rajba` and walk Sartor's army into the north-west cliff rings toward the
-  mage tower (about tile 25, 20). Take a screenshot where a unit stands on the left half of a vertical cliff run,
-  e.g. tile 6, 22 (the west wall) or 12, 24, or the message that the ground is blocked. A unit standing on those tiles
-  confirms the switch's rule. Units that cannot enter, or reach the mages another way, settle it the other way.
-* Does a peasant who picks up a gold item carry it to a storage, as `bigisland`'s quest text says?
+* Goldens move: movement (allies, corner slide), the trigger engine (held units, cargo, scripted orders), scenario AI
+  resignation and the ninja's locomotor (ruleset hash). They are re-pinned in the same PR.
+* `t2 campaign run --survey` on the GOG install (2026-10-22): main campaign 19 of 19, tutorial 7 of 7 (STATUS M4).
+* Follow-ups: ninjas climbing walls; peasants gathering resource items (ReTzar program 0x1e), which would let
+  `bigisland` deliver its gold without a tribute.

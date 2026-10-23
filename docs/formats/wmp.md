@@ -212,9 +212,8 @@ A **cliff tile** (bit 10) stores a cliff piece instead of terrain in bits 0–9.
 column and bit 0 the row inside the piece (in `rajba`, bit 4 alternates along x and bit 0 along y; ADR 0220), bits
 1–3 a variant, bits 5–8 the shape (4 corner/end, 5 horizontal run, 6 vertical run, up to 10), and bit 9 selects the
 second cliff graphic set. The terrain under a cliff is not stored; the converter takes it from the nearest non-cliff
-corner. Whether every cliff tile blocks movement, or only part of a piece, is ⚠ UNVERIFIED (UNK-81): in `rajba` the
-cliff rings fully enclose the mage plateau, which the quest says to reach. A candidate rule (vertical runs block only
-their right column) is behind the converter switch `Unk81HalfCliffs`, off by default (ADR 0220).
+corner. Every cliff tile blocks every ground unit except the ninja, who climbs a band of one or two cliff tiles
+(UNK-81 settled by the owner, 2026-10-22: `rajba`'s mage plateau is reached by ninjas only; WORLD-018, ADR 0220).
 
 When a = b the tile is solid. Otherwise its corner mask is `m = s + 1`, with bits TL = 1, TR = 2, BR = 4, BL = 8. A
 set bit means that corner is terrain `a`, a clear bit means `b`. This matches the transition-strip rows of
@@ -382,7 +381,7 @@ Expressions are text in the language of Appendix C.6, plus what the game's own n
 | UNK-78 | Which "use default" bit covers level and resistance; whether recorded values with a clear bit always override the ruleset |
 | UNK-79 | The second part of Player Win/Lose's `next map|?` |
 | UNK-80 | Area rectangles: inclusive or exclusive right/bottom; rectangles past the edge |
-| UNK-81 | Cliff passability: whether all four tiles of a cliff piece block, and how units cross cliff rings |
+| UNK-81 | **Settled** (owner, 2026-10-22): every cliff tile blocks ground units; ninjas climb one or two (WORLD-018) |
 | UNK-82 | Object facing (0x10): assumed to use the sprite direction order (0 = south, counter-clockwise) |
 
 ## 11. Reproducing

@@ -368,7 +368,7 @@ public static class RulesetCompiler
             LocomotorMask mask = LocomotorMask.None;
             foreach (string loco in RulesDocument.StringList(t.Get("passable") ?? new YamlSequence([]), source, $"terrain.{key}.passable"))
             {
-                mask |= ParseLocomotor(loco, source, t.Line).ToMask();
+                mask |= ParseLocomotor(loco, source, t.Line).Family();
             }
 
             bool water = t.Get("water") is { } w && Bool(w, source, $"terrain.{key}.water");
@@ -390,7 +390,8 @@ public static class RulesetCompiler
         "large" => Locomotor.Large,
         "ship" => Locomotor.Ship,
         "air" => Locomotor.Air,
-        _ => throw new RulesException(source, line, $"unknown locomotor '{text}' (foot, mounted, large, ship, air)"),
+        "climber" => Locomotor.Climber,
+        _ => throw new RulesException(source, line, $"unknown locomotor '{text}' (foot, mounted, large, ship, air, climber)"),
     };
 
     internal static YamlMapping Map(YamlNode? node, string source, string what) => node as YamlMapping
