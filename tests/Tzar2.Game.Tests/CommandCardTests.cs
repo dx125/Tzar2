@@ -365,6 +365,48 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "TRADE-008")]
+    public void The_loan_orders_tell_what_the_tavern_lends_and_what_is_to_return()
+    {
+        _cards.Menus["kingdom"] =
+        [
+            new CardButton("loan_gold", 'G', CardAction.Loan, "gold", 1, "Loan Gold"),
+            new CardButton("loan_return", 'R', CardAction.Loan, "return", 2, "Return loan"),
+        ];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = Context([]) with { IsOwn = false };
+        ref FramePlayer me = ref none.Frame.Players[0];
+        Assert.Equal((1000, 0, -1), (me.LoanLimit, me.LoanDue, me.LoanResource)); // the frame: the first loan is 1,000 (the manual)
+        (me.LoanLimit, me.LoanDue, me.LoanResource) = (1200, 0, -1);
+        IReadOnlyList<CardSlot?> slots = card.Build(none);
+        Assert.Equal("Obtain loan 1200 of Gold", slots[0]!.Value.Description); // STRINGS3 getloan3
+        Assert.Equal(string.Empty, slots[1]!.Value.Description); // nothing to return
+
+        int gold = Rules.Value.ResourceId("gold");
+        (me.LoanDue, me.LoanResource) = (1200, gold);
+        Assert.Equal("Return your loan: 1200 of Gold", card.Build(none)[1]!.Value.Description); // retloan3
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-029")]
+    public void The_quest_order_shows_only_while_there_are_quests()
+    {
+        _cards.Menus["kingdom"] =
+        [
+            new CardButton("nextidle", 'N', CardAction.NextIdle, string.Empty, 82, "Next idle peasant"),
+            new CardButton("view_quests", 'Q', CardAction.Quests, string.Empty, 245, "View Current Quests") { Enable = "QuestCount" }, // ORDERS.INI ENABLE through EQUATIONS.INI
+            new CardButton("view_unknown", 'U', CardAction.NextIdle, string.Empty, 1, "Unknown condition") { Enable = "SomethingElse" },
+        ];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        CardContext none = Context([]) with { IsOwn = false, HasQuests = true };
+        Assert.Equal(["nextidle", "view_unknown"], card.Build(none).Where(s => s is not null).Select(s => s!.Value.Button.Order));
+        Assert.Null(card.SlotOfKey(none, 'Q'));
+        CardContext quests = none with { QuestCount = 2 };
+        Assert.Equal(["nextidle", "view_quests", "view_unknown"], card.Build(quests).Where(s => s is not null).Select(s => s!.Value.Button.Order));
+        Assert.True(card.Press(quests, card.SlotOfKey(quests, 'Q')!.Value).ShowQuests);
+    }
+
+    [Fact]
     [Trait("Rule", "HUD-033")]
     [Trait("Rule", "HUD-020")]
     public void The_kingdom_card_opens_the_online_help()

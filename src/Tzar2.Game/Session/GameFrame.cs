@@ -432,6 +432,15 @@ public struct FramePlayer
     /// <summary>AI assistance the kingdom has asked for: bit 1 economy, bit 2 war (ADR 0183).</summary>
     public byte AiAssist;
 
+    /// <summary>What the tavern lends now (TRADE-008): the limit, a raise whose time has come included.</summary>
+    public int LoanLimit;
+
+    /// <summary>The loan to return, or 0.</summary>
+    public int LoanDue;
+
+    /// <summary>The resource of the loan taken (a resource type id), or -1 for none.</summary>
+    public int LoanResource;
+
     /// <summary>The kingdom's civilization key (the diplomacy screen's race icon), or empty.</summary>
     public string? Civilization;
 

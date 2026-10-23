@@ -119,7 +119,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), the fished patch's blue selection and the selection view's kingdom, level and power (HUD-025, HUD-016), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), orders shown only while their condition holds (the quest order: HUD-029), the loan orders' hints tell what the tavern lends (TRADE-008), F4's scoreboard and clock (DIP-008), the chat screen (D_CHAT: everyone, allies, enemies or picked kingdoms with their stance; the cheat codes in single player: HUD-010, HUD-011), the menu screens' help ball and hints (LOCAL/HELP.INI: SHELL-026), the fished patch's blue selection and the selection view's kingdom, level and power (HUD-025, HUD-016), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -256,11 +256,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
         the ruleset with the same values; only the ruleset hash is re-pinned.
       * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
         client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
-17. **Maintainer (deferred to M8: the map format changes):** the random map generator's items as the original makes
-    them (ReTzar 0x4b5c50): spell books of a random spell with 1 to 5 charges, bows, shields and swords of 5 to 15,
-    potions of 10 to 50 or 2 to 8. It needs item properties on `MapObject` (map.bin and its hash) and changes the
-    generator's hashes. RES.INI's TreasuryItem, WeaponItem, ArmourItem and PotionItem are not what the generator reads
-    (ITEM-015 unclear).
+17. **Maintainer (the coordinator moved it ahead of M8, 2026-10-23; ADR 0264):** the random map generator's items as
+    the original makes them (ReTzar 0x4b5c50): spell books of a random spell with 1 to 5 charges, bows, shields and
+    swords of 5 to 15, potions of 10 to 50 or 2 to 8. It needs item properties on `MapObject` (map.bin and its hash)
+    and changes the generator's hashes. RES.INI's TreasuryItem, WeaponItem, ArmourItem and PotionItem are not what the
+    generator reads (ITEM-015 unclear).
+      * 2026-10-23: the review doc has the second "for a fork" sweep: a ranked list of nine findings, what #204, #205 and
+        #211 did, and what remains (UI fallbacks, the client's per-civilization art, map builders by key, some caps).
 
 ## Decision and event log
 
@@ -269,7 +271,23 @@ the process decisions that have no ADR.
 
 * **2026-10-23 — Fish patches and the selection view (HUD-025, HUD-016).** The patch the player's boats fish gets a blue selection (patch 1.05; the frame now carries each worker's work target). The selection view names the kingdom, shows every experienced unit's LEVEL (but traders') and an item's POWER, as ReTzar reads the original. ITEM-015 is unclear: the original's random map generator makes its items itself (work queue 17, deferred to M8). No hash changes.
 
+* **2026-10-23 — Menu hints (SHELL-026).** The help ball of the original (BTN_HELP_B, BTN_HELP_S on the load and save windows) turns hint mode on and off on the campaign, custom map, custom setup, random map, options, load and save screens; the control under the pointer then shows its LOCAL/HELP.INI text in the original's box (MenuHelp in Tzar2.Game.Ui; the keys are ReTzar's reading of the controls' names). No hash changes.
+
+* **2026-10-23 — Chat screen (HUD-010, HUD-011).** CHAT (and Enter in single player) opens D_CHAT at ReTzar's places: the line, ALL, ALLY, ENEMY and CUSTOM, whose large window lists the other kingdoms with a check, their colour, name and a stance shield. The engine-free ChatScreen gives the line, recipients and mask to GameSession.SubmitChat, so single player can type the cheat codes again. Multiplayer's Enter keeps the overlay's chat line. No hash changes.
+
+* **2026-10-23 — F4's scoreboard and clock (DIP-008).** F4 now steps from nothing to the scoreboard and the clock, the clock alone, and back, as ReTzar reads the original (0x4f2903): the game time at the view's top right, one line per kingdom (name, own/team score, the best first, defeated struck through, its colour) above the bottom right corner. The engine-free ScoreBoard model orders and averages; the score itself stays the placeholder of UNK-29. No hash changes.
+
+* **2026-10-23 — Loan hints (TRADE-008).** The tavern's loan orders say what it lends and what is to return in the original's words (STRINGS3 getloan3, retloan3); the frame carries each kingdom's loan limit (a due raise included), the amount due and its resource. The hint shows in Tzar2's tooltip box, not the original's bottom-left line (HUD-001). No hash changes.
+
+* **2026-10-23 — Order conditions (HUD-029).** The card reads ORDERS.INI ENABLE through EQUATIONS.INI; the only condition in the data, QuestCount, hides the quest order while no quest is open. Unknown conditions keep their order. No hash changes.
+
 * **2026-10-23 — EXP-005 is unclear.** No way for the player to name a hero shows in the original's data or ReTzar; the promotion's HEROES.INI names are what Tzar2 has. A play-test on the owner's PC settles it.
+* **2026-10-23 — `v_02` completes again: the solver spares enemies a pending rule needs alive (ADR 0220).** Bisected
+  to #133, which only changed the random draws: `v_02`'s High Priest talks only while the mages live, and cheat
+  assistance had cleared them while Sartor was away on the army's attack. Now an enemy that an enabled rule wants alive
+  ("!ev_MagesKilled") is neither cleared nor attacked until that rule fires, and the army's attacks leave the heroes a
+  pending goal names. Survey: main 19 of 19, tutorial 7 of 7. The editor acceptance test counts a map by its last
+  attempt (a lost first try without cheats is retried) and fails if no attempt completes it.
 
 * **2026-10-23 — Fire rain and the whirlpool (MAG-024; ADR 0263).** ReTzar's reading of the original: fire rain is twenty fireballs of 40, one every 170 ms, each falling 375 ms within 2 tiles of the point and hitting what meets 5 x 5 tiles; the whirlpool forms on water only, deals 20 to every ship on its 3 x 3 tiles each 250 ms, wanders a tile every 2 s and lasts 30 s. New spell fields square, scatter, delayMs, moveMs (no new state: the moves follow from the time since the cast). Re-pinned: the gameplay golden's ruleset hash only.
 
