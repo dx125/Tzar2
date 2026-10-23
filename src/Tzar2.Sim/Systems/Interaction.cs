@@ -37,6 +37,24 @@ internal static class Interaction
         return IntMath.DistanceSquared(x, y, p.X, p.Y);
     }
 
+    /// <summary>
+    /// The larger of the two axis distances from a point to an entity: to its footprint (0 inside), or to a unit's
+    /// position. A square area's test (spell areas in the original's cells).
+    /// </summary>
+    public static long ChebyshevTo(World world, int x, int y, EntityId entity)
+    {
+        if (world.Footprints.Has(entity))
+        {
+            (int x0, int y0, int x1, int y1) = Rect(world, entity);
+            long dx = x < x0 ? x0 - x : x >= x1 ? x - (x1 - 1) : 0;
+            long dy = y < y0 ? y0 - y : y >= y1 ? y - (y1 - 1) : 0;
+            return Math.Max(dx, dy);
+        }
+
+        Position p = world.Positions.Get(entity);
+        return Math.Max(Math.Abs((long)x - p.X), Math.Abs((long)y - p.Y));
+    }
+
     /// <summary>Squared distance from a point to a rectangle (0 inside).</summary>
     public static long DistanceSquaredToRect(int x, int y, (int X0, int Y0, int X1, int Y1) r)
     {

@@ -211,7 +211,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Crafting | 50 gold per power point, 2 s per point, at most 20; a potion 10 HP or 5 mana per point, a level per 5 points; a book's uses = its points (ADR 0186) | YAML `combat.craft*` | UNK-25 | workshop captures |
 | Workshop items | books of 20 spells, potions of health (red), levels (green), mana (blue), attack (yellow), defence (grey), sword, bow, shield | YAML `Item.crafts` | ITEM-016 | an owner session in the workshop |
 | A map book's spell | magic type = index in STRINGS.INI `[spell_names]` (⚠ HYPOTHESIS) | `ScenarioSetup.LegacySpellOrder` | ITEM-016 | the editor shows a book's spell |
-| Spell magnitudes | cooldowns, cast times, fire rain and whirlpool; **range, mana, amounts, durations and areas of the other spells from ReTzar (ADRs 0260, 0261)** | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
+| Spell magnitudes | cooldowns, cast times; **range, mana, amounts, durations and areas of the other spells, fire rain and the whirlpool from ReTzar (ADRs 0260, 0261, 0263)** | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
 | Spell damage | no defence, no bonus | code (`MagicSystem`) | UNK-26 | captures |
 | Summon mana above the pool | costs at most the caster's whole pool (golem 600m, dragon 800m vs `max_manna` 100; ⚠ HYPOTHESIS) | code (`MagicSystem.ManaCost`) | UNK-26 | summon captures |
 | Medicine | **+2 tiles of healing range (ReTzar, ADR 0260)** | YAML `te_medicine` | — | captures |

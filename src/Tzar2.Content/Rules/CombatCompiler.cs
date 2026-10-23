@@ -35,7 +35,7 @@ internal sealed class CombatCompiler
     private static readonly string[] SpellFields =
     [
         "effect", "target", "affects", "mana", "range", "cooldownMs", "castMs", "amount", "durationMs", "radius", "summon", "projectile",
-        "pulseMs", "count", "targets", "bookValue", "durationMaxMs",
+        "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs",
     ];
 
     private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire"];
@@ -498,6 +498,10 @@ internal sealed class CombatCompiler
             Count = Math.Clamp(Int("count", 1, 64), 1, 64),
             BookValue = Int("bookValue", 0, 1_000_000),
             DurationMaxMs = Int("durationMaxMs", 0, 3_600_000),
+            Square = Int("square", 0, 1) == 1,
+            ScatterUnits = Int("scatter", 0, 32) * UnitsPerTile,
+            DelayMs = Int("delayMs", 0, 60_000),
+            MoveMs = Int("moveMs", 0, 60_000),
         };
     }
 

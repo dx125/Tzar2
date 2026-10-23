@@ -327,6 +327,24 @@ public sealed record SpellDefinition(
     /// <summary>When above <see cref="SpellDefinition.DurationMs"/>, a lasting effect lasts a random time up to this (stone: 120-300 s).</summary>
     public int DurationMaxMs { get; init; }
 
+    /// <summary>
+    /// An area effect's pulse reaches what meets the square of <see cref="SpellDefinition.RadiusUnits"/> tiles around the
+    /// pulse's tile (the original's cells: fire rain 5 × 5, the whirlpool 3 × 3), not a circle.
+    /// </summary>
+    public bool Square { get; init; }
+
+    /// <summary>Each pulse of an area effect lands at a random point up to this far from the cast point on each axis (fire rain: 2 tiles).</summary>
+    public int ScatterUnits { get; init; }
+
+    /// <summary>The first pulse comes this much later than <see cref="SpellDefinition.PulseMs"/> (fire rain: the fireball's fall).</summary>
+    public int DelayMs { get; init; }
+
+    /// <summary>
+    /// Every this long an area effect takes a random step of one tile where its whole square stays on water (the whirlpool:
+    /// 2 s); 0: it stays.
+    /// </summary>
+    public int MoveMs { get; init; }
+
     /// <summary>Whether <paramref name="typeId"/> may be affected (by its type).</summary>
     public bool AffectsType(ushort typeId) => TargetTypes.IsDefaultOrEmpty || TargetTypes.BinarySearch(typeId) >= 0;
 }
