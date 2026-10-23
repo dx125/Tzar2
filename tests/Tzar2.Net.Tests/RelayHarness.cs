@@ -15,15 +15,21 @@ internal sealed class RelayHarness : IDisposable
 {
     public const string Version = "test-1";
 
-    public RelayHarness(Action<RelayOptions>? configure = null)
+    // Issue #179: a 1 s relay and a 2 s client timeout dropped members on loaded Windows runners (several CI jobs at
+    // once) before a test got going. The defaults are generous; the keep-alive test sets its own, tighter ones.
+    public RelayHarness(Action<RelayOptions>? configure = null, int clientTimeoutMs = 8_000)
     {
-        Options = new RelayOptions { StartDelayMs = 50, DisconnectTimeoutMs = 1_000, DesyncCollectMs = 3_000, Log = e => LogLines.Add(e) };
+        ClientTimeoutMs = clientTimeoutMs;
+        Options = new RelayOptions { StartDelayMs = 50, DisconnectTimeoutMs = 5_000, DesyncCollectMs = 3_000, Log = e => LogLines.Add(e) };
         configure?.Invoke(Options);
         Relay = new RelayServer(Options);
         Relay.Start();
     }
 
     public RelayOptions Options { get; }
+
+    /// <summary>The clients' disconnect timeout.</summary>
+    public int ClientTimeoutMs { get; }
 
     public RelayServer Relay { get; }
 
@@ -53,7 +59,7 @@ internal sealed class RelayHarness : IDisposable
     }
 
     public LockstepClientOptions ClientOptions(string name, string version = Version) =>
-        new() { Host = "127.0.0.1", Port = Relay.Port, Name = name, GameVersion = version, DisconnectTimeoutMs = 2_000 };
+        new() { Host = "127.0.0.1", Port = Relay.Port, Name = name, GameVersion = version, DisconnectTimeoutMs = ClientTimeoutMs };
 
     /// <summary>Pumps the relay and every peer until <paramref name="done"/> holds.</summary>
     /// <exception cref="TimeoutException">It did not within <paramref name="timeoutMs"/>.</exception>

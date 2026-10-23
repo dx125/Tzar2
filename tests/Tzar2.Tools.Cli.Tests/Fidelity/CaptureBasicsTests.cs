@@ -219,15 +219,35 @@ public class MemoryProbeTests
         Assert.Equal([0x10000ul + 100], MemoryProbe.Filter(memory, "e", scan, ScanMode.Exact, 50, 10).Addresses);
         Assert.Empty(MemoryProbe.Filter(memory, "i", scan, ScanMode.Increased, null, 10).Addresses);
 
+        // A manual clock (issue #179: on a loaded Windows runner a 1 ms wait lasts a 15.6 ms timer tick or more, and 30 ms
+        // of wall time gave fewer than two samples): every wait advances the clock by exactly what was asked.
         using var stream = new MemoryStream();
+        var clock = new ManualClock();
         int samples = MemoryProbe.Sample(memory, scan.Addresses, 4, TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(30), stream,
-            System.Diagnostics.Stopwatch.GetTimestamp(), CancellationToken.None);
-        Assert.True(samples >= 2);
+            0, CancellationToken.None, clock, (d, _) => clock.Advance(d));
+        Assert.Equal(30, samples);
         MemoryProbe.SampleSeries series = MemoryProbe.ReadSamples(stream.ToArray());
         Assert.Equal(scan.Addresses, series.Addresses);
         Assert.Equal(samples, series.TimesMicroseconds.Count);
         Assert.All(series.Values[0], v => Assert.Equal(50, v));
         Assert.All(series.Values[1], v => Assert.Equal(65, v));
         Assert.Throws<InvalidDataException>(() => MemoryProbe.ReadSamples([1, 2, 3, 4]));
+    }
+}
+
+/// <summary>A clock that moves only when told (microsecond ticks).</summary>
+internal sealed class ManualClock : TimeProvider
+{
+    private long _now;
+
+    public override long TimestampFrequency => 1_000_000;
+
+    public override long GetTimestamp() => _now;
+
+    /// <summary>Moves the clock on by <paramref name="by"/>; returns false (not cancelled).</summary>
+    public bool Advance(TimeSpan by)
+    {
+        _now += (long)by.TotalMicroseconds;
+        return false;
     }
 }
