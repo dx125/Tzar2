@@ -81,7 +81,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly HashSet<uint> _selected = [];
     private readonly Dictionary<uint, (int X, int Y)> _shotStart = [];
     private readonly Dictionary<uint, (int X, int Y)> _shotPrevious = [];
-    private readonly Dictionary<uint, (int X, int Y, byte Kind)> _shotCurrent = [];
+    private readonly Dictionary<uint, (int X, int Y, ShotLook? Look)> _shotCurrent = [];
     private readonly HashSet<uint> _shotSeen = [];
     private readonly List<uint> _shotGone = [];
     private readonly List<(SheetRef Sheet, int X, int Y, long StartMs)> _bursts = [];
@@ -558,8 +558,9 @@ public sealed class WorldRenderer : IDisposable
 
     private const int ShotLift = 14; // shots leave and hit at a body's height (pixels)
 
-    // Projectiles in flight (GAME-07): the original's picture of each kind, raised on an arc from where it was first seen
-    // to its target and turned along its flight; explosive ones leave an explosion where they vanish.
+    // Projectiles in flight (GAME-07, PRES-002): the original's picture of each kind and shooter, raised on its arc from
+    // where it was first seen to its target and turned along its flight; shells, bolts and rockets leave a hole, a splash
+    // or a blast where they vanish, spells their burst.
     private void DrawProjectiles(GameFrame frame, bool fresh, int alpha, Rect2I cull)
     {
         ReadOnlySpan<FrameProjectile> shots = frame.Projectiles;
@@ -572,7 +573,7 @@ public sealed class WorldRenderer : IDisposable
             }
 
             _shotGone.Clear();
-            foreach ((uint id, (int x, int y, byte kind)) in _shotCurrent)
+            foreach ((uint id, (int x, int y, ShotLook? look)) in _shotCurrent)
             {
                 if (_shotSeen.Contains(id))
                 {
@@ -580,7 +581,7 @@ public sealed class WorldRenderer : IDisposable
                 }
 
                 _shotGone.Add(id);
-                if (kind < _rules.Projectiles.Count && EffectImages.Impact(_rules.Projectiles[kind].Key) is { } name && _bank.Get(name) is { } burst)
+                if (look is not null && look.ImpactOn(WaterAt(x, y), look.Shell && BuildingAt(frame, x, y)) is { } name && _bank.Get(name) is { } burst)
                 {
                     _bursts.Add((burst, x, y, _timeMs));
                 }
@@ -592,7 +593,7 @@ public sealed class WorldRenderer : IDisposable
             }
 
             _shotPrevious.Clear();
-            foreach ((uint id, (int x, int y, byte _)) in _shotCurrent)
+            foreach ((uint id, (int x, int y, ShotLook? _)) in _shotCurrent)
             {
                 _shotPrevious[id] = (x, y);
             }
@@ -600,21 +601,19 @@ public sealed class WorldRenderer : IDisposable
             _shotCurrent.Clear();
             foreach (FrameProjectile s in shots)
             {
-                _shotCurrent[s.Id] = (s.X, s.Y, s.Kind);
-                _shotStart.TryAdd(s.Id, (s.X, s.Y));
+                ShotLook? look = LookOf(s);
+                _shotCurrent[s.Id] = (s.X, s.Y, look);
+                if (_shotStart.TryAdd(s.Id, (s.X, s.Y)) && look is { Muzzle: true } && _bank.Get("explosion_small") is { } flash)
+                {
+                    _bursts.Add((flash, s.X, s.Y - ((24 - ShotLift) * UnitsPerPixel), _timeMs)); // the muzzle flash, 24 px up
+                }
             }
         }
 
         uint top = uint.MaxValue >> 2;
         foreach (FrameProjectile s in shots)
         {
-            if (s.Kind >= _rules.Projectiles.Count)
-            {
-                continue;
-            }
-
-            string key = _rules.Projectiles[s.Kind].Key;
-            if (EffectImages.Projectile(key) is not { } image || _bank.Get(image) is not { } sheet)
+            if (LookOf(s) is not { } look || _bank.Get(look.Body) is not { } sheet)
             {
                 continue;
             }
@@ -622,10 +621,12 @@ public sealed class WorldRenderer : IDisposable
             int a = Math.Clamp(alpha, 0, 1000);
             (int x, int y) = _shotPrevious.TryGetValue(s.Id, out (int X, int Y) from) ? (from.X + (int)((long)(s.X - from.X) * a / 1000), from.Y + (int)((long)(s.Y - from.Y) * a / 1000)) : (s.X, s.Y);
             (int sx, int sy) = _shotStart.TryGetValue(s.Id, out (int X, int Y) start) ? start : (x, y);
-            double length = Math.Sqrt(((double)(s.TargetX - sx) * (s.TargetX - sx)) + ((double)(s.TargetY - sy) * (s.TargetY - sy))) / UnitsPerPixel;
-            double left = Math.Sqrt(((double)(s.TargetX - x) * (s.TargetX - x)) + ((double)(s.TargetY - y) * (s.TargetY - y))) / UnitsPerPixel;
-            double progress = length > 0 ? 1 - (left / length) : 1;
-            int lift = ShotLift + EffectImages.ArcHeight(key, length, progress);
+
+            // 0x4335e7: the arc over the Chebyshev distance flown; shots without one fly at a body's height.
+            double span = Math.Max(Math.Abs(s.TargetX - sx), Math.Abs(s.TargetY - sy)) / (double)UnitsPerPixel;
+            double flown = Math.Max(Math.Abs(x - sx), Math.Abs(y - sy)) / (double)UnitsPerPixel;
+            bool arcs = look.Peak != 0 || look.Start != 0;
+            int lift = arcs ? EffectImages.ArcHeight(look.Peak, look.Start, span, flown) : ShotLift;
             int px = x / UnitsPerPixel, py = y / UnitsPerPixel;
             if (!cull.HasPoint(new Vector2I(px, py)))
             {
@@ -633,26 +634,30 @@ public sealed class WorldRenderer : IDisposable
             }
 
             int frameIndex;
-            if (EffectImages.Turns(key))
+            if (look.Turns)
             {
                 // The screen direction along the arc: the ground direction, tilted by the arc's slope.
                 double dx = (s.TargetX - x) / (double)UnitsPerPixel, dy = (s.TargetY - y) / (double)UnitsPerPixel;
                 double d = Math.Max(1, Math.Sqrt((dx * dx) + (dy * dy)));
-                double step = Math.Max(0.01, 4 / Math.Max(1, length));
-                double rise = EffectImages.ArcHeight(key, length, Math.Min(1, progress + step)) - EffectImages.ArcHeight(key, length, progress);
-                frameIndex = EffectImages.TurnFrame(dx / d * step * length, (dy / d * step * length) - rise, sheet.Sheet.FramesPerDirection);
+                const double Step = 4;
+                double rise = arcs ? EffectImages.ArcHeight(look.Peak, look.Start, span, flown + Step) - lift : 0;
+                frameIndex = EffectImages.TurnFrame(dx / d * Step, (dy / d * Step) - rise, sheet.Sheet.FramesPerDirection);
             }
             else
             {
                 frameIndex = sheet.Animation.FrameAt(_timeMs + (s.Id * 37));
             }
 
-            if (sheet.Shadow is { } shadow)
+            if (look.Shadow is { } shadowName && _bank.Get(shadowName) is { } shadow)
             {
-                Add(_objects, shadow, new Vector2I(px, py) - sheet.Anchor, 0, frameIndex, -1, top, shadowOnly: true);
+                Add(_objects, shadow, new Vector2I(px, py) - shadow.Anchor, 0, look.Turns ? frameIndex : 0, -1, top, shadowOnly: true);
+            }
+            else if (sheet.Shadow is { } own)
+            {
+                Add(_objects, own, new Vector2I(px, py) - sheet.Anchor, 0, frameIndex, -1, top, shadowOnly: true);
             }
 
-            Add(EffectImages.Glows(key) ? _glow : _objects, sheet, new Vector2I(px, py - lift) - sheet.Anchor, 0, frameIndex, -1, top | 1, shadowOnly: false);
+            Add(look.Glows ? _glow : _objects, sheet, new Vector2I(px, py - lift) - sheet.Anchor, 0, frameIndex, -1, top | 1, shadowOnly: false);
         }
 
         // Explosions where explosive shots landed.
@@ -660,14 +665,60 @@ public sealed class WorldRenderer : IDisposable
         {
             (SheetRef burst, int bx, int by, long startMs) = _bursts[i];
             long age = _timeMs - startMs;
-            if (age < 0 || age >= burst.Animation.CycleMs)
+            // A hole stays on the ground for 10 s on its last frame (0x43392a); the rest play once.
+            bool hole = burst.Name == EffectImages.Hole;
+            if (age < 0 || age >= (hole ? EffectImages.HoleMs : burst.Animation.CycleMs))
             {
                 _bursts.RemoveAt(i);
                 continue;
             }
 
-            Add(_glow, burst, new Vector2I(bx / UnitsPerPixel, (by / UnitsPerPixel) - ShotLift) - burst.Anchor, 0, burst.Animation.FrameAt(age), -1, top | 2, shadowOnly: false);
+            int f = age >= burst.Animation.CycleMs ? burst.Sheet.FramesPerDirection - 1 : burst.Animation.FrameAt(age);
+            bool ground = hole || burst.Name == EffectImages.Splash;
+            Add(ground ? _ground : _glow, burst, new Vector2I(bx / UnitsPerPixel, (by / UnitsPerPixel) - (ground ? 0 : ShotLift)) - burst.Anchor, 0, f, -1, top | 2, shadowOnly: false);
         }
+    }
+
+    // How a shot looks: by its kind and its shooter's original class (PRES-002).
+    private ShotLook? LookOf(in FrameProjectile s)
+    {
+        if (s.Kind >= _rules.Projectiles.Count)
+        {
+            return null;
+        }
+
+        string? shooter = s.ShooterType < _rules.EntityTypes.Count ? _rules.EntityTypes[s.ShooterType].Traits.LegacyClass : null;
+        return EffectImages.Look(_rules.Projectiles[s.Kind].Key, shooter);
+    }
+
+    // Open water under a point (world units): all four corners of its tile are water.
+    private bool WaterAt(int x, int y)
+    {
+        int tx = Math.Clamp(x / (TilePixels * UnitsPerPixel), 0, _grid.Width - 1), ty = Math.Clamp(y / (TilePixels * UnitsPerPixel), 0, _grid.Height - 1);
+        (int tl, int tr, int br, int bl) = _grid.CornersOf(tx, ty);
+        return tl == 0 && tr == 0 && br == 0 && bl == 0;
+    }
+
+    // A building's footprint covers the point (a shell there blasts).
+    private bool BuildingAt(GameFrame frame, int x, int y)
+    {
+        int tx = x / (TilePixels * UnitsPerPixel), ty = y / (TilePixels * UnitsPerPixel);
+        foreach (FrameEntity e in frame.Entities)
+        {
+            if (e.TileX < 0 || e.TypeId >= _rules.EntityTypes.Count)
+            {
+                continue;
+            }
+
+            EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
+            (int w, int h) = def.FootprintSize(e.Rotated && def.CanTurn);
+            if (def.Traits.Category == EntityCategory.Building && tx >= e.TileX && tx < e.TileX + w && ty >= e.TileY && ty < e.TileY + h)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Flames on a burning building (GAME-03): the original's fire strips at a few spots of the footprint, more on larger

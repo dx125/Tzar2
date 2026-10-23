@@ -110,14 +110,14 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Magic, religion and spies](magic.yaml) (MAG) | 24 | 20 | 4 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 3 | 3 | 3 | 0 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 4 | 3 | 2 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 6 | 10 | 6 | 4 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 341 | 223 | 78 | 19 | 10 | 9 | 2 |
+| **All** | 341 | 224 | 78 | 18 | 10 | 9 | 2 |
 
 ## Not done yet
 
@@ -157,7 +157,6 @@ Missing and partial rules.
 
 ### Animations, effects and sounds
 
-* **PRES-002** (partial): Arrows, bolts, stones, cannon balls, rockets and spells fly as the original's pictures, and stones, shells, rockets and bolts leave its explosions. *Which picture goes with which weapon, the flames' spots and the arcs are Tzar2's guesses.*
 * **PRES-005** (partial): Units have their own animations for capturing and collecting meat (peasants), murder (ninjas), prayer (priests), casting (mages and priests) and other attack swings (footmen, macemen, peasants, bears, ninjas). *Done - capturing and cutting meat (peasants), casting (mages and priests, image_spell; the Asian priest's prayer is the same picture) and the second swing on half the blows (footmen, macemen, peasants, bears, ninjas, priests; the original draws at random, 0x4e5720 by ReTzar's reading). Left - the ninja's murder (the order is not built) and the Asian peasant's third swing under Kung Fu.*
 * **PRES-008** (partial): Some animations start inside their sheet, at the row and column the data gives. *An attack turns its picture by startcol (a knight striking east shows column 4) and a swing starts on its startrow. Walks and idles still start where the shared clock is, because the frame does not carry when a picture was set.*
 
