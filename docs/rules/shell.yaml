@@ -27,14 +27,14 @@ rules:
     status: implemented
   SHELL-006:
     rule: The setup of a custom map shows the players with their names and colours and lets each choose the European, Arabian or Asian civilization.
-    source: [manual Single Player Setup Screen]
-    status: partial
-    note: Only the player's own civilization can be chosen; the computer kingdoms keep the map's.
+    source: [manual Single Player Setup Screen, 'community ReTzar src/menu.rs (Screen::Setup), src/world.rs (GameSetup)']
+    status: tested
+    note: Each kingdom of the map has a row: colour, name, civilization (RANDOM is drawn at the start) and team 1-4. A team allies over the map's diplomacy. A kingdom given another civilization takes it for its units and buildings where the ruleset has their class for it (ReTzar reads the original's loader). With the map's settings the rows keep the map's choices.
   SHELL-007:
     rule: On the setup of a custom map the map's own settings apply until USE MAP SETTINGS is unchecked; then the number of kingdoms, game type, victory condition, difficulty, starting resources, No Fog and Explore can be changed.
-    source: [manual Single Player Setup Screen]
-    status: partial
-    note: Each option has a "map" choice instead of the one checkbox; the number of kingdoms, the game type and the victory condition cannot be changed.
+    source: [manual Single Player Setup Screen, 'strings STRINGS.INI [sp_setupmap]', 'community ReTzar src/menu.rs (Screen::Setup), src/world.rs (GameSetup)']
+    status: tested
+    note: With the map's settings the difficulty is the map's. Without them, Starting Resources has Default (the map's stockpiles), and fewer kingdoms leave out the last ones in kingdom order with their objects (Not Appear objects stay for Appear Object). The original keeps some options locked by the map's header (ReTzar setup_locks); Tzar2 opens all of them (UNVERIFIED which header values lock).
   SHELL-008:
     rule: The difficulty of the computer kingdoms is Easy, Normal or Hard.
     source: [manual Single Player Setup Screen]
@@ -106,9 +106,9 @@ rules:
   SHELL-021:
     rule: The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game.
     source: [manual Menu Screen, manual Hot Keys]
-    status: partial
+    status: tested
     adr: [0187]
-    note: Instructions are missing.
+    note: INSTRUCTIONS (at the top of D_MENU, where ReTzar puts it) opens the online help at its hot keys (HK.TXT), as ReTzar does; what the original's "floating screen" of directives shows is UNVERIFIED.
   SHELL-022:
     rule: F2 opens the save dialog and F3 the load dialog.
     source: [manual Hot Keys]

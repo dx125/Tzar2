@@ -28,7 +28,7 @@ rules:
     rule: The victory conditions are standard (the last kingdom standing), destroy the castle, a score limit, a time limit, or none.
     source: [manual Single Player Setup Screen, community TDD GAME-17]
     status: tested
-    note: The setup screens cannot choose them (SHELL-007).
+    note: The random map screen, the custom map setup (without the map's settings) and the multiplayer lobby choose them (SHELL-007, SHELL-010).
   DIP-007:
     rule: A Deathmatch game starts every kingdom rich.
     source: [manual Random Map Screen (game type)]

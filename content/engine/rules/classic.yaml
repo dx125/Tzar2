@@ -206,8 +206,12 @@ legacy:
   # armaments the hit frame of their attack animation (WAR-014); the pin had drifted again before that (E716BE64DED8009D).
   # Then (ITEM-016) ITEM_PLUSPLUS is imported as a weapon, the power item; then (WORLD-015) land units get a body from
   # their object box. Then (ADR 0250) the ^class.messiah and ^class.ghost templates take the Messiah and the ghost; then (ADR 0252) ^euro.trader, ^arab.trader and ^asia.peon.
+  # Re-pinned 2026-10-23 (code review): measured at every pinning commit on a clean install, the pin matched its own
+  # commit up to #131 (D13ECBADA7B58867); #168 (only ninjas climb cliffs) moved it to 2B10D506FB5D9D5A without a re-pin,
+  # and #133 and #139 pinned values measured on branches made before #168 (8E099B69A78D8E17, 8EB08346ED82C438), which no
+  # commit of main ever produced. Main has given 7F4CCBEEEC76AD36 since #139 (#187 and later moved nothing).
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "8EB08346ED82C438"
+  referenceDataHash: "7F4CCBEEEC76AD36"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
