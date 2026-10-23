@@ -51,6 +51,18 @@ public class ClientLogicTests
     }
 
     [Fact]
+    public void The_first_run_import_has_its_option_and_writes_into_the_users_data()
+    {
+        ViewerArgs args = ViewerArgs.Parse(["--import", @"E:\Games\Tzar", "--smoke"]);
+        Assert.Equal(@"E:\Games\Tzar", args.Import);
+        Assert.True(args.IsAutomated);
+        Assert.False(ViewerArgs.Parse([]).IsAutomated);
+        Assert.True(ViewerArgs.Parse(["--autoplay", "shots"]).IsAutomated);
+        Assert.Contains("--import", ViewerArgs.Usage, StringComparison.Ordinal);
+        Assert.Equal(System.IO.Path.Combine("u", "import"), FirstRunImport.OutputDirectory("u"));
+    }
+
+    [Fact]
     public void Sound_font_locator_takes_the_first_existing_candidate()
     {
         Assert.Equal("b", SoundFontLocator.Choose(p => p is "b" or "c", null, " ", "a", "b", "c"));

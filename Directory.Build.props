@@ -13,7 +13,14 @@
     <Tzar2OverflowPolicy Condition="'$(Tzar2OverflowPolicy)' == '' and ('$(Configuration)' == 'Release' or '$(Configuration)' == 'ExportRelease')">Saturate</Tzar2OverflowPolicy>
     <Tzar2OverflowPolicy Condition="'$(Tzar2OverflowPolicy)' == ''">Throw</Tzar2OverflowPolicy>
 
-    <VersionPrefix>0.0.1</VersionPrefix>
+    <!--
+      Godot's export builds the client and, through the project references, every library with Configuration=ExportRelease,
+      which the SDK does not optimise by itself (ADR 0241).
+    -->
+    <Optimize Condition="'$(Configuration)' == 'ExportRelease'">true</Optimize>
+
+    <!-- The M7 Windows beta (ADR 0240); the packaging job adds -beta.<run> (VersionSuffix) and the commit (ADR 0241). -->
+    <VersionPrefix>0.7.0</VersionPrefix>
 
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
