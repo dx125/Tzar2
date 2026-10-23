@@ -47,7 +47,7 @@ rules:
     rule: The random map screen sets for each player an AI script (the small button by the name), the civilization, the number of kingdoms, the game type (Standard or Deathmatch), the victory condition, the difficulty, the starting resources, No Fog and Explore.
     source: [manual Random Map Screen, 'strings STRINGS.INI [sp_setuprnd]', 'community ReTzar src/menu.rs (Screen::Random)']
     status: tested
-    note: Each kingdom also has a colour and a team (1-4). The victory condition's time limit runs 30-180 minutes by 30 and its score limit 200-2,000 by 200 (ReTzar). The AI button steps through the scripts; the original opens a list (D_CHOOSEAI, still to build). Where the captions sit is ours (UNVERIFIED until a screenshot of the original); the map preview of the old screen is gone, the five map options are in its place.
+    note: Each kingdom also has a colour and a team (1-4). The victory condition's time limit runs 30-180 minutes by 30 and its score limit 200-2,000 by 200 (ReTzar). The AI button steps through the scripts; the original opens a list (D_CHOOSEAI, still to build). The captions sit where the original writes them (ReTzar), and Number of Players shows its range ("(2 - 6)"); the map preview of the old screen is gone, the five map options are in its place.
   SHELL-011:
     rule: A random map has a size (Medium, Large, Huge, Enormous, Real World), a type (Random, Archipelagos, Dry, Island, Continental, Lakes), a terrain set (Grass, Desert, Summer, Winter) and map resources (Low, Normal, High), and may have a guarded town, animals, gateways, magic items and cliffs.
     source: [manual Random Map Screen, 'community ReTzar src/menu.rs (Screen::Random)']
