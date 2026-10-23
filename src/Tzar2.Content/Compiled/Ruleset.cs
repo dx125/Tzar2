@@ -53,6 +53,7 @@ public sealed partial class Ruleset
     public const string DefaultCommonCivilization = "comm";
 
     private readonly string[] _civilizations;
+    private readonly int[] _seats;
     private readonly OrderGate[] _orderGates;
     private readonly string[] _orderGateKeys;
     private readonly int[] _orderGateIndex;
@@ -216,6 +217,11 @@ public sealed partial class Ruleset
         }
 
         Array.Sort(_sortedKeys, _sortedIds, StringComparer.Ordinal);
+        _seats = new int[_civilizations.Length];
+        for (int c = 0; c < _civilizations.Length; c++)
+        {
+            _seats[c] = Array.FindIndex(_entityTypes, t => t.Traits.IsSeat && t.Traits.Civilization == _civilizations[c]);
+        }
 
         Name = name;
         OccupancyCellsPerTileAxis = occupancyCellsPerTileAxis;
@@ -273,6 +279,26 @@ public sealed partial class Ruleset
     /// <summary>Whether <paramref name="civilization"/> is a kingdom's own civilization: listed, not empty, not the common one.</summary>
     public bool IsPlayableCivilization(string civilization)
         => !string.IsNullOrEmpty(civilization) && civilization != CommonCivilization && Array.IndexOf(_civilizations, civilization) >= 0;
+
+    /// <summary>
+    /// The type id of <paramref name="civilization"/>'s seat, the lowest-id type of that civilization with trait
+    /// <c>Seat</c> (classic: its castle), or -1. A kingdom needs one: it is where the kingdom starts and what the "destroy
+    /// the castles" victory counts (GAME-17).
+    /// </summary>
+    public int SeatTypeId(string civilization)
+    {
+        int c = Array.IndexOf(_civilizations, civilization);
+        return c < 0 ? -1 : _seats[c];
+    }
+
+    /// <summary>Whether a kingdom can be of <paramref name="civilization"/>: playable and with a seat.</summary>
+    public bool CanFoundKingdom(string civilization) => IsPlayableCivilization(civilization) && SeatTypeId(civilization) >= 0;
+
+    /// <summary>The first civilization in the ruleset's order that <see cref="CanFoundKingdom"/>, or null (classic: euro).</summary>
+    public string? FirstKingdomCivilization => Array.Find(_civilizations, CanFoundKingdom);
+
+    /// <summary>The civilizations a kingdom can be of (<see cref="CanFoundKingdom"/>), in the ruleset's order.</summary>
+    public IReadOnlyList<string> KingdomCivilizations => Array.FindAll(_civilizations, CanFoundKingdom);
 
     /// <summary>Orders that need a technology per civilization (consumed by the systems that implement the orders).</summary>
     public IReadOnlyList<OrderGate> OrderGates => _orderGates;

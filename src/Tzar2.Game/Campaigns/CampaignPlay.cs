@@ -171,7 +171,7 @@ public static class ScenarioMatch
                 civ = chosen;
             }
 
-            if (ruleset.EntityTypeId(civ + ".castle") < 0)
+            if (!ruleset.CanFoundKingdom(civ))
             {
                 civ = FirstPlayable(ruleset);
             }
@@ -254,7 +254,7 @@ public static class ScenarioMatch
         for (int p = 0; p < players.Length; p++)
         {
             players[p] = p < descriptor.Players.Length && descriptor.Players[p] is { } d
-                ? new PlayerSetup((byte)p, ruleset.EntityTypeId(d.Civilization + ".castle") >= 0 ? d.Civilization : b.Players[p].Civilization, d.Controller, d.Difficulty, d.AiScript, d.Colour)
+                ? new PlayerSetup((byte)p, ruleset.CanFoundKingdom(d.Civilization) ? d.Civilization : b.Players[p].Civilization, d.Controller, d.Difficulty, d.AiScript, d.Colour)
                 : b.Players[p]; // the rescue kingdom the map adds
         }
 
@@ -335,19 +335,9 @@ public static class ScenarioMatch
 
     /// <summary>Match start: stockpiles and diplomacy of the scenario's kingdoms, then the campaign carry-over.</summary>
     // mapStockpiles: the kingdoms start with the map's stockpiles (false: a starting-resource level was chosen).
-    // The ruleset's first playable civilization with a castle (classic: euro).
+    // The ruleset's first civilization a kingdom can be of (classic: euro).
     private static string FirstPlayable(Ruleset ruleset)
-    {
-        foreach (string c in ruleset.Civilizations)
-        {
-            if (ruleset.IsPlayableCivilization(c) && ruleset.EntityTypeId(c + ".castle") >= 0)
-            {
-                return c;
-            }
-        }
-
-        return "euro";
-    }
+        => ruleset.FirstKingdomCivilization ?? throw new System.IO.InvalidDataException($"Ruleset '{ruleset.Name}' has no civilization with a seat.");
 
     private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, bool mapStockpiles = true) : IMatchPreparation
     {

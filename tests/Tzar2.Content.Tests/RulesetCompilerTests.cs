@@ -327,6 +327,38 @@ public class RulesetCompilerTests
     }
 
     [Fact]
+    public void A_kingdom_can_be_of_a_playable_civilization_with_a_seat()
+    {
+        // Code review 2026-10 (item 16, for a fork): the match setup, the campaigns and the desync reports asked for a
+        // type named "<civ>.castle"; they ask the ruleset now, which reads the Seat trait. In classic the seats are
+        // exactly the castles, so nothing changes there.
+        Ruleset classic = SyntheticLegacyContent.CompileRuleset();
+        int[] seats = [.. classic.EntityTypes.Where(t => t.Traits.IsSeat).Select(t => (int)t.Id)];
+        int[] castles = [.. classic.Civilizations.Select(c => classic.EntityTypeId(c + ".castle")).Where(id => id >= 0)];
+        Assert.Equal(castles.Order(), seats.Order());
+        foreach (string civ in classic.Civilizations)
+        {
+            Assert.Equal(classic.EntityTypeId(civ + ".castle"), classic.SeatTypeId(civ));
+        }
+
+        Assert.Equal([.. classic.Civilizations.Where(c => classic.IsPlayableCivilization(c) && classic.EntityTypeId(c + ".castle") >= 0)], classic.KingdomCivilizations);
+        Assert.Equal("euro", classic.FirstKingdomCivilization);
+        Assert.False(classic.CanFoundKingdom("comm"));
+        Assert.False(classic.CanFoundKingdom("elves"));
+
+        // A fork's civilization without a seat cannot found a kingdom, whatever its place in the list. With two seats the
+        // civilization's seat is the lower type id.
+        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        {
+            OverrideTexts = [new("fork.yaml", "ruleset: { civilizations: [elves, euro, arab, asia] }\neuro.house: { Seat: {} }")],
+        });
+        Assert.Equal(-1, fork.SeatTypeId("elves"));
+        Assert.False(fork.CanFoundKingdom("elves"));
+        Assert.Equal("euro", fork.FirstKingdomCivilization);
+        Assert.Equal(Math.Min(fork.EntityTypeId("euro.house"), fork.EntityTypeId("euro.castle")), fork.SeatTypeId("euro"));
+    }
+
+    [Fact]
     [Trait("Rule", "WORLD-012")]
     public void A_unit_walks_at_the_speed_of_its_walk_sheets_stride_unless_measured()
     {

@@ -227,9 +227,9 @@ public sealed record MatchSetup
                 throw new ArgumentException($"Player {i} has slot {Players[i].Slot}; slots must be 0..n-1 in order.", nameof(ruleset));
             }
 
-            if (ruleset.EntityTypeId(Players[i].Civilization + ".castle") < 0)
+            if (!ruleset.CanFoundKingdom(Players[i].Civilization))
             {
-                throw new ArgumentException($"Civilization '{Players[i].Civilization}' has no castle in ruleset '{ruleset.Name}'.", nameof(ruleset));
+                throw new ArgumentException($"Civilization '{Players[i].Civilization}' is not playable or has no seat (castle) in ruleset '{ruleset.Name}'.", nameof(ruleset));
             }
 
             humans += Players[i].Controller == ControllerKind.Human ? 1 : 0;
