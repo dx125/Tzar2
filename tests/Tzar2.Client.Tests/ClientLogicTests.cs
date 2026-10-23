@@ -58,6 +58,9 @@ public class ClientLogicTests
         Assert.True(args.IsAutomated);
         Assert.False(ViewerArgs.Parse([]).IsAutomated);
         Assert.True(ViewerArgs.Parse(["--autoplay", "shots"]).IsAutomated);
+        Assert.True(ViewerArgs.Parse(["--ui-smoke"]).IsAutomated);
+        Assert.True(ViewerArgs.Parse(["--bench-render"]).IsAutomated);
+        Assert.True(ViewerArgs.Parse(["--resource-soak", "soak"]).IsAutomated);
         Assert.Contains("--import", ViewerArgs.Usage, StringComparison.Ordinal);
         Assert.Equal(System.IO.Path.Combine("u", "import"), FirstRunImport.OutputDirectory("u"));
     }

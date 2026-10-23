@@ -155,7 +155,7 @@ files:
   - path: LOCAL/STRINGS.INI
     reader: Tzar2.Client PresentationCatalog (texts)
     account: sections
-    used: [campaign, chat, check, diplomacy, edit, endgamedlg, game_scr, general, images, load, mainscr, menu, notify, objects, options, orders_add, orders_names, save, selview, singlescr, sp_choosemap, sp_setupmap, sp_setuprnd, tribute, viewmsg]
+    used: [campaign, chat, check, diplomacy, edit, endgamedlg, game_scr, general, images, load, mainscr, menu, notify, objects, options, orders_add, orders_names, q, save, selview, singlescr, sp_choosemap, sp_setupmap, sp_setuprnd, tribute, viewmsg]
     ignored:
       dlg_btns: OK and CANCEL; Tzar2's dialogs take theirs from the screens' pictures
       err: errors of DirectX, video modes and flags that Tzar2 does not have
@@ -169,7 +169,6 @@ files:
       defmsg: the hint line's description of orders (HUD-001)
       msg: the game's messages in the original's words (HUD-026)
       peons: a working peasant named by its job, woodcutter, farmer, miner, builder (HUD-032)
-      q: the confirmations of quit, resign and disconnect (SHELL-027)
       wnd_message: the message window's button (HUD-026)
       wnd_quests: the quest window's texts (HUD-026)
   - path: LOCAL/STRINGS2.INI

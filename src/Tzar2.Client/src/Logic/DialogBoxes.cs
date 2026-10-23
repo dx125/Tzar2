@@ -23,6 +23,21 @@ public readonly record struct ArtBox(int X, int Y, int Width, int Height)
 /// </summary>
 public static class DialogBoxes
 {
+    /// <summary><c>D_MSGWND/back</c>: 500 × 320 (quit, resign, disconnect; SHELL-027).</summary>
+    public static readonly (int Width, int Height) Question = (500, 320);
+
+    /// <summary>The question window's title box (ReTzar's layout of the original's dialog).</summary>
+    public static readonly ArtBox QuestionTitle = new(44, 46, 406, 20);
+
+    /// <summary>The question window's text box.</summary>
+    public static readonly ArtBox QuestionText = new(50, 92, 400, 140);
+
+    /// <summary>The question window's Yes button (a 189 × 27 state of <c>D_MSGWND/btn</c>).</summary>
+    public static readonly ArtBox QuestionYes = new(50, 258, 189, 27);
+
+    /// <summary>The question window's No button.</summary>
+    public static readonly ArtBox QuestionNo = new(261, 258, 189, 27);
+
     /// <summary><c>D_MESSAGE/back</c>: 500 × 320.</summary>
     public static readonly (int Width, int Height) Message = (500, 320);
 
