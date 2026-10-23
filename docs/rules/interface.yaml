@@ -137,8 +137,8 @@ rules:
   HUD-029:
     rule: An order shows only when its condition holds; the quest order only when there are quests.
     source: [data ORDERS.INI enable, data EQUATIONS.INI]
-    status: missing
-    note: The quest order is always there.
+    status: tested
+    note: The card reads an order's ENABLE through EQUATIONS.INI; the one condition the data has, QuestCount (view_quests), hides the quest order while no quest is open. A condition the card does not know keeps its order.
   HUD-030:
     rule: The minimap paints terrains, trees and cliffs in the colours of the terrain set's data.
     source: ['data TERRAIN.INI [minidatargb]']

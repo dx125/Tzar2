@@ -17,13 +17,15 @@ public sealed class PresentationCatalogTests
     private static readonly Lazy<(Ruleset Rules, MemorySource Tables)> Data = new(() =>
     {
         MemorySource tables = SyntheticLegacyContent.CreateTables();
-        tables.Add("tables/data/menu.ini.json", Ini(("e_peon", [("default", "move"), ("move", "M"), ("e_build", "B"), ("harvest", "H"), ("bribe", "I")]), ("e_build", [("e_house", "H"), ("e_rare", "")])));
+        tables.Add("tables/data/menu.ini.json", Ini(("e_peon", [("default", "move"), ("move", "M"), ("e_build", "B"), ("harvest", "H"), ("bribe", "I")]), ("e_build", [("e_house", "H"), ("e_rare", "")]), ("ownership", [("view_quests", "Q")])));
         tables.Add("tables/data/orders.ini.json", Ini(
             ("move", [("ACTION", "move"), ("IMG", "7")]),
             ("harvest", [("ACTION", "harvest"), ("IMG", "9")]),
             ("bribe", [("ACTION", "bribe"), ("IMG", "1")]),
             ("e_build", [("ACTION", string.Empty), ("SUBMENU", "e_build"), ("IMG", "24")]),
-            ("e_house", [("ACTION", "BUILD house"), ("IMG", "74")])));
+            ("e_house", [("ACTION", "BUILD house"), ("IMG", "74")]),
+            ("view_quests", [("ACTION", "view_quests"), ("IMG", "245"), ("ENABLE", "EnableQuestButton")])));
+        tables.Add("tables/data/equations.ini.json", Ini(("Equations", [("EnableQuestButton", "QuestCount")])));
         tables.Add("tables/data/sounds.ini.json", Ini(("foot_cmd", [("command\\Foot1.wav", "100"), ("command\\foot2.wav", "300")]), ("priority", [("obj_select", "255")])));
         tables.Add("tables/data/keys.ini.json", Ini(("Ctrl", [("C", "castle"), ("T", "tower_wood,tower_stone2")])));
         tables.Add("tables/data/icons.ini.json", Ini(("e_peon", [("image", "ICONS\\icons.bmp"), ("index", "33")])));
@@ -55,6 +57,7 @@ public sealed class PresentationCatalogTests
     }
 
     [Fact]
+    [Trait("Rule", "HUD-029")]
     public void Cards_classify_orders_and_keep_menu_letters()
     {
         PresentationCatalog catalog = Catalog();
@@ -69,6 +72,8 @@ public sealed class PresentationCatalogTests
         Assert.Equal((CardAction.Build, "house"), (house.Action, house.Argument));
         Assert.Equal(catalog.Ruleset.EntityTypeId("euro.house"), catalog.TypeOfClass("euro", "house"));
         Assert.Equal((CardAction.Train, "peon"), PresentationCatalog.Classify("CREATE peon", null));
+        Assert.Equal(string.Empty, card[0].Enable);
+        Assert.Equal("QuestCount", catalog.Card("ownership")[0].Enable); // HUD-029: ORDERS.INI ENABLE through EQUATIONS.INI
         Assert.Equal((CardAction.Stop, string.Empty), PresentationCatalog.Classify("STOP", null));
     }
 

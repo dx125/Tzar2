@@ -25,7 +25,7 @@ internal sealed class CombatCompiler
         "heroLevel", "leadershipTechnology", "leadershipRadiusTiles", "leadershipSharePercent", "honorTechnology", "honorAttackPercent",
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
         "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
-        "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
+        "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeGather", "crusaderArrivalMs", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
         "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell", "dummyDamagePerPoint", "experienceSpeeds", "levelCapBuildings", "levelCapPerBuilding",
         "marketTechnology", "marketFirstMs", "marketEveryMs", "marketSize", "marketBuyPercent", "marketOffers", "marketBookSpells",
     ];
@@ -35,7 +35,7 @@ internal sealed class CombatCompiler
     private static readonly string[] SpellFields =
     [
         "effect", "target", "affects", "mana", "range", "cooldownMs", "castMs", "amount", "durationMs", "radius", "summon", "projectile",
-        "pulseMs", "count", "targets", "bookValue", "durationMaxMs",
+        "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs",
     ];
 
     private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire"];
@@ -309,6 +309,8 @@ internal sealed class CombatCompiler
             CrusadeRestart = Range("crusadeRestart", d.CrusadeRestart, 0, 1000),
             CrusadeCeilingStep = Range("crusadeCeilingStep", d.CrusadeCeilingStep, 0, 1000),
             CrusadeCeilingMax = Range("crusadeCeilingMax", d.CrusadeCeilingMax, 0, 1000),
+            CrusadeGather = Gather(d.CrusadeGather),
+            CrusaderArrivalMs = Range("crusaderArrivalMs", d.CrusaderArrivalMs, 1, 60_000),
             CrusadeAnchorRadiusUnits = Range("crusadeAnchorRadiusTiles", d.CrusadeAnchorRadiusUnits / UnitsPerTile, 0, 64) * UnitsPerTile,
             HeroNames = HeroNameLists(legacy),
             BansheeSpell = bansheeSpell,
@@ -498,6 +500,10 @@ internal sealed class CombatCompiler
             Count = Math.Clamp(Int("count", 1, 64), 1, 64),
             BookValue = Int("bookValue", 0, 1_000_000),
             DurationMaxMs = Int("durationMaxMs", 0, 3_600_000),
+            Square = Int("square", 0, 1) == 1,
+            ScatterUnits = Int("scatter", 0, 32) * UnitsPerTile,
+            DelayMs = Int("delayMs", 0, 60_000),
+            MoveMs = Int("moveMs", 0, 60_000),
         };
     }
 
@@ -524,6 +530,32 @@ internal sealed class CombatCompiler
 
         string source = _settings.FieldSource(Section, field);
         return research.Filter("combat." + field, RulesetCompiler.Map(node, source, "combat." + field), source);
+    }
+
+    // combat.crusadeGather: { from minute: every seconds }, ascending from 0; absent: the original's steps.
+    private ImmutableArray<CrusadeGatherStep> Gather(ImmutableArray<CrusadeGatherStep> fallback)
+    {
+        if (_settings.Field(Section, "crusadeGather") is not { } node)
+        {
+            return fallback;
+        }
+
+        string source = _settings.FieldSource(Section, "crusadeGather");
+        var list = new List<CrusadeGatherStep>();
+        foreach (KeyValuePair<string, YamlNode> e in RulesetCompiler.Map(node, source, "combat.crusadeGather").Entries)
+        {
+            int every = RulesetCompiler.Int(e.Value, source, "combat.crusadeGather." + e.Key);
+            int first = list.Count == 0 ? 0 : list[^1].FromMinute + 1;
+            if (!int.TryParse(e.Key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int minute)
+                || (list.Count == 0 ? minute != 0 : minute < first) || every is < 1 or > 3600)
+            {
+                throw new RulesException(source, e.Value.Line, "combat.crusadeGather: ascending minutes from 0, each with 1..3600 seconds");
+            }
+
+            list.Add(new CrusadeGatherStep(minute, every));
+        }
+
+        return [.. list];
     }
 
     // combat.experienceSpeeds: { technology: percent }, in file order.

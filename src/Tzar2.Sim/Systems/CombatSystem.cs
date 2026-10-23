@@ -43,9 +43,6 @@ public sealed class CombatSystem : ISimSystem
     /// <summary>A chased target that moved further than this from the last chase point triggers a new request.</summary>
     public const int ChaseRetargetUnits = MapState.UnitsPerTile;
 
-    /// <summary>An auto-acquired target further than this many times the sight radius is dropped.</summary>
-    public const int LeashFactor = 2;
-
     /// <summary>Owner bit of Nature in the per-cell owner masks (player slots use bits 0-15).</summary>
     private const int NatureBit = 31;
 
@@ -271,12 +268,12 @@ public sealed class CombatSystem : ISimSystem
         c.HitInMs = -1;
         c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
         // A unit may always chase what can hit it from where it stands (a tower that outranges its sight).
-        long leash = Math.Max(Math.Max(Sight(world, self, type), range), ReachOf(world, target));
+        long leash = Math.Max(Math.Max(Sight(world, self, type), range), ReachOf(world, target)) * world.Ruleset.Gameplay.AutoChaseLeashPercent / 100;
         bool mobile = world.Motions.IndexOf(attacker) is >= 0 and var m && world.Motions.At(m).SpeedPerTick > 0;
         bool tooClose = distance < arm.MinRangeUnits;
         bool across = IsAcrossShore(PlaneOf(type), PlaneOf(world.TypeOf(target))); // REQ-PATH-09: no chasing across the shore
-        if (!mobile || (c.Mode == CombatMode.Auto && (distance > leash * LeashFactor || stance == CombatStance.StandGround || tooClose || across))
-            || (c.Mode == CombatMode.AttackMove && (distance > leash * LeashFactor || tooClose || across)))
+        if (!mobile || (c.Mode == CombatMode.Auto && (distance > leash || stance == CombatStance.StandGround || tooClose || across))
+            || (c.Mode == CombatMode.AttackMove && (distance > leash || tooClose || across)))
         {
             c.Target = 0;
             c.Mode = c.Mode == CombatMode.AttackMove ? CombatMode.AttackMove : CombatMode.None;

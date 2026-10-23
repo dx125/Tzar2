@@ -200,7 +200,7 @@ public sealed partial class World
         {
             AreaEffect a = AreaEffects.Components[i];
             if (Identities.Has(ids[i]) || Positions.Has(ids[i]) || a.Spell >= Ruleset.Spells.Count || Ruleset.Spells[a.Spell].Effect != SpellEffect.AreaDamage
-                || a.RemainingMs < 0 || a.RemainingMs > Ruleset.Spells[a.Spell].DurationMs || a.PulseAccumMs < 0 || a.PulseAccumMs >= Ruleset.Spells[a.Spell].PulseMs
+                || a.RemainingMs < 0 || a.RemainingMs > Ruleset.Spells[a.Spell].DurationMs || a.PulseAccumMs < -Ruleset.Spells[a.Spell].DelayMs || a.PulseAccumMs >= Ruleset.Spells[a.Spell].PulseMs
                 || !Map.ContainsPoint(a.X, a.Y) || !IsValidOwner(a.Owner) || a.Reserved != 0)
             {
                 throw Invalid("invalid area effect");
@@ -305,7 +305,7 @@ public sealed partial class World
         {
             CrusadeState s = Crusades.Components[i];
             if (Identities.Get(ids[i]).TypeId != settings.CrusadeAnchor || s.ToRaise < 0 || s.ToRaise > settings.CrusadeCeilingMax + settings.CrusadeStart
-                || s.NextTick < 0 || s.NextTick > tick + Systems.MagicSystem.CrusaderArrivalTicks(tickMs) || !HasPlayer(Identities.Get(ids[i]).Owner))
+                || s.NextTick < 0 || s.NextTick > tick + Systems.MagicSystem.CrusaderArrivalTicks(Ruleset.Combat, tickMs) || !HasPlayer(Identities.Get(ids[i]).Owner))
             {
                 throw Invalid("invalid crusade");
             }
