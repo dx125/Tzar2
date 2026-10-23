@@ -44,13 +44,13 @@ rules:
   HUD-010:
     rule: The resource bar at the top shows food, wood, stone and gold, the population against its limit, and the CHAT, DIPLOMACY and MENU buttons.
     source: [manual The Resource Bar]
-    status: partial
-    note: DIPLOMACY says "not available yet" and CHAT works only in multiplayer.
+    status: implemented
+    note: DIPLOMACY opens the diplomacy screen (HUD-012) and CHAT the chat screen (HUD-011), in single player too; the bar is the HUD's art (LAYOUT.INI).
   HUD-011:
     rule: The chat screen opens with the CHAT button or Enter; the message goes to the allies, the enemies, everyone, or players picked from a list that shows each one's stance.
-    source: [manual Chat Screen, manual Hot Keys]
-    status: partial
-    note: Multiplayer only, as a chat line where Tab cycles everyone, allies and enemies; there is no list of players to pick from.
+    source: [manual Chat Screen, manual Hot Keys, data IMAGES/SCREENS/D_CHAT, 'community ReTzar src/hud.rs (Panel::Chat)']
+    status: tested
+    note: The chat screen (D_CHAT, ReTzar's places) has the line, ALL, ALLY, ENEMY and CUSTOM; CUSTOM opens the large window with a row per other kingdom (a check, its colour and name, a shield of the player's stance, whose place on the row is ours, UNVERIFIED). CHAT opens it in every game; in single player Enter opens it too, and its line takes the cheat codes. In multiplayer Enter still opens the overlay's chat line, where Tab cycles everyone, allies and enemies (ADR 0168).
     adr: [0168]
   HUD-012:
     rule: The diplomacy screen (DIPLOMACY, F5) shows each player's civilization and lets you choose ally, enemy or neutral towards him, offer shared vision, resources and unit control, and set allied victory; each button shows whether the other player agreed.
@@ -137,8 +137,8 @@ rules:
   HUD-029:
     rule: An order shows only when its condition holds; the quest order only when there are quests.
     source: [data ORDERS.INI enable, data EQUATIONS.INI]
-    status: missing
-    note: The quest order is always there.
+    status: tested
+    note: The card reads an order's ENABLE through EQUATIONS.INI; the one condition the data has, QuestCount (view_quests), hides the quest order while no quest is open. A condition the card does not know keeps its order.
   HUD-030:
     rule: The minimap paints terrains, trees and cliffs in the colours of the terrain set's data.
     source: ['data TERRAIN.INI [minidatargb]']

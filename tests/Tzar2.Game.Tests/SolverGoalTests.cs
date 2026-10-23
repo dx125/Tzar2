@@ -75,4 +75,24 @@ public sealed class SolverGoalTests(ITestOutputHelper output)
         Assert.True(report.Missions[0].Completed, $"{report.Missions[0].Result} {report.Missions[0].Ticks} {report.Missions[0].Trace}");
         Assert.Contains("breach", report.Missions[0].Trace, System.StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void An_enemy_a_pending_rule_needs_alive_is_not_cleared_before_that_rule_fires()
+    {
+        // v_02: the High Priest talks only while the mages live ("AtPriest && !Killed"), and the win needs both the talk
+        // and the mages dead. Cheat assistance clears the enemies early; it must spare the mage until the talk is done.
+        var b = new ScenarioBuilder { Width = 128 };
+        int hero = b.Unit("euro.footman", 0, 4, 8);
+        int mage = b.Unit("euro.peon", 1, 60, 28);
+        b.Event(new ObjectInAreaEvent("AtPriest", All(hero), Rect(118, 7, 120, 9))); // a long walk: the clearing comes first
+        b.Event(new ObjectDestroyedEvent("Killed", All(mage)));
+        b.Rule("1", b.Action(new ChangePlayerStatusAction("stays", 2, CannotWin: false, CannotLose: true))); // no win by conquest
+        b.Rule("AtPriest && !Killed", b.Action(new ExpressionAction("talk", b.Expr("$talked = 1"))));
+        b.Rule("$talked && Killed", b.Action(new PlayerWinAction("win", PlayerMasks.Of(1), null)));
+
+        CampaignReport report = Run(b, new AutoplayOptions { ComputerAi = false, SingleMission = true, ClearAfterTicks = 40, ReinforceAfterTicks = 1_000_000, MaxTicksPerMission = 12000 });
+        output.WriteLine(report.Missions[0].Trace);
+        Assert.True(report.Missions[0].Completed, $"{report.Missions[0].Result} {report.Missions[0].Ticks} {report.Missions[0].Trace}");
+        Assert.Contains("talked=1", report.Missions[0].Trace, System.StringComparison.Ordinal);
+    }
 }
