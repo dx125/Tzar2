@@ -216,14 +216,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
-* **2026-10-22 — Civilizations are an ordered list in the ruleset (ADR 0211; code review, item 16).**
-  * `ruleset.civilizations: [euro, arab, asia]` and `commonCivilization: comm` replace an ordinally sorted list.
-  * This fixes a bug: the trigger variable `Race` read 1 Arabian, 2 Asian and 4 European; it now reads the original's
-    1 European, 2 Arabian, 3 Asian.
-  * A kingdom without objects now defaults to euro instead of arab.
-  * The gameplay, AI and synthetic-mission hashes are re-pinned; the AI's commands are unchanged.
-  * The client's skirmish, custom-map and lobby screens offer the ruleset's playable civilizations instead of three
-    keys written in code.
+* **2026-10-22 — Output no longer depends on the machine's locale (code review, item 16).**
+  * A new analyzer rule, T2C001, runs on every project under `src/`. It fails the build when an interpolated string or
+    a string concatenation formats a `double`, `float`, `decimal` or date with the current culture, or an integer with
+    a culture format such as `N0`. CA1305 does not cover these.
+  * It found 48 strings: 35 in the fidelity suite (its verdicts read "37,5 s" under a German or C.UTF-8 locale, which
+    failed a test on macOS), the rest in the CLI and the client.
+  * They now use the invariant culture.
 
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
