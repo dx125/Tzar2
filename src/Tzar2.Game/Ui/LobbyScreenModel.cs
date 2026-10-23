@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Tzar2.Content.MapGen;
 using Tzar2.Game.Campaigns;
@@ -125,10 +126,10 @@ public sealed record LobbySetting(LobbySettingKey Key, string Caption, IReadOnly
 public sealed class LobbyScreenModel
 {
     /// <summary>Population limits offered (as single player's random map screen).</summary>
-    public static readonly int[] PopulationLimits = [50, 100, 150, 200, 300, 500, 1000];
+    public static readonly ImmutableArray<int> PopulationLimits = [50, 100, 150, 200, 300, 500, 1000];
 
     /// <summary>Game speeds offered, in percent.</summary>
-    public static readonly int[] Speeds = [50, 75, 100, 150, 200, 300];
+    public static readonly ImmutableArray<int> Speeds = [50, 75, 100, 150, 200, 300];
 
     private static readonly string[] OffOn = ["off", "on"];
     private static readonly RandomMapType[] MapTypes = Enum.GetValues<RandomMapType>();
@@ -393,12 +394,12 @@ public sealed class LobbyScreenModel
         list.Add(new LobbySetting(LobbySettingKey.ScoreLimit, "Score limit", [], s.ScoreLimit, host && !own && s.Victory == VictoryCondition.ScoreLimit, false, 1, MaxScoreLimit));
         Option(LobbySettingKey.StartingResources, "Starting resources", ["Default", "Low", "Normal", "High"], s.StartingResources + 1, enabled: !own);
         Option(LobbySettingKey.PopulationLimit, "Population limit", ["Default", .. PopulationLimits.Select(p => p.ToString(System.Globalization.CultureInfo.InvariantCulture))],
-            s.PopulationLimit < 0 ? 0 : Array.IndexOf(PopulationLimits, s.PopulationLimit) + 1, enabled: !own);
+            s.PopulationLimit < 0 ? 0 : PopulationLimits.IndexOf(s.PopulationLimit) + 1, enabled: !own);
         Check(LobbySettingKey.NoFog, "No fog", s.NoFog);
         Check(LobbySettingKey.Explore, "Explore", s.Explored);
         Check(LobbySettingKey.DayNight, "Day and night", s.DayNight);
         Check(LobbySettingKey.Weather, "Weather", s.Weather);
-        Option(LobbySettingKey.Speed, "Speed", [.. Speeds.Select(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture) + " %")], Array.IndexOf(Speeds, s.SpeedPercent));
+        Option(LobbySettingKey.Speed, "Speed", [.. Speeds.Select(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture) + " %")], Speeds.IndexOf(s.SpeedPercent));
         Check(LobbySettingKey.AiAssist, "AI Assist", s.AiAssist);
         Check(LobbySettingKey.Cheats, "Cheats allowed", s.CheatsAllowed, enabled: !s.Ranked);
         Check(LobbySettingKey.Ranked, "Ranked (never cheats)", s.Ranked);

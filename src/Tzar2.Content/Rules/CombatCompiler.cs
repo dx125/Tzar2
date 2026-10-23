@@ -163,7 +163,7 @@ internal sealed class CombatCompiler
                 LocomotorMask mask = LocomotorMask.None;
                 foreach (string loco in RulesDocument.StringList(k.Value, source, $"combat.unitKeywords.{k.Key}"))
                 {
-                    mask |= RulesetCompiler.ParseLocomotor(loco, source, k.Value.Line).ToMask();
+                    mask |= RulesetCompiler.ParseLocomotor(loco, source, k.Value.Line).Family();
                 }
 
                 map[k.Key] = mask;
