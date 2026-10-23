@@ -24,6 +24,12 @@ public interface IParallelJob
 /// <remarks>
 /// <see cref="Run"/> allocates nothing. If jobs throw, every job still runs and the exception of the lowest failing
 /// job index is rethrown, so the outcome does not depend on scheduling either.
+/// <para>
+/// <see cref="Run"/> waits for the <b>jobs</b>, not for the helpers it woke (ADR 0214): a helper that the OS schedules
+/// only after the other threads finished every job no longer holds the tick up. Each fork has a generation; jobs are
+/// claimed with a compare-and-swap on one 64-bit word holding the generation and the next job index, so a helper that
+/// wakes late can never take a job of a later fork.
+/// </para>
 /// </remarks>
 public sealed class DeterministicWorkerPool : IDisposable
 {
@@ -31,14 +37,18 @@ public sealed class DeterministicWorkerPool : IDisposable
     public const int MaxWorkers = 64;
 
     private readonly Thread[] _threads;
-    private readonly SemaphoreSlim _start;
+    private readonly object _gate = new();
     private readonly ManualResetEventSlim _finished = new(false);
     private readonly object _errorLock = new();
 
+    // Written by Run under _gate before the generation is published; read by helpers under _gate.
     private IParallelJob? _job;
     private int _jobCount;
-    private int _nextJob;
-    private int _workersRunning;
+    private int _generation;
+
+    // High 32 bits: the generation of the fork the claims belong to; low 32 bits: the next job index.
+    private long _claims;
+    private int _done;
     private int _failedJob;
     private Exception? _failure;
     private volatile bool _disposed;
@@ -51,7 +61,6 @@ public sealed class DeterministicWorkerPool : IDisposable
         ArgumentOutOfRangeException.ThrowIfLessThan(workerCount, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(workerCount, MaxWorkers);
         WorkerCount = workerCount;
-        _start = new SemaphoreSlim(0, MaxWorkers);
         _threads = new Thread[workerCount - 1];
         for (int i = 0; i < _threads.Length; i++)
         {
@@ -93,26 +102,35 @@ public sealed class DeterministicWorkerPool : IDisposable
             return;
         }
 
-        _job = job;
-        _jobCount = jobCount;
-        _nextJob = 0;
         _failure = null;
         _failedJob = int.MaxValue;
-        int helpers = Math.Min(_threads.Length, jobCount - 1);
-        if (helpers > 0)
+        int generation;
+        bool helpers = _threads.Length > 0 && jobCount > 1;
+        lock (_gate)
         {
+            generation = unchecked(_generation + 1);
+            _generation = generation;
+            _job = job;
+            _jobCount = jobCount;
+            Volatile.Write(ref _done, 0);
             _finished.Reset();
-            Volatile.Write(ref _workersRunning, helpers);
-            _start.Release(helpers);
+            Volatile.Write(ref _claims, (long)generation << 32);
+            if (helpers)
+            {
+                Monitor.PulseAll(_gate);
+            }
         }
 
-        Drain();
-        if (helpers > 0)
+        Drain(job, jobCount, generation);
+
+        // Every job claimed and finished: the last one to finish set the event. Helpers that wake later find no job
+        // of this generation and go back to sleep; nothing waits for them.
+        _finished.Wait();
+        lock (_gate)
         {
-            _finished.Wait();
+            _job = null;
         }
 
-        _job = null;
         if (_failure is not null)
         {
             Exception failure = _failure;
@@ -121,7 +139,7 @@ public sealed class DeterministicWorkerPool : IDisposable
         }
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc/>
     public void Dispose()
     {
         if (_disposed)
@@ -129,48 +147,64 @@ public sealed class DeterministicWorkerPool : IDisposable
             return;
         }
 
-        _disposed = true;
-        if (_threads.Length > 0)
+        lock (_gate)
         {
-            _start.Release(_threads.Length);
-            foreach (Thread thread in _threads)
-            {
-                thread.Join();
-            }
+            _disposed = true;
+            Monitor.PulseAll(_gate);
         }
 
-        _start.Dispose();
+        foreach (Thread thread in _threads)
+        {
+            thread.Join();
+        }
+
         _finished.Dispose();
     }
 
     private void WorkerLoop()
     {
+        int seen = 0;
         while (true)
         {
-            _start.Wait();
-            if (_disposed)
+            IParallelJob? job;
+            int count, generation;
+            lock (_gate)
             {
-                return;
+                while (!_disposed && (_generation == seen || _job is null))
+                {
+                    Monitor.Wait(_gate);
+                }
+
+                if (_disposed)
+                {
+                    return;
+                }
+
+                seen = _generation;
+                generation = _generation;
+                job = _job;
+                count = _jobCount;
             }
 
-            Drain();
-            if (Interlocked.Decrement(ref _workersRunning) == 0)
-            {
-                _finished.Set();
-            }
+            Drain(job!, count, generation);
         }
     }
 
-    private void Drain()
+    // Claims and runs jobs of `generation` until none is left; the thread that finishes the last job sets _finished.
+    private void Drain(IParallelJob job, int count, int generation)
     {
-        IParallelJob job = _job!;
-        int count = _jobCount;
         while (true)
         {
-            int index = Interlocked.Increment(ref _nextJob) - 1;
-            if (index >= count)
+            long claims = Volatile.Read(ref _claims);
+            int index = (int)(claims & 0xFFFF_FFFFL);
+            if ((int)(claims >> 32) != generation || index >= count)
             {
                 return;
+            }
+
+            if (Interlocked.CompareExchange(ref _claims, claims + 1, claims) != claims)
+            {
+                continue;
             }
 
             try
@@ -189,6 +223,11 @@ public sealed class DeterministicWorkerPool : IDisposable
                         _failure = ex;
                     }
                 }
+            }
+
+            if (Interlocked.Increment(ref _done) == count)
+            {
+                _finished.Set();
             }
         }
     }

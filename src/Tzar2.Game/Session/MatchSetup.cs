@@ -108,6 +108,12 @@ public sealed record MatchSetup
     public bool AiAssist { get; init; }
 
     /// <summary>
+    /// Whether computer kingdoms may resign on their own (the AI resign flag, SHELL-013; ADR 0262). Off: they never do.
+    /// Scenario maps never resign either way (ADR 0220).
+    /// </summary>
+    public bool AiResign { get; init; } = true;
+
+    /// <summary>
     /// A multiplayer match (ADR 0162): several human kingdoms, each with a standby AI that takes over when its human
     /// drops (REQ-NET-07; ADR 0163). Part of the match fingerprint.
     /// </summary>
