@@ -743,6 +743,8 @@ public static class CampaignAutoplay
             _setters ??= Setters(scenario);
             _named = null;
             _protected = Scripted(world, me, triggers);
+            _needed = Needed(triggers, me);
+            _protected.UnionWith(_needed);
             _props = Props(world, triggers);
             var visited = new HashSet<int>();
             for (int r = 0; r < scenario.Rules.Length; r++)
@@ -2180,6 +2182,41 @@ public static class CampaignAutoplay
         }
 
         private HashSet<EntityId>? _named;
+        private HashSet<EntityId> _needed = [];
+
+        // Enemies a rule still to come needs alive ("!ev_MagesKilled" in v_02's rule for the High Priest's conversation):
+        // neither the solver's attacks nor cheat assistance kill them before that rule has fired, or it never can. Rules
+        // that make the local kingdom lose do not count.
+        private HashSet<EntityId> Needed(Scripting.Legacy.LegacyTriggerSystem triggers, byte me)
+        {
+            var set = new HashSet<EntityId>();
+            World world = session.Simulation.World;
+            for (int r = 0; r < scenario.Rules.Length; r++)
+            {
+                if (triggers.State.RuleDisabled[r] || scenario.Rules[r].Condition.Root is not { } condition || LosesMe(scenario.Rules[r], me))
+                {
+                    continue;
+                }
+
+                foreach (int e in Unwanted(condition))
+                {
+                    if (triggers.State.EventValues[e] || scenario.Events[e] is not ObjectDestroyedEvent { Objects: NamedObjects named })
+                    {
+                        continue;
+                    }
+
+                    foreach (int index in named.ObjectIndices)
+                    {
+                        if (Entity(world, triggers, index) is { } u && !world.Diplomacy.MayCommand(me, world.Identities.Get(u).Owner))
+                        {
+                            set.Add(u);
+                        }
+                    }
+                }
+            }
+
+            return set;
+        }
 
         // Units the events of the enabled rules name (heroes, messengers), refreshed each decision.
         private HashSet<EntityId> Named(World world, Scripting.Legacy.LegacyTriggerSystem triggers)
@@ -2282,11 +2319,20 @@ public static class CampaignAutoplay
                     continue;
                 }
 
+                if (_needed.Contains(target))
+                {
+                    continue; // another rule needs it alive first
+                }
+
                 Position t = Pos(world, target);
                 bool ally = world.HasPlayer(owner) && world.Diplomacy.StanceOf(me, owner) == Sim.Kingdoms.Stance.Ally;
                 if (!ally)
                 {
-                    _batch.Add(CommandKind.Attack, _army.ToArray(), 0, 0, target);
+                    // Not the heroes a pending goal names: sent after a far target, they leave their own goals (v_02's
+                    // Sartor and the mages across the water). With nobody else, the whole army.
+                    _named ??= Named(world, triggers);
+                    EntityId[] attackers = [.. _army.Where(u => !_named.Contains(u))];
+                    _batch.Add(CommandKind.Attack, attackers.Length > 0 ? attackers : [.. _army], 0, 0, target);
                     Goal = $"{name}: attack ({t.X / Tile},{t.Y / Tile})";
                     return true;
                 }

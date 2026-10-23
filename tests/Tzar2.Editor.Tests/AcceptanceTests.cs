@@ -250,7 +250,12 @@ public sealed class AcceptanceTests(ITestOutputHelper output)
                     output.WriteLine($"{doc.State.Id}/{r.MapId}: {(r.Completed ? "completed" : "NOT completed")} ({r.Result}, {r.Assist}, {r.Ticks} ticks, {r.Faults} faults)");
                 }
 
-                Assert.True(report.Missions.All(r => r.Completed), string.Join("\n", report.Missions.Select(r => $"{r.MapId}: {r.Result} {r.Assist} {r.Trace}")));
+                // A map counts by its last attempt: a lost first try (no cheat assistance) is retried, as in `t2 campaign run`.
+                // A map that no attempt completes still fails; so does one whose first attempt did not even run.
+                IGrouping<string, MissionReport>[] maps = [.. report.Missions.GroupBy(r => r.MapId)];
+                Assert.True(maps.All(g => g.First().Ticks > 0), string.Join("\n", maps.Where(g => g.First().Ticks <= 0).Select(g => $"{g.Key}: the first attempt did not run")));
+                MissionReport[] last = [.. maps.Select(g => g.Last())];
+                Assert.True(last.All(r => r.Completed), string.Join("\n", last.Where(r => !r.Completed).Select(r => $"{r.MapId}: {r.Result} {r.Assist} {r.Trace}")));
             }
         }
     }

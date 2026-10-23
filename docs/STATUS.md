@@ -267,6 +267,12 @@ the process decisions that have no ADR.
 * **2026-10-23 — Order conditions (HUD-029).** The card reads ORDERS.INI ENABLE through EQUATIONS.INI; the only condition in the data, QuestCount, hides the quest order while no quest is open. Unknown conditions keep their order. No hash changes.
 
 * **2026-10-23 — EXP-005 is unclear.** No way for the player to name a hero shows in the original's data or ReTzar; the promotion's HEROES.INI names are what Tzar2 has. A play-test on the owner's PC settles it.
+* **2026-10-23 — `v_02` completes again: the solver spares enemies a pending rule needs alive (ADR 0220).** Bisected
+  to #133, which only changed the random draws: `v_02`'s High Priest talks only while the mages live, and cheat
+  assistance had cleared them while Sartor was away on the army's attack. Now an enemy that an enabled rule wants alive
+  ("!ev_MagesKilled") is neither cleared nor attacked until that rule fires, and the army's attacks leave the heroes a
+  pending goal names. Survey: main 19 of 19, tutorial 7 of 7. The editor acceptance test counts a map by its last
+  attempt (a lost first try without cheats is retried) and fails if no attempt completes it.
 
 * **2026-10-23 — Fire rain and the whirlpool (MAG-024; ADR 0263).** ReTzar's reading of the original: fire rain is twenty fireballs of 40, one every 170 ms, each falling 375 ms within 2 tiles of the point and hitting what meets 5 x 5 tiles; the whirlpool forms on water only, deals 20 to every ship on its 3 x 3 tiles each 250 ms, wanders a tile every 2 s and lasts 30 s. New spell fields square, scatter, delayMs, moveMs (no new state: the moves follow from the time since the cast). Re-pinned: the gameplay golden's ruleset hash only.
 
