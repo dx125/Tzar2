@@ -47,7 +47,7 @@ public partial class SettingsScreen : ArtScreen
         Title(Controls, T("options", "t_uint", "CONTROLS"));
         Row(Controls, 0, "Edge scroll", () => OnOff(_settings.EdgeScroll), _ => _settings.EdgeScroll = !_settings.EdgeScroll);
         Row(Controls, 1, "Drag map with right button", () => OnOff(_settings.DragScroll), _ => _settings.DragScroll = !_settings.DragScroll);
-        Row(Controls, 2, T("options", "t_ss", "Scroll Speed"), () => _settings.ScrollSpeed.ToString(CultureInfo.InvariantCulture), step => _settings.ScrollSpeed += step);
+        Row(Controls, 2, T("options", "t_ss", "Scroll Speed"), () => _settings.ScrollSpeed.ToString(CultureInfo.InvariantCulture), step => _settings.ScrollSpeed += step, hint: "O_SCROLL_SPEED");
         Row(Controls, 3, "Pointer", () => _settings.SystemCursor ? "System" : "Tzar2", _ => _settings.SystemCursor = !_settings.SystemCursor);
         if (ClientLog.Reporter is { } reporter)
         {
@@ -72,16 +72,18 @@ public partial class SettingsScreen : ArtScreen
         }
 
         Title(Sound, T("options", "t_sopt", "SOUND"));
-        Row(Sound, 0, T("options", "t_svol", "Sound Volume"), () => $"{_settings.SoundVolume} %", step => _settings.SoundVolume += step * 10);
-        Row(Sound, 1, T("options", "t_mv", "Music Volume"), () => $"{_settings.MusicVolume} %", step => _settings.MusicVolume += step * 10);
+        Row(Sound, 0, T("options", "t_svol", "Sound Volume"), () => $"{_settings.SoundVolume} %", step => _settings.SoundVolume += step * 10, hint: "O_SOUND_VOLUME");
+        Row(Sound, 1, T("options", "t_mv", "Music Volume"), () => $"{_settings.MusicVolume} %", step => _settings.MusicVolume += step * 10, hint: "O_MUSIC_VOLUME");
 
         Title(Game, T("options", "t_gopt", "GAME"));
-        Row(Game, 0, T("options", "t_gs", "Game Speed"), () => $"{Tzar2.Game.Session.GameSession.SpeedSteps[_settings.GameSpeed]} %", step => _settings.GameSpeed += step);
-        Row(Game, 1, T("options", "t_dn", "Day/Night"), () => OnOff(_settings.DayNight), _ => _settings.DayNight = !_settings.DayNight);
-        Row(Game, 2, T("options", "t_we", "Weather Effects"), () => OnOff(_settings.Weather), _ => _settings.Weather = !_settings.Weather);
+        Row(Game, 0, T("options", "t_gs", "Game Speed"), () => $"{Tzar2.Game.Session.GameSession.SpeedSteps[_settings.GameSpeed]} %", step => _settings.GameSpeed += step, hint: "O_GAME_SPEED");
+        Row(Game, 1, T("options", "t_dn", "Day/Night"), () => OnOff(_settings.DayNight), _ => _settings.DayNight = !_settings.DayNight, hint: "O_DAY_NIGTH");
+        Row(Game, 2, T("options", "t_we", "Weather Effects"), () => OnOff(_settings.Weather), _ => _settings.Weather = !_settings.Weather, hint: "O_WEATHER");
 
         const string Btn = "art/screens/s_campaign/btn.t2img";
         Button(new Vector2I(536, 544), new Vector2I(235, 25), Btn, T("options", "ok", "OK"), () => Closed?.Invoke());
+        Hint(new Rect2I(536, 544, 235, 25), "O_OK"); // SHELL-026
+        HelpBall(k => T("HELP", k, k));
         Refresh();
     }
 
@@ -127,9 +129,14 @@ public partial class SettingsScreen : ArtScreen
 
     private void Title(Rect2I panel, string text) => Text(panel.Position, text, UiAssets.BoldFont);
 
-    private void Row(Rect2I panel, int index, string label, Func<string> value, Action<int> step, bool display = false)
+    private void Row(Rect2I panel, int index, string label, Func<string> value, Action<int> step, bool display = false, string hint = "")
     {
         Vector2I at = panel.Position + new Vector2I(0, 26 + (index * RowHeight));
+        if (hint.Length > 0)
+        {
+            Hint(new Rect2I(at, new Vector2I(panel.Size.X, RowHeight)), hint);
+        }
+
         Text(at + new Vector2I(0, 6), label, UiAssets.SmallFont, new Color(0.85f, 0.85f, 0.75f));
         int arrows = panel.Size.X - (2 * Arrow) - 110;
         Vector2I left = at + new Vector2I(arrows, 0), right = left + new Vector2I(Arrow + 110, 0);

@@ -44,13 +44,13 @@ rules:
   HUD-010:
     rule: The resource bar at the top shows food, wood, stone and gold, the population against its limit, and the CHAT, DIPLOMACY and MENU buttons.
     source: [manual The Resource Bar]
-    status: partial
-    note: DIPLOMACY says "not available yet" and CHAT works only in multiplayer.
+    status: implemented
+    note: DIPLOMACY opens the diplomacy screen (HUD-012) and CHAT the chat screen (HUD-011), in single player too; the bar is the HUD's art (LAYOUT.INI).
   HUD-011:
     rule: The chat screen opens with the CHAT button or Enter; the message goes to the allies, the enemies, everyone, or players picked from a list that shows each one's stance.
-    source: [manual Chat Screen, manual Hot Keys]
-    status: partial
-    note: Multiplayer only, as a chat line where Tab cycles everyone, allies and enemies; there is no list of players to pick from.
+    source: [manual Chat Screen, manual Hot Keys, data IMAGES/SCREENS/D_CHAT, 'community ReTzar src/hud.rs (Panel::Chat)']
+    status: tested
+    note: The chat screen (D_CHAT, ReTzar's places) has the line, ALL, ALLY, ENEMY and CUSTOM; CUSTOM opens the large window with a row per other kingdom (a check, its colour and name, a shield of the player's stance, whose place on the row is ours, UNVERIFIED). CHAT opens it in every game; in single player Enter opens it too, and its line takes the cheat codes. In multiplayer Enter still opens the overlay's chat line, where Tab cycles everyone, allies and enemies (ADR 0168).
     adr: [0168]
   HUD-012:
     rule: The diplomacy screen (DIPLOMACY, F5) shows each player's civilization and lets you choose ally, enemy or neutral towards him, offer shared vision, resources and unit control, and set allied victory; each button shows whether the other player agreed.
@@ -75,8 +75,8 @@ rules:
   HUD-016:
     rule: The selection view shows the selected object's picture, name, kingdom, health, attack, mana, power, range, resistance (buildings), units inside, defence, time and level.
     source: [manual The Selection View]
-    status: partial
-    note: The kingdom's name (only its colour shows) and power are not shown. INSIDE and LEVEL show for the player's own objects only.
+    status: tested
+    note: KINGDOM shows the kingdom's name; LEVEL every experienced unit's, the enemy's too, but traders' (ReTzar's reading of the original's view); POWER an item's on the ground (ReTzar shows it for potions). INSIDE shows for the player's own holders only (what the original shows of an enemy's is UNVERIFIED).
   HUD-017:
     rule: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped.
     source: [manual The Inventory, manual Hints About Gameplay]
@@ -119,7 +119,8 @@ rules:
   HUD-025:
     rule: The fish patch a kingdom's boats are fishing is marked with a blue selection.
     source: [patch 1.05 (TZAR110.TXT)]
-    status: missing
+    status: tested
+    note: The frame carries each worker's work target; the patches the player's harvesting ships work get blue corners, the selection's shape (the original's exact blue is UNVERIFIED).
   HUD-026:
     rule: Messages tell the player what happens (a unit or technology is ready, an attack, a lack of resources or room) and Home goes to the last event, Page Up and Down through the earlier ones.
     source: [manual Hot Keys]

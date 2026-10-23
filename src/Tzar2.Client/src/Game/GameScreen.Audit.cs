@@ -17,7 +17,7 @@ public partial class GameScreen
     public static readonly string[] AuditDialogs =
     [
         "game-menu", "options", "save", "load", "diplomacy", "tribute", "gamble", "exchange", "trade", "craft",
-        "message", "story", "quests", "conversation", "help", "help-hotkeys", "scores",
+        "message", "story", "quests", "conversation", "chat", "chat-custom", "help", "help-hotkeys", "scores",
     ];
 
     // Sample scenario texts, long enough to wrap (our own words).
@@ -39,6 +39,16 @@ public partial class GameScreen
             case "game-menu":
                 ShowMenu();
                 return true;
+            case "chat":
+                ShowChat(null);
+                return _frame is not null;
+            case "chat-custom":
+                if (_frame is not null)
+                {
+                    ShowChat(new Tzar2.Game.Ui.ChatScreen(_frame, _session.LocalPlayer, Tzar2.Game.Session.ChatTarget.Custom)); // the large window
+                }
+
+                return _frame is not null;
             case "help":
                 ShowHelp(Tzar2.Game.Ui.HelpCategory.Units);
                 return true;

@@ -79,6 +79,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly byte[] _lightBytes;
     private readonly List<Pickable> _pickables = [];
     private readonly HashSet<uint> _selected = [];
+    private HashSet<uint> _fished = [];
     private readonly Dictionary<uint, (int X, int Y)> _shotStart = [];
     private readonly Dictionary<uint, (int X, int Y)> _shotPrevious = [];
     private readonly Dictionary<uint, (int X, int Y, ShotLook? Look)> _shotCurrent = [];
@@ -220,6 +221,8 @@ public sealed class WorldRenderer : IDisposable
         {
             _selected.Add(id.Value);
         }
+
+        _fished = Tzar2.Game.Ui.WorkMarks.FishedPatches(frame, _rules, localPlayer); // HUD-025
 
         byte[] fog = frame.Visibility;
         bool useFog = options.Fog && fog.Length == MapWidth * MapHeight;
@@ -752,6 +755,12 @@ public sealed class WorldRenderer : IDisposable
             ref readonly FrameEntity e = ref entities[p.Index];
             bool selected = _selected.Contains(e.Id.Value);
             EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
+            if (!selected && _fished.Contains(e.Id.Value))
+            {
+                // Patch 1.05: a blue selection around the fish patch the player's boats are fishing (HUD-025).
+                Corners(_marksOver, p.Rect, new Color(0.3f, 0.55f, 1f));
+            }
+
             if (!selected && !(options.AllHealthBars && e.MaxHealth > 0 && def.Traits.Category is EntityCategory.Unit or EntityCategory.Building))
             {
                 continue;

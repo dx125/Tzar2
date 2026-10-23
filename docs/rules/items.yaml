@@ -68,7 +68,8 @@ rules:
   ITEM-015:
     rule: The random items of a map take their strength from the data (treasure, weapons, armour, potions).
     source: ['data RES.INI [TreasuryItem] [WeaponItem] [ArmourItem] [PotionItem]']
-    status: missing
+    status: unclear
+    note: The original's random map generator does not read these sections (ReTzar 0x4b5c50 makes its items with ranges of its own; work queue 17); what reads them is not known.
   ITEM-016:
     rule: Each kind of item the magic workshop makes has several items, books of different spells, potions of different effects, and weapons for attack or defence (swords, bows, shields).
     source: ['data IMAGES.INI item_book1-3 item_potion1-8 item_sword1-3 item_bow1-3 item_shield1-3', 'strings STRINGS3.INI [orders_names] book_itm potion_itm power_itm', 'strings STRINGS3.INI [tzaredit] health3 exp3 manna3 defence3 attack3 sword3 shield3 bow3', owner 2026-10-21 (answers)]

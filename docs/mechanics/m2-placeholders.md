@@ -71,6 +71,7 @@ Spawning now works (`hmnopop` lifts the house limit that blocked every `hmspawn`
 | Storage accepts stone | stone, gold, iron (manual: "iron and gold") | YAML `^class.storage.DropOff` | — | observation |
 | Field footprint | 3 × 3 from the selection box (no `object` box) | importer | UNK-02 | editor placement |
 | DAT footprint value 1 | treated as blocked | importer | UNK-02 (dat.md §3) | editor placement/pathing |
+| Harbor reach to the water | the ships' water within 2 tiles of the footprint (a shore tile carries neither) | YAML `^class.harbor.Building.coastReachTiles` (a constant until the code review of 2026-10) | UNK-02 | editor placement of a harbor one, two and three tiles from the water |
 
 ## Rules in code
 
