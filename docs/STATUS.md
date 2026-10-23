@@ -245,6 +245,11 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — Ninjas climb walls as they climb cliffs (WORLD-018; ReTzar 0x4a99a0).** A wall piece (not a gate or
+  a tower) is open to the climber when the band of wall or cliff tiles through it is one or two thick, from ground to
+  ground. The climber keeps its own navigation layer on every map, since walls are built later. Goldens and bench hashes
+  are unchanged; survey main 18 of 19 (`v_02`, as on `main`), tutorial 7 of 7.
+
 * **2026-10-23 — Quitting, resigning and disconnecting ask first (SHELL-027).** The main menu's QUIT asks "Exit Tzar", the game
   menu's QUIT asks to resign alone and to disconnect in multiplayer, in the original's D_MSGWND window with its words
   (STRINGS.INI [q]); the model is `Tzar2.Game.Ui.Confirmations`. No hash changes.

@@ -105,5 +105,5 @@ captures beat it.
   * Runs of 14 minutes passed only on the Hard AI's xebec shooting the human's woodcutters. With the forests, the
     corner slide moves where the xebec parks (tile 26,37 instead of 32,41), out of range.
 * `t2 campaign run --survey` on the GOG install (2026-10-22): main campaign 19 of 19, tutorial 7 of 7 (STATUS M4).
-* Follow-ups: ninjas climbing walls; peasants gathering resource items (ReTzar program 0x1e), which would let
+* Follow-ups: ninjas climbing walls (done 2026-10-23, WORLD-018); peasants gathering resource items (ReTzar program 0x1e), which would let
   `bigisland` deliver its gold without a tribute.

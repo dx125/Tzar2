@@ -99,6 +99,28 @@ public class ConstructionM3Tests
     }
 
     [Fact]
+    [Trait("Rule", "WORLD-018")]
+    public void A_ninja_climbs_over_a_wall_that_stops_everyone_else()
+    {
+        // A wooden wall across the map, column 10; a climber (the ninja's locomotor) and a footman west of it.
+        Ruleset rules = ClassicWith("euro.archer: { Mobile: { locomotor: climber } }");
+        using var d = new SimDriver(TestMap(20, 8, Structure("euro.castle", 0, 1, 1), Unit("euro.archer", 0, 6, 4), Unit("euro.footman", 0, 6, 5)), ruleset: rules);
+        EntityId peon = d.Spawn(Id(rules, "euro.peon"), 0, 8, 1);
+        d.World.Players[0].Resources[Resource("wood")] = 5000;
+        d.Order(0, CommandKind.BuildWall, [peon], 10 * Tile, 0, arg0: Id(rules, "comm.wall_wood"), arg1: (7 << 16) | 10);
+        d.Step();
+        d.RunUntil(() => d.Count(SimEventKind.ConstructionCompleted) == 8, 12000);
+        Assert.Equal(8, d.Count(SimEventKind.ConstructionCompleted));
+
+        EntityId ninja = OfType(d.World, "euro.archer").Single(), footman = OfType(d.World, "euro.footman").Single();
+        d.MoveToTile(0, [ninja], 14, 4);
+        d.MoveToTile(0, [footman], 14, 5);
+        d.RunUntil(() => d.PositionOf(ninja).X / Tile >= 13, 3000);
+        Assert.InRange(d.PositionOf(ninja).X / Tile, 13, 15);
+        Assert.True(d.PositionOf(footman).X / Tile < 10);
+    }
+
+    [Fact]
     [Trait("Rule", "BLD-011")]
     public void A_dragged_wall_places_one_site_per_tile_and_the_builder_moves_along_it()
     {

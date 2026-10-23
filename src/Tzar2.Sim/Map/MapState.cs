@@ -32,6 +32,7 @@ public sealed class MapState
     private readonly byte[] _basePassability;
     private readonly ushort[] _blockers;
     private readonly byte[] _bridges;
+    private readonly ushort[] _walls; // derived: how many of a tile's blockers are walls (rebuilt on restore)
     private readonly int[] _occupancy;
     private int[] _changedTiles = new int[64];
     private int _changedCount;
@@ -54,6 +55,7 @@ public sealed class MapState
         _basePassability = new byte[Width * Height];
         _blockers = new ushort[Width * Height];
         _bridges = new byte[Width * Height];
+        _walls = new ushort[Width * Height];
         _occupancy = new int[CellWidth * CellHeight];
 
         var terrainMasks = new LocomotorMask[ruleset.TerrainTypes.Count];
@@ -86,7 +88,7 @@ public sealed class MapState
 
     // Whether a cliff tile lies in a band a climber crosses: along a row, a column or a diagonal, the run of cliff tiles
     // through it is at most two long and has ground a climber may stand on at both ends (ReTzar 0x4a99a0 refuses a third
-    // cliff cell in a row of steps). The original climbs walls too; walls are not modelled here (ADR 0220).
+    // cliff cell in a row of steps). Walls are climbed the same way (ThinWall).
     private static bool ThinCliff(MapData map, LocomotorMask[] terrainMasks, int x, int y)
     {
         ReadOnlySpan<(int Dx, int Dy)> axes = [(1, 0), (0, 1), (1, 1), (1, -1)];
@@ -203,7 +205,73 @@ public sealed class MapState
             mask = (mask & ~LocomotorMask.Ship) | LocomotorMask.Land;
         }
 
-        return _blockers[i] != 0 ? mask & LocomotorMask.Air : mask;
+        if (_blockers[i] == 0)
+        {
+            return mask;
+        }
+
+        // A wall stops every ground unit but the ninja, who climbs a band of one or two tiles of wall or cliff from ground
+        // to ground, as he climbs cliffs (WORLD-018).
+        return _walls[i] == _blockers[i] && (mask & LocomotorMask.Climber) != 0 && ThinWall(tx, ty)
+            ? mask & (LocomotorMask.Air | LocomotorMask.Climber)
+            : mask & LocomotorMask.Air;
+    }
+
+    // Whether a wall tile lies in a band a climber crosses: along a row, a column or a diagonal, the run of wall or cliff
+    // tiles through it is at most two long and has open ground at both ends (ReTzar 0x4a99a0: walls and cliffs alike).
+    private bool ThinWall(int x, int y)
+    {
+        ReadOnlySpan<(int Dx, int Dy)> axes = [(1, 0), (0, 1), (1, 1), (1, -1)];
+        foreach ((int dx, int dy) in axes)
+        {
+            int run = 1;
+            int ax = x - dx, ay = y - dy;
+            while (Climbed(ax, ay) && run <= 2)
+            {
+                run++;
+                ax -= dx;
+                ay -= dy;
+            }
+
+            int bx = x + dx, by = y + dy;
+            while (Climbed(bx, by) && run <= 2)
+            {
+                run++;
+                bx += dx;
+                by += dy;
+            }
+
+            if (run <= 2 && Ground(ax, ay) && Ground(bx, by))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // A tile a climber climbs over: a cliff, or one only walls block.
+    private bool Climbed(int x, int y)
+    {
+        if (!ContainsTile(x, y))
+        {
+            return false;
+        }
+
+        int i = (y * Width) + x;
+        return Data.CliffTiles[i] != 0 || (_blockers[i] != 0 && _walls[i] == _blockers[i]);
+    }
+
+    // A tile a climber stands on before and after the climb: no cliff, no blocker, ground or a bridge deck.
+    private bool Ground(int x, int y)
+    {
+        if (!ContainsTile(x, y))
+        {
+            return false;
+        }
+
+        int i = (y * Width) + x;
+        return Data.CliffTiles[i] == 0 && _blockers[i] == 0 && (((LocomotorMask)_basePassability[i] & LocomotorMask.Climber) != 0 || _bridges[i] != 0);
     }
 
     /// <summary>Bridge deck count per tile.</summary>
@@ -251,12 +319,29 @@ public sealed class MapState
     /// <summary>Occupancy cell index of a world point on the map.</summary>
     public int CellIndexAt(int x, int y) => ((y / UnitsPerCell) * CellWidth) + (x / UnitsPerCell);
 
-    /// <summary>Adds a footprint obstacle to a tile.</summary>
-    public void AddBlocker(int tx, int ty)
+    /// <summary>Adds a footprint obstacle to a tile; <paramref name="wall"/>: a wall's, which ninjas climb (WORLD-018).</summary>
+    public void AddBlocker(int tx, int ty, bool wall = false)
     {
         int i = TileIndex(tx, ty);
+        bool climbs = wall || _walls[i] != 0;
+        Span<byte> before = stackalloc byte[25];
+        if (climbs)
+        {
+            Around(tx, ty, before);
+        }
+
         _blockers[i] = checked((ushort)(_blockers[i] + 1));
         ObstacleVersion++;
+        if (wall)
+        {
+            _walls[i]++;
+        }
+
+        if (climbs)
+        {
+            RecordAround(tx, ty, before);
+        }
+
         if (_blockers[i] == 1)
         {
             RecordChange(i);
@@ -264,18 +349,35 @@ public sealed class MapState
         }
     }
 
-    /// <summary>Removes a footprint obstacle from a tile.</summary>
-    /// <exception cref="InvalidOperationException">The tile has no blocker.</exception>
-    public void RemoveBlocker(int tx, int ty)
+    /// <summary>Removes a footprint obstacle from a tile (<paramref name="wall"/>: a wall's).</summary>
+    /// <exception cref="InvalidOperationException">The tile has no blocker (of a wall).</exception>
+    public void RemoveBlocker(int tx, int ty, bool wall = false)
     {
         int i = TileIndex(tx, ty);
-        if (_blockers[i] == 0)
+        if (_blockers[i] == 0 || (wall && _walls[i] == 0))
         {
             throw new InvalidOperationException($"Tile ({tx}, {ty}) has no blocker.");
         }
 
+        bool climbs = wall || _walls[i] != 0;
+        Span<byte> before = stackalloc byte[25];
+        if (climbs)
+        {
+            Around(tx, ty, before);
+        }
+
         _blockers[i]--;
         ObstacleVersion++;
+        if (wall)
+        {
+            _walls[i]--;
+        }
+
+        if (climbs)
+        {
+            RecordAround(tx, ty, before);
+        }
+
         if (_blockers[i] == 0)
         {
             RecordChange(i);
@@ -435,6 +537,36 @@ public sealed class MapState
             _occupancy[cell.Cell]++;
         }
     }
+
+    // The passability of the 5 x 5 tiles around a tile: a wall there may open or close a climb up to two tiles away.
+    private void Around(int tx, int ty, Span<byte> into)
+    {
+        for (int k = 0; k < 25; k++)
+        {
+            into[k] = (byte)PassabilityAt(tx + (k % 5) - 2, ty + (k / 5) - 2);
+        }
+    }
+
+    // Records the tiles around a changed wall tile whose passability changed for the climber (WORLD-018); the tile itself
+    // is recorded by its blocker count as before.
+    private void RecordAround(int tx, int ty, ReadOnlySpan<byte> before)
+    {
+        for (int k = 0; k < 25; k++)
+        {
+            int x = tx + (k % 5) - 2, y = ty + (k / 5) - 2;
+            if ((x != tx || y != ty) && ContainsTile(x, y) && (byte)PassabilityAt(x, y) != before[k])
+            {
+                RecordChange((y * Width) + x);
+                PassabilityVersion++;
+            }
+        }
+    }
+
+    /// <summary>Forgets which blockers are walls, before <see cref="CountWall"/> counts them again (snapshot restore).</summary>
+    internal void ClearWalls() => Array.Clear(_walls);
+
+    /// <summary>Counts one of a tile's blockers as a wall's (snapshot restore).</summary>
+    internal void CountWall(int tx, int ty) => _walls[TileIndex(tx, ty)]++;
 
     private void RecordChange(int tile)
     {
