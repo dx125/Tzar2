@@ -103,7 +103,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 18 | 10 | 1 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 7 | 1 | 1 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 22 | 17 | 5 | 0 | 0 | 0 | 0 |
-| [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 1 | 0 | 0 | 0 |
+| [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 34 | 10 | 14 | 5 | 2 | 2 | 1 |
 | [Items](items.yaml) (ITEM) | 16 | 11 | 3 | 0 | 1 | 1 | 0 |
@@ -117,7 +117,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 341 | 235 | 78 | 12 | 5 | 9 | 2 |
+| **All** | 341 | 235 | 78 | 11 | 5 | 9 | 3 |
 
 ## Not done yet
 
@@ -130,10 +130,6 @@ Missing and partial rules.
 ### Diplomacy and victory
 
 * **DIP-008** (partial): F4 shows the scores. *The scores show as messages; there is no score screen.* (ADR 0106)
-
-### Experience and heroes
-
-* **EXP-005** (partial): Very experienced units become heroes and can be named. *Units become named heroes at level 12 with Heroism; the player cannot name them.*
 
 ### The screen
 
@@ -167,6 +163,10 @@ Missing and partial rules.
 ## Unclear
 
 The sources disagree or say too little.
+
+### Experience and heroes
+
+* **EXP-005**: Very experienced units become heroes and can be named. *Units become heroes at level 12 with Heroism and take the next name of HEROES.INI, as ReTzar reads the original's promotion (0x506d60); Tzar2 does the same. Neither the original's data nor ReTzar show a way for the player to type a name, so the manual's "can name" may mean only this; a play-test on the owner's PC (select a level-12 hero, click its name or press Enter) settles it.*
 
 ### The screen
 

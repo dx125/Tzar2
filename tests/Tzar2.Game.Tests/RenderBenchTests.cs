@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Linq;
 using Tzar2.Content.Compiled;
@@ -23,6 +24,10 @@ public class RenderBenchTests
         Assert.Equal(ControllerKind.Human, setup.Players[0].Controller);
         Assert.All(setup.Players.Skip(1), p => Assert.Equal((ControllerKind.Computer, Difficulty.Hard), (p.Controller, p.Difficulty)));
         Assert.Equal(8, RenderBench.Setup(Rules.Value, SkirmishAi.EngineDefault)!.Players.Count);
+
+        // The kingdoms take the ruleset's civilizations in its order (ADR 0244 amendment, #204), not a list in code.
+        IReadOnlyList<string> civs = Rules.Value.KingdomCivilizations;
+        Assert.Equal(setup.Players.Select((p, i) => civs[i % civs.Count]), setup.Players.Select(p => p.Civilization));
 
         using var session = new GameSession(setup, Rules.Value);
         Sim.World world = session.Simulation.World;

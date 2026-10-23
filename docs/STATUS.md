@@ -119,7 +119,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    unit (ITEM-010; ADR 0255), cows' meat as food items (NAT-004; ADR 0256), the trade profit (TRADE-001; ADR 0257),
    experience on the original's scale (EXP-001, EXP-002, EXP-004; ADR 0258), Jewelry's item market (TECH-030; ADR
    0259), the spells' ranges and mana (MAG-023; ADR 0260), the spells' strength, durations and areas (MAG-024; ADR
-   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), orders shown only while their condition holds (the quest order: HUD-029), the controls
+   0261), the confirmations of quitting, resigning and disconnecting (SHELL-027), the random map screen rebuilt to the original's layout (kingdom rows with colour, AI script, civilization and team; game type, victory and its limit; map resources and options; kept between runs: SHELL-010/011/012, AI-001), the AI resign flag on the random map screen and in the lobby (SHELL-013; ADR 0262), the custom map setup in the original's layout (each kingdom's civilization, colour and team; USE MAP SETTINGS; fewer kingdoms, game type and victory: SHELL-006, SHELL-007), the online help (HELP/ITEMS.TXT, HK.TXT; P on the kingdom's card, INSTRUCTIONS in the game menu: HUD-020, SHELL-021), fire rain and the whirlpool as the original casts them (MAG-024; ADR 0263), EXP-005 moved to unclear (naming heroes: only the promotion's names are known), orders shown only while their condition holds (the quest order: HUD-029), the controls
    (Shift and Alt orders, turned gates and bridges, bridges and harbors placed as the sim allows; ADR 0189), unit
    bodies (WORLD-015, ADR 0188), save and load (ADR 0187), the inventory (HUD-017, HUD-018), the owner's interface fixes (main menu, minimap), the diplomacy and tribute screens (HUD-012, HUD-013), Landing Tactics (TECH-019), one
    farmer per field (ECO-021), move-sneak (ORD-004), siege weapons hurting their own side (WAR-013), waypoints
@@ -250,6 +250,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       * 2026-10-23: `legacy.referenceDataHash` re-pinned to 7F4CCBEEEC76AD36, the value main has produced since #139: #168
         moved it unpinned and #133/#139 pinned values measured on stale branches. Import tests with `TZAR2_ORIGIN` pass;
         importer PRs now run them after merging main (DEVELOPMENT.md, AGENTS.md).
+      * 2026-10-23: whether a civilization can found a kingdom is asked of the ruleset (its Seat), not of a type named
+        "<civ>.castle"; the render bench takes the ruleset's civilization order (ADR 0244 amendment).
+      * 2026-10-23: the crusade gathering pace, the crusaders' arrival interval and the chase leash moved from code to
+        the ruleset with the same values; only the ruleset hash is re-pinned.
+      * 2026-10-23: an architecture test keeps civilization keys and type-key suffixes out of Sim, Game, AI and the
+        client, except a list of 20 files that may only shrink (translators, test scenarios, UI fallbacks).
 
 ## Decision and event log
 
@@ -257,6 +263,10 @@ Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisi
 the process decisions that have no ADR.
 
 * **2026-10-23 — Order conditions (HUD-029).** The card reads ORDERS.INI ENABLE through EQUATIONS.INI; the only condition in the data, QuestCount, hides the quest order while no quest is open. Unknown conditions keep their order. No hash changes.
+
+* **2026-10-23 — EXP-005 is unclear.** No way for the player to name a hero shows in the original's data or ReTzar; the promotion's HEROES.INI names are what Tzar2 has. A play-test on the owner's PC settles it.
+
+* **2026-10-23 — Fire rain and the whirlpool (MAG-024; ADR 0263).** ReTzar's reading of the original: fire rain is twenty fireballs of 40, one every 170 ms, each falling 375 ms within 2 tiles of the point and hitting what meets 5 x 5 tiles; the whirlpool forms on water only, deals 20 to every ship on its 3 x 3 tiles each 250 ms, wanders a tile every 2 s and lasts 30 s. New spell fields square, scatter, delayMs, moveMs (no new state: the moves follow from the time since the cast). Re-pinned: the gameplay golden's ruleset hash only.
 
 * **2026-10-23 — Online help (HUD-020, SHELL-021).** An engine-free OnlineHelp model reads the original's HELP/ITEMS.TXT topics (chapters by key prefix, civilizations, links of built in / researched in / requires / allows / see also / what a building makes, BACK through the pages) and HK.TXT; the client draws it on HELP_SCR/BACKGR with the help's own buttons and icons. P on the kingdom's card opens it, INSTRUCTIONS (new on the game menu, at ReTzar's place) at its hot keys. The original's places on these pictures are UNVERIFIED (screenshot requested).
 
