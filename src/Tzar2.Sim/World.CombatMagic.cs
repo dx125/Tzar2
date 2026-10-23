@@ -38,6 +38,9 @@ public sealed partial class World
     /// <summary>The points units walk after their current move (ORD-005).</summary>
     public ComponentStore<WaypointQueue> WaypointQueues { get; private set; } = null!;
 
+    /// <summary>The kingdom's market holding its items on offer (Jewelry, TECH-030).</summary>
+    public ComponentStore<MarketStock> MarketStocks { get; private set; } = null!;
+
     /// <summary>Units' errands: boarding, pick-up, give, bribe, conversion (hot).</summary>
     public ComponentStore<Errand> Errands { get; private set; } = null!;
 
@@ -90,6 +93,7 @@ public sealed partial class World
         CrusaderLinks = Components.RegisterHot<CrusaderOf>("game.crusader");
         Disguises = Components.RegisterHot<Disguise>("game.disguise");
         WaypointQueues = Components.RegisterHot<WaypointQueue>("game.waypoints");
+        MarketStocks = Components.RegisterHot<MarketStock>("game.market");
     }
 
     /// <summary>
@@ -447,6 +451,11 @@ public sealed partial class World
     // (a ship at sea) they go down with it.
     private void BeforeDestroyCombatMagic(EntityId entity)
     {
+        if (MarketStocks.Count != 0 && MarketStocks.Has(entity))
+        {
+            Systems.MarketItems.Clear(this, entity); // the offers go with their market (TECH-030)
+        }
+
         // The soul items bound to a unit go with it (ITEM-010; ReTzar's reading of the original, 0x4e219f).
         if (Items.Count != 0 && !Items.Has(entity))
         {
@@ -526,6 +535,11 @@ public sealed partial class World
     // owner's units out; a bribed unit leaves the holder of its previous owner.
     private void AfterChangeOwnerCombatMagic(EntityId entity)
     {
+        if (MarketStocks.Count != 0 && MarketStocks.Has(entity))
+        {
+            Systems.MarketItems.Clear(this, entity); // the offers were its old kingdom's (TECH-030)
+        }
+
         Errands.Remove(entity);
         StopCasting(entity);
         CrusaderLinks.Remove(entity);

@@ -318,6 +318,12 @@ public sealed record SpellDefinition(
     /// <summary>How many summons one cast creates (or most corpses raised).</summary>
     public int Count { get; init; } = 1;
 
+    /// <summary>
+    /// The gold a book of this spell is worth per charge, before the half added on top (TECH-030; ReTzar's reading of the
+    /// original, 0x4643e0); a summon is worth its creature's gold.
+    /// </summary>
+    public int BookValue { get; init; }
+
     /// <summary>Whether <paramref name="typeId"/> may be affected (by its type).</summary>
     public bool AffectsType(ushort typeId) => TargetTypes.IsDefaultOrEmpty || TargetTypes.BinarySearch(typeId) >= 0;
 }
@@ -523,6 +529,27 @@ public sealed record CombatSettings
     /// <summary>Levels each <see cref="LevelCapBuildings"/> building adds to the cap (10; ReTzar, 0x401850).</summary>
     public int LevelCapPerBuilding { get; init; }
 
+    /// <summary>Jewelry (TECH-030): the technology that lets a kingdom's markets sell and buy items, or -1.</summary>
+    public int MarketTechnology { get; init; } = -1;
+
+    /// <summary>Jewelry: the first offer comes this long after the market stands.</summary>
+    public int MarketFirstMs { get; init; } = 1000;
+
+    /// <summary>Jewelry: a new offer comes this often.</summary>
+    public int MarketEveryMs { get; init; } = 60_000;
+
+    /// <summary>Jewelry: the most offers on the list; a new one pushes out the oldest.</summary>
+    public int MarketSize { get; init; } = 8;
+
+    /// <summary>Jewelry: an offer costs this percent of its value in gold (a sale earns 100 %).</summary>
+    public int MarketBuyPercent { get; init; } = 400;
+
+    /// <summary>Jewelry: the kinds an offer is drawn from (each equally likely), each a list of variants (equally likely).</summary>
+    public ImmutableArray<ImmutableArray<MarketVariant>> MarketOffers { get; init; } = [];
+
+    /// <summary>Jewelry: the spells a book on offer is drawn from (equally likely), in the original's numbering.</summary>
+    public ImmutableArray<ushort> MarketBookSpells { get; init; } = [];
+
     /// <summary>The range of the banshee scream's draw.</summary>
     public int BansheeOutOf { get; init; } = 1001;
 
@@ -608,6 +635,31 @@ public sealed record CombatSettings
         }
 
         Check(DummyDamagePerPoint, 1, 1_000_000);
+        Check(MarketTechnology, -1, technologies - 1);
+        Check(MarketFirstMs, 0, 3_600_000);
+        Check(MarketEveryMs, 1, 3_600_000);
+        Check(MarketSize, 1, 8);
+        Check(MarketBuyPercent, 0, 100_000);
+        if (MarketOffers.IsDefault || MarketBookSpells.IsDefault)
+        {
+            throw new ArgumentException("combat: the market offers must not be default.");
+        }
+
+        foreach (ImmutableArray<MarketVariant> kind in MarketOffers)
+        {
+            if (kind.IsDefaultOrEmpty)
+            {
+                throw new ArgumentException("combat: a market offer kind needs a variant.");
+            }
+
+            foreach (MarketVariant v in kind)
+            {
+                Check(v.Item, 0, typeCount - 1);
+                Check(v.Min, 0, 1_000_000);
+                Check(v.Max, v.Min, 1_000_000);
+            }
+        }
+
         if (ExperienceSpeeds.IsDefault)
         {
             throw new ArgumentException("combat: the experience speeds must not be default.");
@@ -667,3 +719,16 @@ public sealed record CombatSettings
 /// <param name="Technology">The technology id.</param>
 /// <param name="Percent">Percent of a level's cost.</param>
 public sealed record ExperienceSpeed(int Technology, int Percent);
+
+/// <summary>
+/// One variant of a market offer (TECH-030): an item of type <paramref name="Item"/> with the effect, look and a power drawn
+/// from <paramref name="Min"/> to <paramref name="Max"/>; a <paramref name="Book"/> takes a spell from
+/// <see cref="CombatSettings.MarketBookSpells"/> and charges by the time played instead.
+/// </summary>
+/// <param name="Item">The item type id.</param>
+/// <param name="Effect">What it adds (power items and potions).</param>
+/// <param name="Look">1 + the index of its look in the item's looks, 0 = the type's own.</param>
+/// <param name="Min">Least power.</param>
+/// <param name="Max">Most power.</param>
+/// <param name="Book">A spell book.</param>
+public sealed record MarketVariant(ushort Item, ItemEffect Effect, int Look, int Min, int Max, bool Book);

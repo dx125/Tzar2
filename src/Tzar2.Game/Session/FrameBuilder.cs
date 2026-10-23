@@ -585,6 +585,7 @@ public static class FrameBuilder
             bool isDefault = false;
             int spell = -1;
             string? look = null;
+            int value = 0;
             if (item && world.Inventories.IndexOf(holder) is >= 0 and var inv)
             {
                 Inventory inventory = world.Inventories.At(inv);
@@ -597,12 +598,21 @@ public static class FrameBuilder
                 }
 
                 isDefault = slot >= 0 && inventory.Default == slot;
+            }
+            else if (item)
+            {
+                slot = MarketItems.IndexInStock(world, holder, unit); // a market's offer (TECH-030)
+            }
+
+            if (item)
+            {
                 spell = world.ItemSpell(unit);
                 ItemDefinition def = world.TypeOf(unit).Traits.Item!;
                 look = world.Items.Get(unit).Look is > 0 and var l && l <= def.Looks.Length ? def.Looks[l - 1] : null;
+                value = MarketItems.Value(world, unit);
             }
 
-            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item, slot, isDefault, spell, look));
+            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item, slot, isDefault, spell, look, value));
         }
 
         frame.HeldCount = n;

@@ -168,9 +168,10 @@ rules:
     adr: [0253]
   TECH-030:
     rule: Jewelry (Asians) lets the markets sell and buy items, the same items in every market.
-    source: [manual Researching Technologies, patch 1.09 (TZAR110.TXT)]
-    status: missing
-    note: The markets' item menus (market_items, market_sell) are empty in MENU.INI and filled by the game; Tzar2 has no item trade.
+    source: [manual Researching Technologies, patch 1.09 (TZAR110.TXT), 'data TECHTREE ASIA.INI market_items', 'community ReTzar src/gameplay.rs (0x479c34, 0x47a254, 0x47a1e1)']
+    status: tested
+    adr: [0259]
+    note: One market of the kingdom gets an offer a second after it stands and then every minute (a book, a power item, a book or a potion, each with a random record); the newest 8 stay; any market of the kingdom sells an offer for 4 times its value in gold, at one of its corners, and buys a carried book, power item or potion for its value. An offered potion of experience gives one level here.
   TECH-031:
     rule: Piracy gives boarding units an attack bonus, and Boarding Ram lets ships board others.
     source: [manual Asian Buildings (Harbor), strings STRINGS.INI orders_add te_piracy te_boardingram]

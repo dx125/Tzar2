@@ -64,6 +64,7 @@ public sealed class MagicSystem : ISimSystem
         ExpireStatuses(world, tick);
         Crusades(world, tick);
         Crafting(world, tickMs);
+        MarketItems.Step(world, tick);
         CombatSystem.ProcessDeaths(world, _deaths);
     }
 

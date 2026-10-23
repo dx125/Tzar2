@@ -234,7 +234,8 @@ public sealed class CommandCard
         }
 
         var buttons = (menu?.StartsWith(ListMenu, StringComparison.Ordinal) == true ? KingdomList(context, menu[ListMenu.Length..])
-            : TavernMenu(menu) is { } heroes ? HireButtons(context, heroes) : _source.Card(menu)).ToList();
+            : TavernMenu(menu) is { } heroes ? HireButtons(context, heroes)
+            : MarketMenu(menu) is { } selling ? MarketButtons(context, selling) : _source.Card(menu)).ToList();
         if (OpenMenu is null && !e.Id.IsNone && ((_rules.EntityTypes[e.TypeId].Traits.Abilities & AbilityFlags.Impersonate) != 0 || e.SpyType >= 0))
         {
             buttons.AddRange(_source.AbilityButtons("impersonate")); // the spy's impersonate and reveal (MAG-012)
@@ -499,6 +500,11 @@ public sealed class CommandCard
                 return Commands(CommandKind.DropItem, OwnIds(selected, e => e.IsMobile), arg0: 0);
             case CardAction.Hire when int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int offer):
                 return Commands(CommandKind.Hire, Taverns(context), arg0: offer);
+            case CardAction.MarketBuy or CardAction.MarketSell when uint.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint item)
+                && Markets(context) is { Length: > 0 } markets:
+                var market = new CommandList();
+                market.Add(b.Action == CardAction.MarketBuy ? CommandKind.MarketBuy : CommandKind.MarketSell, [markets[0]], target: EntityId.FromValue(item));
+                return new CardPress(Commands: market);
             case CardAction.Gamble:
                 return new CardPress(Dialog: CardDialogKind.Gamble);
             case CardAction.Exchange:
@@ -889,6 +895,60 @@ public sealed class CommandCard
     private EntityId[] OwnIds(List<EntityInfo> selected, Func<EntityInfo, bool> which)
         => [.. selected.Where(e => e.Owner == _me && which(e)).Select(e => e.Id)];
 
+    private EntityId[] Markets(CardContext context)
+        => OwnIds(Selected(context), e => !e.IsMobile && !e.UnderConstruction && (_rules.EntityTypes[e.TypeId].Traits.World.TradeDock & DropOffAccess.Land) != 0);
+
+    // The original's Asian market menus are empty in MENU.INI: the game lists the kingdom's offers (market_items) and the
+    // items its units carry that the market buys (market_sell; TECH-030). True: selling.
+    private static bool? MarketMenu(string? menu) => menu switch
+    {
+        _ when string.Equals(menu, "market_items", StringComparison.OrdinalIgnoreCase) => false,
+        _ when string.Equals(menu, "market_sell", StringComparison.OrdinalIgnoreCase) => true,
+        _ => null,
+    };
+
+    private List<CardButton> MarketButtons(CardContext context, bool selling)
+    {
+        var buttons = new List<CardButton>();
+        GameFrame f = context.Frame;
+        foreach (FrameHeld h in f.Helds)
+        {
+            if (!h.IsItem || h.Value <= 0 || HolderIsUnit(f, h.Holder) != selling || (!selling && h.Slot < 0))
+            {
+                continue;
+            }
+
+            string name = h.Look is { } look ? _source.Text("images", look, _source.Name(h.TypeId)) : _source.Name(h.TypeId);
+            if (h.Spell >= 0 && h.Spell < _rules.Spells.Count)
+            {
+                string spell = _rules.Spells[h.Spell].Key;
+                name += ": " + _source.Text("spell_names", spell, spell);
+            }
+
+            int gold = selling ? h.Value : (int)Math.Min((long)h.Value * _rules.Combat.MarketBuyPercent / 100, int.MaxValue);
+            string what = selling ? $"Sell {name} for {gold} gold" : $"Buy {name} for {gold} gold";
+            char key = (char)('1' + buttons.Count);
+            buttons.Add(new CardButton(selling ? "sell_item" : "buy_item", key, selling ? CardAction.MarketSell : CardAction.MarketBuy,
+                h.Unit.Value.ToString(CultureInfo.InvariantCulture), _source.ItemIcon(h.TypeId, h.Look), what));
+        }
+
+        return buttons;
+    }
+
+    private bool HolderIsUnit(GameFrame f, uint holder)
+    {
+        ReadOnlySpan<FrameEntity> entities = f.Entities;
+        for (int i = 0; i < entities.Length; i++)
+        {
+            if (entities[i].Id.Value == holder)
+            {
+                return entities[i].TypeId < _rules.EntityTypes.Count && _rules.EntityTypes[entities[i].TypeId].IsMobile;
+            }
+        }
+
+        return false;
+    }
+
     private EntityId[] Taverns(CardContext context)
         => OwnIds(Selected(context), e => !e.IsMobile && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.World.IsTavern);
 
@@ -1139,6 +1199,8 @@ public sealed class CommandCard
                 return selected.Any(e => e.Owner == _me && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.World.IsTavern) ? (true, string.Empty) : (false, "needs a tavern");
             case CardAction.Hire:
                 return HireAvailability(context, b);
+            case CardAction.MarketBuy or CardAction.MarketSell:
+                return Markets(context).Length > 0 ? (true, string.Empty) : (false, "needs a market");
             case CardAction.Trade:
                 return selected.Any(e => e.Owner == _me && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null) ? (true, string.Empty) : (false, "needs a trader");
             case CardAction.Unload:
@@ -1201,6 +1263,14 @@ public sealed class CommandCard
                 }
 
                 return HireButtons(context, heroes).Count > 0 ? (true, string.Empty) : (false, "no offer now");
+            case CardAction.Submenu when MarketMenu(b.Argument) is { } selling:
+                // The market's offers once Jewelry is there (TECHTREE ASIA market_items); what it buys, always (TECH-030).
+                if (!selling && _rules.Combat.MarketTechnology >= 0 && !Me(context).HasTechnology(_rules.Combat.MarketTechnology))
+                {
+                    return (false, "needs Jewelry");
+                }
+
+                return MarketButtons(context, selling).Count > 0 ? (true, string.Empty) : (false, selling ? "nothing to sell" : "no offer now");
             case CardAction.Submenu:
                 foreach (CardButton child in _source.Card(b.Argument))
                 {

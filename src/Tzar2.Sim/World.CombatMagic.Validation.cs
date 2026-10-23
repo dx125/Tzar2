@@ -44,7 +44,7 @@ public sealed partial class World
 
             if (Items.Has(ids[i]))
             {
-                if (!Inventories.Has(holder) || h.RequestSerial != 0)
+                if ((!Inventories.Has(holder) && Systems.MarketItems.IndexInStock(this, holder, ids[i]) < 0) || h.RequestSerial != 0)
                 {
                     throw Invalid("an item held by something without an inventory");
                 }
@@ -160,6 +160,26 @@ public sealed partial class World
                 || (s.Bound != 0 && (itemDef.Kind != ItemKind.Soul || !Entities.IsAlive(EntityId.FromValue(s.Bound)) || Items.Has(EntityId.FromValue(s.Bound)))))
             {
                 throw Invalid("invalid item");
+            }
+        }
+
+        ids = MarketStocks.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            MarketStock m = MarketStocks.Components[i];
+            if (!Footprints.Has(ids[i]) || m.Count > Ruleset.Combat.MarketSize || m.Reserved0 != 0 || m.Reserved1 != 0 || m.NextTick < 0
+                || m.NextTick > tick + Math.Max(Ruleset.Combat.MarketEveryMs, Ruleset.Combat.MarketFirstMs))
+            {
+                throw Invalid("invalid market stock");
+            }
+
+            for (int k = 0; k < Ruleset.InventoryLimit; k++)
+            {
+                EntityId item = EntityId.FromValue(m.Items[k]);
+                if (k < m.Count ? !Items.Has(item) || Helds.IndexOf(item) is not (>= 0 and var hi) || Helds.At(hi).Holder != ids[i].Value : m.Items[k] != 0)
+                {
+                    throw Invalid("invalid market stock");
+                }
             }
         }
 

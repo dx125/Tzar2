@@ -55,8 +55,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0220, 2026-10-22) movement: the corner slide, allies as friends: the hashes.
     // (ADR 0255, 2026-10-22) souls are bound to a unit (item state grows, hashed layout 14), the Messiah takes no magic damage.
     // (ADR 0256, 2026-10-22) cows grow meat (a new store, hashed layout 15) that falls as food items peasants carry home.
-    private const ulong GoldenHashStream = 0x766926EC85AEDF3DUL;
-    private const ulong GoldenFinalFullHash = 0xA668F1E566E9B935UL;
+    // (ADR 0259, 2026-10-22) Jewelry: the markets' offers (a new store, hashed layout 16) and the original's spell numbering for map books.
+    private const ulong GoldenHashStream = 0x3174BB9F6572FFF8UL;
+    private const ulong GoldenFinalFullHash = 0xBD717DEF296B9604UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;
