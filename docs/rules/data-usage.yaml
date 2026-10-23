@@ -81,11 +81,11 @@ files:
     reader: Tzar2.Content GameplayReader (starting resources, node amounts, resource items)
     account: sections
     used: [high, low, medium, others, resitem]
-    todo:
-      armouritem: the strength of the map's random items (ITEM-015)
-      potionitem: the strength of the map's random items (ITEM-015)
-      treasuryitem: the strength of the map's random items (ITEM-015)
-      weaponitem: the strength of the map's random items (ITEM-015)
+    ignored:
+      armouritem: what reads it is unclear; the random map generator makes its items with its own ranges (ITEM-015)
+      potionitem: what reads it is unclear; the random map generator makes its items with its own ranges (ITEM-015)
+      treasuryitem: what reads it is unclear; the random map generator makes its items with its own ranges (ITEM-015)
+      weaponitem: what reads it is unclear; the random map generator makes its items with its own ranges (ITEM-015)
   - path: DATA/SOUNDS.INI
     account: whole
     reason: Tzar2.Client looks up each object's and order's sounds by their section names.
