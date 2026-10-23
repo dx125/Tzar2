@@ -97,11 +97,11 @@ internal static class FidelityCommand
         stdout.WriteLine($"Layout {session.Layout.Name} {session.Layout.Width}x{session.Layout.Height}; {scenarios.Count} scenarios:");
         foreach (ScenarioSpec s in scenarios)
         {
-            stdout.WriteLine($"  {(s.Default ? "*" : " ")} {s.Id,-20} {s.Minutes,5:0.#} min  {s.Trials.Count} trial(s)  {string.Join(',', s.Resolves),-16} {s.Title}{(s.Experimental ? " [experimental]" : string.Empty)}");
+            stdout.WriteLine(string.Create(CultureInfo.InvariantCulture, $"  {(s.Default ? "*" : " ")} {s.Id,-20} {s.Minutes,5:0.#} min  {s.Trials.Count} trial(s)  {string.Join(',', s.Resolves),-16} {s.Title}{(s.Experimental ? " [experimental]" : string.Empty)}"));
         }
 
         double total = scenarios.Where(s => s.Default).Sum(s => s.Minutes);
-        stdout.WriteLine($"* = run by default (about {total:0} minutes).");
+        stdout.WriteLine(string.Create(CultureInfo.InvariantCulture, $"* = run by default (about {total:0} minutes)."));
         return ExitCodes.Success;
     }
 
@@ -442,7 +442,7 @@ internal static class FidelityCommand
 
         var environment = new GameEnvironment(install, workDir, renderer, rendererDescription);
         double minutes = selected.Sum(s => s.Minutes);
-        log.Info($"Scenarios: {string.Join(", ", selected.Select(s => s.Id))} (about {minutes:0} minutes).");
+        log.Info(string.Create(CultureInfo.InvariantCulture, $"Scenarios: {string.Join(", ", selected.Select(s => s.Id))} (about {minutes:0} minutes)."));
         log.Info("Please do not touch the mouse or keyboard until the session ends. Ctrl+C in this window stops it safely.");
         using var cancel = new CancellationTokenSource();
         ConsoleCancelEventHandler handler = (_, e) =>

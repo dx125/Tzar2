@@ -30,6 +30,29 @@ public sealed class ImportedPackageSkirmishTests(ITestOutputHelper output)
         Environment.GetEnvironmentVariable("TZAR2_PACKAGE") is { Length: > 0 } p && File.Exists(p) ? p : null;
 
     [PackageFact]
+    [Trait("Rule", "AI-001")]
+    public void The_original_ai_ini_offers_its_strategies_and_each_plays()
+    {
+        // SHELL-016, ADR 0232: Random plus the nine AI.INI strategies (Deathmatch is commented out), each compiled and run.
+        using PackageSource package = PackageSource.Open(PackagePath!);
+        Ruleset ruleset = RulesetLoader.Compile(package).Ruleset;
+        SkirmishAi ai = SkirmishAi.Resolve(package);
+        output.WriteLine(string.Join(", ", ai.Scripts.Select(s => $"{s.Name} = {s.Script}")));
+        Assert.True(ai.IsOriginal);
+        Assert.Equal(10, ai.Scripts.Count);
+        Assert.Equal(ai.Scripts.Count, ai.Scripts.Select(s => ai.ForScript(s.Script).ContentHash).Distinct().Count());
+        var setup = new MatchSetup
+        {
+            Map = new SkirmishTestMap(96),
+            Players = [.. ai.Scripts.Take(8).Select((s, i) => new PlayerSetup((byte)i, "euro", ControllerKind.Computer, Difficulty.Hard, s.Script))],
+            Ai = ai,
+        };
+        using var session = new GameSession(setup, ruleset);
+        session.Step(600);
+        Assert.All(Enumerable.Range(0, 8), slot => Assert.True(session.Ai!.Issued(slot) > 0, $"kingdom {slot} ({ai.Scripts[slot].Name}) gave orders"));
+    }
+
+    [PackageFact]
     public void Random_maps_of_every_type_load_on_the_classic_ruleset()
     {
         using PackageSource package = PackageSource.Open(PackagePath!);

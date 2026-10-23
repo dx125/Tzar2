@@ -6,8 +6,8 @@ rules:
     rule: Each computer kingdom plays an AI script, chosen per player before the game.
     source: [manual Random Map Screen, manual Multiplayer Setup Screen]
     status: partial
-    note: Tzar2 picks the script; it cannot be chosen (SHELL-010, SHELL-016).
-    adr: [0178]
+    note: Chosen per player in the multiplayer setup (SHELL-016); the random map screen cannot choose it yet (SHELL-010).
+    adr: [0178, 0232]
   AI-002:
     rule: The computer's strategy (build order, technologies, army mix) comes from the original's scripts; its tactics are Tzar2's own, smarter with the difficulty.
     source: [owner 2026-10-20]
