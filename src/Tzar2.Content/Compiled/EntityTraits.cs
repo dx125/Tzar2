@@ -345,6 +345,12 @@ public sealed partial record EntityTraits
     /// <summary>Type spawned where the entity dies (a cow's meat), or -1.</summary>
     public int SpawnOnDeath { get; init; } = -1;
 
+    /// <summary>
+    /// The meat a living animal grows and leaves as <see cref="SpawnOnDeath"/> items when it dies (NAT-004), or null for a
+    /// single spawn.
+    /// </summary>
+    public MeatDefinition? Meat { get; init; }
+
     /// <summary>Lifetime of the entity (meat rots), 0 = unlimited.</summary>
     public int LifetimeMs { get; init; }
 
@@ -360,3 +366,14 @@ public sealed partial record EntityTraits
     /// <summary>Whether the type accepts resource <paramref name="resource"/> as a drop-off.</summary>
     public bool AcceptsDropOff(int resource) => (uint)resource < 32 && (DropOffMask & (1 << resource)) != 0;
 }
+
+/// <summary>
+/// Meat an animal grows (NAT-004; ReTzar's reading of the original, the cow's +0x120): <paramref name="Start"/> when it
+/// appears, <paramref name="PerSecond"/> more each second it can act, up to <paramref name="Max"/>; when it dies it leaves
+/// items of at most <paramref name="Piece"/> each.
+/// </summary>
+/// <param name="Start">Meat at the start (300).</param>
+/// <param name="PerSecond">Meat grown each second (2).</param>
+/// <param name="Max">Most meat (600).</param>
+/// <param name="Piece">Most meat of one item left (100).</param>
+public sealed record MeatDefinition(int Start, int PerSecond, int Max, int Piece);

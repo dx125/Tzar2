@@ -66,7 +66,7 @@ internal sealed partial class EntityCompiler
         ["Seat"] = [],
         ["WalkableFootprint"] = [],
         ["Decay"] = ["afterMs", "healthPerMinute"],
-        ["SpawnOnDeath"] = ["type"],
+        ["SpawnOnDeath"] = ["type", "start", "perSecond", "max", "piece"],
         ["Lifetime"] = ["ms"],
         ["Trader"] = ["capacity", "access", "technology"],
         ["TradeDock"] = ["access"],
@@ -197,6 +197,7 @@ internal sealed partial class EntityCompiler
                 WalkableFootprint = d.WalkableFootprint,
                 Decay = d.Decay,
                 SpawnOnDeath = spawnOnDeath,
+                Meat = d.Meat,
                 LifetimeMs = d.LifetimeMs,
                 World = d.World with
                 {
@@ -628,6 +629,11 @@ internal sealed partial class EntityCompiler
         if (entry.Find("SpawnOnDeath")?.Get("type") is { } spawnType)
         {
             d.SpawnOnDeath = (RulesetCompiler.Str(spawnType.Node, spawnType.Source, Where("SpawnOnDeath", "type")), spawnType);
+            if (entry.Find("SpawnOnDeath")!.Get("piece") is not null)
+            {
+                d.Meat = new MeatDefinition(NonNegative("SpawnOnDeath", "start", 0), NonNegative("SpawnOnDeath", "perSecond", 0),
+                    NonNegative("SpawnOnDeath", "max", 0), Math.Max(1, NonNegative("SpawnOnDeath", "piece", 1)));
+            }
         }
 
         d.IsCapturer = entry.Find("Capturer") is not null;
@@ -813,6 +819,7 @@ internal sealed partial class EntityCompiler
         public bool WalkableFootprint;
         public DecayDefinition? Decay;
         public (string Key, RuleValue At)? SpawnOnDeath;
+        public MeatDefinition? Meat;
         public int LifetimeMs;
         public WorldTraits World = WorldTraits.None;
     }

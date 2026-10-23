@@ -308,7 +308,9 @@ legacy:
     gatherMs: 200                     # UNVERIFIED (UNK-17): milking time per unit; batch B bounds it (a 50-unit trip, walk included, took 10.6 s; ADR 0170)
     carry: 50                         # VERIFIED (batch B, capture-20261018-222649): a peasant brings 50 food per trip from a cow (ADR 0170)
     keepWhenEmpty: true
-  SpawnOnDeath: { type: comm.meat }
+  # NAT-004 (ReTzar's reading of the original, the cow's +0x120): 300 meat at the start, 2 more a second up to 600; it falls
+  # as items of at most 100 food when the cow dies.
+  SpawnOnDeath: { type: comm.meat, start: 300, perSecond: 2, max: 600, piece: 100 }
   Capturable: { instant: true, technology: te_cowpoaching }
   ClaimOnTouch: { by: any }           # UNVERIFIED: a wild (Nature) cow joins the first kingdom whose unit touches it (GAME-15)
   Animal: { wanders: true }           # UNVERIFIED: wild cows wander around their spot
@@ -441,12 +443,13 @@ comm.tree:
   Building: { width: 1, height: 1 }
   ResourceNode: { resource: wood, amount: 100 }   # UNVERIFIED (UNK-17): wood per tree
 
-# Meat left by a slaughtered cow (GAME-02): a footprint-less pile that rots (never blocks, ORIG-01/05).
+# Meat left by a slaughtered cow (GAME-02, NAT-004): resource items of food (ReTzar: item_meat, a RESITEM) that a peasant
+# carries home and any other unit brings in at once; they rot (never block, ORIG-01/05).
 comm.meat:
   new: true
-  inherits: [^Resource]
+  inherits: [^Item]
   Legacy: { class: meat, civ: comm }
-  ResourceNode: { resource: food, amount: 100 }   # UNVERIFIED (UNK-17)
+  Item: { kind: resource, resource: food, power: 100, holders: [infantryunits, mountedunits] }
   Lifetime: { ms: 120000 }                        # UNVERIFIED (UNK-17)
 
 # Ambient birds (OBJECTS BIRD.INI / EAGLE.INI, teren = 0; not in the tables): they fly around, nobody fights them.
