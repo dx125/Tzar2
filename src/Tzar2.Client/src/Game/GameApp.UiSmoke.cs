@@ -38,6 +38,7 @@ public partial class GameApp
             [
                 ("main-menu", () => Show(ShowMainMenu)),
                 ("settings", () => Show(ShowSettings)),
+                ("credits", () => Show(ShowCredits)),
                 ("single-player", () => Show(ShowSinglePlayer)),
                 ("choose-map", () => Show(ShowCustomMaps)),
                 ("map-setup", () => _customMaps.Count > 0 && Show(() => ShowMapSetup(_customMaps[0]))),

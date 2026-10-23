@@ -112,12 +112,12 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 3 | 3 | 3 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
-| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 5 | 10 | 6 | 5 | 2 | 0 |
+| [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 6 | 10 | 6 | 4 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 7 | 1 | 1 | 1 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 341 | 222 | 78 | 19 | 11 | 9 | 2 |
+| **All** | 341 | 223 | 78 | 19 | 10 | 9 | 2 |
 
 ## Not done yet
 
@@ -170,7 +170,6 @@ Missing and partial rules.
 * **SHELL-012**: The settings of the random map screen are kept for the next time.
 * **SHELL-013**: The random map screen and the multiplayer options let each computer kingdom resign on its own (a flag) or never (a sword).
 * **SHELL-019** (partial): The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears. *CD audio and when the menu bar appears are missing; the path depth is dropped on purpose (TDD ORIG-03).*
-* **SHELL-020**: The credits screen shows the makers of the game. *CREDITS prints where the credits file is.*
 * **SHELL-021** (partial): The in-game menu (F1, F10) offers instructions, load game, save game, options, restart, quit and back to game. *Instructions are missing.* (ADR 0187)
 * **SHELL-026**: The controls of the menu screens explain themselves in a hint line.
 * **SHELL-027**: Quitting, resigning and disconnecting ask for confirmation.
@@ -225,11 +224,10 @@ Tzar2 does these differently on purpose.
 
 ## The original's data
 
-[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 7 not read, and of the names in the others 155 used, 5 restated by hand, 18 not needed and 34 to do.
+[data-usage.yaml](data-usage.yaml) accounts for 32 files or groups of files: 4 read whole, 6 not read, and of the names in the others 156 used, 5 restated by hand, 18 not needed and 33 to do.
 
 To do:
 
-* `DATA/CREDITSFNT.INI` (the whole file): the font of the credits screen (SHELL-020).
 * `DATA/EQUATIONS.INI` `enablequestbutton`: when the quest order is on (HUD-029)
 * `DATA/LAYOUT.INI` `layout1024l`: the interface down the left side (HUD-009)
 * `DATA/LAYOUT.INI` `layout1024r`: the interface down the right side (HUD-009)

@@ -17,8 +17,9 @@ files:
     account: whole
     reason: Tzar2.Content LegacyBonuses reads every unit group and its bonuses.
   - path: DATA/CREDITSFNT.INI
-    account: unused
-    reason: "todo: the font of the credits screen (SHELL-020)."
+    reader: Tzar2.Client GameApp (the credits screen's fonts, SHELL-020)
+    account: sections
+    used: [credits]
   - path: DATA/EQUATIONS.INI
     account: keys
     todo:
