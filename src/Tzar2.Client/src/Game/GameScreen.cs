@@ -1703,6 +1703,7 @@ public partial class GameScreen : Node
                         _eventHistory.Add((x, y, e.Entity));
                         Message($"{v.Name} ready");
                         _mixer?.PlaySet(v.SoundCommand, SoundCategory.Speech, _catalog.SoundPriority("obj_unit_ready"), Distance(x, y));
+                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, _catalog.SoundPriority("obj_unit_ready"), Distance(x, y)); // PRES-007
                     }
 
                     break;
@@ -1714,6 +1715,7 @@ public partial class GameScreen : Node
                         _eventHistory.Add((x, y, e.Entity));
                         Message($"{v.Name} completed");
                         _mixer?.PlaySet(v.SoundSelect, SoundCategory.Buildings, _catalog.SoundPriority("obj_building_ready"), Distance(x, y));
+                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, _catalog.SoundPriority("obj_building_ready"), Distance(x, y)); // PRES-007
                     }
 
                     break;
@@ -1996,7 +1998,7 @@ public partial class GameScreen : Node
         {
             Name = e.DisguiseMastery >= 0 ? string.Create(CultureInfo.InvariantCulture, $"{(e.SpyType >= 0 ? _catalog.Type((ushort)e.SpyType).Name : v.Name)} ({e.DisguiseMastery})") : name,
             Detail = e.MaxHealth > 0 ? $"{e.Health}/{e.MaxHealth} {owner}" : owner,
-            Icon = v.IconIndex,
+            Icon = v.Portrait(e.Hero),
             Health = e.MaxHealth > 0 && t.Category != EntityCategory.Resource ? e.Health / (float)e.MaxHealth : -1,
             Stats = stats,
             Strip = strip,
