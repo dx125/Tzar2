@@ -421,7 +421,12 @@ public partial class SkirmishSetupScreen : ArtScreen
     }
 }
 
-/// <summary>The end-of-game dialog (<c>D_ENDGAME</c>, <c>WIN.BMP</c>/<c>LOSE.BMP</c>) with the match statistics.</summary>
+/// <summary>
+/// The end-of-game dialog (<c>D_ENDGAME</c>, <c>WIN.BMP</c>/<c>LOSE.BMP</c>) with the match statistics. Its four slots hold
+/// the original's <c>endgamedlg</c> choices (UI review UI-A4): ACHIEVEMENTS (<c>stat</c>; greyed until the score screen
+/// exists), RESTART, QUIT and LOAD GAME (<c>load</c>). Which slot the original gives each is ours until the owner's
+/// screenshot (question 4).
+/// </summary>
 public partial class ResultsScreen : ArtScreen
 {
     /// <summary>Creates the dialog.</summary>
@@ -440,8 +445,13 @@ public partial class ResultsScreen : ArtScreen
         Text(new Vector2I(234, 64), T(won ? "win2" : "lose2", won ? "VICTORIOUS" : "DEFEATED"), UiAssets.TitleFont, null, 210);
         const string Btn = "art/screens/d_endgame/btn.t2img";
         var size = new Vector2I(210, 27);
-        Button(new Vector2I(233, 161), size, Btn, T("restart", "RESTART"), () => Restart?.Invoke());
-        Button(new Vector2I(233, 209), size, Btn, T("quit", "QUIT"), () => Quit?.Invoke());
+        Vector2I Slot(int i) => new(DialogBoxes.EndgameSlot(i).X, DialogBoxes.EndgameSlot(i).Y);
+        TextureButton achievements = Button(Slot(0), size, Btn, string.Empty, () => { });
+        achievements.Disabled = true;
+        Text(Slot(0) + new Vector2I(0, 5), T("stat", "ACHIEVEMENTS"), UiAssets.BoldFont, new Color(0.55f, 0.52f, 0.42f), 210);
+        Button(Slot(1), size, Btn, T("restart", "RESTART"), () => Restart?.Invoke());
+        Button(Slot(2), size, Btn, T("quit", "QUIT"), () => Quit?.Invoke());
+        Button(Slot(3), size, Btn, T("load", "LOAD GAME"), () => LoadGame?.Invoke());
         var lines = new List<string>
         {
             $"Time {stats.Seconds / 60}:{stats.Seconds % 60:00}    Units trained {stats.Trained}    Buildings {stats.Built}",
@@ -458,6 +468,9 @@ public partial class ResultsScreen : ArtScreen
 
     /// <summary>QUIT (to the main menu).</summary>
     public event Action? Quit;
+
+    /// <summary>LOAD GAME.</summary>
+    public event Action? LoadGame;
 }
 
 /// <summary>Choices of the in-game menu.</summary>

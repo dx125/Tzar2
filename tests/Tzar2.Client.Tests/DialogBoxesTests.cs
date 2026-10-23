@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Tzar2.Client.Logic;
 using Xunit;
 
@@ -38,6 +39,9 @@ public class DialogBoxesTests
         Inside(DialogBoxes.Quests, [.. quests]);
         Inside(DialogBoxes.Load, DialogBoxes.LoadTypePrevious, DialogBoxes.LoadTypeField, DialogBoxes.LoadTypeNext);
         Inside(DialogBoxes.Story, DialogBoxes.StoryImage, DialogBoxes.StoryText, DialogBoxes.StoryButton);
+        Inside(DialogBoxes.Credits, DialogBoxes.CreditsPage);
+        Inside(DialogBoxes.Endgame, [.. Enumerable.Range(0, 4).Select(DialogBoxes.EndgameSlot)]);
+        Inside(DialogBoxes.Options, [.. Enumerable.Range(0, 3).Select(DialogBoxes.OptionsLayout)]);
     }
 
     [Fact]

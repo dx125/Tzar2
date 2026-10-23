@@ -296,8 +296,8 @@ public partial class GameApp : Node
                 ApplyDisplay();
             }
 
-            SoundMixer.SetVolume(SoundMixer.SfxBus, _settings.SoundVolume);
-            SoundMixer.SetVolume(SoundMixer.MusicBus, _settings.MusicVolume);
+            SoundMixer.SetVolume(SoundMixer.SfxBus, _settings.SoundLevel);
+            SoundMixer.SetVolume(SoundMixer.MusicBus, _settings.MusicLevel);
         };
         screen.Closed += ShowMainMenu;
         Replace(screen, music: null);
@@ -554,6 +554,7 @@ public partial class GameApp : Node
         var results = new ResultsScreen(_ui!, _catalog, Screen, outcome, stats);
         results.Restart += restart ?? (() => StartSkirmish(_skirmish));
         results.Quit += quit ?? ShowMainMenu;
+        results.LoadGame += ShowLoadGame;
         Replace(results, music: outcome == MatchOutcome.Victory ? "music/win1.mid" : "music/outro.mid");
     }
 
