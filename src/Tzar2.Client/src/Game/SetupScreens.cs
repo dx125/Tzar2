@@ -36,6 +36,9 @@ public abstract partial class SetupScreen : ArtScreen
     /// <summary>Draws what changes (called again after each press).</summary>
     protected abstract void DrawLayer();
 
+    /// <summary>The prefix of the screen's hint keys in LOCAL/HELP.INI (<c>RM</c>, <c>CM1</c>).</summary>
+    protected virtual string HintPrefix => "RM";
+
     /// <summary>Clears the layer and draws it again.</summary>
     protected void Refresh()
     {
@@ -44,7 +47,10 @@ public abstract partial class SetupScreen : ArtScreen
             child.QueueFree();
         }
 
+        ClearHints();
         DrawLayer();
+        Hint(new Rect2I(556, 499, 210, 27), HintPrefix + "_PLAY");
+        Hint(new Rect2I(556, 554, 210, 27), HintPrefix + "_BACK");
     }
 
     /// <summary>
@@ -59,6 +65,10 @@ public abstract partial class SetupScreen : ArtScreen
         Picture(new Vector2I(73, 31 + y), Ui.Region(Common + "color bars.t2img", new Rect2I(0, Math.Min((int)colour, 7) * 13, 13, 13)));
         Label(new Vector2I(110, 30 + y), name, Colors.White);
         Spin(new Vector2I(311, 23 + y), civilization, step => change(RandomMapRowField.Civilization, step), arrows: true, enabled: enabled);
+        Hint(new Rect2I(73, 31 + y, 13, 13), HintPrefix + "_PLAYER_COLOR");
+        Hint(new Rect2I(110, 30 + y, 163, 14), HintPrefix + "_PLAYER_NAME");
+        Hint(new Rect2I(311, 23 + y, 180, 27), HintPrefix + "_PLAYER_CIVILIVIZATION");
+        Hint(new Rect2I(511, 31 + y, 13, 13), HintPrefix + "_PLAYER_TEAM");
         Picture(new Vector2I(511, 31 + y), Ui.Region(Common + "teams.t2img", new Rect2I(0, ((team + 4) % 5) * 13, 13, 13)));
         if (enabled)
         {
@@ -67,17 +77,26 @@ public abstract partial class SetupScreen : ArtScreen
         }
     }
 
-    /// <summary>A baked 180 × 27 spin of the art with its caption.</summary>
-    protected void Option(Vector2I at, Vector2I captionAt, string caption, string value, Action<int> change, bool enabled)
+    /// <summary>A baked 180 × 27 spin of the art with its caption (and its hint, a LOCAL/HELP.INI key).</summary>
+    protected void Option(Vector2I at, Vector2I captionAt, string caption, string value, Action<int> change, bool enabled, string hint = "")
     {
         Label(captionAt, caption, Caption);
         Spin(at, value, change, arrows: false, enabled: enabled);
+        if (hint.Length > 0)
+        {
+            Hint(new Rect2I(at, new Vector2I(180, 27)), hint);
+        }
     }
 
     /// <summary>A 30 × 30 check box (<c>COMMON/CHK</c>: the green light on top, the red one below) with its caption.</summary>
-    protected void Check(Vector2I at, Vector2I captionAt, string caption, bool on, Action toggle, bool enabled)
+    protected void Check(Vector2I at, Vector2I captionAt, string caption, bool on, Action toggle, bool enabled, string hint = "")
     {
         ArgumentNullException.ThrowIfNull(toggle);
+        if (hint.Length > 0)
+        {
+            Hint(new Rect2I(at, new Vector2I(30, 30)), hint);
+        }
+
         Picture(at, Ui.Region(Common + "chk.t2img", new Rect2I(0, on ? 0 : 31, 31, 31)));
         if (enabled)
         {
@@ -90,6 +109,7 @@ public abstract partial class SetupScreen : ArtScreen
     /// <summary>The victory limit's selector (<c>COMMON/SCROLL CTRL</c>) under the victory condition, with its caption.</summary>
     protected void LimitSelector(string caption, string value, Action<int> change, bool enabled)
     {
+        Hint(new Rect2I(66, 541, 191, 27), HintPrefix + "_VALUE");
         Picture(new Vector2I(66, 538), Ui.Texture(Common + "scroll ctrl.t2img"));
         Label(new Vector2I(68, 527), caption, Caption);
         Spin(new Vector2I(66, 541), value, change, arrows: false, width: 191, enabled: enabled);
@@ -190,6 +210,7 @@ public partial class MapSetupScreen : SetupScreen
         Button(new Vector2I(556, 499), new Vector2I(210, 27), Btn, T("play", "PLAY"), () => Play?.Invoke(_model));
         Button(new Vector2I(556, 554), new Vector2I(210, 27), Btn, T("back", "BACK"), () => Back?.Invoke());
         Refresh();
+        HelpBall(k => catalog?.Text("HELP", k, k) ?? k); // SHELL-026
     }
 
     /// <summary>PLAY.</summary>
@@ -202,6 +223,9 @@ public partial class MapSetupScreen : SetupScreen
     public CustomMapScreenModel Model => _model;
 
     private string T(string key, string fallback) => _catalog?.Text("sp_setupmap", key, fallback) ?? fallback;
+
+    /// <inheritdoc/>
+    protected override string HintPrefix => "CM1";
 
     /// <inheritdoc/>
     protected override void DrawLayer()
@@ -218,7 +242,15 @@ public partial class MapSetupScreen : SetupScreen
         string N(int n) => n.ToString(CultureInfo.InvariantCulture);
         string[] victories = ["Standard", "Destroy Castles", "Time Limit", "Score Limit"];
         void Spin(Vector2I at, Vector2I captionAt, string caption, string value, CustomMapOption option)
-            => Option(at, captionAt, caption, value, step => m.Change(option, step), m.CanChange(option));
+            => Option(at, captionAt, caption, value, step => m.Change(option, step), m.CanChange(option), option switch
+            {
+                CustomMapOption.Players => "CM1_NUMBER_OF_PLAYERS",
+                CustomMapOption.GameType => "CM1_GAME_TYPE",
+                CustomMapOption.Victory => "CM1_VICTORY_CONDITION",
+                CustomMapOption.PopulationLimit => "CM1_POP_LIMIT",
+                CustomMapOption.Difficulty => "CM1_DIFFICULTY_LEVEL",
+                _ => "CM1_STARTING_RESOURCES",
+            });
         Spin(new Vector2I(66, 369), new Vector2I(68, 353), T("t_num_players", "Number of Players") + $" ({m.FewestPlayers} - {m.MostPlayers})", N(m.Players), CustomMapOption.Players);
         Spin(new Vector2I(66, 427), new Vector2I(68, 410), T("t_game_type", "Game Type"), m.IsDeathmatch ? "Deathmatch" : T("g_type_0", "Standard"), CustomMapOption.GameType);
         Spin(new Vector2I(66, 487), new Vector2I(68, 470), T("t_vict_cond", "Victory Condition"), T($"vcond_{m.VictoryChoice}", victories[Math.Max(0, m.VictoryChoice)]), CustomMapOption.Victory);
@@ -232,7 +264,13 @@ public partial class MapSetupScreen : SetupScreen
         }
 
         void Box(Vector2I at, Vector2I captionAt, string caption, bool on, CustomMapOption option)
-            => Check(at, captionAt, caption, on, () => m.Change(option, +1), m.CanChange(option));
+            => Check(at, captionAt, caption, on, () => m.Change(option, +1), m.CanChange(option), option switch
+            {
+                CustomMapOption.NoFog => "CM1_NO_FOG",
+                CustomMapOption.Explore => "CM1_EXPLORE",
+                _ => "CM1_USE_MAP_SETTINGS",
+            });
+        Hint(new Rect2I(549, 54, 190, 240), "CM1_MAP_DECRIPTION");
         Box(new Vector2I(268, 539), new Vector2I(302, 549), T("t_fog", "No Fog"), m.NoFog, CustomMapOption.NoFog);
         Box(new Vector2I(268, 569), new Vector2I(302, 579), T("t_expolre", "Explore"), m.Explore, CustomMapOption.Explore);
         Box(new Vector2I(548, 309), new Vector2I(584, 320), T("t_mapdef", "Use Map Settings"), m.UseMapSettings, CustomMapOption.UseMapSettings);

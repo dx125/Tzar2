@@ -106,7 +106,7 @@ public sealed class HotkeyTable
             new("objectives", GameKey.F8, KeyMods.None, GameAction.Objectives, 0, Done, "the quest log of scenario maps (ADR 0132); the objective message in skirmishes"),
             new("options", GameKey.F9, KeyMods.None, GameAction.Options, 0, Partial, "volume and game-speed options only"),
             new("screenshot", GameKey.F11, KeyMods.None, GameAction.Screenshot, 0, Done, "PNG into the user folder"),
-            new("chat", GameKey.Enter, KeyMods.None, GameAction.Chat, 0, Partial, "multiplayer: the chat line (ADR 0168); single player has none, so its cheat codes cannot be typed yet"),
+            new("chat", GameKey.Enter, KeyMods.None, GameAction.Chat, 0, Partial, "single player: the chat screen (HUD-011), where the cheat codes are typed; multiplayer: the chat line (ADR 0168)"),
             new("send-location", GameKey.Enter, KeyMods.Ctrl, GameAction.SendLocation, 0, Blocked, "multiplayer chat has no location messages yet"),
             new("center", GameKey.Space, KeyMods.None, GameAction.CenterSelection, 0, Done, string.Empty),
             new("default-item", GameKey.Backspace, KeyMods.None, GameAction.UseDefaultItem, 0, Done, string.Empty),
