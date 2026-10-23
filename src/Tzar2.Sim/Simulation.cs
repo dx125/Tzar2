@@ -37,6 +37,7 @@ public sealed class Simulation : IDisposable
     private readonly SystemScheduler _scheduler = new();
     private readonly SimContext _context;
     private readonly StateHasher _hasher = new();
+    private readonly BulkHash _bulk = new();
     private readonly BinaryBufferWriter _snapshotWriter = new(64 * 1024);
     private int _busy;
 
@@ -175,7 +176,7 @@ public sealed class Simulation : IDisposable
             if (World.Tick.Value % World.Config.FullHashIntervalTicks == 0)
             {
                 profiler?.Begin("full hash");
-                full = StateHashing.ComputeFullHash(World, _hasher);
+                full = StateHashing.ComputeFullHash(World, _hasher, _bulk, Workers);
                 profiler?.End();
             }
 
@@ -221,7 +222,7 @@ public sealed class Simulation : IDisposable
         Enter(allowFaulted: true);
         try
         {
-            return StateHashing.ComputeFullHash(World, _hasher);
+            return StateHashing.ComputeFullHash(World, _hasher, _bulk, Workers);
         }
         finally
         {
