@@ -132,7 +132,17 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
             objects.Add(new MapObject("euro.footman", 0, (2 + i) * 2048, 7 * 2048));
         }
 
-        MapData map = ScenarioMaps.WithObjects(ScenarioMaps.Build("origin-magic", 40, 24, new byte[40 * 24], []), objects);
+        // A pond of 6 x 6 tiles at (34, 8): the whirlpool forms only on water (MAG-024, ReTzar 0x4733c4).
+        byte[] water = new byte[40 * 24];
+        for (int y = 8; y < 14; y++)
+        {
+            for (int x = 34; x < 40; x++)
+            {
+                water[(y * 40) + x] = 1;
+            }
+        }
+
+        MapData map = ScenarioMaps.WithObjects(ScenarioMaps.Build("origin-magic", 40, 24, water, []), objects);
         using var sim = new Simulation(rules, map, new SimulationConfig { MatchSeed = 3, PlayerCount = 2, PopulationLimit = 1000 });
         World w = sim.World;
         for (int t = 0; t < rules.Technologies.Count; t++)
@@ -181,6 +191,10 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
 
                     Position at = w.Positions.Get(c);
                     Position aim = target.IsNone ? at : w.Positions.Get(target);
+                    if (s.MoveMs > 0)
+                    {
+                        (target, aim) = (EntityId.None, new Position(37 * 2048, 11 * 2048)); // the middle of the pond
+                    }
                     batch.Add(CommandKind.CastSpell, [c], aim.X, aim.Y, target, arg0: spell);
                     w.Manas.Get(c).MilliMana = 100_000_000 / 100; // plenty of mana for the test
                 }
