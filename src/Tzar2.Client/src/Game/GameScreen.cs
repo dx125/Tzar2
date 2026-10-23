@@ -93,6 +93,8 @@ public partial class GameScreen : Node
     private CardDialog? _dialog;
     private EntityId _dialogFor;
     private (int Goods, int Load)? _route; // a trade route waiting for the far market's click
+    private readonly EntityId[] _tradeDocks = [EntityId.None, EntityId.None]; // the trade window's picked source and destination (TRADE-002)
+    private int _pickingDock = -1; // the trade window's market cell waiting for a click on the map, or -1
     private ushort _placing = ushort.MaxValue;
     private int _facing; // the placement ghost's facing: 0, 2 turned by 90° (gates and bridges); 1, 3 a gate facing the other way (CTRL-024, BLD-019)
     private int _eventCursor = -1;
@@ -809,6 +811,12 @@ public partial class GameScreen : Node
                 if (_route is { } route)
                 {
                     PickMarket(e.Position, route);
+                    return;
+                }
+
+                if (_pickingDock >= 0 && _dialog is TradeDialog tradeDialog)
+                {
+                    PickDock(e.Position, tradeDialog);
                     return;
                 }
 
@@ -1540,9 +1548,30 @@ public partial class GameScreen : Node
                 break;
             case CardDialogKind.Trade:
                 var trade = new TradeDialog(_ui);
+                (_tradeDocks[0], _tradeDocks[1], _pickingDock) = (EntityId.None, EntityId.None, -1);
+                trade.PickMarket += which =>
+                {
+                    _pickingDock = which;
+                    Message(which == 0 ? "Trade: click the market or harbor to start at." : "Trade: click the far market or harbor.");
+                };
                 trade.Route += (here, there, load) =>
                 {
-                    _route = (_rules.ResourceId(here) | (_rules.ResourceId(there) << 8), load);
+                    int goods = _rules.ResourceId(here) | (_rules.ResourceId(there) << 8);
+                    _pickingDock = -1;
+                    if (!_tradeDocks[1].IsNone)
+                    {
+                        (CommandList? commands, string? message) = _card.Trade(CardNow(), _tradeDocks[1], goods, load, _tradeDocks[0]);
+                        if (message is not null)
+                        {
+                            Message(message);
+                        }
+
+                        Submit(commands);
+                        CloseDialog();
+                        return;
+                    }
+
+                    _route = (goods, load);
                     CloseDialog();
                     Message("Trade: click the far market or harbor.");
                 };
@@ -1623,6 +1652,20 @@ public partial class GameScreen : Node
         _hud?.ShowDialog(null);
     }
 
+    // The trade window's source or destination: a market or harbor of the traders' kind under the pointer (TRADE-002).
+    private void PickDock(Vector2 screen, TradeDialog dialog)
+    {
+        if (PickAt(screen) is not { } dock || !_card.IsTradeDock(CardNow(), dock.Id))
+        {
+            Message("Trade: that is not a market of this trader's kind.");
+            return;
+        }
+
+        _tradeDocks[_pickingDock] = dock.Id;
+        dialog.ShowMarket(_pickingDock, _ui.PlayerCell("art/icons/icons.t2img", _catalog.Type(dock.TypeId).Portrait(false), dock.Owner < 8 ? dock.Owner : -1));
+        _pickingDock = -1;
+    }
+
     // The far market of a trade route: a market or harbor under the pointer.
     private void PickMarket(Vector2 screen, (int Goods, int Load) route)
     {
@@ -1638,7 +1681,7 @@ public partial class GameScreen : Node
             return;
         }
 
-        (CommandList? commands, string? message) = _card.Trade(CardNow(), far.Id, route.Goods, route.Load);
+        (CommandList? commands, string? message) = _card.Trade(CardNow(), far.Id, route.Goods, route.Load, _tradeDocks[0]);
         if (message is not null)
         {
             Message(message);

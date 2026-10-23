@@ -628,6 +628,49 @@ public sealed class CommandCard
     /// <param name="far">The far market or harbor clicked.</param>
     /// <param name="goods">The goods: what is carried there (low byte) and back (next byte).</param>
     /// <param name="load">The load of each trip.</param>
+    /// <summary>
+    /// Whether <paramref name="dock"/> is a market or harbor the selected traders may trade at (finished, of their
+    /// kind; another kingdom's too, TRADE-003): what the trade window's SOURCE and DESTINATION pick (TRADE-002).
+    /// </summary>
+    public bool IsTradeDock(CardContext context, EntityId dock)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        EntityId[] traders = Traders(context);
+        Dictionary<uint, int> index = Index(context.Frame);
+        if (traders.Length == 0 || !index.TryGetValue(traders[0].Value, out int first) || !index.TryGetValue(dock.Value, out int d))
+        {
+            return false;
+        }
+
+        DropOffAccess access = _rules.EntityTypes[context.Frame.Entities[first].TypeId].Traits.World.Trader!.Access;
+        FrameEntity m = context.Frame.Entities[d];
+        return (_rules.EntityTypes[m.TypeId].Traits.World.TradeDock & access) != 0 && m.ConstructionPermille < 0;
+    }
+
+    /// <summary>
+    /// The trade route of the selected traders to <paramref name="far"/> with <paramref name="goods"/> (the goods loaded
+    /// at the start in the low byte, those brought back in the next) and <paramref name="load"/> per trip, starting at
+    /// <paramref name="near"/> when the trade window picked it (TRADE-002), else at the trader's nearest own market.
+    /// </summary>
+    public (CommandList? Commands, string? Message) Trade(CardContext context, EntityId far, int goods, int load, EntityId near)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (near.IsNone || near == far || !IsTradeDock(context, near))
+        {
+            return Trade(context, far, goods, load);
+        }
+
+        if (!IsTradeDock(context, far) || !Index(context.Frame).TryGetValue(far.Value, out int fi))
+        {
+            return (null, "Trade: that is not a market of this trader's kind.");
+        }
+
+        var list = new CommandList();
+        list.Add(CommandKind.Trade, Traders(context), context.Frame.Entities[fi].X, context.Frame.Entities[fi].Y, target: near, arg0: goods, arg1: load);
+        return (list, null);
+    }
+
+    /// <summary>The trade route of the selected traders to <paramref name="far"/>, starting at their nearest own market.</summary>
     public (CommandList? Commands, string? Message) Trade(CardContext context, EntityId far, int goods, int load)
     {
         ArgumentNullException.ThrowIfNull(context);
