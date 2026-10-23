@@ -167,3 +167,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0261](0261-spell-magnitudes-as-the-original-casts-them.md) | Give spells the original's strength, duration and area | Accepted | 2026-10-22 |
 | [0262](0262-ai-resign-flag-in-the-match-settings.md) | Carry the AI resign flag in the match settings, format version 3 | Accepted | 2026-10-23 |
 | [0263](0263-fire-rain-and-whirlpool-as-the-original-casts-them.md) | Fire rain and the whirlpool as the original casts them | Accepted | 2026-10-23 |
+| [0264](0264-item-properties-on-map-objects.md) | Give map objects item properties; the random map generator makes its items as the original | Accepted | 2026-10-23 |

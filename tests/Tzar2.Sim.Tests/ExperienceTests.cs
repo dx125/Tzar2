@@ -85,6 +85,48 @@ public class ExperienceTests
     }
 
     [Fact]
+    [Trait("Rule", "EXP-002")]
+    public void The_experience_curve_is_data_and_classic_keeps_the_originals()
+    {
+        // Code review 2026-10 (item 16, for a fork): the curve's shape was code (level k costs base × k). It is
+        // levelBaseXp + levelStepXp × (k − 1) now, -1 for "as base"; classic gives the original's numbers exactly, at
+        // every experience speed.
+        CombatSettings classic = Classic.Combat;
+        Assert.Equal((1, -1, 1), (classic.LevelBaseXp, classic.LevelStepXp, classic.LevelStep));
+        foreach (int b in new[] { 1, 3, 100 })
+        {
+            CombatSettings c = classic with { LevelBaseXp = b };
+            foreach (int speed in new[] { 100, 70, 50, 35 })
+            {
+                for (int n = 0; n <= 200; n++)
+                {
+                    long old = 0;
+                    if (speed == 100)
+                    {
+                        old = n <= 0 ? 0 : 1 + ((long)b * n * (n - 1) / 2);
+                    }
+                    else
+                    {
+                        for (int k = 0; k < n; k++)
+                        {
+                            old += System.Math.Max(1, (long)b * speed * k / 100);
+                        }
+                    }
+
+                    Assert.Equal(old, CombatStats.XpForLevel(c, n, speed));
+                }
+            }
+        }
+
+        // A fork with flat levels (every level costs 5) and one that grows faster (2, then 3 more per level).
+        Ruleset flat = ClassicWith("combat: { levelBaseXp: 5, levelStepXp: 0 }");
+        Assert.Equal([0, 1, 6, 11, 16], Enumerable.Range(0, 5).Select(n => CombatStats.XpForLevel(flat.Combat, n)));
+        Ruleset steep = ClassicWith("combat: { levelBaseXp: 2, levelStepXp: 3 }");
+        Assert.Equal([0, 1, 3, 8, 16], Enumerable.Range(0, 5).Select(n => CombatStats.XpForLevel(steep.Combat, n)));
+        Assert.Equal(CombatStats.XpForLevel(steep.Combat, 30), CombatStats.XpForLevel(steep.Combat, 30, 100));
+    }
+
+    [Fact]
     [Trait("Rule", "EXP-001")]
     [Trait("Rule", "EXP-002")]
     public void Each_kill_is_a_point_and_each_level_costs_as_many_points_as_it_is_high()
