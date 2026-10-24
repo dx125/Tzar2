@@ -153,14 +153,16 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    with the original.
    1. Fields could not be built ("Requires: requirements"; a blocker): **fixed** (log below).
    2. Builders arriving at a site push the working ones aside instead of taking the free places around it. Up to 8
-      peasants work around one tree in the original, while ours cut from one side; mines alike. Likely the whole logic
-      of a group working at one object: check ReTzar.
+      peasants work around one tree in the original, while ours cut from one side; mines alike: **fixed** (WORLD-019,
+      log below). Open: soldiers crowding a building they attack.
    3. The gathering cursors (pick, saw, perhaps others) are not the original's: **fixed**, every pointer as ReTzar
       reads the original (CTRL-012, CTRL-013; log below).
    4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
-   5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14): the minimap and the day
-      globe as in the original's left HUD (`LAYOUT1024L`); the selection view and the orders stay at the bottom, the
-      orders in one row.
+   5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14), as corrected on
+      2026-10-24: the minimap and the day globe as in the original's left HUD (`LAYOUT1024L`); the selection view and
+      the orders, in two rows as in the original so that they match the selection view's height, at the bottom in the
+      middle of the screen, not stretched across it. Whether these panels turn translucent with nothing selected is to
+      be proposed.
    6. Texts still not in the original's style, such as the QUIT confirmation's. The confirmation itself stays (the
       owner finds it handy; STRINGS.INI `[q]` holds the original's own questions): **fixed** for the shell (log below).
    7. The main menu: the original's five buttons in the art's slots, in the original's colours, lit under the pointer
@@ -301,6 +303,23 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-24 — Workers take a place of their own at what they work at (WORLD-019; the fifth play-test).** Builders
+  arriving at a site pushed the working ones aside, and a group cut a tree from one side. ReTzar reads the original:
+  units ordered to an object take the cells of its edge (its footprint grown by one) one by one, from where the path
+  ends, alternately ahead and behind (0x451cc0, 0x451b40), and a cell holds one unit. Now:
+  * a worker walks to the first such tile that it can stand on, that no other worker at the object walks to or holds
+    and where no other unit stands; on its way it stops only there, not where it first touches the object;
+  * a unit at work (gathering, building, repairing, capturing) is not shoved by the other workers of the same object;
+    everyone else shoves it as before (holding it against all workers broke the campaign acceptance's alex1 through a
+    changed economy, so the rule stays where the play-test saw it);
+  * when every place at a node is taken (eight at a tree), the worker takes the next node with room.
+
+  Tzar2's paths do not know units, so a worker the crowd stops short of its tile works where it stopped. The gameplay
+  and AI goldens and both CI bench hashes are re-pinned (gameplay D62F1CB1FA30D467, ai F7A172FC2A942001); the sim bench
+  does not move. The original's campaigns still complete 19 of 19 and the tutorial 7 of 7 (the acceptance test with
+  `TZAR2_ORIGIN`). Cost: 8 AIs for 10 minutes run at the tick p50 and p99 of main (0.23-0.26 and 0.97-1.17 ms).
+  The owner corrected the HUD of item 5.5: the selection view and the orders in the middle at the bottom, in two rows.
 
 * **2026-10-24 — The menus in the original's style; the main menu's five slots; the campaign screen rebuilt (the fifth
   play-test, items 5.6-5.8).** ReTzar reads how the original draws its menus, and the shell follows it:

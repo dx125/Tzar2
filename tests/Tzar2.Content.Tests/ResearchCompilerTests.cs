@@ -73,6 +73,7 @@ public class ResearchCompilerTests
         Assert.Equal(-1, Classic.OrderTechnology(string.Empty, string.Empty));
         OrderGate first = Classic.OrderGates[0];
         Classic.OrderTechnology(first.Order, first.Civilization);
+        Classic.OrderTechnology("spell_nothing", "euro"); // both paths warmed up (a cold miss failed once on a CI runner)
         long before = GC.GetAllocatedBytesForCurrentThread();
         for (int i = 0; i < 100; i++)
         {

@@ -44,7 +44,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // so the commands change.
     // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement: the fights and so the commands change.
     // (ADR 0250, 2026-10-22) the curse, hypnosis, the banshee and the Messiah as ReTzar reads them: a synthetic Messiah shifts type ids, status effects grow (hashed layout 13): the commands name the shifted type ids.
-    private const ulong GoldenCommandStream = 0xA10DD058749DF77DUL;
+    // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at and are not shoved there by
+    // the others of the same object: the economy changes, and so the commands.
+    private const ulong GoldenCommandStream = 0x4D12BACB2F04AC94UL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
@@ -62,8 +64,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0266, 2026-10-23) no spell cooldowns (casters wait only for mana) and spells learned from books (a new store, hashed layout 18, snapshot 20): the hashes.
     // (ADR 0267, 2026-10-23) mana regrows 2 a second (Nature 1), a pool below a spell's cost is raised to it, a summon costs its creature's mana (mana state grows, hashed layout 19, snapshot 21): the hashes.
     // (ADR 0269, 2026-10-23) the computer picks up and uses items (AI-005; its settings byte in the AI state gains TakesItems): the hashes.
-    private const ulong GoldenHashStream = 0x41601E2DF618E6B9UL;
-    private const ulong GoldenFinalFullHash = 0x3F82563435A1FFF7UL;
+    // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at: the hashes.
+    private const ulong GoldenHashStream = 0xD4CBD52556D10E07UL;
+    private const ulong GoldenFinalFullHash = 0x0847ADB557A0ABADUL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;
