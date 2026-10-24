@@ -1002,6 +1002,11 @@ public sealed class MovementSystem : ISimSystem
         }
     }
 
+    // Whether a unit works where it stands: a worker gathering, building, repairing or capturing.
+    private static bool AtWork(World world, EntityId unit)
+        => world.Workers.IndexOf(unit) is >= 0 and var w
+            && world.Workers.At(w).Phase is WorkerPhase.Gathering or WorkerPhase.Building or WorkerPhase.Repairing or WorkerPhase.Capturing;
+
     /// <summary>The per-tick flat copy of the mobile units, parallel to the motion store.</summary>
     private sealed class Frame
     {
@@ -1028,6 +1033,10 @@ public sealed class MovementSystem : ISimSystem
         public byte[] Owner = [];
         public byte[] Plane = [];
         public byte[] Moving = [];
+
+        // Units at work (a worker gathering, building, repairing or capturing) hold their place: nobody shoves them
+        // (WORLD-019, the owner's fifth play-test).
+        public byte[] Anchored = [];
         public int[] Out = [];
         public int GridW;
         public int GridH;
@@ -1057,6 +1066,7 @@ public sealed class MovementSystem : ISimSystem
                 Owner = new byte[size];
                 Plane = new byte[size];
                 Moving = new byte[size];
+                Anchored = new byte[size];
                 Out = new int[size];
                 CellItems = new int[size];
             }
@@ -1105,6 +1115,7 @@ public sealed class MovementSystem : ISimSystem
                 Locomotor locomotor = world.Ruleset.EntityTypes[identity.TypeId].Locomotor;
                 Plane[i] = locomotor == Locomotor.Air ? (byte)2 : locomotor == Locomotor.Ship ? (byte)1 : (byte)0;
                 Moving[i] = m.State == MotionState.Moving && m.Mode != MotionMode.Waiting ? (byte)1 : (byte)0;
+                Anchored[i] = Moving[i] == 0 && AtWork(world, e) ? (byte)1 : (byte)0;
                 Out[i] = 0;
                 CellStart[CellOf(p.X, p.Y) + 1]++;
             }
@@ -1480,7 +1491,11 @@ public sealed class MovementSystem : ISimSystem
 
                         bool friendly = f.Friends(i, j);
                         int share; // quarters of the overlap this unit takes
-                        if (iMoving == jMoving)
+                        if (f.Anchored[i] != 0 || f.Anchored[j] != 0)
+                        {
+                            share = f.Anchored[i] != 0 ? 0 : 4; // a unit at work holds its place, also against another (WORLD-019)
+                        }
+                        else if (iMoving == jMoving)
                         {
                             share = 2;
                         }

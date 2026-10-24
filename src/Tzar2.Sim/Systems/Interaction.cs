@@ -116,7 +116,30 @@ internal static class Interaction
         bool shipWorker = type.Locomotor == Locomotor.Ship;
         bool across = shipWorker ? world.Footprints.Has(target) : other.IsMobile && other.Locomotor == Locomotor.Ship;
         int extra = across ? MapState.UnitsPerTile : 0;
-        return Reaches(world, world.Positions.Get(worker), type.Radius + extra, target, IsMoving(world, worker));
+        bool moving = IsMoving(world, worker);
+        if (moving && !shipWorker && world.Footprints.Has(target) && !NearOrderPoint(world, worker))
+        {
+            // Walking to its own tile at the structure (WorkSpot), it stops there and not where it first touches the
+            // footprint, so a group spreads around the structure instead of crowding its near side (the fifth play-test).
+            return false;
+        }
+
+        return Reaches(world, world.Positions.Get(worker), type.Radius + extra, target, moving);
+    }
+
+    // Whether a unit on a move is within a third of a tile of its order point (true for any other movement).
+    private static bool NearOrderPoint(World world, EntityId unit)
+    {
+        int m = world.Motions.IndexOf(unit);
+        if (m < 0 || world.Motions.At(m).Order != MotionOrder.Move)
+        {
+            return true;
+        }
+
+        ref Motion motion = ref world.Motions.At(m);
+        Position at = world.Positions.Get(unit);
+        const long near = MapState.UnitsPerTile / 3;
+        return IntMath.DistanceSquared(at.X, at.Y, motion.OrderX, motion.OrderY) <= near * near;
     }
 
     /// <summary>
@@ -260,11 +283,12 @@ internal static class Interaction
     /// <summary>
     /// The next node of <paramref name="resource"/> for <paramref name="worker"/>, which worked at (<paramref name="x"/>,
     /// <paramref name="y"/>) (ADR 0180; the owner's play-test: peasants walked to far trees): among the nodes within
-    /// <paramref name="radiusTiles"/> that the worker can get next to (a tree inside a forest is left for later), the one
-    /// with the shortest way from there plus the way from it to the owner's nearest drop-off for the resource, so the
-    /// cutting moves toward the lumber mill (ties: lower entity index), or <see cref="EntityId.None"/>.
+    /// <paramref name="radiusTiles"/> that the worker can get next to (a tree inside a forest is left for later) and that
+    /// have a free place for it (<see cref="HasWorkSpot"/>), other than <paramref name="exclude"/>, the one with the
+    /// shortest way from there plus the way from it to the owner's nearest drop-off for the resource, so the cutting
+    /// moves toward the lumber mill (ties: lower entity index), or <see cref="EntityId.None"/>.
     /// </summary>
-    public static EntityId NextNode(World world, EntityId worker, int resource, int x, int y, int radiusTiles)
+    public static EntityId NextNode(World world, EntityId worker, int resource, int x, int y, int radiusTiles, EntityId exclude = default)
     {
         byte owner = world.Identities.Get(worker).Owner;
         EntityTypeDefinition type = world.TypeOf(worker);
@@ -284,7 +308,8 @@ internal static class Interaction
         for (int i = 0; i < nodes.Length; i++)
         {
             if (stocks[i].Amount == 0 || world.TypeOf(nodes[i]).Traits.ResourceNode!.Resource != resource || world.Constructions.Has(nodes[i])
-                || !MayHarvest(world, owner, nodes[i]) || IsOnWater(world, nodes[i]) != boat || !HasRoom(world, nodes[i], worker))
+                || !MayHarvest(world, owner, nodes[i]) || IsOnWater(world, nodes[i]) != boat || !HasRoom(world, nodes[i], worker)
+                || nodes[i] == exclude)
             {
                 continue;
             }
@@ -307,7 +332,7 @@ internal static class Interaction
             }
 
             long score = IntMath.ISqrt(d) + IntMath.ISqrt(toDrop);
-            if (score < bestScore && (component < 0 || CanWorkAt(world, nodes[i], layer!, component)))
+            if (score < bestScore && (component < 0 || CanWorkAt(world, nodes[i], layer!, component)) && HasWorkSpot(world, nodes[i], worker))
             {
                 bestScore = score;
                 best = nodes[i];
@@ -518,6 +543,17 @@ internal static class Interaction
     public static DropOffAccess AccessOf(EntityTypeDefinition type) => type.Locomotor == Locomotor.Ship ? DropOffAccess.Water : DropOffAccess.Land;
 
     /// <summary>
+    /// Whether <paramref name="worker"/> has a tile of its own at <paramref name="target"/> (<see cref="WorkSpot"/>); always
+    /// for targets without one (a field, a cow, a fish patch) and for boats.
+    /// </summary>
+    public static bool HasWorkSpot(World world, EntityId target, EntityId worker)
+    {
+        Locomotor locomotor = world.TypeOf(worker).Locomotor;
+        return !world.Footprints.Has(target) || world.TypeOf(target).Traits.WalkableFootprint || locomotor == Locomotor.Ship
+            || WorkSpot(world, target, world.Positions.Get(worker), locomotor, worker, out _, out _);
+    }
+
+    /// <summary>
     /// Whether <paramref name="worker"/> may work <paramref name="node"/> beside the others already on it (ECO-021: one
     /// peasant per field). Those gathering on it or carrying from it hold it; of several heading there, the first to
     /// arrive takes it and the others look for another.
@@ -563,8 +599,9 @@ internal static class Interaction
     }
 
     /// <summary>
-    /// Where a worker goes to work on <paramref name="target"/>: the walkable tile next to a structure nearest to the
-    /// worker, or the position of a footprint-less target (a cow, a fish patch, meat).
+    /// Where a worker goes to work on <paramref name="target"/>: its own tile next to a structure (<see cref="WorkSpot"/>),
+    /// else the walkable tile next to it nearest to the worker, or the position of a footprint-less target (a cow, a fish
+    /// patch, meat).
     /// </summary>
     public static (int X, int Y) WorkPoint(World world, EntityId target, Position from, Locomotor locomotor, EntityId worker = default)
     {
@@ -578,6 +615,11 @@ internal static class Interaction
 
         if (world.Footprints.Has(target))
         {
+            if (!worker.IsNone && locomotor != Locomotor.Ship && WorkSpot(world, target, from, locomotor, worker, out int sx, out int sy))
+            {
+                return (sx, sy);
+            }
+
             if (ApproachPoint(world, target, from.X, from.Y, locomotor, out int x, out int y))
             {
                 return (x, y);
@@ -587,6 +629,171 @@ internal static class Interaction
         Position p = world.Positions.Get(target);
         return (p.X, p.Y);
     }
+
+    /// <summary>
+    /// The tile where <paramref name="worker"/> stands to work at a structure, one worker to a tile (the owner's fifth
+    /// play-test: at most eight peasants cut at a tree, builders take the free places around a site). As ReTzar reads the
+    /// original (0x451cc0, 0x451b40), the tiles are those next to the footprint (the footprint grown by one, 0x41fd70); the
+    /// worker takes the first one around that edge, from the one nearest to it, alternately ahead and behind, that it can
+    /// stand on, that no other worker at the structure walks to or holds, and where no other unit stands (a unit walking
+    /// through does not count).
+    /// </summary>
+    /// <returns><c>false</c> when every such tile is taken or none can be stood on.</returns>
+    public static bool WorkSpot(World world, EntityId target, Position from, Locomotor locomotor, EntityId worker, out int x, out int y)
+    {
+        (int fx, int fy, int fw, int fh) = world.FootprintRect(target);
+        int x0 = fx - 1;
+        int y0 = fy - 1;
+        int x1 = fx + fw;
+        int y1 = fy + fh;
+        int edge = 2 * ((x1 - x0) + (y1 - y0));
+        MapState map = world.Map;
+
+        // Where the worker comes to the edge: its nearest tile it can stand on.
+        long best = long.MaxValue;
+        int sx = 0;
+        int sy = 0;
+        for (int n = 0; n < edge; n++)
+        {
+            (int tx, int ty) = EdgeTile(x0, y0, x1, y1, x0, y0, n);
+            if (!Standable(map, locomotor, tx, ty))
+            {
+                continue;
+            }
+
+            long d = IntMath.DistanceSquared(Center(tx), Center(ty), from.X, from.Y);
+            if (d < best)
+            {
+                best = d;
+                (sx, sy) = (tx, ty);
+            }
+        }
+
+        x = 0;
+        y = 0;
+        if (best == long.MaxValue)
+        {
+            return false;
+        }
+
+        Span<bool> taken = stackalloc bool[(x1 - x0 + 1) * (y1 - y0 + 1)];
+        TakenTiles(world, target, worker, x0, y0, x1, y1, taken);
+        for (int n = 0; n < edge; n++)
+        {
+            (int tx, int ty) = EdgeTile(x0, y0, x1, y1, sx, sy, n);
+            if (!Standable(map, locomotor, tx, ty) || taken[TileKey(tx, ty, x0, y0, x1)])
+            {
+                continue;
+            }
+
+            x = Center(tx);
+            y = Center(ty);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool Standable(MapState map, Locomotor locomotor, int tx, int ty)
+        => tx >= 0 && ty >= 0 && tx < map.Width && ty < map.Height && map.IsPassable(locomotor, tx, ty);
+
+    // The tile n steps around the edge of the tile rect [x0, x1] x [y0, y1] from (sx, sy), alternately ahead (even n) and
+    // behind (odd n), going down the left side, right along the bottom, up the right side and left along the top
+    // (ReTzar 0x451b40).
+    private static (int X, int Y) EdgeTile(int x0, int y0, int x1, int y1, int sx, int sy, int n)
+    {
+        int perimeter = 2 * ((x1 - x0) + (y1 - y0));
+        int steps = (n & 1) != 0 ? perimeter - (n / 2) - 1 : n / 2;
+        int x = sx;
+        int y = sy;
+        for (int i = 0; i < steps; i++)
+        {
+            if (x == x0 && y < y1)
+            {
+                y++;
+            }
+            else if (y == y1 && x < x1)
+            {
+                x++;
+            }
+            else if (x == x1 && y > y0)
+            {
+                y--;
+            }
+            else
+            {
+                x--;
+            }
+        }
+
+        return (x, y);
+    }
+
+    // The edge tiles taken: those other workers at the structure hold (the tile they were sent to, which they keep after
+    // they stop, also when a crowd stopped them short of it; else the one they stand on), and those another unit stands on.
+    private static void TakenTiles(World world, EntityId target, EntityId worker, int x0, int y0, int x1, int y1, Span<bool> taken)
+    {
+        Position self = world.Positions.Get(worker);
+        bool selfStands = !IsMoving(world, worker);
+        for (int ty = Math.Max(0, y0); ty <= Math.Min(world.Map.Height - 1, y1); ty++)
+        {
+            for (int tx = Math.Max(0, x0); tx <= Math.Min(world.Map.Width - 1, x1); tx++)
+            {
+                if (!OnEdge(tx, ty, x0, y0, x1, y1))
+                {
+                    continue;
+                }
+
+                int standing = world.StandingAt(tx, ty);
+                if (selfStands && self.X / MapState.UnitsPerTile == tx && self.Y / MapState.UnitsPerTile == ty)
+                {
+                    standing--;
+                }
+
+                taken[TileKey(tx, ty, x0, y0, x1)] = standing > 0;
+            }
+        }
+
+        ReadOnlySpan<EntityId> workers = world.Workers.Entities;
+        Span<Worker> states = world.Workers.Components;
+        for (int i = 0; i < workers.Length; i++)
+        {
+            if (workers[i] == worker || WorkObject(states[i]) != target.Value)
+            {
+                continue;
+            }
+
+            int m = world.Motions.IndexOf(workers[i]);
+            int tx = m >= 0 ? world.Motions.At(m).OrderX / MapState.UnitsPerTile : -1;
+            int ty = m >= 0 ? world.Motions.At(m).OrderY / MapState.UnitsPerTile : -1;
+            if (!OnEdge(tx, ty, x0, y0, x1, y1))
+            {
+                Position at = world.Positions.Get(workers[i]);
+                (tx, ty) = (at.X / MapState.UnitsPerTile, at.Y / MapState.UnitsPerTile);
+            }
+
+            if (OnEdge(tx, ty, x0, y0, x1, y1))
+            {
+                taken[TileKey(tx, ty, x0, y0, x1)] = true;
+            }
+        }
+    }
+
+    // The structure a worker works at or walks to work at (a drop-off while carrying a load there), none otherwise.
+    private static uint WorkObject(in Worker w) => w.Phase switch
+    {
+        WorkerPhase.ToDropOff => w.DropTarget,
+        WorkerPhase.ToNode or WorkerPhase.Gathering or WorkerPhase.ToSite or WorkerPhase.Building or WorkerPhase.ToTarget
+            or WorkerPhase.Repairing or WorkerPhase.Capturing => w.Target,
+        _ => 0,
+    };
+
+    private static int TileKey(int tx, int ty, int x0, int y0, int x1) => ((ty - y0) * (x1 - x0 + 1)) + (tx - x0);
+
+    private static bool OnEdge(int tx, int ty, int x0, int y0, int x1, int y1)
+        => tx >= x0 && tx <= x1 && ty >= y0 && ty <= y1 && (tx == x0 || tx == x1 || ty == y0 || ty == y1);
+
+    private static int Center(int tile) => (tile * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2);
 
     /// <summary>
     /// Whether a worker of <paramref name="owner"/> may gather from <paramref name="node"/>: Nature's nodes (trees,
