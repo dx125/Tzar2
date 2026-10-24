@@ -17,7 +17,7 @@ public partial class GameScreen
     public static readonly string[] AuditDialogs =
     [
         "game-menu", "options", "save", "load", "diplomacy", "tribute", "gamble", "exchange", "trade", "craft",
-        "message", "story", "quests", "conversation", "chat", "chat-custom", "help", "help-hotkeys", "scores",
+        "message", "story", "quests", "conversation", "chat", "chat-custom", "help", "help-hotkeys", "scores", "resign",
     ];
 
     // Sample scenario texts, long enough to wrap (our own words).
@@ -38,6 +38,9 @@ public partial class GameScreen
         {
             case "game-menu":
                 ShowMenu();
+                return true;
+            case "resign":
+                AskQuit();
                 return true;
             case "chat":
                 ShowChat(null);

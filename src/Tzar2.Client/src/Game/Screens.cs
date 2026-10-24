@@ -79,9 +79,20 @@ public abstract partial class ArtScreen : Control
         return rect;
     }
 
+    /// <summary>The menus' text colours, as ReTzar reads the original: gold (lit, chosen, captions).</summary>
+    public static readonly Color Gold = Color.Color8(0xE2, 0xA3, 0x19);
+
+    /// <summary>Dark gold: a button's text at rest, the lists' other rows, descriptions.</summary>
+    public static readonly Color DarkGold = Color.Color8(0xA3, 0x7B, 0x1B);
+
+    /// <summary>A disabled button's text.</summary>
+    public static readonly Color DisabledGold = Color.Color8(0x5D, 0x49, 0x11);
+
     /// <summary>
     /// A button from a strip of states side by side (<paramref name="image"/>; state 0 normal, 1 pressed) at a position
-    /// relative to the background, with a centred label.
+    /// relative to the background, with a centred label as the original's menus draw it (ReTzar's reading): Arial 14
+    /// bold in dark gold, gold under the pointer and while pressed, the pressed text a pixel down and right, a darker
+    /// gold when disabled (the fifth play-test: the buttons did not light up).
     /// </summary>
     protected TextureButton Button(Vector2I at, Vector2I size, string image, string label, Action pressed)
     {
@@ -95,12 +106,47 @@ public abstract partial class ArtScreen : Control
 
         button.Pressed += pressed;
         AddChild(button);
-        if (label.Length > 0 && Ui.Text(label, UiAssets.BoldFont, new Color(1f, 0.92f, 0.65f)) is { } t)
+        if (label.Length > 0 && Ui.Text(label, UiAssets.TitleFont, DarkGold) is { } rest)
         {
-            button.AddChild(new TextureRect { Texture = t, Position = new Vector2((size.X - t.GetWidth()) / 2, (size.Y - t.GetHeight()) / 2), MouseFilter = MouseFilterEnum.Ignore });
+            ImageTexture lit = Ui.Text(label, UiAssets.TitleFont, Gold) ?? rest;
+            ImageTexture off = Ui.Text(label, UiAssets.TitleFont, DisabledGold) ?? rest;
+            var place = new Vector2((size.X - rest.GetWidth()) / 2, (size.Y - rest.GetHeight()) / 2);
+            var text = new TextureRect { Texture = rest, Position = place, MouseFilter = MouseFilterEnum.Ignore };
+            button.AddChild(text);
+            void Show()
+            {
+                bool down = button.ButtonPressed || button.IsPressed();
+                text.Texture = button.Disabled ? off : down || button.IsHovered() ? lit : rest;
+                text.Position = place + (down && !button.Disabled ? Vector2.One : Vector2.Zero);
+            }
+
+            button.MouseEntered += Show;
+            button.MouseExited += Show;
+            button.ButtonDown += Show;
+            button.ButtonUp += Show;
+            button.Draw += Show;
         }
 
         return button;
+    }
+
+    /// <summary>
+    /// A small text button at a position relative to the background: Arial 12 bold in dark gold, gold under the pointer;
+    /// returns the x where it ends.
+    /// </summary>
+    protected int Link(Vector2I at, string label, Action pressed)
+    {
+        ImageTexture? rest = Ui.Text(label, UiAssets.BoldFont, DarkGold);
+        if (rest is null)
+        {
+            return at.X;
+        }
+
+        ImageTexture lit = Ui.Text(label, UiAssets.BoldFont, Gold) ?? rest;
+        var button = new TextureButton { Position = Origin + at, Size = rest.GetSize(), TextureNormal = rest, TextureHover = lit, TexturePressed = lit, IgnoreTextureSize = true };
+        button.Pressed += pressed;
+        AddChild(button);
+        return at.X + rest.GetWidth();
     }
 
     /// <summary>
@@ -153,7 +199,10 @@ public abstract partial class ArtScreen : Control
     }
 
     /// <summary>The text broken into lines no wider than <paramref name="width"/> (paragraphs at line breaks).</summary>
-    protected List<string> Wrap(string text, int width)
+    protected List<string> Wrap(string text, int width) => WrapIn(text, width, UiAssets.SmallFont);
+
+    /// <summary>The text broken into lines of <paramref name="font"/> no wider than <paramref name="width"/> (paragraphs at line breaks).</summary>
+    protected List<string> WrapIn(string text, int width, string font)
     {
         var lines = new List<string>();
         foreach (string paragraph in (text ?? string.Empty).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n'))
@@ -162,7 +211,7 @@ public abstract partial class ArtScreen : Control
             foreach (string word in paragraph.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 string next = line.Length == 0 ? word : line + " " + word;
-                if (line.Length > 0 && Ui.Measure(next) > width)
+                if (line.Length > 0 && Ui.Measure(next, font) > width)
                 {
                     lines.Add(line.ToString());
                     line.Clear().Append(word);
@@ -312,10 +361,11 @@ public abstract partial class ArtScreen : Control
         }
     }
 
-    // The box, black edged on cream with black text, below the pointer (MenuHelp.Box on the screen's size).
+    // The box, black edged on cream with black text in Arial 12 bold (ReTzar: 0x45c6c6), below the pointer
+    // (MenuHelp.Box on the screen's size).
     private void ShowHint(string text, Vector2I at)
     {
-        if (_helpLayer is null || Ui.Text(text, UiAssets.SmallFont, Colors.Black) is not { } t)
+        if (_helpLayer is null || Ui.Text(text, UiAssets.BoldFont, Colors.Black) is not { } t)
         {
             return;
         }
@@ -336,9 +386,9 @@ public abstract partial class ArtScreen : Control
 }
 
 /// <summary>
-/// The main menu (<c>S_MAIN</c>; SHELL-003): one column of equal buttons, the original's single player, multiplayer,
-/// preferences (SETTINGS) and credits, then the editor and the asset viewer, then quit. Campaigns are in single player
-/// (the owner, 2026-10-22).
+/// The main menu (<c>S_MAIN</c>; SHELL-003): the original's single player, multiplayer, preferences, credits and quit in
+/// the art's five slots; the editor and the asset viewer as small links at the bottom left (the owner, 2026-10-24).
+/// Campaigns are in single player (the owner, 2026-10-22).
 /// </summary>
 public partial class MainMenuScreen : ArtScreen
 {
@@ -346,25 +396,30 @@ public partial class MainMenuScreen : ArtScreen
     public MainMenuScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, string? notice = null)
         : base(ui, screen, "art/screens/s_main/back.t2img")
     {
-        Notice(notice, new Vector2I(8, 566));
+        Notice(notice, new Vector2I(24, 546));
         string Label(string key, string fallback) => catalog?.Text("mainscr", key, fallback) ?? fallback;
         var size = new Vector2I(235, 25);
         const string Image = "art/screens/s_main/btn.t2img";
+        // The original's five items in the art's five carved slots (ReTzar: 270, 277 + 60 i); Tzar2's editor and asset
+        // viewer as small links at the bottom left, the version at the bottom right as the original's (the owner's
+        // answer to UI review question 1, the fifth play-test).
         (string Label, Action Pressed)[] items =
         [
             (Label("single", "SINGLE PLAYER"), () => SinglePlayer?.Invoke()),
             (Label("multi", "MULTIPLAYER"), () => MultiplayerPressed?.Invoke()),
             (ShellTexts.Preferences.In(catalog is null ? null : catalog.Text), () => Settings?.Invoke()),
             (Label("credits", "CREDITS"), () => Credits?.Invoke()),
-            ("EDITOR", () => Editor?.Invoke()),
-            ("ASSET VIEWER", () => Viewer?.Invoke()),
             (Label("quit", "QUIT"), () => Quit?.Invoke()),
         ];
         for (int i = 0; i < items.Length; i++)
         {
-            Button(new Vector2I(270, 215 + (i * 48)), size, Image, items[i].Label, items[i].Pressed);
+            Button(new Vector2I(270, 277 + (i * 60)), size, Image, items[i].Label, items[i].Pressed);
         }
-        Text(new Vector2I(8, 584), $"{Tzar2.Game.GameInfo.Codename} {Tzar2.Game.GameInfo.Version}", UiAssets.SmallFont, new Color(0.7f, 0.7f, 0.6f));
+
+        int x = Link(new Vector2I(24, 570), "EDITOR", () => Editor?.Invoke());
+        Link(new Vector2I(x + 24, 570), "ASSET VIEWER", () => Viewer?.Invoke());
+        string version = $"{Tzar2.Game.GameInfo.Codename} {Tzar2.Game.GameInfo.Version.Split('+')[0]}";
+        Text(new Vector2I(776 - Ui.Measure(version, UiAssets.BoldFont), 570), version, UiAssets.BoldFont, DarkGold);
     }
 
     /// <summary>SINGLE PLAYER.</summary>
@@ -594,8 +649,10 @@ public partial class SkirmishSetupScreen : SetupScreen
         Check(new Vector2I(268, 539), new Vector2I(302, 549), T("t_fog", "No Fog"), Tzar2.Game.Ui.RandomMapOption.NoFog);
         Check(new Vector2I(268, 569), new Vector2I(302, 579), T("t_expolre", "Explore"), Tzar2.Game.Ui.RandomMapOption.Explore);
 
-        Option(new Vector2I(565, 56), new Vector2I(568, 43), T("t_map_size", "Map Size"), ShellTexts.MapSize(s.MapSize).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapSize);
-        Option(new Vector2I(565, 111), new Vector2I(568, 98), T("t_map_type", "Map Type"), ShellTexts.MapType(s.MapType).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapType);
+        // Map Size and Map Type sit a pixel above the original's 43 and 98: Arial 12 bold's cell is a pixel taller than
+        // the 13 the original gives them above their selectors.
+        Option(new Vector2I(565, 56), new Vector2I(568, 42), T("t_map_size", "Map Size"), ShellTexts.MapSize(s.MapSize).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapSize);
+        Option(new Vector2I(565, 111), new Vector2I(568, 97), T("t_map_type", "Map Type"), ShellTexts.MapType(s.MapType).In(Lookup), Tzar2.Game.Ui.RandomMapOption.MapType);
         Option(new Vector2I(565, 169), new Vector2I(568, 155), T("t_terrain", "Terrain"), ShellTexts.Terrain(s.Terrain).In(Lookup), Tzar2.Game.Ui.RandomMapOption.Terrain);
         Option(new Vector2I(565, 228), new Vector2I(568, 214), T("t_map_res", "Map Resources"), T($"m_res_{(int)s.Resources}", s.Resources.ToString()), Tzar2.Game.Ui.RandomMapOption.MapResources);
         Check(new Vector2I(564, 267), new Vector2I(610, 278), T("t_gslocations", "Guarded Town"), Tzar2.Game.Ui.RandomMapOption.GuardedTown);

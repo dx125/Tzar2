@@ -13,14 +13,15 @@ rules:
     status: implemented
   SHELL-003:
     rule: The main screen offers single player, multiplayer, preferences, credits and quit.
-    source: [manual Main Screen]
+    source: [manual Main Screen, 'community ReTzar src/menu.rs (the five slots at 270, 277 + 60 i)']
     status: implemented
-    note: Tzar2 adds the editor and the asset viewer, in the same column; campaigns are in single player.
+    note: The five items fill the art's five carved slots; Tzar2 adds the editor and the asset viewer as small links at the bottom left (the owner, 2026-10-24); campaigns are in single player.
   SHELL-004:
     rule: The campaign screen lists the campaigns with a description, the chosen campaign's entry missions with a description, and PLAY and BACK.
-    source: [manual Campaign Screen]
-    status: implemented
+    source: [manual Campaign Screen, 'community ReTzar src/menu.rs (the screen''s places; campaign_missions)']
+    status: tested
     adr: [0133]
+    note: In the original's places with its scroll bars; the entry missions are those the campaign starts with and those reached since; the difficulty sets the computers of its missions. Tzar2's own RESTART CAMPAIGN is gone (the owner's fifth play-test).
   SHELL-005:
     rule: The custom map screen lists the maps; PLAY opens the setup of the chosen map and BACK returns to the single player screen.
     source: [manual Custom Map Screen]

@@ -24,7 +24,7 @@ public partial class HelpScreen : ArtScreen
     private static readonly Rect2I TopPanel = new(126, 76, 616, 246);
     private static readonly Rect2I LinkPanel = new(126, 358, 616, 98);
     private static readonly Rect2I HintPanel = new(126, 492, 616, 46);
-    private static readonly Color Gold = new(1f, 0.92f, 0.65f);
+    private static readonly Color Cream = new(1f, 0.92f, 0.65f);
     private static readonly Color Caption = new(0.85f, 0.85f, 0.75f);
 
     private static readonly (HelpCategory Category, string Image, string Hint)[] Chapters =
@@ -163,7 +163,7 @@ public partial class HelpScreen : ArtScreen
             int x = 146;
             foreach ((bool highlight, string text) in rowsOfParts[_scroll + i])
             {
-                if (Ui.Text(text, UiAssets.SmallFont, highlight ? Gold : Colors.White) is { } t)
+                if (Ui.Text(text, UiAssets.SmallFont, highlight ? Cream : Colors.White) is { } t)
                 {
                     Picture(new Vector2I(x, 86 + (i * Line)), t);
                     x += t.GetWidth();
@@ -175,7 +175,7 @@ public partial class HelpScreen : ArtScreen
     private void Chapter()
     {
         IReadOnlyList<HelpTopic> entries = _help.Entries;
-        Label(TopPanel.Position, Title(_help.Category), Gold);
+        Label(TopPanel.Position, Title(_help.Category), Cream);
         const int Columns = 3, Row = 34;
         int columnWidth = TopPanel.Size.X / Columns;
         int rows = (TopPanel.Size.Y - 22) / Row;
@@ -201,7 +201,7 @@ public partial class HelpScreen : ArtScreen
             var at = HintPanel.Position + new Vector2I(0, 2);
             Picture(at, Ui.Region(Art + "but_race.t2img", new Rect2I(0, 0, 210, 27)));
             string race = _help.Race.Length == 0 ? "common" : _help.Race;
-            if (Ui.Text(L("help_str", race, race.ToUpperInvariant()), UiAssets.BoldFont, Gold) is { } name)
+            if (Ui.Text(L("help_str", race, race.ToUpperInvariant()), UiAssets.BoldFont, Cream) is { } name)
             {
                 Picture(at + new Vector2I((210 - name.GetWidth()) / 2, (27 - name.GetHeight()) / 2), name);
             }
@@ -217,7 +217,7 @@ public partial class HelpScreen : ArtScreen
             Picture(TopPanel.Position, Ui.Region($"art-extra/help/bmp/{topic.IconFile}.t2img", new Rect2I(0, topic.IconFile is 6 or 7 ? 0 : topic.IconIndex * 48, 48, 48)));
         }
 
-        Picture(TopPanel.Position + new Vector2I(60, 4), Ui.Text(topic.Brief, UiAssets.TitleFont, Gold));
+        Picture(TopPanel.Position + new Vector2I(60, 4), Ui.Text(topic.Brief, UiAssets.TitleFont, Cream));
         var lines = new List<string>();
         foreach (string paragraph in topic.Paragraphs)
         {
@@ -259,7 +259,7 @@ public partial class HelpScreen : ArtScreen
 
             foreach (string key in topics)
             {
-                if (_help.Find(key) is not { } target || Ui.Text(target.Brief, UiAssets.SmallFont, Gold) is not { } t)
+                if (_help.Find(key) is not { } target || Ui.Text(target.Brief, UiAssets.SmallFont, Cream) is not { } t)
                 {
                     continue;
                 }
