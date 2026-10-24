@@ -114,9 +114,10 @@ public partial class Hud : Control
 
         AddOverlay(ui, layout);
 
-        // Blocks clicks on the panels from reaching the world (top bar and bottom panel).
+        // Blocks clicks on the panels from reaching the world (the top bar, the minimap corner, the bottom panel).
         AddChild(new Control { Position = Vector2.Zero, Size = new Vector2(layout.Size.X, layout.View.Position.Y), MouseFilter = MouseFilterEnum.Stop });
-        AddChild(new Control { Position = new Vector2(0, layout.PanelTop), Size = new Vector2(layout.Size.X, HudLayout.PanelHeight), MouseFilter = MouseFilterEnum.Stop });
+        AddChild(new Control { Position = layout.Corner.Position, Size = layout.Corner.Size, MouseFilter = MouseFilterEnum.Stop });
+        AddChild(new Control { Position = layout.Panel.Position, Size = layout.Panel.Size, MouseFilter = MouseFilterEnum.Stop });
 
         TopButton(layout.MenuButton, layout.MenuImage, () => MenuPressed?.Invoke());
         TopButton(layout.DiplomacyButton, layout.DiplomacyImage, () => DiplomacyPressed?.Invoke());
@@ -192,7 +193,7 @@ public partial class Hud : Control
 
         for (int i = 0; i < _messages.Length; i++)
         {
-            _messages[i] = Add(new TextureRect { Position = new Vector2(layout.View.Position.X + 8, layout.View.Position.Y + 8 + (i * 15)), MouseFilter = MouseFilterEnum.Ignore });
+            _messages[i] = Add(new TextureRect { Position = layout.MessagesAt + new Vector2I(0, i * 15), MouseFilter = MouseFilterEnum.Ignore });
         }
 
         _tooltip = Add(new Control { MouseFilter = MouseFilterEnum.Ignore, Visible = false });
@@ -836,33 +837,33 @@ public partial class Hud : Control
     // slice repeated between them. The cuts are measured on SCREEN 1024.BMP: the top bar's left part ends after the
     // population box, its vine ornament is the last 219 px; the panel's left part ends where the info area's marble
     // starts plain, its letters and ornament are the last 164 px.
+    // The hybrid HUD's art (HudLayout): the top bar (its ends kept, the middle tiled on a wider screen), the left layout's
+    // corner with the minimap and the day globe, and the bottom panel's middle.
     private void AddOverlay(UiAssets ui, HudLayout layout)
     {
-        if (!layout.Wide)
-        {
-            AddChild(new TextureRect { Texture = ui.Texture(layout.Image), MouseFilter = MouseFilterEnum.Ignore });
-            return;
-        }
-
         const int TopLeft = 805, TopRight = 219, TopFillX = 850, TopFill = 150;
-        const int PanelLeft = 660, PanelRight = 164, PanelFill = 200;
         Vector2I size = layout.Size, bitmap = layout.Base;
         int top = layout.View.Position.Y;
-        int panel = HudLayout.PanelHeight;
-        int from = bitmap.Y - panel, to = size.Y - panel;
-        Piece(new Rect2I(0, 0, TopLeft, top), Vector2I.Zero);
-        Tile(new Rect2I(TopFillX, 0, TopFill, top), new Rect2I(TopLeft, 0, size.X - TopLeft - TopRight, top));
-        Piece(new Rect2I(bitmap.X - TopRight, 0, TopRight, top), new Vector2I(size.X - TopRight, 0));
-        Piece(new Rect2I(0, from, PanelLeft, panel), new Vector2I(0, to));
-        Tile(new Rect2I(PanelLeft, from, PanelFill, panel), new Rect2I(PanelLeft, to, size.X - PanelLeft - PanelRight, panel));
-        Piece(new Rect2I(bitmap.X - PanelRight, from, PanelRight, panel), new Vector2I(size.X - PanelRight, to));
-        Piece(layout.GlobeOrnamentSource, layout.GlobeOrnament.Position);
-
-        void Piece(Rect2I source, Vector2I at)
+        if (size.X == bitmap.X)
         {
-            if (ui.Region(layout.Image, source) is { } t)
+            Piece(layout.Image, new Rect2I(0, 0, bitmap.X, top), Vector2I.Zero);
+        }
+        else
+        {
+            Piece(layout.Image, new Rect2I(0, 0, Math.Min(TopLeft, size.X), top), Vector2I.Zero);
+            Tile(new Rect2I(TopFillX, 0, TopFill, top), new Rect2I(TopLeft, 0, size.X - TopLeft - TopRight, top));
+            Piece(layout.Image, new Rect2I(bitmap.X - TopRight, 0, TopRight, top), new Vector2I(size.X - TopRight, 0));
+        }
+
+        Piece(layout.CornerImage, HudLayout.CornerSource, layout.Corner.Position);
+        Piece(layout.Image, HudLayout.PanelSource, layout.Panel.Position);
+        Piece(layout.Image, HudLayout.PanelBorderSource, new Vector2I(layout.Panel.End.X - HudLayout.PanelBorderSource.Size.X, layout.Panel.Position.Y), mirrored: true);
+
+        void Piece(string image, Rect2I source, Vector2I at, bool mirrored = false)
+        {
+            if (ui.Region(image, source) is { } t)
             {
-                AddChild(new TextureRect { Texture = t, Position = at, MouseFilter = MouseFilterEnum.Ignore });
+                AddChild(new TextureRect { Texture = t, Position = at, FlipH = mirrored, MouseFilter = MouseFilterEnum.Ignore });
             }
         }
 
@@ -889,7 +890,8 @@ public partial class Hud : Control
 
         public override void _Draw()
         {
-            var r = new Rect2(Camera.Position * Size, Camera.Size * Size);
+            // Kept inside the minimap: the view can be larger than a small map.
+            Rect2 r = new Rect2(Camera.Position * Size, Camera.Size * Size).Intersection(new Rect2(Vector2.Zero, Size));
             DrawRect(r, Colors.White, filled: false, width: 1f);
         }
     }

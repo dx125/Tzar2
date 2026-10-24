@@ -105,7 +105,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Resources and gathering](economy.yaml) (ECO) | 24 | 19 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 34 | 14 | 15 | 1 | 1 | 2 | 1 |
+| [The screen](interface.yaml) (HUD) | 34 | 14 | 15 | 1 | 0 | 3 | 1 |
 | [Items](items.yaml) (ITEM) | 19 | 14 | 3 | 0 | 0 | 1 | 1 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 28 | 28 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
@@ -118,7 +118,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 9 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 353 | 262 | 75 | 2 | 1 | 9 | 4 |
+| **All** | 353 | 262 | 75 | 2 | 0 | 10 | 4 |
 
 ## Not done yet
 
@@ -126,7 +126,6 @@ Missing and partial rules.
 
 ### The screen
 
-* **HUD-009**: The interface can be placed along the bottom, the left or the right of the screen. Work: STATUS work queue 12 (M8, owner decision 2026-10-21).
 * **HUD-028** (partial): The \ key shows the trees translucent so that units under them can be seen. *Trees are drawn at 45 % opacity, not with the original's look; neither the data nor ReTzar says how the original does it.* Work: UI review screenshot 8 (docs/reviews/2026-10-ui-review.md).
 
 ### Menus, setup and pause
@@ -164,6 +163,7 @@ Tzar2 does these differently on purpose.
 ### The screen
 
 * **HUD-001**: An order button's hint gives its name, its hotkey, its price and what it still requires ("Create Knight - 'K' ( Gold:70 Food:120 ) Requires Stable, Plate Armor"). *Tzar2 shows a box with the name and a hotkey key cap, the price with the resource icons (what is short in red), the time, the order's description and the requirements; the owner preferred it to the original's single line (2026-10-21).*
+* **HUD-009**: The interface can be placed along the bottom, the left or the right of the screen. *Tzar2 has one hybrid layout and no switch (the owner, 2026-10-24, fifth play-test; it replaces the side panels as a setting of 2026-10-21) - the top bar of LAYOUT1024H, the minimap and the day globe in LAYOUT1024L's corner, the selection view, the three boxes and the orders (two rows) with the info area in the middle of the bottom; the world view runs under them to the screen's edges.*
 * **HUD-034**: The hint of a category of the build menu lists the letters of the buildings in it. *The original's categories have no letter of their own (MENU.INI); the owner asked to see shortcuts for them too, and the letters of what is inside work from the build menu (CTRL-029).*
 
 ### Items
