@@ -104,8 +104,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0267, 2026-10-23) mana regrows 2 a second (Nature 1), a pool below a spell's cost is raised to it, a summon costs its creature's mana (mana state grows, hashed layout 19, snapshot 21): the hashes.
     // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at and are not shoved there by
     // the others of the same object (the fifth play-test): the stream and the final hash.
-    private const ulong GoldenHashStream = 0x97DBEB5CAB80BD0BUL;
-    private const ulong GoldenFinalFullHash = 0xB6D83044152C3EFCUL;
+    // (WORLD-019, 2026-10-24) footmen attacking a building take tiles of their own around it: the stream and the final hash.
+    private const ulong GoldenHashStream = 0x8D116B6CF965322DUL;
+    private const ulong GoldenFinalFullHash = 0x36E8E8F8490D4153UL;
 
     private const int Ticks = 1600;
 

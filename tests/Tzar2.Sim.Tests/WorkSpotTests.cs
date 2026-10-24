@@ -118,6 +118,31 @@ public class WorkSpotTests
         Assert.Equal(1, d.Count(SimEventKind.ConstructionCompleted));
     }
 
+    [Fact]
+    [Trait("Rule", "WORLD-019")]
+    public void Footmen_sent_against_a_building_strike_it_from_tiles_of_their_own_all_around()
+    {
+        var objects = new List<Tzar2.Content.Compiled.MapObject> { Structure("euro.castle", 0, 2, 2), Structure("euro.house", 1, 20, 10) };
+        for (int i = 0; i < 8; i++)
+        {
+            objects.Add(Unit("euro.footman", 0, 8 + (i % 2), 8 + (i / 2)));
+        }
+
+        using var d = new SimDriver(TestMap(40, 24, [.. objects]), ruleset: Classic);
+        EntityId[] footmen = [.. OfType(d.World, "euro.footman")];
+        EntityId house = OfType(d.World, "euro.house").Single();
+        int hp = d.World.Healths.Get(house).Current;
+        d.Order(0, CommandKind.Attack, footmen, target: house);
+        d.RunUntil(() => footmen.All(f => !d.IsMoving(f)) && d.World.Healths.Get(house).Current < hp, 600);
+        d.RunUntil(() => false, 40);
+
+        HashSet<(int, int)> tiles = [.. footmen.Select(f => TileOf(d, f))];
+        Assert.Equal(footmen.Length, tiles.Count); // one to a tile
+        (int fx, int fy, int fw, int fh) = d.World.FootprintRect(house);
+        Assert.All(tiles, t => Assert.True(t.Item1 >= fx - 1 && t.Item1 <= fx + fw && t.Item2 >= fy - 1 && t.Item2 <= fy + fh, $"a footman stands at {t}, away from the house"));
+        Assert.Contains(tiles, t => t.Item1 >= fx + fw / 2); // around it, not only on the side they came from
+    }
+
     private static bool Gathers(SimDriver d, EntityId peon, EntityId node)
     {
         Worker w = d.World.Workers.Get(peon);

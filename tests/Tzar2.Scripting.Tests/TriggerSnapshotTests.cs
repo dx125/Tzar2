@@ -125,7 +125,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // then: (ADR 0265, 2026-10-23) a spell book keeps its own pool and may be endless (item state grows, hashed layout 17).
             // then: (ADR 0266, 2026-10-23) no spell cooldowns, spells learned from books (a new store, hashed layout 18).
             // then: (ADR 0267, 2026-10-23) mana regrows 2 a second and a pool below a cost is raised to it (hashed layout 19).
-            Assert.Equal("FECC69FEC185A843", d.Hashes[^1].ToString("X16"));
+            // then: (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it.
+            Assert.Equal("0CD9F834394BBF73", d.Hashes[^1].ToString("X16"));
         }
     }
 

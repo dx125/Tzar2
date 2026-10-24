@@ -226,7 +226,12 @@ public sealed class CombatSystem : ISimSystem
         int reach = range > 0 ? range
             : world.Footprints.Has(target) ? (Interaction.IsMoving(world, attacker) ? world.Ruleset.Gameplay.InteractionTouchUnits : world.Ruleset.Gameplay.InteractionReachUnits)
             : world.Ruleset.Gameplay.MeleeReachUnits;
-        if (distance <= reach && distance >= arm.MinRangeUnits)
+
+        // A hand-to-hand attacker walking to its own tile at a building strikes from there, not where it first touches
+        // the footprint, so a group spreads around the building (WORLD-019, the fifth play-test).
+        bool onItsWay = range == 0 && world.Footprints.Has(target) && type.Locomotor != Locomotor.Ship && Interaction.IsMoving(world, attacker)
+            && !Interaction.NearOrderPoint(world, attacker);
+        if (!onItsWay && distance <= reach && distance >= arm.MinRangeUnits)
         {
             Interaction.Halt(world, attacker);
             Position tp = world.Positions.Get(target);
@@ -756,7 +761,13 @@ public sealed class CombatSystem : ISimSystem
 
         int x = tp.X;
         int y = tp.Y;
-        if (world.Footprints.Has(target) && !Interaction.ApproachPoint(world, target, position.X, position.Y, type.Locomotor, out x, out y))
+        bool melee = type.Traits.Armament is not { } armament || armament.RangeUnits <= 0;
+        if (world.Footprints.Has(target) && melee && type.Locomotor != Locomotor.Ship
+            && Interaction.WorkSpot(world, target, position, type.Locomotor, attacker, out int sx, out int sy))
+        {
+            (x, y) = (sx, sy); // a tile of its own next to the building (WORLD-019)
+        }
+        else if (world.Footprints.Has(target) && !Interaction.ApproachPoint(world, target, position.X, position.Y, type.Locomotor, out x, out y))
         {
             (x, y) = (tp.X, tp.Y);
         }
