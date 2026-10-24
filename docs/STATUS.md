@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-24 (the fifth play-test's findings)
+* **Last updated:** 2026-10-24 (the fifth play-test's findings fixed, #245-#250; what is left is item 5's list)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -170,6 +170,23 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       menus' buttons and texts in the original's fonts and colours (log below).
    8. The campaign screen: the original's layout (campaigns, campaign description, entry missions and their
       description; PLAY, the difficulty, BACK): **fixed** (log below).
+
+   **Left (2026-10-24, the owner stopped the work here):**
+   * **Owner:** whether the hybrid HUD's panels turn translucent with nothing selected (5.5; proposed: keep them
+     opaque, since the kingdom's card is on them then; or dim them only while nothing is selected and the pointer is
+     away).
+   * **Owner:** a sixth play-test of #245-#250 on a fresh build (the hybrid HUD, the menus, the campaign screen, the
+     pointers, workers and soldiers around objects); then compare the menu screens with the original.
+   * **Maintainer:** the menu screens not yet checked against ReTzar's places and styles beyond the shared buttons and
+     captions: single player, custom maps, settings, credits, load and save, multiplayer, lobby and replays (their
+     lists and labels still use Arial 10), the victory and defeat window; the UI review's open likeness items
+     (UI-A2, A4, A6, A7, A9, A13) wait for the owner's screenshots.
+   * **Maintainer:** WORLD-019 leaves a worker the crowd stops short of its tile working where it stopped (paths do not
+     know units); a unit at work holds its place only against the workers and attackers of the same object (wider, it
+     broke the campaign acceptance's alex1). Revisit with unit-aware paths.
+   * **Maintainer:** watch the nightly AI bench gate: it failed once on 2026-10-24 at 1.21 x a baseline of eight runs,
+     then passed on main (log below); widen the baseline as runs accumulate.
+   * The squash of #248 kept its first commit's title ("wip hybrid hud"); its content is the hybrid HUD (log below).
 6. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 7. **Done (2026-10-22, ADR 0190):** walking speed for every class from its walk sheet's stride, by the rule ReTzar read
