@@ -37,8 +37,8 @@ rules:
   PRES-008:
     rule: Some animations start inside their sheet, at the row and column the data gives.
     source: [data IMAGES.INI startrow startcol, community ReTzar src/gameplay.rs (0x4fd450) and src/frontend/scene.rs (0x5017f0)]
-    status: partial
-    note: An attack turns its picture by startcol (a knight striking east shows column 4) and a swing starts on its startrow. Walks and idles still start where the shared clock is, because the frame does not carry when a picture was set.
+    status: tested
+    note: An attack turns its picture by startcol (a knight striking east shows column 4) and a swing starts on its startrow. Every other picture runs from its startrow from when the unit took it up; the client notes when (AnimationStarts), the sim does not need to.
   PRES-009:
     rule: Trees, stumps and bushes are drawn from the tree sheet of the terrain set, at the positions and with the shadows the data gives.
     source: [data TREES.INI, 'data TERRAIN.INI [trees] [treename]']

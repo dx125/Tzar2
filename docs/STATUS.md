@@ -284,6 +284,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — Pictures run from their start row when set (PRES-008; ReTzar 0x5017f0).** Walks, idles and every
+  picture but the attack swing used to run on a clock shared by all units. Now each runs from its startrow from the
+  moment the unit took it up. The client's engine-free `AnimationStarts` notes when, and drops units no longer drawn
+  after 5 s so the table stays bounded. No sim or hash change.
 * **2026-10-23 — Mana regrows 2 a second; a pool below a spell's cost is raised to it (ADR 0267; MAG-026, MAG-027).**
   ReTzar reads the original's mana:
   * the timer (0x502ea2): once a second a kingdom's caster regains 2 and Nature's 1, and Concentration adds 4;
