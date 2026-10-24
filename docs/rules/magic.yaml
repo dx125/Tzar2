@@ -6,7 +6,7 @@ rules:
     rule: Only mages cast spells; each spell needs its technology and costs mana, which every caster has on its own and which comes back over time.
     source: [manual Production Of Units, help ITEMS.TXT WI_SPELLS]
     status: tested
-    note: Mana costs, cooldowns and the regeneration rate are placeholders (UNK-26).
+    note: The mana costs and ranges are ReTzar's (MAG-023), there are no cooldowns (MAG-025) and the regeneration is 2 a second (MAG-026).
   MAG-002:
     rule: European mages cast lightning and freeze, make units invisible and summon bats and stone golems.
     source: [manual European Units (Mage)]
@@ -121,7 +121,18 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x4e1c30, 0x4e1d2e)']
     status: tested
     adr: [0266]
-    note: Tzar2 had a cooldown of 1.5 to 5 s per spell (UNVERIFIED); the classic ruleset now has none, the field stays for other rulesets. Not done yet - a caster short of mana should take the order and wait for it, looking again every 2 s, its maximum raised to the cost when lower (0x4e1c30); Tzar2 refuses the order.
+    note: Tzar2 had a cooldown of 1.5 to 5 s per spell (UNVERIFIED); the classic ruleset now has none, the field stays for other rulesets. Not done - a caster short of mana should take the order, walk into range and only then stand idle, looking again in 2 s (0x4e1c30); Tzar2 refuses the order at once (its maximum is raised to the cost all the same, MAG-027).
+  MAG-026:
+    rule: Once a second a kingdom's caster regains 2 mana and a neutral one 1; each Concentration adds 4 for the kingdom.
+    source: ['community ReTzar src/gameplay.rs (0x502ea2)']
+    status: tested
+    adr: [0267]
+  MAG-027:
+    rule: A caster ordered to cast a spell that costs more than its whole pool has its pool raised to the cost; a summon costs its creature's mana.
+    source: ['community ReTzar src/gameplay.rs (0x4e1c30, 0x4723e0)', 'data the manna of the summoned creatures (bat 25, jinn 300, carpet 500, stone golem 600, dragon 800), above every caster''s pool of 100']
+    status: tested
+    adr: [0267]
+    note: The original also plays the pump picture over the caster; Tzar2 does not draw it yet.
   MAG-028:
     rule: A ninja's murder is one blow of fifteen times its attack, through the target's defence, which spends all its mana; it takes any unit, the Messiah too, and a ninja with 60 mana ordered to attack a unit murders it with its first blow.
     source: ['community ReTzar src/gameplay.rs (0x4e076a, 0x437250, 0x4eb950, 0x4e197d)', 'guide Campaign Discussion (Mission 18)']

@@ -84,7 +84,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // worker by their traits): the ruleset hash only, maps and the match are the same.
     // With the three settings above (#226, #225, then this change) the ruleset hash is the value below.
     // (ADR 0266, 2026-10-23) the classic spells lose their cooldownMs: the ruleset hash.
-    private const ulong GoldenRulesetHash = 0x745BD20C88DAC794UL;
+    // (ADR 0267, 2026-10-23) manaRegenPerMinute 120 and combat.natureManaRegenPercent 50: the ruleset hash.
+    // (ADR 0268, 2026-10-23) the ninja's murder becomes a blow (effect murder, combat.murderBlowMana): the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0x195DF0DEB49CC3C6UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -99,8 +101,9 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
     // (ADR 0265, 2026-10-23) a spell book keeps its own pool and may be endless (item state grows, hashed layout 17, snapshot 19): the hashes.
     // (ADR 0266, 2026-10-23) no spell cooldowns (casters wait only for mana) and spells learned from books (a new store, hashed layout 18, snapshot 20): the hashes.
-    private const ulong GoldenHashStream = 0x9FDBCE54941F7B85UL;
-    private const ulong GoldenFinalFullHash = 0x4AA7F8C2231C3E35UL;
+    // (ADR 0267, 2026-10-23) mana regrows 2 a second (Nature 1), a pool below a spell's cost is raised to it, a summon costs its creature's mana (mana state grows, hashed layout 19, snapshot 21): the hashes.
+    private const ulong GoldenHashStream = 0xA21747D2F984E57FUL;
+    private const ulong GoldenFinalFullHash = 0x4F4F3CBF003ABA27UL;
 
     private const int Ticks = 1600;
 

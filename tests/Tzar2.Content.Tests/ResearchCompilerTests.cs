@@ -149,7 +149,7 @@ public class ResearchCompilerTests
 
         // GAME-01: mana (max_manna) and mana costs.
         Assert.Equal(90, Type("euro.mage").Traits.ManaPool!.Max);
-        Assert.Equal(60, Type("euro.mage").Traits.ManaPool!.RegenPerMinute);
+        Assert.Equal(120, Type("euro.mage").Traits.ManaPool!.RegenPerMinute); // 2 a second (ReTzar 0x502ea2)
 
         // GAME-02: cows hold milk, regrow it and leave meat; fishing boats sail; fish patches have no footprint.
         EntityTypeDefinition cow = Type("comm.cow");

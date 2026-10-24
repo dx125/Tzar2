@@ -46,7 +46,7 @@ gameplay:
   attackCycleMs: 6000                 # UNVERIFIED (UNK-07): time between hits = attackCycleMs / RATE
   hitDelayPercent: 50                 # UNVERIFIED (UNK-07): hit frame at this share of the cycle, for types whose attack
                                       # animation does not mark it (IMAGES.INI actionrow gives the others, WAR-014)
-  manaRegenPerMinute: 60              # UNVERIFIED (UNK-26): mana a caster regains per minute
+  manaRegenPerMinute: 120             # ReTzar (0x502ea2): a kingdom's caster regains 2 mana a second, once a second (ADR 0267)
   # Combat and work constants.
   minimumDamage: 1                    # UNVERIFIED (UNK-08)
   resistanceScale: 1000               # UNVERIFIED (UNK-08): building damage x 1000 / (1000 + RESISTANCE) (manual ch. 4); owner
@@ -574,6 +574,7 @@ combat:
   levelBaseXp: 1
   levelStepXp: -1                     # each level costs this much more than the one before; -1: as levelBaseXp (the original)
   murderBlowMana: 60                  # a ninja with this much mana murders the unit it attacks with its first blow (ReTzar 0x4eb950)
+  natureManaRegenPercent: 50          # ReTzar (0x502ea2): a neutral caster regains 1 mana a second, a kingdom's 2 (ADR 0267)
   dummyDamagePerPoint: 75
   experienceSpeeds: { te_warfare: 70, te_tactics: 50, te_suntzubook: 35 }
   levelCapBuildings: { classes: [academy] }

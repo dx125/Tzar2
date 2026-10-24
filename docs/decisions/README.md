@@ -170,4 +170,5 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0264](0264-item-properties-on-map-objects.md) | Give map objects item properties; the random map generator makes its items as the original | Accepted | 2026-10-23 |
 | [0265](0265-spell-books-own-pool-and-endless-charges.md) | Spell books keep their own recharge and may be endless | Accepted | 2026-10-23 |
 | [0266](0266-no-spell-cooldowns-and-spells-learned-from-books.md) | Casters wait only for mana; units learn spells from books | Accepted | 2026-10-23 |
+| [0267](0267-mana-regeneration-and-pools-raised-to-a-spells-cost.md) | Mana regrows 2 a second (Nature 1); a pool below a spell's cost is raised to it | Accepted | 2026-10-23 |
 | [0268](0268-the-ninjas-murder-is-a-blow-of-fifteen-attacks.md) | The ninja's murder is one blow of fifteen times its attack | Accepted | 2026-10-23 |

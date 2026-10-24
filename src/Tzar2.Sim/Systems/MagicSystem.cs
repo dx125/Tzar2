@@ -137,8 +137,8 @@ public sealed class MagicSystem : ISimSystem
 
     /// <summary>
     /// A spell's mana: its own plus a summoned type's (cost suffix <c>m</c>). The tables price some summons above any
-    /// caster's pool (stone golem 600m, dragon 800m against a mage's <c>max_manna = 100</c>): ⚠ HYPOTHESIS (UNK-26), a
-    /// summon costs at most the caster's whole pool, so it needs a full pool and empties it.
+    /// caster's pool (stone golem 600m, dragon 800m against a mage's <c>max_manna = 100</c>); ordering one raises the
+    /// caster's most mana to the cost (<see cref="RaiseMaxToCost"/>, ReTzar 0x4e1c30, ADR 0267), so it fills that far.
     /// </summary>
     internal static int ManaCost(World world, SpellDefinition s, EntityId caster)
     {
@@ -146,14 +146,27 @@ public sealed class MagicSystem : ISimSystem
         if (s.Effect == SpellEffect.Summon && s.Summon >= 0)
         {
             mana += (long)world.Ruleset.EntityTypes[s.Summon].Traits.ManaCost * s.Count;
-            Identity identity = world.Identities.Get(caster);
-            if (world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool is { } pool)
-            {
-                mana = Math.Min(mana, world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max));
-            }
         }
 
-        return (int)Math.Min(mana, int.MaxValue);
+        return (int)Math.Min(mana, 1_000_000);
+    }
+
+    /// <summary>
+    /// A caster ordered to cast a spell it cannot afford, whose most mana is below the spell's cost, has its most mana raised
+    /// to the cost (ReTzar 0x4e1c30, ADR 0267): a mage's pool of 100 grows to a dragon's 800 and fills from there.
+    /// </summary>
+    internal static void RaiseMaxToCost(World world, EntityId caster, ushort spell)
+    {
+        if (spell >= world.Ruleset.Spells.Count || world.Manas.IndexOf(caster) is not (>= 0 and var m))
+        {
+            return;
+        }
+
+        int cost = ManaCost(world, world.Ruleset.Spells[spell], caster);
+        if (cost > world.MaxMana(caster))
+        {
+            world.Manas.At(m).RaisedMax = cost;
+        }
     }
 
     /// <summary>The caster's whole mana points.</summary>
