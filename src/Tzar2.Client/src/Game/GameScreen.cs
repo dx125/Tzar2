@@ -1728,8 +1728,7 @@ public partial class GameScreen : Node
 
         Card = _card.Build(CardNow());
         _hud.SetCard(Card);
-        int eye = _card.InventoryOpen ? 2 : _card.Carrier(CardNow()).IsNone ? 0 : 1;
-        _hud.SetSide(_card.Page > 0, eye, _card.Page < _card.PageCount - 1);
+        _hud.SetSide(_card.Page > 0, _card.EyeFrame(CardNow()), _card.Page < _card.PageCount - 1);
     }
 
     // The eye and the slash key (HUD-017): the selected unit's items on the card, or back to its orders.

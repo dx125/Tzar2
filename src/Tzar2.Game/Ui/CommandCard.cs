@@ -117,6 +117,13 @@ public sealed class CommandCard
         return EntityId.None;
     }
 
+    /// <summary>
+    /// The eye's picture among the art's four (HUD-017; ReTzar's reading of the original's holder button): 3 grey while
+    /// no selected unit of the kingdom carries anything (it does nothing then), 2 while the inventory is open, 0 otherwise
+    /// (the client shows 1 under the pointer).
+    /// </summary>
+    public int EyeFrame(CardContext context) => InventoryOpen ? 2 : Carrier(context).IsNone ? 3 : 0;
+
     /// <summary>The eye: opens the carrier's inventory on the card, or closes it; true when it is open after.</summary>
     public bool ToggleInventory(CardContext context)
     {

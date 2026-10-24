@@ -81,6 +81,8 @@ public partial class Hud : Control
     private readonly TextureRect[] _messages = new TextureRect[6];
     private readonly TextureRect[] _side = new TextureRect[3];
     private readonly string[] _sideArt = new string[3];
+    private readonly int[] _sideFrame = new int[3];
+    private int _sideHover = -1;
     private readonly TextureRect _portrait;
     private readonly ColorRect _portraitBar;
     private readonly Control _nameBox;
@@ -162,11 +164,17 @@ public partial class Hud : Control
             Rect2I r = layout.SideBox(i);
             _side[i] = Add(new TextureRect { Position = r.Position, Size = r.Size, MouseFilter = MouseFilterEnum.Stop });
             _sideArt[i] = sides[i];
+            _side[i].MouseEntered += () => HoverSide(box);
+            _side[i].MouseExited += () => HoverSide(-1);
             _side[i].GuiInput += e =>
             {
                 if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
                 {
-                    if (box == 1)
+                    if (_sideFrame[box] == 3)
+                    {
+                        // Grey: nothing that way (the arrows) or nothing to show (the eye).
+                    }
+                    else if (box == 1)
                     {
                         EyePressed?.Invoke();
                     }
@@ -214,15 +222,30 @@ public partial class Hud : Control
     public event Action? EyePressed;
 
     /// <summary>
-    /// The arrows and the eye: each arrow lit when there is a page that way (frame 3, grey, otherwise); the eye
-    /// <paramref name="eye"/> 0 closed (nothing to show), 1 open (the selection carries items), 2 lit (the inventory is open).
+    /// The arrows and the eye, each from its art's four frames (ReTzar's reading of the original): an arrow is lit when
+    /// there is a page that way (frame 3, grey, otherwise); the eye's frame is the card's (<c>CommandCard.EyeFrame</c>).
+    /// A lit box shows frame 1 under the pointer.
     /// </summary>
     public void SetSide(bool previous, int eye, bool next)
     {
-        int[] frames = [previous ? 0 : 3, Math.Clamp(eye, 0, 2), next ? 0 : 3];
+        _sideFrame[0] = previous ? 0 : 3;
+        _sideFrame[1] = Math.Clamp(eye, 0, 3);
+        _sideFrame[2] = next ? 0 : 3;
+        DrawSide();
+    }
+
+    private void HoverSide(int box)
+    {
+        _sideHover = box;
+        DrawSide();
+    }
+
+    private void DrawSide()
+    {
         for (int i = 0; i < _side.Length; i++)
         {
-            _side[i].Texture = _ui.Region(_sideArt[i], new Rect2I(frames[i] * 25, 0, 25, 25));
+            int frame = _sideFrame[i] == 0 && _sideHover == i ? 1 : _sideFrame[i];
+            _side[i].Texture = _ui.Region(_sideArt[i], new Rect2I(frame * 25, 0, 25, 25));
         }
     }
 
