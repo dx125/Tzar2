@@ -187,7 +187,7 @@ public sealed class AiPlayerState
         w.WriteUInt64(Settings.Program.ContentHash);
         w.WriteByte((byte)Settings.Difficulty);
         w.WriteString(Settings.Civilization);
-        w.WriteByte((byte)((Settings.EconomyAi ? 1 : 0) | (Settings.WarAi ? 2 : 0) | (Settings.MayResign ? 4 : 0)));
+        w.WriteByte((byte)((Settings.EconomyAi ? 1 : 0) | (Settings.WarAi ? 2 : 0) | (Settings.MayResign ? 4 : 0) | (Settings.TakesItems ? 8 : 0)));
         WriteBits(w, Flags);
         WriteBits(w, Forgotten);
         WriteBits(w, Latched);
@@ -229,7 +229,7 @@ public sealed class AiPlayerState
     {
         if (r.ReadByte() != Version || r.ReadByte() != Settings.Slot || r.ReadUInt64() != Settings.Program.ContentHash
             || r.ReadByte() != (byte)Settings.Difficulty || !string.Equals(r.ReadString(64), Settings.Civilization, StringComparison.Ordinal)
-            || r.ReadByte() != (byte)((Settings.EconomyAi ? 1 : 0) | (Settings.WarAi ? 2 : 0) | (Settings.MayResign ? 4 : 0)))
+            || r.ReadByte() != (byte)((Settings.EconomyAi ? 1 : 0) | (Settings.WarAi ? 2 : 0) | (Settings.MayResign ? 4 : 0) | (Settings.TakesItems ? 8 : 0)))
         {
             throw new InvalidDataException($"The AI state of slot {Settings.Slot} was saved with another script or settings.");
         }

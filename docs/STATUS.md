@@ -284,6 +284,18 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — The computer picks up and uses items (ADR 0269; AI-005).** ReTzar reads the original's AI, and the
+  new `ItemExecutor` follows it:
+  * beyond the easy level an idle soldier goes for the nearest power item, book or potion within 16 tiles (0x413e00);
+  * its units drink the potions they hold, learn a one-charge book they can, and cast a summoning book on themselves
+    when it is ready (0x4155c0, 0x464280).
+
+  The walk-in pickup of 0x4de310 is left out. Two guards came from the campaigns' acceptance test:
+  * not in a scenario's match: in bigisland a computer kingdom took Razma's quest book and summoned from an endless
+    book;
+  * never an endless book.
+
+  The AI goldens and the AI bench hash move: the settings byte now carries `TakesItems`.
 * **2026-10-23 — The client's memory measured; StringName churn fixed (code review, work queue 16).** The render bench
   line gains `managed=` and `engine=`. A heap dump in the S2 bench showed:
   * live managed data of about 0.5 GB;

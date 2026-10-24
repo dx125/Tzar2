@@ -61,8 +61,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0265, 2026-10-23) a spell book keeps its own pool and may be endless (item state grows, hashed layout 17, snapshot 19): the hashes.
     // (ADR 0266, 2026-10-23) no spell cooldowns (casters wait only for mana) and spells learned from books (a new store, hashed layout 18, snapshot 20): the hashes.
     // (ADR 0267, 2026-10-23) mana regrows 2 a second (Nature 1), a pool below a spell's cost is raised to it, a summon costs its creature's mana (mana state grows, hashed layout 19, snapshot 21): the hashes.
-    private const ulong GoldenHashStream = 0xB400718577B1169BUL;
-    private const ulong GoldenFinalFullHash = 0x96DE81AB83C7D981UL;
+    // (ADR 0269, 2026-10-23) the computer picks up and uses items (AI-005; its settings byte in the AI state gains TakesItems): the hashes.
+    private const ulong GoldenHashStream = 0x41601E2DF618E6B9UL;
+    private const ulong GoldenFinalFullHash = 0x3F82563435A1FFF7UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

@@ -172,3 +172,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0266](0266-no-spell-cooldowns-and-spells-learned-from-books.md) | Casters wait only for mana; units learn spells from books | Accepted | 2026-10-23 |
 | [0267](0267-mana-regeneration-and-pools-raised-to-a-spells-cost.md) | Mana regrows 2 a second (Nature 1); a pool below a spell's cost is raised to it | Accepted | 2026-10-23 |
 | [0268](0268-the-ninjas-murder-is-a-blow-of-fifteen-attacks.md) | The ninja's murder is one blow of fifteen times its attack | Accepted | 2026-10-23 |
+| [0269](0269-the-computer-picks-up-and-uses-items.md) | The computer picks up and uses items | Accepted | 2026-10-23 |

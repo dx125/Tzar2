@@ -87,7 +87,7 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
         Diagnostics = diagnostics.ToImmutable();
         _optionsFingerprint = Fingerprint(options, _world.Ruleset.ResourceTypes);
         // The naval executor runs first: it reserves what its harbor and ships cost (it does nothing on land maps).
-        var executors = new List<IAiExecutor> { new NavalExecutor(), new ConstructionExecutor(), new ProductionExecutor(), new ResearchExecutor(), new EconomyExecutor(), new MilitaryExecutor() };
+        var executors = new List<IAiExecutor> { new NavalExecutor(), new ConstructionExecutor(), new ProductionExecutor(), new ResearchExecutor(), new EconomyExecutor(), new MilitaryExecutor(), new ItemExecutor() };
         executors.AddRange(options.ExtraExecutors);
         _executors = [.. executors];
     }

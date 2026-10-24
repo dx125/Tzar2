@@ -49,6 +49,12 @@ public sealed record AiPlayerSettings
     public bool MayResign { get; init; } = true;
 
     /// <summary>
+    /// The AI picks up and uses the map's items (AI-005, ADR 0269). Off in a scenario's match: there items are often the
+    /// story's (bigisland's book for Razma), and a computer kingdom that took one could leave the mission unwinnable.
+    /// </summary>
+    public bool TakesItems { get; init; } = true;
+
+    /// <summary>
     /// A human kingdom of a multiplayer match: the AI is attached from the start but stays idle until the kingdom is
     /// handed to the computer (<see cref="PlayerFlags.AiControlled"/>, REQ-NET-07 drop policy; ADR 0163).
     /// </summary>

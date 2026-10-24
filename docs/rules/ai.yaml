@@ -26,3 +26,9 @@ rules:
     status: tested
     adr: [0183]
     note: Single player has it too (the owner). Military are units that neither work nor trade, towers, walls, gates and buildings that train only such units; the original's exact split is not in its data.
+  AI-005:
+    rule: Beyond the easy level the computer's idle soldiers pick up the power items, spell books and potions lying within 16 tiles; its units drink the potions they hold, learn the spell of a one-charge book they can learn, and cast a summoning book of more charges on themselves when it is ready.
+    source: ['community ReTzar src/gameplay/ai/idle.rs (0x413e00, 0x413ee0, 0x414219)', 'community ReTzar src/gameplay.rs (0x4155c0, 0x464280)']
+    status: tested
+    adr: [0269]
+    note: Not in a scenario's match (its items are often the story's) and never an endless summoning book (ADR 0269); the original also has its fighters pick up the items lying in the 3 x 3 cells they walk into (0x4de310), Tzar2 picks up only when idle.

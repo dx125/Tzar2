@@ -150,6 +150,9 @@ public sealed class GameSession : IDisposable
                         // The resign flag is offered by the random map and multiplayer screens only (1.09, SHELL-013):
                         // a scenario's computer kingdoms never resign (ReTzar: ai_resign is off in a campaign mission; ADR 0220).
                         MayResign = setup.Scenario is null && setup.AiResign,
+
+                        // A scenario's items are often its story's (ADR 0269): its computer kingdoms leave them alone.
+                        TakesItems = setup.Scenario is null,
                     });
                 }
             }
