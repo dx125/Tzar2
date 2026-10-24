@@ -89,6 +89,7 @@ public class MagicTests
         d.Step();
         Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections());
         Assert.Equal(cost, d.World.MaxMana(mage)); // the pool now holds the cost
+        Assert.Equal(cost, Of(d, SimEventKind.ManaRaised).Single().Arg); // the pump picture plays over it (ReTzar 0x4e1d0a)
         d.World.Manas.Get(mage).MilliMana = cost * 1000;
         Cast(d, mage, "spell_spawnstonegolem", default, 6 * Tile, 4 * Tile);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 400);

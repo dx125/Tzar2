@@ -284,6 +284,11 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — The pump picture over a caster whose pool grows; two events had one number.**
+  * `MagicSystem.RaiseMaxToCost` emits the new `ManaRaised` event, and the client plays IMAGES.INI `pump` over the
+    caster (MAG-027, ReTzar 0x4e1d0a).
+  * `SimEventKind.Impersonated` had the value 40, the same as `DiplomacyChanged`, so a spy's new look read as a
+    change of diplomacy to every reader of either. It is now 55. `SimEventKindTests` keeps every kind's number its own.
 * **2026-10-23 — The client's memory measured; StringName churn fixed (code review, work queue 16).** The render bench
   line gains `managed=` and `engine=`. A heap dump in the S2 bench showed:
   * live managed data of about 0.5 GB;

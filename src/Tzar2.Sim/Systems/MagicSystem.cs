@@ -166,6 +166,7 @@ public sealed class MagicSystem : ISimSystem
         if (cost > world.MaxMana(caster))
         {
             world.Manas.At(m).RaisedMax = cost;
+            world.Events.Emit(new SimEvent(SimEventKind.ManaRaised, world.Identities.Get(caster).Owner, caster, 0, 0, cost));
         }
     }
 

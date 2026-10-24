@@ -178,6 +178,15 @@ public sealed class WorldRenderer : IDisposable
     /// </summary>
     public void ConfirmOrder(int x, int y, EntityId target, BlinkColour colour = BlinkColour.Green) => _order = (x, y, target.Value, _timeMs, colour);
 
+    /// <summary>Plays IMAGES.INI picture <paramref name="name"/> once at world (<paramref name="x"/>, <paramref name="y"/>), if the package has it.</summary>
+    public void Burst(string name, int x, int y)
+    {
+        if (_bank.Get(name) is { } burst)
+        {
+            _bursts.Add((burst, x, y, _timeMs));
+        }
+    }
+
     /// <summary>Draws <paramref name="frame"/>.</summary>
     public void Render(
         GameFrame frame,
