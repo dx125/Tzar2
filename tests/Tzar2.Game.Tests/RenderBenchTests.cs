@@ -54,7 +54,7 @@ public class RenderBenchTests
         result.AddFrame(50);
         result.AddTicks([2, 3, 4, 5, 11]);
         result.SampleMemory(2L << 30, 1L << 30);
-        result.SampleMemory(1L << 30, 0);
+        result.SampleMemory(1L << 30, 0, 1L << 29, 1L << 28);
 
         Assert.Equal(1000.0 * 100 / 1040, result.Fps, 6);
         Assert.Equal(20, result.Low1Fps, 6);
@@ -64,7 +64,7 @@ public class RenderBenchTests
         Assert.Equal("PASS", result.S2Verdict);
         string line = result.Line();
         Assert.StartsWith("RENDER-BENCH v1 S2=PASS res=2560x1440 fps=96.2 low1=20.0 frame_p50=10.0ms", line, StringComparison.Ordinal);
-        Assert.Contains("sim_p99=11.0ms ticks=5 frames=100 units=4000 load=7.3s ram=2.00GB vram=1.00GB phases=none renderer=mobile/vulkan gpu=\"GTX '1060'\" cpu=\"Ryzen 5 3600\"", line, StringComparison.Ordinal);
+        Assert.Contains("sim_p99=11.0ms ticks=5 frames=100 units=4000 load=7.3s ram=2.00GB vram=1.00GB managed=0.50GB engine=0.25GB phases=none renderer=mobile/vulkan gpu=\"GTX '1060'\" cpu=\"Ryzen 5 3600\"", line, StringComparison.Ordinal);
         Assert.DoesNotContain('\n', line);
 
         Assert.Equal("n/a", new RenderBenchResult { Width = 1920, Height = 1080 }.S2Verdict);

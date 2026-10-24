@@ -89,6 +89,10 @@ public sealed class WorldRenderer : IDisposable
     private readonly List<(SheetRef Sheet, int X, int Y, long StartMs)> _bursts = [];
     private readonly AnimationStarts _starts = new(); // when each unit's picture was set (PRES-008)
     private long _timeMs;
+    private static readonly StringName FogEnabledParam = "fog_enabled";
+    private static readonly StringName DarknessParam = "darkness";
+    private bool? _fogEnabled;
+    private float _darkness = float.NaN;
     private (int X, int Y, uint Target, long StartMs, BlinkColour Colour)? _order;
     private bool _lightsValid;
 
@@ -969,8 +973,18 @@ public sealed class WorldRenderer : IDisposable
 
     private void UpdateFogAndLight(GameFrame frame, bool fresh, bool useFog, byte localPlayer, float darkness)
     {
-        _fogMaterial.SetShaderParameter("fog_enabled", useFog);
-        _fogMaterial.SetShaderParameter("darkness", darkness);
+        // Every drawn frame: cached names, and only what changed (the code review: a StringName per call otherwise).
+        if (useFog != _fogEnabled)
+        {
+            _fogEnabled = useFog;
+            _fogMaterial.SetShaderParameter(FogEnabledParam, useFog);
+        }
+
+        if (darkness != _darkness)
+        {
+            _darkness = darkness;
+            _fogMaterial.SetShaderParameter(DarknessParam, darkness);
+        }
 
         // The layers change with the sim (fog every 4 ticks, lights as units move): upload on new frames only.
         bool lightsNeeded = darkness > 0f;

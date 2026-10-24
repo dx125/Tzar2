@@ -164,7 +164,7 @@ public partial class GameApp
                 if (clock.Elapsed.TotalSeconds >= nextSample)
                 {
                     nextSample = clock.Elapsed.TotalSeconds + 1;
-                    result.SampleMemory(System.Environment.WorkingSet, (long)Performance.GetMonitor(Performance.Monitor.RenderVideoMemUsed));
+                    result.SampleMemory(System.Environment.WorkingSet, (long)Performance.GetMonitor(Performance.Monitor.RenderVideoMemUsed), System.GC.GetGCMemoryInfo().HeapSizeBytes, (long)Performance.GetMonitor(Performance.Monitor.MemoryStatic));
                 }
             }
 

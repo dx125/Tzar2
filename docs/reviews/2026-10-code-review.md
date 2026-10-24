@@ -76,6 +76,33 @@ merge.
 * Godot's texture-memory monitor underflows after a match is left: it reads 2⁴⁴ MB in the menu. This is an engine
   accounting quirk; video memory is correct.
 
+### The client's memory in the S2 render bench (the owner's PC, 2026-10-23)
+
+The owner's run of `--bench-render` showed a working set of 2.3 GB (min-spec-tuning.md § Results). The bench line now
+splits it into `managed=` (the .NET heap) and `engine=` (Godot's static memory). A heap dump (`dotnet-gcdump`) was
+taken 75 s into a run. The client was a Debug build on the same PC, 4,000 units at 2,560 × 1,440.
+
+| | Before | After this change |
+|---|---|---|
+| Working set (peak) | 2.35 GB | 2.55 GB |
+| Managed heap size (peak) | 1.39 GB | 1.36 GB |
+| Live managed objects (dump) | 518 MB | 501 MB |
+| `Godot.StringName` objects alive | 161,495 | 3,902 |
+
+* **What is live** (about 0.5 GB):
+  * the frame buffers, three `FrameEntity[]` of 16 MB;
+  * byte buffers: about 115 MB in 1 MB, 128 KB and 64 KB arrays;
+  * int arrays: about 50 MB;
+  * the sim's and the AI's stores: about 20 MB;
+  * the terrain's tile colours: two `Color[]` of 4 MB;
+  * the rest in small objects.
+* **What is not live:** the heap is about 2.7 times the live data. It is the GC's allocation budget, which .NET sizes
+  from the CPU's L3 cache (96 MB on this Ryzen 7 9800X3D), plus garbage between collections. On a smaller-cache CPU the
+  budget, and the heap, are smaller.
+* **Fixed here:** the per-frame shader parameters (every visible terrain chunk's water frame, the fog's flag and
+  darkness) passed a string. Each call made a `StringName`, which Godot tracks until it is finalized, so 161,000 were
+  alive at any time. They now use cached names and are sent only when they change.
+
 ## Findings: performance, resources and memory
 
 1. **Terrain textures grew with the map's area: 1.2 GB on a huge map, 2.7 GB on the largest.** Fixed by ADR 0210 (a
