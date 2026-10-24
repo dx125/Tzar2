@@ -155,7 +155,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    2. Builders arriving at a site push the working ones aside instead of taking the free places around it. Up to 8
       peasants work around one tree in the original, while ours cut from one side; mines alike. Likely the whole logic
       of a group working at one object: check ReTzar.
-   3. The gathering cursors (pick, saw, perhaps others) are not the original's: check them all against ReTzar.
+   3. The gathering cursors (pick, saw, perhaps others) are not the original's: **fixed**, every pointer as ReTzar
+      reads the original (CTRL-012, CTRL-013; log below).
    4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
    5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14), as corrected on
       2026-10-24: the minimap and the day globe as in the original's left HUD (`LAYOUT1024L`); the selection view and
@@ -308,6 +309,18 @@ the process decisions that have no ADR.
   the bottom panel's middle (its left border mirrored at its right end) and set in the middle of the screen's bottom.
   The world view runs under the pieces to the screen's edges, and the pieces stop the pointer. Messages start right of
   the minimap corner. The UI smoke test shows no issue at the 22 displays.
+
+* **2026-10-24 — The pointers over the map are the original's (CTRL-012, CTRL-013; the fifth play-test).** Tzar2 had
+  painted its own saw over trees and pickaxe over rocks (play-test of 2026-10-20). ReTzar reads the original's choice:
+  * over an object, the pointer of the right click (0x4f45b0 → 0x42da60): the shovel for cutting, mining, farming and
+    building a site; the repair pointer for a repair; the spell for a capture; the hand for an item only; the move
+    pointer for boarding; the arrow for walking, following, milking, fishing and carrying home;
+  * while a card's order waits for its target, the order's pointer (0x43a8c1): the repair pointer for capture and
+    build, the patrol path for patrol and explore, the spell for an item used on a target.
+
+  The choice is an engine-free model (`OrderCursors`) and the cursors are named by the original's IMAGES.INI entries,
+  each with its own hotspot (the spell's capture variant has another). Shift on an attack keeps the attack-set pointer
+  (CTRL-026), Tzar2's choice.
 
 * **2026-10-24 — The fifth play-test; fields can be built again; the inventory's eye is grey with nothing to show.**
   The owner played the installed build 0.7.0-beta.6+a393a3b; the findings are work queue item 5. Two are fixed:
