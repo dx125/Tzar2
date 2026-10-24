@@ -7,10 +7,13 @@ using Tzar2.Game.Ui;
 namespace Tzar2.Client.Game;
 
 /// <summary>
-/// One <c>LAYOUT.INI</c> layout (REQ-UI-01: geometry from the imported table, art from <c>IMAGES/SCREENS/S_VIEW</c>):
-/// screen size, the world view, minimap, resource boxes, top buttons and the clock. The bottom panel's inner slots
-/// (selection view, command card) are not in the INI; their positions are measured on the panel bitmap (same at 800 and
-/// 1024, anchored to the bottom edge) and listed here as constants.
+/// The HUD's geometry (REQ-UI-01: from the imported <c>LAYOUT.INI</c>, art from <c>IMAGES/SCREENS/S_VIEW</c>), the
+/// owner's hybrid of the original's layouts (the fifth play-test, 2026-10-24; no switch): the top bar of the bottom layout
+/// (<c>LAYOUT1024H</c>); the minimap and the day globe at the top left as the left layout has them (<c>LAYOUT1024L</c>,
+/// its art's corner); the selection view, the three boxes and the orders (two rows) with the info area right of them, cut
+/// from the bottom panel's middle and set at the middle of the screen's bottom. The world view is the whole screen below
+/// the top bar; the pieces lie over it. The bottom panel's inner slots are not in the INI; their positions are measured on
+/// the panel bitmap and listed here as constants.
 /// </summary>
 public sealed class HudLayout
 {
@@ -83,24 +86,52 @@ public sealed class HudLayout
     /// <summary>Top of the bottom panel.</summary>
     public int PanelTop => Size.Y - PanelHeight;
 
+    /// <summary>Where the bottom panel's middle is cut from in the bitmap: the selection view to the info area's end.</summary>
+    public static readonly Rect2I PanelSource = new(184, 614, 706, PanelHeight);
+
+    /// <summary>The panel's left border, drawn mirrored at its right end too (the bitmap has the ornament there).</summary>
+    public static readonly Rect2I PanelBorderSource = new(184, 614, 6, PanelHeight);
+
+    /// <summary>Where the left layout's corner with the minimap and the day globe is cut from, below its top bar.</summary>
+    public static readonly Rect2I CornerSource = new(0, 30, 216, 138);
+
+    /// <summary>The bottom panel piece on screen, in the middle of the bottom edge.</summary>
+    public Rect2I Panel => new((Size.X - PanelSource.Size.X - PanelBorderSource.Size.X) / 2, PanelTop, PanelSource.Size.X + PanelBorderSource.Size.X, PanelHeight);
+
+    /// <summary>The minimap corner piece on screen, at the top left below the top bar.</summary>
+    public Rect2I Corner => new(CornerSource.Position.X, View.Position.Y, CornerSource.Size.X, CornerSource.Size.Y);
+
+    /// <summary>The left layout's bitmap the corner is cut from.</summary>
+    public string CornerImage { get; private init; } = "art/screens/s_view/screen 1024 left.t2img";
+
+    // How far the panel piece sits from where its slots are in the bitmap.
+    private int PanelShift => Panel.Position.X - PanelSource.Position.X;
+
     /// <summary>Card slot rectangle.</summary>
     public Rect2I CardSlot(int slot)
-        => new(CardLeft + ((slot % 4) * CardPitchX), Size.Y - (slot < 4 ? CardRow0FromBottom : CardRow1FromBottom), Button, Button);
+        => new(CardLeft + PanelShift + ((slot % 4) * CardPitchX), Size.Y - (slot < 4 ? CardRow0FromBottom : CardRow1FromBottom), Button, Button);
 
     /// <summary>
     /// The three 25 × 25 boxes left of the orders bar (measured on the panel): 0 the left arrow, 1 the inventory's eye,
     /// 2 the right arrow (ORDERS <c>left</c>, <c>holder</c>, <c>right</c>; which box holds which is ours, ⚠ UNVERIFIED).
     /// </summary>
-    public Rect2I SideBox(int box) => new(344, Size.Y - 124 + (box * 37), 25, 25);
+    public Rect2I SideBox(int box) => new(344 + PanelShift, Size.Y - 124 + (box * 37), 25, 25);
 
     /// <summary>Portrait slot of the selection view.</summary>
-    public Rect2I Portrait => new(201, Size.Y - 132, 48, 48);
+    public Rect2I Portrait => new(201 + PanelShift, Size.Y - 132, 48, 48);
 
     /// <summary>Stat rows of the selection view (20×20 icon boxes).</summary>
-    public Rect2I StatRow(int row) => new(262, Size.Y - 131 + (row * 22), 20, 20);
+    public Rect2I StatRow(int row) => new(262 + PanelShift, Size.Y - 131 + (row * 22), 20, 20);
 
-    /// <summary>Area right of the command card (multi-selection icons, production queue); wider on a wide screen.</summary>
-    public Rect2I InfoArea => new(648, Size.Y - 140, 236 + Math.Max(0, Size.X - Base.X), 130);
+    /// <summary>Area right of the command card (multi-selection icons, production queue), at the panel piece's right.</summary>
+    public Rect2I InfoArea => new(648 + PanelShift, Size.Y - 140, 236, 130);
+
+    /// <summary>Where the message lines start: right of the minimap corner.</summary>
+    public Vector2I MessagesAt => new(Corner.End.X + 8, View.Position.Y + 8);
+
+    /// <summary>Whether a screen point is on the HUD (the top bar, the minimap corner or the bottom panel), not the world.</summary>
+    public bool Covers(Vector2 point)
+        => point.Y < View.Position.Y || new Rect2(Corner.Position, Corner.Size).HasPoint(point) || new Rect2(Panel.Position, Panel.Size).HasPoint(point);
 
     /// <summary>The bitmap's own size (1024 × 768 or 800 × 600); <see cref="Size"/> is larger or smaller on a Wide screen.</summary>
     public Vector2I Base { get; private init; } = new(1024, 768);
@@ -108,38 +139,29 @@ public sealed class HudLayout
     /// <summary>Whether the screen differs from the bitmap and the HUD is drawn in anchored pieces (ADR 0177).</summary>
     public bool Wide => Size != Base;
 
-    /// <summary>The clock globe's ornament over the panel's left end (LAYOUT.INI <c>mscr1</c>), on screen.</summary>
-    public Rect2I GlobeOrnament { get; private init; }
-
-    /// <summary>Where the globe ornament is in the bitmap.</summary>
-    public Rect2I GlobeOrnamentSource { get; private init; }
-
     /// <summary>
-    /// Reads <paramref name="section"/> of LAYOUT.INI for a logical screen of <paramref name="screen"/> (default: the
-    /// bitmap's own size); falls back to the measured 1024 layout when missing. On a Wide screen (ADR 0177) the top bar
-    /// keeps its place, everything of the lower half is anchored to the bottom, and the world view and the info area take
-    /// the extra room.
+    /// Reads <paramref name="section"/> of LAYOUT.INI (the top bar) and its left layout (the minimap and the clock) for a
+    /// logical screen of <paramref name="screen"/> (default: the bitmap's own size); falls back to the measured 1024
+    /// layouts when missing. The world view takes the whole screen below the top bar (ADR 0177's Wide screens included).
     /// </summary>
     public static HudLayout Load(IniTable layout, string section = "LAYOUT1024H", Vector2I? screen = null)
     {
         ArgumentNullException.ThrowIfNull(layout);
         IniSection? s = layout.Section(section);
+        IniSection? left = layout.Section(section.Replace("H", "L", StringComparison.Ordinal));
         bool small = section.Contains("800", StringComparison.Ordinal);
         Vector2I bitmap = small ? new Vector2I(800, 600) : new Vector2I(1024, 768);
         Vector2I size = screen ?? bitmap;
-        Vector2I grow = size - bitmap;
-        Rect2I Low(Rect2I r) => r.Position.Y >= bitmap.Y / 2 ? new Rect2I(r.Position + new Vector2I(0, grow.Y), r.Size) : r;
         string image = s?.Get("image") is { Length: > 0 } img ? "art/screens/s_view/" + img.ToLowerInvariant().Replace(".bmp", ".t2img", StringComparison.Ordinal) : $"art/screens/s_view/screen {bitmap.X}.t2img";
-        Rect2I view = Rect(s, "view", new Rect2I(0, 30, bitmap.X, bitmap.Y - 184));
-        Rect2I globe = Rect(s, "mscr1", new Rect2I(0, bitmap.Y - 231, 126, 77));
+        string corner = left?.Get("image") is { Length: > 0 } li ? "art/screens/s_view/" + li.ToLowerInvariant().Replace(".bmp", ".t2img", StringComparison.Ordinal) : $"art/screens/s_view/screen {bitmap.X} left.t2img";
+        int top = Rect(s, "view", new Rect2I(0, 30, bitmap.X, bitmap.Y - 184)).Position.Y;
         return new HudLayout(section, size)
         {
             Base = bitmap,
             Image = image,
-            View = new Rect2I(view.Position, view.Size + grow),
-            GlobeOrnamentSource = globe,
-            GlobeOrnament = Low(globe),
-            Minimap = Low(Rect(s, "minimap", new Rect2I(28, bitmap.Y - 146, 128, 128))),
+            CornerImage = corner,
+            View = new Rect2I(0, top, size.X, size.Y - top),
+            Minimap = Rect(left, "minimap", new Rect2I(4, 31, 128, 128)),
             Resources =
             [
                 Rect(s, "resgold", new Rect2I(360, 0, 48, 18)),
@@ -154,7 +176,7 @@ public sealed class HudLayout
             DiplomacyImage = Art(s?.Get("diplomacyimage"), "btn diplomacy left"),
             ChatButton = Rect(s, "chatbutton", new Rect2I(219, 0, 61, 25)),
             ChatImage = Art(s?.Get("chatimage"), "btn chat left"),
-            Clock = Low(Rect(s, "clock", new Rect2I(8, bitmap.Y - 193, 36, 36))),
+            Clock = Rect(left, "clock", new Rect2I(142, 31, 36, 36)),
         };
     }
 

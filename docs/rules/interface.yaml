@@ -39,8 +39,8 @@ rules:
   HUD-009:
     rule: The interface can be placed along the bottom, the left or the right of the screen.
     source: [manual The Interface, data LAYOUT.INI LAYOUT1024H LAYOUT1024L LAYOUT1024R]
-    status: missing
-    work: STATUS work queue 12 (M8, owner decision 2026-10-21)
+    status: deviation
+    note: Tzar2 has one hybrid layout and no switch (the owner, 2026-10-24, fifth play-test; it replaces the side panels as a setting of 2026-10-21) - the top bar of LAYOUT1024H, the minimap and the day globe in LAYOUT1024L's corner, the selection view, the three boxes and the orders (two rows) with the info area in the middle of the bottom; the world view runs under them to the screen's edges.
   HUD-010:
     rule: The resource bar at the top shows food, wood, stone and gold, the population against its limit, and the CHAT, DIPLOMACY and MENU buttons.
     source: [manual The Resource Bar]
