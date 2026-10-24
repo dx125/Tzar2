@@ -30,6 +30,26 @@ public static class SpriteRules
         => hasSecond && ((blow * 2246822519u) >> 31) == 1 ? UnitAnim.Attack2 : UnitAnim.Attack;
 
     /// <summary>
+    /// The picture of blow number <paramref name="blow"/> for a unit that may also strike its third swing
+    /// (<c>image_attack3</c>; PRES-005): with <paramref name="third"/> each of the three swings takes a third of the blows, as
+    /// the Asian peasant under Kung Fu draws one of three at random (ReTzar 0x4ae090); otherwise as <see cref="Swing(bool, uint)"/>.
+    /// </summary>
+    public static UnitAnim Swing(bool hasSecond, bool third, uint blow)
+    {
+        if (!third)
+        {
+            return Swing(hasSecond, blow);
+        }
+
+        return ((ulong)(blow * 2246822519u) * 3 >> 32) switch
+        {
+            0 => UnitAnim.Attack,
+            1 => hasSecond ? UnitAnim.Attack2 : UnitAnim.Attack,
+            _ => UnitAnim.Attack3,
+        };
+    }
+
+    /// <summary>
     /// The frame of a swing <paramref name="elapsed"/> frames after it began, in a picture starting at IMAGES.INI
     /// <c>startrow</c> (PRES-008; ReTzar's reading, 0x5017f0: a picture set on row r shows r first, then runs on and wraps).
     /// </summary>

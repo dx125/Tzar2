@@ -35,4 +35,13 @@ public class MoreAnimationsTests
         Assert.InRange(second, 4_500, 5_500);
         Assert.All(Enumerable.Range(0, 100), b => Assert.Equal(UnitAnim.Attack, SpriteRules.Swing(false, (uint)b)));
     }
+
+    [Fact]
+    public void Under_kung_fu_each_of_three_swings_takes_a_third_of_the_blows()
+    {
+        // ReTzar 0x4ae090: the Asian peasant with Kung Fu draws image_attack, image_attack2 or image_attack3 at random.
+        UnitAnim[] blows = [.. Enumerable.Range(0, 9_000).Select(b => SpriteRules.Swing(true, true, (uint)b))];
+        Assert.All(new[] { UnitAnim.Attack, UnitAnim.Attack2, UnitAnim.Attack3 }, a => Assert.InRange(blows.Count(b => b == a), 2_700, 3_300));
+        Assert.Equal(SpriteRules.Swing(true, 42u), SpriteRules.Swing(true, false, 42u)); // without it, as before
+    }
 }
