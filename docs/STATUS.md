@@ -296,6 +296,15 @@ the process decisions that have no ADR.
   * never an endless book.
 
   The AI goldens and the AI bench hash move: the settings byte now carries `TakesItems`.
+* **2026-10-23 — The Asian peasant's third swing under Kung Fu (PRES-005).** ReTzar reads the original drawing one of
+  image_attack, image_attack2 and image_attack3 at random for an Asian peasant whose kingdom has Kung Fu (0x4ae090).
+  The client now gives each of the three a third of the blows when the unit has a third picture and its owner has
+  `te_kungfu`. PRES-005 is complete. No sim change.
+* **2026-10-23 — The pump picture over a caster whose pool grows; two events had one number.**
+  * `MagicSystem.RaiseMaxToCost` emits the new `ManaRaised` event, and the client plays IMAGES.INI `pump` over the
+    caster (MAG-027, ReTzar 0x4e1d0a).
+  * `SimEventKind.Impersonated` had the value 40, the same as `DiplomacyChanged`, so a spy's new look read as a
+    change of diplomacy to every reader of either. It is now 55. `SimEventKindTests` keeps every kind's number its own.
 * **2026-10-23 — The client's memory measured; StringName churn fixed (code review, work queue 16).** The render bench
   line gains `managed=` and `engine=`. A heap dump in the S2 bench showed:
   * live managed data of about 0.5 GB;

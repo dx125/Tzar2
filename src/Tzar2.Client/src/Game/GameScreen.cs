@@ -1832,6 +1832,9 @@ public partial class GameScreen : Node
                 case SimEventKind.CommandRejected when e.Player == me:
                     Message(RejectionText((CommandRejection)e.Arg));
                     break;
+                case SimEventKind.ManaRaised when _lastByIndex.TryGetValue(e.Entity.Index, out var pumped):
+                    _world?.Burst(EffectImages.ManaPump, pumped.X, pumped.Y); // MAG-027: the pump picture over the caster
+                    break;
                 case SimEventKind.ProductionStalled when e.Player == me && e.Arg == 1:
                     if (_now - _lastAlert > 5)
                     {

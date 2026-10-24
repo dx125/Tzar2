@@ -22,8 +22,8 @@ rules:
   PRES-005:
     rule: Units have their own animations for capturing and collecting meat (peasants), murder (ninjas), prayer (priests), casting (mages and priests) and other attack swings (footmen, macemen, peasants, bears, ninjas).
     source: [data OBJECTS image_capture image_meat image_murder image_pray image_spell image_attack2 image_attack3]
-    status: partial
-    note: Done - capturing and cutting meat (peasants), casting (mages and priests, image_spell; the Asian priest's prayer is the same picture) and the second swing on half the blows (footmen, macemen, peasants, bears, ninjas, priests; the original draws at random, 0x4e5720 by ReTzar's reading). the ninja's murder (image_murder, else the attack's; ADR 0268). Left - the Asian peasant's third swing under Kung Fu.
+    status: tested
+    note: Capturing and cutting meat (peasants), casting (mages and priests, image_spell; the Asian priest's prayer is the same picture) and the second swing on half the blows (footmen, macemen, peasants, bears, ninjas, priests; the original draws at random, 0x4e5720 by ReTzar's reading). the ninja's murder (image_murder, else the attack's; ADR 0268). the Asian peasant's third swing under Kung Fu (each of its three swings a third of the blows; ReTzar 0x4ae090).
   PRES-006:
     rule: A hero shows a hero's portrait.
     source: [data OBJECTS icon_hero]
