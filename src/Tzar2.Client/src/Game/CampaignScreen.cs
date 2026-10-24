@@ -5,44 +5,48 @@ using Godot;
 using Tzar2.Client.Logic;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Game.Campaigns;
+using Tzar2.Game.Session;
 
 namespace Tzar2.Client.Game;
 
 /// <summary>
-/// The campaign screen (<c>S_CAMPAIGN</c>; ADR 0133) laid out on the panels of its art (800 × 600): the selected
-/// campaign's missions (top left, paged by the arrows of the bottom bar and the mouse wheel) and the selected mission's
-/// briefing (top right); the campaigns (bottom left) and the selected campaign's description and progress with RESTART
-/// (bottom right); BACK and PLAY in the bar's two button slots. Missions show their state from the profile (done, open,
-/// locked); PLAY starts the chosen open mission, or the campaign's current one.
+/// The campaign screen (<c>S_CAMPAIGN</c>; ADR 0133) in the original's layout, as ReTzar reads it (the owner's fifth
+/// play-test): the campaigns (top left) and the selected one's description (top right); its entry missions, those it
+/// starts with and those reached since (bottom left), and the selected mission's description (bottom right); PLAY, the
+/// difficulty and BACK below. The lists and the descriptions scroll by their bars' arrows and the mouse wheel. Texts are
+/// Arial 12 bold: captions and the chosen rows in gold, the other rows and the descriptions in dark gold.
 /// </summary>
 public partial class CampaignScreen : ArtScreen
 {
-    // Panels and slots of back.bmp, measured on the art (top-left x, y, width, height).
-    private static readonly Rect2I Missions = new(84, 46, 270, 246);
-    private static readonly Rect2I Briefing = new(411, 46, 356, 246);
-    private static readonly Rect2I CampaignList = new(84, 355, 272, 140);
-    private static readonly Rect2I About = new(410, 355, 358, 140);
-    private static readonly Vector2I BackSlot = new(78, 544);
-    private static readonly Vector2I PlaySlot = new(536, 544);
-    private static readonly Rect2I PreviousArrow = new(333, 544, 24, 24);
-    private static readonly Rect2I NextArrow = new(487, 544, 24, 24);
-    private static readonly Rect2I PageText = new(360, 548, 125, 16);
-    private const int RowHeight = 18;
+    private const int Row = 16;
+    private const int Arrow = 27;
+    private const int CampaignRowsShown = 15;
+    private const int MissionRowsShown = 9;
+    private const string Common = "art/screens/common/";
 
-    private static readonly Color Gold = new(1f, 0.92f, 0.65f);
-    private static readonly Color Grey = new(0.6f, 0.6f, 0.55f);
-    private static readonly Color Done = new(0.6f, 0.85f, 0.55f);
+    // The original's places on the 800 × 600 art (ReTzar's reading).
+    private static readonly Rect2I CampaignRows = new(80, 43, 251, Row * CampaignRowsShown);
+    private static readonly Rect2I MissionRows = new(80, 352, 252, Row * MissionRowsShown);
+    private static readonly Rect2I CampaignBar = new(332, 40, 26, 256);
+    private static readonly Rect2I MissionBar = new(332, 349, 26, 150);
+    private static readonly Rect2I CampaignText = new(408, 45, 328, 250);
+    private static readonly Rect2I MissionText = new(406, 352, 332, 145);
+    private static readonly Rect2I CampaignTextBar = new(743, 40, 26, 256);
+    private static readonly Rect2I MissionTextBar = new(745, 349, 26, 150);
+    private static readonly Rect2I DifficultySpin = new(332, 542, 180, 27);
+    private static readonly Vector2I PlaySlot = new(78, 545);
+    private static readonly Vector2I BackSlot = new(535, 544);
 
     private readonly IReadOnlyList<ICampaignSource> _campaigns;
     private readonly PlayerProfile _profile;
     private readonly PresentationCatalog? _catalog;
+    private readonly int[] _top = new int[4]; // first row shown: campaigns, missions, campaign text, mission text
     private int _selected;
     private string? _map;
-    private int _page;
     private Control? _details;
 
     /// <summary>Creates the screen.</summary>
-    public CampaignScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, IReadOnlyList<ICampaignSource> campaigns, PlayerProfile profile)
+    public CampaignScreen(UiAssets ui, PresentationCatalog? catalog, Vector2I screen, IReadOnlyList<ICampaignSource> campaigns, PlayerProfile profile, Difficulty difficulty = Difficulty.Normal)
         : base(ui, screen, "art/screens/s_campaign/back.t2img")
     {
         ArgumentNullException.ThrowIfNull(campaigns);
@@ -50,72 +54,74 @@ public partial class CampaignScreen : ArtScreen
         _campaigns = campaigns;
         _profile = profile;
         _catalog = catalog;
+        Difficulty = difficulty;
 
+        foreach ((string key, string fallback, int x, int y) in new[]
+        {
+            ("t_cam", "Campaigns", 78, 17), ("t_descr", "Campaign Description", 401, 17),
+            ("t_emiss", "Entry Missions", 78, 326), ("t_emisdes", "Entry Mission Description", 401, 326),
+        })
+        {
+            Text(new Vector2I(x, y), Label(key, fallback), UiAssets.BoldFont, Gold);
+        }
+
+        Text(new Vector2I(338, 526), _catalog?.Text("mp_setupmap", "t_diff_lvl", "Difficulty Level") ?? "Difficulty Level", UiAssets.BoldFont, Gold, 149);
         const string Btn = "art/screens/s_campaign/btn.t2img";
         var size = new Vector2I(235, 25);
-        Button(BackSlot, size, Btn, Label("cancel", "BACK"), () => Back?.Invoke());
-        Button(PlaySlot, size, Btn, Label("start", "PLAY"), () =>
+        TextureButton play = Button(PlaySlot, size, Btn, Label("play", "PLAY"), () =>
         {
             if (_campaigns.Count > 0)
             {
-                Play?.Invoke(_campaigns[_selected], _map);
+                Play?.Invoke(_campaigns[_selected], _map, Difficulty);
             }
         });
-        Area(PreviousArrow, () => Turn(-1));
-        Area(NextArrow, () => Turn(1));
+        play.Disabled = _campaigns.Count == 0;
+        Button(BackSlot, size, Btn, Label("back", "BACK"), () => Back?.Invoke());
         Select(0);
 
         // SHELL-026: the original's names of these controls (ReTzar's reading).
-        Hint(CampaignList, "CN_CAMPAIGNS");
-        Hint(About, "CN_CAMPAIGN_DESCRIPTION");
-        Hint(Missions, "CN_ENTRY_MISSONS");
-        Hint(Briefing, "CN_ENTRY_MISSONS_DESCRIPTION");
+        Hint(CampaignRows, "CN_CAMPAIGNS");
+        Hint(CampaignText, "CN_CAMPAIGN_DESCRIPTION");
+        Hint(MissionRows, "CN_ENTRY_MISSONS");
+        Hint(MissionText, "CN_ENTRY_MISSONS_DESCRIPTION");
         Hint(new Rect2I(BackSlot, size), "CN_BACK");
         Hint(new Rect2I(PlaySlot, size), "CN_PLAY");
         HelpBall(k => catalog?.Text("HELP", k, k) ?? k);
     }
 
-    /// <summary>PLAY: the campaign and the map chosen (null: its current map).</summary>
-    public event Action<ICampaignSource, string?>? Play;
-
-    /// <summary>RESTART: new progress for the campaign.</summary>
-    public event Action<ICampaignSource>? Restart;
+    /// <summary>PLAY: the campaign, the entry mission chosen (null: its current one) and the difficulty.</summary>
+    public event Action<ICampaignSource, string?, Difficulty>? Play;
 
     /// <summary>BACK.</summary>
     public event Action? Back;
 
-    /// <summary>Missions shown per page of the mission panel.</summary>
-    public static int MissionsPerPage => (Missions.Size.Y / RowHeight) - 1;
+    /// <summary>The computer kingdoms' difficulty for the campaign's missions.</summary>
+    public Difficulty Difficulty { get; private set; }
 
     /// <inheritdoc/>
     public override void _GuiInput(InputEvent @event)
     {
         if (@event is InputEventMouseButton { Pressed: true } wheel && wheel.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
         {
-            Turn(wheel.ButtonIndex == MouseButton.WheelUp ? -1 : 1);
+            Vector2I at = (Vector2I)(wheel.Position - (Vector2)Origin);
+            int step = wheel.ButtonIndex == MouseButton.WheelUp ? -1 : 1;
+            Rect2I[] panels = [Wider(CampaignRows, CampaignBar), Wider(MissionRows, MissionBar), Wider(CampaignText, CampaignTextBar), Wider(MissionText, MissionTextBar)];
+            for (int i = 0; i < panels.Length; i++)
+            {
+                if (panels[i].HasPoint(at))
+                {
+                    Scroll(i, step);
+                    break;
+                }
+            }
+
             AcceptEvent();
         }
     }
 
+    private static Rect2I Wider(Rect2I panel, Rect2I bar) => new(panel.Position, new Vector2I(bar.End.X - panel.Position.X, Math.Max(panel.Size.Y, bar.Size.Y)));
+
     private string Label(string key, string fallback) => _catalog?.Text("campaign", key, fallback) ?? fallback;
-
-    private void Turn(int pages)
-    {
-        if (_campaigns.Count == 0)
-        {
-            return;
-        }
-
-        int count = Pages(_campaigns[_selected].Campaign);
-        int next = Math.Clamp(_page + pages, 0, count - 1);
-        if (next != _page)
-        {
-            _page = next;
-            Redraw();
-        }
-    }
-
-    private static int Pages(CampaignData c) => Math.Max(1, (c.Maps.Length + MissionsPerPage - 1) / MissionsPerPage);
 
     private void Select(int index)
     {
@@ -127,107 +133,146 @@ public partial class CampaignScreen : ArtScreen
         _selected = index;
         CampaignData c = _campaigns[index].Campaign;
         CampaignProgress? progress = _profile.Progress(c.Id);
-        string? current = progress?.Current ?? c.Maps.FirstOrDefault(m => m.IsEntry)?.Id;
-        _map = null;
-        int at = Math.Max(0, Array.FindIndex(c.Maps.ToArray(), m => m.Id == current));
-        _page = at / MissionsPerPage; // open on the page of the mission to play next
+        IReadOnlyList<CampaignMap> entries = CampaignFlow.EntryMissions(c, progress);
+
+        // The mission to play next when it is an entry, else the first.
+        int at = Math.Max(0, entries.ToList().FindIndex(m => m.Id == progress?.Current));
+        _map = entries.Count > 0 ? entries[at].Id : null;
+        _top[1] = Math.Clamp(at - (MissionRowsShown - 1), 0, Math.Max(0, entries.Count - MissionRowsShown));
+        _top[2] = 0;
+        _top[3] = 0;
         Redraw();
     }
+
+    private void Scroll(int panel, int step)
+    {
+        (int total, int shown) = Extent(panel);
+        int next = Math.Clamp(_top[panel] + step, 0, Math.Max(0, total - shown));
+        if (next != _top[panel])
+        {
+            _top[panel] = next;
+            Redraw();
+        }
+    }
+
+    // The rows a panel holds and how many show.
+    private (int Total, int Shown) Extent(int panel)
+    {
+        if (_campaigns.Count == 0)
+        {
+            return (0, 1);
+        }
+
+        CampaignData c = _campaigns[_selected].Campaign;
+        return panel switch
+        {
+            0 => (_campaigns.Count, CampaignRowsShown),
+            1 => (CampaignFlow.EntryMissions(c, _profile.Progress(c.Id)).Count, MissionRowsShown),
+            2 => (Lines(c.Description, CampaignText.Size.X).Count, CampaignText.Size.Y / Row),
+            _ => (Lines(c.Maps.FirstOrDefault(m => m.Id == _map)?.Description ?? string.Empty, MissionText.Size.X).Count, MissionText.Size.Y / Row),
+        };
+    }
+
+    private List<string> Lines(string text, int width)
+        => WrapIn(text.Trim().Length > 0 ? text : _catalog?.Text("defmsg", "nodecr", "No description") ?? "No description", width, UiAssets.BoldFont);
 
     private void Redraw()
     {
         _details?.QueueFree();
         _details = new Control { MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_details);
+        Bar(0, CampaignBar);
         if (_campaigns.Count == 0)
         {
-            Add(Briefing.Position, "No campaigns in this package.", UiAssets.BoldFont, Gold);
+            Add(CampaignText.Position, "No campaigns in this package.", DarkGold);
             return;
         }
 
-        CampaignData c = _campaigns[_selected].Campaign;
-        CampaignProgress? progress = _profile.Progress(c.Id);
-        string? current = progress?.Current ?? c.Maps.FirstOrDefault(m => m.IsEntry)?.Id;
-        string? shown = _map ?? current;
-
-        // Campaigns (bottom left).
-        Add(CampaignList.Position, Label("campaigns", "CAMPAIGNS"), UiAssets.BoldFont, Gold);
-        for (int i = 0; i < _campaigns.Count && (i + 1) * RowHeight < CampaignList.Size.Y; i++)
+        // Campaigns.
+        for (int i = _top[0]; i < Math.Min(_campaigns.Count, _top[0] + CampaignRowsShown); i++)
         {
             int index = i;
-            Vector2I row = CampaignList.Position + new Vector2I(0, (i + 1) * RowHeight);
-            Add(row, Fit((i == _selected ? "> " : "  ") + _campaigns[i].Campaign.Name, CampaignList.Size.X, UiAssets.BoldFont), UiAssets.BoldFont, i == _selected ? Gold : Grey);
-            Click(new Rect2I(row, new Vector2I(CampaignList.Size.X, RowHeight)), () => Select(index));
+            var row = new Rect2I(CampaignRows.Position + new Vector2I(0, (i - _top[0]) * Row), new Vector2I(CampaignRows.Size.X, Row));
+            Add(row.Position + new Vector2I(2, 0), Fit(_campaigns[i].Campaign.Name, row.Size.X - 4, UiAssets.BoldFont), i == _selected ? Gold : DarkGold);
+            Click(row, () => Select(index));
         }
 
-        // Missions (top left), one page.
-        int done = 0;
-        Add(Missions.Position, $"{c.Name}", UiAssets.BoldFont, Gold);
-        for (int i = 0; i < c.Maps.Length; i++)
+        // Its entry missions.
+        CampaignData c = _campaigns[_selected].Campaign;
+        IReadOnlyList<CampaignMap> entries = CampaignFlow.EntryMissions(c, _profile.Progress(c.Id));
+        for (int i = _top[1]; i < Math.Min(entries.Count, _top[1] + MissionRowsShown); i++)
         {
-            CampaignMap m = c.Maps[i];
-            bool finished = progress is not null && progress.History.Any(h => h.MapId == m.Id && h.Result != MissionResult.Lost);
-            done += finished ? 1 : 0;
-            int slot = i - (_page * MissionsPerPage);
-            if (slot < 0 || slot >= MissionsPerPage)
+            string id = entries[i].Id;
+            var row = new Rect2I(MissionRows.Position + new Vector2I(0, (i - _top[1]) * Row), new Vector2I(MissionRows.Size.X, Row));
+            Add(row.Position + new Vector2I(2, 0), Fit(entries[i].MapName, row.Size.X - 4, UiAssets.BoldFont), id == _map ? Gold : DarkGold);
+            Click(row, () =>
             {
-                continue;
-            }
-
-            bool open = progress is null ? m.IsEntry : progress.Unlocked.Contains(m.Id);
-            string mark = m.Id == shown ? "> " : "  ";
-            string state = finished ? " (done)" : open ? string.Empty : " (locked)";
-            Color colour = finished ? Done : open ? Gold : Grey;
-            Vector2I row = Missions.Position + new Vector2I(0, (slot + 1) * RowHeight);
-            Add(row, Fit($"{mark}{i + 1}. {m.MapName}{state}", Missions.Size.X, UiAssets.BoldFont), UiAssets.BoldFont, colour);
-            if (open)
-            {
-                string id = m.Id;
-                Click(new Rect2I(row, new Vector2I(Missions.Size.X, RowHeight)), () =>
-                {
-                    _map = id;
-                    Redraw();
-                });
-            }
+                _map = id;
+                _top[3] = 0;
+                Redraw();
+            });
         }
 
-        Add(PageText.Position, $"{_page + 1} / {Pages(c)}", UiAssets.BoldFont, Gold, PageText.Size.X);
-
-        // Briefing of the mission shown (top right).
-        if (c.Maps.FirstOrDefault(m => m.Id == shown) is { } map)
+        if (entries.Count > MissionRowsShown)
         {
-            Add(Briefing.Position, Fit(map.MapName, Briefing.Size.X, UiAssets.BoldFont), UiAssets.BoldFont, Gold);
-            Paragraph(Briefing.Position + new Vector2I(0, 22), map.Description, Briefing.Size.X, Briefing.Size.Y - 22);
+            Bar(1, MissionBar);
         }
 
-        // The campaign (bottom right): description, progress, RESTART.
-        Add(About.Position, Fit(c.Name, About.Size.X, UiAssets.BoldFont), UiAssets.BoldFont, Gold);
-        int used = Paragraph(About.Position + new Vector2I(0, 20), c.Description, About.Size.X, About.Size.Y - 60);
-        string status = progress?.Completed == true ? "Campaign completed." : $"{done} of {c.Maps.Length} missions done.";
-        Add(About.Position + new Vector2I(0, 24 + used), status, UiAssets.SmallFont, Colors.White);
-        Vector2I restart = About.Position + new Vector2I(0, About.Size.Y - 18);
-        Add(restart, Label("restart", "RESTART CAMPAIGN"), UiAssets.BoldFont, Gold);
-        Click(new Rect2I(restart, new Vector2I(Ui.Measure(Label("restart", "RESTART CAMPAIGN"), UiAssets.BoldFont) + 8, RowHeight)), () => Restart?.Invoke(_campaigns[_selected]));
+        // The descriptions.
+        Describe(2, c.Description, CampaignText, CampaignTextBar);
+        Describe(3, c.Maps.FirstOrDefault(m => m.Id == _map)?.Description ?? string.Empty, MissionText, MissionTextBar);
+
+        // The difficulty: the art has the arrows; a click on the left one lowers it, elsewhere raises it.
+        string level = _catalog?.Text("mp_setupmap", $"difflvl_{(int)Difficulty}", Difficulty.ToString()) ?? Difficulty.ToString();
+        Add(DifficultySpin.Position + new Vector2I(Arrow, 6), level.Split('|')[0].Trim(), Gold, DifficultySpin.Size.X - (2 * Arrow));
+        Click(new Rect2I(DifficultySpin.Position, new Vector2I(Arrow, Arrow)), () => Step(-1));
+        Click(new Rect2I(DifficultySpin.Position + new Vector2I(Arrow, 0), new Vector2I(DifficultySpin.Size.X - Arrow, Arrow)), () => Step(+1));
     }
 
-    // Wrapped text in a panel; returns the height used. Lines that do not fit are cut with an ellipsis on the last one.
-    private int Paragraph(Vector2I at, string text, int width, int height)
+    private void Step(int delta)
     {
-        const int Line = 14;
-        List<string> lines = Wrap(text, width);
-        int max = Math.Max(1, height / Line);
-        for (int i = 0; i < lines.Count && i < max; i++)
-        {
-            string line = i == max - 1 && lines.Count > max ? Fit(lines[i] + "...", width, UiAssets.SmallFont) : lines[i];
-            Add(at + new Vector2I(0, i * Line), line, UiAssets.SmallFont, Colors.White);
-        }
-
-        return Math.Min(lines.Count, max) * Line;
+        Difficulty = (Difficulty)Math.Clamp((int)Difficulty + delta, (int)Difficulty.Easy, (int)Difficulty.Hard);
+        Redraw();
     }
 
-    private void Add(Vector2I at, string text, string font, Color colour, int width = 0)
+    // A description in its panel from the row it is scrolled to, with its bar.
+    private void Describe(int panel, string text, Rect2I box, Rect2I bar)
     {
-        if (text.Length > 0 && Ui.Text(text, font, colour) is { } t)
+        List<string> lines = Lines(text, box.Size.X);
+        int shown = box.Size.Y / Row;
+        for (int i = _top[panel]; i < Math.Min(lines.Count, _top[panel] + shown); i++)
+        {
+            Add(box.Position + new Vector2I(0, (i - _top[panel]) * Row), lines[i], DarkGold);
+        }
+
+        Bar(panel, bar);
+    }
+
+    // A scroll bar of the original (COMMON/BTN UP, BTN DOWN, THUMB VERT): its arrows scroll the panel a row.
+    private void Bar(int panel, Rect2I track)
+    {
+        (int total, int shown) = Extent(panel);
+        int max = Math.Max(0, total - shown);
+        int travel = Math.Max(0, track.Size.Y - (3 * Arrow));
+        int thumb = max == 0 ? 0 : (int)Math.Round(travel * (double)Math.Min(_top[panel], max) / max);
+        Picture(track.Position, Ui.Region(Common + "btn up.t2img", new Rect2I(0, 0, Arrow, Arrow)));
+        Picture(track.Position + new Vector2I(0, track.Size.Y - Arrow), Ui.Region(Common + "btn down.t2img", new Rect2I(0, 0, Arrow, Arrow)));
+        Picture(track.Position + new Vector2I(0, Arrow + thumb), Ui.Region(Common + "thumb vert.t2img", new Rect2I(0, 0, Arrow, Arrow)));
+        Click(new Rect2I(track.Position, new Vector2I(Arrow, Arrow)), () => Scroll(panel, -1));
+        Click(new Rect2I(track.Position + new Vector2I(0, track.Size.Y - Arrow), new Vector2I(Arrow, Arrow)), () => Scroll(panel, +1));
+    }
+
+    private void Picture(Vector2I at, Texture2D? texture)
+    {
+        if (texture is not null)
+        {
+            _details!.AddChild(new TextureRect { Texture = texture, Position = Origin + at, MouseFilter = MouseFilterEnum.Ignore });
+        }
+    }
+
+    private void Add(Vector2I at, string text, Color colour, int width = 0)
+    {
+        if (text.Length > 0 && Ui.Text(text, UiAssets.BoldFont, colour) is { } t)
         {
             int dx = width > 0 ? (width - t.GetWidth()) / 2 : 0;
             _details!.AddChild(new TextureRect { Texture = t, Position = Origin + at + new Vector2I(dx, 0), MouseFilter = MouseFilterEnum.Ignore });

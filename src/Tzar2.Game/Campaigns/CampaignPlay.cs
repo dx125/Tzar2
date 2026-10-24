@@ -172,7 +172,7 @@ public static class ScenarioMatch
     /// <param name="computerAi">Whether computer kingdoms run the legacy AI.</param>
     /// <param name="cheats">Whether cheats are allowed (the headless solver).</param>
     /// <param name="custom">The single-player setup of a custom map, or null (campaigns: the map as it is).</param>
-    public static MatchSetup Setup(MissionContent mission, Ruleset ruleset, CampaignProgress? carry = null, bool computerAi = true, bool cheats = false, CustomMapSettings? custom = null)
+    public static MatchSetup Setup(MissionContent mission, Ruleset ruleset, CampaignProgress? carry = null, bool computerAi = true, bool cheats = false, CustomMapSettings? custom = null, Difficulty? difficulty = null)
     {
         ArgumentNullException.ThrowIfNull(mission);
         ArgumentNullException.ThrowIfNull(ruleset);
@@ -243,7 +243,7 @@ public static class ScenarioMatch
 
             bool absent = p != human && p != rescue && left is not null && !left.Contains(p);
             list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue || absent ? ControllerKind.Passive : ControllerKind.Computer,
-                custom?.Difficulty ?? Difficulty.Normal, Colour: custom?.KingdomAt(p)?.Colour ?? 255);
+                custom?.Difficulty ?? difficulty ?? Difficulty.Normal, Colour: custom?.KingdomAt(p)?.Colour ?? 255);
         }
 
         // The objects of the kingdoms left out are not created; a kingdom given another civilization takes it for its
@@ -766,6 +766,16 @@ public sealed record MissionEnd(MissionResult Result, string? NextMapId, Campaig
 /// </summary>
 public static class CampaignFlow
 {
+    /// <summary>
+    /// The entry missions the campaign screen lists, in the campaign's order (SHELL-004): those the campaign starts with,
+    /// or once it has progress those unlocked, which the original lists as the missions reached since (ReTzar's reading).
+    /// </summary>
+    public static IReadOnlyList<CampaignMap> EntryMissions(CampaignData campaign, CampaignProgress? progress)
+    {
+        ArgumentNullException.ThrowIfNull(campaign);
+        return [.. campaign.Maps.Where(m => progress is null ? m.IsEntry : progress.Unlocked.Contains(m.Id))];
+    }
+
     /// <summary>Progress at the start of a campaign: the entry maps unlocked, the first one current.</summary>
     public static CampaignProgress Begin(CampaignData campaign)
     {

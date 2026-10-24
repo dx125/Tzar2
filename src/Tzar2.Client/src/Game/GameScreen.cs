@@ -2519,6 +2519,27 @@ public partial class GameScreen : Node
         };
     }
 
+    // SHELL-027: resign (single player) or disconnect (multiplayer), once confirmed.
+    private void AskQuit()
+    {
+        _session.Paused = !_session.IsMultiplayer;
+        var question = new ConfirmDialog(_ui, _hud!.Layout.Size,
+            Tzar2.Game.Ui.Confirmations.For(Tzar2.Game.Ui.Confirmations.GameMenuQuit(_session.IsMultiplayer), _catalog.Text))
+        { Name = "Confirm" };
+        var confirmLayer = new CanvasLayer { Layer = 3, Name = "Confirm" };
+        confirmLayer.AddChild(question);
+        AddChild(confirmLayer);
+        question.Answered += yes =>
+        {
+            _session.Paused = false;
+            if (yes)
+            {
+                QuitRequested?.Invoke();
+            }
+        };
+        question.Closed += () => confirmLayer.QueueFree();
+    }
+
     private void ShowMenu()
     {
         if (GetNodeOrNull("GameMenu") is not null || _hud is null)
@@ -2535,23 +2556,7 @@ public partial class GameScreen : Node
             switch (choice)
             {
                 case GameMenuChoice.Quit:
-                    // SHELL-027: resign (single player) or disconnect (multiplayer), once confirmed.
-                    _session.Paused = !_session.IsMultiplayer;
-                    var question = new ConfirmDialog(_ui, _hud.Layout.Size,
-                        Tzar2.Game.Ui.Confirmations.For(Tzar2.Game.Ui.Confirmations.GameMenuQuit(_session.IsMultiplayer), _catalog.Text))
-                    { Name = "Confirm" };
-                    var confirmLayer = new CanvasLayer { Layer = 3, Name = "Confirm" };
-                    confirmLayer.AddChild(question);
-                    AddChild(confirmLayer);
-                    question.Answered += yes =>
-                    {
-                        _session.Paused = false;
-                        if (yes)
-                        {
-                            QuitRequested?.Invoke();
-                        }
-                    };
-                    question.Closed += () => confirmLayer.QueueFree();
+                    AskQuit();
                     break;
                 case GameMenuChoice.Restart:
                     RestartRequested?.Invoke();

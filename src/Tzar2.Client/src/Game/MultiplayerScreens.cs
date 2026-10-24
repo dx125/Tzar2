@@ -81,8 +81,6 @@ public abstract partial class MultiplayerArtScreen : ArtScreen
     /// <summary>A STRINGS.INI text (the part before a <c>|</c>), or <paramref name="fallback"/>.</summary>
     protected string T(string section, string key, string fallback) => _text?.Invoke(section, key, fallback) ?? fallback;
 
-    /// <summary>Gold, the colour of the screens' texts.</summary>
-    protected static readonly Color Gold = new(1f, 0.92f, 0.65f);
 
     /// <summary>
     /// A line of text in the original font at a position relative to the art, cut to <paramref name="width"/> (0: not

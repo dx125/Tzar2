@@ -100,8 +100,7 @@ public partial class ChooseMapScreen : ArtScreen
     private static readonly Vector2I PlaySlot = new(535, 544);
     private const int RowHeight = 18;
 
-    private static readonly Color Gold = new(1f, 0.92f, 0.65f);
-    private static readonly Color Grey = new(0.75f, 0.75f, 0.7f);
+    private static readonly Color Grey = DarkGold; // the rows not chosen, as the original's (ReTzar)
 
     private readonly IReadOnlyList<CustomMap> _maps;
     private readonly Func<MapData, Image?> _preview;
