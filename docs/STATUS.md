@@ -153,8 +153,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    with the original.
    1. Fields could not be built ("Requires: requirements"; a blocker): **fixed** (log below).
    2. Builders arriving at a site push the working ones aside instead of taking the free places around it. Up to 8
-      peasants work around one tree in the original, while ours cut from one side; mines alike. Likely the whole logic
-      of a group working at one object: check ReTzar.
+      peasants work around one tree in the original, while ours cut from one side; mines alike: **fixed** (WORLD-019,
+      log below). Open: soldiers crowding a building they attack.
    3. The gathering cursors (pick, saw, perhaps others) are not the original's: **fixed**, every pointer as ReTzar
       reads the original (CTRL-012, CTRL-013; log below).
    4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
@@ -303,6 +303,22 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-24 — Workers take a place of their own at what they work at (WORLD-019; the fifth play-test).** Builders
+  arriving at a site pushed the working ones aside, and a group cut a tree from one side. ReTzar reads the original:
+  units ordered to an object take the cells of its edge (its footprint grown by one) one by one, from where the path
+  ends, alternately ahead and behind (0x451cc0, 0x451b40), and a cell holds one unit. Now:
+  * a worker walks to the first such tile that it can stand on, that no other worker at the object walks to or holds
+    and where no other unit stands; on its way it stops only there, not where it first touches the object;
+  * a unit at work (gathering, building, repairing, capturing) is not shoved by the other workers of the same object;
+    everyone else shoves it as before (holding it against all workers broke the campaign acceptance's alex1 through a
+    changed economy, so the rule stays where the play-test saw it);
+  * when every place at a node is taken (eight at a tree), the worker takes the next node with room.
+
+  Tzar2's paths do not know units, so a worker the crowd stops short of its tile works where it stopped. The gameplay
+  and AI goldens and both CI bench hashes are re-pinned (gameplay D62F1CB1FA30D467, ai F7A172FC2A942001); the sim bench
+  does not move. The original's campaigns still complete 19 of 19 and the tutorial 7 of 7 (the acceptance test with
+  `TZAR2_ORIGIN`). Cost: 8 AIs for 10 minutes run at the tick p50 and p99 of main (0.23-0.26 and 0.97-1.17 ms).
 
 * **2026-10-24 — The hybrid HUD (HUD-009; the fifth play-test, item 5.5).** The owner asked for one layout without a
   switch, in place of the side panels of item 14: the top bar of `LAYOUT1024H`; the minimap and the day globe in the

@@ -117,8 +117,8 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 9 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 353 | 265 | 72 | 2 | 0 | 10 | 4 |
+| [Terrain and movement](world.yaml) (WORLD) | 19 | 12 | 5 | 0 | 0 | 2 | 0 |
+| **All** | 354 | 266 | 72 | 2 | 0 | 10 | 4 |
 
 ## Not done yet
 

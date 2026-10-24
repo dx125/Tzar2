@@ -129,6 +129,15 @@ public sealed class WorkerSystem : ISimSystem
                     w.TimerMs = 0;
                     w.Retries = 0;
                 }
+                else if (!Interaction.IsMoving(world, worker) && !Interaction.HasWorkSpot(world, node, worker)
+                    && Interaction.NextNode(world, worker, w.NodeResource, w.NodeX, w.NodeY, world.Ruleset.Gameplay.NodeSearchRadiusTiles, exclude: node) is { IsNone: false } other)
+                {
+                    // Every place at the node is taken (at most eight peasants at a tree): the next node with room.
+                    w.Target = other.Value;
+                    w.Retries = 0;
+                    Position p = world.Positions.Get(other);
+                    (w.NodeX, w.NodeY) = (p.X, p.Y);
+                }
                 else if (!Approach(world, worker, ref w, node, position, type))
                 {
                     // Cannot get there: try another node next tick (excluding none: the nearest may be the same).
