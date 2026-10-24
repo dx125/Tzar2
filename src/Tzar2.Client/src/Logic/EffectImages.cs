@@ -25,6 +25,9 @@ public static class EffectImages
     /// <summary>The yellow stars floating above a unit that carries a spell book (IMAGES.INI <c>magic_star</c>; 1.09, ITEM-012).</summary>
     public const string BookStars = "magic_star";
 
+    /// <summary>Played over a caster whose most mana grows to a spell's cost (IMAGES.INI <c>pump</c>; MAG-027, ReTzar 0x4e1d0a).</summary>
+    public const string ManaPump = "pump";
+
     /// <summary>Every picture a match may need.</summary>
     public static IReadOnlyList<string> All { get; } =
     [

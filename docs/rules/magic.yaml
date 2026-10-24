@@ -129,10 +129,10 @@ rules:
     adr: [0267]
   MAG-027:
     rule: A caster ordered to cast a spell that costs more than its whole pool has its pool raised to the cost; a summon costs its creature's mana.
-    source: ['community ReTzar src/gameplay.rs (0x4e1c30, 0x4723e0)', 'data the manna of the summoned creatures (bat 25, jinn 300, carpet 500, stone golem 600, dragon 800), above every caster''s pool of 100']
+    source: ['community ReTzar src/gameplay.rs (0x4e1c30, 0x4e1d0a, 0x4723e0)', 'data the manna of the summoned creatures (bat 25, jinn 300, carpet 500, stone golem 600, dragon 800), above every caster''s pool of 100']
     status: tested
     adr: [0267]
-    note: The original also plays the pump picture over the caster; Tzar2 does not draw it yet.
+    note: The pump picture plays over the caster (the ManaRaised event, ReTzar 0x4e1d0a).
   MAG-028:
     rule: A ninja's murder is one blow of fifteen times its attack, through the target's defence, which spends all its mana; it takes any unit, the Messiah too, and a ninja with 60 mana ordered to attack a unit murders it with its first blow.
     source: ['community ReTzar src/gameplay.rs (0x4e076a, 0x437250, 0x4eb950, 0x4e197d)', 'guide Campaign Discussion (Mission 18)']

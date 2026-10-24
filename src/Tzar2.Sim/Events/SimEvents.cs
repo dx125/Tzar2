@@ -224,11 +224,20 @@ public enum SimEventKind : ushort
     /// <summary>A holder's damage was spread over the units inside (Entity = holder, X = units hit, Arg = total damage).</summary>
     DamageShared = 39,
 
-    /// <summary>A spy took another kingdom's unit's look (Entity = spy, X = target index, Y = its owner, Arg = its type id; ADR 0184).</summary>
-    Impersonated = 40,
+    /// <summary>
+    /// A spy took another kingdom's unit's look (Entity = spy, X = target index, Y = its owner, Arg = its type id; ADR 0184).
+    /// It was 40 until 2026-10-23, the same as <see cref="DiplomacyChanged"/>, which every reader of either took for both.
+    /// </summary>
+    Impersonated = 55,
 
     /// <summary>A market offers a new item (TECH-030; Entity = item, X = market index, Arg = item type id).</summary>
     ItemOffered = 54,
+
+    /// <summary>
+    /// A caster's most mana was raised to the cost of a spell it was ordered to cast (MAG-027; Entity = caster, Arg = the new
+    /// most mana); the original plays the <c>pump</c> picture over it (ReTzar 0x4e1d0a).
+    /// </summary>
+    ManaRaised = 56,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>
