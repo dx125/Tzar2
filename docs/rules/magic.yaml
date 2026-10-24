@@ -133,6 +133,12 @@ rules:
     status: tested
     adr: [0267]
     note: The original also plays the pump picture over the caster; Tzar2 does not draw it yet.
+  MAG-028:
+    rule: A ninja's murder is one blow of fifteen times its attack, through the target's defence, which spends all its mana; it takes any unit, the Messiah too, and a ninja with 60 mana ordered to attack a unit murders it with its first blow.
+    source: ['community ReTzar src/gameplay.rs (0x4e076a, 0x437250, 0x4eb950, 0x4e197d)', 'guide Campaign Discussion (Mission 18)']
+    status: tested
+    adr: [0268]
+    note: The mana the murder order needs (50) is UNVERIFIED.
   MAG-021:
     rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; the fuller it is, the closer the copied kingdom's spies must come to unmask it, right next to it at 100.
     source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846, capture capture-20261022-011438]

@@ -435,6 +435,8 @@ public sealed class WorldRenderer : IDisposable
             UnitActivity.Meat => UnitAnim.Farm,
             UnitActivity.Cast when visual.Images.ContainsKey(UnitAnim.Spell) => UnitAnim.Spell,
             UnitActivity.Cast => UnitAnim.Attack,
+            UnitActivity.Murder when visual.Images.ContainsKey(UnitAnim.Murder) => UnitAnim.Murder,
+            UnitActivity.Murder => UnitAnim.Attack, // the attack picture for a class without image_murder (ReTzar 0x4e197d)
             _ => UnitAnim.Idle,
         };
         if (anim == UnitAnim.Attack)

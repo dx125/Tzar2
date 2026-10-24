@@ -487,6 +487,21 @@ public sealed class MagicSystem : ISimSystem
                 }
 
                 break;
+            case SpellEffect.Murder:
+                // ReTzar 0x4e076a: one blow of the caster's attack times the amount, through the defence like any blow (not
+                // magic: the Messiah takes it, as the guide's "8-10 cloaked Ninja set to murder him" says); all mana spent.
+                if (world.Entities.IsAlive(caster) && world.TypeOf(caster) is { Traits.Armament: { } arm } killer)
+                {
+                    int attack = (int)Math.Min((long)CombatStats.Attack(world, caster, killer, arm) * Math.Max(1, s.Amount), int.MaxValue);
+                    CombatSystem.Apply(world, new HitRecord(caster, target, owner, killer.Id, attack, 0, 100, arm.DamageClass, world.IsHero(caster)), deaths);
+                }
+
+                if (world.Manas.IndexOf(caster) is >= 0 and var spent)
+                {
+                    world.Manas.At(spent).MilliMana = 0;
+                }
+
+                break;
             case SpellEffect.Kill:
                 if (!world.IsHero(target) && (world.TypeOf(target).Traits.Abilities & AbilityFlags.KillImmune) == 0 && !world.IsStone(target))
                 {

@@ -85,7 +85,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // With the three settings above (#226, #225, then this change) the ruleset hash is the value below.
     // (ADR 0266, 2026-10-23) the classic spells lose their cooldownMs: the ruleset hash.
     // (ADR 0267, 2026-10-23) manaRegenPerMinute 120 and combat.natureManaRegenPercent 50: the ruleset hash.
-    private const ulong GoldenRulesetHash = 0x790035C864BF32A8UL;
+    // (ADR 0268, 2026-10-23) the ninja's murder becomes a blow (effect murder, combat.murderBlowMana): the ruleset hash only.
+    private const ulong GoldenRulesetHash = 0x195DF0DEB49CC3C6UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.

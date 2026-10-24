@@ -674,6 +674,13 @@ internal static class GameplayCommands
                 continue;
             }
 
+            // A ninja with enough mana murders the unit it is ordered to attack with its first blow (MAG-028, ReTzar 0x4eb950).
+            if (traits.Category == EntityCategory.Unit && CombatMagicCommands.TryMurderBlow(world, entity, target))
+            {
+                applied++;
+                continue;
+            }
+
             ClearTasks(world, entity, CombatMode.Explicit);
             Interaction.Halt(world, entity);
             world.Combats.Get(entity).Target = target.Value;
