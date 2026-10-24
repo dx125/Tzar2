@@ -102,10 +102,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0265, 2026-10-23) a spell book keeps its own pool and may be endless (item state grows, hashed layout 17, snapshot 19): the hashes.
     // (ADR 0266, 2026-10-23) no spell cooldowns (casters wait only for mana) and spells learned from books (a new store, hashed layout 18, snapshot 20): the hashes.
     // (ADR 0267, 2026-10-23) mana regrows 2 a second (Nature 1), a pool below a spell's cost is raised to it, a summon costs its creature's mana (mana state grows, hashed layout 19, snapshot 21): the hashes.
-    // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at and are not shoved while at
-    // work (the fifth play-test): the stream and the final hash.
-    private const ulong GoldenHashStream = 0x7B823150BFA0671DUL;
-    private const ulong GoldenFinalFullHash = 0x28CB2DCA6B074CFDUL;
+    // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at and are not shoved there by
+    // the others of the same object (the fifth play-test): the stream and the final hash.
+    private const ulong GoldenHashStream = 0x97DBEB5CAB80BD0BUL;
+    private const ulong GoldenFinalFullHash = 0xB6D83044152C3EFCUL;
 
     private const int Ticks = 1600;
 

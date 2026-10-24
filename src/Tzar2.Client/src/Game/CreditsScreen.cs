@@ -54,29 +54,6 @@ public partial class CreditsScreen : ArtScreen
         _text.Size = new Vector2(page.Width, y);
     }
 
-    // Words wrapped to the page in the line's own font.
-    private List<string> WrapIn(string text, int width, string font)
-    {
-        var lines = new List<string>();
-        string line = string.Empty;
-        foreach (string word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        {
-            string next = line.Length == 0 ? word : line + " " + word;
-            if (line.Length > 0 && Ui.Measure(next, font) > width)
-            {
-                lines.Add(line);
-                line = word;
-            }
-            else
-            {
-                line = next;
-            }
-        }
-
-        lines.Add(line);
-        return lines;
-    }
-
     /// <summary>Raised when the player leaves the credits.</summary>
     public event Action? Closed;
 

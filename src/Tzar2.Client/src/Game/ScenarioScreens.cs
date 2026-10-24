@@ -311,13 +311,15 @@ public partial class ConfirmDialog : ScenarioDialog
     public ConfirmDialog(UiAssets ui, Vector2I screen, Tzar2.Game.Ui.Confirmation question)
         : base(ui, screen, "art/screens/d_msgwnd/back.t2img")
     {
+        // As ReTzar reads the original's question window: the title in Arial 14 bold, the question in Arial 12 bold, both
+        // gold and centred (the fifth play-test: the texts were not the original's).
         ArtBox title = DialogBoxes.QuestionTitle;
-        Text(new Vector2I(title.X + ((title.Width - Ui.Measure(question.Title, UiAssets.BoldFont)) / 2), title.Y), question.Title, UiAssets.BoldFont);
+        Text(new Vector2I(title.X + ((title.Width - Ui.Measure(question.Title, UiAssets.TitleFont)) / 2), title.Y), question.Title, UiAssets.TitleFont, Gold);
         ArtBox body = DialogBoxes.QuestionText;
-        List<string> lines = Wrap(question.Question, body.Width);
-        for (int i = 0; i < Math.Min(lines.Count, body.Height / 14); i++)
+        List<string> lines = Wrap(question.Question, body.Width, UiAssets.BoldFont);
+        for (int i = 0; i < Math.Min(lines.Count, body.Height / 16); i++)
         {
-            Text(new Vector2I(body.X + ((body.Width - Ui.Measure(lines[i], UiAssets.SmallFont)) / 2), body.Y + (i * 14)), lines[i], UiAssets.SmallFont, Colors.White);
+            Text(new Vector2I(body.X + ((body.Width - Ui.Measure(lines[i], UiAssets.BoldFont)) / 2), body.Y + (i * 16)), lines[i], UiAssets.BoldFont, Gold);
         }
 
         ArtBox yes = DialogBoxes.QuestionYes, no = DialogBoxes.QuestionNo;

@@ -155,7 +155,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    2. Builders arriving at a site push the working ones aside instead of taking the free places around it. Up to 8
       peasants work around one tree in the original, while ours cut from one side; mines alike: **fixed** (WORLD-019,
       log below). Open: soldiers crowding a building they attack.
-   3. The gathering cursors (pick, saw, perhaps others) are not the original's: check them all against ReTzar.
+   3. The gathering cursors (pick, saw, perhaps others) are not the original's: **fixed**, every pointer as ReTzar
+      reads the original (CTRL-012, CTRL-013; log below).
    4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
    5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14), as corrected on
       2026-10-24: the minimap and the day globe as in the original's left HUD (`LAYOUT1024L`); the selection view and
@@ -163,11 +164,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       middle of the screen, not stretched across it. Whether these panels turn translucent with nothing selected is to
       be proposed.
    6. Texts still not in the original's style, such as the QUIT confirmation's. The confirmation itself stays (the
-      original has none; the owner finds it handy).
+      owner finds it handy; STRINGS.INI `[q]` holds the original's own questions): **fixed** for the shell (log below).
    7. The main menu: the original's five buttons in the art's slots, in the original's colours, lit under the pointer
-      (the owner's answer to UI review question 1). The other menu screens differ in style too.
+      (the owner's answer to UI review question 1). The other menu screens differ in style too: **fixed**, the
+      menus' buttons and texts in the original's fonts and colours (log below).
    8. The campaign screen: the original's layout (campaigns, campaign description, entry missions and their
-      description; PLAY, the difficulty, BACK).
+      description; PLAY, the difficulty, BACK): **fixed** (log below).
 6. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 7. **Done (2026-10-22, ADR 0190):** walking speed for every class from its walk sheet's stride, by the rule ReTzar read
@@ -308,13 +310,42 @@ the process decisions that have no ADR.
   ends, alternately ahead and behind (0x451cc0, 0x451b40), and a cell holds one unit. Now:
   * a worker walks to the first such tile that it can stand on, that no other worker at the object walks to or holds
     and where no other unit stands; on its way it stops only there, not where it first touches the object;
-  * a unit at work (gathering, building, repairing, capturing) is not shoved by others, nor by another at work;
+  * a unit at work (gathering, building, repairing, capturing) is not shoved by the other workers of the same object;
+    everyone else shoves it as before (holding it against all workers broke the campaign acceptance's alex1 through a
+    changed economy, so the rule stays where the play-test saw it);
   * when every place at a node is taken (eight at a tree), the worker takes the next node with room.
 
   Tzar2's paths do not know units, so a worker the crowd stops short of its tile works where it stopped. The gameplay
-  and AI goldens and both CI bench hashes are re-pinned (gameplay 4EDC85F684266735, ai C3346CBCDBAAA08C); the sim bench
-  does not move. Cost: 8 AIs for 10 minutes run at the same tick p50 and p99 as before (0.23-0.24 and 1.12-1.16 ms).
+  and AI goldens and both CI bench hashes are re-pinned (gameplay D62F1CB1FA30D467, ai F7A172FC2A942001); the sim bench
+  does not move. The original's campaigns still complete 19 of 19 and the tutorial 7 of 7 (the acceptance test with
+  `TZAR2_ORIGIN`). Cost: 8 AIs for 10 minutes run at the tick p50 and p99 of main (0.23-0.26 and 0.97-1.17 ms).
   The owner corrected the HUD of item 5.5: the selection view and the orders in the middle at the bottom, in two rows.
+
+* **2026-10-24 — The menus in the original's style; the main menu's five slots; the campaign screen rebuilt (the fifth
+  play-test, items 5.6-5.8).** ReTzar reads how the original draws its menus, and the shell follows it:
+  * a button's label is Arial 14 bold in dark gold, gold under the pointer and while pressed (a pixel down and right),
+    darker when disabled; the screens' captions, values and names are Arial 12 bold in gold, the other rows of a list
+    and the descriptions in dark gold; the hint box's text is Arial 12 bold;
+  * the main menu has the original's five items in the art's five slots (the owner's answer to UI review question 1);
+    the editor and the asset viewer are small links at the bottom left, the version is at the bottom right;
+  * the question window (QUIT, resign, disconnect): its title in Arial 14 bold and its question in Arial 12 bold, both
+    gold; the UI smoke test now audits it in the game too;
+  * the campaign screen in the original's layout: the campaigns and the selected one's description above, its entry
+    missions (those it starts with and those reached since) and the selected one's description below, each with the
+    original's scroll bar; PLAY, the difficulty (Easy, Normal, Hard for the computers of the campaign's missions) and
+    BACK. Tzar2's RESTART CAMPAIGN goes: every mission reached stays in the entry missions.
+
+* **2026-10-24 — The pointers over the map are the original's (CTRL-012, CTRL-013; the fifth play-test).** Tzar2 had
+  painted its own saw over trees and pickaxe over rocks (play-test of 2026-10-20). ReTzar reads the original's choice:
+  * over an object, the pointer of the right click (0x4f45b0 → 0x42da60): the shovel for cutting, mining, farming and
+    building a site; the repair pointer for a repair; the spell for a capture; the hand for an item only; the move
+    pointer for boarding; the arrow for walking, following, milking, fishing and carrying home;
+  * while a card's order waits for its target, the order's pointer (0x43a8c1): the repair pointer for capture and
+    build, the patrol path for patrol and explore, the spell for an item used on a target.
+
+  The choice is an engine-free model (`OrderCursors`) and the cursors are named by the original's IMAGES.INI entries,
+  each with its own hotspot (the spell's capture variant has another). Shift on an attack keeps the attack-set pointer
+  (CTRL-026), Tzar2's choice.
 
 * **2026-10-24 — The fifth play-test; fields can be built again; the inventory's eye is grey with nothing to show.**
   The owner played the installed build 0.7.0-beta.6+a393a3b; the findings are work queue item 5. Two are fixed:

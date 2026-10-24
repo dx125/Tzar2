@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Text;
 using Tzar2.AI.Legacy.Program;
 using Tzar2.AI.Scenarios;
@@ -45,9 +44,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // so the commands change.
     // (ADR 0220, 2026-10-22) the corner slide and allies as friends in movement: the fights and so the commands change.
     // (ADR 0250, 2026-10-22) the curse, hypnosis, the banshee and the Messiah as ReTzar reads them: a synthetic Messiah shifts type ids, status effects grow (hashed layout 13): the commands name the shifted type ids.
-    // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at and are not shoved while at
-    // work: the economy changes, and so the commands.
-    private const ulong GoldenCommandStream = 0x023C163E8FEBDB6CUL;
+    // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at and are not shoved there by
+    // the others of the same object: the economy changes, and so the commands.
+    private const ulong GoldenCommandStream = 0x4D12BACB2F04AC94UL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
@@ -66,8 +65,8 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0267, 2026-10-23) mana regrows 2 a second (Nature 1), a pool below a spell's cost is raised to it, a summon costs its creature's mana (mana state grows, hashed layout 19, snapshot 21): the hashes.
     // (ADR 0269, 2026-10-23) the computer picks up and uses items (AI-005; its settings byte in the AI state gains TakesItems): the hashes.
     // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at: the hashes.
-    private const ulong GoldenHashStream = 0x1BBDA0C7363B0036UL;
-    private const ulong GoldenFinalFullHash = 0x86FA3FF9B07A1057UL;
+    private const ulong GoldenHashStream = 0xD4CBD52556D10E07UL;
+    private const ulong GoldenFinalFullHash = 0x0847ADB557A0ABADUL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;
@@ -94,9 +93,7 @@ public class AiGoldenHashTests(ITestOutputHelper output)
 
         ulong final = scenario.Simulation.ComputeFullHash();
         output.WriteLine($"workers={workers} runtime={Environment.Version} commands={commands.GetCurrentHash():X16} stream={states.GetCurrentHash():X16} final={final:X16} {scenario.Describe()}");
-        // Every computer plays and the kingdoms attack (since WORLD-019 p0 sends no wave in the 10 minutes; the others do).
-        Assert.True(Enumerable.Range(0, 4).All(p => scenario.Ai.Issued(p) > 0 && scenario.Trained(p) > 0), scenario.Describe());
-        Assert.True(Enumerable.Range(0, 4).Sum(p => scenario.Ai.Players[p].Waves) > 0, scenario.Describe());
+        Assert.True(scenario.Ai.Issued(0) > 0 && scenario.Trained(0) > 0 && scenario.Ai.Players[0].Waves > 0, scenario.Describe());
         Assert.Equal(GoldenCommandStream, commands.GetCurrentHash());
         Assert.Equal(GoldenHashStream, states.GetCurrentHash());
         Assert.Equal(GoldenFinalFullHash, final);

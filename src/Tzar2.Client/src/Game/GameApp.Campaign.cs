@@ -19,6 +19,7 @@ public partial class GameApp
     private ProfileStore? _profiles;
     private PlayerProfile? _profile;
     private ICampaignSource? _campaign;
+    private Tzar2.Game.Session.Difficulty _campaignDifficulty = Tzar2.Game.Session.Difficulty.Normal; // the campaign screen's choice
     private string? _missionMap;
     private GameSession? _mission;
     private bool _missionEnding;
@@ -128,13 +129,11 @@ public partial class GameApp
             return;
         }
 
-        var screen = new CampaignScreen(_ui!, _catalog, Screen, Campaigns(), Profile);
-        screen.Play += (source, map) => StartMission(source, map);
-        screen.Restart += source =>
+        var screen = new CampaignScreen(_ui!, _catalog, Screen, Campaigns(), Profile, _campaignDifficulty);
+        screen.Play += (source, map, difficulty) =>
         {
-            _profile = Profile.With(CampaignFlow.Begin(source.Campaign));
-            Profiles.Save(_profile);
-            ShowCampaigns();
+            _campaignDifficulty = difficulty;
+            StartMission(source, map);
         };
         screen.Back += ShowMainMenu;
         Replace(screen, music: null);
@@ -172,7 +171,7 @@ public partial class GameApp
         GameSession session;
         try
         {
-            session = resume is not null ? resume.Resume(source, _rules) : new GameSession(ScenarioMatch.Setup(source.Load(map), _rules, progress), _rules);
+            session = resume is not null ? resume.Resume(source, _rules) : new GameSession(ScenarioMatch.Setup(source.Load(map), _rules, progress, difficulty: _campaignDifficulty), _rules);
         }
         catch (Exception e) when (e is ArgumentException or InvalidDataException or KeyNotFoundException)
         {

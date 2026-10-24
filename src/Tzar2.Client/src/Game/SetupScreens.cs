@@ -19,10 +19,10 @@ public abstract partial class SetupScreen : ArtScreen
     /// <summary>The common screen art.</summary>
     protected const string Common = "art/screens/common/";
 
-    /// <summary>The colour of the captions.</summary>
-    protected static readonly Color Caption = new(0.85f, 0.85f, 0.75f);
+    /// <summary>The colour of the captions: gold, as the original's (ReTzar's reading; the fifth play-test).</summary>
+    protected static readonly Color Caption = Gold;
 
-    private static readonly Color Disabled = new(0.55f, 0.52f, 0.42f);
+    private static readonly Color Disabled = DisabledGold;
     private readonly Control _layer;
 
     /// <summary>Creates the screen on <paramref name="background"/>.</summary>
@@ -63,7 +63,7 @@ public abstract partial class SetupScreen : ArtScreen
         int y = 35 * index;
         Picture(new Vector2I(62, 20 + y), Ui.Texture(rowArt));
         Picture(new Vector2I(73, 31 + y), Ui.Region(Common + "color bars.t2img", new Rect2I(0, Math.Min((int)colour, 7) * 13, 13, 13)));
-        Label(new Vector2I(110, 30 + y), name, Colors.White);
+        Label(new Vector2I(110, 30 + y), name, Gold);
         Spin(new Vector2I(311, 23 + y), civilization, step => change(RandomMapRowField.Civilization, step), arrows: true, enabled: enabled);
         Hint(new Rect2I(73, 31 + y, 13, 13), HintPrefix + "_PLAYER_COLOR");
         Hint(new Rect2I(110, 30 + y, 163, 14), HintPrefix + "_PLAYER_NAME");
@@ -136,17 +136,17 @@ public abstract partial class SetupScreen : ArtScreen
             Click(new Rect2I(at + new Vector2I(Arrow, 0), new Vector2I(width - (2 * Arrow), Arrow)), () => change(+1));
         }
 
-        string shown = Fit(value, width - (2 * Arrow) - 6, UiAssets.SmallFont);
-        if (Ui.Text(shown, UiAssets.SmallFont, enabled ? Colors.White : Disabled) is { } t)
+        string shown = Fit(value, width - (2 * Arrow) - 6, UiAssets.BoldFont);
+        if (Ui.Text(shown, UiAssets.BoldFont, enabled ? Gold : Disabled) is { } t)
         {
             Picture(at + new Vector2I((width - t.GetWidth()) / 2, (Arrow - t.GetHeight()) / 2), t);
         }
     }
 
-    /// <summary>A line of small text at a position of the art.</summary>
+    /// <summary>A line of text (Arial 12 bold, the original's menus' text) at a position of the art.</summary>
     protected void Label(Vector2I at, string text, Color colour)
     {
-        if (Ui.Text(text, UiAssets.SmallFont, colour) is { } t)
+        if (Ui.Text(text, UiAssets.BoldFont, colour) is { } t)
         {
             Picture(at, t);
         }
@@ -197,13 +197,14 @@ public partial class MapSetupScreen : SetupScreen
         _model = model;
         _catalog = catalog;
         Notice(notice, new Vector2I(66, 304), 470); // below the kingdoms' rows
-        Text(new Vector2I(549, 35), T("t_map_decr", "Map Description"), UiAssets.SmallFont, Caption);
-        List<string> lines = Wrap(map.Description.Length > 0 ? map.Description : map.Title, Description.Size.X);
-        int max = Description.Size.Y / 14;
+        // The caption in gold, the description in dark gold, both Arial 12 bold (ReTzar's reading of the original).
+        Text(new Vector2I(549, 35), T("t_map_decr", "Map Description"), UiAssets.BoldFont, Caption);
+        List<string> lines = WrapIn(map.Description.Length > 0 ? map.Description : map.Title, Description.Size.X, UiAssets.BoldFont);
+        int max = Description.Size.Y / 16;
         for (int i = 0; i < lines.Count && i < max; i++)
         {
-            string line = i == max - 1 && lines.Count > max ? Fit(lines[i] + "...", Description.Size.X, UiAssets.SmallFont) : lines[i];
-            Text(Description.Position + new Vector2I(0, i * 14), line, UiAssets.SmallFont, Colors.White);
+            string line = i == max - 1 && lines.Count > max ? Fit(lines[i] + "...", Description.Size.X, UiAssets.BoldFont) : lines[i];
+            Text(Description.Position + new Vector2I(0, i * 16), line, UiAssets.BoldFont, DarkGold);
         }
 
         const string Btn = Art + "btn.t2img";

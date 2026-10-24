@@ -2223,31 +2223,14 @@ public partial class GameScreen : Node
             bool shift = Input.IsKeyPressed(Key.Shift), alt = Input.IsKeyPressed(Key.Alt);
             if (_mode != OrderMode.None)
             {
-                name = _mode switch
-                {
-                    OrderMode.Attack when alt => "cs_attacktype", // CTRL-026: every object of the type
-                    OrderMode.Attack when shift => "cs_attackset", // CTRL-026: a set attacked in turn
-                    OrderMode.Attack => "s_attack",
-                    OrderMode.Harvest => "s_harvest",
-                    OrderMode.Patrol when shift => "s_patrol2", // ORD-006: a patrol path
-                    OrderMode.Patrol => "s_patrol",
-                    OrderMode.Guard => "s_guard",
-                    OrderMode.Repair => "s_repair",
-                    OrderMode.AttackGround or OrderMode.MoveAdvance => "s_attack",
-                    OrderMode.Capture or OrderMode.Bribe or OrderMode.PickItem or OrderMode.Impersonate => "s_hand",
-                    OrderMode.Spell => "s_spell",
-                    OrderMode.UseItem => "s_potion",
-                    OrderMode.Unload when !LandUnderPointer() => "s_none", // ORD-014: no landing there
-                    _ => "s_move",
-                };
+                string mode = OrderCursors.ForMode(_mode, shift, alt, _mode != OrderMode.Unload || LandUnderPointer());
+                name = mode == OrderCursors.Arrow ? name : mode;
             }
             else if (_selection.IsOwn && PickAt(_mouse) is { } hover)
             {
-                name = HoverCursor(hover, SelectedInfos(), name);
-                if (name == "s_attack")
-                {
-                    name = alt ? "cs_attacktype" : shift ? "cs_attackset" : name;
-                }
+                bool dug = _rules.EntityTypes[hover.TypeId].HasFootprint; // a tree, a rock, a field; not a cow, fish or meat
+                string over = OrderCursors.ForHover(OrderResolver.Hover(SelectedInfos(), hover, _session.LocalPlayer, _rules), dug, shift, alt);
+                name = over == OrderCursors.Arrow ? name : over;
             }
         }
 
@@ -2265,36 +2248,6 @@ public partial class GameScreen : Node
         (int x, int y) = ToWorld(_mouse);
         int tx = x / MapData.UnitsPerTile, ty = y / MapData.UnitsPerTile;
         return tx >= 0 && ty >= 0 && tx < _world.MapWidth && ty < _world.MapHeight && (_frame.Terrain[(ty * _world.MapWidth) + tx] & Placement.Land) != 0;
-    }
-
-    // The cursor of the right click's default action on what the pointer is over (OrderResolver.Hover, the same rules the
-    // click follows): the sword over enemies, the hand over buildings to capture and items to pick up, the resource's
-    // tool for harvesters (saw, pickaxe, the original's harvest cursor over fields, cows and fish), the hammer over own
-    // sites and damaged objects for builders, the move cursor over holders to board and units to follow; elsewhere the
-    // pointer (play-test of 2026-10-20: the hand showed over everything).
-    private string HoverCursor(EntityInfo hover, List<EntityInfo> selection, string pointer)
-    {
-        switch (OrderResolver.Hover(selection, hover, _session.LocalPlayer, _rules))
-        {
-            case DefaultAction.Attack:
-                return "s_attack";
-            case DefaultAction.Capture or DefaultAction.PickItem:
-                return "s_hand";
-            case DefaultAction.Build or DefaultAction.Repair:
-                return "s_repair";
-            case DefaultAction.Board or DefaultAction.Follow:
-                return "s_move";
-            case DefaultAction.Harvest:
-                string resource = _rules.EntityTypes[hover.TypeId].Traits.ResourceNode is { } node && node.Resource < _rules.ResourceTypes.Count ? _rules.ResourceTypes[node.Resource] : string.Empty;
-                return resource switch
-                {
-                    "wood" => OwnCursors.Saw,
-                    "gold" or "stone" or "iron" => OwnCursors.Mine,
-                    _ => "s_harvest",
-                };
-            default:
-                return pointer;
-        }
     }
 
     private void Screenshot()
@@ -2519,6 +2472,27 @@ public partial class GameScreen : Node
         };
     }
 
+    // SHELL-027: resign (single player) or disconnect (multiplayer), once confirmed.
+    private void AskQuit()
+    {
+        _session.Paused = !_session.IsMultiplayer;
+        var question = new ConfirmDialog(_ui, _hud!.Layout.Size,
+            Tzar2.Game.Ui.Confirmations.For(Tzar2.Game.Ui.Confirmations.GameMenuQuit(_session.IsMultiplayer), _catalog.Text))
+        { Name = "Confirm" };
+        var confirmLayer = new CanvasLayer { Layer = 3, Name = "Confirm" };
+        confirmLayer.AddChild(question);
+        AddChild(confirmLayer);
+        question.Answered += yes =>
+        {
+            _session.Paused = false;
+            if (yes)
+            {
+                QuitRequested?.Invoke();
+            }
+        };
+        question.Closed += () => confirmLayer.QueueFree();
+    }
+
     private void ShowMenu()
     {
         if (GetNodeOrNull("GameMenu") is not null || _hud is null)
@@ -2535,23 +2509,7 @@ public partial class GameScreen : Node
             switch (choice)
             {
                 case GameMenuChoice.Quit:
-                    // SHELL-027: resign (single player) or disconnect (multiplayer), once confirmed.
-                    _session.Paused = !_session.IsMultiplayer;
-                    var question = new ConfirmDialog(_ui, _hud.Layout.Size,
-                        Tzar2.Game.Ui.Confirmations.For(Tzar2.Game.Ui.Confirmations.GameMenuQuit(_session.IsMultiplayer), _catalog.Text))
-                    { Name = "Confirm" };
-                    var confirmLayer = new CanvasLayer { Layer = 3, Name = "Confirm" };
-                    confirmLayer.AddChild(question);
-                    AddChild(confirmLayer);
-                    question.Answered += yes =>
-                    {
-                        _session.Paused = false;
-                        if (yes)
-                        {
-                            QuitRequested?.Invoke();
-                        }
-                    };
-                    question.Closed += () => confirmLayer.QueueFree();
+                    AskQuit();
                     break;
                 case GameMenuChoice.Restart:
                     RestartRequested?.Invoke();
