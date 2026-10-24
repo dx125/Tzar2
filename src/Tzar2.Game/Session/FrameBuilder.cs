@@ -684,8 +684,11 @@ internal static class FrameBuilder
         byte[] makeable = frame.Makeable;
         for (int t = 0; t < types; t++)
         {
+            // Every type that is made: units, buildings and resources with a footprint (a field is a building and a food
+            // source; the fifth play-test found its button greyed out as "Requires: requirements").
             EntityTypeDefinition type = world.Ruleset.EntityTypes[t];
-            bool made = type.Traits.Category is EntityCategory.Unit or EntityCategory.Building;
+            bool made = type.Traits.Category is EntityCategory.Unit or EntityCategory.Building
+                || (type.Traits.Category == EntityCategory.Resource && type.HasFootprint);
             makeable[t] = made && PlacementQueries.RequirementsMet(world, who, (ushort)t) ? (byte)1 : (byte)0;
         }
 

@@ -79,9 +79,9 @@ rules:
     note: KINGDOM shows the kingdom's name; LEVEL every experienced unit's, the enemy's too, but traders' (ReTzar's reading of the original's view); POWER an item's on the ground (ReTzar shows it for potions). INSIDE shows for the player's own holders only (what the original shows of an enemy's is UNVERIFIED).
   HUD-017:
     rule: The eye by the orders bar, lit when the selected object carries items, opens its inventory in the orders bar, where an item can be used or dropped.
-    source: [manual The Inventory, manual Hints About Gameplay]
+    source: [manual The Inventory, manual Hints About Gameplay, 'community ReTzar src/hud.rs (holder_enabled)']
     status: tested
-    note: The eye (ORDERS holder) sits in the middle of the three boxes left of the orders bar, the arrows above and below it; which box holds which is ours. The focused unit's items show, else the first selected unit's.
+    note: The eye (ORDERS holder) sits in the middle of the three boxes left of the orders bar, the arrows above and below it; which box holds which is ours. The focused unit's items show, else the first selected unit's. Of the art's four frames the eye is grey (the fourth) and does nothing while no selected unit carries items, lit (the third) while the inventory is open, open (the second) under the pointer, closed (the first) otherwise, as ReTzar draws the original's holder button (the fifth play-test found it lit with nothing selected).
   HUD-018:
     rule: In an inventory a left click uses an item, a right click drops it, Ctrl makes either instant, Alt+click makes it the default item, and < and > turn its pages.
     source: [manual Hot Keys]
