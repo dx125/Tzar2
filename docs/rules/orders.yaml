@@ -62,7 +62,7 @@ rules:
   ORD-014:
     rule: Unload makes a loaded vehicle let its units out at the clicked place; the pointer's colour shows whether they can land there.
     source: [manual Commanding Units (Unload)]
-    status: implemented
+    status: tested
     note: The pointer is the forbidden one (cs_none) where no land is to let the units out on.
   ORD-015:
     rule: Emerge lets one chosen unit out of a building at the place right-clicked next; with no unit chosen, everyone comes out at once.

@@ -1,43 +1,44 @@
 using Godot;
+using Tzar2.Game.Ui;
 
 namespace Tzar2.Client.Game;
 
 /// <summary>
-/// Hardware cursors from the imported <c>IMAGES/CURSORS</c> (TDD §13.8) and Tzar2's own (<see cref="OwnCursors"/>). Each
-/// original cursor clicks with the <c>hotspot</c> of its IMAGES.INI software-cursor entry (<c>cs_arrow</c> = <c>s_def</c>
-/// at 2, 0; UNK-40); a cursor without an entry clicks with its centre.
+/// Hardware cursors from the imported <c>IMAGES/CURSORS</c> (TDD §13.8), named by the original's IMAGES.INI software
+/// cursor entries (<c>cs_*</c>, <see cref="OrderCursors"/>). Each clicks with its entry's <c>hotspot</c> (CTRL-014;
+/// <c>cs_arrow</c> = <c>s_def</c> at 2, 0; UNK-40); a cursor without an entry clicks with its centre.
 /// </summary>
 public static class CursorCache
 {
-    // The IMAGES.INI entry of each cursor picture (the game's cs_* names).
-    private static readonly System.Collections.Generic.Dictionary<string, string> s_entries = new(global::System.StringComparer.OrdinalIgnoreCase)
+    // The picture of each entry (its IMAGES.INI image, cursors\*.bmp). cs_magicharm shares s_spell with its own hotspot.
+    private static readonly System.Collections.Generic.Dictionary<string, string> s_pictures = new(global::System.StringComparer.OrdinalIgnoreCase)
     {
-        ["s_def"] = "cs_arrow",
-        ["s_attack"] = "cs_attack",
-        ["cs_attackset"] = "cs_attackset",
-        ["cs_attacktype"] = "cs_attacktype",
-        ["s_guard"] = "cs_guard",
-        ["s_harvest"] = "cs_harvest",
-        ["s_move"] = "cs_move",
-        ["s_none"] = "cs_none",
-        ["s_patrol"] = "cs_patrol",
-        ["s_patrol2"] = "cs_patrol_ex",
-        ["s_hand"] = "cs_pick",
-        ["s_repair"] = "cs_repair",
-        ["s_spell"] = "cs_spell",
-        ["s_spell_good"] = "cs_magicmodify",
+        [OrderCursors.Arrow] = "s_def",
+        [OrderCursors.Attack] = "s_attack",
+        [OrderCursors.AttackSet] = "cs_attackset",
+        [OrderCursors.AttackType] = "cs_attacktype",
+        [OrderCursors.Guard] = "s_guard",
+        [OrderCursors.Harvest] = "s_harvest",
+        [OrderCursors.MagicHarm] = "s_spell",
+        ["cs_magicmodify"] = "s_spell_good",
+        [OrderCursors.Move] = "s_move",
+        [OrderCursors.None] = "s_none",
+        ["cs_patrol"] = "s_patrol",
+        [OrderCursors.Patrol] = "s_patrol2",
+        [OrderCursors.Pick] = "s_hand",
+        [OrderCursors.Repair] = "s_repair",
+        [OrderCursors.Spell] = "s_spell",
     };
 
-    private static readonly System.Collections.Generic.Dictionary<string, ImageTexture> s_own = [];
     private static string? s_current;
 
     /// <summary>The name that shows the system's own pointer.</summary>
     public const string System = "system";
 
     /// <summary>The original's default pointer (<c>IMAGES/CURSORS/S_DEF</c>).</summary>
-    public const string Default = "s_def";
+    public const string Default = OrderCursors.Arrow;
 
-    /// <summary>Shows cursor <paramref name="name"/> (<c>s_hand</c>, <c>s_attack</c>..., <see cref="System"/>); unchanged names cost nothing.</summary>
+    /// <summary>Shows cursor <paramref name="name"/> (a <c>cs_*</c> entry, or <see cref="System"/>); unchanged names cost nothing.</summary>
     public static void Apply(UiAssets ui, string name)
     {
         if (name == s_current || DisplayServer.GetName() == "headless")
@@ -46,33 +47,14 @@ public static class CursorCache
         }
 
         s_current = name;
-        if (name == System)
+        string picture = s_pictures.TryGetValue(name, out string? p) ? p : name;
+        if (name == System || ui?.Texture($"art/cursors/{picture}.t2img") is not { } texture)
         {
             Input.SetCustomMouseCursor(null);
             return;
         }
 
-        if (OwnCursors.Has(name))
-        {
-            if (!s_own.TryGetValue(name, out ImageTexture? own) && OwnCursors.Paint(name) is { } painted)
-            {
-                own = ImageTexture.CreateFromImage(painted);
-                s_own[name] = own;
-            }
-
-            Input.SetCustomMouseCursor(own, Input.CursorShape.Arrow, OwnCursors.Hotspot(name));
-            return;
-        }
-
-        if (ui?.Texture($"art/cursors/{name}.t2img") is not { } texture)
-        {
-            Input.SetCustomMouseCursor(null);
-            return;
-        }
-
-        Vector2 hotspot = s_entries.TryGetValue(name, out string? entry) && ui.ImageInts(entry, "hotspot") is { Length: >= 2 } hot
-            ? new Vector2(hot[0], hot[1])
-            : texture.GetSize() / 2;
+        Vector2 hotspot = ui.ImageInts(name, "hotspot") is { Length: >= 2 } hot ? new Vector2(hot[0], hot[1]) : texture.GetSize() / 2;
         Input.SetCustomMouseCursor(texture, Input.CursorShape.Arrow, hotspot);
     }
 
