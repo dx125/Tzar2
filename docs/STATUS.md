@@ -309,8 +309,8 @@ the process decisions that have no ADR.
   attacker chasing a building now walks to its own tile of the footprint grown by one (the workers' and the attackers'
   claims are one), strikes only from there, and holds its place against the other attackers of that building. Attacks
   on units keep their crowd. The gameplay, AI and trigger-mission goldens and the gameplay bench hash are re-pinned
-  (1A17F8464C0BE10A);
-  the AI and sim benches do not move. The original's campaigns still complete 19 of 19 and the tutorial 7 of 7.
+  (1A17F8464C0BE10A); the AI and sim benches do not move. The original's campaigns still complete 19 of 19 and the
+  tutorial 7 of 7.
   The nightly Benchmarks of 2026-10-24 failed the AI gate (normalized p50 0.788 against a limit of 0.714 from eight
   runs); a dispatched run on main passed, and locally the 8-AI bench is the same before and after #242: runner noise
   near the provisional limit.
