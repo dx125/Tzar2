@@ -110,7 +110,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Magic, religion and spies](magic.yaml) (MAG) | 28 | 28 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 5 | 3 | 1 | 0 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 6 | 3 | 0 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Scenario scripts](scenario.yaml) (SCN) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 15 | 10 | 1 | 0 | 2 | 0 |
@@ -118,7 +118,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 9 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 352 | 260 | 75 | 3 | 1 | 9 | 4 |
+| **All** | 352 | 261 | 75 | 2 | 1 | 9 | 4 |
 
 ## Not done yet
 
@@ -128,10 +128,6 @@ Missing and partial rules.
 
 * **HUD-009**: The interface can be placed along the bottom, the left or the right of the screen. Work: STATUS work queue 12 (M8, owner decision 2026-10-21).
 * **HUD-028** (partial): The \ key shows the trees translucent so that units under them can be seen. *Trees are drawn at 45 % opacity, not with the original's look; neither the data nor ReTzar says how the original does it.* Work: UI review screenshot 8 (docs/reviews/2026-10-ui-review.md).
-
-### Animations, effects and sounds
-
-* **PRES-005** (partial): Units have their own animations for capturing and collecting meat (peasants), murder (ninjas), prayer (priests), casting (mages and priests) and other attack swings (footmen, macemen, peasants, bears, ninjas). *Done - capturing and cutting meat (peasants), casting (mages and priests, image_spell; the Asian priest's prayer is the same picture) and the second swing on half the blows (footmen, macemen, peasants, bears, ninjas, priests; the original draws at random, 0x4e5720 by ReTzar's reading). the ninja's murder (image_murder, else the attack's; ADR 0268). Left - the Asian peasant's third swing under Kung Fu.*
 
 ### Menus, setup and pause
 

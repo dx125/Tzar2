@@ -89,6 +89,8 @@ public sealed class WorldRenderer : IDisposable
     private readonly List<(SheetRef Sheet, int X, int Y, long StartMs)> _bursts = [];
     private readonly AnimationStarts _starts = new(); // when each unit's picture was set (PRES-008)
     private long _timeMs;
+    private GameFrame? _current; // the frame being drawn
+    private readonly int _thirdSwing; // the technology that gives a third swing (Kung Fu, PRES-005), or -1
     private static readonly StringName FogEnabledParam = "fog_enabled";
     private static readonly StringName DarknessParam = "darkness";
     private bool? _fogEnabled;
@@ -109,6 +111,7 @@ public sealed class WorldRenderer : IDisposable
     {
         ArgumentNullException.ThrowIfNull(host);
         _rules = rules;
+        _thirdSwing = rules.TechnologyId("te_kungfu"); // ReTzar 0x4ae090: the Asian peasant's image_attack3 under Kung Fu
         _catalog = catalog;
         _bank = bank;
         _root = RS.CanvasItemCreate();
@@ -205,6 +208,7 @@ public sealed class WorldRenderer : IDisposable
     {
         ArgumentNullException.ThrowIfNull(frame);
         _timeMs = timeMs;
+        _current = frame;
         _starts.Sweep(timeMs);
         var view = new Transform2D(new Vector2(1, 0), new Vector2(0, 1), (Vector2)(origin - pan));
         var visible = new Rect2I(pan, viewSize);
@@ -454,7 +458,10 @@ public sealed class WorldRenderer : IDisposable
         };
         if (anim == UnitAnim.Attack)
         {
-            anim = SpriteRules.Swing(visual.Images.ContainsKey(UnitAnim.Attack2), NextSwing(e)); // PRES-005: half the blows swing the other way
+            // PRES-005: half the blows swing the other way; a unit with a third swing under its technology (the Asian peasant's
+            // Kung Fu) takes each of three a third of the time.
+            bool third = visual.Images.ContainsKey(UnitAnim.Attack3) && _thirdSwing >= 0 && _current is { } now && e.Owner < now.Players.Length && now.Players[e.Owner].HasTechnology(_thirdSwing);
+            anim = SpriteRules.Swing(visual.Images.ContainsKey(UnitAnim.Attack2), third, NextSwing(e));
         }
         SheetRef? s = _bank.Get(visual.Image(anim)) ?? _bank.Get(visual.Image(UnitAnim.Base));
         if (s is null)
@@ -469,7 +476,7 @@ public sealed class WorldRenderer : IDisposable
         {
             frame = 0;
         }
-        else if (anim is UnitAnim.Attack or UnitAnim.Attack2 && e.SwingMs >= 0)
+        else if (anim is UnitAnim.Attack or UnitAnim.Attack2 or UnitAnim.Attack3 && e.SwingMs >= 0)
         {
             frame = SpriteRules.SwingFrame(s.StartRow, e.SwingMs >= s.Animation.CycleMs ? 0 : s.Animation.FrameAt(e.SwingMs), s.Sheet.FramesPerDirection);
         }
@@ -480,7 +487,7 @@ public sealed class WorldRenderer : IDisposable
         }
 
         int dir = SpriteRules.Direction(e.Facing, s.Sheet.Directions);
-        if (anim is UnitAnim.Attack or UnitAnim.Attack2)
+        if (anim is UnitAnim.Attack or UnitAnim.Attack2 or UnitAnim.Attack3)
         {
             dir = SpriteRules.TurnedColumn(dir, s.StartCol, s.Sheet.Directions); // PRES-008: the knight's and ships' attack sheets
         }

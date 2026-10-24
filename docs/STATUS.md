@@ -284,6 +284,10 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — The Asian peasant's third swing under Kung Fu (PRES-005).** ReTzar reads the original drawing one of
+  image_attack, image_attack2 and image_attack3 at random for an Asian peasant whose kingdom has Kung Fu (0x4ae090).
+  The client now gives each of the three a third of the blows when the unit has a third picture and its owner has
+  `te_kungfu`. PRES-005 is complete. No sim change.
 * **2026-10-23 — The pump picture over a caster whose pool grows; two events had one number.**
   * `MagicSystem.RaiseMaxToCost` emits the new `ManaRaised` event, and the client plays IMAGES.INI `pump` over the
     caster (MAG-027, ReTzar 0x4e1d0a).
