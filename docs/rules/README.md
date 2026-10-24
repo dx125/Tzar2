@@ -100,7 +100,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 14 | 10 | 4 | 0 | 0 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
-| [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 19 | 10 | 0 | 0 | 0 | 0 |
+| [Selection, mouse and pointers](controls.yaml) (CTRL) | 29 | 20 | 9 | 0 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 8 | 1 | 0 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 24 | 19 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
@@ -109,7 +109,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Items](items.yaml) (ITEM) | 19 | 14 | 3 | 0 | 0 | 1 | 1 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 28 | 28 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 6 | 6 | 0 | 0 | 0 | 0 | 0 |
-| [Unit orders](orders.yaml) (ORD) | 18 | 13 | 5 | 0 | 0 | 0 | 0 |
+| [Unit orders](orders.yaml) (ORD) | 18 | 14 | 4 | 0 | 0 | 0 | 0 |
 | [Animations, effects and sounds](presentation.yaml) (PRES) | 9 | 6 | 3 | 0 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 15 | 10 | 4 | 0 | 0 | 1 | 0 |
 | [Scenario scripts](scenario.yaml) (SCN) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
@@ -118,7 +118,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 10 | 9 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 18 | 11 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 353 | 262 | 75 | 2 | 1 | 9 | 4 |
+| **All** | 353 | 264 | 73 | 2 | 1 | 9 | 4 |
 
 ## Not done yet
 
