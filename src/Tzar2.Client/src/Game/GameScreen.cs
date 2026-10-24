@@ -783,7 +783,7 @@ public partial class GameScreen : Node
         return best is { } b ? InfoOf(_frame.Entities[b.Index]) : null;
     }
 
-    private bool InView(Vector2 screen) => _hud is not null && new Rect2(_hud.Layout.View.Position, _hud.Layout.View.Size).HasPoint(screen);
+    private bool InView(Vector2 screen) => _hud is not null && new Rect2(_hud.Layout.View.Position, _hud.Layout.View.Size).HasPoint(screen) && !_hud.Layout.Covers(screen);
 
     private void MouseButtonEvent(InputEventMouseButton e)
     {

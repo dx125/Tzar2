@@ -158,9 +158,11 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    3. The gathering cursors (pick, saw, perhaps others) are not the original's: **fixed**, every pointer as ReTzar
       reads the original (CTRL-012, CTRL-013; log below).
    4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
-   5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14): the minimap and the day
-      globe as in the original's left HUD (`LAYOUT1024L`); the selection view and the orders stay at the bottom, the
-      orders in one row.
+   5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14), as corrected on
+      2026-10-24: the minimap and the day globe as in the original's left HUD (`LAYOUT1024L`); the selection view and
+      the orders, in two rows as in the original, at the bottom in the middle of the screen, not stretched across it:
+      **done** (HUD-009, log below). Open: whether the panel turns translucent with nothing selected (proposed to
+      the owner: keep it opaque, as the kingdom's card is on it then).
    6. Texts still not in the original's style, such as the QUIT confirmation's. The confirmation itself stays (the
       owner finds it handy; STRINGS.INI `[q]` holds the original's own questions): **fixed** for the shell (log below).
    7. The main menu: the original's five buttons in the art's slots, in the original's colours, lit under the pointer
@@ -301,6 +303,13 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-24 — The hybrid HUD (HUD-009; the fifth play-test, item 5.5).** The owner asked for one layout without a
+  switch, in place of the side panels of item 14: the top bar of `LAYOUT1024H`; the minimap and the day globe in the
+  corner of `LAYOUT1024L`'s art; the selection view, the three boxes, the orders in two rows and the info area cut from
+  the bottom panel's middle (its left border mirrored at its right end) and set in the middle of the screen's bottom.
+  The world view runs under the pieces to the screen's edges, and the pieces stop the pointer. Messages start right of
+  the minimap corner. The UI smoke test shows no issue at the 22 displays.
 
 * **2026-10-24 — The menus in the original's style; the main menu's five slots; the campaign screen rebuilt (the fifth
   play-test, items 5.6-5.8).** ReTzar reads how the original draws its menus, and the shell follows it:
