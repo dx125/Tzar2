@@ -153,13 +153,15 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    with the original.
    1. Fields could not be built ("Requires: requirements"; a blocker): **fixed** (log below).
    2. Builders arriving at a site push the working ones aside instead of taking the free places around it. Up to 8
-      peasants work around one tree in the original, while ours cut from one side; mines alike. Likely the whole logic
-      of a group working at one object: check ReTzar.
+      peasants work around one tree in the original, while ours cut from one side; mines alike: **fixed** (WORLD-019,
+      log below). Open: soldiers crowding a building they attack.
    3. The gathering cursors (pick, saw, perhaps others) are not the original's: check them all against ReTzar.
    4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
-   5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14): the minimap and the day
-      globe as in the original's left HUD (`LAYOUT1024L`); the selection view and the orders stay at the bottom, the
-      orders in one row.
+   5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14), as corrected on
+      2026-10-24: the minimap and the day globe as in the original's left HUD (`LAYOUT1024L`); the selection view and
+      the orders, in two rows as in the original so that they match the selection view's height, at the bottom in the
+      middle of the screen, not stretched across it. Whether these panels turn translucent with nothing selected is to
+      be proposed.
    6. Texts still not in the original's style, such as the QUIT confirmation's. The confirmation itself stays (the
       original has none; the owner finds it handy).
    7. The main menu: the original's five buttons in the art's slots, in the original's colours, lit under the pointer
@@ -299,6 +301,20 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-24 — Workers take a place of their own at what they work at (WORLD-019; the fifth play-test).** Builders
+  arriving at a site pushed the working ones aside, and a group cut a tree from one side. ReTzar reads the original:
+  units ordered to an object take the cells of its edge (its footprint grown by one) one by one, from where the path
+  ends, alternately ahead and behind (0x451cc0, 0x451b40), and a cell holds one unit. Now:
+  * a worker walks to the first such tile that it can stand on, that no other worker at the object walks to or holds
+    and where no other unit stands; on its way it stops only there, not where it first touches the object;
+  * a unit at work (gathering, building, repairing, capturing) is not shoved by others, nor by another at work;
+  * when every place at a node is taken (eight at a tree), the worker takes the next node with room.
+
+  Tzar2's paths do not know units, so a worker the crowd stops short of its tile works where it stopped. The gameplay
+  and AI goldens and both CI bench hashes are re-pinned (gameplay 4EDC85F684266735, ai C3346CBCDBAAA08C); the sim bench
+  does not move. Cost: 8 AIs for 10 minutes run at the same tick p50 and p99 as before (0.23-0.24 and 1.12-1.16 ms).
+  The owner corrected the HUD of item 5.5: the selection view and the orders in the middle at the bottom, in two rows.
 
 * **2026-10-24 — The fifth play-test; fields can be built again; the inventory's eye is grey with nothing to show.**
   The owner played the installed build 0.7.0-beta.6+a393a3b; the findings are work queue item 5. Two are fixed:

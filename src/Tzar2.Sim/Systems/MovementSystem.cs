@@ -1002,6 +1002,10 @@ public sealed class MovementSystem : ISimSystem
         }
     }
 
+    // The object a worker with a task works at or walks to, 0 for none.
+    private static uint TargetOf(World world, EntityId unit)
+        => world.Workers.IndexOf(unit) is >= 0 and var w && world.Workers.At(w).Task != WorkerTask.None ? world.Workers.At(w).Target : 0;
+
     // Whether a unit works where it stands: a worker gathering, building, repairing or capturing.
     private static bool AtWork(World world, EntityId unit)
         => world.Workers.IndexOf(unit) is >= 0 and var w
@@ -1034,9 +1038,12 @@ public sealed class MovementSystem : ISimSystem
         public byte[] Plane = [];
         public byte[] Moving = [];
 
-        // Units at work (a worker gathering, building, repairing or capturing) hold their place: nobody shoves them
-        // (WORLD-019, the owner's fifth play-test).
+        // Units at work (a worker gathering, building, repairing or capturing) hold their place against the workers of
+        // the same object, coming or at work (WORLD-019, the owner's fifth play-test); everyone else shoves them as before.
         public byte[] Anchored = [];
+
+        // The object a worker works at or walks to (Worker.Target), 0 for none.
+        public uint[] WorkTarget = [];
         public int[] Out = [];
         public int GridW;
         public int GridH;
@@ -1067,6 +1074,7 @@ public sealed class MovementSystem : ISimSystem
                 Plane = new byte[size];
                 Moving = new byte[size];
                 Anchored = new byte[size];
+                WorkTarget = new uint[size];
                 Out = new int[size];
                 CellItems = new int[size];
             }
@@ -1115,6 +1123,7 @@ public sealed class MovementSystem : ISimSystem
                 Locomotor locomotor = world.Ruleset.EntityTypes[identity.TypeId].Locomotor;
                 Plane[i] = locomotor == Locomotor.Air ? (byte)2 : locomotor == Locomotor.Ship ? (byte)1 : (byte)0;
                 Moving[i] = m.State == MotionState.Moving && m.Mode != MotionMode.Waiting ? (byte)1 : (byte)0;
+                WorkTarget[i] = TargetOf(world, e);
                 Anchored[i] = Moving[i] == 0 && AtWork(world, e) ? (byte)1 : (byte)0;
                 Out[i] = 0;
                 CellStart[CellOf(p.X, p.Y) + 1]++;
@@ -1491,9 +1500,12 @@ public sealed class MovementSystem : ISimSystem
 
                         bool friendly = f.Friends(i, j);
                         int share; // quarters of the overlap this unit takes
-                        if (f.Anchored[i] != 0 || f.Anchored[j] != 0)
+                        bool together = f.WorkTarget[i] != 0 && f.WorkTarget[i] == f.WorkTarget[j];
+                        bool iHolds = together && f.Anchored[i] != 0;
+                        bool jHolds = together && f.Anchored[j] != 0;
+                        if (iHolds || jHolds)
                         {
-                            share = f.Anchored[i] != 0 ? 0 : 4; // a unit at work holds its place, also against another (WORLD-019)
+                            share = iHolds ? 0 : 4; // a unit at work holds its place against workers (WORLD-019)
                         }
                         else if (iMoving == jMoving)
                         {

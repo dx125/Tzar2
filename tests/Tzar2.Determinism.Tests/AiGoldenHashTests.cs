@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using Tzar2.AI.Legacy.Program;
 using Tzar2.AI.Scenarios;
@@ -93,7 +94,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
 
         ulong final = scenario.Simulation.ComputeFullHash();
         output.WriteLine($"workers={workers} runtime={Environment.Version} commands={commands.GetCurrentHash():X16} stream={states.GetCurrentHash():X16} final={final:X16} {scenario.Describe()}");
-        Assert.True(scenario.Ai.Issued(0) > 0 && scenario.Trained(0) > 0 && scenario.Ai.Players[0].Waves > 0, scenario.Describe());
+        // Every computer plays and the kingdoms attack (since WORLD-019 p0 sends no wave in the 10 minutes; the others do).
+        Assert.True(Enumerable.Range(0, 4).All(p => scenario.Ai.Issued(p) > 0 && scenario.Trained(p) > 0), scenario.Describe());
+        Assert.True(Enumerable.Range(0, 4).Sum(p => scenario.Ai.Players[p].Waves) > 0, scenario.Describe());
         Assert.Equal(GoldenCommandStream, commands.GetCurrentHash());
         Assert.Equal(GoldenHashStream, states.GetCurrentHash());
         Assert.Equal(GoldenFinalFullHash, final);

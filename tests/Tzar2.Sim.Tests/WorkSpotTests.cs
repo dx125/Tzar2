@@ -44,15 +44,15 @@ public class WorkSpotTests
             Assert.True(cutting.Count <= 8, $"{cutting.Count} peasants cut at one tree");
             foreach (EntityId p in cutting)
             {
-                // Next to the tree, and held where it started cutting while others walk past (no shoving; settling
-                // against a neighbour moves it a pixel).
+                // Next to the tree, and held where it started cutting while the others come; the two walking past to
+                // the next tree nudge it a quarter of a tile at most, as any unit does.
                 Position at = d.PositionOf(p);
                 int gapX = Math.Max(0, Math.Max((20 * Tile) - at.X, at.X - (21 * Tile)));
                 int gapY = Math.Max(0, Math.Max((12 * Tile) - at.Y, at.Y - (13 * Tile)));
                 Assert.True(Math.Max(gapX, gapY) <= Tile + (Tile / 4), $"a cutter stands {Math.Max(gapX, gapY) / 64} px from the tree");
                 if (standing.TryGetValue(p, out Position first))
                 {
-                    Assert.True(Math.Abs(first.X - at.X) + Math.Abs(first.Y - at.Y) <= 3 * 64, $"a cutter was shoved {(Math.Abs(first.X - at.X) + Math.Abs(first.Y - at.Y)) / 64.0:F1} px at tick {d.World.Tick.Value}");
+                    Assert.True(Math.Abs(first.X - at.X) + Math.Abs(first.Y - at.Y) <= 8 * 64, $"a cutter was shoved {(Math.Abs(first.X - at.X) + Math.Abs(first.Y - at.Y)) / 64.0:F1} px at tick {d.World.Tick.Value}");
                 }
                 else
                 {
@@ -93,7 +93,21 @@ public class WorkSpotTests
         d.Step();
         EntityId house = OfType(d.World, "euro.house").Single();
         d.Order(0, CommandKind.Build, peons, target: house);
-        d.RunUntil(() => peons.All(p => d.World.Workers.Get(p).Phase == WorkerPhase.Building && !d.IsMoving(p)), 600);
+        var building = new Dictionary<EntityId, Position>();
+        d.RunUntil(() =>
+        {
+            foreach (EntityId p in peons.Where(p => d.World.Workers.Get(p).Phase == WorkerPhase.Building && !d.IsMoving(p)))
+            {
+                // Builders at work stay where they stand while the others of the site come (the fifth play-test).
+                Position at = d.PositionOf(p);
+                if (!building.TryAdd(p, at))
+                {
+                    Assert.True(Math.Abs(building[p].X - at.X) + Math.Abs(building[p].Y - at.Y) <= 64, "a builder was shoved");
+                }
+            }
+
+            return building.Count == peons.Length;
+        }, 600);
 
         HashSet<(int, int)> tiles = [.. peons.Select(p => TileOf(d, p))];
         Assert.Equal(peons.Length, tiles.Count); // one to a tile, none pushed onto another's
