@@ -1002,14 +1002,27 @@ public sealed class MovementSystem : ISimSystem
         }
     }
 
-    // The object a worker with a task works at or walks to, 0 for none.
+    // The object a worker with a task works at or walks to, or the building a unit attacks; 0 for none.
     private static uint TargetOf(World world, EntityId unit)
-        => world.Workers.IndexOf(unit) is >= 0 and var w && world.Workers.At(w).Task != WorkerTask.None ? world.Workers.At(w).Target : 0;
+    {
+        if (world.Workers.IndexOf(unit) is >= 0 and var w && world.Workers.At(w).Task != WorkerTask.None)
+        {
+            return world.Workers.At(w).Target;
+        }
 
-    // Whether a unit works where it stands: a worker gathering, building, repairing or capturing.
+        return BuildingAttacked(world, unit);
+    }
+
+    // The building a unit attacks (Combat.Target with a footprint), 0 for none.
+    private static uint BuildingAttacked(World world, EntityId unit)
+        => world.Combats.IndexOf(unit) is >= 0 and var c && world.Combats.At(c).Target is not 0 and var t && world.Footprints.Has(EntityId.FromValue(t)) ? t : 0;
+
+    // Whether a unit works where it stands: a worker gathering, building, repairing or capturing, or a unit attacking a
+    // building.
     private static bool AtWork(World world, EntityId unit)
-        => world.Workers.IndexOf(unit) is >= 0 and var w
-            && world.Workers.At(w).Phase is WorkerPhase.Gathering or WorkerPhase.Building or WorkerPhase.Repairing or WorkerPhase.Capturing;
+        => (world.Workers.IndexOf(unit) is >= 0 and var w
+            && world.Workers.At(w).Phase is WorkerPhase.Gathering or WorkerPhase.Building or WorkerPhase.Repairing or WorkerPhase.Capturing)
+            || BuildingAttacked(world, unit) != 0;
 
     /// <summary>The per-tick flat copy of the mobile units, parallel to the motion store.</summary>
     private sealed class Frame

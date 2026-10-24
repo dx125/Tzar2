@@ -154,7 +154,7 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    1. Fields could not be built ("Requires: requirements"; a blocker): **fixed** (log below).
    2. Builders arriving at a site push the working ones aside instead of taking the free places around it. Up to 8
       peasants work around one tree in the original, while ours cut from one side; mines alike: **fixed** (WORLD-019,
-      log below). Open: soldiers crowding a building they attack.
+      log below); soldiers attacking a building in hand-to-hand spread around it too.
    3. The gathering cursors (pick, saw, perhaps others) are not the original's: **fixed**, every pointer as ReTzar
       reads the original (CTRL-012, CTRL-013; log below).
    4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
@@ -303,6 +303,17 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-24 — Soldiers attacking a building take places of their own around it (WORLD-019).** The rest of item 5.2:
+  ReTzar reads the same cell assignment for an attack on an object (approach_object, 0x451cc0). A hand-to-hand
+  attacker chasing a building now walks to its own tile of the footprint grown by one (the workers' and the attackers'
+  claims are one), strikes only from there, and holds its place against the other attackers of that building. Attacks
+  on units keep their crowd. The gameplay, AI and trigger-mission goldens and the gameplay bench hash are re-pinned
+  (1A17F8464C0BE10A);
+  the AI and sim benches do not move. The original's campaigns still complete 19 of 19 and the tutorial 7 of 7.
+  The nightly Benchmarks of 2026-10-24 failed the AI gate (normalized p50 0.788 against a limit of 0.714 from eight
+  runs); a dispatched run on main passed, and locally the 8-AI bench is the same before and after #242: runner noise
+  near the provisional limit.
 
 * **2026-10-24 — Workers take a place of their own at what they work at (WORLD-019; the fifth play-test).** Builders
   arriving at a site pushed the working ones aside, and a group cut a tree from one side. ReTzar reads the original:

@@ -127,8 +127,8 @@ internal static class Interaction
         return Reaches(world, world.Positions.Get(worker), type.Radius + extra, target, moving);
     }
 
-    // Whether a unit on a move is within a third of a tile of its order point (true for any other movement).
-    private static bool NearOrderPoint(World world, EntityId unit)
+    /// <summary>Whether a unit on a move is within a third of a tile of its order point (true for any other movement).</summary>
+    public static bool NearOrderPoint(World world, EntityId unit)
     {
         int m = world.Motions.IndexOf(unit);
         if (m < 0 || world.Motions.At(m).Order != MotionOrder.Move)
@@ -729,8 +729,9 @@ internal static class Interaction
         return (x, y);
     }
 
-    // The edge tiles taken: those other workers at the structure hold (the tile they were sent to, which they keep after
-    // they stop, also when a crowd stopped them short of it; else the one they stand on), and those another unit stands on.
+    // The edge tiles taken: those other workers and attackers at the structure hold (the tile they were sent to, which they
+    // keep after they stop, also when a crowd stopped them short of it; else the one they stand on), and those another unit
+    // stands on.
     private static void TakenTiles(World world, EntityId target, EntityId worker, int x0, int y0, int x1, int y1, Span<bool> taken)
     {
         Position self = world.Positions.Get(worker);
@@ -758,24 +759,38 @@ internal static class Interaction
         Span<Worker> states = world.Workers.Components;
         for (int i = 0; i < workers.Length; i++)
         {
-            if (workers[i] == worker || WorkObject(states[i]) != target.Value)
+            if (workers[i] != worker && WorkObject(states[i]) == target.Value)
             {
-                continue;
+                Claim(world, workers[i], x0, y0, x1, y1, taken);
             }
+        }
 
-            int m = world.Motions.IndexOf(workers[i]);
-            int tx = m >= 0 ? world.Motions.At(m).OrderX / MapState.UnitsPerTile : -1;
-            int ty = m >= 0 ? world.Motions.At(m).OrderY / MapState.UnitsPerTile : -1;
-            if (!OnEdge(tx, ty, x0, y0, x1, y1))
+        ReadOnlySpan<EntityId> attackers = world.Combats.Entities;
+        Span<Combat> fights = world.Combats.Components;
+        for (int i = 0; i < attackers.Length; i++)
+        {
+            if (attackers[i] != worker && fights[i].Target == target.Value)
             {
-                Position at = world.Positions.Get(workers[i]);
-                (tx, ty) = (at.X / MapState.UnitsPerTile, at.Y / MapState.UnitsPerTile);
+                Claim(world, attackers[i], x0, y0, x1, y1, taken);
             }
+        }
+    }
 
-            if (OnEdge(tx, ty, x0, y0, x1, y1))
-            {
-                taken[TileKey(tx, ty, x0, y0, x1)] = true;
-            }
+    // The edge tile a unit at the structure holds: its order point, else where it stands.
+    private static void Claim(World world, EntityId unit, int x0, int y0, int x1, int y1, Span<bool> taken)
+    {
+        int m = world.Motions.IndexOf(unit);
+        int tx = m >= 0 ? world.Motions.At(m).OrderX / MapState.UnitsPerTile : -1;
+        int ty = m >= 0 ? world.Motions.At(m).OrderY / MapState.UnitsPerTile : -1;
+        if (!OnEdge(tx, ty, x0, y0, x1, y1))
+        {
+            Position at = world.Positions.Get(unit);
+            (tx, ty) = (at.X / MapState.UnitsPerTile, at.Y / MapState.UnitsPerTile);
+        }
+
+        if (OnEdge(tx, ty, x0, y0, x1, y1))
+        {
+            taken[TileKey(tx, ty, x0, y0, x1)] = true;
         }
     }
 
