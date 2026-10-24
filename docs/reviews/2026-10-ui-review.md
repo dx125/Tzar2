@@ -66,7 +66,7 @@ The original's fonts are used everywhere except where noted (UI-F). Ids: **T** t
 
 | Id | Screen | Finding | Source | Fix |
 |---|---|---|---|---|
-| UI-A1 | main menu | The art has five carved button slots, 60 px apart (y 277–517). Our seven buttons are 48 px apart from y 215, so carved slots show between and under them as double frames. | `S_MAIN/back`, `btn` | Needs the owner's choice; see question 1 below. |
+| UI-A1 | main menu | The art has five carved button slots, 60 px apart (y 277–517). Our seven buttons are 48 px apart from y 215, so carved slots show between and under them as double frames. | `S_MAIN/back`, `btn` | **Fixed** (the owner's choice, 2026-10-24): the original's five items in the five slots (270, 277 + 60 i), the editor and the asset viewer as small links at the bottom left, the version at the bottom right. |
 | UI-T1 | main menu | SETTINGS is ours; the original's item is `mainscr.pref`. EDITOR and ASSET VIEWER have no original text (ours, kept). | `mainscr.*` | **Fixed:** `mainscr.pref` (`ShellTexts`). |
 | UI-A2 | main menu | CREDITS prints to the log; there is no credits screen. The original has one (`S_CREDITS` art, `CREDITSFNT.INI` fonts, `credits.txt`). | `S_CREDITS` | **Fixed:** the text scrolls on the book's right page in the CREDITSFNT.INI fonts; the portraits wait for question 6. |
 | UI-T2 | random map setup | Map types and sizes are our lower-case names (`continental`, `small`); the original's are `sp_setuprnd.m_type_*`, `m_size_*`. No Fog and Explore show Yes/No in our words; `general.yes`, `general.no`. The subtitle "A new map from the options on the right" and the label "Kingdom" are ours. | `sp_setuprnd.*`, `general.*` | **Fixed:** the keys; the subtitle is gone. "Kingdom" stays (no key). |
@@ -103,9 +103,8 @@ layout is covered by UI-L1 and UI-L3.
 The art gives the backgrounds and buttons. Where texts and controls go on them is not in any data file. Each request
 is one screenshot of the original (GOG v1.10, 1024 × 768), taken on the owner's PC; they stay local like the captures.
 
-1. **Main menu** (UI-A1). No screenshot needed; this is a decision. Five original items fit the five carved slots. The
-   editor and the asset viewer would then need another place, such as two small buttons in the bottom corners. The
-   alternative is seven buttons at the slots' 60 px pitch from y 217, with the last one on the stone's bottom border.
+1. **Main menu** (UI-A1). Answered on 2026-10-24: the five original items in the five carved slots; the editor and
+   the asset viewer as small links at the bottom left.
 2. **Multiplayer** (UI-A6, UI-A7, UI-T6), three screenshots:
    * the connection screen with a game found and selected (`S_MULTISETUP`);
    * the lobby with four players, one of them a computer (`S_MULTIPLAYER`);

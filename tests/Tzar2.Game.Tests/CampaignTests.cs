@@ -83,6 +83,16 @@ public sealed class CampaignTests(ITestOutputHelper output)
     }
 
     [Fact]
+    [Trait("Rule", "SHELL-004")]
+    public void The_campaign_screen_lists_the_entry_missions_and_then_every_mission_reached()
+    {
+        CampaignData campaign = DemoCampaign.Create().Campaign;
+        Assert.Equal(["ford"], CampaignFlow.EntryMissions(campaign, null).Select(m => m.Id));
+        MissionEnd won = CampaignFlow.End(campaign, CampaignFlow.Begin(campaign), "ford", MissionResult.Won, null, 100);
+        Assert.Equal(["ford", "mill"], CampaignFlow.EntryMissions(campaign, won.Progress).Select(m => m.Id)); // in the campaign's order
+    }
+
+    [Fact]
     public void Profiles_round_trip_as_readable_json_and_bad_ones_are_rejected()
     {
         CampaignProgress progress = CampaignFlow.Begin(DemoCampaign.Create().Campaign) with

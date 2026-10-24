@@ -162,11 +162,12 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
       globe as in the original's left HUD (`LAYOUT1024L`); the selection view and the orders stay at the bottom, the
       orders in one row.
    6. Texts still not in the original's style, such as the QUIT confirmation's. The confirmation itself stays (the
-      original has none; the owner finds it handy).
+      owner finds it handy; STRINGS.INI `[q]` holds the original's own questions): **fixed** for the shell (log below).
    7. The main menu: the original's five buttons in the art's slots, in the original's colours, lit under the pointer
-      (the owner's answer to UI review question 1). The other menu screens differ in style too.
+      (the owner's answer to UI review question 1). The other menu screens differ in style too: **fixed**, the
+      menus' buttons and texts in the original's fonts and colours (log below).
    8. The campaign screen: the original's layout (campaigns, campaign description, entry missions and their
-      description; PLAY, the difficulty, BACK).
+      description; PLAY, the difficulty, BACK): **fixed** (log below).
 6. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 7. **Done (2026-10-22, ADR 0190):** walking speed for every class from its walk sheet's stride, by the rule ReTzar read
@@ -300,6 +301,20 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-24 — The menus in the original's style; the main menu's five slots; the campaign screen rebuilt (the fifth
+  play-test, items 5.6-5.8).** ReTzar reads how the original draws its menus, and the shell follows it:
+  * a button's label is Arial 14 bold in dark gold, gold under the pointer and while pressed (a pixel down and right),
+    darker when disabled; the screens' captions, values and names are Arial 12 bold in gold, the other rows of a list
+    and the descriptions in dark gold; the hint box's text is Arial 12 bold;
+  * the main menu has the original's five items in the art's five slots (the owner's answer to UI review question 1);
+    the editor and the asset viewer are small links at the bottom left, the version is at the bottom right;
+  * the question window (QUIT, resign, disconnect): its title in Arial 14 bold and its question in Arial 12 bold, both
+    gold; the UI smoke test now audits it in the game too;
+  * the campaign screen in the original's layout: the campaigns and the selected one's description above, its entry
+    missions (those it starts with and those reached since) and the selected one's description below, each with the
+    original's scroll bar; PLAY, the difficulty (Easy, Normal, Hard for the computers of the campaign's missions) and
+    BACK. Tzar2's RESTART CAMPAIGN goes: every mission reached stays in the entry missions.
 
 * **2026-10-24 — The pointers over the map are the original's (CTRL-012, CTRL-013; the fifth play-test).** Tzar2 had
   painted its own saw over trees and pickaxe over rocks (play-test of 2026-10-20). ReTzar reads the original's choice:
