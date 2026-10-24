@@ -246,6 +246,12 @@ public sealed class RenderBenchResult
     /// <summary>Peak video memory in use (bytes; 0 when the renderer does not tell).</summary>
     public long PeakVram { get; private set; }
 
+    /// <summary>Peak managed heap (bytes; the game's .NET objects; 0 when not sampled).</summary>
+    public long PeakManaged { get; private set; }
+
+    /// <summary>Peak engine memory (bytes; Godot's own static allocations; 0 when not sampled).</summary>
+    public long PeakEngine { get; private set; }
+
     /// <summary>Frames measured.</summary>
     public int FrameCount => _frames.Count;
 
@@ -255,11 +261,13 @@ public sealed class RenderBenchResult
     /// <summary>Records sim tick times.</summary>
     public void AddTicks(IEnumerable<double> milliseconds) => _ticks.AddRange(milliseconds);
 
-    /// <summary>Records a memory sample.</summary>
-    public void SampleMemory(long ram, long vram)
+    /// <summary>Records a memory sample: the process, video memory, and of the process the managed heap and the engine's.</summary>
+    public void SampleMemory(long ram, long vram, long managed = 0, long engine = 0)
     {
         PeakRam = Math.Max(PeakRam, ram);
         PeakVram = Math.Max(PeakVram, vram);
+        PeakManaged = Math.Max(PeakManaged, managed);
+        PeakEngine = Math.Max(PeakEngine, engine);
     }
 
     /// <summary>Frames per second over the measurement (frames / total time).</summary>
@@ -304,7 +312,7 @@ public sealed class RenderBenchResult
         return string.Create(CultureInfo.InvariantCulture,
             $"{Prefix} S2={S2Verdict} res={Width}x{Height} fps={F(Fps)} low1={F(Low1Fps)} frame_p50={F(FramePercentile(50))}ms frame_p99={F(FramePercentile(99))}ms "
             + $"sim_p50={F(TickPercentile(50))}ms sim_p99={F(TickPercentile(99))}ms ticks={_ticks.Count} frames={_frames.Count} units={Units} load={F(LoadSeconds)}s "
-            + $"ram={Gb(PeakRam)}GB vram={Gb(PeakVram)}GB {Phases} renderer={Renderer} gpu={Q(Gpu)} cpu={Q(Cpu)} version={Version}");
+            + $"ram={Gb(PeakRam)}GB vram={Gb(PeakVram)}GB managed={Gb(PeakManaged)}GB engine={Gb(PeakEngine)}GB {Phases} renderer={Renderer} gpu={Q(Gpu)} cpu={Q(Cpu)} version={Version}");
     }
 
     private static double Percentile(List<double> values, double percentile)

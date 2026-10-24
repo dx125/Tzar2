@@ -345,11 +345,18 @@ public sealed class TerrainLayer : IDisposable
     // One chunk: a canvas item drawn from the atlas through the chunk's slots (one RGBA8 layer of 24-bit slots per frame).
     private sealed class Chunk : IDisposable
     {
+        // Shader parameter names made once: a string argument would make a new StringName on every call.
+        private static readonly StringName TilesParam = "tiles";
+        private static readonly StringName SizeParam = "size";
+        private static readonly StringName FrameParam = "frame";
+        private static readonly StringName AtlasParam = "atlas";
+
         private static ImageTexture? s_white;
         private readonly Rid _item;
         private readonly ShaderMaterial _material;
         private Texture2DArray? _tiles;
         private int _frameCount = 1;
+        private int _frame = -1;
 
         public Chunk(Rid parent, int drawIndex)
         {
@@ -393,9 +400,10 @@ public sealed class TerrainLayer : IDisposable
             _tiles?.Dispose();
             _tiles = tiles;
             _frameCount = slots.Length;
-            _material.SetShaderParameter("tiles", _tiles);
-            _material.SetShaderParameter("size", new Vector2(width, height));
-            _material.SetShaderParameter("frame", 0);
+            _material.SetShaderParameter(TilesParam, _tiles);
+            _material.SetShaderParameter(SizeParam, new Vector2(width, height));
+            _material.SetShaderParameter(FrameParam, 0);
+            _frame = 0;
             if (s_white is null)
             {
                 using Image white = Image.CreateEmpty(1, 1, false, Image.Format.Rgba8);
@@ -406,9 +414,19 @@ public sealed class TerrainLayer : IDisposable
             RS.CanvasItemAddTextureRect(_item, new Rect2(position, new Vector2(width, height)), s_white.GetRid());
         }
 
-        public void SetAtlas(Texture2DArray atlas) => _material.SetShaderParameter("atlas", atlas);
+        public void SetAtlas(Texture2DArray atlas) => _material.SetShaderParameter(AtlasParam, atlas);
 
-        public void SetFrame(int frame) => _material.SetShaderParameter("frame", ((frame % _frameCount) + _frameCount) % _frameCount);
+        // Called for every visible chunk on every drawn frame; the water's frame changes a few times a second, so the
+        // parameter is only sent when it does (the code review: per-frame calls made a StringName and a native call each).
+        public void SetFrame(int frame)
+        {
+            int f = ((frame % _frameCount) + _frameCount) % _frameCount;
+            if (f != _frame)
+            {
+                _frame = f;
+                _material.SetShaderParameter(FrameParam, f);
+            }
+        }
 
         public void SetView(Transform2D view) => RS.CanvasItemSetTransform(_item, view);
 

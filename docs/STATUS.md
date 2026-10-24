@@ -284,6 +284,14 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-23 — The client's memory measured; StringName churn fixed (code review, work queue 16).** The render bench
+  line gains `managed=` and `engine=`. A heap dump in the S2 bench showed:
+  * live managed data of about 0.5 GB;
+  * a heap of 1.4 GB, the GC's budget on a 96 MB L3 cache;
+  * 161,000 `StringName`s alive, made by per-frame shader parameters passed as strings.
+
+  The parameters now use cached names and are sent only when they change, which leaves 3,900 alive. Details:
+  [reviews/2026-10-code-review.md](reviews/2026-10-code-review.md). No sim change.
 * **2026-10-23 — The ninja's murder is one blow of fifteen times its attack (ADR 0268; MAG-028, PRES-005).** ReTzar
   reads the Murder op (0x4e076a): the ninja shows itself, spends all its mana and strikes once with 15 times its attack,
   through the defence. The order takes any unit (0x437250). A ninja with 60 mana ordered to attack a unit murders it
