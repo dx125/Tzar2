@@ -258,11 +258,14 @@ public sealed class SessionTests
         for (int t = 0; t < frame.Makeable.Length; t++)
         {
             EntityTypeDefinition type = Rules.Value.EntityTypes[t];
-            if (type.Traits.Category is EntityCategory.Unit or EntityCategory.Building)
+            if (type.Traits.Category is EntityCategory.Unit or EntityCategory.Building || type.HasFootprint)
             {
                 Assert.Equal(PlacementQueries.RequirementsMet(world, session.LocalPlayer, (ushort)t), frame.Makeable[t] != 0);
             }
         }
+
+        // A field is a food source with a footprint, built like a building (the fifth play-test).
+        Assert.NotEqual(0, frame.Makeable[Rules.Value.EntityTypeId("comm.field")]);
 
         Assert.Contains(frame.Makeable, m => m != 0);
         Assert.Contains(frame.Makeable, m => m == 0);

@@ -6,7 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-23 (the paused agent's open work landed; the owner's PC runs; consolidated update)
+* **Last updated:** 2026-10-24 (the fifth play-test's findings)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -148,7 +148,24 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
        fighting units hold;
      * free places around an attack target instead of a crowd;
      * ORIG-02's jams at bridges and gates must not come back.
-5. **Operator:** a fifth play-test (`tools/play/play.ps1`) once item 4 is merged.
+5. **The fifth play-test (2026-10-24, the owner, installed build 0.7.0-beta.6+a393a3b).** The findings, each fixed in
+   its own PR. The owner asks that the interface's likeness be checked against ReTzar first; the owner then compares
+   with the original.
+   1. Fields could not be built ("Requires: requirements"; a blocker): **fixed** (log below).
+   2. Builders arriving at a site push the working ones aside instead of taking the free places around it. Up to 8
+      peasants work around one tree in the original, while ours cut from one side; mines alike. Likely the whole logic
+      of a group working at one object: check ReTzar.
+   3. The gathering cursors (pick, saw, perhaps others) are not the original's: check them all against ReTzar.
+   4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
+   5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14): the minimap and the day
+      globe as in the original's left HUD (`LAYOUT1024L`); the selection view and the orders stay at the bottom, the
+      orders in one row.
+   6. Texts still not in the original's style, such as the QUIT confirmation's. The confirmation itself stays (the
+      original has none; the owner finds it handy).
+   7. The main menu: the original's five buttons in the art's slots, in the original's colours, lit under the pointer
+      (the owner's answer to UI review question 1). The other menu screens differ in style too.
+   8. The campaign screen: the original's layout (campaigns, campaign description, entry missions and their
+      description; PLAY, the difficulty, BACK).
 6. **Maintainer (deferred to M8):** a night-share scenario (UNK-32, ADR 0173): 35 minutes or more of a night in a
    view no unit walks through, in a match the Hard AI does not end. Then **Operator:** run it.
 7. **Done (2026-10-22, ADR 0190):** walking speed for every class from its walk sheet's stride, by the rule ReTzar read
@@ -169,9 +186,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
     and the render bench ([min-spec-tuning.md § Results](release/min-spec-tuning.md#results), 2026-10-23). **Owner:**
     pick the crash server and the signing route (ADRs 0242, 0243); play request 2's 10-minute skirmish on the
     installed build and send its log folder.
-14. **Maintainer (deferred to M8, owner decision 2026-10-21):** the original's side panels (LAYOUT.INI `LAYOUT1024L`
-    and `R`: the HUD down the left or right side) as a setting; the card, the tooltips and the selection view already
-    place themselves by the layout.
+14. **Replaced (owner, 2026-10-24):** the original's side panels as a setting (deferred to M8 on 2026-10-21) give way
+    to one hybrid HUD without a switch, item 5.5.
 15. **Maintainer (owner's order of 2026-10-22): a full UI review, for every modern resolution and for likeness to the
     original.** Many texts and buttons differ from the original's today.
     * **Resolutions.** Every screen and dialog has to work at 1280 × 720, 1366 × 768, 1600 × 900, 1920 × 1080,
@@ -283,6 +299,18 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-24 — The fifth play-test; fields can be built again; the inventory's eye is grey with nothing to show.**
+  The owner played the installed build 0.7.0-beta.6+a393a3b; the findings are work queue item 5. Two are fixed:
+  * The frame told the card what the kingdom can make for units and buildings only. A field is a resource (a food
+    source) with a footprint, so Build Field was always grey as "Requires: requirements", while the computer, which
+    asks the sim, built fields. Resources with a footprint now count.
+  * The eye used the first of its four frames with nothing to show. As ReTzar draws the original's holder button, it
+    is grey and does nothing then, lit while the inventory is open and open under the pointer (HUD-017). The arrows
+    show the same hover frame.
+
+  The owner's decisions: the main menu follows the original's five slots (UI review question 1); the side panels of
+  item 14 give way to a hybrid HUD without a switch (item 5.5).
 
 * **2026-10-23 — The computer picks up and uses items (ADR 0269; AI-005).** ReTzar reads the original's AI, and the
   new `ItemExecutor` follows it:

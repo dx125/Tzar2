@@ -209,6 +209,8 @@ public sealed class CommandCardTests : IDisposable
         EntityId other = Own("euro.peon");
         var card = new CommandCard(Rules.Value, _cards, 0);
         Assert.True(card.Carrier(Context([other, footman])).IsNone); // nothing carried yet
+        Assert.Equal(3, card.EyeFrame(Context([other, footman]))); // the eye is grey (the fifth play-test)
+        Assert.Equal(3, card.EyeFrame(Context([])));
 
         Position at = world.Positions.Get(footman);
         EntityId potion = world.Spawn((ushort)Rules.Value.EntityTypeId("comm.item_health"), 255, at.X + 2048, at.Y);
@@ -227,7 +229,9 @@ public sealed class CommandCardTests : IDisposable
 
         _session.Step(1);
         Assert.Equal(footman, card.Carrier(Context([other, footman])));
+        Assert.Equal(0, card.EyeFrame(Context([other, footman])));
         Assert.True(card.ToggleInventory(Context([other, footman])));
+        Assert.Equal(2, card.EyeFrame(Context([other, footman])));
 
         IReadOnlyList<CardSlot?> items = card.Build(Context([other, footman]));
         Assert.Equal(2, items.Count);
@@ -256,6 +260,23 @@ public sealed class CommandCardTests : IDisposable
         // Another selection closes it.
         card.Build(Context([other]));
         Assert.False(card.InventoryOpen);
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-001")]
+    [Trait("Rule", "ECO-010")]
+    public void A_peasant_builds_a_field_though_it_is_a_food_source()
+    {
+        // The fifth play-test: the frame left fields (resources with a footprint) out of what the kingdom can make, so
+        // Build Field stayed grey as "Requires: requirements" while the computer built them.
+        EntityId peasant = Own("euro.peon");
+        _cards.Menus["e_peon"] = [new CardButton("e_field", 'F', CardAction.Build, "field", 2, "Build Field")];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+
+        CardSlot field = card.Build(Context([peasant]))[0]!.Value;
+
+        Assert.True(field.Enabled, field.Detail);
+        Assert.Equal((ushort)Rules.Value.EntityTypeId("comm.field"), card.Press(Context([peasant]), field).Placing);
     }
 
     [Fact]
