@@ -160,9 +160,9 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
    4. The inventory's eye was lit with nothing selected: **fixed**, grey as in the original (HUD-017).
    5. The bottom HUD wastes room. The owner's proposal, without a switch (it replaces item 14), as corrected on
       2026-10-24: the minimap and the day globe as in the original's left HUD (`LAYOUT1024L`); the selection view and
-      the orders, in two rows as in the original so that they match the selection view's height, at the bottom in the
-      middle of the screen, not stretched across it. Whether these panels turn translucent with nothing selected is to
-      be proposed.
+      the orders, in two rows as in the original, at the bottom in the middle of the screen, not stretched across it:
+      **done** (HUD-009, log below). Open: whether the panel turns translucent with nothing selected (proposed to
+      the owner: keep it opaque, as the kingdom's card is on it then).
    6. Texts still not in the original's style, such as the QUIT confirmation's. The confirmation itself stays (the
       owner finds it handy; STRINGS.INI `[q]` holds the original's own questions): **fixed** for the shell (log below).
    7. The main menu: the original's five buttons in the art's slots, in the original's colours, lit under the pointer
@@ -319,7 +319,13 @@ the process decisions that have no ADR.
   and AI goldens and both CI bench hashes are re-pinned (gameplay D62F1CB1FA30D467, ai F7A172FC2A942001); the sim bench
   does not move. The original's campaigns still complete 19 of 19 and the tutorial 7 of 7 (the acceptance test with
   `TZAR2_ORIGIN`). Cost: 8 AIs for 10 minutes run at the tick p50 and p99 of main (0.23-0.26 and 0.97-1.17 ms).
-  The owner corrected the HUD of item 5.5: the selection view and the orders in the middle at the bottom, in two rows.
+
+* **2026-10-24 — The hybrid HUD (HUD-009; the fifth play-test, item 5.5).** The owner asked for one layout without a
+  switch, in place of the side panels of item 14: the top bar of `LAYOUT1024H`; the minimap and the day globe in the
+  corner of `LAYOUT1024L`'s art; the selection view, the three boxes, the orders in two rows and the info area cut from
+  the bottom panel's middle (its left border mirrored at its right end) and set in the middle of the screen's bottom.
+  The world view runs under the pieces to the screen's edges, and the pieces stop the pointer. Messages start right of
+  the minimap corner. The UI smoke test shows no issue at the 22 displays.
 
 * **2026-10-24 — The menus in the original's style; the main menu's five slots; the campaign screen rebuilt (the fifth
   play-test, items 5.6-5.8).** ReTzar reads how the original draws its menus, and the shell follows it:
