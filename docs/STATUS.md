@@ -6,7 +6,8 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-24 (the fifth play-test's findings fixed, #245-#250; what is left is item 5's list)
+* **Last updated:** 2026-10-25 (the sixth play-test's findings recorded as item 18, not started; the fifth's left is
+  item 5's list)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -102,7 +103,8 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
 Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the other; item 4 comes from the fourth
-play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
+play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover; item 18 is the sixth play-test, waiting
+for the owner's word to start.
 
 1. **Maintainer:** the ledger's first fill, the data account and the hotkey checklist's update are done (log below).
    Keep the ledger current with every change.
@@ -176,7 +178,8 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
      opaque, since the kingdom's card is on them then; or dim them only while nothing is selected and the pointer is
      away).
    * **Owner:** a sixth play-test of #245-#250 on a fresh build (the hybrid HUD, the menus, the campaign screen, the
-     pointers, workers and soldiers around objects); then compare the menu screens with the original.
+     pointers, workers and soldiers around objects): **done** 2026-10-25, its findings are item 18. Then compare the
+     menu screens with the original.
    * **Maintainer:** the menu screens not yet checked against ReTzar's places and styles beyond the shared buttons and
      captions: single player, custom maps, settings, credits, load and save, multiplayer, lobby and replays (their
      lists and labels still use Arial 10), the victory and defeat window; the UI review's open likeness items
@@ -315,12 +318,84 @@ play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover.
     swords of 5 to 15, potions of 10 to 50 or 2 to 8. It needs item properties on `MapObject` (map.bin and its hash)
     and changes the generator's hashes. RES.INI's TreasuryItem, WeaponItem, ArmourItem and PotionItem are not what the
     generator reads (ITEM-015 unclear).
+18. **The sixth play-test (2026-10-25, the owner, a build with #245-#250).** Recorded only: the owner says when the
+    work starts. For each item that the original's files cannot settle, look first at how ReTzar does it. The rule IDs
+    say where the ledger touches an item today. The screenshots stay with the owner (they show the original's art).
+    * **With screenshots:**
+      1. Farmers stand at a field's edge, not in its middle as in the original (ECO-008). A field has to be built
+         before it is used; the original's is ready at once.
+      2. A mine (golden rocks) vanishes from view once peasants mine it, though its selection view still shows its gold
+         and they go on mining. The miners crowd in rows at one corner and work from there; in the original a peasant
+         gathers only from a tile next to the resource (WORLD-019).
+      3. Guard (ORD-001):
+         * swordsmen guarding a tower crowd against it; in the original they stand within some radius of it, unless
+           they are already closer;
+         * a site not yet begun (1 HP) cannot be guarded: the click is a move;
+         * the guards hardly react when the guarded object is attacked;
+         * soldiers in general are passive with enemies near: they stand, or step from tile to tile, and leave a fight
+           when the attacker of the guarded object dies though other enemies stand next to them.
+      4. Peasants build from far off, without turning to the site.
+      5. Peasants taking a load to the drop-off by the shortest way get stuck walking in place.
+      6. Wall segments do not join into one wall; a wooden wall is drawn with a broken stone wall's picture.
+      7. The tavern:
+         * its card is crooked, shifted against the rest of the HUD;
+         * an exchange shows nothing, though it works;
+         * it is instant, not gradual as in the original;
+         * the card feels like a picture, not like controls.
+
+         The owner also asks for amounts up to 10,000 (steps of 500 above 1,000) instead of 1,000.
+      8. The Warriors' Guild is empty and offers nothing to research; check every other special building.
+      9. Enter opens the chat line over a black screen, with the world and the HUD gone; the dialog looks unfinished
+         (HUD-011).
+    * **Without screenshots:**
+      1. Sites placed one after another: the builders leave the one they build for the last one placed, and do not
+         come back to the earlier ones. In the original they build them in the order placed, each after the one
+         before.
+      2. A builder coming to a site with others at work runs into them and turns about looking for a free tile,
+         instead of going straight to one (WORLD-019).
+      3. Placing a building closes the build menu. In the original the build mode and its ghost stay for more of the
+         same, which is how a wall is drawn by holding the left button (BLD-011). The ghost is still the finished
+         building, not the green shadow (CTRL-023).
+      4. A gold mine seen once and now under the fog changes its look several times a second, instead of keeping the
+         look it had when last seen; check the other objects too.
+      5. A tree drawn over a building takes the click, so a peasant sent to build goes to cut the tree. In the original
+         the building under the tree wins (CTRL-001).
+      6. Sound effects hang on, most after a fight (blows, the cries of the dying) or after a horseman is ordered to
+         move.
+      7. Moving troops push standing friends several tiles aside instead of going round. Letting them through is right
+         when there is no other way, but the friends should step aside and come back.
+      8. Units walk under some buildings (peasants through the stable's picture); there may be more.
+      9. Units coming out of a building (castle, outpost) should be selected, as in the original, and come out around
+         it. Check unloading ships, caravans and carpets too (HOLD-003).
+      10. Big fights:
+          * a crowd jitters left and right, nobody goes round the side, and only the front fights;
+          * when the front of a large group is stuck or fighting, the rear jitters in place instead of going round;
+          * a unit that cannot reach the enemy it was ordered to attack freezes, even with another enemy next to it;
+          * soldiers, archers most, all strike the same enemy.
+      11. A peasant carrying a load sent to gather something else first takes the load home. In the original it goes to
+          the new work, and drops the old load on the ground when it takes a new one.
+      12. Units answer orders late, standing a while first, most when a group standing close together is selected.
+      13. Wrong pointers are still shown, such as digging over repair or build (CTRL-012, CTRL-013).
+      14. The outpost's button to view the units inside does nothing; check the other holders and what can be done
+          with the units inside them.
+      15. A click often selects the unit below the one under the pointer, as if it covered it; a single click in a
+          close, moving group often selects several units.
+      16. Cows walk off far from the farms, all in one direction; in the original they seemed to wander aimlessly
+          (NAT-002).
+      17. The original's cheat codes do not work (HUD-011).
+    * **New features (the owner's):**
+      1. Take a building down for 75 % of its cost.
+      2. Cancel a site that no peasant has begun on. The sim gives the whole cost back (BLD-020); whether an order on
+         the site's card offers it is to check.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-25 — The sixth play-test recorded (item 18).** The owner played a build with #245-#250 and sent 9 findings
+  with screenshots, 17 without and 2 new features. On the owner's word they are recorded only; none is started until
+  the owner says so. Where the original's files cannot settle an item, ReTzar is read first.
 * **2026-10-24 — Soldiers attacking a building take places of their own around it (WORLD-019).** The rest of item 5.2:
   ReTzar reads the same cell assignment for an attack on an object (approach_object, 0x451cc0). A hand-to-hand
   attacker chasing a building now walks to its own tile of the footprint grown by one (the workers' and the attackers'
