@@ -4,8 +4,9 @@ title: Unit orders
 rules:
   ORD-001:
     rule: Guard on an own unit or building makes the guards follow and defend it; they fight what attacks it, keep guarding after the fight and come back.
-    source: [manual Commanding Units (Guard), owner 2026-10-20 (second play-test)]
+    source: [manual Commanding Units (Guard), owner 2026-10-20 (second play-test), 'community ReTzar src/gameplay.rs (0x4e4f1f, 0x42dd00)', owner 2026-10-25 (sixth play-test)]
     status: tested
+    note: Guards stand within three tiles of what they guard (of its footprint, or of a unit's tile; combat.guardRadiusTiles), not against it; one already that close guards from where it stands, and one further away walks back. They are called to every attack on it (WAR-017) and prefer its attackers (WAR-015).
   ORD-002:
     rule: Guard on an enemy attacks it; Guard on open ground holds that place with a move-advance.
     source: [owner 2026-10-20 (second play-test)]

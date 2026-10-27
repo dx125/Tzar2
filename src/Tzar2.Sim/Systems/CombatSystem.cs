@@ -15,8 +15,9 @@ namespace Tzar2.Sim.Systems;
 /// </summary>
 /// <remarks>
 /// <para><b>Acquisition</b> (staggered, §8.9): an idle armed unit with <c>AutoAcquire</c>, or one on a move-advance,
-/// scans every <c>acquireIntervalMs</c> (on ticks where <c>(index + tick)</c> hits its slot) for the nearest enemy in
-/// sight: smallest edge distance, ties to the lower entity index. Candidates come from a uniform grid of 4×4-tile
+/// scans every <c>acquireIntervalMs</c> (on ticks where <c>(index + tick)</c> hits its slot) for the best enemy in sight
+/// by the original's ranking (WAR-015, <see cref="Better"/>), and calls the fighters around it to help (WAR-017); a unit
+/// whose target falls or cannot be reached scans at once (WAR-016). Candidates come from a uniform grid of 4×4-tile
 /// cells rebuilt every tick (counting sort, ascending index per cell). Units inside holders, stone and cloaked units
 /// are never candidates; a confused unit takes everyone as an enemy and everyone takes it as one.</para>
 /// <para><b>Stances</b>: stand ground fights only what is in reach (no chasing); hold fire never starts a fight by
@@ -32,7 +33,7 @@ namespace Tzar2.Sim.Systems;
 /// (simultaneous resolution, ADR 0038); deaths follow (<see cref="SimEventKind.Killed"/>: X = killer index, Y = killer
 /// owner).</para>
 /// </remarks>
-public sealed class CombatSystem : ISimSystem
+public sealed partial class CombatSystem : ISimSystem
 {
     /// <summary>Grid cell side in world units (4 tiles, §8.9).</summary>
     public const int CellSize = 4 * MapState.UnitsPerTile;
@@ -73,6 +74,7 @@ public sealed class CombatSystem : ISimSystem
         }
 
         BuildGrid(world);
+        CountAttackers(world);
         int tick = world.Tick.Value;
         int tickMs = world.Config.TickLengthMilliseconds;
         int acquireEvery = Math.Max(1, world.Ruleset.Gameplay.AcquireIntervalMs / tickMs);
@@ -104,8 +106,14 @@ public sealed class CombatSystem : ISimSystem
         // tick can both die, whatever their entity indices), then pass 3 removes the dead.
         foreach (HitRecord hit in _hits)
         {
-            Apply(world, hit, _deaths);
+            Apply(world, hit, _deaths, _alarms);
             Banshee(world, hit, _deaths);
+        }
+
+        // Calls for help of the units and buildings hit (WAR-017), in the order of the hits.
+        for (int i = 0; i < _alarms.Count; i++)
+        {
+            CallForHelp(world, _alarms[i].Victim, _alarms[i].Attacker);
         }
 
         ProcessDeaths(world, _deaths);
@@ -161,24 +169,33 @@ public sealed class CombatSystem : ISimSystem
 
         int radius = Interaction.RadiusOf(world, attacker);
         EntityId target = EntityId.FromValue(c.Target);
+        bool lost = false;
         if (c.Target != 0 && !IsHostileTarget(world, attacker, self.Owner, target)
             && !(c.Mode == CombatMode.Explicit && (IsButcherTarget(world, self.Owner, target) || IsTrainingTarget(world, self.Owner, target)))
             && !(c.Mode == CombatMode.Scripted && target != attacker && IsTargetable(world, target)))
         {
             c.Target = 0;
             c.HitInMs = -1;
+            c.Striking = 0;
             target = EntityId.None;
+            lost = c.Mode is CombatMode.Explicit or CombatMode.Auto; // WAR-016: it looks for the next target at once
             if (c.Mode is CombatMode.Explicit or CombatMode.Auto or CombatMode.Scripted)
             {
                 c.Mode = CombatMode.None;
             }
 
-            // The fight is over: the next of the unit's queued orders (CTRL-026); a move-advance resumes first, and a
-            // unit still walking takes it on arrival.
-            if (c.Mode != CombatMode.AttackMove && world.WaypointQueues.Count > 0 && world.WaypointQueues.Has(attacker) && !Interaction.IsMoving(world, attacker))
+            // The fight is over: the next of the unit's queued orders comes first (CTRL-026); a move-advance resumes
+            // first, and a unit still walking on another errand takes it on arrival.
+            if (c.Mode != CombatMode.AttackMove && world.WaypointQueues.Count > 0 && world.WaypointQueues.Has(attacker) && (lost || !Interaction.IsMoving(world, attacker)))
             {
+                if (lost)
+                {
+                    Interaction.Halt(world, attacker);
+                }
+
                 OrderQueue.Next(world, attacker);
                 target = EntityId.FromValue(c.Target);
+                lost = false;
             }
         }
 
@@ -188,28 +205,18 @@ public sealed class CombatSystem : ISimSystem
             bool idle = !Interaction.IsMoving(world, attacker) && !HasTask(world, attacker);
             // A guard (follow order) watches for enemies while it walks with what it guards.
             bool guarding = world.Motions.IndexOf(attacker) is >= 0 and var gm && world.Motions.At(gm).Order == MotionOrder.Follow;
-            bool scan = c.Mode == CombatMode.AttackMove || (c.Mode == CombatMode.None && arm.AutoAcquire && (idle || guarding) && stance != CombatStance.HoldFire);
-            if (scan && (attacker.Index + tick) % acquireEvery == 0)
+            bool scan = c.Mode == CombatMode.AttackMove || (c.Mode == CombatMode.None && arm.AutoAcquire && (idle || guarding || lost) && stance != CombatStance.HoldFire);
+            if (scan && (lost || (attacker.Index + tick) % acquireEvery == 0))
             {
-                long sight = Math.Max(Sight(world, self, type), Range(world, attacker, self, type, arm));
-                if (stance == CombatStance.StandGround)
-                {
-                    sight = Math.Max(Range(world, attacker, self, type, arm), world.Ruleset.Gameplay.MeleeReachUnits);
-                }
-
-                target = Acquire(world, attacker, self.Owner, position, radius, sight, arm.MinRangeUnits, PlaneOf(type), Range(world, attacker, self, type, arm));
+                target = Search(world, attacker, self, type, arm, position, EntityId.None);
                 if (!target.IsNone)
                 {
-                    c.Target = target.Value;
-                    c.ChaseTick = -1;
-                    if (c.Mode == CombatMode.None)
-                    {
-                        c.Mode = CombatMode.Auto;
-                    }
-                    else
-                    {
-                        c.Resume = 1; // move-advance: continue to the destination after this fight
-                    }
+                    Engage(world, ref c, target); // a move-advance continues to its destination after this fight
+                    CallForHelp(world, attacker, target); // the fighters around it join in (WAR-017)
+                }
+                else if (lost)
+                {
+                    Interaction.Halt(world, attacker); // nobody left in sight: the fight ends where it stands
                 }
             }
 
@@ -233,6 +240,7 @@ public sealed class CombatSystem : ISimSystem
             && !Interaction.NearOrderPoint(world, attacker);
         if (!onItsWay && distance <= reach && distance >= arm.MinRangeUnits)
         {
+            c.Striking = 1;
             Interaction.Halt(world, attacker);
             Position tp = world.Positions.Get(target);
             if (tp.X != position.X || tp.Y != position.Y)
@@ -270,6 +278,7 @@ public sealed class CombatSystem : ISimSystem
         }
 
         // Out of reach (or too close for a minimum range): the swing is lost.
+        c.Striking = 0;
         c.HitInMs = -1;
         c.CooldownMs = Math.Max(0, c.CooldownMs - tickMs);
         // A unit may always chase what can hit it from where it stands (a tower that outranges its sight).
@@ -288,6 +297,19 @@ public sealed class CombatSystem : ISimSystem
         if (tooClose)
         {
             return; // an explicit target inside the minimum range: the unit waits (UNVERIFIED: no backing off)
+        }
+
+        // WAR-016: a target the unit cannot reach (its walk gave up, or it made no progress since its last plan) gives way
+        // to an enemy it reaches now, or, once the walk gave up, to the best other one in sight.
+        if (c.Mode != CombatMode.Scripted && c.ChaseTick >= 0 && (attacker.Index + tick) % acquireEvery == 0
+            && world.Motions.IndexOf(attacker) is >= 0 and var mi && (world.Motions.At(mi).State == MotionState.Blocked || world.Motions.At(mi).Replans > 0)
+            && Search(world, attacker, self, type, arm, position, target) is { IsNone: false } other
+            && (world.Motions.At(mi).State == MotionState.Blocked || Interaction.EdgeDistance(world, position, radius, other) <= Math.Max(range, world.Ruleset.Gameplay.MeleeReachUnits)))
+        {
+            Interaction.Halt(world, attacker);
+            Engage(world, ref c, other);
+            CallForHelp(world, attacker, other);
+            return;
         }
 
         Chase(world, attacker, ref c, target, position, type, tick);
@@ -504,9 +526,10 @@ public sealed class CombatSystem : ISimSystem
 
     /// <summary>
     /// Applies one hit (pass 2; also used by spells): damage after bonus, defence, resistance, the holder's share and
-    /// immunity, experience for the attacker, retaliation, and the death queue.
+    /// immunity, experience for the attacker, retaliation, and the death queue. With <paramref name="alarms"/> (the
+    /// combat system's own hits) the victim calls for help instead (WAR-017), its own retaliation included.
     /// </summary>
-    internal static void Apply(World world, in HitRecord hit, List<Death> deaths)
+    internal static void Apply(World world, in HitRecord hit, List<Death> deaths, List<(EntityId Victim, EntityId Attacker)>? alarms = null)
     {
         if (!world.Entities.IsAlive(hit.Target) || world.Healths.IndexOf(hit.Target) is not (>= 0 and var hp))
         {
@@ -571,10 +594,20 @@ public sealed class CombatSystem : ISimSystem
         health.Current = (int)Math.Max(health.Current - (long)dealt, 0);
         world.Events.Emit(new SimEvent(SimEventKind.Damaged, victim.Owner, hit.Target, hit.Attacker.Index, health.Current, dealt));
         Credit(world, hit, victim.Owner, dealt);
+        if (alarms is not null && attackerAlive && hit.Owner != victim.Owner && !Allies(world, victim.Owner, hit.Owner) && !world.IsHeld(hit.Attacker))
+        {
+            alarms.Add((hit.Target, hit.Attacker)); // the victim calls for help, dying or not (ReTzar: the damage routine calls)
+        }
+
         if (health.Current == 0)
         {
             deaths.Add(new Death(hit.Target, hit.Attacker, hit.Owner));
             return;
+        }
+
+        if (alarms is not null)
+        {
+            return; // its retaliation comes with the call for help
         }
 
         // Retaliation: an idle armed unit that is hit fights back (not on hold fire). So does a unit on a move-advance
@@ -908,10 +941,12 @@ public sealed class CombatSystem : ISimSystem
 
     private static uint OwnerBit(byte owner) => owner == MapObject.Nature ? 1u << NatureBit : 1u << (owner & 15);
 
-    private EntityId Acquire(World world, EntityId scanner, byte owner, Position position, int radius, long sight, int minRange, byte plane, int range)
+    // The best target in sight by the original's ranking (WAR-015), or none; never `except`.
+    private EntityId Acquire(World world, in Scanner s, Position position, int radius, long sight, int minRange, byte plane, int range, EntityId except)
     {
+        EntityId scanner = s.Id;
+        byte owner = s.Owner;
         EntityId best = EntityId.None;
-        long bestDistance = long.MaxValue;
         bool confused = world.IsConfused(scanner);
 
         // Structures are bucketed by their center; their footprint reaches at most half the largest side further.
@@ -934,10 +969,10 @@ public sealed class CombatSystem : ISimSystem
                     continue; // nobody but the scanner's own kingdom here
                 }
 
-                // Skip cells that cannot hold anything nearer than what was found (or than the sight radius).
+                // Skip cells that cannot hold anything within the sight radius.
                 long dx = Math.Max(0, Math.Max((long)cx * CellSize - position.X, position.X - (((long)cx + 1) * CellSize)));
                 long dy = Math.Max(0, Math.Max((long)cy * CellSize - position.Y, position.Y - (((long)cy + 1) * CellSize)));
-                long limit = Math.Min(bestDistance, sight) + slack + radius;
+                long limit = sight + slack + radius;
                 if ((dx * dx) + (dy * dy) > limit * limit)
                 {
                     continue;
@@ -947,14 +982,13 @@ public sealed class CombatSystem : ISimSystem
                 {
                     int dense = _cellItems[k];
                     EntityId candidate = ids[dense];
-                    if (candidate == scanner)
+                    if (candidate == scanner || candidate == except)
                     {
                         continue;
                     }
 
-                    // Nearest first: the lookups below only for a candidate that would become the best (same choice).
                     long d = Interaction.EdgeDistance(world, position, radius, candidate);
-                    if (d > sight || d < minRange || d > bestDistance || (d == bestDistance && candidate.Index > best.Index))
+                    if (d > sight || d < minRange)
                     {
                         continue;
                     }
@@ -988,8 +1022,23 @@ public sealed class CombatSystem : ISimSystem
                         continue;
                     }
 
-                    bestDistance = d;
-                    best = candidate;
+                    // WAR-015: bridges, gates, buildings the kingdom strikes already and what has no priority are left out;
+                    // the rest are ranked (a confused unit takes the nearest, ties to the lower index).
+                    if (confused)
+                    {
+                        long bd = best.IsNone ? long.MaxValue : Interaction.EdgeDistance(world, position, radius, best);
+                        if (d < bd || (d == bd && candidate.Index < best.Index))
+                        {
+                            best = candidate;
+                        }
+
+                        continue;
+                    }
+
+                    if (Eligible(world, s, candidate) && Better(world, s, best, candidate))
+                    {
+                        best = candidate;
+                    }
                 }
             }
         }

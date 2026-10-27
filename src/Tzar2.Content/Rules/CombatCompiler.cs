@@ -28,6 +28,7 @@ internal sealed class CombatCompiler
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeGather", "crusaderArrivalMs", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
         "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell", "dummyDamagePerPoint", "experienceSpeeds", "levelCapBuildings", "levelCapPerBuilding",
         "marketTechnology", "marketFirstMs", "marketEveryMs", "marketSize", "marketBuyPercent", "marketOffers", "marketBookSpells",
+        "targetPriority", "siegeTargetPriority", "siegeScanners", "targetMages", "targetTrainers", "targetSeats", "helpRadiusTiles", "guardRadiusTiles",
     ];
 
     private static readonly string[] SpellTraits = ["Legacy", "Spell"];
@@ -146,7 +147,7 @@ internal sealed class CombatCompiler
             spells.Add(CompileSpell((ushort)i, _spellEntries[i], types, research));
         }
 
-        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), LevelCapBuildings = Filter(research, "levelCapBuildings"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells), MarketOffers = Offers(types), MarketBookSpells = BookSpells(spells) }, spells, _projectiles);
+        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), LevelCapBuildings = Filter(research, "levelCapBuildings"), SiegeScanners = Filter(research, "siegeScanners"), TargetMages = Filter(research, "targetMages"), TargetTrainers = Filter(research, "targetTrainers"), TargetSeats = Filter(research, "targetSeats"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells), MarketOffers = Offers(types), MarketBookSpells = BookSpells(spells) }, spells, _projectiles);
     }
 
     private static EntityTypeDefinition WithTraits(EntityTypeDefinition t, EntityTraits traits)
@@ -330,7 +331,35 @@ internal sealed class CombatCompiler
             LevelCapPerBuilding = Range("levelCapPerBuilding", d.LevelCapPerBuilding, 0, 10_000),
             TournamentEvery = Range("tournamentEvery", d.TournamentEvery, 1, 255),
             TournamentGrant = Range("tournamentGrant", d.TournamentGrant, 0, 1_000_000),
+            TargetPriority = Priorities("targetPriority", d.TargetPriority),
+            SiegeTargetPriority = Priorities("siegeTargetPriority", d.SiegeTargetPriority),
+            HelpRadiusTiles = Range("helpRadiusTiles", d.HelpRadiusTiles, 0, 64),
+            GuardRadiusTiles = Range("guardRadiusTiles", d.GuardRadiusTiles, 0, 64),
         };
+    }
+
+    // combat.targetPriority, combat.siegeTargetPriority: one priority per target category (WAR-015).
+    private ImmutableArray<int> Priorities(string field, ImmutableArray<int> fallback)
+    {
+        if (_settings.Field(Section, field) is not { } node)
+        {
+            return fallback;
+        }
+
+        string source = _settings.FieldSource(Section, field);
+        if (node is not YamlSequence list || list.Items.Count != CombatSettings.TargetCategories)
+        {
+            throw new RulesException(source, node.Line, $"combat.{field} needs {CombatSettings.TargetCategories} priorities, one per target category");
+        }
+
+        var values = ImmutableArray.CreateBuilder<int>(list.Items.Count);
+        foreach (YamlNode item in list.Items)
+        {
+            int p = RulesetCompiler.Int(item, source, "combat." + field);
+            values.Add(p is >= 0 and <= 1_000_000 ? p : throw new RulesException(source, item.Line, $"combat.{field}: a priority must be 0..1000000"));
+        }
+
+        return values.MoveToImmutable();
     }
 
     // combat.heroNames: "legacy" = DATA/HEROES.INI (a section per civilization, a name per line), or { civ: [names] }.
