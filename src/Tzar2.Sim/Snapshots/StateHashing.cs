@@ -19,7 +19,7 @@ namespace Tzar2.Sim.Snapshots;
 public static class StateHashing
 {
     /// <summary>Changes whenever the hashed layout changes; part of every hash.</summary>
-    public const int LayoutVersion = 19;
+    public const int LayoutVersion = 20; // 20: the land units' steps (ADR 0270)
 
     /// <summary>Computes the per-tick hash of <paramref name="world"/>.</summary>
     public static ulong ComputeTickHash(World world, StateHasher hasher)

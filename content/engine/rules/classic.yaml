@@ -37,6 +37,9 @@ gameplay:
   # Owner decision for M2: a group move travels at its slowest member's speed in both rulesets until UNK-12 is captured
   # (ADR 0024 question).
   groupMoveSpeed: slowest             # VERIFIED (capture-20261019-221300, group-speed: knight 72 + pikeman 40 px/s walked 40 together)
+  # ADR 0270 (ReTzar's reading of the original, 0x4def20, 0x4debb0): land units stand one to a tile and step from tile to
+  # tile, waiting for a unit entering the next one or going round one standing there; nobody is pushed.
+  movement: cells
   populationLimit: 200                # VERIFIED (capture-20261018-024524, smoke/plain setup screen): the setup screen's default
   startingResources: legacy           # RES.INI [Low]/[Medium]/[High] (lobby STARTING RESOURCES)
   defaultStartingResources: medium    # UNVERIFIED: the lobby's default level
@@ -51,7 +54,9 @@ gameplay:
   minimumDamage: 1                    # UNVERIFIED (UNK-08)
   resistanceScale: 1000               # UNVERIFIED (UNK-08): building damage x 1000 / (1000 + RESISTANCE) (manual ch. 4); owner
                                       # decision: 100 made castles (1000) practically immune to melee; capture uses RESISTANCE alone
-  meleeReachPx: 8                     # UNVERIFIED (UNK-07/11): edge-to-edge reach of hand-to-hand attacks
+  meleeReachPx: 18                    # UNVERIFIED (UNK-07/11): edge-to-edge reach of hand-to-hand attacks; with units one to a
+                                      # tile (ADR 0270) a diagonal neighbour is in reach (45 - 2 x 14 px bodies = 17), the next
+                                      # tile but one is not (the original: the target's tiles grown by one)
   interactionReachPx: 32              # UNVERIFIED (UNK-17/18): worker reach to a node, drop-off or site, once stopped
   interactionTouchPx: 12              # UNVERIFIED (UNK-17/18): the same while still walking there: units go up to the wall
                                       # (owner play-test 2026-10-20: they stood a tile away from what they worked on)

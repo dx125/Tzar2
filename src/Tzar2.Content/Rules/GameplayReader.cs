@@ -10,7 +10,7 @@ internal sealed class GameplayReader
 {
     private static readonly string[] KnownFields =
     [
-        "groupMoveSpeed", "populationLimit", "startingResources", "defaultStartingResources", "minimumDamage", "resistanceScale",
+        "groupMoveSpeed", "movement", "populationLimit", "startingResources", "defaultStartingResources", "minimumDamage", "resistanceScale",
         "interactionReachPx", "interactionTouchPx", "meleeReachPx", "acquireIntervalMs", "autoChaseLeashPercent", "nodeSearchRadiusTiles", "constructionRefundPercent",
         "productionRefundPercent", "queueCapacity", "speedPixelsPerSecondPerPoint", "attackCycleMs", "hitDelayPercent",
         "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
@@ -64,10 +64,18 @@ internal sealed class GameplayReader
             { } other => throw Error("groupMoveSpeed", $"'{other}' is not slowest/own"),
         };
 
+        MovementModel movement = (settings.Scalar("gameplay", "movement") ?? "continuous") switch
+        {
+            "continuous" => MovementModel.Continuous,
+            "cells" => MovementModel.Cells,
+            { } other => throw Error("movement", $"'{other}' is not cells/continuous"),
+        };
+
         (ImmutableArray<StartingResources> levels, int defaultLevel) = StartingLevels(legacy, settings);
         return d with
         {
             GroupMoveSpeed = group,
+            Movement = movement,
             PopulationLimit = Range("populationLimit", d.PopulationLimit, 0, 100_000),
             StartingResources = levels,
             DefaultStartingResources = defaultLevel,

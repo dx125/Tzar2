@@ -195,6 +195,48 @@ public struct Motion : IComponent
     public MotionOrder Order;
 }
 
+/// <summary>
+/// A land unit's step from tile to tile (ADR 0270, <see cref="Tzar2.Content.Compiled.MovementModel.Cells"/>): the tile it
+/// enters (it is the unit's from the step's start), where the step began and how far it has come; and the tile it
+/// stepped aside from to let a friend pass, which it goes back to.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct CellStep : IComponent
+{
+    /// <summary>The anchor tile entered (its navigation layer's), or -1 while the unit stands on its tile.</summary>
+    public int To;
+
+    /// <summary>Where the step began, X (world units).</summary>
+    public int FromX;
+
+    /// <summary>Where the step began, Y (world units).</summary>
+    public int FromY;
+
+    /// <summary>World units walked into the step, 0 up to a tile (a step takes as long in any of the eight directions).</summary>
+    public int Progress;
+
+    /// <summary>The tile the unit stepped aside from for a friend, or -1.</summary>
+    public int Home;
+
+    /// <summary>The tick it stepped aside.</summary>
+    public int HomeTick;
+
+    /// <summary>The tile off a friend's way it walks to, to make room, or -1.</summary>
+    public int Aside;
+
+    /// <summary>Ticks waited behind a unit entering the next tile.</summary>
+    public byte Waits;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved0;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved1;
+
+    /// <summary>Padding, always 0.</summary>
+    public byte Reserved2;
+}
+
 /// <summary>The occupancy cell an entity is counted in (TDD §9.1), or -1.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct OccupancyCell : IComponent

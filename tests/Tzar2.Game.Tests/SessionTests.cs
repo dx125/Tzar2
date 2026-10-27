@@ -404,7 +404,8 @@ public sealed class SessionTests
         var batch = new CommandList();
         batch.Add(CommandKind.Repair, [peon], target: castle);
         session.Submit(batch);
-        for (int t = 0; t < 400 && world.Workers.Get(peon).Phase != WorkerPhase.Repairing; t++)
+        // Until it works: its last step onto its tile ends first (ADR 0270).
+        for (int t = 0; t < 400 && (world.Workers.Get(peon).Phase != WorkerPhase.Repairing || (world.CellSteps.IndexOf(peon) is >= 0 and var s && world.CellSteps.At(s).To >= 0)); t++)
         {
             session.Step(1);
         }

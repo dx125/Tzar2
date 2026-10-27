@@ -41,9 +41,12 @@ public class AiSkirmishTests(ITestOutputHelper output)
             Assert.True(scenario.Delivered(p) > 5000, scenario.Describe());
             Assert.True(scenario.Built(p) >= 10, scenario.Describe());
             Assert.True(scenario.Trained(p) >= 30, scenario.Describe());
-            Assert.True(scenario.Ai.Players[p].Waves >= 1, scenario.Describe());
             Assert.True(scenario.DamageDealt(p) > 0 && scenario.Kills(p) > 0, scenario.Describe());
         }
+
+        // Both fight; at least one attacks. Since units step cell by cell (ADR 0270) the race between the two is no longer
+        // even: on this map p1 has its barracks first, its first wave beats p0's army, and p0 defends for the rest.
+        Assert.True(scenario.Ai.Players[0].Waves + scenario.Ai.Players[1].Waves >= 1, scenario.Describe());
     }
 
     [Fact]

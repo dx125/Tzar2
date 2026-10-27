@@ -3,6 +3,16 @@ using System.Collections.Immutable;
 
 namespace Tzar2.Content.Compiled;
 
+/// <summary>How land units move (ADR 0270).</summary>
+public enum MovementModel : byte
+{
+    /// <summary>Steered with avoidance and soft pushes (ADR 0025).</summary>
+    Continuous = 0,
+
+    /// <summary>One to a tile, stepping from tile to tile, waiting for or going round other units (the original).</summary>
+    Cells = 1,
+}
+
 /// <summary>How fast the members of a group move order travel (UNK-12; ADR 0024 question, owner decision for M2).</summary>
 public enum GroupMoveSpeed : byte
 {
@@ -30,6 +40,13 @@ public sealed record GameplaySettings
 
     /// <summary>Group move speed rule (UNK-12).</summary>
     public GroupMoveSpeed GroupMoveSpeed { get; init; } = GroupMoveSpeed.Slowest;
+
+    /// <summary>
+    /// How land units move (ADR 0270): <see cref="MovementModel.Cells"/> one to a tile, stepping from tile to tile as the
+    /// original; <see cref="MovementModel.Continuous"/> steered with soft pushes (ADR 0025). Ships and flyers move
+    /// continuously in both.
+    /// </summary>
+    public MovementModel Movement { get; init; } = MovementModel.Continuous;
 
     /// <summary>Default population limit of a match (lobby "POPULATION LIMIT").</summary>
     public int PopulationLimit { get; init; } = 200;
