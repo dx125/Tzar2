@@ -7,7 +7,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 indexed in [decisions/README.md](decisions/README.md).
 
 * **Last updated:** 2026-10-26 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
-  targets and answer enemies as the original)
+  targets and answer enemies as the original; land units step cell by cell)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -347,7 +347,8 @@ owner's order of 2026-10-26.
            when the attacker of the guarded object dies though other enemies stand next to them: **fixed** for the
            choice of targets (WAR-015, WAR-016, WAR-017); stepping from tile to tile is the movement (N10).
       4. Peasants build from far off, without turning to the site.
-      5. Peasants taking a load to the drop-off by the shortest way get stuck walking in place.
+      5. Peasants taking a load to the drop-off by the shortest way get stuck walking in place: **fixed** by the cell
+         steps (WORLD-020, ADR 0270): a unit waits for or goes round another, and nobody pushes.
       6. Wall segments do not join into one wall; a wooden wall is drawn with a broken stone wall's picture.
       7. The tavern:
          * its card is crooked, shifted against the rest of the HUD;
@@ -378,7 +379,9 @@ owner's order of 2026-10-26.
       6. Sound effects hang on, most after a fight (blows, the cries of the dying) or after a horseman is ordered to
          move.
       7. Moving troops push standing friends several tiles aside instead of going round. Letting them through is right
-         when there is no other way, but the friends should step aside and come back.
+         when there is no other way, but the friends should step aside and come back: **fixed** (WORLD-020): movers go
+         round; with no way round an idle friend walks to a free tile off the way and goes back, or in a corridor the
+         two change places.
       8. Units walk under some buildings (peasants through the stable's picture); there may be more.
       9. Units coming out of a building (castle, outpost) should be selected, as in the original, and come out around
          it. Check unloading ships, caravans and carpets too (HOLD-003).
@@ -389,7 +392,9 @@ owner's order of 2026-10-26.
             **fixed**, it takes the one it reaches (WAR-016);
           * soldiers, archers most, all strike the same enemy: **fixed** as the original ranks targets (WAR-015: about
             two attackers to a target, then the weaker, then the nearer);
-          * open: the crowd's movement (jitter, nobody going round, the rear stuck), which is the movement model, next.
+          * the crowd's movement (jitter, nobody going round, the rear stuck): **fixed**, land units stand one to a
+            tile and step from tile to tile as the original (WORLD-020, ADR 0270); attackers of one enemy take the
+            tiles round it.
       11. A peasant carrying a load sent to gather something else first takes the load home. In the original it goes to
           the new work, and drops the old load on the ground when it takes a new one.
       12. Units answer orders late, standing a while first, most when a group standing close together is selected.
@@ -411,6 +416,21 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-26 — Land units step cell by cell, one to a tile (WORLD-020, ADR 0270; item 18.S5, N7, N10).** ReTzar's
+  reading of the original's movement: a step takes the next tile at once and slides there (a tile in any of eight
+  directions in the same time); a unit entering the tile is waited for, one standing there is gone round (a search
+  round the units); nobody is pushed. Tzar2 keeps its routes, flow fields and arrival slots; only the step is the
+  original's (`gameplay.movement: cells`; ships and flyers stay continuous). Head-on friends pass each other
+  (ORIG-02); with no way round an idle friend walks off the way and comes back (the owner's wish). Hand-to-hand reach is
+  18 px so a diagonal neighbour is in reach. The original's campaigns forced more than the original's rules:
+  units that make way include those of kingdoms that are not enemies; a way round may go through them at a price; an
+  idle one steps off a walker's goal tile; walkers jammed together change places; each unit's own layer says where it
+  may stand (a ninja climbs); progress along routes and flow fields is theirs. With those the local acceptance passes
+  every mission again (it had failed bigisland and rajba). The goldens and all three CI bench hashes are re-pinned
+  (sim 9BDF7B273CFACC77 for the new layout only, gameplay 8EB701A39DA38195, ai 74946F3B0593C43C; the snapshot format is
+  22, the hashed layout 20). The gameplay bench's p50 is within 2 % of main (a held-up unit searches its way round
+  every 8 ticks). The computer's economy is about 8 % slower and the two-AI race uneven: the AI tests ask that one of
+  them attacks.
 * **2026-10-26 — Troops choose targets and answer enemies as the original (WAR-015, WAR-016, WAR-017, ORD-001;
   item 18.S3, N10).** From ReTzar's reading of the original's code:
   * a unit or tower that takes on an enemy by itself ranks what it sees by the original's target categories and

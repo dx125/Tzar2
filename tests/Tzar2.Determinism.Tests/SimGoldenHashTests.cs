@@ -47,7 +47,9 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // (ADR 0265, 2026-10-23) a spell book keeps its own pool and may be endless (item state grows, hashed layout 17, snapshot 19): the hashes.
     // (ADR 0266, 2026-10-23) no spell cooldowns (casters wait only for mana) and spells learned from books (a new store, hashed layout 18, snapshot 20): the hashes.
     // (ADR 0267, 2026-10-23) mana regrows 2 a second (Nature 1), a pool below a spell's cost is raised to it, a summon costs its creature's mana (mana state grows, hashed layout 19, snapshot 21): the hashes.
-    private const ulong GoldenFinalFullHash = 0x425F28EE363BD785UL;
+    // (ADR 0270, 2026-10-27) a new store for the land units' steps (hashed layout 20; this scenario keeps the continuous
+    // movement): the hashes only.
+    private const ulong GoldenFinalFullHash = 0x9BDF7B273CFACC77UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look, craft jobs their variant (layout 11): the hashes only.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
@@ -56,7 +58,8 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // allies shove and queue like friends: movement changes.
     // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
     // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
-    private const ulong GoldenHashStream = 0x2772EC161E833C61UL;
+    // (ADR 0270, 2026-10-27) the hashed layout 20 (the steps' store): the hashes only.
+    private const ulong GoldenHashStream = 0x9967629D13D0D9A8UL;
 
     private const int Ticks = 300;
 

@@ -54,13 +54,28 @@ ADR 0188 named this model as the faithful one, and kept the continuous one only 
   * If a unit is entering the tile, the walker waits up to 2.5 s.
   * If a unit stands there, the walker searches its way round the other units: an A* over at most 1,200 tiles
     within 12 of it, toward the goal or the next point, and takes the first step.
+  * That search treats an enemy, or a creature of Nature, as a wall. It may go through a unit that makes way, at a
+    higher cost: 2 tiles' worth for one walking, 6 for one standing. If its first step is onto such a unit, the
+    walker asks that unit to make room or to pass it.
 * **Friends make room** (the owner: allies should step aside and come back, not be shoved).
+  * Units that make way are friends and the units of any kingdom that is not an enemy of the walker's, either way.
+    The campaigns' neutral towns would otherwise wall a road for good.
   * With no way round, an idle friend in the way walks to the nearest free tile off the walker's way, within three
     steps.
   * It goes back two seconds later when its tile is free.
-  * In a corridor with no room off the way, the two change places.
-* **Stuck.** As before: a unit settles near its goal when the goal is held, re-plans after 2 s without a step, and
-  gives up after the old counts.
+  * In a corridor, or a crowd with no room off the way, the two change places. So does a unit already making room
+    but hemmed in.
+  * An idle unit that makes way steps off a walker's goal tile: the order named that place (a trigger's area).
+    One at work, or an enemy, keeps it, and the walker settles next to it.
+  * A walker that has not got on for a second (a crowd of walkers locked together) changes places with the walker
+    that needs its tile, unless it is at work or striking.
+  * Each unit's own layer says where it may stand: a ninja climbs where a footman cannot (WORLD-018).
+  * The campaigns found these: the main campaign's rajba locked a ninja in its own army for an hour of game time.
+* **Stuck.** Progress means coming nearer the goal, or moving on along a path.
+  * A unit that steps for 6 s without progress plans again. Without this, units pushed off a straight line (a bridge
+    crossed head on) kept stepping along the bank.
+  * A blocked unit settles near its goal when the goal is held, re-plans after 2 s, and gives up after the old
+    counts.
 * **Hand-to-hand reach** (`meleeReachPx`) becomes 18 px. With 14 px bodies, a diagonal neighbour is then in reach, as
   the original's target cells grown by one are; the next tile but one is not.
 * **Snapshots and hashes.** The snapshot format is 22 and the hashed layout 20. The occupancy is rebuilt every tick,
@@ -83,7 +98,10 @@ ADR 0188 named this model as the faithful one, and kept the continuous one only 
   original.
   * In the AI skirmish tests the race between two computers is no longer even. The tests ask that one of them
     attacks within ten or twelve minutes.
-* Every golden hash and the gameplay and AI bench hashes change. The sim bench (continuous, M2 synthetic) does not.
+* Every golden hash and all three CI bench hashes change; the sim bench only by the new store in the hashed layout
+  (the M2 synthetic scenario keeps the continuous movement).
+* The gameplay bench's p50 is within 2 % of the continuous model's: a unit held up for a while searches its way round
+  every 8 ticks, not every tick (every tick cost 18 %).
 * The M2 bodies (ADR 0188) still give the reach and the spacing of ships and flyers.
 * Not done: units stepping aside for a passing enemy (they fight), and a unit of two tiles' clearance changing
   places.

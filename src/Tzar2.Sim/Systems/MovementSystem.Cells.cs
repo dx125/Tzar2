@@ -25,8 +25,11 @@ public sealed partial class MovementSystem
     /// <summary>How far (tiles) a unit looks for its way round the units in its way.</summary>
     public const int DetourRadius = 12;
 
-    /// <summary>Most tiles one search for a way round looks at.</summary>
-    public const int DetourNodes = 1200;
+    /// <summary>Most tiles one search for a way round looks at (its whole square of DetourRadius).</summary>
+    public const int DetourNodes = 640;
+
+    /// <summary>A unit held up for a while looks for its way round only this often (ticks; a crowd costs less).</summary>
+    public const int DetourEvery = 8;
 
     /// <summary>How long a unit that stepped aside for a friend stands before it goes back.</summary>
     public const int YieldReturnMs = 2000;
@@ -142,6 +145,10 @@ public sealed partial class MovementSystem
         int y = f.Py[i];
         int speed = m.GroupSpeed > 0 ? Math.Min(m.SpeedPerTick, m.GroupSpeed) : m.SpeedPerTick;
         int budget = Math.Max(1, speed);
+        if (m.State == MotionState.Moving && m.Mode != MotionMode.Waiting)
+        {
+            m.StallTicks++; // reset by progress (NextTile)
+        }
         f.Qx[i] = x;
         f.Qy[i] = y;
         if (s.To >= 0)
@@ -162,7 +169,6 @@ public sealed partial class MovementSystem
             (x, y) = (cx, cy);
             s.To = -1;
             s.Progress = 0;
-            m.BestDistance = int.MaxValue; // reached a tile: progress
         }
 
         f.Fx[i] = x;
@@ -259,19 +265,59 @@ public sealed partial class MovementSystem
             return -1;
         }
 
+        // Progress is coming nearer the goal (or on along a path); a unit that steps without it for a while, round and
+        // round a crowd or along a bank its straight line crossed, plans again.
+        int cursor = m.PathCursor;
         int toward = SteeringTile(world, layer, f, i, ref m, here, goal);
+        long nearer = Octile(here % layer.Width, here / layer.Width, goal % layer.Width, goal / layer.Width);
+        if (m.Mode == MotionMode.Path && m.PathCursor != cursor)
+        {
+            m.BestDistance = int.MaxValue;
+        }
+
+        // A route or a flow field tracks its own progress along the way (the pre-pass: tiles left along the tree, the
+        // field's cost); a path or a straight walk is judged here by the distance to the goal.
+        bool tracked = m.Mode is MotionMode.Route or MotionMode.Flow;
+        if (!tracked && nearer < m.BestDistance)
+        {
+            m.BestDistance = (int)Math.Min(nearer, int.MaxValue);
+            m.StallTicks = 0;
+        }
+        else if (m.StallTicks >= 3 * ReplanTicks)
+        {
+            f.Out[i] = OutReplan;
+            m.StallTicks = 0;
+            m.BestDistance = int.MaxValue;
+            return -1;
+        }
+
         int best = BestNeighbour(world, layer, f.Owner[i], here, toward);
         if (best >= 0 && Free(layer, best, i))
         {
-            m.StallTicks = 0;
             return best;
         }
 
         int blocker = best >= 0 ? _tileUnit[best] - 1 : -1;
 
-        // The goal is held by a unit standing on it: the unit settles next to it.
+        // The goal is held by a unit standing on it: an idle one that makes way steps off it (the order named that place:
+        // a trigger's area, a work spot); one at work or of an enemy keeps it, and the unit settles next to it.
         if (Chebyshev(layer, here, goal) <= 1 && _tileUnit[goal] != 0 && _tileUnit[goal] - 1 != i && _tileEntering[goal] == 0)
         {
+            int holder = _tileUnit[goal] - 1;
+            if (goal == best && f.Moving[holder] == 0 && f.Anchored[holder] == 0 && MakesWay(world, f, i, holder))
+            {
+                int made = YieldAside(world, layer, f, holder, here, goal, tick);
+                if (made == 2)
+                {
+                    return goal; // the two change places
+                }
+
+                if (made == 1)
+                {
+                    return -1; // it steps off: wait for it
+                }
+            }
+
             f.Out[i] = OutArrived;
             return -1;
         }
@@ -280,7 +326,6 @@ public sealed partial class MovementSystem
         // the original's units squeezed past on open ground, ADR 0188).
         if (blocker >= 0 && _tileEntering[best] == 0 && SwapWith(world, layer, f, i, blocker, here, best))
         {
-            m.StallTicks = 0;
             return best;
         }
 
@@ -291,34 +336,48 @@ public sealed partial class MovementSystem
             return -1;
         }
 
-        // Standing in the way, or waited long enough: round the units.
-        int round = Detour(world, layer, f, i, here, goal, toward);
-        if (round >= 0)
+        // Standing in the way, or waited long enough: round the units. The way may lead through units that make way
+        // (not an enemy's), dearer than free ground; its first step then asks the one there.
+        int round = m.StallTicks < DetourEvery || (tick + i) % DetourEvery == 0 ? Detour(world, layer, f, i, here, goal, toward) : -1;
+        if (round >= 0 && Free(layer, round, i))
         {
-            m.StallTicks = 0;
             return round;
         }
 
-        // No way round: an idle friend standing in the way makes room (the owner's sixth play-test: allies step aside and
-        // come back instead of being shoved along).
-        if (blocker >= 0 && f.Moving[blocker] == 0 && f.Friends(i, blocker) && f.Anchored[blocker] == 0)
+        int there = round >= 0 ? _tileUnit[round] - 1 : -1;
+        if (there >= 0 && MakesWay(world, f, i, there))
         {
-            int made = YieldAside(world, layer, f, blocker, here, best, tick);
-            if (made == 2)
+            // Head on with it: the two pass each other.
+            if (_tileEntering[round] == 0 && SwapWith(world, layer, f, i, there, here, round))
             {
-                m.StallTicks = 0;
-                return best; // the two change places
+                return round;
             }
 
-            if (made == 1)
+            // Standing idle: it makes room (the owner's sixth play-test: allies step aside and come back instead of being
+            // shoved along).
+            if (f.Moving[there] == 0 && f.Anchored[there] == 0)
             {
-                s.Waits = 0;
-                return -1; // it walks off the way: wait for it
+                int made = YieldAside(world, layer, f, there, here, round, tick);
+                if (made == 2)
+                {
+                    return round; // the two change places
+                }
+
+                if (made == 1)
+                {
+                    s.Waits = 0;
+                    return -1; // it walks off the way: wait for it
+                }
+            }
+
+            // Jammed itself (a crowd of walkers locked together): the two change places, so one of them gets on.
+            if (SwapJammed(world, layer, f, i, there, here, round, tick))
+            {
+                return round;
             }
         }
 
         // Stuck: as the continuous model, settle near the goal, re-plan, give up.
-        m.StallTicks++;
         long toGoal = Chebyshev(layer, here, goal) * (long)MapState.UnitsPerTile;
         if (toGoal <= m.SettleRadius + MapState.UnitsPerTile && m.StallTicks >= SettleTicks)
         {
@@ -329,6 +388,7 @@ public sealed partial class MovementSystem
             bool giveUp = m.Replans >= MaxCrowdReplans || (m.Replans >= MaxReplans && blocker < 0);
             f.Out[i] = giveUp ? OutGiveUp : OutReplan;
             m.StallTicks = 0;
+            m.BestDistance = int.MaxValue;
         }
 
         return -1;
@@ -455,12 +515,24 @@ public sealed partial class MovementSystem
                 }
 
                 int n = (ny * width) + nx;
-                if ((_tileUnit[n] != 0 && _tileUnit[n] - 1 != i) || Barred(world, layer, f.Owner[i], node, n))
+                int extra = 0;
+                if (_tileUnit[n] != 0 && _tileUnit[n] - 1 != i)
+                {
+                    int k = _tileUnit[n] - 1;
+                    if (!MakesWay(world, f, i, k))
+                    {
+                        continue; // an enemy, or a creature of Nature, is a wall
+                    }
+
+                    extra = f.Moving[k] != 0 || _tileEntering[n] != 0 ? MovingUnitCost : StandingUnitCost;
+                }
+
+                if (Barred(world, layer, f.Owner[i], node, n))
                 {
                     continue;
                 }
 
-                int g = _cost[node] + (d % 2 == 0 ? NavLayer.StraightCost : NavLayer.DiagonalCost);
+                int g = _cost[node] + (d % 2 == 0 ? NavLayer.StraightCost : NavLayer.DiagonalCost) + extra;
                 if (_seen[n] == _search && _cost[n] <= g)
                 {
                     continue;
@@ -485,31 +557,52 @@ public sealed partial class MovementSystem
             step = _from[step];
         }
 
-        return _from[step] == here && Free(layer, step, i) ? step : -1;
+        return _from[step] == here ? step : -1;
+    }
+
+    // What going through a unit's tile costs a way round, beyond the step: one walking on soon leaves it; one standing has
+    // to make room.
+    private const int MovingUnitCost = 2 * NavLayer.StraightCost;
+    private const int StandingUnitCost = 6 * NavLayer.StraightCost;
+
+    // Whether unit j makes way for unit i (steps aside, or passes it head on): a friend, or a unit of a kingdom neither of
+    // the two counts as an enemy. Enemies and creatures of Nature do not.
+    private static bool MakesWay(World world, Frame f, int i, int j)
+    {
+        if (f.Friends(i, j))
+        {
+            return true;
+        }
+
+        byte a = f.Owner[i];
+        byte b = f.Owner[j];
+        return world.HasPlayer(a) && world.HasPlayer(b)
+            && world.Diplomacy.StanceOf(a, b) != Kingdoms.Stance.Enemy && world.Diplomacy.StanceOf(b, a) != Kingdoms.Stance.Enemy;
     }
 
     // Two friends head on: j stands on `there`, on its way, and its next tile is i's `here`. Both step at once, each onto
     // the other's tile; i's step begins in Step.
     private bool SwapWith(World world, NavLayer layer, Frame f, int i, int j, int here, int there)
     {
-        if (f.Cell[j] == 0 || f.Moving[j] == 0 || !f.Friends(i, j) || layer.Clearance != 1)
+        if (f.Cell[j] == 0 || f.Moving[j] == 0 || !MakesWay(world, f, i, j) || layer.Clearance != 1)
         {
             return false;
         }
 
         ref Motion mj = ref world.Motions.At(j);
         int s = world.CellSteps.IndexOf(f.Entity[j]);
-        if (mj.Layer != layer.Index || s < 0 || world.CellSteps.At(s).To >= 0)
+        NavLayer lj = LayerOf(world, j);
+        if (lj.Clearance != 1 || s < 0 || world.CellSteps.At(s).To >= 0)
         {
             return false;
         }
 
-        // j's way goes through i's tile: it would come nearer where it heads for.
-        int goal = layer.TileOf(mj.TargetX, mj.TargetY);
-        int toward = SteeringTile(world, layer, f, j, ref mj, there, goal);
+        // j's way goes through i's tile: it would come nearer where it heads for (on its own layer: a ninja climbs).
+        int goal = lj.TileOf(mj.TargetX, mj.TargetY);
+        int toward = SteeringTile(world, lj, f, j, ref mj, there, goal);
         int w = layer.Width;
         if (goal == there || Octile(here % w, here / w, toward % w, toward / w) >= Octile(there % w, there / w, toward % w, toward / w)
-            || !CanStep(world, layer, f.Owner[j], there, here))
+            || !CanStep(world, lj, f.Owner[j], there, here))
         {
             return false;
         }
@@ -537,14 +630,16 @@ public sealed partial class MovementSystem
     {
         EntityId e = f.Entity[j];
         int s = world.CellSteps.IndexOf(e);
-        if (s < 0 || world.CellSteps.At(s).To >= 0 || world.CellSteps.At(s).Aside >= 0 || f.Cell[j] == 0 || world.Motions.At(j).Layer != layer.Index
+        if (s < 0 || world.CellSteps.At(s).To >= 0 || f.Cell[j] == 0 || LayerOf(world, j).Clearance != 1
             || layer.Clearance != 1 || world.Combats.IndexOf(e) is >= 0 and var c && world.Combats.At(c).Target != 0)
         {
-            return 0; // walking, making room already, of another size, or fighting
+            return 0; // walking, of another size, or fighting
         }
 
+        // Making room already but hemmed in (a crowd): it changes places instead. Its own layer says where it may stand.
+        NavLayer lj = LayerOf(world, j);
         ref CellStep step = ref world.CellSteps.At(s);
-        int aside = OffTheWay(world, layer, f, j, asker, at);
+        int aside = step.Aside < 0 ? OffTheWay(world, lj, f, j, asker, at) : -1;
         if (aside >= 0)
         {
             if (step.Home < 0)
@@ -559,7 +654,7 @@ public sealed partial class MovementSystem
 
         // No room off the way (a corridor): the two change places, and j goes back after the asker has passed.
         int i = _tileUnit[asker] - 1;
-        if (i < 0 || !CanStep(world, layer, f.Owner[j], at, asker))
+        if (i < 0 || !CanStep(world, lj, f.Owner[j], at, asker))
         {
             return 0;
         }
@@ -582,6 +677,41 @@ public sealed partial class MovementSystem
         step.HomeTick = tick;
         return 2;
     }
+
+    // A walker that has not got on for this long gives its tile to one that needs it (a jam, ORIG-02).
+    private const int JamTicks = 20;
+
+    // j, a walker that makes way, stands jammed on `there` (no step under way and no progress for JamTicks), neither at
+    // work nor striking: the two change places, j stepping back onto i's tile.
+    private bool SwapJammed(World world, NavLayer layer, Frame f, int i, int j, int here, int there, int tick)
+    {
+        EntityId e = f.Entity[j];
+        int s = world.CellSteps.IndexOf(e);
+        if (s < 0 || f.Cell[j] == 0 || f.Moving[j] == 0 || f.Anchored[j] != 0 || layer.Clearance != 1 || LayerOf(world, j).Clearance != 1
+            || world.CellSteps.At(s).To >= 0 || world.Motions.At(j).StallTicks < JamTicks
+            || (world.Combats.IndexOf(e) is >= 0 and var c && world.Combats.At(c).Striking != 0)
+            || !CanStep(world, LayerOf(world, j), f.Owner[j], there, here))
+        {
+            return false;
+        }
+
+        ref CellStep step = ref world.CellSteps.At(s);
+        _tileUnit[here] = j + 1;
+        _tileEntering[here] = 1;
+        _tileUnit[there] = i + 1;
+        _tileEntering[there] = 1;
+        _tilesSet.Add(here);
+        _tilesSet.Add(there);
+        step.To = here;
+        step.FromX = layer.CenterX(there);
+        step.FromY = layer.CenterY(there);
+        step.Progress = 0;
+        step.Waits = 0;
+        return true;
+    }
+
+    // The navigation layer unit j walks on (its locomotor and clearance: a ninja's climbs).
+    private static NavLayer LayerOf(World world, int j) => world.Navigation.Layers[world.Motions.At(j).Layer];
 
     // Whether unit j walks off a friend's way.
     private static bool MakingRoom(World world, Frame f, int j)

@@ -127,7 +127,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // then: (ADR 0267, 2026-10-23) mana regrows 2 a second and a pool below a cost is raised to it (hashed layout 19).
             // then: (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it.
             // then: (WAR-015/016/017, 2026-10-26) the original's choice of targets, the next target at once, calls for help.
-            Assert.Equal("D99CF223AB073276", d.Hashes[^1].ToString("X16"));
+            // then: (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (hashed layout 20).
+            Assert.Equal("DE301E7753B2BAE4", d.Hashes[^1].ToString("X16"));
         }
     }
 
