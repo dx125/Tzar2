@@ -290,6 +290,7 @@ public sealed partial class World
         }
 
         Helds.Remove(unit);
+        CellSteps.RemoveEntity(unit); // a fresh start on the tile it comes out on (ADR 0270)
         ref HolderState state = ref Holders.Get(holder);
         state.Count--;
         Positions.Get(unit) = new Position(x, y);

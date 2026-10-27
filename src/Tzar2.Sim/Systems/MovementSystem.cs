@@ -30,7 +30,7 @@ namespace Tzar2.Sim.Systems;
 /// <para><b>Merge</b> (sequential, ascending unit order): positions, facing, occupancy, events, re-plans. Jobs read only
 /// the flat copy and write only their own units' outputs, so results do not depend on the worker count (ADR 0017).</para>
 /// </remarks>
-public sealed class MovementSystem : ISimSystem
+public sealed partial class MovementSystem : ISimSystem
 {
     /// <summary>Units per job.</summary>
     public const int ChunkSize = 256;
@@ -96,6 +96,11 @@ public sealed class MovementSystem : ISimSystem
         ITickProfiler? profiler = context.Profiler;
         nav.EnsureUpToDate();
         world.RefreshGateBars();
+        if (world.CellSteps.Count != 0)
+        {
+            DropCarriedSteps(world);
+        }
+
         profiler?.Begin("pre-pass");
         PrePass(context, world, nav);
         profiler?.End();
@@ -118,6 +123,13 @@ public sealed class MovementSystem : ISimSystem
         profiler?.Begin("resolve");
         context.Workers.Run(_resolve, jobs);
         profiler?.End();
+        if (_frame.Cells)
+        {
+            profiler?.Begin("cells");
+            CellPass(world, nav); // land units step cell by cell (ADR 0270)
+            profiler?.End();
+        }
+
         profiler?.Begin("merge");
         Merge(world);
         profiler?.End();
@@ -1059,6 +1071,11 @@ public sealed class MovementSystem : ISimSystem
 
         // The object a worker works at or walks to (Worker.Target), 0 for none.
         public uint[] WorkTarget = [];
+
+        // Land units that step cell by cell (ADR 0270), and those whose tile another unit holds already.
+        public byte[] Cell = [];
+        public byte[] Displaced = [];
+        public bool Cells;
         public int[] Out = [];
         public int GridW;
         public int GridH;
@@ -1090,6 +1107,8 @@ public sealed class MovementSystem : ISimSystem
                 Moving = new byte[size];
                 Anchored = new byte[size];
                 WorkTarget = new uint[size];
+                Cell = new byte[size];
+                Displaced = new byte[size];
                 Out = new int[size];
                 CellItems = new int[size];
             }
@@ -1120,6 +1139,7 @@ public sealed class MovementSystem : ISimSystem
             }
 
             Array.Clear(CellStart);
+            Cells = false;
             for (int i = 0; i < n; i++)
             {
                 EntityId e = entities[i];
@@ -1140,6 +1160,14 @@ public sealed class MovementSystem : ISimSystem
                 Moving[i] = m.State == MotionState.Moving && m.Mode != MotionMode.Waiting ? (byte)1 : (byte)0;
                 WorkTarget[i] = TargetOf(world, e);
                 Anchored[i] = Moving[i] == 0 && AtWork(world, e) ? (byte)1 : (byte)0;
+                Cell[i] = IsCellUnit(world, identity.TypeId) && m.Layer != NavigationGrid.NoLayer && !world.IsHeld(e) ? (byte)1 : (byte)0;
+                Cells |= Cell[i] != 0;
+                Displaced[i] = 0;
+                if (Cell[i] == 0 && world.CellSteps.Count != 0 && world.CellSteps.IndexOf(e) is >= 0 and var cs)
+                {
+                    world.CellSteps.At(cs).To = -1; // carried away (a holder): no step under way
+                }
+
                 Out[i] = 0;
                 CellStart[CellOf(p.X, p.Y) + 1]++;
             }
@@ -1187,6 +1215,11 @@ public sealed class MovementSystem : ISimSystem
                 f.Qx[i] = f.Px[i];
                 f.Qy[i] = f.Py[i];
                 ref Motion m = ref data[i];
+                if (f.Cell[i] != 0)
+                {
+                    continue; // steps cell by cell (CellPass)
+                }
+
                 if (f.Moving[i] == 0)
                 {
                     if (m.State != MotionState.Moving)
@@ -1441,6 +1474,11 @@ public sealed class MovementSystem : ISimSystem
             int end = Math.Min(f.Count, (jobIndex + 1) * ChunkSize);
             for (int i = jobIndex * ChunkSize; i < end; i++)
             {
+                if (f.Cell[i] != 0)
+                {
+                    continue; // steps cell by cell (CellPass)
+                }
+
                 ref Motion m = ref data[i];
                 NavLayer? layer = m.Layer == NavigationGrid.NoLayer ? null : nav.Layers[m.Layer];
                 int qx = f.Qx[i];

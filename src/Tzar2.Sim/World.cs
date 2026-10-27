@@ -72,6 +72,7 @@ public sealed partial class World
         Navigation = new NavigationGrid(Map, ruleset);
         CorpseTtlTicks = (ruleset.CorpseTtlMilliseconds + config.TickLengthMilliseconds - 1) / config.TickLengthMilliseconds;
         InitializeKingdoms();
+        CellSteps = Components.RegisterHot<CellStep>("core.cellstep"); // ADR 0270; appended after the others
     }
 
     /// <summary>The compiled ruleset.</summary>
@@ -124,6 +125,9 @@ public sealed partial class World
 
     /// <summary>Occupancy bookkeeping (hot).</summary>
     public ComponentStore<OccupancyCell> OccupancyCells { get; }
+
+    /// <summary>Land units' steps from tile to tile (hot; ADR 0270).</summary>
+    public ComponentStore<CellStep> CellSteps { get; }
 
     /// <summary>Names (cold).</summary>
     public ColdComponentStore<EntityName> Names { get; }
@@ -1003,6 +1007,20 @@ public sealed partial class World
             if (m.Mode == MotionMode.Route && !RouteIsValid(Paths.Get(movers[i].Index), m.Layer, m.PathCursor, m.PlanVersion))
             {
                 throw Invalid("invalid route");
+            }
+        }
+
+        ReadOnlySpan<EntityId> steppers = CellSteps.Entities;
+        Span<CellStep> steps = CellSteps.Components;
+        int tiles = Map.Width * Map.Height;
+        for (int i = 0; i < steppers.Length; i++)
+        {
+            CellStep s = steps[i];
+            if (s.To < -1 || s.To >= tiles || s.Home < -1 || s.Home >= tiles || s.Aside < -1 || s.Aside >= tiles || s.Progress < 0
+                || s.Progress > MapState.UnitsPerTile || s.HomeTick < 0 || s.HomeTick > Tick.Value || !Map.ContainsPoint(s.FromX, s.FromY)
+                || s.Reserved0 != 0 || s.Reserved1 != 0 || s.Reserved2 != 0)
+            {
+                throw Invalid("invalid cell step");
             }
         }
 

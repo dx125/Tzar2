@@ -111,6 +111,7 @@ public class NatureTests
         Assert.Equal(0, w.Identities.Get(cow).Owner);
         Assert.False(w.NatureHomes.Has(cow));
         Assert.NotEqual(MotionState.Moving, w.Motions.Get(cow).State); // a claimed cow stops wandering (play-test 2026-10-20)
+        d.RunUntil(() => !d.IsMoving(cow), 40); // it ends the step it began onto its tile (ADR 0270)
         Position claimedAt = d.PositionOf(cow);
         d.Order(0, CommandKind.Stop, [peon]);
         d.RunUntil(() => false, 400);

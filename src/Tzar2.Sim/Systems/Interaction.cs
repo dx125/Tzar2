@@ -871,8 +871,15 @@ internal static class Interaction
     public static bool IsMoving(World world, EntityId unit)
     {
         int m = world.Motions.IndexOf(unit);
-        return m >= 0 && world.Motions.At(m).State == MotionState.Moving;
+        return m >= 0 && (world.Motions.At(m).State == MotionState.Moving || Stepping(world, unit));
     }
+
+    /// <summary>
+    /// Whether a land unit is in the middle of a step from tile to tile (ADR 0270): stopped or not, it walks on to the
+    /// tile it entered, and what it does next waits for the step's end (the original's programs wait for it).
+    /// </summary>
+    public static bool Stepping(World world, EntityId unit)
+        => world.CellSteps.Count != 0 && world.CellSteps.IndexOf(unit) is >= 0 and var s && world.CellSteps.At(s).To >= 0;
 
     /// <summary>Stops a unit's current movement (it keeps no order).</summary>
     public static void Halt(World world, EntityId unit)

@@ -106,7 +106,7 @@ internal sealed class SimDriver : IDisposable
 
     public Motion MotionOf(EntityId e) => World.Motions.Get(e);
 
-    public bool IsMoving(EntityId e) => World.Motions.Get(e).State == MotionState.Moving;
+    public bool IsMoving(EntityId e) => Systems.Interaction.IsMoving(World, e); // a land unit mid-step walks on (ADR 0270)
 
     public bool AnyMoving(IEnumerable<EntityId> units)
     {

@@ -87,7 +87,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0267, 2026-10-23) manaRegenPerMinute 120 and combat.natureManaRegenPercent 50: the ruleset hash.
     // (ADR 0268, 2026-10-23) the ninja's murder becomes a blow (effect murder, combat.murderBlowMana): the ruleset hash only.
     // (WAR-015, 2026-10-26) the target categories and priorities, the help and guard radii (combat settings): the ruleset hash.
-    private const ulong GoldenRulesetHash = 0x01C7A98DF6CEEFBAUL;
+    // (ADR 0270, 2026-10-27) gameplay.movement cells and meleeReachPx 18: the ruleset hash.
+    private const ulong GoldenRulesetHash = 0xE70716C4C73E5069UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -108,8 +109,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (WORLD-019, 2026-10-24) footmen attacking a building take tiles of their own around it: the stream and the final hash.
     // (WAR-015/016/017, 2026-10-26) the original's choice of targets, the next target at once and the calls for help;
     // guards stand within three tiles (ORD-001): the stream and the final hash.
-    private const ulong GoldenHashStream = 0xC535F3819FBB4BB2UL;
-    private const ulong GoldenFinalFullHash = 0x8ED1B52D809C73B3UL;
+    // (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (a new store, hashed layout 20): the stream and
+    // the final hash.
+    private const ulong GoldenHashStream = 0xC1EFCD30E23F6859UL;
+    private const ulong GoldenFinalFullHash = 0x16379D4C2C3A9C2EUL;
 
     private const int Ticks = 1600;
 

@@ -31,7 +31,8 @@ public class ActivityFrameTests
         var order = new CommandList();
         order.Add(CommandKind.Capture, [peon], target: house);
         sim.Tick(order);
-        for (int t = 0; t < 400 && world.Workers.Get(peon).Phase != WorkerPhase.Capturing; t++)
+        // Until it digs: its last step onto its tile ends first (ADR 0270).
+        for (int t = 0; t < 400 && (world.Workers.Get(peon).Phase != WorkerPhase.Capturing || (world.CellSteps.IndexOf(peon) is >= 0 and var s && world.CellSteps.At(s).To >= 0)); t++)
         {
             sim.Tick(new CommandList());
         }

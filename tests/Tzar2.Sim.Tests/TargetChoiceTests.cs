@@ -102,4 +102,24 @@ public class TargetChoiceTests
         Assert.Equal(before, d.PositionOf(close)); // already within three tiles: it guards from where it stands
         Assert.Equal(MotionOrder.Follow, d.MotionOf(walker).Order);
     }
+
+    [Fact]
+    [Trait("Rule", "ORD-001")]
+    public void A_site_nobody_has_begun_can_be_guarded()
+    {
+        // The sixth play-test: guarding a site of 1 HP turned into a move.
+        using var d = new SimDriver(TestMap(40, 20, Unit("euro.peon", 0, 4, 4), Unit("euro.footman", 0, 6, 10)), ruleset: Classic);
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        d.Order(0, CommandKind.Build, [peon], 30 * Tile, 10 * Tile, arg0: (ushort)d.World.Ruleset.EntityTypeId("euro.house"));
+        d.Order(0, CommandKind.Stop, [peon]);
+        d.Step();
+        EntityId site = OfType(d.World, "euro.house").Single();
+        Assert.Equal(0, d.World.Constructions.Get(site).ProgressMs);
+        d.Order(0, CommandKind.Follow, [footman], target: site);
+        d.Step();
+
+        Assert.Equal(MotionOrder.Follow, d.MotionOf(footman).Order);
+        Assert.Equal(site.Value, d.MotionOf(footman).FollowTarget);
+    }
 }

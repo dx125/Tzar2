@@ -48,7 +48,7 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at and are not shoved there by
     // the others of the same object: the economy changes, and so the commands.
     // (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it: the fights, so the commands.
-    private const ulong GoldenCommandStream = 0x6502F4415EC653A7UL;
+    private const ulong GoldenCommandStream = 0xEBCCFFF76144C5E0UL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
@@ -70,8 +70,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it: the hashes.
     // (WAR-015/016/017, 2026-10-26) the original's choice of targets, the next target at once and the calls for help;
     // guards stand within three tiles (ORD-001): the hashes.
-    private const ulong GoldenHashStream = 0xB0F2F0541D030F03UL;
-    private const ulong GoldenFinalFullHash = 0x530626ED7FF47A53UL;
+    // (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (hashed layout 20): the hashes.
+    private const ulong GoldenHashStream = 0xED846B8B46BC966DUL;
+    private const ulong GoldenFinalFullHash = 0x37AE0141C93D351BUL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;
