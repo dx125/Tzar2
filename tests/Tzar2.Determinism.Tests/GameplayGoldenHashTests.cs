@@ -88,7 +88,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0268, 2026-10-23) the ninja's murder becomes a blow (effect murder, combat.murderBlowMana): the ruleset hash only.
     // (WAR-015, 2026-10-26) the target categories and priorities, the help and guard radii (combat settings): the ruleset hash.
     // (ADR 0270, 2026-10-27) gameplay.movement cells and meleeReachPx 18: the ruleset hash.
-    private const ulong GoldenRulesetHash = 0xE70716C4C73E5069UL;
+    // (ECO-025, 2026-10-27) the field's trait ReadyAtOnce: the ruleset hash only (this scenario places no field).
+    private const ulong GoldenRulesetHash = 0x0F47580DFE9134BCUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.

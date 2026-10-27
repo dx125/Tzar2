@@ -273,7 +273,7 @@ jobs:
           dotnet run -c Release --project src/Tzar2.Tools.Cli --
           bench --scenario ai --map 128 --players 4 --seed 1592598566
           --ticks 2400 --warmup 0 --workers 4
-          --expect-hash 74946F3B0593C43C --hash-stream hash-stream-ai-${{ matrix.os }}.tsv
+          --expect-hash D3E95CCCBF4DF642 --hash-stream hash-stream-ai-${{ matrix.os }}.tsv
       - uses: actions/upload-artifact@v4
         with:
           name: hash-stream-${{ matrix.os }}
