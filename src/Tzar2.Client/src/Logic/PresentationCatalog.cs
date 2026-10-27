@@ -278,12 +278,15 @@ public sealed class PresentationCatalog : ICardSource
 
         foreach (KeyValuePair<string?, string> e in section.Entries)
         {
-            if (e.Key is null || string.Equals(e.Key, "default", StringComparison.OrdinalIgnoreCase))
+            // "e_footman = F", or a bare "te_heroism": the research of the guilds, the temples and the mage towers has no
+            // letter (HUD-035). A bare word that is no order ("capturekeys") is a flag of the menu.
+            string order = (e.Key ?? e.Value).Trim();
+            if (order.Length == 0 || string.Equals(order, "default", StringComparison.OrdinalIgnoreCase) || (e.Key is null && _orders.Section(order) is null))
             {
                 continue;
             }
 
-            buttons.Add(Button(e.Key, e.Value.Length == 1 ? char.ToUpperInvariant(e.Value[0]) : '\0'));
+            buttons.Add(Button(order, e.Key is not null && e.Value.Length == 1 ? char.ToUpperInvariant(e.Value[0]) : '\0'));
         }
 
         return buttons;
