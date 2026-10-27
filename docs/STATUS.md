@@ -6,8 +6,8 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-26 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
-  targets and answer enemies as the original; land units step cell by cell)
+* **Last updated:** 2026-10-27 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
+  targets and answer enemies as the original; land units step cell by cell; fields ready at once)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -333,7 +333,7 @@ owner's order of 2026-10-26.
     S = with screenshots, N = without, F = new features, below.
     * **With screenshots:**
       1. Farmers stand at a field's edge, not in its middle as in the original (ECO-008). A field has to be built
-         before it is used; the original's is ready at once.
+         before it is used; the original's is ready at once: **fixed** (ECO-025, ECO-008; log below).
       2. A mine (golden rocks) vanishes from view once peasants mine it, though its selection view still shows its gold
          and they go on mining. The miners crowd in rows at one corner and work from there; in the original a peasant
          gathers only from a tile next to the resource (WORLD-019).
@@ -416,6 +416,12 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-27 — Fields are ready at once; the farmer works the middle tile (ECO-025, ECO-008; item 18.S1).** ReTzar
+  reads the original's field as born complete and ripe (0x44c7a0), its peasants digging it at once (0x48f603), the Dig
+  program walking to the field's cell (x + 1, y + 1) (0x42e600). A new trait ReadyAtOnce on the field places it finished
+  at full health and sets its peasants farming; the work point is the footprint's middle tile. A farmer coming back
+  from the drop-off keeps its field: a peasant choosing another node leaves alone one that someone heads for. The AI
+  golden and the AI bench (D3E95CCCBF4DF642) are re-pinned; the gameplay golden's ruleset hash only.
 * **2026-10-26 — Land units step cell by cell, one to a tile (WORLD-020, ADR 0270; item 18.S5, N7, N10).** ReTzar's
   reading of the original's movement: a step takes the next tile at once and slides there (a tile in any of eight
   directions in the same time); a unit entering the tile is waited for, one standing there is gone round (a search

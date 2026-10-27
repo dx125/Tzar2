@@ -40,8 +40,9 @@ rules:
     status: implemented
   ECO-008:
     rule: Units can walk over fields, farmers work on the field's own tiles, and nothing can be built on a field.
-    source: [owner 2026-10-20 (before the second play-test)]
+    source: [owner 2026-10-20 (before the second play-test), 'community ReTzar src/gameplay.rs (0x42e600: the Dig program walks to the field''s cell x + 1, y + 1)', owner 2026-10-25 (sixth play-test)]
     status: tested
+    note: The farmer works on the field's middle tile; one taken, it digs where it stands on the field. A farmer coming back from the drop-off keeps its field against idle peasants looking for work.
   ECO-009:
     rule: There are four resources in the stockpile, gold (golden rocks), stone (rocks), wood (trees) and food (fields, cows, fish); mana belongs to each caster.
     source: [manual Resources]
@@ -114,3 +115,8 @@ rules:
     rule: A peasant that changes hands keeps the load it carries; only its task ends.
     source: ['community ReTzar src/gameplay.rs (transfer_owner, 0x5050a0)']
     status: tested
+  ECO-025:
+    rule: A field is ready the moment it is placed, at full health; the peasants who placed it farm it at once.
+    source: ['community ReTzar src/gameplay.rs (0x44c7a0: a field is born complete and ripe; 0x48f603: its peasants dig it at once)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: Data, the trait ReadyAtOnce of the field; Tzar2 had built fields as sites.

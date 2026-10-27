@@ -351,6 +351,12 @@ public sealed partial record EntityTraits
     /// </summary>
     public bool WalkableFootprint { get; init; }
 
+    /// <summary>
+    /// Trait <c>ReadyAtOnce</c> (ECO-025; ReTzar's reading of the original, 0x44c7a0): the structure is placed finished,
+    /// at full health, with no site to build (a field: the peasants that placed it farm it at once).
+    /// </summary>
+    public bool ReadyAtOnce { get; init; }
+
     /// <summary>Neglect decay (fields), or null.</summary>
     public DecayDefinition? Decay { get; init; }
 

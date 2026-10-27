@@ -332,7 +332,7 @@ internal static class Interaction
         for (int i = 0; i < nodes.Length; i++)
         {
             if (stocks[i].Amount == 0 || world.TypeOf(nodes[i]).Traits.ResourceNode!.Resource != resource || world.Constructions.Has(nodes[i])
-                || !MayHarvest(world, owner, nodes[i]) || IsOnWater(world, nodes[i]) != boat || !HasRoom(world, nodes[i], worker)
+                || !MayHarvest(world, owner, nodes[i]) || IsOnWater(world, nodes[i]) != boat || !HasRoom(world, nodes[i], worker, choosing: true)
                 || nodes[i] == exclude)
             {
                 continue;
@@ -580,9 +580,10 @@ internal static class Interaction
     /// <summary>
     /// Whether <paramref name="worker"/> may work <paramref name="node"/> beside the others already on it (ECO-021: one
     /// peasant per field). Those gathering on it or carrying from it hold it; of several heading there, the first to
-    /// arrive takes it and the others look for another.
+    /// arrive takes it and the others look for another. A worker looking for another node (<paramref name="choosing"/>)
+    /// leaves one alone that someone heads for too: a farmer coming back from the drop-off keeps its field.
     /// </summary>
-    public static bool HasRoom(World world, EntityId node, EntityId worker)
+    public static bool HasRoom(World world, EntityId node, EntityId worker, bool choosing = false)
     {
         int max = world.Ruleset.EntityTypes[world.Identities.Get(node).TypeId].Traits.ResourceNode?.MaxWorkers ?? 0;
         if (max == 0)
@@ -601,7 +602,7 @@ internal static class Interaction
                 continue;
             }
 
-            if (w.Phase != WorkerPhase.ToNode)
+            if (choosing || w.Phase != WorkerPhase.ToNode)
             {
                 ahead++;
             }
@@ -631,10 +632,10 @@ internal static class Interaction
     {
         if (world.Footprints.Has(target) && world.TypeOf(target).Traits.WalkableFootprint && locomotor != Locomotor.Ship)
         {
-            // On a field: one of its tiles, picked by the worker so that several farmers spread out.
+            // On a field: its middle tile (ECO-008; ReTzar 0x42e600: the Dig program walks to the field's cell (x + 1, y + 1));
+            // one farmer to a field (ECO-021), who digs where it stands on the field when the middle is taken.
             (int tx, int ty, int w, int h) = world.FootprintRect(target);
-            int cell = (int)((uint)worker.Index % (uint)Math.Max(1, w * h));
-            return (((tx + (cell % w)) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2), ((ty + (cell / w)) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2));
+            return (((tx + (w / 2)) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2), ((ty + (h / 2)) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2));
         }
 
         if (world.Footprints.Has(target))

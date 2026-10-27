@@ -381,6 +381,7 @@ legacy:
 ^class.field:
   ResourceNode: { resource: food, amount: unlimited, workers: 1 }   # help HT_TEND_FIELDS: only one peasant tends each field (ECO-021)
   WalkableFootprint: {}               # UNVERIFIED: units walk over fields and the farmer works on the field (play-test 2026-10-20)
+  ReadyAtOnce: {}                     # ECO-025 (ReTzar 0x44c7a0): a field is born complete and ripe; its peasants farm at once
   DropOff: { autoGather: true }       # UNVERIFIED: the builder starts farming the new field
   Decay: { afterMs: 60000, healthPerMinute: 30 }   # UNVERIFIED (UNK-17)
   -Burnable:

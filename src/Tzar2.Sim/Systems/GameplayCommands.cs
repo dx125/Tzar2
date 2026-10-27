@@ -254,6 +254,16 @@ internal static class GameplayCommands
         Position p = world.Positions.Get(site);
         world.Events.Emit(new SimEvent(SimEventKind.ConstructionStarted, command.Player, site, p.X, p.Y, typeId));
         Assign(world, command.Player, site, typeId, entities, WorkerTask.Build);
+        if (type.Traits.ReadyAtOnce)
+        {
+            // ECO-025 (ReTzar 0x44c7a0, 0x48f603): a field is born complete and ripe, and its peasants dig it at once.
+            ref Health health = ref world.Healths.Get(site);
+            health.Current = health.Max;
+            world.CompleteConstruction(site);
+            world.Events.Emit(new SimEvent(SimEventKind.ConstructionCompleted, command.Player, site, 0, 0, typeId));
+            ProductionSystem.AutoGather(world, site);
+        }
+
         return null;
     }
 
