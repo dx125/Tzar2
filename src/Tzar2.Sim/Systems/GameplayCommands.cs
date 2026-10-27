@@ -277,10 +277,11 @@ internal static class GameplayCommands
     }
 
     /// <summary>
-    /// Drags a wall (GAME-03; ADR 0043): one site per tile on the straight line from the start tile to the end tile
-    /// (Bresenham, at most <c>maxWallSegments</c>), each paid when placed; tiles that do not fit are skipped, and the
-    /// line stops at the first segment the player cannot pay. The builders start on the first segment and move on to
-    /// the next unfinished one when it completes.
+    /// Drags a wall (GAME-03, BLD-011; ADR 0043): one site per tile of the row from the start tile to the end tile, the
+    /// original's L (<see cref="PlacementQueries.WallRow"/>; Alt takes the other side first), from its end nearer the
+    /// first builder, at most <c>maxWallSegments</c>, each paid when placed; tiles that do not fit are skipped, and the
+    /// row stops at the first segment the player cannot pay. The builders start on the first segment (after their site
+    /// at work, BLD-025) and move on to the next unfinished one when it completes.
     /// </summary>
     public static CommandRejection? BuildWall(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
@@ -318,17 +319,24 @@ internal static class GameplayCommands
             return CommandRejection.RequirementNotMet;
         }
 
-        int x0 = command.X / MapState.UnitsPerTile;
-        int y0 = command.Y / MapState.UnitsPerTile;
-        int dx = Math.Abs(x1 - x0);
-        int dy = -Math.Abs(y1 - y0);
-        int sx = x0 < x1 ? 1 : -1;
-        int sy = y0 < y1 ? 1 : -1;
-        int error = dx + dy;
+        (int X, int Y)? near = null;
+        foreach (EntityId entity in entities)
+        {
+            if (OwnedWorker(world, entity, command.Player) >= 0 && world.TypeOf(entity).Traits.CanBuild(typeId))
+            {
+                Position b = world.Positions.Get(entity);
+                near = (b.X / MapState.UnitsPerTile, b.Y / MapState.UnitsPerTile);
+                break;
+            }
+        }
+
+        var row = new List<(int X, int Y)>();
+        PlacementQueries.WallRow(command.X / MapState.UnitsPerTile, command.Y / MapState.UnitsPerTile, x1, y1, (command.Flags & CommandFlags.Alt) != 0, near, row);
         EntityId first = EntityId.None;
         CommandRejection reason = CommandRejection.IllegalPlacement;
-        for (int n = 0; n < world.Ruleset.Gameplay.MaxWallSegments; n++)
+        for (int n = 0; n < Math.Min(row.Count, world.Ruleset.Gameplay.MaxWallSegments); n++)
         {
+            (int x0, int y0) = row[n];
             if (CanPlace(world, type, x0, y0, rotated: false))
             {
                 if (world.Entities.RemainingCapacity < 1)
@@ -349,24 +357,6 @@ internal static class GameplayCommands
                 world.Events.Emit(new SimEvent(SimEventKind.ConstructionStarted, command.Player, segment, p.X, p.Y, typeId));
                 first = first.IsNone ? segment : first;
             }
-
-            if (x0 == x1 && y0 == y1)
-            {
-                break;
-            }
-
-            int e2 = 2 * error;
-            if (e2 >= dy)
-            {
-                error += dy;
-                x0 += sx;
-            }
-
-            if (e2 <= dx)
-            {
-                error += dx;
-                y0 += sy;
-            }
         }
 
         if (first.IsNone)
@@ -374,7 +364,7 @@ internal static class GameplayCommands
             return reason;
         }
 
-        Assign(world, command.Player, first, typeId, entities, WorkerTask.Build);
+        AssignPlaced(world, command.Player, first, entities);
         return null;
     }
 

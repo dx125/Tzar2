@@ -181,6 +181,40 @@ public sealed class TerrainAndSpriteRuleTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-010")]
+    public void A_wall_joins_its_neighbours_of_its_material_and_shows_its_damage()
+    {
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset("classic");
+        EntityTypeDefinition wood = rules.EntityTypes[rules.EntityTypeId("comm.wall_wood")];
+        EntityTypeDefinition stone = rules.EntityTypes[rules.EntityTypeId("comm.wall_stone")];
+        EntityTypeDefinition gate = rules.EntityTypes[rules.EntityTypeId("comm.gate_wood")];
+        Assert.Equal((1, 2, 1, 0), (SpriteRules.WallMaterial(wood), SpriteRules.WallMaterial(stone), SpriteRules.WallMaterial(gate), SpriteRules.WallMaterial(rules.EntityTypes[rules.EntityTypeId("euro.house")])));
+
+        // A 5 x 3 map, row by row: wood across the middle row, a wooden gate tile above its middle, stone below it.
+        byte[] pieces =
+        [
+            0, 0, 1, 0, 0,
+            1, 1, 1, 1, 0,
+            0, 0, 2, 0, 0,
+        ];
+        Assert.Equal(2, SpriteRules.WallMask(pieces, 5, 0, 1, 1)); // east only
+        Assert.Equal(10, SpriteRules.WallMask(pieces, 5, 1, 1, 1)); // east and west
+        Assert.Equal(11, SpriteRules.WallMask(pieces, 5, 2, 1, 1)); // the gate above too; the stone below does not join
+        Assert.Equal(4, SpriteRules.WallMask(pieces, 5, 2, 0, 1)); // at the map's edge
+        Assert.Equal(0, SpriteRules.WallMask(pieces, 5, 2, 2, 2));
+
+        Assert.Equal("walls_wood_horz", SpriteRules.WallImage(wood, 10, site: false, damaged: false));
+        Assert.Equal("walls_wood_vert_dest", SpriteRules.WallImage(wood, 5, site: false, damaged: true));
+        Assert.Equal("walls_stone_tower", SpriteRules.WallImage(stone, 11, site: false, damaged: false));
+        Assert.Equal("walls_stone_tower", SpriteRules.WallImage(stone, 2, site: false, damaged: false));
+        Assert.Equal("walls_wood_build", SpriteRules.WallImage(wood, 10, site: true, damaged: false));
+        Assert.Null(SpriteRules.WallImage(gate, 10, site: false, damaged: false));
+
+        // Five damage pictures: a scratch shows the first, a wall near its end the last.
+        Assert.Equal([0, 0, 1, 3, 4], new[] { 99, 81, 61, 21, 1 }.Select(h => SpriteRules.WallDamageFrame(h, 100, 5)));
+    }
+
+    [Fact]
     [Trait("Rule", "BLD-019")]
     public void A_turned_bridge_draws_the_vertical_picture()
     {

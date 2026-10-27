@@ -153,6 +153,13 @@ public sealed class SpriteRenderer : IDisposable
     /// <summary>Multiplies the colour pass (translucent trees, §13.3).</summary>
     public void SetModulate(Color colour) => RS.CanvasItemSetModulate(_objectsItem, colour);
 
+    /// <summary>Draws every picture as its shape in <paramref name="colour"/> (the placement ghost, CTRL-023).</summary>
+    public void SetSilhouette(Color colour)
+    {
+        _colourMaterial.SetShaderParameter("silhouette", true);
+        _colourMaterial.SetShaderParameter("silhouette_colour", colour);
+    }
+
     /// <summary>Starts a new frame.</summary>
     public void Clear() => _count = 0;
 

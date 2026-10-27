@@ -44,10 +44,11 @@ rules:
     source: [guide Economy]
     status: tested
   BLD-011:
-    rule: Walls are laid by dragging a line, and the builder goes on along it.
-    source: [community TDD GAME-03]
+    rule: A wall is laid by dragging with the left button held, from the tile pressed to the tile where the button comes up, as an L with the longer side first (the other side first with Alt); the builder begins at the row's end nearer to it and goes on along it.
+    source: [community TDD GAME-03, 'community ReTzar src/gameplay.rs (0x4fb8f0: the row''s cells; 0x4fb19d: begun at the end nearer the builder) and src/frontend/mission.rs (0x4fb0be, 0x4fb169: dragged from the press, laid when the button comes up)', owner 2026-10-25 (sixth play-test)]
     status: tested
     adr: [0043]
+    note: While the button is held the row shows each segment's green shadow, joined as it will stand, and a red tile where none can go. A segment goes on each tile that takes one, at most maxWallSegments tiles of the row, each paid when placed. A straight line has no other side.
   BLD-012:
     rule: Peasants who finish a storage or a lumber mill start gathering nearby by themselves.
     source: [patch 1.05 (TZAR110.TXT)]

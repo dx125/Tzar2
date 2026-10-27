@@ -96,6 +96,7 @@ public partial class GameScreen : Node
     private readonly EntityId[] _tradeDocks = [EntityId.None, EntityId.None]; // the trade window's picked source and destination (TRADE-002)
     private int _pickingDock = -1; // the trade window's market cell waiting for a click on the map, or -1
     private ushort _placing = ushort.MaxValue;
+    private (int X, int Y)? _wallFrom; // the tile a wall is being dragged from, the left button held (BLD-011)
     private int _facing; // the placement ghost's facing: 0, 2 turned by 90° (gates and bridges); 1, 3 a gate facing the other way (CTRL-024, BLD-019)
     private int _eventCursor = -1;
     private int _locationCursor = -1;
@@ -804,6 +805,12 @@ public partial class GameScreen : Node
 
                 if (_placing != ushort.MaxValue)
                 {
+                    if (_rules.EntityTypes[_placing].Traits.IsWall && _frame is not null && CurrentGhost(_frame) is { } start)
+                    {
+                        _wallFrom = (start.TileX, start.TileY); // BLD-011: laid when the button comes up
+                        return;
+                    }
+
                     PlaceBuilding(mods);
                     return;
                 }
@@ -842,6 +849,11 @@ public partial class GameScreen : Node
                 }
 
                 _dragStart = e.Position;
+            }
+            else if (_wallFrom is { } from)
+            {
+                _wallFrom = null;
+                PlaceWall(from, mods);
             }
             else if (_dragStart is { } start)
             {
@@ -926,6 +938,7 @@ public partial class GameScreen : Node
         if (_placing != ushort.MaxValue || _mode != OrderMode.None)
         {
             _placing = ushort.MaxValue;
+            _wallFrom = null;
             _mode = OrderMode.None;
             RefreshCard();
             return;
@@ -1143,6 +1156,7 @@ public partial class GameScreen : Node
                 else if (_placing != ushort.MaxValue || _mode != OrderMode.None)
                 {
                     _placing = ushort.MaxValue;
+                    _wallFrom = null;
                     _mode = OrderMode.None;
                 }
                 else if (_card.OpenMenu is not null)
@@ -1398,6 +1412,49 @@ public partial class GameScreen : Node
             return;
         }
 
+        if (Builders() is not { } builders)
+        {
+            return;
+        }
+
+        // The build mode stays for more of the same until a right click or Esc (the owner's sixth play-test).
+        var batch = new CommandList();
+        batch.Add(CommandKind.Build, builders, ghost.TileX * 2048, ghost.TileY * 2048, arg0: ghost.TypeId, arg1: (ghost.Rotated ? 1 : 0) | (ghost.Mirrored ? 2 : 0), flags: (mods & KeyMods.Shift) != 0 ? CommandFlags.Queue : CommandFlags.None);
+        _session.Submit(batch);
+        _mixer?.PlaySet("build", SoundCategory.Effects, _catalog.SoundPriority("build"));
+    }
+
+    // A wall dragged with the left button held (BLD-011): its row is laid when the button comes up, from the tile it was
+    // pressed on to the one under the pointer, a segment on each tile that takes one; Alt takes the other side first.
+    private void PlaceWall((int X, int Y) from, KeyMods mods)
+    {
+        if (_frame is null || _world is null || _placing == ushort.MaxValue || CurrentGhost(_frame) is not { } ghost)
+        {
+            return;
+        }
+
+        if (!ghost.Legal)
+        {
+            Message("Cannot build there.");
+            return;
+        }
+
+        if (Builders() is not { } builders)
+        {
+            return;
+        }
+
+        int x1 = Math.Clamp(ghost.TileX, 0, _world.MapWidth - 1), y1 = Math.Clamp(ghost.TileY, 0, _world.MapHeight - 1);
+        CommandFlags flags = ((mods & KeyMods.Shift) != 0 ? CommandFlags.Queue : CommandFlags.None) | ((mods & KeyMods.Alt) != 0 ? CommandFlags.Alt : CommandFlags.None);
+        var batch = new CommandList();
+        batch.Add(CommandKind.BuildWall, builders, from.X * 2048, from.Y * 2048, arg0: ghost.TypeId, arg1: (y1 << 16) | x1, flags: flags);
+        _session.Submit(batch);
+        _mixer?.PlaySet("build", SoundCategory.Effects, _catalog.SoundPriority("build"));
+    }
+
+    // The selected builders of the local kingdom; none ends the build mode.
+    private EntityId[]? Builders()
+    {
         var builders = new List<EntityId>();
         foreach (EntityInfo e in SelectedInfos())
         {
@@ -1410,19 +1467,11 @@ public partial class GameScreen : Node
         if (builders.Count == 0)
         {
             _placing = ushort.MaxValue;
-            return;
+            _wallFrom = null;
+            return null;
         }
 
-        var batch = new CommandList();
-        batch.Add(CommandKind.Build, builders.ToArray(), ghost.TileX * 2048, ghost.TileY * 2048, arg0: ghost.TypeId, arg1: (ghost.Rotated ? 1 : 0) | (ghost.Mirrored ? 2 : 0), flags: (mods & KeyMods.Shift) != 0 ? CommandFlags.Queue : CommandFlags.None);
-        _session.Submit(batch);
-        _mixer?.PlaySet("build", SoundCategory.Effects, _catalog.SoundPriority("build"));
-        if ((mods & KeyMods.Shift) == 0)
-        {
-            _placing = ushort.MaxValue;
-            _card.Reset();
-            RefreshCard();
-        }
+        return [.. builders];
     }
 
     private Ghost? CurrentGhost(GameFrame frame)
@@ -1437,21 +1486,36 @@ public partial class GameScreen : Node
         bool mirrored = (_facing & 1) != 0 && type.Traits.Gate is not null;
         (int x, int y) = ToWorld(_mouse);
         (int tx, int ty) = Placement.TopLeftFor(type, x, y, turned);
+        if (_wallFrom is { } from && type.Traits.IsWall)
+        {
+            // BLD-011: the row being dragged, each tile with whether a segment can go there; the sim lays at most
+            // maxWallSegments of them.
+            var cells = new List<(int X, int Y)>();
+            Placement.WallRow(from.X, from.Y, tx, ty, Input.IsKeyPressed(Key.Alt), cells);
+            var row = new List<GhostCell>(cells.Count);
+            bool any = false;
+            for (int i = 0; i < cells.Count; i++)
+            {
+                (int cx, int cy) = cells[i];
+                bool ok = i < _rules.Gameplay.MaxWallSegments && Explored(frame, cx, cy)
+                    && Placement.IsLegal(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, cx, cy, rotated: false);
+                row.Add(new GhostCell(cx, cy, ok));
+                any |= ok;
+            }
+
+            return new Ghost(_placing, tx, ty, any, Row: row);
+        }
+
         List<(int Dx, int Dy)> blocked = Placement.BlockedCells(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned);
         (int width, int height) = Placement.Size(type, turned);
-        if (frame.Visibility.Length == _world.MapWidth * _world.MapHeight)
+        for (int dy = 0; dy < height; dy++)
         {
-            // Not on unexplored ground.
-            for (int dy = 0; dy < height; dy++)
+            for (int dx = 0; dx < width; dx++)
             {
-                for (int dx = 0; dx < width; dx++)
+                // Not on unexplored ground.
+                if (!Explored(frame, tx + dx, ty + dy) && !blocked.Contains((dx, dy)))
                 {
-                    int cx = tx + dx, cy = ty + dy;
-                    bool inside = cx >= 0 && cy >= 0 && cx < _world.MapWidth && cy < _world.MapHeight;
-                    if (inside && frame.Visibility[(cy * _world.MapWidth) + cx] == 0 && !blocked.Contains((dx, dy)))
-                    {
-                        blocked.Add((dx, dy));
-                    }
+                    blocked.Add((dx, dy));
                 }
             }
         }
@@ -1459,6 +1523,11 @@ public partial class GameScreen : Node
         bool legal = blocked.Count == 0 && Placement.IsLegal(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned);
         return new Ghost(_placing, tx, ty, legal, blocked, turned, mirrored);
     }
+
+    // Whether a tile of the map is explored (a tile off the map is left to the placement check).
+    private bool Explored(GameFrame frame, int x, int y)
+        => _world is null || frame.Visibility.Length != _world.MapWidth * _world.MapHeight
+            || x < 0 || y < 0 || x >= _world.MapWidth || y >= _world.MapHeight || frame.Visibility[(y * _world.MapWidth) + x] != 0;
 
     private void OnCard(int slot, bool right)
     {
@@ -1490,6 +1559,7 @@ public partial class GameScreen : Node
         if (press.Placing is { } type)
         {
             _placing = type;
+            _wallFrom = null;
             _facing = 0;
         }
 

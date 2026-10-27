@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
+using Tzar2.Sim.Systems;
 using Xunit;
 using static Tzar2.Sim.Tests.GameplayFixtures;
 
@@ -37,6 +39,48 @@ public class ConstructionOrderTests
         Assert.Equal((WorkerTask.Build, second.Value), (d.World.Workers.Get(peon).Task, d.World.Workers.Get(peon).Target)); // then the next
         d.RunUntil(() => !d.World.Constructions.Has(second), 4000);
         Assert.False(d.World.Constructions.Has(second));
+    }
+
+    [Fact]
+    [Trait("Rule", "BLD-011")]
+    public void A_dragged_wall_is_an_L_with_the_longer_side_first_and_Alt_takes_the_other()
+    {
+        var row = new List<(int X, int Y)>();
+        PlacementQueries.WallRow(20, 4, 14, 7, alt: false, builder: null, row);
+        Assert.Equal([(20, 4), (19, 4), (18, 4), (17, 4), (16, 4), (15, 4), (14, 4), (14, 5), (14, 6), (14, 7)], row);
+        PlacementQueries.WallRow(20, 4, 14, 7, alt: true, builder: null, row);
+        Assert.Equal([(20, 4), (20, 5), (20, 6), (20, 7), (19, 7), (18, 7), (17, 7), (16, 7), (15, 7), (14, 7)], row);
+
+        // A straight line has no other side; one tile is one segment; the row begins at the end nearer the builder.
+        PlacementQueries.WallRow(3, 5, 3, 2, alt: true, builder: null, row);
+        Assert.Equal([(3, 5), (3, 4), (3, 3), (3, 2)], row);
+        PlacementQueries.WallRow(3, 5, 3, 5, alt: false, builder: null, row);
+        Assert.Equal([(3, 5)], row);
+        PlacementQueries.WallRow(20, 4, 14, 7, alt: false, builder: (12, 8), row);
+        Assert.Equal((14, 7), row[0]);
+        Assert.Equal((20, 4), row[^1]);
+    }
+
+    [Fact]
+    [Trait("Rule", "BLD-011")]
+    public void A_dragged_wall_is_begun_at_its_end_nearer_the_builder()
+    {
+        using var d = new SimDriver(TestMap(40, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 8)), ruleset: Classic);
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        d.World.Players[0].Resources[Resource("wood")] = 5000;
+        d.Order(0, CommandKind.BuildWall, [peon], 20 * Tile, 4 * Tile, arg0: Id("comm.wall_wood"), arg1: (7 << 16) | 14);
+        d.Step();
+        EntityId[] segments = [.. OfType(d.World, "comm.wall_wood")];
+        Assert.Equal(10, segments.Length);
+        Assert.Contains(segments, s => d.World.FootprintRect(s) == (14, 5, 1, 1)); // the corner and the side down
+        EntityId first = segments.Single(s => d.World.FootprintRect(s) == (14, 7, 1, 1));
+        Assert.Equal(first.Value, d.World.Workers.Get(peon).Target);
+
+        // With Alt, the other side first.
+        d.Order(0, CommandKind.BuildWall, [peon], 30 * Tile, 2 * Tile, arg0: Id("comm.wall_wood"), arg1: (5 << 16) | 33, flags: CommandFlags.Alt);
+        d.Step();
+        Assert.Contains(OfType(d.World, "comm.wall_wood"), s => d.World.FootprintRect(s) == (30, 5, 1, 1));
+        Assert.DoesNotContain(OfType(d.World, "comm.wall_wood"), s => d.World.FootprintRect(s) == (33, 2, 1, 1));
     }
 
     [Fact]

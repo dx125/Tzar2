@@ -44,3 +44,8 @@ rules:
     source: [data TREES.INI, 'data TERRAIN.INI [trees] [treename]']
     status: tested
     note: The tree and its shadow hang from the terrain set's [trees] pos_tree and pos_shadow (ReTzar's reading, 0x43cc84), and a tree takes a picture of a kind [treename] and [treeterrain] let grow on its tile. Tzar2's trees carry no kind, so the picture is picked by the tree's place, not the map's. DATA/TREES.INI (bushes, chopped) is not read.
+  PRES-010:
+    rule: A wall's picture follows its neighbours of the same material, walls and gates of any kingdom - upright when joined above and below only, across when joined left and right only, a tower otherwise - and shows its damage; a wall's site has a picture of its own.
+    source: ['data IMAGES.INI walls_wood_* walls_stone_*', 'community ReTzar src/world/walls.rs (0x4fb690, 0x4fbde0: the neighbours and the damage pictures) and src/world.rs (0x4fbce0: walls_wood_build, walls_stone_build)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: The neighbours are the tiles above, right, below and left of the wall (1, 2, 4, 8); 5 is walls_*_vert, 10 walls_*_horz, any other walls_*_tower, always the first column. A damaged wall shows the *_dest picture's row rows - floor(health x rows / most) - 1. A site shows walls_*_build by its progress. Only finished walls and gates join. The kingdom's flag on the towers (image_c) is not drawn.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Tzar2.Content.Compiled;
+using Tzar2.Sim.Systems;
 
 namespace Tzar2.Game.Input;
 
@@ -101,6 +102,14 @@ public static class Placement
 
         return blocked;
     }
+
+    /// <summary>
+    /// The tiles of a wall dragged from (<paramref name="x0"/>, <paramref name="y0"/>) to (<paramref name="x1"/>,
+    /// <paramref name="y1"/>), as the sim lays them (BLD-011): the original's L, the longer side first, the other with
+    /// <paramref name="alt"/>.
+    /// </summary>
+    public static void WallRow(int x0, int y0, int x1, int y1, bool alt, List<(int X, int Y)> row)
+        => PlacementQueries.WallRow(x0, y0, x1, y1, alt, null, row);
 
     /// <summary>The footprint's width and height in tiles, turned when <paramref name="rotated"/> (its own turned footprint).</summary>
     public static (int Width, int Height) Size(EntityTypeDefinition type, bool rotated)

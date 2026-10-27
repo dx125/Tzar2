@@ -66,7 +66,10 @@ public sealed class WorldRenderer : IDisposable
     private readonly SpriteRenderer _ground;
     private readonly SpriteRenderer _objects;
     private readonly SpriteRenderer _translucent;
-    private readonly SpriteRenderer _ghostLayer; // the building being placed: green, without the kingdom's colours
+    private readonly SpriteRenderer _ghostLayer; // the building being placed: its green shadow (CTRL-023)
+    private bool? _ghostLegal; // the colour the ghost layer is set to: green when legal, red when not
+    private readonly byte[] _wallPieces; // the material of the finished wall or gate on each tile (PRES-010), refilled each frame
+    private readonly List<int> _wallTiles = []; // the tiles set in _wallPieces, cleared with the next frame
     private readonly SpriteRenderer _glow;
     private readonly Rid _marksUnder;
     private readonly Rid _marksOver;
@@ -126,7 +129,6 @@ public sealed class WorldRenderer : IDisposable
         _glow = new SpriteRenderer(host, _root, 36, additive: true);
         _glow.SetShadowsVisible(false);
         _ghostLayer = new SpriteRenderer(host, _root, 38);
-        _ghostLayer.SetModulate(new Color(0.35f, 1f, 0.35f, 0.8f));
         _ghostLayer.SetShadowsVisible(false);
         _marksOver = Item(40);
         _ground.SetAtlas(bank.Gpu);
@@ -138,6 +140,7 @@ public sealed class WorldRenderer : IDisposable
         MapWidth = grid.Width;
         MapHeight = grid.Height;
         _fogBytes = new byte[MapWidth * MapHeight];
+        _wallPieces = new byte[MapWidth * MapHeight];
         _lightBytes = new byte[MapWidth * MapHeight];
         _fogImage = Image.CreateFromData(MapWidth, MapHeight, false, Image.Format.L8, _fogBytes);
         _lightImage = Image.CreateFromData(MapWidth, MapHeight, false, Image.Format.L8, _lightBytes);
@@ -263,6 +266,7 @@ public sealed class WorldRenderer : IDisposable
         }
 
         ReadOnlySpan<FrameEntity> entities = frame.Entities;
+        FillWallPieces(entities);
         for (int i = 0; i < entities.Length; i++)
         {
             ref readonly FrameEntity e = ref entities[i];
@@ -375,7 +379,16 @@ public sealed class WorldRenderer : IDisposable
             bool field = def.Traits.WalkableFootprint;
             bool ground = field || def.Traits.IsBridge;
             int facing = (e.Rotated ? 2 : 0) + (e.Mirrored ? 1 : 0);
-            if (_bank.Get(SpriteRules.GateImage(def, facing, site: e.ConstructionPermille >= 0)) is { } gate)
+            bool damaged = e.MaxHealth > 0 && e.Health < e.MaxHealth;
+            if (def.Traits.IsWall
+                && _bank.Get(SpriteRules.WallImage(def, SpriteRules.WallMask(_wallPieces, MapWidth, e.TileX, e.TileY, SpriteRules.WallMaterial(def)), e.ConstructionPermille >= 0, damaged)) is { } wall)
+            {
+                // PRES-010: a wall joins its neighbours, shows its damage, and its site is the wall's own.
+                sheet = wall;
+                frameIndex = e.ConstructionPermille >= 0 ? SpriteRules.SiteFrame(e.ConstructionPermille, wall.Sheet.FramesPerDirection)
+                    : damaged ? SpriteRules.WallDamageFrame(e.Health, e.MaxHealth, wall.Sheet.FramesPerDirection) : 0;
+            }
+            else if (_bank.Get(SpriteRules.GateImage(def, facing, site: e.ConstructionPermille >= 0)) is { } gate)
             {
                 // Gates draw their drawbridge for their facing: raised when closed, lowered when open (CTRL-024).
                 sheet = gate;
@@ -959,18 +972,71 @@ public sealed class WorldRenderer : IDisposable
         Add(_ground, cross, at, 0, cross.Animation.FrameAt(Math.Max(0, age)), -1, (uint)(order.Y / UnitsPerPixel + 4096) << 6, shadowOnly: false);
     }
 
+    // The finished walls and gates of the frame by tile and material, for the walls to join (PRES-010). Walls join those
+    // of any kingdom, as the original's lookup.
+    private void FillWallPieces(ReadOnlySpan<FrameEntity> entities)
+    {
+        foreach (int tile in _wallTiles)
+        {
+            _wallPieces[tile] = 0;
+        }
+
+        _wallTiles.Clear();
+        for (int i = 0; i < entities.Length; i++)
+        {
+            ref readonly FrameEntity e = ref entities[i];
+            EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
+            if (e.ConstructionPermille < 0 && SpriteRules.WallMaterial(def) is > 0 and var material)
+            {
+                (int w, int h) = def.FootprintSize(e.Rotated && def.CanTurn);
+                for (int y = e.TileY; y < e.TileY + h; y++)
+                {
+                    for (int x = e.TileX; x < e.TileX + w; x++)
+                    {
+                        MarkWallPiece(x, y, material);
+                    }
+                }
+            }
+        }
+    }
+
+    private void MarkWallPiece(int x, int y, byte material)
+    {
+        if (x >= 0 && y >= 0 && x < MapWidth && y < MapHeight)
+        {
+            _wallPieces[(y * MapWidth) + x] = material;
+            _wallTiles.Add((y * MapWidth) + x);
+        }
+    }
+
     private void DrawGhost(Ghost ghost)
     {
         EntityTypeDefinition def = _rules.EntityTypes[ghost.TypeId];
         int left = ghost.TileX * TilePixels, top = ghost.TileY * TilePixels;
         (int width, int height) = def.FootprintSize(ghost.Rotated && def.CanTurn);
         var rect = new Rect2(left, top, width * TilePixels, height * TilePixels);
-        SheetRef? image = _bank.Get(SpriteRules.GateImage(def, (ghost.Rotated ? 2 : 0) + (ghost.Mirrored ? 1 : 0), site: false))
+        bool green = ghost.Legal || ghost.Row is not null;
+        if (_ghostLegal != green)
+        {
+            // The shadow of the building, green, or red where it cannot stand (CTRL-023; the owner's sixth play-test).
+            _ghostLegal = green;
+            _ghostLayer.SetSilhouette(green ? new Color(0.3f, 1f, 0.3f, 0.55f) : new Color(1f, 0.25f, 0.2f, 0.55f));
+        }
+
+        if (ghost.Row is { } row)
+        {
+            DrawWallRow(def, row);
+            return;
+        }
+
+        byte material = SpriteRules.WallMaterial(def);
+        SheetRef? image = _bank.Get(SpriteRules.WallImage(def, SpriteRules.WallMask(_wallPieces, MapWidth, ghost.TileX, ghost.TileY, material), site: false, damaged: false))
+            ?? _bank.Get(SpriteRules.GateImage(def, (ghost.Rotated ? 2 : 0) + (ghost.Mirrored ? 1 : 0), site: false))
             ?? _bank.Get(SpriteRules.Turned(_catalog.Type(ghost.TypeId).Image(UnitAnim.Base), ghost.Rotated));
         if (image is { } sheet)
         {
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
-            // Green and without the kingdom's colours, as in the original (the owner, 2026-10-21; CTRL-023).
+            // Its shadow, without the kingdom's colours (the owner, 2026-10-21 and the sixth play-test; CTRL-023).
             AddSheet(_ghostLayer, sheet, origin, 0, 0, -1, uint.MaxValue >> 1, shadows: false);
         }
 
@@ -985,6 +1051,37 @@ public sealed class WorldRenderer : IDisposable
         }
 
         Corners(_marksOver, rect, ghost.Legal ? new Color(0.4f, 1f, 0.4f) : new Color(1f, 0.25f, 0.2f));
+    }
+
+    // A wall being dragged (BLD-011): the shadow of each segment where one can go, joined as the row will stand, and a red
+    // tile where none can.
+    private void DrawWallRow(EntityTypeDefinition def, IReadOnlyList<GhostCell> row)
+    {
+        byte material = SpriteRules.WallMaterial(def);
+        foreach (GhostCell c in row)
+        {
+            if (c.Legal)
+            {
+                MarkWallPiece(c.TileX, c.TileY, material);
+            }
+        }
+
+        foreach (GhostCell c in row)
+        {
+            int left = c.TileX * TilePixels, top = c.TileY * TilePixels;
+            if (!c.Legal)
+            {
+                RS.CanvasItemAddRect(_marksOver, new Rect2(left, top, TilePixels, TilePixels), new Color(1f, 0.15f, 0.1f, 0.45f));
+                continue;
+            }
+
+            int mask = SpriteRules.WallMask(_wallPieces, MapWidth, c.TileX, c.TileY, material);
+            if ((_bank.Get(SpriteRules.WallImage(def, mask, site: false, damaged: false)) ?? _bank.Get(_catalog.Type(def.Id).Image(UnitAnim.Base))) is { } sheet)
+            {
+                var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
+                AddSheet(_ghostLayer, sheet, origin, 0, 0, -1, (uint)(top + TilePixels + 4096) << 6, shadows: false);
+            }
+        }
     }
 
     private void UpdateFogAndLight(GameFrame frame, bool fresh, bool useFog, byte localPlayer, float darkness)
@@ -1084,4 +1181,11 @@ public sealed class WorldRenderer : IDisposable
 /// <param name="Blocked">Footprint cells (offsets from the top-left) that block it.</param>
 /// <param name="Rotated">Turned by 90° (gates and bridges; CTRL-024, BLD-019).</param>
 /// <param name="Mirrored">A gate facing the other way along its axis (CTRL-024).</param>
-public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null, bool Rotated = false, bool Mirrored = false);
+/// <param name="Row">The tiles of a wall being dragged (BLD-011), each with whether a segment can go there; null otherwise.</param>
+public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null, bool Rotated = false, bool Mirrored = false, IReadOnlyList<GhostCell>? Row = null);
+
+/// <summary>A tile of a wall being dragged.</summary>
+/// <param name="TileX">Tile X.</param>
+/// <param name="TileY">Tile Y.</param>
+/// <param name="Legal">Whether a segment can go there now.</param>
+public readonly record struct GhostCell(int TileX, int TileY, bool Legal);
