@@ -89,7 +89,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (WAR-015, 2026-10-26) the target categories and priorities, the help and guard radii (combat settings): the ruleset hash.
     // (ADR 0270, 2026-10-27) gameplay.movement cells and meleeReachPx 18: the ruleset hash.
     // (ECO-025, 2026-10-27) the field's trait ReadyAtOnce: the ruleset hash only (this scenario places no field).
-    private const ulong GoldenRulesetHash = 0x0F47580DFE9134BCUL;
+    private const ulong GoldenRulesetHash = 0x29D2DCDFD50601CAUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -112,8 +112,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // guards stand within three tiles (ORD-001): the stream and the final hash.
     // (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (a new store, hashed layout 20): the stream and
     // the final hash.
-    private const ulong GoldenHashStream = 0xC1EFCD30E23F6859UL;
-    private const ulong GoldenFinalFullHash = 0x16379D4C2C3A9C2EUL;
+    private const ulong GoldenHashStream = 0x49769635D3F73846UL;
+    private const ulong GoldenFinalFullHash = 0x95CE1A9BC3FA71E5UL;
 
     private const int Ticks = 1600;
 

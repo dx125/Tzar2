@@ -7,7 +7,8 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 indexed in [decisions/README.md](decisions/README.md).
 
 * **Last updated:** 2026-10-27 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
-  targets and answer enemies as the original; land units step cell by cell; fields ready at once)
+  targets and answer enemies as the original; land units step cell by cell; fields ready at once; sites built in the
+  order placed, wall rows turning to stone, builders next to the site)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -325,7 +326,8 @@ owner's order of 2026-10-26.
     2. pathfinding and how troops answer enemies (S3, S5, N7, N10, N12);
     3. fields that have to be built before use (S1);
     4. the build menu closing and the other construction problems (N1, N2, N3, S4, S6), and one more: upgrading a
-       wooden wall upgrades only the selected segment, while the original upgrades every joined segment, gates too;
+       wooden wall upgrades only the selected segment, while the original upgrades every joined segment, gates too:
+       **fixed** (BLD-026, log below);
     5. taking buildings down (F1) with an icon of its own, the usual pictogram for it; no setting for now;
     6. the rest of the items with screenshots (S2, S7, S9), while the screenshots are at hand;
     7. everything else, by its weight on the play and whether it has a workaround.
@@ -346,7 +348,8 @@ owner's order of 2026-10-26.
          * soldiers in general are passive with enemies near: they stand, or step from tile to tile, and leave a fight
            when the attacker of the guarded object dies though other enemies stand next to them: **fixed** for the
            choice of targets (WAR-015, WAR-016, WAR-017); stepping from tile to tile is the movement (N10).
-      4. Peasants build from far off, without turning to the site.
+      4. Peasants build from far off, without turning to the site: **fixed**, from a tile next to the site, facing it
+         (WORLD-019, log below).
       5. Peasants taking a load to the drop-off by the shortest way get stuck walking in place: **fixed** by the cell
          steps (WORLD-020, ADR 0270): a unit waits for or goes round another, and nobody pushes.
       6. Wall segments do not join into one wall; a wooden wall is drawn with a broken stone wall's picture.
@@ -366,9 +369,10 @@ owner's order of 2026-10-26.
     * **Without screenshots:**
       1. Sites placed one after another: the builders leave the one they build for the last one placed, and do not
          come back to the earlier ones. In the original they build them in the order placed, each after the one
-         before.
+         before: **fixed** (BLD-025, log below).
       2. A builder coming to a site with others at work runs into them and turns about looking for a free tile,
-         instead of going straight to one (WORLD-019).
+         instead of going straight to one (WORLD-019). Likely gone with the cell steps (WORLD-020: a walker goes round
+         those at work) and the reach of one tile (S4); to check in play.
       3. Placing a building closes the build menu. In the original the build mode and its ghost stay for more of the
          same, which is how a wall is drawn by holding the left button (BLD-011). The ghost is still the finished
          building, not the green shadow (CTRL-023).
@@ -416,6 +420,16 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-27 — Sites are built in the order placed; a wall turns to stone with its row (BLD-025, BLD-026, WORLD-019;
+  item 18.N1, S4 and the wall row).** From ReTzar's reading of the original: a peasant at work on a site that places
+  another one queues it (0x48f160); our builders left the site they built for the last one placed. The next site is a
+  Build waypoint in the peasant's queue of orders, taken when the site is finished, cancelled or destroyed. A wooden
+  wall's upgrade to stone takes its whole row (0x4fab10, 0x4fa710): the kingdom's finished walls and gates joined to it
+  through the tiles left, right, above and below, for the upgrade's price for each wall and ten times it for each gate;
+  a gate turns by its own conversion. Workers reach what they work at from a neighbouring tile only
+  (`interactionReachPx` 32 to 18 with units one to a tile), and a builder turns to its site. The gameplay and AI
+  goldens and both benches (gameplay F6EA2F8511AA2D7A, ai 351CB997418AB39D) are re-pinned for the new reach. The
+  client side of construction (the build mode staying, dragged walls, the green ghost, wall pictures) is next.
 * **2026-10-27 — Fields are ready at once; the farmer works the middle tile (ECO-025, ECO-008; item 18.S1).** ReTzar
   reads the original's field as born complete and ripe (0x44c7a0), its peasants digging it at once (0x48f603), the Dig
   program walking to the field's cell (x + 1, y + 1) (0x42e600). A new trait ReadyAtOnce on the field places it finished
