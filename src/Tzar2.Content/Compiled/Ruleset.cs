@@ -580,7 +580,7 @@ public sealed partial class Ruleset
             throw new ArgumentException($"{where}: a gate needs one passage cell per footprint tile.");
         }
 
-        if ((t.IsWall || t.IsBridge || t.Burnable || t.LeavesRuin || t.ProtectedDelete || t.WalkableFootprint || t.Placement != PlacementKind.Land) && !e.HasFootprint)
+        if ((t.IsWall || t.IsBridge || t.Burnable || t.LeavesRuin || t.ProtectedDelete || t.WalkableFootprint || t.ReadyAtOnce || t.Placement != PlacementKind.Land) && !e.HasFootprint)
         {
             throw new ArgumentException($"{where}: wall, bridge, burning, ruin, protected delete, walkable footprint and placement rules need a footprint.");
         }
@@ -869,7 +869,7 @@ public sealed partial class Ruleset
             .AddSpan<ushort>(t.Builds.AsSpan()).AddSpan<ushort>(t.RequiredTypes.AsSpan())
             .Add(Encoding.UTF8.GetBytes(t.RequiredTechnology)).Add(t.ManaCost).Add((byte)t.DropOffAccess).Add(t.AutoGather).Add((byte)t.Placement).Add(t.CoastReachTiles)
             .Add(t.IsCapturer).Add(t.IsRepairable).Add(t.Burnable).Add(t.LeavesRuin).Add(t.IsWall).Add(t.IsBridge).Add(t.ProtectedDelete).Add(t.IsSeat).Add(t.IsStartingWorker)
-            .Add(t.SpawnOnDeath).Add(t.LifetimeMs).Add(t.WalkableFootprint)
+            .Add(t.SpawnOnDeath).Add(t.LifetimeMs).Add(t.WalkableFootprint).Add(t.ReadyAtOnce)
             .Add(t.Meat?.Start ?? -1).Add(t.Meat?.PerSecond ?? -1).Add(t.Meat?.Max ?? -1).Add(t.Meat?.Piece ?? -1);
         AddRequirements(hasher, t.Requirements);
         hasher.Add(t.ManaPool is not null);

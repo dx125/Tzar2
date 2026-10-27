@@ -244,7 +244,7 @@ public sealed class ProductionSystem : ISimSystem
 
     // 1.05: the builders of a completed storage or lumber mill start gathering what it accepts nearby; the builder of a
     // field farms it (UNVERIFIED).
-    private static void AutoGather(World world, EntityId building)
+    internal static void AutoGather(World world, EntityId building)
     {
         EntityTraits traits = world.TypeOf(building).Traits;
         if (!traits.AutoGather)

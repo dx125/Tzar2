@@ -137,17 +137,23 @@ public class EconomyTests
     }
 
     [Fact]
-    public void Construction_sites_are_not_drop_offs_and_fields_under_construction_are_not_harvestable()
+    [Trait("Rule", "ECO-025")]
+    [Trait("Rule", "ECO-008")]
+    public void A_field_is_ready_at_once_and_its_peasant_farms_its_middle_tile()
     {
+        // The sixth play-test: a field had to be built first; the original's is born complete and ripe (ReTzar 0x44c7a0),
+        // and its peasant walks to its middle tile and digs there (0x42e600).
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 10, 10)), ruleset: Classic);
         EntityId peon = OfType(d.World, "euro.peon").Single();
         d.Order(0, CommandKind.Build, [peon], 12 * Tile, 4 * Tile, arg0: Id("comm.field"));
         d.Step();
         EntityId field = OfType(d.World, "comm.field").Single();
-        Assert.True(d.World.Constructions.Has(field));
-        Assert.False(d.World.ResourceStocks.Has(field));
-        d.Order(0, CommandKind.Harvest, [peon], target: field);
-        d.Step();
-        Assert.Equal(CommandRejection.InvalidArgument, d.Rejections().Single());
+        Assert.False(d.World.Constructions.Has(field));
+        Assert.Equal(d.World.Healths.Get(field).Max, d.World.Healths.Get(field).Current);
+        Assert.Equal((WorkerTask.Harvest, field.Value), (d.World.Workers.Get(peon).Task, d.World.Workers.Get(peon).Target));
+
+        d.RunUntil(() => d.World.Workers.Get(peon).Phase == WorkerPhase.Gathering && !d.IsMoving(peon), 400);
+        (int fx, int fy, int fw, int fh) = d.World.FootprintRect(field);
+        Assert.Equal((fx + (fw / 2), fy + (fh / 2)), (d.PositionOf(peon).X / Tile, d.PositionOf(peon).Y / Tile));
     }
 }

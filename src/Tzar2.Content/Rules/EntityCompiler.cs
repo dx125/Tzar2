@@ -66,6 +66,7 @@ internal sealed partial class EntityCompiler
         ["Seat"] = [],
         ["StartingWorker"] = [],
         ["WalkableFootprint"] = [],
+        ["ReadyAtOnce"] = [],
         ["Decay"] = ["afterMs", "healthPerMinute"],
         ["SpawnOnDeath"] = ["type", "start", "perSecond", "max", "piece"],
         ["Lifetime"] = ["ms"],
@@ -198,6 +199,7 @@ internal sealed partial class EntityCompiler
                 IsSeat = d.IsSeat,
                 IsStartingWorker = d.IsStartingWorker,
                 WalkableFootprint = d.WalkableFootprint,
+                ReadyAtOnce = d.ReadyAtOnce,
                 Decay = d.Decay,
                 SpawnOnDeath = spawnOnDeath,
                 Meat = d.Meat,
@@ -654,6 +656,7 @@ internal sealed partial class EntityCompiler
         d.IsSeat = entry.Find("Seat") is not null;
         d.IsStartingWorker = entry.Find("StartingWorker") is not null;
         d.WalkableFootprint = entry.Find("WalkableFootprint") is not null;
+        d.ReadyAtOnce = entry.Find("ReadyAtOnce") is not null;
         d.LifetimeMs = NonNegative("Lifetime", "ms", 0);
         if (d.GateRows is { } passage)
         {
@@ -828,6 +831,7 @@ internal sealed partial class EntityCompiler
         public bool IsSeat;
         public bool IsStartingWorker;
         public bool WalkableFootprint;
+        public bool ReadyAtOnce;
         public DecayDefinition? Decay;
         public (string Key, RuleValue At)? SpawnOnDeath;
         public MeatDefinition? Meat;
