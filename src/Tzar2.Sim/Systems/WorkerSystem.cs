@@ -208,7 +208,19 @@ public sealed class WorkerSystem : ISimSystem
         EntityId site = EntityId.FromValue(w.Target);
         if (!world.Entities.IsAlive(site) || !world.Constructions.Has(site) || world.Identities.Get(site).Owner != world.Identities.Get(worker).Owner)
         {
-            // Completed, cancelled or destroyed: a wall builder moves on to the next unfinished segment nearby.
+            // Completed, cancelled or destroyed: the next site the peasant placed (BLD-025), else, a wall builder, the next
+            // unfinished segment nearby.
+            if (world.WaypointQueues.Count != 0 && world.WaypointQueues.IndexOf(worker) is >= 0 and var q
+                && world.WaypointQueues.At(q).Points[0].Kind == WaypointKind.Build)
+            {
+                OrderQueue.Next(world, worker);
+                w = world.Workers.Get(worker);
+                if (w.Task == WorkerTask.Build)
+                {
+                    return; // on its way there next tick
+                }
+            }
+
             EntityId next = NextWallSegment(world, worker, site);
             if (next.IsNone)
             {
@@ -231,6 +243,7 @@ public sealed class WorkerSystem : ISimSystem
                 Interaction.Halt(world, worker);
                 w.Phase = WorkerPhase.Building;
                 w.Retries = 0;
+                Interaction.Face(world, worker, site); // the sixth play-test: builders worked turned away from the site
             }
 
             return;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
@@ -253,7 +254,15 @@ internal static class GameplayCommands
         world.Constructions.Get(site).Paid = paid;
         Position p = world.Positions.Get(site);
         world.Events.Emit(new SimEvent(SimEventKind.ConstructionStarted, command.Player, site, p.X, p.Y, typeId));
-        Assign(world, command.Player, site, typeId, entities, WorkerTask.Build);
+        if (type.Traits.ReadyAtOnce)
+        {
+            Assign(world, command.Player, site, typeId, entities, WorkerTask.Build);
+        }
+        else
+        {
+            AssignPlaced(world, command.Player, site, entities);
+        }
+
         if (type.Traits.ReadyAtOnce)
         {
             // ECO-025 (ReTzar 0x44c7a0, 0x48f603): a field is born complete and ripe, and its peasants dig it at once.
@@ -515,7 +524,21 @@ internal static class GameplayCommands
                 continue;
             }
 
-            if (!ResearchRules.TryPay(world, command.Player, u.Cost))
+            // A wall turns to stone with its row: its price for each wall, ten times it for each gate (BLD-026).
+            ImmutableArray<int> cost = u.Cost;
+            if (u.IsConversion && world.TypeOf(entity).Traits.IsWall)
+            {
+                int weight = ResearchRules.RowWeight(world, entity, upgrade);
+                var builder = ImmutableArray.CreateBuilder<int>(cost.Length);
+                foreach (int c in cost)
+                {
+                    builder.Add((int)Math.Min((long)c * weight, int.MaxValue));
+                }
+
+                cost = builder.MoveToImmutable();
+            }
+
+            if (!ResearchRules.TryPay(world, command.Player, cost))
             {
                 reason = queued > 0 ? null : CommandRejection.NotAffordable;
                 break;
@@ -1015,6 +1038,30 @@ internal static class GameplayCommands
         }
 
         return assigned;
+    }
+
+    // BLD-025 (ReTzar 0x48f160): a peasant at work on a site takes a new site it placed after its own, in the order placed;
+    // the others start on it now.
+    private static void AssignPlaced(World world, byte player, EntityId site, ReadOnlySpan<EntityId> entities)
+    {
+        foreach (EntityId entity in entities)
+        {
+            if (OwnedWorker(world, entity, player) is not (>= 0 and var w) || !world.TypeOf(entity).Traits.IsBuilder)
+            {
+                continue;
+            }
+
+            Worker worker = world.Workers.At(w);
+            EntityId current = EntityId.FromValue(worker.Target);
+            bool building = worker.Task == WorkerTask.Build && worker.Phase is WorkerPhase.ToSite or WorkerPhase.Building
+                && world.Entities.IsAlive(current) && world.Constructions.Has(current);
+            if (building && OrderQueue.Add(world, entity, new Waypoint { X = world.Positions.Get(site).X, Y = world.Positions.Get(site).Y, Kind = WaypointKind.Build, Target = site.Value }))
+            {
+                continue;
+            }
+
+            StartWork(world, entity, site, WorkerTask.Build);
+        }
     }
 
     /// <summary>Gives a builder the task of building or repairing <paramref name="target"/> (its tasks so far end).</summary>

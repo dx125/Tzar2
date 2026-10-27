@@ -239,9 +239,9 @@ public sealed partial class World
             for (int k = 0; k < WaypointQueue.Capacity; k++)
             {
                 Waypoint p = q.Points[k];
-                bool targeted = p.Kind is WaypointKind.Attack or WaypointKind.Guard;
+                bool targeted = p.Kind is WaypointKind.Attack or WaypointKind.Guard or WaypointKind.Build;
                 if (k < q.Count
-                    ? !Map.ContainsPoint(p.X, p.Y) || p.Kind > WaypointKind.Patrol || (p.Kind == WaypointKind.Patrol) != path || targeted == (p.Target == 0)
+                    ? !Map.ContainsPoint(p.X, p.Y) || p.Kind > WaypointKind.Build || (p.Kind == WaypointKind.Patrol) != path || targeted == (p.Target == 0)
                         || (p.Kind == WaypointKind.Move ? p.Mode is not (CombatMode.None or CombatMode.AttackMove or CombatMode.Sneak) : p.Mode != CombatMode.None)
                         || (p.Reserved1 | p.Reserved2) != 0
                     : p.X != 0 || p.Y != 0 || p.Mode != CombatMode.None || p.Kind != WaypointKind.Move || p.Target != 0 || (p.Reserved1 | p.Reserved2) != 0)

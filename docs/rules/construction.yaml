@@ -100,3 +100,13 @@ rules:
     status: tested
     adr: [0185]
     note: Batch J's third run (repair-mill, repair-barracks, repair-castle; manual.yaml repair). Our idle peasants came to help unasked. Whether Architecture speeds repairs, and how ships and siege weapons are repaired, are not measured; Tzar2 applies the same rule to them.
+  BLD-025:
+    rule: A peasant at work on a site that places another one builds it after its own, the sites in the order placed; one not at a site starts on the new one.
+    source: ['community ReTzar src/gameplay.rs (0x48f160: a peasant at work on its Build program takes the new site after its own)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: The next site waits in the peasant's queue of orders (a Build waypoint); finished, cancelled or destroyed, its site gives way to the next one still unfinished, then to the rest of a dragged wall nearby.
+  BLD-026:
+    rule: Upgrading a wooden wall to stone upgrades its whole row, the walls and gates of its kingdom joined to it side by side, for the upgrade's price for each wall and ten times it for each gate.
+    source: ['community ReTzar src/gameplay.rs (0x4fab10, 0x4fa710: the row through the cells left, right, above and below each segment; a gate counts ten)', owner 2026-10-26 (sixth play-test)]
+    status: tested
+    note: The row is taken when the order is given (the price) and again when the upgrade is done (what turns to stone); a gate turns by its own conversion. Pieces meeting only at a corner are not joined.

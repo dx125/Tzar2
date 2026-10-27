@@ -868,6 +868,29 @@ internal static class Interaction
         MovementOrders.Request(world, unit, ref motion, 0, motion.OrderX, motion.OrderY);
     }
 
+    /// <summary>Turns a unit toward an entity (the middle of a structure's footprint, a unit's position).</summary>
+    public static void Face(World world, EntityId unit, EntityId target)
+    {
+        Position p = world.Positions.Get(unit);
+        int tx;
+        int ty;
+        if (world.Footprints.Has(target))
+        {
+            (int x0, int y0, int x1, int y1) = Rect(world, target);
+            (tx, ty) = ((x0 + x1) / 2, (y0 + y1) / 2);
+        }
+        else
+        {
+            Position t = world.Positions.Get(target);
+            (tx, ty) = (t.X, t.Y);
+        }
+
+        if (tx != p.X || ty != p.Y)
+        {
+            world.Identities.Get(unit).Facing = (byte)Trig.Atan2(ty - p.Y, tx - p.X).ToDirection8();
+        }
+    }
+
     /// <summary>Whether a unit is executing a movement.</summary>
     public static bool IsMoving(World world, EntityId unit)
     {
