@@ -17,8 +17,14 @@ public sealed class PresentationCatalogTests
     private static readonly Lazy<(Ruleset Rules, MemorySource Tables)> Data = new(() =>
     {
         MemorySource tables = SyntheticLegacyContent.CreateTables();
-        tables.Add("tables/data/menu.ini.json", Ini(("e_peon", [("default", "move"), ("move", "M"), ("e_build", "B"), ("harvest", "H"), ("bribe", "I")]), ("e_build", [("e_house", "H"), ("e_rare", "")]), ("ownership", [("view_quests", "Q")])));
+        tables.Add("tables/data/menu.ini.json", Ini(
+            ("e_peon", [("default", "move"), ("move", "M"), ("e_build", "B"), ("harvest", "H"), ("bribe", "I")]),
+            ("e_build", [(null, "capturekeys"), ("e_house", "H"), ("e_rare", "")]),
+            ("ownership", [("view_quests", "Q")]),
+            ("e_warguild", [(null, "te_heroism"), (null, "te_warfare")])));
         tables.Add("tables/data/orders.ini.json", Ini(
+            ("te_heroism", [("ACTION", "TECHNOLOGY"), ("CLASSNAME", "te_heroism"), ("IMG", "133")]),
+            ("te_warfare", [("ACTION", "TECHNOLOGY"), ("CLASSNAME", "te_warfare"), ("IMG", "161")]),
             ("move", [("ACTION", "move"), ("IMG", "7")]),
             ("harvest", [("ACTION", "harvest"), ("IMG", "9")]),
             ("bribe", [("ACTION", "bribe"), ("IMG", "1")]),
@@ -77,6 +83,23 @@ public sealed class PresentationCatalogTests
         Assert.Equal((CardAction.Stop, string.Empty), PresentationCatalog.Classify("STOP", null));
     }
 
+    /// <summary>
+    /// HUD-035 (the sixth play-test: the Warriors' Guild was empty): a menu's bare lines are orders without a letter, as
+    /// the guilds', the temples' and the mage towers' research is in MENU.INI; a bare word that is no order is a flag.
+    /// </summary>
+    [Fact]
+    [Trait("Rule", "HUD-035")]
+    public void Cards_list_the_menu_lines_without_a_letter()
+    {
+        PresentationCatalog catalog = Catalog();
+        IReadOnlyList<CardButton> guild = catalog.Card("e_warguild");
+        Assert.Equal(["te_heroism", "te_warfare"], guild.Select(b => b.Order));
+        Assert.All(guild, b => Assert.Equal('\0', b.Hotkey));
+        Assert.Equal((CardAction.Research, "te_heroism", 133), (guild[0].Action, guild[0].Argument, guild[0].ImageIndex));
+        Assert.Equal(["e_house", "e_rare"], catalog.Card("e_build").Select(b => b.Order)); // capturekeys is no button
+        Assert.True(catalog.CapturesKeys("e_build"));
+    }
+
     [Theory]
     [InlineData("TECHNOLOGY", "te_feudalism", CardAction.Research, "te_feudalism")]
     [InlineData("UPGRADE gate_stone", "to_gate_stone", CardAction.Upgrade, "to_gate_stone")]
@@ -122,11 +145,11 @@ public sealed class PresentationCatalogTests
         Assert.Empty(catalog.ClassesOfKey('Q'));
     }
 
-    internal static byte[] Ini(params (string Name, (string Key, string Value)[] Entries)[] sections)
+    internal static byte[] Ini(params (string Name, (string? Key, string Value)[] Entries)[] sections)
     {
         var sb = new StringBuilder("{\"source\":\"test\",\"codePage\":1252,\"sections\":[");
         sb.Append(string.Join(",", sections.Select(s =>
-            $"{{\"name\":\"{s.Name}\",\"line\":1,\"entries\":[{string.Join(",", s.Entries.Select(e => $"[\"{Escape(e.Key)}\",\"{Escape(e.Value)}\"]"))}]}}")));
+            $"{{\"name\":\"{s.Name}\",\"line\":1,\"entries\":[{string.Join(",", s.Entries.Select(e => $"[{(e.Key is null ? "null" : $"\"{Escape(e.Key)}\"")},\"{Escape(e.Value)}\"]"))}]}}")));
         sb.Append("]}");
         return Encoding.UTF8.GetBytes(sb.ToString());
 

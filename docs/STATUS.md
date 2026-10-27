@@ -6,8 +6,7 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-25 (the sixth play-test's findings recorded as item 18, not started; the fifth's left is
-  item 5's list)
+* **Last updated:** 2026-10-26 (item 18, the sixth play-test, in the owner's order: the guilds' research fixed)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -103,8 +102,8 @@ with the engine fails `Tzar2.Fidelity.Tests`, so a fact and the engine fix that 
 In order. **Maintainer** = code and analysis; **Operator** = runs on the Windows PC with the original game.
 
 Items 1 to 3 are the owner's order of 2026-10-21 (log below), done one after the other; item 4 comes from the fourth
-play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover; item 18 is the sixth play-test, waiting
-for the owner's word to start.
+play-test; items 15 and 16 are the owner's order of 2026-10-22 at the handover; item 18 is the sixth play-test, in the
+owner's order of 2026-10-26.
 
 1. **Maintainer:** the ledger's first fill, the data account and the hotkey checklist's update are done (log below).
    Keep the ledger current with every change.
@@ -318,9 +317,19 @@ for the owner's word to start.
     swords of 5 to 15, potions of 10 to 50 or 2 to 8. It needs item properties on `MapObject` (map.bin and its hash)
     and changes the generator's hashes. RES.INI's TreasuryItem, WeaponItem, ArmourItem and PotionItem are not what the
     generator reads (ITEM-015 unclear).
-18. **The sixth play-test (2026-10-25, the owner, a build with #245-#250).** Recorded only: the owner says when the
-    work starts. For each item that the original's files cannot settle, look first at how ReTzar does it. The rule IDs
-    say where the ledger touches an item today. The screenshots stay with the owner (they show the original's art).
+18. **The sixth play-test (2026-10-25, the owner, a build with #245-#250).** For each item that the original's files
+    cannot settle, look first at how ReTzar does it. The rule IDs say where the ledger touches an item today. The
+    screenshots stay with the owner (they show the original's art). **The owner's order of work (2026-10-26):**
+    1. the Warriors' Guild (S8), then a check of every other special building, not to be forgotten;
+    2. pathfinding and how troops answer enemies (S3, S5, N7, N10, N12);
+    3. fields that have to be built before use (S1);
+    4. the build menu closing and the other construction problems (N1, N2, N3, S4, S6), and one more: upgrading a
+       wooden wall upgrades only the selected segment, while the original upgrades every joined segment, gates too;
+    5. taking buildings down (F1) with an icon of its own, the usual pictogram for it; no setting for now;
+    6. the rest of the items with screenshots (S2, S7, S9), while the screenshots are at hand;
+    7. everything else, by its weight on the play and whether it has a workaround.
+
+    S = with screenshots, N = without, F = new features, below.
     * **With screenshots:**
       1. Farmers stand at a field's edge, not in its middle as in the original (ECO-008). A field has to be built
          before it is used; the original's is ready at once.
@@ -344,7 +353,10 @@ for the owner's word to start.
          * the card feels like a picture, not like controls.
 
          The owner also asks for amounts up to 10,000 (steps of 500 above 1,000) instead of 1,000.
-      8. The Warriors' Guild is empty and offers nothing to research; check every other special building.
+      8. The Warriors' Guild is empty and offers nothing to research; check every other special building. **Fixed**
+         (HUD-035, log below): the card skipped MENU.INI's lines without a letter, so every guild, temple and mage
+         tower lacked its research. Every building's card now has its menu's orders (audited on the original's
+         package); whether each special building's orders work is still to check.
       9. Enter opens the chat line over a black screen, with the world and the HUD gone; the dialog looks unfinished
          (HUD-011).
     * **Without screenshots:**
@@ -385,14 +397,19 @@ for the owner's word to start.
       17. The original's cheat codes do not work (HUD-011).
     * **New features (the owner's):**
       1. Take a building down for 75 % of its cost.
-      2. Cancel a site that no peasant has begun on. The sim gives the whole cost back (BLD-020); whether an order on
-         the site's card offers it is to check.
+      2. Cancel a site that no peasant has begun on. The sim gives the whole cost back (BLD-020), and a site's card
+         has a Cancel construction order (C); check it in play.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-26 — The guilds, temples and mage towers research again (HUD-035; item 18.S8).** MENU.INI lists their
+  research as bare lines without a letter (`te_heroism`); the importer read them, but the client's card skipped every
+  keyless line, so the Warriors' Guild was empty and the Trade Guild, the cathedral, the mosque, the Shaolin monastery
+  and the mage towers lacked their research. Every building's card was audited on the original's package; the only
+  empty ones are empty in the original too. The owner's order of work for item 18 is in the queue.
 * **2026-10-25 — The sixth play-test recorded (item 18).** The owner played a build with #245-#250 and sent 9 findings
   with screenshots, 17 without and 2 new features. On the owner's word they are recorded only; none is started until
   the owner says so. Where the original's files cannot settle an item, ReTzar is read first.

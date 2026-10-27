@@ -166,3 +166,8 @@ rules:
     source: [owner 2026-10-21 (fourth play-test)]
     status: deviation
     note: The original's categories have no letter of their own (MENU.INI); the owner asked to see shortcuts for them too, and the letters of what is inside work from the build menu (CTRL-029).
+  HUD-035:
+    rule: A building's card offers every order of its menu, those without a letter too; the guilds, the temples and the mage towers research there.
+    source: ['data MENU.INI (e_warguild, cathedral, e_tcguild, e_magetower)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: MENU.INI lists that research as bare lines (te_heroism) with no letter; the card had skipped them, so the Warriors' Guild was empty and the other guilds, the temples and the mage towers lacked their research. A bare word that is no order (capturekeys) is a flag of the menu, not a button.
