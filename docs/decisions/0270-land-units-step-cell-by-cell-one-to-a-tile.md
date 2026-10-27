@@ -52,7 +52,7 @@ ADR 0188 named this model as the faithful one, and kept the continuous one only 
   * If the neighbour is free, the unit steps.
   * If a friend there is on its way through this unit's tile (head on), the two pass each other (ORIG-02).
   * If a unit is entering the tile, the walker waits up to 2.5 s.
-  * If a unit stands there, the walker searches its way round the other units: an A* over at most 1,200 tiles
+  * If a unit stands there, the walker searches its way round the other units: an A* over at most 640 tiles
     within 12 of it, toward the goal or the next point, and takes the first step.
   * That search treats an enemy, or a creature of Nature, as a wall. It may go through a unit that makes way, at a
     higher cost: 2 tiles' worth for one walking, 6 for one standing. If its first step is onto such a unit, the
