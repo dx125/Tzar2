@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using Tzar2.AI.Legacy.Program;
 using Tzar2.AI.Scenarios;
@@ -47,7 +48,7 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at and are not shoved there by
     // the others of the same object: the economy changes, and so the commands.
     // (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it: the fights, so the commands.
-    private const ulong GoldenCommandStream = 0x60B0C04729951164UL;
+    private const ulong GoldenCommandStream = 0x6502F4415EC653A7UL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
@@ -67,8 +68,10 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ADR 0269, 2026-10-23) the computer picks up and uses items (AI-005; its settings byte in the AI state gains TakesItems): the hashes.
     // (WORLD-019, 2026-10-24) workers take a tile of their own next to what they work at: the hashes.
     // (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it: the hashes.
-    private const ulong GoldenHashStream = 0x4FAD67D40D30AF03UL;
-    private const ulong GoldenFinalFullHash = 0x6EFC33A275E46DF4UL;
+    // (WAR-015/016/017, 2026-10-26) the original's choice of targets, the next target at once and the calls for help;
+    // guards stand within three tiles (ORD-001): the hashes.
+    private const ulong GoldenHashStream = 0xB0F2F0541D030F03UL;
+    private const ulong GoldenFinalFullHash = 0x530626ED7FF47A53UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;
@@ -95,7 +98,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
 
         ulong final = scenario.Simulation.ComputeFullHash();
         output.WriteLine($"workers={workers} runtime={Environment.Version} commands={commands.GetCurrentHash():X16} stream={states.GetCurrentHash():X16} final={final:X16} {scenario.Describe()}");
-        Assert.True(scenario.Ai.Issued(0) > 0 && scenario.Trained(0) > 0 && scenario.Ai.Players[0].Waves > 0, scenario.Describe());
+        // The computer plays: it gives orders, trains, and sends waves (since WAR-017 a kingdom's soldiers answer the calls
+        // for help of its defence, and p0 sends its first wave after 10 minutes, the others before).
+        Assert.True(scenario.Ai.Issued(0) > 0 && scenario.Trained(0) > 0 && scenario.Ai.Players.Any(p => p.Waves > 0), scenario.Describe());
         Assert.Equal(GoldenCommandStream, commands.GetCurrentHash());
         Assert.Equal(GoldenHashStream, states.GetCurrentHash());
         Assert.Equal(GoldenFinalFullHash, final);

@@ -126,7 +126,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // then: (ADR 0266, 2026-10-23) no spell cooldowns, spells learned from books (a new store, hashed layout 18).
             // then: (ADR 0267, 2026-10-23) mana regrows 2 a second and a pool below a cost is raised to it (hashed layout 19).
             // then: (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it.
-            Assert.Equal("0CD9F834394BBF73", d.Hashes[^1].ToString("X16"));
+            // then: (WAR-015/016/017, 2026-10-26) the original's choice of targets, the next target at once, calls for help.
+            Assert.Equal("D99CF223AB073276", d.Hashes[^1].ToString("X16"));
         }
     }
 
