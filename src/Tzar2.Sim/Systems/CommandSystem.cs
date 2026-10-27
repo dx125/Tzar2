@@ -138,6 +138,18 @@ public sealed partial class CommandSystem : ISimSystem
 
                     GameplayCommands.ClearTasks(world, entity);
                     ref Motion m = ref world.Motions.At(p);
+                    if (Interaction.TilesFrom(world, world.Positions.Get(entity), command.Target) <= world.Ruleset.Combat.GuardRadiusTiles)
+                    {
+                        // Close enough already: it guards from where it stands (ORD-001).
+                        MovementOrders.Stop(world, entity, ref m);
+                        m.Order = MotionOrder.Follow;
+                        m.FollowTarget = command.Target.Value;
+                        m.OrderX = target.X;
+                        m.OrderY = target.Y;
+                        applied++;
+                        continue;
+                    }
+
                     m.Order = MotionOrder.Follow;
                     m.FollowTarget = command.Target.Value;
                     m.OrderX = target.X;

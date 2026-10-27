@@ -66,7 +66,7 @@ public class OrderQueueTests
         Assert.Equal(MotionOrder.Follow, d.MotionOf(guard).Order);
         d.RunUntil(() => false, 600);
         Position g = d.PositionOf(guard), s = d.PositionOf(second);
-        Assert.True(System.Math.Abs(g.X - s.X) < 3 * Tile && System.Math.Abs(g.Y - s.Y) < 3 * Tile, "the guard went to the second object");
+        Assert.True(System.Math.Abs((g.X / Tile) - (s.X / Tile)) <= 3 && System.Math.Abs((g.Y / Tile) - (s.Y / Tile)) <= 3, "the guard went to the second object"); // within 3 tiles (ORD-001)
     }
 
     [Fact]

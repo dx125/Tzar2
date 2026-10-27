@@ -69,8 +69,8 @@ public struct Combat : IComponent
     /// <summary>1 when a fight interrupted a move-advance, which resumes once the unit is free again.</summary>
     public byte Resume;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved0;
+    /// <summary>1 while the target is in reach and the unit strikes it (WAR-015: a building struck is left to them).</summary>
+    public byte Striking;
 
     /// <summary>Padding, always 0.</summary>
     public byte Reserved1;

@@ -55,6 +55,30 @@ internal static class Interaction
         return Math.Max(Math.Abs((long)x - p.X), Math.Abs((long)y - p.Y));
     }
 
+    /// <summary>
+    /// The tiles between a point's tile and what an entity stands on (its footprint, or a unit's tile), the larger axis;
+    /// 0 on it. ORD-001: guards stand within <c>combat.guardRadiusTiles</c> of what they guard.
+    /// </summary>
+    public static int TilesFrom(World world, Position p, EntityId entity)
+    {
+        int gx = p.X / MapState.UnitsPerTile;
+        int gy = p.Y / MapState.UnitsPerTile;
+        int x0, y0, x1, y1;
+        if (world.Footprints.Has(entity))
+        {
+            (int tx, int ty, int w, int h) = world.FootprintRect(entity);
+            (x0, y0, x1, y1) = (tx, ty, tx + w - 1, ty + h - 1);
+        }
+        else
+        {
+            Position t = world.Positions.Get(entity);
+            (x0, y0) = (t.X / MapState.UnitsPerTile, t.Y / MapState.UnitsPerTile);
+            (x1, y1) = (x0, y0);
+        }
+
+        return Math.Max(Math.Max(x0 - gx, gx - x1), Math.Max(Math.Max(y0 - gy, gy - y1), 0));
+    }
+
     /// <summary>Squared distance from a point to a rectangle (0 inside).</summary>
     public static long DistanceSquaredToRect(int x, int y, (int X0, int Y0, int X1, int Y1) r)
     {

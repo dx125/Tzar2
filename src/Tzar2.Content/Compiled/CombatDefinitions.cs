@@ -416,6 +416,55 @@ public sealed record CrafterDefinition(ImmutableArray<ushort> Items);
 public sealed record HeroNames(string Civilization, ImmutableArray<string> Names);
 
 /// <summary>
+/// The categories a unit or tower ranks a possible target by when it chooses on its own (WAR-015; ReTzar's reading of the
+/// original, 0x412730), numbered as the original's priority tables are indexed.
+/// </summary>
+public enum TargetCategory : byte
+{
+    /// <summary>Nothing to attack on its own.</summary>
+    None = 0,
+
+    /// <summary>A wall.</summary>
+    Wall = 1,
+
+    /// <summary>A building of no other category.</summary>
+    Building = 2,
+
+    /// <summary>A unit that does not fight (a peasant at other work, a trader).</summary>
+    Unarmed = 3,
+
+    /// <summary>A tower.</summary>
+    Tower = 4,
+
+    /// <summary>A fighting unit, or a peasant that attacks.</summary>
+    Fighter = 5,
+
+    /// <summary>A peasant building a tower within the scanner's range and two tiles.</summary>
+    TowerBuilder = 6,
+
+    /// <summary>A peasant capturing a building.</summary>
+    Capturer = 7,
+
+    /// <summary>A site not begun yet within the scanner's range and four tiles.</summary>
+    NewSite = 8,
+
+    /// <summary>A training dummy.</summary>
+    Dummy = 9,
+
+    /// <summary>A mage (<see cref="CombatSettings.TargetMages"/>).</summary>
+    Mage = 10,
+
+    /// <summary>A barracks, church or workshop (<see cref="CombatSettings.TargetTrainers"/>).</summary>
+    Trainer = 11,
+
+    /// <summary>A castle, cathedral, guild, temple or mage tower (<see cref="CombatSettings.TargetSeats"/>).</summary>
+    Seat = 12,
+
+    /// <summary>A wall marked for a breach (the original's computer; Tzar2 marks none).</summary>
+    MarkedWall = 13,
+}
+
+/// <summary>
 /// Ruleset-wide constants of combat, experience, holders, items and magic (GAME-07…11; section <c>combat:</c>). Values
 /// not in the original tables are UNVERIFIED placeholders (docs/mechanics/m3-placeholders.md, stream E).
 /// </summary>
@@ -630,6 +679,37 @@ public sealed record CombatSettings
     /// <summary>Tournaments: the types it teaches (Asian peasants, monks, ninjas and priests), ascending.</summary>
     public ImmutableArray<ushort> TournamentPupils { get; init; } = [];
 
+    /// <summary>
+    /// WAR-015 (ReTzar's reading of the original, 0x4129d0): the priority of each <see cref="TargetCategory"/> (1 to 13, at
+    /// index category − 1) for a unit or tower choosing what to attack on its own; 0 is never chosen. The original's
+    /// table for a human kingdom.
+    /// </summary>
+    public ImmutableArray<int> TargetPriority { get; init; } = [0, 2000, 3000, 4000, 4000, 6000, 7000, 8000, 500, 4000, 2800, 2200, 0];
+
+    /// <summary>WAR-015: the priorities of the <see cref="SiegeScanners"/> (catapults), as <see cref="TargetPriority"/>.</summary>
+    public ImmutableArray<int> SiegeTargetPriority { get; init; } = [4000, 5000, 1000, 6000, 3000, 2000, 2500, 7000, 0, 3000, 5500, 5200, 4000];
+
+    /// <summary>WAR-015: the types that choose by <see cref="SiegeTargetPriority"/> (catapults), ascending.</summary>
+    public ImmutableArray<ushort> SiegeScanners { get; init; } = [];
+
+    /// <summary>WAR-015: the types of <see cref="TargetCategory.Mage"/> (mages), ascending.</summary>
+    public ImmutableArray<ushort> TargetMages { get; init; } = [];
+
+    /// <summary>WAR-015: the types of <see cref="TargetCategory.Trainer"/> (barracks, churches, workshops), ascending.</summary>
+    public ImmutableArray<ushort> TargetTrainers { get; init; } = [];
+
+    /// <summary>WAR-015: the types of <see cref="TargetCategory.Seat"/> (castles, cathedrals, guilds, temples, mage towers), ascending.</summary>
+    public ImmutableArray<ushort> TargetSeats { get; init; } = [];
+
+    /// <summary>
+    /// WAR-017 (ReTzar, 0x413950): a unit or building that is hit, or a unit that takes on an enemy by itself, calls the
+    /// fighters and towers of its kingdom within this many tiles (and its guards wherever they are) to answer.
+    /// </summary>
+    public int HelpRadiusTiles { get; init; } = 3;
+
+    /// <summary>ORD-001 (ReTzar, 0x4e4f1f): guards stand within this many tiles of what they guard, and walk back beyond it.</summary>
+    public int GuardRadiusTiles { get; init; } = 3;
+
 
     /// <summary>Hero names per civilization (<c>HEROES.INI</c>).</summary>
     public ImmutableArray<HeroNames> HeroNames { get; init; } = [];
@@ -647,6 +727,9 @@ public sealed record CombatSettings
 
         return [];
     }
+
+    /// <summary>The number of target categories (WAR-015).</summary>
+    public const int TargetCategories = 13;
 
     internal void Validate(int typeCount, int technologies)
     {
@@ -767,6 +850,37 @@ public sealed record CombatSettings
         {
             Check(pupil, 0, typeCount - 1);
         }
+
+        if (TargetPriority.Length != TargetCategories || SiegeTargetPriority.Length != TargetCategories)
+        {
+            throw new ArgumentException($"combat: the target priorities need {TargetCategories} entries.");
+        }
+
+        foreach (int p in TargetPriority.AsSpan())
+        {
+            Check(p, 0, 1_000_000);
+        }
+
+        foreach (int p in SiegeTargetPriority.AsSpan())
+        {
+            Check(p, 0, 1_000_000);
+        }
+
+        foreach (ImmutableArray<ushort> list in (ReadOnlySpan<ImmutableArray<ushort>>)[SiegeScanners, TargetMages, TargetTrainers, TargetSeats])
+        {
+            if (list.IsDefault)
+            {
+                throw new ArgumentException("combat: the target type lists must not be default.");
+            }
+
+            foreach (ushort t in list)
+            {
+                Check(t, 0, typeCount - 1);
+            }
+        }
+
+        Check(HelpRadiusTiles, 0, 64);
+        Check(GuardRadiusTiles, 0, 64);
 
         if (HeroNames.IsDefault)
         {

@@ -27,13 +27,14 @@ public class DiplomacyTests
     [Trait("Rule", "DIP-001")]
     public void Stances_decide_what_military_units_attack(Stance stance, bool peasantHit, bool soldierHit)
     {
-        // Player 0's footman between player 1's peasant and footman; only player 0's stance changes.
+        // Player 0's footman between player 1's peasant and footman; only player 0's stance changes. A fighter comes before
+        // a peasant (WAR-015), so the soldier falls first.
         using var d = new SimDriver(TestMap(48, 16, Unit("euro.footman", 0, 20, 8), Unit("euro.peon", 1, 22, 8), Unit("euro.footman", 1, 18, 4)), ruleset: Classic);
         EntityId peasant = OfType(d.World, "euro.peon", 1).Single();
         EntityId soldier = OfType(d.World, "euro.footman", 1).Single();
         Stance(d, 0, 1, stance);
         Stance(d, 1, 0, Kingdoms.Stance.Ally); // player 1 never strikes first
-        for (int t = 0; t < 300; t++) // 15 s: footmen walk 40 px/s (ADR 0172)
+        for (int t = 0; t < 600; t++) // 30 s: footmen walk 40 px/s (ADR 0172)
         {
             d.Step();
         }

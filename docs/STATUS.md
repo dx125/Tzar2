@@ -6,7 +6,8 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-26 (item 18, the sixth play-test, in the owner's order: the guilds' research fixed)
+* **Last updated:** 2026-10-26 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
+  targets and answer enemies as the original)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -338,11 +339,13 @@ owner's order of 2026-10-26.
          gathers only from a tile next to the resource (WORLD-019).
       3. Guard (ORD-001):
          * swordsmen guarding a tower crowd against it; in the original they stand within some radius of it, unless
-           they are already closer;
-         * a site not yet begun (1 HP) cannot be guarded: the click is a move;
-         * the guards hardly react when the guarded object is attacked;
+           they are already closer: **fixed**, within three tiles as the original (ORD-001, log below);
+         * a site not yet begun (1 HP) cannot be guarded: the click is a move (open: the client's pick, to check in
+           play);
+         * the guards hardly react when the guarded object is attacked: **fixed**, the calls for help (WAR-017);
          * soldiers in general are passive with enemies near: they stand, or step from tile to tile, and leave a fight
-           when the attacker of the guarded object dies though other enemies stand next to them.
+           when the attacker of the guarded object dies though other enemies stand next to them: **fixed** for the
+           choice of targets (WAR-015, WAR-016, WAR-017); stepping from tile to tile is the movement (N10).
       4. Peasants build from far off, without turning to the site.
       5. Peasants taking a load to the drop-off by the shortest way get stuck walking in place.
       6. Wall segments do not join into one wall; a wooden wall is drawn with a broken stone wall's picture.
@@ -382,8 +385,11 @@ owner's order of 2026-10-26.
       10. Big fights:
           * a crowd jitters left and right, nobody goes round the side, and only the front fights;
           * when the front of a large group is stuck or fighting, the rear jitters in place instead of going round;
-          * a unit that cannot reach the enemy it was ordered to attack freezes, even with another enemy next to it;
-          * soldiers, archers most, all strike the same enemy.
+          * a unit that cannot reach the enemy it was ordered to attack freezes, even with another enemy next to it:
+            **fixed**, it takes the one it reaches (WAR-016);
+          * soldiers, archers most, all strike the same enemy: **fixed** as the original ranks targets (WAR-015: about
+            two attackers to a target, then the weaker, then the nearer);
+          * open: the crowd's movement (jitter, nobody going round, the rear stuck), which is the movement model, next.
       11. A peasant carrying a load sent to gather something else first takes the load home. In the original it goes to
           the new work, and drops the old load on the ground when it takes a new one.
       12. Units answer orders late, standing a while first, most when a group standing close together is selected.
@@ -405,6 +411,20 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-26 — Troops choose targets and answer enemies as the original (WAR-015, WAR-016, WAR-017, ORD-001;
+  item 18.S3, N10).** From ReTzar's reading of the original's code:
+  * a unit or tower that takes on an enemy by itself ranks what it sees by the original's target categories and
+    priorities (data: `combat.targetPriority` and the type lists), then by its tie-breaks (attackers of what it guards,
+    in reach, the BONUS.INI matchup, about two attackers to a target, the weaker, the nearer); walls, bridges and gates
+    are never its own choice, nor a building its kingdom strikes already;
+  * a unit whose target falls, or that cannot reach it while another enemy is in reach, takes the next one at once;
+  * a unit or building that is hit, and a unit that takes on an enemy by itself, calls the fighters and towers within
+    three tiles and its guards to answer;
+  * guards stand within three tiles of what they guard instead of against it.
+
+  The gameplay, AI and trigger-mission goldens and the gameplay bench (D24D0D8E53E6CAED) are re-pinned; the AI's golden
+  test now asks that some kingdom sends a wave (p0's first comes after its 10 minutes, its soldiers answering the calls
+  of its defence). The movement of crowds is next (item 18, order 2).
 * **2026-10-26 — The guilds, temples and mage towers research again (HUD-035; item 18.S8).** MENU.INI lists their
   research as bare lines without a letter (`te_heroism`); the importer read them, but the client's card skipped every
   keyless line, so the Warriors' Guild was empty and the Trade Guild, the cathedral, the mosque, the Shaolin monastery

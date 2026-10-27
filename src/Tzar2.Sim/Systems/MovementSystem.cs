@@ -237,14 +237,16 @@ public sealed class MovementSystem : ISimSystem
 
         Position tp = world.Positions.At(t);
         Position p = world.Positions.Get(entity);
-        long near = (long)m.Radius + MapState.UnitsPerTile + (3 * MapState.UnitsPerTile / 2);
-        bool far = IntMath.DistanceSquared(p.X, p.Y, tp.X, tp.Y) > near * near;
+        // ORD-001 (ReTzar 0x4e4f1f): a guard stands within guardRadiusTiles of what it guards (of its footprint, or of a
+        // unit's tile), not against it, and walks back from further away.
+        int away = Interaction.TilesFrom(world, p, target);
+        int guard = world.Ruleset.Combat.GuardRadiusTiles;
+        bool far = away > guard;
         bool moved = IntMath.DistanceSquared(m.OrderX, m.OrderY, tp.X, tp.Y) > 4L * MapState.UnitsPerTile * MapState.UnitsPerTile;
         // Re-plan when the target has moved since the last request (an unreachable idle target is not chased again), or
         // when an idle follower was shoved out of range of an idle target: it is at most FollowDriftTiles beyond the
         // follow range (a follower stopped at the nearest reachable point of an unreachable target usually is not).
-        long drift = near + (FollowDriftTiles * MapState.UnitsPerTile);
-        bool drifted = far && m.State == MotionState.Idle && IntMath.DistanceSquared(p.X, p.Y, tp.X, tp.Y) <= drift * drift;
+        bool drifted = far && m.State == MotionState.Idle && away <= guard + FollowDriftTiles;
         if ((far && moved) || drifted)
         {
             m.OrderX = tp.X;

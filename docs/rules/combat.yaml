@@ -65,3 +65,18 @@ rules:
     source: [data IMAGES.INI actionrow]
     status: tested
     note: The importer reads the attack animation (OBJECTS image_attack) and lands the blow at the share of the swing that the frames before the action row take, by their delays (footman 840 of 1,398 ms, archer 943 of 1,200); ranged units loose their missile then. The action row is counted from 0, which is not checked against a capture (one frame, about 80-140 ms). Types without the data keep half the cycle (hitDelayPercent, UNK-07).
+  WAR-015:
+    rule: A unit or tower that takes on an enemy by itself chooses by the target's kind first (a peasant capturing or building a tower near, a site not begun near, fighters, towers, mages, then peasants, guilds, barracks and other buildings; walls never), then the one attacking what it guards, the one in reach, the better matchup, the one about two others attack, the weaker, the nearer.
+    source: ['community ReTzar src/gameplay/combat.rs (0x412730, 0x4129d0, 0x412bf0)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: 'The categories and their priorities are data (combat.targetPriority, siegeTargetPriority for catapults, targetMages, targetTrainers, targetSeats; the human kingdom''s table: the sim does not tell a computer''s kingdom apart, and Tzar2 marks no walls for a breach). Bridges and gates are never chosen, nor a building another unit of the kingdom strikes already. In reach is Tzar2''s own reach test (the original counts cells); a tower looks only within its range. A confused unit still takes the nearest.'
+  WAR-016:
+    rule: A unit whose target falls, or that cannot reach it while another enemy is in reach, takes on the next target at once; with nobody in sight it stops, and an order queued with Shift comes first.
+    source: ['community ReTzar src/gameplay.rs (0x42df70)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: Cannot reach is a walk that gave up, or one that made no progress since its last plan (two seconds); then the unit takes an enemy it reaches now, or once the walk gave up the best other one in sight. The original's units stand on cells and wait or go round; Tzar2's paths do not know units yet.
+  WAR-017:
+    rule: A unit or building that is hit, and a unit that takes on an enemy by itself, calls for help; the fighters and towers of its kingdom and its allies within three tiles, and its guards wherever they are, answer the attacker.
+    source: ['community ReTzar src/gameplay.rs (0x413950, 0x413410)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: 'An idle helper takes the better of the attacker and its own best target; one on a move-advance, a sneak or a patrol turns at once; one fighting by itself changes only for a better target, and one on the player''s order keeps it; a tower answers within its range, a unit standing its ground within its reach. The original calls at most every 100 ms per victim (Tzar2 once per tick) and reaches six tiles for a computer''s kingdom (Tzar2 three for all, combat.helpRadiusTiles).'

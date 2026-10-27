@@ -579,6 +579,18 @@ combat:
   experienceSpeeds: { te_warfare: 70, te_tactics: 50, te_suntzubook: 35 }
   levelCapBuildings: { classes: [academy] }
   levelCapPerBuilding: 10
+  # WAR-015 (ReTzar's reading of the original, 0x412730, 0x4129d0): what a unit or tower attacks on its own is ranked by
+  # its category: 1 wall, 2 building, 3 unarmed unit, 4 tower, 5 fighter, 6 peasant building a tower near, 7 peasant
+  # capturing, 8 site not begun near, 9 dummy, 10 mage, 11 barracks/church/workshop, 12 castle/cathedral/guild/temple/mage
+  # tower, 13 wall marked for a breach; 0 is never chosen. The human kingdom's table (the computer's own is not used).
+  targetPriority: [0, 2000, 3000, 4000, 4000, 6000, 7000, 8000, 500, 4000, 2800, 2200, 0]
+  siegeTargetPriority: [4000, 5000, 1000, 6000, 3000, 2000, 2500, 7000, 0, 3000, 5500, 5200, 4000]
+  siegeScanners: { classes: [catapult, hcatapult] }
+  targetMages: { classes: [mage] }
+  targetTrainers: { classes: [barrack, church, workshop] }
+  targetSeats: { classes: [castle, cathedral, academy, magetower, tcguild, shaolinn, mosque] }
+  helpRadiusTiles: 3                  # WAR-017 (ReTzar 0x413950): the square a call for help reaches (6 for a computer)
+  guardRadiusTiles: 3                 # ORD-001 (ReTzar 0x4e4f1f): guards stand within 3 tiles of what they guard
   baseLevelCap: 0                     # strategy guide: Learning allows experience; te_learning / te_heroism raise the cap
   attackPerLevel: 1                   # manual
   defenceHalvesPerLevel: 1            # manual: half a point per level (truncated: UNVERIFIED rounding, UNK-08)
