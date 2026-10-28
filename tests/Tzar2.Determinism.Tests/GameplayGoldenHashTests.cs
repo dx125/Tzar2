@@ -112,7 +112,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // guards stand within three tiles (ORD-001): the stream and the final hash.
     // (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (a new store, hashed layout 20): the stream and
     // the final hash.
-    private const ulong GoldenHashStream = 0xDB344211EA2AAEEDUL;
+    private const ulong GoldenHashStream = 0xE6573BC7E20D4385UL;
     private const ulong GoldenFinalFullHash = 0x43E9B5053DC5D2D6UL;
 
     private const int Ticks = 1600;

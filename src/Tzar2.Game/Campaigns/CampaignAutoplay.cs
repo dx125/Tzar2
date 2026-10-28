@@ -2117,6 +2117,13 @@ public static class CampaignAutoplay
                 if (world.Helds.IndexOf(u) is >= 0 and var h && EntityId.FromValue(world.Helds.At(h).Holder) is var ship && world.IsShip(ship)
                     && world.Diplomacy.MayCommand(me, world.Identities.Get(ship).Owner))
                 {
+                    // A ship that went back to the shore for late boarders had its unload order dropped by the new one:
+                    // those asks were not refusals (bigisland: two slow boarders made the whole force get off again).
+                    if (world.Dockings.IndexOf(ship) is >= 0 and var dock && world.Dockings.At(dock).Purpose == DockPurpose.Board)
+                    {
+                        _asked.Remove(ship.Value);
+                    }
+
                     if (!Sails(world, ship, point) || Refused(world, ship, point))
                     {
                         // Aboard a ship on other water (a lake): out again where it is, then another ship.

@@ -484,6 +484,20 @@ the process decisions that have no ADR.
       `Resource`, so saves stay; the new pictures are not in the tables hash.
     * Two checks sent a peasant home when its load of the old resource filled the new resource's capacity; they now
       count only a load of the node's resource.
+    * An idle peasant with a load takes up only work on that resource by itself: only an order drops a load.
+  * **A loop on a route (found by the campaign acceptance).**
+    * The batch changed the course of Rajba, and the pilot then stalled: a mage sent off the cliff-ringed plateau walked
+      round in a ring for ever, and the ninja bringing him the book never caught him.
+    * The cause, on main too: a step toward the route's steering point cut the corner of the cluster the route had
+      just left. The route went back to that cluster's exit, and the unit walked round in a loop (likely some of the
+      seventh play-test's back and forth).
+    * Now a unit keeps its way while it still sees its steering point (`UpdateRoute`).
+    * A synthetic map did not reproduce it (the plateau's regions and corners are particular); the acceptance's Rajba
+      covers it.
+  * **The pilot's ferry (bigisland).** The dropped bags shifted the course of Bigisland, and two slow boarders now
+    sent the ship back to the shore. Each new Board order dropped the pending unload, and the pilot took three such asks
+    from one place for a ship that cannot sail, so it put the whole force off again. Now the asks start over when the
+    ship docks for boarders.
 
 * **2026-10-28 — The seventh play-test, batch B: the way round units, sounds where they are (WORLD-021, PRES-013;
   item 19.3, 6).**

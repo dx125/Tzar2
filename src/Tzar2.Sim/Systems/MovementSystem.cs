@@ -424,6 +424,15 @@ public sealed partial class MovementSystem : ISimSystem
             exit = exit + 1 < len ? exit + 1 : len; // at the portal: next is the partner across, or the goal
         }
 
+        // A unit heading for its steering point along a line that cuts across a cluster the route has left (round a
+        // corner of the cluster grid) keeps its way while it sees the point: going back to that cluster's portal walked
+        // it round in a loop (a mage on Rajba's plateau circled for ever; the seventh play-test's back and forth).
+        int margin = Math.Min(world.TypeOf(entity).TerrainRadius, (MapState.UnitsPerTile / 2) - 128);
+        if (exit >= 0 && exit < m.PathCursor && PathSearch.CorridorClear(layer, p.X, p.Y, m.SteerX, m.SteerY, margin, out _))
+        {
+            return RouteAction.None;
+        }
+
         if (exit < 0)
         {
             if (cluster == layer.ClusterOf(goalTile) && m.PathCursor >= len - 1)
@@ -463,7 +472,6 @@ public sealed partial class MovementSystem : ISimSystem
             m.StallTicks = 0;
         }
 
-        int margin = Math.Min(world.TypeOf(entity).TerrainRadius, (MapState.UnitsPerTile / 2) - 128);
         if ((exit >= len - 1 || layer.ClusterOf(goalTile) == cluster) && PathSearch.CorridorClear(layer, p.X, p.Y, m.TargetX, m.TargetY, margin, out _))
         {
             m.Mode = MotionMode.Direct;
