@@ -341,7 +341,8 @@ public sealed partial class World
                 || (loan && (k.LoanResource < 0 || k.LoanResource >= resources || k.LoanDue <= 0)) || (!loan && k.LoanDue != 0)
                 || k.LoanLimit < 0 || k.LoanRaiseTick < -1 || k.OutcomeTick < -1 || k.OutcomeTick > Tick.Value
                 || (k.Cheats & ~(CheatFlags.NoFog | CheatFlags.NoTech | CheatFlags.God | CheatFlags.Buildozer)) != 0
-                || (k.Cheats != CheatFlags.None && !Config.CheatsAllowed) || k.Reserved1 != 0
+                || (k.Cheats != CheatFlags.None && !Config.CheatsAllowed)
+                || k.ExchangeLeft < 0 || k.ExchangeLeft > k.ExchangeTotal || (k.ExchangeLeft > 0 && (k.ExchangeGive >= resources || k.ExchangeReceive >= resources))
                 || k.TavernPeriod < 0 || k.TavernPeriod > Systems.TavernOffers.PeriodAt(this, Tick.Value)
                 || (k.TavernTaken >> (Ruleset.World.MercenaryOffers + Ruleset.World.HeroOffers)) != 0)
             {

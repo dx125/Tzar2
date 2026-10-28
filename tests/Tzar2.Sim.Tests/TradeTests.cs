@@ -161,6 +161,7 @@ public class TradeTests
     [Trait("Rule", "TRADE-005")]
     [Trait("Rule", "TRADE-006")]
     [Trait("Rule", "TRADE-007")]
+    [Trait("Rule", "TRADE-011")]
     public void The_tavern_converts_ten_to_one_gambles_deterministically_and_lends_more_after_a_repayment()
     {
         using SimDriver d = Markets(20);
@@ -172,8 +173,20 @@ public class TradeTests
         w.Players[0].Resources[gold] = 0;
         d.Order(0, CommandKind.Convert, [tavern], arg0: wood | (gold << 8), arg1: 105);
         d.Step();
-        Assert.Equal(5, w.Players[0].Resources[wood]); // whole units only: 100 wood for 10 gold
+        Assert.Equal(5, w.Players[0].Resources[wood]); // whole units only, paid at once: 100 wood for 10 gold
+        Assert.Equal(0, w.Players[0].Resources[gold]);
+
+        // TRADE-011: the gold comes a unit every 300 ms; another exchange waits for this one.
+        d.Order(0, CommandKind.Convert, [tavern], arg0: wood | (gold << 8), arg1: 10);
+        d.Step();
+        Assert.Equal(CommandRejection.ExchangeUnderWay, d.Rejections().Last());
+        int unit = (w.Ruleset.World.ExchangeUnitMs + w.Config.TickLengthMilliseconds - 1) / w.Config.TickLengthMilliseconds;
+        d.RunUntil(() => w.Players[0].Resources[gold] >= 5, 100);
+        Assert.Equal(5, w.Players[0].Resources[gold]);
+        Assert.Equal(5, w.Kingdoms[0].ExchangeLeft);
+        d.RunUntil(() => d.Count(SimEventKind.Converted) == 1, 10 * unit);
         Assert.Equal(10, w.Players[0].Resources[gold]);
+        Assert.Equal(0, w.Kingdoms[0].ExchangeLeft);
 
         // Loans: 1,000, outstanding blocks another, repaid, then 1,200 after the delay (manual ch. 5 §10).
         d.Order(0, CommandKind.Loan, [tavern], arg0: gold, arg1: 0);

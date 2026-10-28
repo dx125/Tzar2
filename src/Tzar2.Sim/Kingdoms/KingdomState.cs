@@ -101,11 +101,26 @@ public struct KingdomState
     /// <summary>Tavern offers of <see cref="TavernPeriod"/> already hired (bit = offer slot; GAME-14).</summary>
     public byte TavernTaken;
 
-    /// <summary>Padding, always 0.</summary>
-    public short Reserved1;
+    /// <summary>The resource the tavern exchange under way takes (TRADE-011).</summary>
+    public byte ExchangeGive;
+
+    /// <summary>The resource the tavern exchange under way gives, a unit at a time (TRADE-011).</summary>
+    public byte ExchangeReceive;
 
     /// <summary>The tavern period <see cref="TavernTaken"/> belongs to (offers change every <c>world.tavernRefreshMs</c>).</summary>
     public int TavernPeriod;
+
+    /// <summary>Units of the tavern exchange under way still to come; 0 when none is under way (TRADE-011).</summary>
+    public int ExchangeLeft;
+
+    /// <summary>Units the exchange under way gives in all.</summary>
+    public int ExchangeTotal;
+
+    /// <summary>The tick the next unit of the exchange comes.</summary>
+    public int ExchangeNextTick;
+
+    /// <summary>The tavern exchanging (<c>EntityId.Value</c>): the exchange ends if it is lost.</summary>
+    public uint ExchangeTavern;
 #pragma warning restore CA1051
 
     /// <summary><see cref="LoanResource"/> when no loan is outstanding.</summary>

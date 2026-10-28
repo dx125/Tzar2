@@ -51,3 +51,8 @@ rules:
     rule: Markets need the merchants' guild and make traders or caravans.
     source: [manual Civilizations (Market)]
     status: implemented
+  TRADE-011:
+    rule: The tavern's exchange is paid at once and received a unit every 300 ms; a kingdom has one exchange under way at a time, and it ends if the tavern is lost.
+    source: ['community ReTzar src/gameplay.rs (0x4d3104: delivered one unit every 300 ms; K+0x126: one exchange per kingdom)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: The dialog offers 100, 200, 500, then steps of 500 up to 10,000 (the owner's wish; the original offers 500 to 20,000 by 500), opens with the last exchange asked for, shows what has come so far in the result's cell and greys TRADE until it is over; a message tells when it is done. exchangeUnitMs in the classic ruleset.

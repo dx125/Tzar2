@@ -71,6 +71,12 @@ public sealed record WorldSettings
     /// <summary>Tavern conversion: give this many units for one unit of another resource (manual ch. 5 §7: 1/10).</summary>
     public int ConvertRatio { get; init; } = 10;
 
+    /// <summary>
+    /// Tavern conversion: the exchange is paid at once and received a unit every this many milliseconds (TRADE-011;
+    /// ReTzar's reading of the original, 0x4d3104: 300); 0 gives it all at once.
+    /// </summary>
+    public int ExchangeUnitMs { get; init; }
+
     /// <summary>Gambling odds a player may choose (pay N, win N × odds; UNK-28).</summary>
     public ImmutableArray<int> GambleOdds { get; init; } = [2, 3, 5, 10];
 
@@ -235,6 +241,8 @@ public sealed record WorldSettings
 
         ArgumentOutOfRangeException.ThrowIfNegative(GambleHouseEdgeBasisPoints);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(GambleHouseEdgeBasisPoints, 10_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(ExchangeUnitMs);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(ExchangeUnitMs, 60_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxGambleStake, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxGambleStake, 10_000_000);
         ArgumentOutOfRangeException.ThrowIfNegative(LoanStartAmount);

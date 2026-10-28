@@ -224,9 +224,16 @@ internal static class KingdomCommands
             return CommandRejection.InvalidArgument;
         }
 
-        if (!HasTavern(world, command.Player, entities))
+        if (Tavern(world, command.Player, entities) is not { IsNone: false } tavern)
         {
             return CommandRejection.NoValidEntities;
+        }
+
+        // TRADE-011 (ReTzar's reading of the original, 0x4d3104): one exchange at a time for a kingdom.
+        ref KingdomState k = ref world.Kingdoms[command.Player];
+        if (k.ExchangeLeft > 0)
+        {
+            return CommandRejection.ExchangeUnderWay;
         }
 
         int received = amount / w.ConvertRatio;
@@ -238,9 +245,59 @@ internal static class KingdomCommands
             return CommandRejection.NotAffordable;
         }
 
-        world.Credit(command.Player, receive, received);
-        world.Events.Emit(new SimEvent(SimEventKind.Converted, command.Player, EntityId.None, give, receive, received));
+        if (w.ExchangeUnitMs <= 0)
+        {
+            world.Credit(command.Player, receive, received);
+            world.Events.Emit(new SimEvent(SimEventKind.Converted, command.Player, EntityId.None, give, receive, received));
+            return null;
+        }
+
+        // Paid now, received a unit at a time.
+        k.ExchangeGive = (byte)give;
+        k.ExchangeReceive = (byte)receive;
+        k.ExchangeLeft = received;
+        k.ExchangeTotal = received;
+        k.ExchangeNextTick = world.Tick.Value + Ticks(world, w.ExchangeUnitMs);
+        k.ExchangeTavern = tavern.Value;
         return null;
+    }
+
+    /// <summary>
+    /// Gives each kingdom the units of its tavern exchange whose time has come, one every <c>world.exchangeUnitMs</c>
+    /// (TRADE-011); an exchange whose tavern is lost ends there. Each tick, before the trade.
+    /// </summary>
+    public static void DeliverExchanges(World world)
+    {
+        Span<KingdomState> kingdoms = world.Kingdoms;
+        for (int p = 0; p < kingdoms.Length; p++)
+        {
+            ref KingdomState k = ref kingdoms[p];
+            if (k.ExchangeLeft <= 0)
+            {
+                continue;
+            }
+
+            EntityId tavern = EntityId.FromValue(k.ExchangeTavern);
+            if (!world.Entities.IsAlive(tavern) || world.Identities.Get(tavern).Owner != p)
+            {
+                (k.ExchangeLeft, k.ExchangeTotal) = (0, 0);
+                continue;
+            }
+
+            int unit = Ticks(world, world.Ruleset.World.ExchangeUnitMs);
+            while (k.ExchangeLeft > 0 && world.Tick.Value >= k.ExchangeNextTick)
+            {
+                world.Credit((byte)p, k.ExchangeReceive, 1);
+                k.ExchangeLeft--;
+                k.ExchangeNextTick += unit;
+            }
+
+            if (k.ExchangeLeft == 0)
+            {
+                world.Events.Emit(new SimEvent(SimEventKind.Converted, (byte)p, tavern, k.ExchangeGive, k.ExchangeReceive, k.ExchangeTotal));
+                k.ExchangeTotal = 0;
+            }
+        }
     }
 
     public static CommandRejection? Gamble(World world, in Command command, ReadOnlySpan<EntityId> entities)
@@ -400,18 +457,21 @@ internal static class KingdomCommands
         return null;
     }
 
-    private static bool HasTavern(World world, byte player, ReadOnlySpan<EntityId> entities)
+    private static bool HasTavern(World world, byte player, ReadOnlySpan<EntityId> entities) => !Tavern(world, player, entities).IsNone;
+
+    // The first finished tavern of the player among the listed entities, or none.
+    private static EntityId Tavern(World world, byte player, ReadOnlySpan<EntityId> entities)
     {
         foreach (EntityId e in entities)
         {
             if (world.Entities.IsAlive(e) && world.Identities.IndexOf(e) is >= 0 and var i && world.Identities.At(i).Owner == player
                 && world.TypeOf(e).Traits.World.IsTavern && !world.Constructions.Has(e))
             {
-                return true;
+                return e;
             }
         }
 
-        return false;
+        return EntityId.None;
     }
 
     // A technology the ruleset does not have (a mod without it) is no requirement.

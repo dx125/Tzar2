@@ -336,6 +336,9 @@ public enum CommandRejection
 
     /// <summary>A crusade of the player is still going on or cooling down (GAME-11).</summary>
     CrusadeActive = 22,
+
+    /// <summary>The kingdom's tavern exchange is still under way: one at a time (TRADE-011).</summary>
+    ExchangeUnderWay = 23,
 }
 
 /// <summary>One simulation event. Output only: events are not part of the state, hashes or snapshots.</summary>

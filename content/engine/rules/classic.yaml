@@ -119,6 +119,7 @@ world:
   tradeMinDistanceTiles: 12
   tradeDockMs: 2000                   # UNVERIFIED: time to unload and load at a dock
   convertRatio: 10                    # manual ch. 5 §7: "you give ten times more than you receive"
+  exchangeUnitMs: 300                 # TRADE-011 (ReTzar 0x4d3104): paid at once, received a unit every 300 ms
   gambleOdds: [2, 3, 5, 10]           # UNVERIFIED (UNK-28): the proportions a player may choose
   gambleHouseEdgePercent: 10          # UNVERIFIED (UNK-28): win chance = (1 - edge) / odds
   maxGambleStake: 10000               # engine bound

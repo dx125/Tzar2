@@ -1620,7 +1620,14 @@ public partial class GameScreen : Node
                 break;
             case CardDialogKind.Exchange:
                 var exchange = new ExchangeDialog(_ui, _rules.World.ConvertRatio);
-                exchange.Exchange += (give, get, amount) => Submit(_card.Exchange(CardNow(), give, get, amount));
+                exchange.Exchange += (give, get, amount) =>
+                {
+                    Submit(_card.Exchange(CardNow(), give, get, amount));
+                    int received = amount / Math.Max(1, _rules.World.ConvertRatio);
+                    Message(_rules.World.ExchangeUnitMs > 0
+                        ? string.Create(CultureInfo.InvariantCulture, $"Exchange: {amount} {give} for {received} {get}, a unit every {_rules.World.ExchangeUnitMs / 1000.0:0.#} s")
+                        : $"Exchange: {amount} {give} for {received} {get}");
+                };
                 OpenDialog(exchange);
                 break;
             case CardDialogKind.Craft:
@@ -1844,6 +1851,12 @@ public partial class GameScreen : Node
     {
         byte me = _session.LocalPlayer;
         int attackSounds = 0;
+        if (_dialog is ExchangeDialog exchange && me < frame.Players.Length)
+        {
+            var mine = frame.Players[me];
+            exchange.ShowProgress(mine.ExchangeLeft > 0 ? (mine.ExchangeLeft, mine.ExchangeTotal, mine.ExchangeReceive) : null);
+        }
+
         foreach (SimEvent e in _events)
         {
             if (e.Kind == SimEventKind.Gambled && e.Player == me && _dialog is GambleDialog dice)
@@ -1853,6 +1866,9 @@ public partial class GameScreen : Node
 
             switch (e.Kind)
             {
+                case SimEventKind.Converted when e.Player == me && (uint)e.Y < (uint)_rules.ResourceTypes.Count:
+                    Message($"Exchange done: +{e.Arg} {_rules.ResourceTypes[e.Y]}"); // TRADE-011
+                    break;
                 case SimEventKind.UnitTrained when e.Player == me:
                     Stats.Trained++;
                     {
@@ -1958,6 +1974,7 @@ public partial class GameScreen : Node
         CommandRejection.IllegalPlacement => "Cannot build there",
         CommandRejection.RequirementNotMet => "Requirements are not met",
         CommandRejection.QueueFull => "The queue is full",
+        CommandRejection.ExchangeUnderWay => "An exchange is under way",
         _ => string.Empty,
     };
 
