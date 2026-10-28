@@ -94,7 +94,8 @@ beta): [release/](release/).
 reason in the commit message and in the history comment above the constants:
 `tests/Tzar2.Determinism.Tests/*GoldenHashTests.cs` print the new values in their test output; the bench hashes in
 `ci.yml` come from the same `t2 bench …` command run locally. All OSes and worker counts must agree; if they do not,
-it is a determinism bug, not a re-pin.
+it is a determinism bug, not a re-pin. **`pwsh tools/dev/repin-hashes.ps1`** does all of it in one run (the goldens, the
+trigger snapshot's golden, the three bench hashes in `ci.yml`) and prints each value it changed, for the commit message.
 
 **Relay tests and short timeouts:** `RelayTests` once timed out on loaded runners because peers were dropped while the
 test thread was busy (issue #62, fixed by ADR 0231). A relay test that fails with `member.drop … Timeout` in its log is
@@ -116,6 +117,15 @@ a bug, not a flake: report it with the run id.
   **after merging `main` into the branch**, not before: #133 and #139 pinned values from branches made before #168
   moved the hash, so main never produced them and the clean install warned "modified installation" for days
   (2026-10-23).
+* **Work in batches** (the owner, 2026-10-28): three or four fixes to a branch and a PR. While working, run only the
+  tests of the feature; run the full `dotnet test Tzar2.sln -c Release`, the re-pin script and the campaign acceptance
+  once per batch, the acceptance in the background, and write the next batch while CI runs.
+* **The campaign acceptance** (`The_original_campaigns_convert_through_the_editor_and_every_mission_completes`,
+  `TZAR2_ORIGIN` set; about 5 minutes) is needed when a change can alter how the campaigns play: the sim's behaviour,
+  the AI, the campaign pilot, the importer or the converters. It plays the campaigns at once, one thread each, writes a
+  line a mission to `tzar2-acceptance.log` in the temporary folder as it goes (`tail -f` it;
+  `TZAR2_ACCEPTANCE_PROGRESS` moves it), and stops a campaign at its first mission that no attempt completes;
+  `TZAR2_ACCEPTANCE_SURVEY=1` plays every map instead, for a full survey.
 * AI-assisted commits end with a `Co-Authored-By:` line naming the model.
 
 ## Rules that keep the project correct

@@ -4,6 +4,7 @@ using System.IO;
 using Godot;
 using Tzar2.Client.Logic;
 using Tzar2.Game.Campaigns;
+using Tzar2.Game.Scenario;
 using Tzar2.Game.Session;
 using Tzar2.Game.Ui;
 
@@ -93,8 +94,15 @@ public partial class GameApp
         }
         catch (Exception e) when (e is ArgumentException or InvalidDataException or KeyNotFoundException)
         {
-            GD.PrintErr($"Map '{map.Title}' cannot start: {e.Message}");
-            ShowCustomMaps();
+            if (resume is not null)
+            {
+                ShowFailure("The save cannot be loaded", e.Message, ShowLoadGame);
+            }
+            else
+            {
+                ShowFailure($"Map '{map.Title}' cannot start", e.Message, ShowCustomMaps);
+            }
+
             return;
         }
 
@@ -130,6 +138,17 @@ public partial class GameApp
         Replace(screen, music: null);
     }
 
+    // A save or a match that cannot start says why, and goes back where the player was (the owner, 2026-10-28: a save of
+    // an older version silently opened the list of maps).
+    private void ShowFailure(string title, string reason, Action back)
+    {
+        GD.PrintErr($"{title}: {reason}");
+        var notice = new ScenarioNotice(ScenarioNoticeKind.Message, title, reason, null, null, null, 0, false, 0, 0, true);
+        var dialog = new ScenarioMessageDialog(_ui!, Screen, notice, null, (section, key, fallback) => _catalog?.Text(section, key, fallback) ?? fallback);
+        dialog.Closed += back;
+        Replace(dialog, music: null);
+    }
+
     // LOAD GAME of the single player menu: the load dialog over it.
     private void ShowLoadGame()
     {
@@ -143,7 +162,7 @@ public partial class GameApp
             }
             catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
             {
-                GD.PrintErr("Load failed: " + e.Message);
+                ShowFailure("The save cannot be loaded", e.Message, ShowLoadGame);
             }
         };
         Replace(dialog, music: null);

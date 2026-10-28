@@ -136,16 +136,26 @@ public sealed class Simulation : IDisposable
     /// <param name="workerCount">Threads for fork/join jobs.</param>
     /// <param name="configureSystems">Adds the same extra systems the original simulation had.</param>
     /// <exception cref="System.IO.InvalidDataException">The snapshot is malformed, inconsistent, or does not match the ruleset/map.</exception>
-    public static Simulation Restore(ReadOnlySpan<byte> snapshot, Ruleset ruleset, MapData map, int workerCount = 1, Action<SystemScheduler>? configureSystems = null)
+    /// <param name="tolerance">
+    /// <see cref="SnapshotTolerance.SaveGame"/>: a player's save, read from an older format or under other rules with the
+    /// same tables (ADR 0271); replays, rejoins and desync reports stay <see cref="SnapshotTolerance.Exact"/>.
+    /// </param>
+    public static Simulation Restore(ReadOnlySpan<byte> snapshot, Ruleset ruleset, MapData map, int workerCount = 1, Action<SystemScheduler>? configureSystems = null, SnapshotTolerance tolerance = SnapshotTolerance.Exact)
     {
-        SimulationConfig config = WorldSnapshot.ReadConfig(snapshot, ruleset, map);
+        SimulationConfig config = WorldSnapshot.ReadConfig(snapshot, ruleset, map, tolerance);
         var world = new World(ruleset, map, config);
-        WorldSnapshot.Restore(world, snapshot);
+        bool exact = WorldSnapshot.Restore(world, snapshot, tolerance);
         world.IsLocked = true;
-        var simulation = new Simulation(world, workerCount);
+        var simulation = new Simulation(world, workerCount) { RestoredExactly = exact };
         configureSystems?.Invoke(simulation.Systems);
         return simulation;
     }
+
+    /// <summary>
+    /// Whether a restored simulation was read as it was saved; false for a save of an older format or other rules, which
+    /// continues under the current ones (ADR 0271). True for a new simulation.
+    /// </summary>
+    public bool RestoredExactly { get; private init; } = true;
 
     /// <summary>
     /// Runs tick <see cref="World.Tick"/> with its closed command set (pipeline §8.5), then hashes the state, publishes

@@ -54,3 +54,8 @@ rules:
     source: ['data IMAGES.INI res_gold res_stone (four pictures)', 'community ReTzar src/world.rs (0x4afeae: the look drawn at loading; the last picture the exhausted pit)', owner 2026-10-25 (sixth play-test)]
     status: tested
     note: Each mine takes its look from its id. Before, the look followed the gold left, so a mine three quarters worked showed the pit and seemed gone, and a mine remembered under the fog cycled through its looks several times a second.
+  PRES-012:
+    rule: A sound set's clip is picked by a roll out of 1000, which may pick none; the voices are split between effects, the voices of units and of buildings; only a few effects of a kind play at once, each one playing lowering the next one's priority; and a unit's sounds stop at its new order or its death.
+    source: ['data SOUNDS.INI [priority] and the clips'' weights', 'community ReTzar src/audio.rs (0x455210 the roll; 0x4ceaac 3 + 19 + 4 + 4 voices; 0xc97ad8 the effects of a kind at once; 0x4cfc87 the priority falling; 0x4cfb50 the choice of a voice; 0x4d05b0 an object silenced)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: Blows play at most 5 at once and shots 6, deaths 3, chopping and building 4, digging 2. The sword sets add up to about 530 of 1000 for foot soldiers and 340 for horsemen, so a blow sounds about half or a third of the time. Before, every blow sounded, all 32 voices were shared, and a horseman's or a fighter's sounds ran on after its new order or its death (the sixth play-test - sounds hung on after a fight or after a horseman was sent on). The original's attenuation and panning are not ported (UNK-33). Shots and blows are told apart by the attacker's range.

@@ -288,6 +288,11 @@ public partial class GameScreen : Node
     /// <inheritdoc/>
     public override void _Ready()
     {
+        if (!_session.RestoredExactly)
+        {
+            Message("This save is of an older version of Tzar2: it goes on under the current rules."); // ADR 0271
+        }
+
         var watch = System.Diagnostics.Stopwatch.StartNew();
         HudLayout layout = LoadLayout();
         Prepare().GetAwaiter().GetResult(); // shown before it finished (tests, the editor's playtest): wait here
@@ -1052,10 +1057,20 @@ public partial class GameScreen : Node
         }
 
         _session.Submit(batch);
+
+        // A new order silences what the units were sounding (PRES-012, 0x4d05b0), then the lead answers.
+        foreach (PlannedCommand c in orders)
+        {
+            foreach (EntityId unit in c.Entities)
+            {
+                _mixer?.StopOwner(unit.Index + 1);
+            }
+        }
+
         if (Lead() is { } lead && _frame is not null)
         {
             TypeVisual v = _catalog.Type(_frame.Entities[lead].TypeId);
-            _mixer?.PlaySet(v.SoundCommand, SoundCategory.Speech, _catalog.SoundPriority("obj_order"));
+            _mixer?.PlaySet(v.SoundCommand, SoundCategory.Speech, "obj_order", owner: _frame.Entities[lead].Id.Index + 1);
         }
     }
 
@@ -1078,7 +1093,7 @@ public partial class GameScreen : Node
             TypeVisual v = _catalog.Type(e.TypeId);
             if (e.Owner == _session.LocalPlayer)
             {
-                _mixer?.PlaySet(v.SoundSelect ?? v.SoundCommand, v.SoundSelect is not null ? SoundCategory.Buildings : SoundCategory.Speech, _catalog.SoundPriority("obj_select"));
+                _mixer?.PlaySet(v.SoundSelect ?? v.SoundCommand, v.SoundSelect is not null ? SoundCategory.Buildings : SoundCategory.Speech, "obj_select", owner: e.Id.Index + 1);
             }
         }
     }
@@ -1437,7 +1452,7 @@ public partial class GameScreen : Node
         var batch = new CommandList();
         batch.Add(CommandKind.Build, builders, ghost.TileX * 2048, ghost.TileY * 2048, arg0: ghost.TypeId, arg1: (ghost.Rotated ? 1 : 0) | (ghost.Mirrored ? 2 : 0), flags: (mods & KeyMods.Shift) != 0 ? CommandFlags.Queue : CommandFlags.None);
         _session.Submit(batch);
-        _mixer?.PlaySet("build", SoundCategory.Effects, _catalog.SoundPriority("build"));
+        _mixer?.PlaySet("build", SoundCategory.Effects, "build");
     }
 
     // A wall dragged with the left button held (BLD-011): its row is laid when the button comes up, from the tile it was
@@ -1465,7 +1480,7 @@ public partial class GameScreen : Node
         var batch = new CommandList();
         batch.Add(CommandKind.BuildWall, builders, from.X * 2048, from.Y * 2048, arg0: ghost.TypeId, arg1: (y1 << 16) | x1, flags: flags);
         _session.Submit(batch);
-        _mixer?.PlaySet("build", SoundCategory.Effects, _catalog.SoundPriority("build"));
+        _mixer?.PlaySet("build", SoundCategory.Effects, "build");
     }
 
     // The selected builders of the local kingdom; none ends the build mode.
@@ -1876,8 +1891,8 @@ public partial class GameScreen : Node
                         Position(e.Entity, out int x, out int y);
                         _eventHistory.Add((x, y, e.Entity));
                         Message($"{v.Name} ready");
-                        _mixer?.PlaySet(v.SoundCommand, SoundCategory.Speech, _catalog.SoundPriority("obj_unit_ready"), Distance(x, y));
-                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, _catalog.SoundPriority("obj_unit_ready"), Distance(x, y)); // PRES-007
+                        _mixer?.PlaySet(v.SoundCommand, SoundCategory.Speech, "obj_unit_ready", Distance(x, y), e.Entity.Index + 1);
+                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, "obj_unit_ready", Distance(x, y)); // PRES-007
                     }
 
                     break;
@@ -1888,8 +1903,8 @@ public partial class GameScreen : Node
                         Position(e.Entity, out int x, out int y);
                         _eventHistory.Add((x, y, e.Entity));
                         Message($"{v.Name} completed");
-                        _mixer?.PlaySet(v.SoundSelect, SoundCategory.Buildings, _catalog.SoundPriority("obj_building_ready"), Distance(x, y));
-                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, _catalog.SoundPriority("obj_building_ready"), Distance(x, y)); // PRES-007
+                        _mixer?.PlaySet(v.SoundSelect, SoundCategory.Buildings, "obj_building_ready", Distance(x, y));
+                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, "obj_building_ready", Distance(x, y)); // PRES-007
                     }
 
                     break;
@@ -1900,7 +1915,9 @@ public partial class GameScreen : Node
                     if (_lastByIndex.TryGetValue(e.X, out var attacker) && attackSounds < 4)
                     {
                         attackSounds++;
-                        _mixer?.PlaySet(_catalog.Type(attacker.Type).SoundAttack, SoundCategory.Effects, _catalog.SoundPriority("attack_close"), Distance(attacker.X, attacker.Y));
+                        // Blows and shots (PRES-012): their own categories, a few at once.
+                        string kind = _rules.EntityTypes[attacker.Type].Traits.Armament is { RangeUnits: > 0 } ? "attack_far" : "attack_close";
+                        _mixer?.PlaySet(_catalog.Type(attacker.Type).SoundAttack, SoundCategory.Effects, kind, Distance(attacker.X, attacker.Y), e.X + 1);
                     }
 
                     if (_lastByIndex.TryGetValue(e.Entity.Index, out var victim) && victim.Owner == me && _now - _lastAlert > 10)
@@ -1924,9 +1941,11 @@ public partial class GameScreen : Node
                         Stats.Kills++;
                     }
 
+                    // The dead fall silent, then cry once (PRES-012, 0x4d05b0).
+                    _mixer?.StopOwner(e.Entity.Index + 1);
                     if (_lastByIndex.TryGetValue(e.Entity.Index, out var dead) && dead.Type == (ushort)e.Arg)
                     {
-                        _mixer?.PlaySet(_catalog.Type((ushort)e.Arg).SoundDie, SoundCategory.Effects, _catalog.SoundPriority("death"), Distance(dead.X, dead.Y));
+                        _mixer?.PlaySet(_catalog.Type((ushort)e.Arg).SoundDie, SoundCategory.Effects, "death", Distance(dead.X, dead.Y));
                     }
 
                     break;
@@ -1961,7 +1980,7 @@ public partial class GameScreen : Node
                 if (d < 0.6f)
                 {
                     string set = w.Activity switch { UnitActivity.Chop => "chop", UnitActivity.Mine => "mine", UnitActivity.Farm => "dig", _ => "build" };
-                    _mixer?.PlaySet(set, SoundCategory.Effects, _catalog.SoundPriority(set), d);
+                    _mixer?.PlaySet(set, SoundCategory.Effects, set, d, w.Id.Index + 1);
                     _workSoundBudget--;
                 }
             }

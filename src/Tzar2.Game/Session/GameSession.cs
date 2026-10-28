@@ -8,14 +8,15 @@ using System.Threading.Tasks;
 using Tzar2.AI;
 using Tzar2.AI.Runtime;
 using Tzar2.Content.Compiled;
+using Tzar2.Core.Diagnostics;
 using Tzar2.Core.Ids;
+using Tzar2.Game.Scenario;
+using Tzar2.Replay;
+using Tzar2.Scripting.Legacy;
 using Tzar2.Sim;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Events;
-using Tzar2.Game.Scenario;
-using Tzar2.Core.Diagnostics;
-using Tzar2.Replay;
-using Tzar2.Scripting.Legacy;
+using Tzar2.Sim.Snapshots;
 
 namespace Tzar2.Game.Session;
 
@@ -84,7 +85,7 @@ public sealed class GameSession : IDisposable
     /// </summary>
     public void View(byte? player) => _view = player ?? 255;
 
-    private GameSession(MatchSetup setup, Ruleset ruleset, bool fog, IReadOnlyList<MatchFingerprint>? peers, byte[]? snapshot, ILockstepDriver? driver, bool record)
+    private GameSession(MatchSetup setup, Ruleset ruleset, bool fog, IReadOnlyList<MatchFingerprint>? peers, byte[]? snapshot, ILockstepDriver? driver, bool record, SnapshotTolerance tolerance = SnapshotTolerance.Exact)
     {
         _driver = driver;
         ArgumentNullException.ThrowIfNull(setup);
@@ -117,7 +118,7 @@ public sealed class GameSession : IDisposable
         }
         else
         {
-            Simulation = Simulation.Restore(snapshot, ruleset, Map);
+            Simulation = Simulation.Restore(snapshot, ruleset, Map, tolerance: tolerance);
         }
 
         _slots = setup.Players.Count;
@@ -313,11 +314,18 @@ public sealed class GameSession : IDisposable
     /// rebuilds the map and re-attaches the AI, whose state comes from the snapshot.
     /// </summary>
     /// <exception cref="System.IO.InvalidDataException">The snapshot does not belong to this setup (map, ruleset, AI script).</exception>
-    public static GameSession Restore(MatchSetup setup, Ruleset ruleset, byte[] snapshot, bool fog = true)
+    /// <param name="saveGame">A player's save: an older format or other rules with the same tables go on (ADR 0271).</param>
+    public static GameSession Restore(MatchSetup setup, Ruleset ruleset, byte[] snapshot, bool fog = true, bool saveGame = false)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        return new GameSession(setup, ruleset, fog, peers: null, snapshot, driver: null, record: false);
+        return new GameSession(setup, ruleset, fog, peers: null, snapshot, driver: null, record: false, saveGame ? SnapshotTolerance.SaveGame : SnapshotTolerance.Exact);
     }
+
+    /// <summary>
+    /// Whether the match was restored from a save as it was saved; false when the save was of an older version and
+    /// continues under the current rules (ADR 0271), which the game tells the player.
+    /// </summary>
+    public bool RestoredExactly => Simulation.RestoredExactly;
 
     private TaskCompletionSource<(byte[] Snapshot, int Tick)>? _snapshotRequest;
 

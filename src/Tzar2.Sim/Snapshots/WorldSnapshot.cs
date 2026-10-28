@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using Tzar2.Content.Compiled;
@@ -29,7 +30,13 @@ public static class WorldSnapshot
     public const uint Magic = 0x4E533254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 23; // 22: the land units' steps (ADR 0270); 23: the tavern exchange under way (TRADE-011)
+    public const int FormatVersion = 24; // 22: the land units' steps (ADR 0270); 23: the tavern exchange under way (TRADE-011); 24: the rules' tables hash (ADR 0271)
+
+    /// <summary>The oldest format a save game is still read from (ADR 0271): 21, the saves of 2026-10-24 on.</summary>
+    public const int OldestSaveVersion = 21;
+
+    // The stores a format did not have yet: a save of an older one leaves them empty (ADR 0271).
+    private static readonly Dictionary<string, int> StoreSince = new(StringComparer.Ordinal) { ["core.cellstep"] = 22 };
 
     /// <summary>Writes a snapshot of <paramref name="world"/>.</summary>
     public static void Capture(World world, BinaryBufferWriter writer, StateHasher hasher)
@@ -39,6 +46,7 @@ public static class WorldSnapshot
         writer.WriteUInt32(Magic);
         writer.WriteVarUInt64(FormatVersion);
         writer.WriteUInt64(world.Ruleset.ContentHash);
+        writer.WriteUInt64(world.Ruleset.TablesHash);
         writer.WriteUInt64(world.Map.Data.ContentHash);
         SimulationConfig config = world.Config;
         writer.WriteUInt64(config.MatchSeed);
@@ -91,10 +99,10 @@ public static class WorldSnapshot
 
     /// <summary>Reads the config stored in a snapshot (to construct the world it restores into).</summary>
     /// <exception cref="InvalidDataException">Not a snapshot, wrong version, or the ruleset/map does not match.</exception>
-    public static SimulationConfig ReadConfig(ReadOnlySpan<byte> snapshot, Ruleset ruleset, MapData map)
+    public static SimulationConfig ReadConfig(ReadOnlySpan<byte> snapshot, Ruleset ruleset, MapData map, SnapshotTolerance tolerance = SnapshotTolerance.Exact)
     {
         var reader = new BinaryBufferReader(snapshot);
-        return ReadHeader(ref reader, ruleset, map);
+        return ReadHeader(ref reader, ruleset, map, tolerance, out _, out _);
     }
 
     /// <summary>
@@ -104,11 +112,12 @@ public static class WorldSnapshot
     /// <see cref="Simulation.Restore"/>, which discards it, may call this.
     /// </summary>
     /// <exception cref="InvalidDataException">The snapshot is malformed, inconsistent, or fails the hash check.</exception>
-    internal static void Restore(World world, ReadOnlySpan<byte> snapshot)
+    /// <returns>Whether the state was read as it was saved (false: an older format or other rules, ADR 0271).</returns>
+    internal static bool Restore(World world, ReadOnlySpan<byte> snapshot, SnapshotTolerance tolerance = SnapshotTolerance.Exact)
     {
         ArgumentNullException.ThrowIfNull(world);
         var reader = new BinaryBufferReader(snapshot);
-        SimulationConfig config = ReadHeader(ref reader, world.Ruleset, world.Map.Data);
+        SimulationConfig config = ReadHeader(ref reader, world.Ruleset, world.Map.Data, tolerance, out int version, out bool sameRules);
         if (config != world.Config)
         {
             throw new InvalidDataException("The world was not created with the snapshot's configuration.");
@@ -141,15 +150,26 @@ public static class WorldSnapshot
         world.NextGroupId = (int)nextGroup;
         world.Paths.ReadFrom(ref reader);
         world.PathQueue.ReadFrom(ref reader);
-        world.ReadKingdomsFrom(ref reader);
+        world.ReadKingdomsFrom(ref reader, version);
         ulong storeCount = reader.ReadVarUInt64();
-        if (storeCount != (ulong)world.Components.All.Length)
+        int stores = 0;
+        foreach (IComponentStore store in world.Components.All)
         {
-            throw new InvalidDataException($"Snapshot has {storeCount} stores, the world {world.Components.All.Length}.");
+            stores += StoreSince.TryGetValue(store.Key, out int since) && version < since ? 0 : 1;
+        }
+
+        if (storeCount != (ulong)stores)
+        {
+            throw new InvalidDataException($"Snapshot has {storeCount} stores, the world {stores} in format {version}.");
         }
 
         foreach (IComponentStore store in world.Components.All)
         {
+            if (StoreSince.TryGetValue(store.Key, out int since) && version < since)
+            {
+                continue; // not in that format yet: empty
+            }
+
             string key = reader.ReadString(256);
             byte tier = reader.ReadByte();
             if (!string.Equals(key, store.Key, StringComparison.Ordinal) || tier != (byte)store.Tier)
@@ -176,14 +196,18 @@ public static class WorldSnapshot
 
         world.ValidateRestoredState();
 
+        // A save of an older format or other rules hashes differently by construction; everything else must match.
+        bool exact = version == FormatVersion && sameRules;
         ulong actual = StateHashing.ComputeFullHash(world, new StateHasher());
-        if (actual != expected)
+        if (exact && actual != expected)
         {
             throw new InvalidDataException($"Snapshot hash mismatch: stored {expected:X16}, restored {actual:X16}.");
         }
+
+        return exact;
     }
 
-    private static SimulationConfig ReadHeader(ref BinaryBufferReader reader, Ruleset ruleset, MapData map)
+    private static SimulationConfig ReadHeader(ref BinaryBufferReader reader, Ruleset ruleset, MapData map, SnapshotTolerance tolerance, out int formatVersion, out bool sameRules)
     {
         ArgumentNullException.ThrowIfNull(ruleset);
         ArgumentNullException.ThrowIfNull(map);
@@ -193,14 +217,27 @@ public static class WorldSnapshot
         }
 
         ulong version = reader.ReadVarUInt64();
-        if (version != FormatVersion)
+        bool save = tolerance == SnapshotTolerance.SaveGame;
+        if (version != FormatVersion && !(save && version is >= OldestSaveVersion and < FormatVersion))
         {
-            throw new InvalidDataException($"Unsupported snapshot format version {version}.");
+            throw new InvalidDataException(save && version < OldestSaveVersion
+                ? $"The save is of format {version}, older than the oldest this version reads ({OldestSaveVersion})."
+                : $"Unsupported snapshot format version {version}.");
         }
 
-        if (reader.ReadUInt64() != ruleset.ContentHash)
+        formatVersion = (int)version;
+        sameRules = reader.ReadUInt64() == ruleset.ContentHash;
+        ulong? tables = version >= 24 ? reader.ReadUInt64() : null;
+        if (!sameRules && !save)
         {
             throw new InvalidDataException("The snapshot was taken with a different ruleset.");
+        }
+
+        // ADR 0271: a save of other rules continues under the current ones when what it refers to by index is the same;
+        // older formats carry no tables hash, so they are taken as they come and the validation decides.
+        if (!sameRules && tables is { } t && t != ruleset.TablesHash)
+        {
+            throw new InvalidDataException("The save was made with rules whose types, technologies or resources differ.");
         }
 
         if (reader.ReadUInt64() != map.ContentHash)

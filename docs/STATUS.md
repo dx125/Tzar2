@@ -8,8 +8,9 @@ indexed in [decisions/README.md](decisions/README.md).
 
 * **Last updated:** 2026-10-28 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
   targets and answer enemies as the original; land units step cell by cell; fields ready at once; construction; taking
-  buildings down; the mines' look; the click's pick as the original; the tavern's exchange and the chat window. The
-  slow checks now run once per batch of three or four fixes)
+  buildings down; the mines' look; the click's pick as the original; the tavern's exchange and the chat window; the
+  sounds mixed as the original; saves of older versions load. The slow checks run once per batch of three or four fixes,
+  with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -396,7 +397,7 @@ owner's order of 2026-10-26.
          the building under the tree wins (CTRL-001): **fixed**, the click's pick is the original's (CTRL-001, log
          below).
       6. Sound effects hang on, most after a fight (blows, the cries of the dying) or after a horseman is ordered to
-         move.
+         move: **fixed**, the sounds are mixed as the original (PRES-012, log below); to check in play.
       7. Moving troops push standing friends several tiles aside instead of going round. Letting them through is right
          when there is no other way, but the friends should step aside and come back: **fixed** (WORLD-020): movers go
          round; with no way round an idle friend walks to a free tile off the way and goes back, or in a corridor the
@@ -439,6 +440,33 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-28 — Saves outlive the version that wrote them; the sounds are mixed as the original; faster checks (ADR 0271,
+  PRES-012; item 18.N6; the owner's requests).**
+  * **Saves (ADR 0271).** The owner's saves of 2026-10-25 no longer loaded: a snapshot was read only by the version
+    that wrote it, and a custom map's save that failed opened the list of maps without a word.
+    * A player's save is now read leniently. Formats back to 21 are upgraded: the cell steps' store starts empty, and
+      the kingdom's record is padded. Saves made under other rules continue when the rules' tables are the same.
+      Format 24 carries `Ruleset.TablesHash`; older formats carry none and are taken as they come.
+    * Replays, rejoins and desync reports stay exact.
+    * A save that cannot load says why, and the player goes back to the load screen. A save continued under other
+      rules says so in the game.
+    * The owner's two saves load and play on. A format 21 fixture taken by the old code guards the path
+      (`SaveCompatibilityTests`).
+  * **Sounds (PRES-012).** The sim's hits and deaths stopped with the fight; the mixer did not do what the original
+    does (ReTzar's reading).
+    * A set's clip is picked by a roll out of 1000 that may pick none: the sword sets add up to about 530 and 340, so a
+      blow sounds about half or a third of the time, where every one sounded.
+    * The 32 voices are split into channels: 19 effects, 4 unit voices, 4 building voices, 3 nature, 2 interface.
+    * Only a few effects of a kind play at once (blows 5, shots 6, deaths 3), each one playing lowering the next one's
+      priority.
+    * A unit's sounds stop at its new order or its death (0x4d05b0).
+    * The rules are the engine-free `SoundRules`, tested.
+  * **Checks.**
+    * `tools/dev/repin-hashes.ps1` re-pins every pinned hash in one run.
+    * The campaign acceptance plays the campaigns at once, one thread each. It writes its progress as it goes (the
+      temporary folder's `tzar2-acceptance.log`) and stops a campaign at its first mission that no attempt completes
+      (`TZAR2_ACCEPTANCE_SURVEY=1` for a full survey).
+    * DEVELOPMENT.md describes the batches.
 * **2026-10-28 — The tavern's exchange comes a unit at a time; the card's dialogs and the chat window are fixed
   (TRADE-011, HUD-011, WORLD-020; item 18.S7, S9, N12).**
   * **The exchange.** As ReTzar reads the original (0x4d3104): paid at once, received a unit every 300 ms

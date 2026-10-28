@@ -137,7 +137,7 @@ public sealed class PresentationCatalogTests
     {
         PresentationCatalog catalog = Catalog();
         Assert.Equal([("sound/command/foot1.wav", 100), ("sound/command/foot2.wav", 300)], catalog.Sounds("FOOT_CMD"));
-        Assert.Equal([("sound/buildings/e_castle1.wav", 1)], catalog.Sounds("buildings\\e_castle1.wav"));
+        Assert.Equal([("sound/buildings/e_castle1.wav", SoundRules.RollRange)], catalog.Sounds("buildings\\e_castle1.wav"));
         Assert.Empty(catalog.Sounds(null));
         Assert.Equal(255, catalog.SoundPriority("obj_select"));
         Assert.Equal(128, catalog.SoundPriority("unknown"));

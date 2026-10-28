@@ -292,7 +292,7 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
             throw new InvalidDataException("Not a custom map save.");
         }
 
-        return GameSession.Restore(ScenarioMatch.Setup(mission, ruleset, custom: (Custom ?? new CustomMapSettings()) with { Ai = ai }), ruleset, Snapshot);
+        return GameSession.Restore(ScenarioMatch.Setup(mission, ruleset, custom: (Custom ?? new CustomMapSettings()) with { Ai = ai }), ruleset, Snapshot, saveGame: true);
     }
 
     /// <summary>A skirmish's save continued: its description rebuilds the map, the snapshot the match.</summary>
@@ -304,7 +304,7 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
             throw new InvalidDataException("Not a skirmish save.");
         }
 
-        return GameSession.Restore(MatchDescriptor.Parse(Descriptor).ToSetup(ai, multiplayer: false, localSlot: null), ruleset, Snapshot);
+        return GameSession.Restore(MatchDescriptor.Parse(Descriptor).ToSetup(ai, multiplayer: false, localSlot: null), ruleset, Snapshot, saveGame: true);
     }
 
     /// <summary>
@@ -321,6 +321,6 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
         }
 
         MatchSetup setup = ScenarioMatch.Setup(source.Load(MapId), ruleset, Progress, computerAi, cheats);
-        return GameSession.Restore(setup, ruleset, Snapshot);
+        return GameSession.Restore(setup, ruleset, Snapshot, saveGame: true);
     }
 }
