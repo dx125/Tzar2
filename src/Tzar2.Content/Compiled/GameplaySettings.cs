@@ -103,6 +103,9 @@ public sealed record GameplaySettings
     /// <summary>Share of the cost refunded when a construction site is cancelled (basis points).</summary>
     public int ConstructionRefundBasisPoints { get; init; } = 10_000;
 
+    /// <summary>The share of a building's cost given back when it is taken down (BLD-027, the owner's feature; 75 %).</summary>
+    public int DismantleRefundBasisPoints { get; init; } = 7_500;
+
     /// <summary>Share of the cost refunded when a queued unit is cancelled (basis points).</summary>
     public int ProductionRefundBasisPoints { get; init; } = 10_000;
 
@@ -259,6 +262,8 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(NodeSearchRadiusTiles, 64);
         ArgumentOutOfRangeException.ThrowIfNegative(ConstructionRefundBasisPoints);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ConstructionRefundBasisPoints, 10_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(DismantleRefundBasisPoints);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(DismantleRefundBasisPoints, 10_000);
         ArgumentOutOfRangeException.ThrowIfNegative(ProductionRefundBasisPoints);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ProductionRefundBasisPoints, 10_000);
         if (StartingResources.IsDefault)

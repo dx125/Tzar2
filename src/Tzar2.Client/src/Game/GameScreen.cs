@@ -97,6 +97,7 @@ public partial class GameScreen : Node
     private int _pickingDock = -1; // the trade window's market cell waiting for a click on the map, or -1
     private ushort _placing = ushort.MaxValue;
     private (int X, int Y)? _wallFrom; // the tile a wall is being dragged from, the left button held (BLD-011)
+    private readonly List<PickCandidate> _pickCandidates = []; // reused by PickAt
     private int _facing; // the placement ghost's facing: 0, 2 turned by 90° (gates and bridges); 1, 3 a gate facing the other way (CTRL-024, BLD-019)
     private int _eventCursor = -1;
     private int _locationCursor = -1;
@@ -771,17 +772,32 @@ public partial class GameScreen : Node
             return null;
         }
 
+        // CTRL-001: as the original finds a click's object (PickRules), among what is drawn.
         Vector2 world = screen - _hud.Layout.View.Position + _pan;
-        Pickable? best = null;
+        int x = (int)MathF.Floor(world.X), y = (int)MathF.Floor(world.Y);
+        int cx = (int)MathF.Floor(world.X / 32f), cy = (int)MathF.Floor(world.Y / 32f);
+        _pickCandidates.Clear();
         foreach (Pickable p in _world.Pickables)
         {
-            if (p.Hit.HasPoint(world) && (best is null || p.FootY >= best.Value.FootY))
+            ref readonly FrameEntity e = ref _frame.Entities[p.Index];
+            EntityTypeDefinition def = _rules.EntityTypes[e.TypeId];
+            PickKind kind = def.Key == "comm.tree" ? PickKind.Tree : def.HasFootprint ? PickKind.Structure : PickKind.Unit;
+            bool covers = false;
+            if (kind != PickKind.Unit)
             {
-                best = p;
+                bool turned = e.Rotated && def.CanTurn;
+                (int w, int h) = def.FootprintSize(turned);
+                int dx = cx - e.TileX, dy = cy - e.TileY;
+                ReadOnlySpan<byte> mask = def.FootprintMask(turned);
+                covers = dx >= 0 && dy >= 0 && dx < w && dy < h && (mask.Length != w * h || mask[(dy * w) + dx] != 0);
             }
+
+            Vector2 mid = p.Hit.GetCenter();
+            _pickCandidates.Add(new PickCandidate(p.Index, kind, e.X / 2048, e.Y / 2048, (int)mid.X, (int)mid.Y, e.Id.Value, covers));
         }
 
-        return best is { } b ? InfoOf(_frame.Entities[b.Index]) : null;
+        int picked = PickRules.Pointed(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(_pickCandidates), x, y);
+        return picked >= 0 ? InfoOf(_frame.Entities[picked]) : null;
     }
 
     private bool InView(Vector2 screen) => _hud is not null && new Rect2(_hud.Layout.View.Position, _hud.Layout.View.Size).HasPoint(screen) && !_hud.Layout.Covers(screen);
@@ -858,7 +874,7 @@ public partial class GameScreen : Node
             else if (_dragStart is { } start)
             {
                 _dragStart = null;
-                if ((e.Position - start).Length() > 4 && _world is not null && _hud is not null)
+                if ((e.Position - start).Length() > PickRules.BoxSelects && _world is not null && _hud is not null)
                 {
                     Vector2 a = start - _hud.Layout.View.Position + _pan, b = e.Position - _hud.Layout.View.Position + _pan;
                     var box = new Rect2(new Vector2(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y)), (a - b).Abs());
@@ -2275,7 +2291,7 @@ public partial class GameScreen : Node
     private void DrawBox()
     {
         RenderingServer.CanvasItemClear(_boxItem);
-        if (_dragStart is { } start && (_mouse - start).Length() > 4)
+        if (_dragStart is { } start && (_mouse - start).Length() > PickRules.BoxShown)
         {
             var r = new Rect2(new Vector2(Math.Min(start.X, _mouse.X), Math.Min(start.Y, _mouse.Y)), (start - _mouse).Abs());
             Vector2[] points = [r.Position, r.Position + new Vector2(r.Size.X, 0), r.End, r.Position + new Vector2(0, r.Size.Y), r.Position];

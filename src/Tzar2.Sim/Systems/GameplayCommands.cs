@@ -558,6 +558,36 @@ internal static class GameplayCommands
         return (int)(full * f / 1000);
     }
 
+    // BLD-027 (the owner's feature, item 18.F1): a finished building is taken down for a share of what it costs now.
+    public static CommandRejection? Dismantle(World world, in Command command, ReadOnlySpan<EntityId> entities)
+    {
+        int taken = 0;
+        bool protectedSkipped = false;
+        foreach (EntityId entity in entities)
+        {
+            if (!IsOwned(world, entity, command.Player) || !world.Footprints.Has(entity) || world.Constructions.Has(entity)
+                || world.TypeOf(entity) is not { Traits.Category: EntityCategory.Building } type)
+            {
+                continue;
+            }
+
+            if (type.Traits.ProtectedDelete && (command.Flags & CommandFlags.Queue) == 0)
+            {
+                protectedSkipped = true;
+                continue;
+            }
+
+            (int add, int bp) = world.Stats.Modifier(command.Player, ModifierStat.Cost, type.Id);
+            ResearchRules.RefundFor(world, command.Player, type, new PaidModifier { Add = add, BasisPoints = bp }, world.Ruleset.Gameplay.DismantleRefundBasisPoints);
+            Position p = world.Positions.Get(entity);
+            world.Events.Emit(new SimEvent(SimEventKind.Dismantled, command.Player, entity, p.X, p.Y, type.Id));
+            world.Destroy(entity);
+            taken++;
+        }
+
+        return taken > 0 ? null : protectedSkipped ? CommandRejection.ShiftDeleteRequired : CommandRejection.NoValidEntities;
+    }
+
     public static CommandRejection? Cancel(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         int cancelled = 0;

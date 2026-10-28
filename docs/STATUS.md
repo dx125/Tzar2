@@ -6,10 +6,10 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-27 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
-  targets and answer enemies as the original; land units step cell by cell; fields ready at once; sites built in the
-  order placed, wall rows turning to stone, builders next to the site; the build mode staying, walls dragged as an L,
-  the green shadow, walls joining)
+* **Last updated:** 2026-10-28 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
+  targets and answer enemies as the original; land units step cell by cell; fields ready at once; construction; taking
+  buildings down; the mines' look; the click's pick as the original. The slow checks now run once per batch of three or
+  four fixes)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -329,7 +329,8 @@ owner's order of 2026-10-26.
     4. the build menu closing and the other construction problems (N1, N2, N3, S4, S6), and one more: upgrading a
        wooden wall upgrades only the selected segment, while the original upgrades every joined segment, gates too:
        **fixed** (BLD-026, log below);
-    5. taking buildings down (F1) with an icon of its own, the usual pictogram for it; no setting for now;
+    5. taking buildings down (F1) with an icon of its own, the usual pictogram for it; no setting for now: **done**
+       (BLD-027, log below);
     6. the rest of the items with screenshots (S2, S7, S9), while the screenshots are at hand;
     7. everything else, by its weight on the play and whether it has a workaround.
 
@@ -339,12 +340,14 @@ owner's order of 2026-10-26.
          before it is used; the original's is ready at once: **fixed** (ECO-025, ECO-008; log below).
       2. A mine (golden rocks) vanishes from view once peasants mine it, though its selection view still shows its gold
          and they go on mining. The miners crowd in rows at one corner and work from there; in the original a peasant
-         gathers only from a tile next to the resource (WORLD-019).
+         gathers only from a tile next to the resource (WORLD-019). **Fixed**: a mine keeps its look until it is empty
+         (PRES-011); miners reach a mine only from a neighbouring tile since #257 (`structureReachPx`); the crowd at a
+         corner is to check in play.
       3. Guard (ORD-001):
          * swordsmen guarding a tower crowd against it; in the original they stand within some radius of it, unless
            they are already closer: **fixed**, within three tiles as the original (ORD-001, log below);
-         * a site not yet begun (1 HP) cannot be guarded: the click is a move (open: the client's pick, to check in
-           play);
+         * a site not yet begun (1 HP) cannot be guarded: the click is a move. The click now finds a building on the
+           tiles it takes, as the original (CTRL-001), so the site should be found; to check in play;
          * the guards hardly react when the guarded object is attacked: **fixed**, the calls for help (WAR-017);
          * soldiers in general are passive with enemies near: they stand, or step from tile to tile, and leave a fight
            when the attacker of the guarded object dies though other enemies stand next to them: **fixed** for the
@@ -382,9 +385,12 @@ owner's order of 2026-10-26.
          a wall is dragged with the left button held as the original's L (BLD-011), and the ghost is the building's
          green shadow (CTRL-023; log below).
       4. A gold mine seen once and now under the fog changes its look several times a second, instead of keeping the
-         look it had when last seen; check the other objects too.
+         look it had when last seen; check the other objects too. **Fixed** for the mines (PRES-011): a remembered mine
+         had no stock in the frame and its picture ran as an animation. Other pictures under the fog run their own
+         animations, as in sight.
       5. A tree drawn over a building takes the click, so a peasant sent to build goes to cut the tree. In the original
-         the building under the tree wins (CTRL-001).
+         the building under the tree wins (CTRL-001): **fixed**, the click's pick is the original's (CTRL-001, log
+         below).
       6. Sound effects hang on, most after a fight (blows, the cries of the dying) or after a horseman is ordered to
          move.
       7. Moving troops push standing friends several tiles aside instead of going round. Letting them through is right
@@ -411,12 +417,13 @@ owner's order of 2026-10-26.
       14. The outpost's button to view the units inside does nothing; check the other holders and what can be done
           with the units inside them.
       15. A click often selects the unit below the one under the pointer, as if it covered it; a single click in a
-          close, moving group often selects several units.
+          close, moving group often selects several units: **fixed**, the nearest picture's middle wins (CTRL-001), and
+          a drag shorter than 16 pixels is a click (CTRL-019).
       16. Cows walk off far from the farms, all in one direction; in the original they seemed to wander aimlessly
           (NAT-002).
       17. The original's cheat codes do not work (HUD-011).
     * **New features (the owner's):**
-      1. Take a building down for 75 % of its cost.
+      1. Take a building down for 75 % of its cost: **done** (BLD-027, log below).
       2. Cancel a site that no peasant has begun on. The sim gives the whole cost back (BLD-020), and a site's card
          has a Cancel construction order (C); check it in play.
 
@@ -424,6 +431,25 @@ owner's order of 2026-10-26.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-28 — Buildings are taken down; mines keep their look; the click picks as the original (BLD-027, PRES-011,
+  CTRL-001, CTRL-019; item 18.F1, S2, S3, N4, N5, N15).**
+  * **Taking down (the owner's feature).** A finished building's card has Tzar2's own order: the first press asks, the
+    second takes it down at once and gives back 75 % of what it costs the kingdom now (`dismantleRefundPercent`; the
+    castle and the guilds with Shift, as Delete). The command is the sim's new `Dismantle` and its event `Dismantled`.
+    The button is Tzar2's own picture, the build buttons' roof split apart over a hammer, in the gold of the original's
+    order buttons; `tools/art/dismantle-icon.py` draws it, and the client embeds it (`icons/`, no Godot import).
+  * **Mines.** A gold or stone mine keeps one of its three looks while it lasts and shows the pit once empty
+    (ReTzar 0x4afeae). Before, the look followed the gold left, so a mine three quarters worked looked gone, and a mine
+    remembered under the fog ran its looks as an animation.
+  * **The click.** As ReTzar reads the original (0x4e4280): the unit on the tiles round the click whose picture's middle
+    is nearest, within 30 pixels; else the newest object on the clicked tile (a unit on it, a building or mine whose
+    picture takes it); else a tree. A building under a tree's crown now wins, and a click between two units takes the
+    nearer. A drag box shows after 8 pixels and selects after 16 (0x4f4998, 0x4f4ef8).
+* **2026-10-28 — The slow checks run once per batch (process; the owner).** The owner asked to stop spending so long on
+  testing each small fix. Fixes now go in batches of three or four to a branch and a PR: while working, only the tests
+  of the feature run; the full `dotnet test`, the golden and bench re-pins (one script each) and the campaign acceptance
+  run once per batch, the acceptance in the background, and CI runs while the next batch is written.
 
 * **2026-10-27 — The build mode stays; walls are dragged and join (CTRL-030, BLD-011, CTRL-023, PRES-010; item 18.N3,
   S6).** Placing a building no longer ends the build mode or closes the build menu: its shadow stays for more of the

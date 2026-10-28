@@ -75,6 +75,34 @@ public sealed class UiAssets : IDisposable
         return texture;
     }
 
+    /// <summary>
+    /// One of Tzar2's own order buttons (<c>icons/&lt;name&gt;.png</c>, embedded in the client), for orders the original has
+    /// not; null when there is none.
+    /// </summary>
+    public ImageTexture? OwnIcon(string name)
+    {
+        string key = "own:" + name;
+        if (!_textures.TryGetValue(key, out ImageTexture? texture))
+        {
+            using Stream? stream = typeof(UiAssets).Assembly.GetManifestResourceStream($"icons/{name}.png");
+            texture = null;
+            if (stream is not null)
+            {
+                using var bytes = new MemoryStream();
+                stream.CopyTo(bytes);
+                var image = new Godot.Image();
+                if (image.LoadPngFromBuffer(bytes.ToArray()) == Error.Ok)
+                {
+                    texture = ImageTexture.CreateFromImage(image);
+                }
+            }
+
+            _textures[key] = texture;
+        }
+
+        return texture;
+    }
+
     /// <summary>A sub-rectangle of an image (button states, icon cells), or null.</summary>
     public Texture2D? Region(string asset, Rect2I rect)
     {

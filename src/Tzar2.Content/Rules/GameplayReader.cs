@@ -11,7 +11,7 @@ internal sealed class GameplayReader
     private static readonly string[] KnownFields =
     [
         "groupMoveSpeed", "movement", "populationLimit", "startingResources", "defaultStartingResources", "minimumDamage", "resistanceScale",
-        "interactionReachPx", "structureReachPx", "interactionTouchPx", "meleeReachPx", "acquireIntervalMs", "autoChaseLeashPercent", "nodeSearchRadiusTiles", "constructionRefundPercent",
+        "interactionReachPx", "structureReachPx", "interactionTouchPx", "meleeReachPx", "acquireIntervalMs", "autoChaseLeashPercent", "nodeSearchRadiusTiles", "constructionRefundPercent", "dismantleRefundPercent",
         "productionRefundPercent", "queueCapacity", "speedPixelsPerSecondPerPoint", "attackCycleMs", "hitDelayPercent",
         "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
         "repairTimePercent", "burnThresholdPercent", "burnDamagePerMinute", "wallContinueRadiusTiles", "maxWallSegments",
@@ -89,6 +89,7 @@ internal sealed class GameplayReader
             AutoChaseLeashPercent = Range("autoChaseLeashPercent", d.AutoChaseLeashPercent, 100, 10_000),
             NodeSearchRadiusTiles = Range("nodeSearchRadiusTiles", d.NodeSearchRadiusTiles, 0, 64),
             ConstructionRefundBasisPoints = Range("constructionRefundPercent", d.ConstructionRefundBasisPoints / 100, 0, 100) * 100,
+            DismantleRefundBasisPoints = Range("dismantleRefundPercent", d.DismantleRefundBasisPoints / 100, 0, 100) * 100,
             ProductionRefundBasisPoints = Range("productionRefundPercent", d.ProductionRefundBasisPoints / 100, 0, 100) * 100,
             ResearchRefundBasisPoints = Range("researchRefundPercent", d.ResearchRefundBasisPoints / 100, 0, 100) * 100,
             CapturePointsPerSecond = Range("capturePointsPerSecond", d.CapturePointsPerSecond, 0, 1_000_000),

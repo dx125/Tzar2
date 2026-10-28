@@ -238,6 +238,9 @@ public enum SimEventKind : ushort
     /// most mana); the original plays the <c>pump</c> picture over it (ReTzar 0x4e1d0a).
     /// </summary>
     ManaRaised = 56,
+
+    /// <summary>A building was taken down and part of its cost given back (BLD-027; Entity = building, X, Y = its position, Arg = type id).</summary>
+    Dismantled = 57,
 }
 
 /// <summary>Why a command was ignored (REQ-SIM §8.5 step 1: invalid commands are ignored deterministically and logged).</summary>

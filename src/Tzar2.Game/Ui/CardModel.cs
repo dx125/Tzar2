@@ -131,6 +131,9 @@ public enum CardAction
     /// <summary>The market buys item <see cref="CardButton.Argument"/> (its <c>EntityId.Value</c>), carried by one of the
     /// kingdom's units (the original's empty <c>market_sell</c> menu).</summary>
     MarketSell,
+
+    /// <summary>Take the selected finished buildings down for part of their cost (BLD-027, Tzar2's): the first press asks, the second does it.</summary>
+    Dismantle,
 }
 
 /// <summary>A button of a command card (for the original: a MENU.INI entry and its ORDERS.INI order).</summary>
@@ -148,6 +151,12 @@ public sealed record CardButton(string Order, char Hotkey, CardAction Action, st
     /// keeps the button.
     /// </summary>
     public string Enable { get; init; } = string.Empty;
+
+    /// <summary>
+    /// A picture of Tzar2's own for an order the original has not (its name, e.g. <c>dismantle</c>), drawn in the place of
+    /// <see cref="ImageIndex"/>; null for the original's pictures.
+    /// </summary>
+    public string? OwnIcon { get; init; }
 }
 
 /// <summary>One item of a card button's price in its tooltip.</summary>

@@ -32,6 +32,7 @@ public sealed class CommandCard
     private GameFrame? _indexed;
     private int _page;
     private EntityId _carrier;
+    private EntityId[] _dismantleAsked = []; // the buildings the dismantle button was pressed for once (BLD-027)
 
     /// <summary>Creates the card of a kingdom.</summary>
     /// <param name="rules">The ruleset of the match.</param>
@@ -83,6 +84,7 @@ public sealed class CommandCard
         _menus.Clear();
         _page = 0;
         _carrier = EntityId.None;
+        _dismantleAsked = [];
     }
 
     /// <summary>The arrows by the orders bar (HUD-019): <paramref name="delta"/> pages on, within the card.</summary>
@@ -263,6 +265,12 @@ public sealed class CommandCard
             }
         }
 
+        if (OpenMenu is null && !e.Id.IsNone && _rules.EntityTypes[e.TypeId].Traits.Category == EntityCategory.Building && _rules.EntityTypes[e.TypeId].HasFootprint)
+        {
+            // BLD-027 (the owner's feature): a finished building can be taken down; Tzar2's own order and picture.
+            buttons.Add(new CardButton("dismantle", '\0', CardAction.Dismantle, string.Empty, -1, "Take down") { OwnIcon = "dismantle" });
+        }
+
         buttons = [.. buttons.Where(b => !Hidden(context, b, e))];
         if (buttons.Count > Slots)
         {
@@ -375,6 +383,12 @@ public sealed class CommandCard
 
         List<EntityInfo> selected = Selected(context);
         string civ = Lead(context) is { } lead ? _source.Civilization(context.Frame.Entities[lead].TypeId) : string.Empty;
+        if (b.Action == CardAction.Dismantle)
+        {
+            return Dismantle(selected, shift);
+        }
+
+        _dismantleAsked = [];
         switch (b.Action)
         {
             case CardAction.Move:
@@ -1050,6 +1064,29 @@ public sealed class CommandCard
 
     private EntityId[] Traders(CardContext context)
         => OwnIds(Selected(context), e => e.IsMobile && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null);
+
+    // BLD-027: the first press for a set of buildings asks, the second takes them down (with Shift the castle and the
+    // guilds too, as Delete).
+    private CardPress Dismantle(List<EntityInfo> selected, bool shift)
+    {
+        EntityId[] buildings = OwnIds(selected, e => e.Category == EntityCategory.Building && !e.UnderConstruction);
+        if (buildings.Length == 0)
+        {
+            return CardPress.Nothing;
+        }
+
+        if (!_dismantleAsked.AsSpan().SequenceEqual(buildings))
+        {
+            _dismantleAsked = buildings;
+            int percent = _rules.Gameplay.DismantleRefundBasisPoints / 100;
+            return new CardPress(Message: $"Press again to take {(buildings.Length == 1 ? "it" : "them")} down and get back {percent} % of the cost.");
+        }
+
+        _dismantleAsked = [];
+        var list = new CommandList();
+        list.Add(CommandKind.Dismantle, buildings, flags: shift ? CommandFlags.Queue : CommandFlags.None);
+        return new CardPress(Commands: list);
+    }
 
     private static CardPress Commands(CommandKind kind, EntityId[] entities, int arg0 = 0, int arg1 = 0)
         => List(kind, entities, arg0: arg0, arg1: arg1) is { } list ? new CardPress(Commands: list) : CardPress.Nothing;

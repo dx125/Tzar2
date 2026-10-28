@@ -15,6 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Tzar2's own order buttons for orders the original has not (BLD-027's dismantle; tools/art makes them). Embedded,
+         so they need no Godot import; icons/.gdignore keeps the editor off them. -->
+    <EmbeddedResource Include="icons/*.png" LogicalName="icons/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- MIDI music (REQ-AUD-02); allowed for the client only (ADR 0011 map, ADR 0020). -->
     <PackageReference Include="MeltySynth" />
   </ItemGroup>

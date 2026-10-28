@@ -111,3 +111,8 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x4fab10, 0x4fa710: the row through the cells left, right, above and below each segment; a gate counts ten)', owner 2026-10-26 (sixth play-test)]
     status: tested
     note: The row is taken when the order is given (the price) and again when the upgrade is done (what turns to stone); a gate turns by its own conversion. Pieces meeting only at a corner are not joined.
+  BLD-027:
+    rule: A finished building of the kingdom can be taken down from its card, giving back 75 % of what it costs the kingdom now; the order asks once more before it is carried out, and the castle and the guilds need Shift as for Delete.
+    source: [owner 2026-10-25 (sixth play-test; a new feature)]
+    status: tested
+    note: Tzar2's own, not in the original (dismantleRefundPercent in the classic ruleset). It is done at once; units inside come out round it, as when it is destroyed. The share does not depend on the building's health. The button is Tzar2's own picture (tools/art/dismantle-icon.py) - the build buttons' roof split apart over a hammer, the usual pictogram of demolishing in strategy games. No setting turns it off yet.

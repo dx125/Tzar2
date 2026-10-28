@@ -409,10 +409,11 @@ public sealed class WorldRenderer : IDisposable
                 if (sheet is not null)
                 {
                     variant = (int)(phase % (uint)Math.Max(1, sheet.Sheet.Directions));
-                    if (def.Traits.ResourceNode is { Amount: > 0 } node && e.ResourceLeft >= 0 && sheet.Sheet.FramesPerDirection > 1)
+                    if (SpriteRules.IsMine(def))
                     {
-                        // Rocks shrink as they are mined (frames = stages).
-                        frameIndex = SpriteRules.DepletionFrame(e.ResourceLeft, node.Amount, sheet.Sheet.FramesPerDirection);
+                        // A mine keeps its own look until it is empty, under the fog too (PRES-011; the sixth play-test: it
+                        // vanished while mined, and flickered between its looks under the fog).
+                        frameIndex = SpriteRules.MineFrame(phase, e.ResourceLeft, sheet.Sheet.FramesPerDirection);
                     }
                     else
                     {
