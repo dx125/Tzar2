@@ -380,27 +380,31 @@ public sealed class WorldRenderer : IDisposable
             bool ground = field || def.Traits.IsBridge;
             int facing = (e.Rotated ? 2 : 0) + (e.Mirrored ? 1 : 0);
             bool damaged = e.MaxHealth > 0 && e.Health < e.MaxHealth;
+
+            // A building being taken down shows its site's pictures going back to the ground (BLD-027): the site of a
+            // construction that far along.
+            int site = e.ConstructionPermille >= 0 ? e.ConstructionPermille : e.DismantlePermille;
             if (def.Traits.IsWall
-                && _bank.Get(SpriteRules.WallImage(def, SpriteRules.WallMask(_wallPieces, MapWidth, e.TileX, e.TileY, SpriteRules.WallMaterial(def)), e.ConstructionPermille >= 0, damaged)) is { } wall)
+                && _bank.Get(SpriteRules.WallImage(def, SpriteRules.WallMask(_wallPieces, MapWidth, e.TileX, e.TileY, SpriteRules.WallMaterial(def)), site >= 0, damaged)) is { } wall)
             {
                 // PRES-010: a wall joins its neighbours, shows its damage, and its site is the wall's own.
                 sheet = wall;
-                frameIndex = e.ConstructionPermille >= 0 ? SpriteRules.SiteFrame(e.ConstructionPermille, wall.Sheet.FramesPerDirection)
+                frameIndex = site >= 0 ? SpriteRules.SiteFrame(site, wall.Sheet.FramesPerDirection)
                     : damaged ? SpriteRules.WallDamageFrame(e.Health, e.MaxHealth, wall.Sheet.FramesPerDirection) : 0;
             }
-            else if (_bank.Get(SpriteRules.GateImage(def, facing, site: e.ConstructionPermille >= 0)) is { } gate)
+            else if (_bank.Get(SpriteRules.GateImage(def, facing, site: site >= 0)) is { } gate)
             {
                 // Gates draw their drawbridge for their facing: raised when closed, lowered when open (CTRL-024).
                 sheet = gate;
-                frameIndex = e.ConstructionPermille >= 0 ? SpriteRules.SiteFrame(e.ConstructionPermille, gate.Sheet.FramesPerDirection)
+                frameIndex = site >= 0 ? SpriteRules.SiteFrame(site, gate.Sheet.FramesPerDirection)
                     : SpriteRules.GateFrame((e.Gate & FrameGate.Open) != 0);
             }
-            else if (e.ConstructionPermille >= 0 && !field)
+            else if (site >= 0 && !field)
             {
                 sheet = _bank.Get(SpriteRules.BuildSiteName(def));
                 if (sheet is not null)
                 {
-                    frameIndex = SpriteRules.SiteFrame(e.ConstructionPermille, sheet.Sheet.FramesPerDirection);
+                    frameIndex = SpriteRules.SiteFrame(site, sheet.Sheet.FramesPerDirection);
                 }
             }
             else
@@ -836,11 +840,14 @@ public sealed class WorldRenderer : IDisposable
                 Color c = share > 0.5f ? new Color(0.1f, 0.85f, 0.1f) : share > 0.25f ? new Color(0.95f, 0.85f, 0.1f) : new Color(0.9f, 0.1f, 0.1f);
                 RS.CanvasItemAddRect(_marksOver, bar.Grow(1), Colors.Black);
                 RS.CanvasItemAddRect(_marksOver, new Rect2(bar.Position, new Vector2(MathF.Round(w * share), 3)), c);
-                if (e.ConstructionPermille >= 0)
+                if (e.ConstructionPermille >= 0 || e.DismantlePermille >= 0)
                 {
+                    // The work in progress: a site going up (gold), a building coming down (red, shrinking; BLD-027).
                     var progress = new Rect2(bar.Position + new Vector2(0, 5), new Vector2(w, 2));
+                    int done = e.ConstructionPermille >= 0 ? e.ConstructionPermille : e.DismantlePermille;
+                    Color colour = e.ConstructionPermille >= 0 ? new Color(0.9f, 0.75f, 0.3f) : new Color(0.85f, 0.3f, 0.2f);
                     RS.CanvasItemAddRect(_marksOver, progress.Grow(1), Colors.Black);
-                    RS.CanvasItemAddRect(_marksOver, new Rect2(progress.Position, new Vector2(MathF.Round(w * e.ConstructionPermille / 1000f), 2)), new Color(0.9f, 0.75f, 0.3f));
+                    RS.CanvasItemAddRect(_marksOver, new Rect2(progress.Position, new Vector2(MathF.Round(w * done / 1000f), 2)), colour);
                 }
             }
         }

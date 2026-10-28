@@ -49,7 +49,7 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // (ADR 0267, 2026-10-23) mana regrows 2 a second (Nature 1), a pool below a spell's cost is raised to it, a summon costs its creature's mana (mana state grows, hashed layout 19, snapshot 21): the hashes.
     // (ADR 0270, 2026-10-27) a new store for the land units' steps (hashed layout 20; this scenario keeps the continuous
     // movement): the hashes only.
-    private const ulong GoldenFinalFullHash = 0x40EF65DED149A213UL;
+    private const ulong GoldenFinalFullHash = 0x11037A435F85D6B0UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look, craft jobs their variant (layout 11): the hashes only.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
@@ -59,7 +59,7 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // (ADR 0215, 2026-10-23) the full hash takes the map's layers and the visibility bitsets as the xxHash3 of 64 KiB
     // chunks, hashed on the workers: the full hashes only (the tick hashes and the match are the same).
     // (ADR 0270, 2026-10-27) the hashed layout 20 (the steps' store): the hashes only.
-    private const ulong GoldenHashStream = 0x0B6EE7B4C3B43B96UL;
+    private const ulong GoldenHashStream = 0xF17E34DC8530F454UL;
 
     private const int Ticks = 300;
 

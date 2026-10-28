@@ -504,6 +504,28 @@ public struct Burning : IComponent
     public int AccumMs;
 }
 
+/// <summary>A building being taken down (BLD-027): it goes, and gives back its share, when <see cref="LeftMs"/> runs out.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct Dismantling : IComponent
+{
+    /// <summary>How long the whole taking down takes (5 to 10 s by its health).</summary>
+    public int TotalMs;
+
+    /// <summary>How long is left.</summary>
+    public int LeftMs;
+}
+
+/// <summary>
+/// What a building has cost its kingdom (BLD-027): its construction at the price paid, and every upgrade bought for it
+/// (a wooden tower turned to stone and then to a stone tower 2 adds both). Taking it down gives a share of it back.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct Investment : IComponent
+{
+    /// <summary>The resources spent, by resource type.</summary>
+    public ResourceAmounts Spent;
+}
+
 /// <summary>Neglect of an entity with <c>Decay</c> (fields; GAME-02).</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Neglect : IComponent

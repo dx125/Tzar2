@@ -434,11 +434,50 @@ owner's order of 2026-10-26.
       1. Take a building down for 75 % of its cost: **done** (BLD-027, log below).
       2. Cancel a site that no peasant has begun on. The sim gives the whole cost back (BLD-020), and a site's card
          has a Cancel construction order (C); check it in play.
+19. **The seventh play-test (2026-10-28, the owner, a build with #257-#260).** For each item that the original's files
+    cannot settle, look first at how ReTzar does it. In two batches: A (items 1, 2, 4, 5), then B (3, 6).
+    1. Attack and defence do not grow with experience (only health, with its technology); the owner's save Game 3 has
+       knights of many levels with the same values. A level 12 knight became a hero without the unique name the
+       original gives: **fixed** (EXP-001; log below). The levels and the hero's name were right in the sim; the
+       selection view showed the type's attack, defence and name. The level bonus now follows the original (bowmen
+       half an attack point and a quarter of a defence point a level).
+    2. The church's priest button does nothing: **fixed** (PROD-016; log below).
+    3. Pathfinding in and out of fights is wrong when the shortest way is taken by buildings or units: a unit walks
+       back and forth and does not go round. Movement in fights is still odd. Large groups (30 and more) get stuck,
+       answer orders only in part, and stand while the rest of the group fights nearby.
+    4. Guards stand too close to what they guard; in the original further away: **fixed** (ORD-001; log below).
+    5. The take-down button sits on black while the others are on the card's colour; taking down should take time
+       (5 to 10 s by health, the site's pictures in reverse); the tooltip should say what comes back; a building
+       upgraded several times (stone towers) should give back what all its stages cost: **fixed** (BLD-027; log
+       below).
+    6. Sounds still hang on where fights were, though fewer.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-28 — The seventh play-test, batch A: levels, priests, guards, taking down (EXP-001, PROD-016, ORD-001,
+  BLD-027; item 19.1, 2, 4, 5).**
+  * **Levels.** The owner's save Game 3 shows the sim was right: knights of levels 2 to 12, the level 12 one a hero
+    named Lancelot. The selection view showed the type's attack, defence and name. The frame now carries a unit's own
+    name and the attack and defence it fights with (`GameplayQueries.Combat`), and the view and the list of heroes
+    show them. The level bonus follows ReTzar's reading of the original (0x4de7d0, 0x4de880): a point of attack and a
+    point of defence every two levels (rounded up); a kingdom's bowman half an attack point and a defence point every
+    four levels (`combat.bowLevelClasses`).
+  * **Priests.** The church had no producer: the unit tables name the cathedral and the mosque for priests, and only
+    the tables made producers. A building now also trains what its card creates (MENU.INI CREATE orders, as ReTzar reads
+    the original), so the churches train priests and the Asian monastery monks too.
+  * **Guards.** As the original measures it (0x41fd70, 0x42dd00): within three tiles of the guarded thing's rect grown
+    by one, four tiles from a building's walls; they stood a tile closer.
+  * **Taking down.**
+    * The button is drawn on a transparent ground, as the original's buttons.
+    * A building now comes down over 5 to 10 s by its health, showing its site's pictures in reverse, with a red bar.
+      Its units come out and its queue is refunded at once; it neither trains, shoots nor takes units in.
+    * What comes back is 75 % of all it cost: each building keeps its construction at the price paid and every upgrade
+      bought for it (`game.invested`), so a wooden tower raised to stone gives back all three prices. The tooltip says
+      what comes back.
+    * Two new stores: snapshot format 25 (older saves still load, ADR 0271), hashed layout 22.
 
 * **2026-10-28 — Saves outlive the version that wrote them; the sounds are mixed as the original; faster checks (ADR 0271,
   PRES-012; item 18.N6; the owner's requests).**

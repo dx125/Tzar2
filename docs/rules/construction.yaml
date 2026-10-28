@@ -112,7 +112,7 @@ rules:
     status: tested
     note: The row is taken when the order is given (the price) and again when the upgrade is done (what turns to stone); a gate turns by its own conversion. Pieces meeting only at a corner are not joined.
   BLD-027:
-    rule: A finished building of the kingdom can be taken down from its card, giving back 75 % of what it costs the kingdom now; the order asks once more before it is carried out, and the castle and the guilds need Shift as for Delete.
-    source: [owner 2026-10-25 (sixth play-test; a new feature)]
+    rule: A finished building of the kingdom can be taken down from its card over 5 to 10 seconds by its health, giving back 75 % of all it cost - its construction and every upgrade bought for it; the order asks once more before it is carried out, the tooltip says what comes back, and the castle and the guilds need Shift as for Delete.
+    source: [owner 2026-10-25 (sixth play-test; a new feature), owner 2026-10-28 (seventh play-test)]
     status: tested
-    note: Tzar2's own, not in the original (dismantleRefundPercent in the classic ruleset). It is done at once; units inside come out round it, as when it is destroyed. The share does not depend on the building's health. The button is Tzar2's own picture (tools/art/dismantle-icon.py) - the build buttons' roof split apart over a hammer, the usual pictogram of demolishing in strategy games. No setting turns it off yet.
+    note: Tzar2's own, not in the original (gameplay.dismantleRefundPercent, dismantleBaseMs, dismantleMaxMs, dismantleMsPerHealth). While it comes down it shows its site's pictures in reverse, its units come out at once, its queue is cancelled and refunded, and it neither trains, researches, shoots nor takes units in. What it cost is kept for each building built in the match (game.invested); one the map placed counts its type's price for the kingdom. The share does not depend on the building's health. The button is Tzar2's own picture (tools/art/dismantle-icon.py) - the build buttons' roof split apart over a hammer, the usual pictogram of demolishing in strategy games. No setting turns it off yet.

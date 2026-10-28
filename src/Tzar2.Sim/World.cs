@@ -73,6 +73,8 @@ public sealed partial class World
         CorpseTtlTicks = (ruleset.CorpseTtlMilliseconds + config.TickLengthMilliseconds - 1) / config.TickLengthMilliseconds;
         InitializeKingdoms();
         CellSteps = Components.RegisterHot<CellStep>("core.cellstep"); // ADR 0270; appended after the others
+        Dismantlings = Components.RegisterHot<Dismantling>("game.dismantle"); // BLD-027 (format 25, ADR 0271)
+        Investments = Components.RegisterHot<Investment>("game.invested");
     }
 
     /// <summary>The compiled ruleset.</summary>
@@ -164,6 +166,12 @@ public sealed partial class World
 
     /// <summary>Neglect of decaying entities (fields; hot; GAME-02).</summary>
     public ComponentStore<Neglect> Neglects { get; }
+
+    /// <summary>Buildings being taken down (BLD-027).</summary>
+    public ComponentStore<Dismantling> Dismantlings { get; }
+
+    /// <summary>What buildings have cost their kingdoms (BLD-027).</summary>
+    public ComponentStore<Investment> Investments { get; }
 
     /// <summary>Mana of casters (hot; GAME-01).</summary>
     public ComponentStore<ManaState> Manas { get; }
@@ -624,6 +632,15 @@ public sealed partial class World
             ApplyStructure(entity, add: false); // a bridge deck and a gate passage exist only once completed
         }
 
+        // BLD-027: what it cost, at the price paid when it was placed.
+        Construction site = Constructions.Get(entity);
+        var spent = default(Investment);
+        for (int r = 0; r < type.Traits.Cost.Length && r < Ruleset.MaxResourceTypes; r++)
+        {
+            spent.Spent[r] = PlayerStats.Combine(type.Traits.Cost[r], site.Paid.Add, site.Paid.BasisPoints);
+        }
+
+        Investments.Set(entity, spent);
         Constructions.Remove(entity);
         if (type.Traits.Gate is not null && !Gates.Has(entity))
         {
@@ -1222,6 +1239,27 @@ public sealed partial class World
         RequireCore(Gates.Entities, mobile: false, structure: true);
         RequireCore(Burnings.Entities, mobile: false, structure: true);
         RequireCore(Neglects.Entities, mobile: false, structure: true);
+        RequireCore(Dismantlings.Entities, mobile: false, structure: true);
+        RequireCore(Investments.Entities, mobile: false, structure: true);
+        for (int i = 0; i < Dismantlings.Count; i++)
+        {
+            Dismantling d = Dismantlings.Components[i];
+            if (d.TotalMs <= 0 || d.LeftMs <= 0 || d.LeftMs > d.TotalMs || Constructions.Has(Dismantlings.Entities[i]))
+            {
+                throw new System.IO.InvalidDataException("Snapshot violates a world invariant: invalid dismantling.");
+            }
+        }
+
+        for (int i = 0; i < Investments.Count; i++)
+        {
+            foreach (int amount in Investments.Components[i].Spent)
+            {
+                if (amount < 0)
+                {
+                    throw new System.IO.InvalidDataException("Snapshot violates a world invariant: negative investment.");
+                }
+            }
+        }
         RequireCore(Manas.Entities, mobile: false, structure: false);
         RequireCore(Lifetimes.Entities, mobile: false, structure: false);
         RequireCore(RepairProgresses.Entities, mobile: false, structure: false);

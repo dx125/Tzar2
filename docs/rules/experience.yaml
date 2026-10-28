@@ -4,9 +4,10 @@ title: Experience and heroes
 rules:
   EXP-001:
     rule: Units gain experience in combat; each level adds one point of attack and half a point of defence, and a veteran beats several new units of its kind. A kill of an enemy is one point and damage gives none; the level cap is Learning's 4 per research plus 10 for each academy of the kingdom.
-    source: [manual Production Of Units, manual Hints About Gameplay, 'community ReTzar src/gameplay.rs (0x504f20, 0x5022e0, 0x401850)']
+    source: [manual Production Of Units, manual Hints About Gameplay, 'community ReTzar src/gameplay.rs (0x504f20, 0x5022e0, 0x401850)', 'community ReTzar src/simulation.rs (0x4de7d0, 0x4de880: the level bonus)', owner 2026-10-28 (seventh play-test)]
     status: tested
     adr: [0258]
+    note: As the original counts it (ReTzar 0x4de7d0, 0x4de880) - a level adds a point of attack and a point of defence every two levels (rounded up); a kingdom's bowman (archers, longbowmen, horse archers, ballistas, xebecs; combat.bowLevelClasses) half an attack point and a defence point every four levels, Nature's bowmen a full attack point. The selection view shows the attack and defence a unit fights with, its level, items and spells included (the seventh play-test - it showed the type's values), and a hero's own name.
   EXP-002:
     rule: Each level needs more experience than the last. The first point gives level 1, and level k needs k more points for the next (at the experience speed of Warfare, Tactics and Sun Tzu).
     source: [guide Important tips, 'community ReTzar src/gameplay.rs (0x5022e0)']

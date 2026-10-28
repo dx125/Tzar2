@@ -472,6 +472,41 @@ public sealed partial class World
     // Destroy hook (every removal: death, deletion, conversion, decay): what the entity holds leaves it first, and it
     // leaves whatever holds it. Units inside a destroyed holder take the nearest free tiles; where there are none
     // (a ship at sea) they go down with it.
+    /// <summary>
+    /// Lets every unit out of a holder, each on the nearest free tile; one with nowhere to stand (a ship at sea) goes down.
+    /// A destroyed holder and a building being taken down (BLD-027) empty this way.
+    /// </summary>
+    internal void EmptyHolder(EntityId entity)
+    {
+        if (Holders.Count == 0 || Holders.IndexOf(entity) is not (>= 0 and var hs) || Holders.At(hs).Count == 0)
+        {
+            return;
+        }
+
+        Span<uint> inside = stackalloc uint[HolderDefinition.MaxCapacity];
+        int n = 0;
+        ReadOnlySpan<EntityId> held = Helds.Entities;
+        Span<Held> holds = Helds.Components;
+        for (int i = 0; i < held.Length && n < inside.Length; i++)
+        {
+            if (holds[i].Holder == entity.Value && Items.IndexOf(held[i]) < 0)
+            {
+                inside[n++] = held[i].Value;
+            }
+        }
+
+        Position at = Positions.Get(entity);
+        for (int k = 0; k < n; k++)
+        {
+            EntityId unit = EntityId.FromValue(inside[k]);
+            if (Entities.IsAlive(unit) && !Unload(unit, at.X, at.Y))
+            {
+                Events.Emit(new SimEvent(SimEventKind.Killed, Identities.Get(unit).Owner, unit, entity.Index, Identities.Get(entity).Owner, Identities.Get(unit).TypeId));
+                Kill(unit);
+            }
+        }
+    }
+
     private void BeforeDestroyCombatMagic(EntityId entity)
     {
         if (MarketStocks.Count != 0 && MarketStocks.Has(entity))
@@ -513,31 +548,7 @@ public sealed partial class World
             }
         }
 
-        if (Holders.Count != 0 && Holders.IndexOf(entity) is >= 0 and var hs && Holders.At(hs).Count > 0)
-        {
-            Span<uint> inside = stackalloc uint[HolderDefinition.MaxCapacity];
-            int n = 0;
-            ReadOnlySpan<EntityId> held = Helds.Entities;
-            Span<Held> holds = Helds.Components;
-            for (int i = 0; i < held.Length && n < inside.Length; i++)
-            {
-                if (holds[i].Holder == entity.Value && Items.IndexOf(held[i]) < 0)
-                {
-                    inside[n++] = held[i].Value;
-                }
-            }
-
-            Position at = Positions.Get(entity);
-            for (int k = 0; k < n; k++)
-            {
-                EntityId unit = EntityId.FromValue(inside[k]);
-                if (Entities.IsAlive(unit) && !Unload(unit, at.X, at.Y))
-                {
-                    Events.Emit(new SimEvent(SimEventKind.Killed, Identities.Get(unit).Owner, unit, entity.Index, Identities.Get(entity).Owner, Identities.Get(unit).TypeId));
-                    Kill(unit);
-                }
-            }
-        }
+        EmptyHolder(entity);
 
         if (Helds.Count != 0 && Helds.IndexOf(entity) is >= 0 and var me)
         {

@@ -68,3 +68,8 @@ rules:
     rule: Each house gives room for 10 more units, never beyond the game's population limit.
     source: [help ITEMS.TXT WI_POP_LIMIT, data OBJECTS HOUSE.INI pop_count]
     status: implemented
+  PROD-016:
+    rule: A building trains what its command card creates (MENU.INI's CREATE orders, its submenus included), as well as what the unit tables name it for.
+    source: [data MENU.INI, data ORDERS.INI, 'community ReTzar src/gameplay.rs (a CREATE order runs on the building whose card shows it)', owner 2026-10-28 (seventh play-test)]
+    status: tested
+    note: The churches' cards create priests (the Asian monastery monks too), though the unit tables name the cathedral and the mosque; the church's priest did nothing (the seventh play-test). The cathedral keeps the priests the table gives it.

@@ -2112,7 +2112,8 @@ public partial class GameScreen : Node
         EntityTraits t = def.Traits;
         if (t.Armament is { } arm)
         {
-            stats.Add((arm.RangeUnits > 0 ? "art/icons/attack bow.t2img" : "art/icons/attack sword.t2img", HudText.Number(arm.Attack)));
+            // What it fights with now: its level, items and spells included (GAME-08; the seventh play-test).
+            stats.Add((arm.RangeUnits > 0 ? "art/icons/attack bow.t2img" : "art/icons/attack sword.t2img", HudText.Number(e.Attack > 0 ? e.Attack : arm.Attack)));
             if (arm.RangeUnits > 0)
             {
                 stats.Add(("art/icons/range.t2img", HudText.Number(arm.RangeUnits / 2048)));
@@ -2121,7 +2122,7 @@ public partial class GameScreen : Node
 
         if (t.Category == EntityCategory.Unit)
         {
-            stats.Add(("art/icons/defence.t2img", HudText.Number(t.Defence)));
+            stats.Add(("art/icons/defence.t2img", HudText.Number(e.Defence > 0 ? e.Defence : t.Defence)));
         }
 
         if (t.GainsExperience && t.LegacyClass != "trader")
@@ -2162,6 +2163,10 @@ public partial class GameScreen : Node
         {
             stats.Add(("art/icons/time.t2img", $"{e.ConstructionPermille / 10} %"));
         }
+        else if (e.DismantlePermille >= 0)
+        {
+            stats.Add(("art/icons/time.t2img", $"-{e.DismantlePermille / 10} %")); // BLD-027: what is still standing
+        }
         else if (e.QueueCount > 0)
         {
             stats.Add(("art/icons/time.t2img", $"{e.QueuePermille / 10} %"));
@@ -2197,7 +2202,8 @@ public partial class GameScreen : Node
 
         // A spy's disguise meter follows its name, as in the original: "Spy (100)" in its own look (MAG-021, batch J). A
         // working peasant is named by its job: Woodcutter, Farmer, Miner, Builder... (STRINGS.INI [peons], HUD-032).
-        string name = t.LegacyClass == "peon" && FrameJobs.StringKey(e.Job) is { } job ? _catalog.Text("peons", job, v.Name) : v.Name;
+        string name = e.Name is { Length: > 0 } own ? own // a hero's or the scenario's name (the seventh play-test)
+            : t.LegacyClass == "peon" && FrameJobs.StringKey(e.Job) is { } job ? _catalog.Text("peons", job, v.Name) : v.Name;
         return new SelectionInfo
         {
             Name = e.DisguiseMastery >= 0 ? string.Create(CultureInfo.InvariantCulture, $"{(e.SpyType >= 0 ? _catalog.Type((ushort)e.SpyType).Name : v.Name)} ({e.DisguiseMastery})") : name,

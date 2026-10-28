@@ -318,7 +318,9 @@ public static class SyntheticLegacyContent
         ]));
         source.Add("tables/data/menu.ini.json", Ini("DATA/MENU.INI",
         [
-            ("e_castle", [("e_peon", "P"), ("te_feudalism", "D"), ("te_architecture", "A"), ("te_learning", "L")]),
+            // The castle's card also creates priests, which the unit table gives the cathedral: a building trains what its
+            // card creates (PROD-016; the original's churches create priests). A synthetic pairing, adding no type.
+            ("e_castle", [("e_peon", "P"), ("te_feudalism", "D"), ("te_architecture", "A"), ("te_learning", "L"), ("e_priest", "R")]),
             ("e_farm", [("cow", "C"), ("te_fields", "F"), ("te_irrigation", "I"), ("te_livestock", "D"), ("te_cowpoaching", "P")]),
             ("e_blacksmith", [("te_temperiron", "T"), ("te_halberd", "H"), ("te_scalearmor", "S"), ("te_chainmail", "C"), ("te_platearmor", "P")]),
             ("e_lumber", [("te_woodplus", "S"), ("te_crossbow", "C"), ("te_longbow", "L")]),
@@ -355,6 +357,7 @@ public static class SyntheticLegacyContent
         }
 
         orders.Add(("e_peon", [("ACTION", "CREATE peon"), ("CLASSNAME", "peon"), ("IMG", "3")]));
+        orders.Add(("e_priest", [("ACTION", "CREATE priest"), ("CLASSNAME", "priest"), ("IMG", "114")]));
         orders.Add(("gateopen", [("ACTION", "gateopen"), ("IMG", "4")]));
         foreach (string spell in SpellOrders)
         {

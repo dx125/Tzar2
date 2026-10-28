@@ -20,13 +20,32 @@ internal static class CombatStats
         if (world.Experiences.Count != 0 && world.Experiences.IndexOf(entity) is >= 0 and var x)
         {
             Experience e = world.Experiences.At(x);
-            attack += ((long)e.Level * world.Ruleset.Combat.AttackPerLevel) + e.BonusAttack;
+            attack += (LevelAttack(world, type, owner, e.Level) * (long)world.Ruleset.Combat.AttackPerLevel) + e.BonusAttack;
         }
 
         attack += ItemPower(world, entity, ItemEffect.Attack);
         attack = Status(world, entity, attack, defence: false);
         return (int)Math.Clamp(attack, 0, 1_000_000);
     }
+
+    // GAME-08 (ReTzar's reading of the original, 0x4de7d0): a level adds an attack point; a kingdom's bowman half a point,
+    // rounded up.
+    private static long LevelAttack(World world, EntityTypeDefinition type, byte owner, int level)
+        => IsBowman(world, type) && owner != Content.Compiled.MapObject.Nature ? (level + 1) / 2 : level;
+
+    // GAME-08 (0x4de880): a unit's level adds a defence point every two levels, a bowman's every four, rounded up.
+    private static long LevelDefence(World world, EntityTypeDefinition type, int level)
+    {
+        if (type.Traits.Category != EntityCategory.Unit)
+        {
+            return 0;
+        }
+
+        int every = (IsBowman(world, type) ? 4 : 2) / Math.Max(1, world.Ruleset.Combat.DefenceHalvesPerLevel);
+        return (level + Math.Max(1, every) - 1) / Math.Max(1, every);
+    }
+
+    private static bool IsBowman(World world, EntityTypeDefinition type) => world.Ruleset.Combat.BowLevelClasses.AsSpan().BinarySearch(type.Id) >= 0;
 
     /// <summary>The defence of <paramref name="entity"/>.</summary>
     public static int Defence(World world, EntityId entity, EntityTypeDefinition type)
@@ -36,7 +55,7 @@ internal static class CombatStats
         if (world.Experiences.Count != 0 && world.Experiences.IndexOf(entity) is >= 0 and var x)
         {
             Experience e = world.Experiences.At(x);
-            defence += ((long)e.Level * world.Ruleset.Combat.DefenceHalvesPerLevel / 2) + e.BonusDefence;
+            defence += LevelDefence(world, type, e.Level) + e.BonusDefence;
         }
 
         defence += ItemPower(world, entity, ItemEffect.Defence);

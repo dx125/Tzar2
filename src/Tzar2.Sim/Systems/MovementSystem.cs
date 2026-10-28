@@ -249,9 +249,10 @@ public sealed partial class MovementSystem : ISimSystem
 
         Position tp = world.Positions.At(t);
         Position p = world.Positions.Get(entity);
-        // ORD-001 (ReTzar 0x4e4f1f): a guard stands within guardRadiusTiles of what it guards (of its footprint, or of a
-        // unit's tile), not against it, and walks back from further away.
-        int away = Interaction.TilesFrom(world, p, target);
+        // ORD-001 (ReTzar 0x4e4f1f, 0x42dd00): a guard stands within guardRadiusTiles of what it guards (of its rect: the
+        // footprint, or a unit's tile, grown by one), not against it, and walks back from further away; it stops as soon
+        // as it is within, so a group of guards stands in a ring about four tiles from a building (the seventh play-test).
+        int away = Interaction.GuardTiles(world, p, target);
         int guard = world.Ruleset.Combat.GuardRadiusTiles;
         bool far = away > guard;
         bool moved = IntMath.DistanceSquared(m.OrderX, m.OrderY, tp.X, tp.Y) > 4L * MapState.UnitsPerTile * MapState.UnitsPerTile;

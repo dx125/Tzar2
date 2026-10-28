@@ -98,7 +98,7 @@ public class TargetChoiceTests
         d.RunUntil(() => false, 400);
 
         int away = Systems.Interaction.TilesFrom(d.World, d.PositionOf(walker), house);
-        Assert.InRange(away, 2, 3); // it stopped once within three tiles, short of the house
+        Assert.InRange(away, 3, 4); // it stopped once within three tiles of the house's rect grown by one (0x41fd70), four of its walls
         Assert.Equal(before, d.PositionOf(close)); // already within three tiles: it guards from where it stands
         Assert.Equal(MotionOrder.Follow, d.MotionOf(walker).Order);
     }

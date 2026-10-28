@@ -84,13 +84,33 @@ public sealed class CommandCardTests : IDisposable
         CardSlot dismantle = slots.Last(s => s is not null)!.Value;
         Assert.Equal((CardAction.Dismantle, "dismantle"), (dismantle.Button.Action, dismantle.Button.OwnIcon));
 
-        // The first press asks; the second takes it down (the castle with Shift); another press between asks again.
-        Assert.Contains("75 %", card.Press(Context([castle]), dismantle).Message, StringComparison.Ordinal);
+        // The tooltip says what comes back (the seventh play-test); the first press asks; the second takes it down (the
+        // castle with Shift); another press between asks again.
+        Assert.Contains("75 %", dismantle.Description, StringComparison.Ordinal);
+        int[] cost = [.. Rules.Value.EntityTypes[Rules.Value.EntityTypeId("euro.castle")].Traits.Cost.Select(c => c * 3 / 4)];
+        Assert.Contains($"{cost.First(c => c > 0)} ", dismantle.Description, StringComparison.Ordinal);
+        Assert.StartsWith("Press again", card.Press(Context([castle]), dismantle).Message, StringComparison.Ordinal);
         Command taken = Single(card.Press(Context([castle]), dismantle, shift: true));
         Assert.Equal((CommandKind.Dismantle, CommandFlags.Queue), (taken.Kind, taken.Flags));
         Assert.NotNull(card.Press(Context([castle]), dismantle).Message);
         card.Press(Context([castle]), slots[0]!.Value);
         Assert.NotNull(card.Press(Context([castle]), dismantle).Message);
+    }
+
+    [Fact]
+    [Trait("Rule", "EXP-001")]
+    public void The_frame_shows_a_units_attack_and_defence_with_its_level()
+    {
+        // The seventh play-test: experienced knights showed their type's attack and defence.
+        World world = _session.Simulation.World;
+        Position at = world.Positions.Get(Own("euro.castle"));
+        EntityId footman = world.Spawn((ushort)Rules.Value.EntityTypeId("euro.footman"), 0, at.X, at.Y + (5 * 2048));
+        world.Experiences.Get(footman).Level = 12;
+        GameFrame frame = Step();
+        FrameEntity e = frame.Entities.ToArray().Single(x => x.Id == footman);
+        EntityTraits t = Rules.Value.EntityTypes[e.TypeId].Traits;
+        Assert.True(e.Attack >= t.Armament!.Attack + 12, $"attack {e.Attack} for level 12 over {t.Armament.Attack}");
+        Assert.True(e.Defence >= t.Defence + 6, $"defence {e.Defence} for level 12 over {t.Defence}");
     }
 
     [Fact]

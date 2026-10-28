@@ -216,16 +216,23 @@ internal static class ResearchRules
         Identity identity = world.Identities.Get(entity);
         if (u.IsConversion && world.TypeOf(entity).Traits.IsWall)
         {
-            // BLD-026 (ReTzar 0x4fab10): a wall turns to stone with its whole row, its gates too.
+            // BLD-026 (ReTzar 0x4fab10): a wall turns to stone with its whole row, its gates too; each piece cost its share
+            // (a wall the upgrade's price, a gate ten times it; BLD-027).
             var row = new List<EntityId>();
             WallRow(world, entity, upgrade, row);
             foreach (EntityId piece in row)
             {
                 if (piece != entity && RowConversion(world, piece, upgrade) is { } other && other.ConvertedType(world.Identities.Get(piece).TypeId) is >= 0 and var into)
                 {
+                    Invest(world, piece, u.Cost, world.TypeOf(piece).Traits.Gate is not null ? 10 : 1);
                     world.ConvertType(piece, (ushort)into);
                 }
             }
+        }
+
+        if (world.TypeOf(entity).Traits.Category == EntityCategory.Building)
+        {
+            Invest(world, entity, u.Cost, 1); // BLD-027: a stone tower cost its wooden tower and every upgrade since
         }
 
         if (u.IsConversion)
@@ -253,6 +260,55 @@ internal static class ResearchRules
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.UpgradeCompleted, identity.Owner, entity, identity.TypeId, world.Identities.Get(entity).TypeId, upgrade));
+    }
+
+    /// <summary>
+    /// What a building has cost its kingdom (BLD-027): its <see cref="Investment"/>, or, for one the map placed (built by
+    /// nobody), its type's price for the kingdom now.
+    /// </summary>
+    public static void Spent(World world, EntityId building, Span<int> spent)
+    {
+        spent.Clear();
+        if (world.Investments.IndexOf(building) is >= 0 and var i)
+        {
+            ResourceAmounts amounts = world.Investments.At(i).Spent;
+            for (int r = 0; r < spent.Length && r < Ruleset.MaxResourceTypes; r++)
+            {
+                spent[r] = amounts[r];
+            }
+
+            return;
+        }
+
+        EntityTypeDefinition type = world.TypeOf(building);
+        (int add, int bp) = world.Stats.Modifier(world.Identities.Get(building).Owner, ModifierStat.Cost, type.Id);
+        for (int r = 0; r < spent.Length && r < type.Traits.Cost.Length; r++)
+        {
+            spent[r] = PlayerStats.Combine(type.Traits.Cost[r], add, bp);
+        }
+    }
+
+    // BLD-027: an upgrade bought for a building adds to what it cost (a building the map placed starts from its price now).
+    private static void Invest(World world, EntityId building, ImmutableArray<int> cost, int times)
+    {
+        if (!world.Investments.Has(building))
+        {
+            Span<int> start = stackalloc int[world.Ruleset.ResourceTypes.Count];
+            Spent(world, building, start);
+            var seed = default(Investment);
+            for (int r = 0; r < start.Length && r < Ruleset.MaxResourceTypes; r++)
+            {
+                seed.Spent[r] = start[r];
+            }
+
+            world.Investments.Set(building, seed);
+        }
+
+        ref Investment investment = ref world.Investments.Get(building);
+        for (int r = 0; r < cost.Length && r < Ruleset.MaxResourceTypes; r++)
+        {
+            investment.Spent[r] = (int)Math.Min(investment.Spent[r] + ((long)cost[r] * times), int.MaxValue);
+        }
     }
 
     /// <summary>

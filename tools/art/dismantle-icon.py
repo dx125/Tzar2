@@ -1,5 +1,5 @@
 """Draws Tzar2's own order button for taking a building down (BLD-027): a roof split in two, its halves falling apart,
-over a hammer, embossed in gold on black like the original's order buttons. Tzar2's own art, made by this script.
+over a hammer, embossed in gold on a transparent ground like the original's order buttons. Tzar2's own art, made by this script.
 
 Usage: python tools/art/dismantle-icon.py [out.png]   (default: src/Tzar2.Client/icons/dismantle.png; needs Pillow)
 """
@@ -42,15 +42,15 @@ def shape():
     m = Image.new('L', (S, S), 0)
     d = ImageDraw.Draw(m)
     # The roof of the build buttons, a band and a thin line under it, split at the ridge, its halves sagging apart.
-    line(d, (2.5, 20), (19, 10), 3.2)
-    line(d, (29, 10), (45.5, 20), 3.2)
-    line(d, (7, 22), (18.5, 15), 1.4)
-    line(d, (29.5, 15), (41, 22), 1.4)
+    line(d, (2.5, 20), (19, 10), 4.2)
+    line(d, (29, 10), (45.5, 20), 4.2)
+    line(d, (7, 22.5), (18.5, 15.5), 2.0)
+    line(d, (29.5, 15.5), (41, 22.5), 2.0)
     # A board falling out of the gap.
-    poly(d, bar(24, 13.5, 7, 2.4, 75))
+    poly(d, bar(24, 13.5, 7, 3.0, 75))
     # A hammer below, its head across the top of the handle, striking up at the gap.
-    line(d, (13, 44.5), (26, 31.5), 3.2)
-    poly(d, bar(27, 30.5, 13, 4.6, 45))
+    line(d, (13, 44.5), (26, 31.5), 4.0)
+    poly(d, bar(27, 30.5, 14, 5.4, 45))
     poly(d, bar(22.6, 26.1, 3, 6.4, 45))  # the striking face, toward the ridge
     return m
 
@@ -79,7 +79,15 @@ def emboss(mask):
 
 def main():
     target = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'Tzar2.Client', 'icons', 'dismantle.png')
-    icon = emboss(shape()).resize((SIZE, SIZE), Image.LANCZOS)
+    mask = shape()
+    colour = emboss(mask).resize((SIZE, SIZE), Image.LANCZOS)
+    # As the original's buttons (1-bit alpha): the pictogram opaque on a transparent ground, so the card's stone shows
+    # round it, with a dark rim a pixel wide below and right of it (the seventh play-test: a black square stood out).
+    body = mask.resize((SIZE, SIZE), Image.LANCZOS).point(lambda v: 255 if v >= 110 else 0)
+    rim = ImageChops.subtract(ImageChops.lighter(body, ImageChops.offset(body, 1, 1)), body)
+    icon = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+    icon.paste(Image.new('RGBA', (SIZE, SIZE), (24, 16, 6, 255)), mask=rim)
+    icon.paste(colour.convert('RGBA'), mask=body)
     icon.save(target, optimize=True)
     print('wrote', os.path.normpath(target))
 

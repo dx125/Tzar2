@@ -175,7 +175,7 @@ internal static class OrderQueue
 
                 Position at = world.Positions.At(t);
                 ref Motion m = ref world.Motions.Get(unit);
-                bool near = Interaction.TilesFrom(world, world.Positions.Get(unit), target) <= world.Ruleset.Combat.GuardRadiusTiles;
+                bool near = Interaction.GuardTiles(world, world.Positions.Get(unit), target) <= world.Ruleset.Combat.GuardRadiusTiles;
                 if (near)
                 {
                     MovementOrders.Stop(world, unit, ref m); // close enough already (ORD-001)
