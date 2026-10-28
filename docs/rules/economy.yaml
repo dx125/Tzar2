@@ -120,3 +120,8 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x44c7a0: a field is born complete and ripe; 0x48f603: its peasants dig it at once)', owner 2026-10-25 (sixth play-test)]
     status: tested
     note: Data, the trait ReadyAtOnce of the field; Tzar2 had built fields as sites.
+  ECO-026:
+    rule: A peasant carrying a load sent to other work goes straight to it; when it begins work on another resource it drops the old load on the ground as a bag of that resource, which any peasant can take up again. A peasant that dies drops its load too.
+    source: ['community ReTzar src/gameplay.rs (0x4aea70 the load dropped as a resource item; 0x4ae2a0 as the new work begins; 0x4ff350 before taking a bag of another kind; 0x4acc44 at death)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: 'The bag is OBJECTS RESITEM in the picture of its resource (item_food, item_wood, item_stone, item_gold); it keeps what it holds in the item (ItemState.Resource, which was padding, so saves stay). A bag the map placed holds what its picture shows. Before, the peasant took the load home first (the sixth play-test). Tzar2 tells loads apart by resource only: milk and a field''s food are both food, while the original drops one for the other.'

@@ -86,9 +86,7 @@ public sealed class EconomySystem : ISimSystem
         int resource = definition.Resource;
         if (w.CarryAmount > 0 && w.CarryResource != resource)
         {
-            w.Phase = WorkerPhase.ToDropOff; // deliver the other load first
-            w.DropTarget = 0; // to the nearest drop-off from here
-            return;
+            world.DropLoad(worker, ref w); // ECO-026: the other load is dropped on the ground as the new work begins
         }
 
         if (world.Neglects.IndexOf(node) is >= 0 and var n)

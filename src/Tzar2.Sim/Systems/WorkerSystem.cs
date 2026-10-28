@@ -77,7 +77,7 @@ public sealed class WorkerSystem : ISimSystem
         {
             case WorkerPhase.ToNode:
             {
-                if (w.CarryAmount >= GameplayCommands.CarryCapacity(world, worker))
+                if (w.CarryResource == w.NodeResource && w.CarryAmount >= GameplayCommands.CarryCapacity(world, worker))
                 {
                     StartDropOff(ref w);
                     return;
@@ -114,12 +114,6 @@ public sealed class WorkerSystem : ISimSystem
                     w.Retries = 0;
                     Position p = world.Positions.Get(node);
                     (w.NodeX, w.NodeY) = (p.X, p.Y);
-                }
-
-                if (w.CarryAmount > 0 && w.CarryResource != w.NodeResource)
-                {
-                    StartDropOff(ref w);
-                    return;
                 }
 
                 if (Interaction.WorkerReaches(world, worker, node))

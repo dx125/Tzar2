@@ -91,8 +91,9 @@ public sealed class CommandCard
     public void TurnPage(int delta) => _page = Math.Clamp(_page + delta, 0, Math.Max(0, PageCount - 1));
 
     /// <summary>
-    /// The own unit whose items the eye shows (HUD-017): the focused unit when it carries items, else the first selected
-    /// one that does; none when no selected unit of the kingdom carries anything.
+    /// The own entity whose contents the eye shows (HUD-017, HOLD-011): the focused one when it carries items or holds
+    /// units, else the first selected one that does; none when no selected entity of the kingdom holds anything (the
+    /// original's eye is live while the selection's object holds something, 0x49cc3e).
     /// </summary>
     public EntityId Carrier(CardContext context)
     {
@@ -145,18 +146,45 @@ public sealed class CommandCard
 
         foreach (FrameHeld h in context.Frame.Helds)
         {
-            if (h.IsItem && h.Holder == unit.Value)
+            if (h.Holder == unit.Value)
             {
-                return true;
+                return true; // an item it carries, or a unit inside it
             }
         }
 
         return false;
     }
 
+    // The units inside the holder the eye shows, in the order they came in (HOLD-011, ReTzar 0x4a1830): a click lets one
+    // out, with Ctrl it is selected alone.
+    private List<CardSlot> OccupantSlots(CardContext context)
+    {
+        var slots = new List<CardSlot>();
+        foreach (FrameHeld h in context.Frame.Helds)
+        {
+            if (h.IsItem || h.Holder != _carrier.Value)
+            {
+                continue;
+            }
+
+            string name = h.Name is { Length: > 0 } own ? own : _source.Name(h.TypeId);
+            string health = h.MaxHealth > 0 ? string.Create(CultureInfo.InvariantCulture, $" ({h.Health}/{h.MaxHealth})") : string.Empty;
+            var button = new CardButton("occupant", '\0', CardAction.Occupant, h.Unit.Value.ToString(CultureInfo.InvariantCulture), _source.UnitIcon(h.TypeId, h.Hero), name + health);
+            slots.Add(new CardSlot(button, true, false, string.Empty, Description: "Click: let it out; Ctrl + click: let it out and select it"));
+        }
+
+        return slots;
+    }
+
     // The open inventory: the carrier's items by slot, the default item framed (HUD-017/018).
     private List<CardSlot> InventorySlots(CardContext context)
     {
+        List<CardSlot> occupants = OccupantSlots(context);
+        if (occupants.Count > 0)
+        {
+            return occupants; // a holder: the units inside it
+        }
+
         var items = new List<FrameHeld>();
         foreach (FrameHeld h in context.Frame.Helds)
         {
@@ -375,6 +403,14 @@ public sealed class CommandCard
             return PressItem(context, itemSlot, right, alt, ctrl);
         }
 
+        if (b.Action == CardAction.Occupant && uint.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint occupant) && InventoryOpen)
+        {
+            // HOLD-011: out round the holder, at no place (ReTzar 0x490ad0); with Ctrl it becomes the selection.
+            var leave = new CommandList();
+            leave.Add(CommandKind.Unload, [_carrier], 0, 0, EntityId.FromValue(occupant), 0, 0, ctrl ? CommandFlags.Ctrl : CommandFlags.None);
+            return new CardPress(Commands: leave);
+        }
+
         if (b.Action == CardAction.Page)
         {
             _page++;
@@ -490,14 +526,12 @@ public sealed class CommandCard
                 // A unit picked in a building's list comes out at the place clicked next (manual: Emerge).
                 return new CardPress(Mode: OrderMode.Unload, ModeArgument: unchecked((int)context.Picked.Value));
             case CardAction.Unload:
-                // Emerge without a pick: everyone comes out next to the building at once (ORDERS.INI emerge has no place).
+                // Emerge without a pick: everyone comes out round the building at once, at no place (ORDERS.INI emerge
+                // has none), and joins the selection (HOLD-010).
                 var unload = new CommandList();
                 foreach (EntityInfo holder in selected.Where(e => e.Owner == _me && InsideCount(context, e.Id) > 0))
                 {
-                    if (Index(context.Frame).TryGetValue(holder.Id.Value, out int hi))
-                    {
-                        unload.Add(CommandKind.Unload, [holder.Id], context.Frame.Entities[hi].X, context.Frame.Entities[hi].Y);
-                    }
+                    unload.Add(CommandKind.Unload, [holder.Id], 0, 0);
                 }
 
                 return unload.Count > 0 ? new CardPress(Commands: unload) : CardPress.Nothing;

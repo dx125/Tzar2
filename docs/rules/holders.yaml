@@ -42,3 +42,13 @@ rules:
     rule: A unit inside a holder keeps its items.
     source: [community TDD GAME-10]
     status: tested
+  HOLD-010:
+    rule: Emerge brings everyone out of a building, each onto a free tile of the nearest ring round it that has one, picked at random; the player's units that come out are selected. Units leave a destroyed or dismantled building the same way.
+    source: ['community ReTzar src/gameplay.rs (0x5037fa Emerge; 0x504890, 0x504550 a passenger steps off within 8 rings; 0x5073f0 the ring search; 0x453240 each joins the selection)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: 'The original tries 256 random tiles a ring; Tzar2 picks at random among the ring''s free tiles (Rng.Misc). Before, everyone came out on the one tile of the building''s edge nearest its middle and walked to the middle, in a heap at one side, and nobody was selected (the sixth play-test). Unloading a ship or a carpet at a place does not select (the original''s unload order does not).'
+  HOLD-011:
+    rule: The eye of a castle, an outpost, a ship, a carpet or a caravan lists the units inside; a click lets one out beside it, and with Ctrl it is also selected alone.
+    source: ['community ReTzar src/hud.rs (0x49cc3e the button is live while the selected object holds something)', 'community ReTzar src/frontend/mission.rs (0x4a1830 a click on an occupant; 0x490ad0 it leaves)', 'community ReTzar src/gameplay.rs (0x504550 out with no place; 0x453340 with Ctrl the selection)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: 'A unit leaves a building as from Emerge (HOLD-010); a ship''s steps onto land within the exit radius, or stays when there is none. Before, the eye showed only a unit''s items and was grey for holders. The list of portraits in the selection view and Emerge to a place stay (ORD-015).'

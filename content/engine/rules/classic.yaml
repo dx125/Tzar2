@@ -802,7 +802,9 @@ comm.item_plusplus:
 # item_kill and item_berserk act on the bound unit and the item stays; it goes when the bound unit dies.
 comm.item_soul: { Item: {} }
 spell_soulbind: { new: true, Spell: { bookValue: 10, effect: soulBind, summon: comm.item_soul, affects: all, mana: 50, range: 8, castMs: 500, targets: { category: unit } } }   # books only; range and mana from ReTzar (0x4721e0, 0x4723e0)
-comm.resitem: { Item: { resource: gold, power: 100 } }                      # UNVERIFIED (UNK-25)
+# A bag of a resource (OBJECTS RESITEM): a load a peasant dropped holds its own resource in its picture (ECO-026; the
+# original's RESOURCE_ITEMS as ReTzar reads them, 0x4aea70); one the map placed holds its picture's.
+comm.resitem: { Item: { resource: gold, power: 100, looks: [item_gold, item_stone, item_food, item_wood, item_milk, item_meat] } }   # power UNVERIFIED (UNK-25)
 
 # Magic vision's revealer (OBJECTS FOG_REVEALER, fog_range from the data) lasts a while (UNVERIFIED, UNK-26).
 comm.fog_revealer: { Lifetime: { ms: 60000 } }   # ReTzar (0x4735ac): magic vision lasts 60 s

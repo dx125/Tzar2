@@ -136,9 +136,11 @@ internal static class GameplayCommands
         Position at = world.Positions.Get(node);
         ref Worker worker = ref world.Workers.At(world.Workers.IndexOf(entity));
         worker.Task = WorkerTask.Harvest;
-        worker.Phase = worker.CarryAmount >= CarryCapacity(world, entity) ? WorkerPhase.ToDropOff : WorkerPhase.ToNode;
         worker.Target = node.Value;
         worker.NodeResource = (byte)resource;
+
+        // A full load of the node's resource goes home first; another load is dropped where the work begins (ECO-026).
+        worker.Phase = worker.CarryResource == resource && worker.CarryAmount >= CarryCapacity(world, entity) ? WorkerPhase.ToDropOff : WorkerPhase.ToNode;
         worker.NodeX = at.X;
         worker.NodeY = at.Y;
         return true;

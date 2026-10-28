@@ -156,4 +156,54 @@ public class EconomyTests
         (int fx, int fy, int fw, int fh) = d.World.FootprintRect(field);
         Assert.Equal((fx + (fw / 2), fy + (fh / 2)), (d.PositionOf(peon).X / Tile, d.PositionOf(peon).Y / Tile));
     }
+
+    [Fact]
+    [Trait("Rule", "ECO-026")]
+    public void A_peasant_sent_to_other_work_goes_straight_there_and_drops_its_load_as_a_bag()
+    {
+        // The sixth play-test: a peasant carrying wood sent to the gold mine first took the wood home. In the original
+        // (ReTzar 0x4ae2a0, 0x4aea70) it goes to the mine and drops the wood on the ground as it begins; a bag anyone may
+        // take up again.
+        using var d = new SimDriver(
+            TestMap(48, 20, Structure("euro.castle", 0, 2, 2), Tree(30, 10), Structure("comm.res_gold", MapObject.Nature, 30, 14),
+                Unit("euro.peon", 0, 29, 10), Unit("euro.peon", 0, 34, 16)),
+            ruleset: Classic);
+        int wood = Resource("wood");
+        int goldId = Resource("gold");
+        EntityId[] peons = [.. OfType(d.World, "euro.peon").OrderBy(p => d.PositionOf(p).Y)];
+        EntityId peon = peons[0];
+        d.Order(0, CommandKind.Harvest, [peon], target: OfType(d.World, "comm.tree").Single());
+        d.RunUntil(() => d.World.Workers.Get(peon).CarryAmount >= 3, 1200);
+        int carried = d.World.Workers.Get(peon).CarryAmount;
+        Assert.Equal(wood, (int)d.World.Workers.Get(peon).CarryResource);
+
+        d.Order(0, CommandKind.Harvest, [peon], target: OfType(d.World, "comm.res_gold").Single());
+        int nearestToCastle = int.MaxValue;
+        d.RunUntil(() =>
+        {
+            nearestToCastle = System.Math.Min(nearestToCastle, d.PositionOf(peon).X / Tile);
+            return d.World.Workers.Get(peon).CarryResource == goldId && d.World.Workers.Get(peon).CarryAmount > 0;
+        }, 1200);
+        Assert.True(nearestToCastle >= 26, $"it walked toward the castle (x {nearestToCastle})");
+
+        EntityId bag = OfType(d.World, "comm.resitem").Single();
+        ItemState state = d.World.Items.Get(bag);
+        Assert.Equal((carried, wood + 1), (state.Power, (int)state.Resource));
+        Assert.Equal("item_wood", d.World.TypeOf(bag).Traits.Item!.Looks[state.Look - 1]);
+        Assert.Equal(wood, Systems.GameplayQueries.ItemResource(d.World, bag));
+
+        // Another peasant takes it up as a load of wood.
+        d.Order(0, CommandKind.PickItem, [peons[1]], target: bag);
+        d.RunUntil(() => !d.World.Entities.IsAlive(bag), 600);
+        Assert.Equal((carried, wood), (d.World.Workers.Get(peons[1]).CarryAmount, (int)d.World.Workers.Get(peons[1]).CarryResource));
+
+        // A peasant that dies drops its load too (0x4acc44). (The other peasant, idle, may have taken up gold by itself,
+        // and dropped it as it took the wood.)
+        int load = d.World.Workers.Get(peon).CarryAmount;
+        EntityId[] before = [.. OfType(d.World, "comm.resitem")];
+        d.Order(0, CommandKind.DebugKill, [peon]);
+        d.Step();
+        EntityId dropped = OfType(d.World, "comm.resitem").Except(before).Single();
+        Assert.Equal((load, goldId + 1), (d.World.Items.Get(dropped).Power, (int)d.World.Items.Get(dropped).Resource));
+    }
 }

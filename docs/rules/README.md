@@ -102,9 +102,9 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Construction and repair](construction.yaml) (BLD) | 25 | 21 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 30 | 21 | 9 | 0 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 8 | 1 | 0 | 0 | 0 | 0 |
-| [Resources and gathering](economy.yaml) (ECO) | 25 | 20 | 5 | 0 | 0 | 0 | 0 |
+| [Resources and gathering](economy.yaml) (ECO) | 26 | 21 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
-| [Holders and transport](holders.yaml) (HOLD) | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
+| [Holders and transport](holders.yaml) (HOLD) | 11 | 11 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 35 | 15 | 15 | 1 | 0 | 3 | 1 |
 | [Items](items.yaml) (ITEM) | 19 | 14 | 3 | 0 | 0 | 1 | 1 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 28 | 28 | 0 | 0 | 0 | 0 | 0 |
@@ -118,7 +118,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 11 | 10 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 21 | 14 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 371 | 283 | 72 | 2 | 0 | 10 | 4 |
+| **All** | 374 | 286 | 72 | 2 | 0 | 10 | 4 |
 
 ## Not done yet
 

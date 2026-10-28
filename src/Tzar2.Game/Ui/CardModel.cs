@@ -134,6 +134,12 @@ public enum CardAction
 
     /// <summary>Take the selected finished buildings down for part of their cost (BLD-027, Tzar2's): the first press asks, the second does it.</summary>
     Dismantle,
+
+    /// <summary>
+    /// A unit inside the holder whose list the eye shows (HOLD-011), <see cref="CardButton.Argument"/> its
+    /// <c>EntityId.Value</c>: a click lets it out, with Ctrl it is selected alone; its image is an ICONS.INI cell.
+    /// </summary>
+    Occupant,
 }
 
 /// <summary>A button of a command card (for the original: a MENU.INI entry and its ORDERS.INI order).</summary>
@@ -288,6 +294,9 @@ public interface ICardSource
 
     /// <summary>The ICONS.INI picture of an item of type <paramref name="typeId"/> in <paramref name="look"/> (its own image, or null), or −1.</summary>
     int ItemIcon(ushort typeId, string? look);
+
+    /// <summary>The ICONS.INI portrait of a unit of type <paramref name="typeId"/> (a hero's own when <paramref name="hero"/>), or −1.</summary>
+    int UnitIcon(ushort typeId, bool hero) => -1;
 }
 
 /// <summary>What the command card is built for: the frame, the selection and the order waiting for a target.</summary>

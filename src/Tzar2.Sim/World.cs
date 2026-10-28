@@ -773,6 +773,13 @@ public sealed partial class World
             if (mi.Look.Length > 0 && def.Looks.IndexOf(mi.Look) is >= 0 and var look)
             {
                 item.Look = (byte)(look + 1);
+
+                // A bag of a resource holds what its picture shows (item_wood: wood; ECO-026).
+                if (def.Kind == ItemKind.Resource && mi.Look.StartsWith("item_", StringComparison.Ordinal)
+                    && Ruleset.ResourceId(mi.Look[5..]) is >= 0 and var resource && resource != def.Resource)
+                {
+                    item.Resource = (byte)(resource + 1);
+                }
             }
         }
     }
@@ -833,6 +840,13 @@ public sealed partial class World
 
         int p = Identities.IndexOf(entity);
         int q = Positions.IndexOf(entity);
+        if (p >= 0 && q >= 0 && Workers.Count != 0 && Workers.IndexOf(entity) is >= 0 and var wk && Workers.At(wk).CarryAmount > 0 && !IsHeld(entity))
+        {
+            DropLoad(entity, ref Workers.At(wk)); // ECO-026: a dying peasant drops its load (0x4acc44)
+            p = Identities.IndexOf(entity);
+            q = Positions.IndexOf(entity);
+        }
+
         if (p >= 0 && q >= 0)
         {
             Identity identity = Identities.At(p);
