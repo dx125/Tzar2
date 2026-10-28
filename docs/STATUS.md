@@ -442,8 +442,9 @@ the process decisions that have no ADR.
   Build waypoint in the peasant's queue of orders, taken when the site is finished, cancelled or destroyed. A wooden
   wall's upgrade to stone takes its whole row (0x4fab10, 0x4fa710): the kingdom's finished walls and gates joined to it
   through the tiles left, right, above and below, for the upgrade's price for each wall and ten times it for each gate;
-  a gate turns by its own conversion. Workers reach what they work at from a neighbouring tile only
-  (`interactionReachPx` 32 to 18 with units one to a tile), and a builder turns to its site. The gameplay and AI
+  a gate turns by its own conversion. Workers and hand-to-hand attackers reach a structure from a neighbouring tile
+  only (a new `structureReachPx` 18, with units one to a tile; cows, ships and items keep `interactionReachPx` 32: with
+  the reach of 18 everywhere the campaign acceptance lost rajba), and a builder turns to its site. The gameplay and AI
   goldens and both benches (gameplay F6EA2F8511AA2D7A, ai 351CB997418AB39D) are re-pinned for the new reach.
 * **2026-10-27 — Fields are ready at once; the farmer works the middle tile (ECO-025, ECO-008; item 18.S1).** ReTzar
   reads the original's field as born complete and ripe (0x44c7a0), its peasants digging it at once (0x48f603), the Dig

@@ -172,7 +172,8 @@ public class RulesetCompilerTests
         Assert.Equal("medium", g.StartingResources[g.DefaultStartingResources].Key);
         Assert.Equal([500, 500, 500, 500, 500], g.StartingResources[1].Amounts.ToArray());
         Assert.Equal([210, 220, 20, 10, 5], g.StartingResources[0].Amounts.ToArray());
-        Assert.Equal(18 * 64, g.InteractionReachUnits); // the next tile, a diagonal one too (ADR 0270, the sixth play-test)
+        Assert.Equal(32 * 64, g.InteractionReachUnits);
+        Assert.Equal(18 * 64, g.StructureReachUnits); // the next tile, a diagonal one too (ADR 0270, the sixth play-test)
         Assert.Equal(18 * 64, g.MeleeReachUnits); // a diagonal neighbour is in reach with units one to a tile (ADR 0270)
         Assert.Equal(MovementModel.Cells, g.Movement);
         Assert.Equal(200, g.AcquireIntervalMs);

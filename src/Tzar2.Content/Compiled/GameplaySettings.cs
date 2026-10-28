@@ -67,15 +67,21 @@ public sealed record GameplaySettings
     public int ResistanceScale { get; init; } = 100;
 
     /// <summary>
-    /// How far (world units, edge to edge) a worker may be from the footprint of the node, drop-off or site it works on
-    /// (UNK-17/18).
+    /// How far (world units, edge to edge) a worker or a unit on an errand may be from a target without a footprint (a
+    /// cow, a ship, an item, meat, a fish patch) it works on, boards or picks up (UNK-17/18).
     /// </summary>
     public int InteractionReachUnits { get; init; } = 2048;
 
     /// <summary>
+    /// How far (world units, edge to edge) a unit that has stopped may be from the footprint of a structure it works on,
+    /// boards or fights hand to hand (WORLD-019; UNK-17/18): with units one to a tile, the neighbouring tiles only.
+    /// </summary>
+    public int StructureReachUnits { get; init; } = 2048;
+
+    /// <summary>
     /// The reach (world units, edge to edge) to a structure of a unit still walking to it: it works on, fights or boards
     /// it only once it stands next to it; one that has stopped (arrived, or blocked by others) has
-    /// <see cref="InteractionReachUnits"/> (owner play-test 2026-10-20: in the original units stand at the wall).
+    /// <see cref="StructureReachUnits"/> (owner play-test 2026-10-20: in the original units stand at the wall).
     /// </summary>
     public int InteractionTouchUnits { get; init; } = 768;
 
@@ -239,8 +245,10 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfLessThan(ResistanceScale, 1);
         ArgumentOutOfRangeException.ThrowIfNegative(InteractionReachUnits);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(InteractionReachUnits, 8 * 2048);
+        ArgumentOutOfRangeException.ThrowIfNegative(StructureReachUnits);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(StructureReachUnits, 8 * 2048);
         ArgumentOutOfRangeException.ThrowIfNegative(InteractionTouchUnits);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(InteractionTouchUnits, InteractionReachUnits);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(InteractionTouchUnits, StructureReachUnits);
         ArgumentOutOfRangeException.ThrowIfNegative(MeleeReachUnits);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MeleeReachUnits, 8 * 2048);
         ArgumentOutOfRangeException.ThrowIfLessThan(AcquireIntervalMs, 1);

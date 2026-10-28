@@ -168,13 +168,14 @@ internal static class Interaction
 
     /// <summary>
     /// Whether a unit at <paramref name="position"/> reaches <paramref name="target"/>: its footprint (structures), or
-    /// its body (units: cows, ships; footprint-less nodes: fish patches, meat) within the interaction reach; a unit still
+    /// its body (units: cows, ships; footprint-less nodes: fish patches, meat; items) within the interaction reach, a
+    /// structure's footprint within the structure reach (the neighbouring tiles, WORLD-019); a unit still
     /// <paramref name="moving"/> reaches a structure only once it stands next to it (the touch reach).
     /// </summary>
     public static bool Reaches(World world, Position position, int radius, EntityId target, bool moving = false)
     {
         GameplaySettings g = world.Ruleset.Gameplay;
-        long reach = (long)radius + (moving && world.Footprints.Has(target) ? g.InteractionTouchUnits : g.InteractionReachUnits);
+        long reach = (long)radius + (!world.Footprints.Has(target) ? g.InteractionReachUnits : moving ? g.InteractionTouchUnits : g.StructureReachUnits);
         if (!world.Footprints.Has(target))
         {
             reach += RadiusOf(world, target);

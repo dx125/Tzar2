@@ -228,10 +228,10 @@ public sealed partial class CombatSystem : ISimSystem
         }
 
         int distance = Interaction.EdgeDistance(world, position, radius, target);
-        // Hand-to-hand attackers hit a building from the tiles next to it, like workers do (interaction reach).
+        // Hand-to-hand attackers hit a building from the tiles next to it, like workers do (structure reach).
         int range = Range(world, attacker, self, type, arm);
         int reach = range > 0 ? range
-            : world.Footprints.Has(target) ? (Interaction.IsMoving(world, attacker) ? world.Ruleset.Gameplay.InteractionTouchUnits : world.Ruleset.Gameplay.InteractionReachUnits)
+            : world.Footprints.Has(target) ? (Interaction.IsMoving(world, attacker) ? world.Ruleset.Gameplay.InteractionTouchUnits : world.Ruleset.Gameplay.StructureReachUnits)
             : world.Ruleset.Gameplay.MeleeReachUnits;
 
         // A hand-to-hand attacker walking to its own tile at a building strikes from there, not where it first touches
