@@ -14,4 +14,9 @@
     <ProjectReference Include="../../src/Tzar2.Sim/Tzar2.Sim.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Snapshots taken by older versions on synthetic maps (ADR 0271): saves must go on loading. -->
+    <EmbeddedResource Include="Fixtures/*.t2snap" LogicalName="Fixtures/%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

@@ -175,8 +175,7 @@ public partial class GameApp
         }
         catch (Exception e) when (e is ArgumentException or InvalidDataException or KeyNotFoundException)
         {
-            GD.PrintErr($"Mission '{map}' cannot start: {e.Message}");
-            ShowCampaigns();
+            ShowFailure(resume is not null ? "The save cannot be loaded" : $"Mission '{map}' cannot start", e.Message, resume is not null ? ShowLoadGame : ShowCampaigns);
             return;
         }
 
@@ -256,8 +255,7 @@ public partial class GameApp
                     }
                 }
 
-                GD.PrintErr($"The save belongs to campaign '{save.CampaignId}', which is not available.");
-                ShowSinglePlayer();
+                ShowFailure("The save cannot be loaded", $"It belongs to the campaign '{save.CampaignId}', which is not available.", ShowLoadGame);
                 return;
             case SaveKind.CustomMap when _customMaps is null:
                 ShowLoading(LoadingStage.Load);
@@ -275,8 +273,7 @@ public partial class GameApp
                     return;
                 }
 
-                GD.PrintErr($"The save's map '{save.MapId}' is not in the package.");
-                ShowSinglePlayer();
+                ShowFailure("The save cannot be loaded", $"Its map '{save.MapId}' is not in the package.", ShowLoadGame);
                 return;
             default:
                 ShowLoading(LoadingStage.Load);

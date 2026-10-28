@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Compiled.Scenario.Expressions;
@@ -271,6 +272,7 @@ public sealed class AcceptanceTests(ITestOutputHelper output)
         SkirmishAi? ai = package is null ? null : SkirmishAi.Resolve(package);
         var session = new LegacyImportSession { Settings = new ImportSettings { Ruleset = ruleset } };
         Assert.True(session.Add(root) > 0, "no legacy files under " + root);
+        var campaigns = new List<CampaignDocument>();
         foreach (ImportItem item in session.Convert())
         {
             output.WriteLine($"{item.Path}: {item.Report?.ErrorCount} errors, {item.Report?.WarningCount} warnings, code page {item.Report?.CodePage}, language {item.Report?.Language}");
@@ -293,22 +295,69 @@ public sealed class AcceptanceTests(ITestOutputHelper output)
 
             if (play)
             {
-                CampaignDocument doc = item.OpenCampaign(set => set is null ? TerrainRules.WithoutSet(ruleset) : TerrainRules.ForSet(set, null, ruleset));
-                CampaignReport report = CampaignAutoplay.Run(new CampaignPlaytest(doc), ruleset, new AutoplayOptions { ContinueAfterFailure = true, Ai = ai }, line => output.WriteLine($"{doc.State.Id} {line}"));
-                foreach (MissionReport r in report.Missions)
-                {
-                    output.WriteLine($"{doc.State.Id}/{r.MapId}: {(r.Completed ? "completed" : "NOT completed")} ({r.Result}, {r.Assist}, {r.Ticks} ticks, {r.Faults} faults)");
-                }
-
-                // A map counts by its last attempt: a lost first try (no cheat assistance) is retried, as in `t2 campaign run`.
-                // A map that no attempt completes still fails; so does one whose first attempt did not even run.
-                IGrouping<string, MissionReport>[] maps = [.. report.Missions.GroupBy(r => r.MapId)];
-                Assert.True(maps.All(g => g.First().Ticks > 0), string.Join("\n", maps.Where(g => g.First().Ticks <= 0).Select(g => $"{g.Key}: the first attempt did not run")));
-                MissionReport[] last = [.. maps.Select(g => g.Last())];
-                Assert.True(last.All(r => r.Completed), string.Join("\n", last.Where(r => !r.Completed).Select(r => $"{r.MapId}: {r.Result} {r.Assist} {r.Trace}")));
+                campaigns.Add(item.OpenCampaign(set => set is null ? TerrainRules.WithoutSet(ruleset) : TerrainRules.ForSet(set, null, ruleset)));
             }
         }
+
+        if (campaigns.Count > 0)
+        {
+            PlayAll(campaigns, ruleset, ai);
+        }
     }
+
+    // The campaigns play at once, each on its own thread (the tutorial alongside the main chain). Each line of progress
+    // goes to the file Progress names as it happens (the test's own output comes only at the end), and a campaign stops at
+    // its first mission that no attempt completes, unless TZAR2_ACCEPTANCE_SURVEY=1 asks to play every map.
+    private void PlayAll(List<CampaignDocument> campaigns, Ruleset ruleset, SkirmishAi? ai)
+    {
+        bool survey = Environment.GetEnvironmentVariable("TZAR2_ACCEPTANCE_SURVEY") == "1";
+        string progress = Progress;
+        File.WriteAllText(progress, string.Empty);
+        output.WriteLine($"progress: {progress}");
+        var gate = new object();
+        void Log(string line)
+        {
+            lock (gate)
+            {
+                output.WriteLine(line);
+                File.AppendAllText(progress, $"{DateTime.Now:HH:mm:ss} {line}{Environment.NewLine}");
+            }
+        }
+
+        CampaignReport[] reports = new CampaignReport[campaigns.Count];
+        Parallel.For(0, campaigns.Count, new ParallelOptions { MaxDegreeOfParallelism = campaigns.Count }, i =>
+        {
+            CampaignDocument doc = campaigns[i];
+            reports[i] = CampaignAutoplay.Run(new CampaignPlaytest(doc), ruleset, new AutoplayOptions { ContinueAfterFailure = survey, Ai = ai }, line => Log($"{doc.State.Id} {line}"));
+            Log($"{doc.State.Id}: {(reports[i].Completed ? "done" : "stopped: " + reports[i].Error)}");
+        });
+
+        var failures = new List<string>();
+        for (int i = 0; i < campaigns.Count; i++)
+        {
+            string id = campaigns[i].State.Id;
+            foreach (MissionReport r in reports[i].Missions)
+            {
+                output.WriteLine($"{id}/{r.MapId}: {(r.Completed ? "completed" : "NOT completed")} ({r.Result}, {r.Assist}, {r.Ticks} ticks, {r.Faults} faults)");
+            }
+
+            // A map counts by its last attempt: a lost first try (no cheat assistance) is retried, as in `t2 campaign run`.
+            // A map that no attempt completes still fails; so does one whose first attempt did not even run.
+            IGrouping<string, MissionReport>[] maps = [.. reports[i].Missions.GroupBy(r => r.MapId)];
+            failures.AddRange(maps.Where(g => g.First().Ticks <= 0).Select(g => $"{id}/{g.Key}: the first attempt did not run"));
+            failures.AddRange(maps.Select(g => g.Last()).Where(r => !r.Completed).Select(r => $"{id}/{r.MapId}: {r.Result} {r.Assist} {r.Trace}"));
+        }
+
+        Assert.True(failures.Count == 0, string.Join("\n", failures));
+    }
+
+    /// <summary>
+    /// Where the campaign acceptance writes its progress as it plays (a line a mission; <c>TZAR2_ACCEPTANCE_PROGRESS</c>,
+    /// else the temporary folder's <c>tzar2-acceptance.log</c>): follow it with <c>tail -f</c>.
+    /// </summary>
+    public static string Progress => Environment.GetEnvironmentVariable("TZAR2_ACCEPTANCE_PROGRESS") is { Length: > 0 } path
+        ? path
+        : Path.Combine(Path.GetTempPath(), "tzar2-acceptance.log");
 
     [OriginFact]
     public void The_original_campaigns_convert_through_the_editor_and_every_mission_completes()

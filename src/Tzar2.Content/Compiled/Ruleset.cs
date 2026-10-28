@@ -322,6 +322,15 @@ public sealed partial class Ruleset
     /// <summary>xxHash64 of every field, in declaration order; replays and lobbies compare it (§19.4).</summary>
     public ulong ContentHash { get; }
 
+    /// <summary>
+    /// xxHash64 of what a saved state refers to by index: the keys of the terrains, entity types (with their footprints),
+    /// resources, technologies, upgrades, spells and civilizations, in order (ADR 0271). A save of other rules with the
+    /// same tables is continued under the current rules; one with other tables is not.
+    /// </summary>
+    public ulong TablesHash => _tablesHash ??= ComputeTablesHash();
+
+    private ulong? _tablesHash;
+
     /// <summary>The attack bonus in basis points of <paramref name="attacker"/> against <paramref name="target"/> (0 = none).</summary>
     public int BonusBasisPoints(ushort attacker, ushort target)
     {
@@ -755,6 +764,39 @@ public sealed partial class Ruleset
                 throw new ArgumentException($"{where}: {what} lists '{_entityTypes[ids[i]].Key}', which is not a building.");
             }
         }
+    }
+
+    private ulong ComputeTablesHash()
+    {
+        var hasher = new StateHasher();
+        hasher.Add(1).Add(_terrainTypes.Length);
+        foreach (TerrainTypeDefinition t in _terrainTypes)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(t.Key));
+        }
+
+        hasher.Add(_entityTypes.Length);
+        foreach (EntityTypeDefinition e in _entityTypes)
+        {
+            hasher.Add(Encoding.UTF8.GetBytes(e.Key)).Add(e.FootprintWidth).Add(e.FootprintHeight).Add(e.Turned.Width).Add(e.Turned.Height);
+        }
+
+        void Keys(IEnumerable<string> keys)
+        {
+            var list = new List<string>(keys);
+            hasher.Add(list.Count);
+            foreach (string key in list)
+            {
+                hasher.Add(Encoding.UTF8.GetBytes(key));
+            }
+        }
+
+        Keys(_resourceTypes);
+        Keys(System.Linq.Enumerable.Select(_technologies, t => t.Key));
+        Keys(System.Linq.Enumerable.Select(_upgrades, u => u.Key));
+        Keys(System.Linq.Enumerable.Select(Spells, s => s.Key));
+        Keys(_civilizations);
+        return hasher.GetCurrentHash();
     }
 
     private ulong ComputeHash()

@@ -327,10 +327,20 @@ public sealed partial class World
         Visibility.WriteTo(writer);
     }
 
-    // Restore (before the stores are read: the visibility rebuild only reads the registry and the ruleset).
-    internal void ReadKingdomsFrom(ref BinaryBufferReader reader)
+    // Restore (before the stores are read: the visibility rebuild only reads the registry and the ruleset). Formats before
+    // 23 had no tavern exchange: 16 bytes fewer at the end of each kingdom (ADR 0271).
+    internal void ReadKingdomsFrom(ref BinaryBufferReader reader, int version = Snapshots.WorldSnapshot.FormatVersion)
     {
-        reader.ReadBytes(_kingdoms.Length * Marshal.SizeOf<KingdomState>()).CopyTo(MemoryMarshal.AsBytes(_kingdoms.AsSpan()));
+        int size = Marshal.SizeOf<KingdomState>();
+        int stored = version < 23 ? size - 16 : size;
+        ReadOnlySpan<byte> bytes = reader.ReadBytes(_kingdoms.Length * stored);
+        Span<byte> into = MemoryMarshal.AsBytes(_kingdoms.AsSpan());
+        into.Clear();
+        for (int i = 0; i < _kingdoms.Length; i++)
+        {
+            bytes.Slice(i * stored, stored).CopyTo(into.Slice(i * size, stored));
+        }
+
         int resources = Ruleset.ResourceTypes.Count;
         foreach (KingdomState k in _kingdoms)
         {

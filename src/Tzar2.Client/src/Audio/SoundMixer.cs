@@ -25,10 +25,12 @@ public enum SoundCategory
 }
 
 /// <summary>
-/// Sound effects (REQ-AUD-01): the imported WAVs played losslessly through a pool of <see cref="MaxVoices"/> voices
-/// (<c>MIXERCHANNELS</c> default), SOUNDS.INI priorities (a full pool drops the lowest-priority voice for a higher one),
-/// weighted variation choice with a presentation RNG, per-category toggles and distance attenuation from the screen
-/// centre (⚠ UNK-33: the original's attenuation and panning are not measured; no panning yet). Presentation only.
+/// Sound effects (REQ-AUD-01): the imported WAVs played losslessly through <see cref="MaxVoices"/> voices, mixed by the
+/// original's rules as ReTzar reads them (<see cref="SoundRules"/>, PRES-012): a set's clip picked by a roll of R(0, 1000)
+/// that may pick none; the voices split into channels (effects, the voices of units and of buildings); at most a few
+/// effects of a category at once, each one more lowering the next one's priority; and an entity's sounds silenced at its
+/// new order or its death. Per-category toggles and distance attenuation from the screen centre (⚠ UNK-33: the
+/// original's attenuation and panning are not measured; no panning yet). Presentation only.
 /// </summary>
 public partial class SoundMixer : Node
 {
@@ -43,13 +45,13 @@ public partial class SoundMixer : Node
 
     private readonly Dictionary<string, AudioStreamWav?> _streams = new(StringComparer.Ordinal);
     private readonly AudioStreamPlayer[] _voices = new AudioStreamPlayer[MaxVoices];
-    private readonly int[] _priorities = new int[MaxVoices];
+    private readonly VoiceState[] _states = new VoiceState[MaxVoices];
+    private readonly List<int> _weights = [];
     private readonly Random _random = new(1234);
     private readonly bool[] _enabled = [true, true, true, true];
     private bool _paused;
     private ContentStore? _store;
     private PresentationCatalog? _catalog;
-
     /// <summary>Sounds started so far (smoke/autoplay statistics).</summary>
     public int Played { get; private set; }
 
@@ -137,86 +139,92 @@ public partial class SoundMixer : Node
     }
 
     /// <summary>
-    /// Plays one file of a SOUNDS.INI set (or a direct file reference) with <paramref name="priority"/> (0-255) at
-    /// <paramref name="distance"/> (0 = screen centre, 1 = a screen away; beyond 1.5 inaudible).
+    /// Plays a clip of a SOUNDS.INI set (or a direct file reference) in <paramref name="category"/>'s channel, with the
+    /// priority of its <c>[priority]</c> key <paramref name="priorityKey"/>, at <paramref name="distance"/> (0 = screen
+    /// centre, 1 = a screen away; beyond 1.5 inaudible), for <paramref name="owner"/> (1 + an entity's index, or 0).
+    /// False when nothing plays: the roll picked no clip, the category is muted or no voice is free.
     /// </summary>
-    public bool PlaySet(string? set, SoundCategory category, int priority, float distance = 0f)
+    public bool PlaySet(string? set, SoundCategory category, string priorityKey, float distance = 0f, int owner = 0)
     {
+        ArgumentNullException.ThrowIfNull(priorityKey);
         if (_catalog is null || !_enabled[(int)category] || distance > 1.5f)
         {
             return false;
         }
 
         IReadOnlyList<(string Path, int Weight)> files = _catalog.Sounds(set);
-        if (files.Count == 0)
+        _weights.Clear();
+        foreach ((_, int weight) in files)
         {
-            return false;
+            _weights.Add(weight);
         }
 
-        int total = 0;
-        foreach ((_, int w) in files)
-        {
-            total += w;
-        }
-
-        int pick = _random.Next(total);
-        string path = files[0].Path;
-        foreach ((string p, int w) in files)
-        {
-            if (pick < w)
-            {
-                path = p;
-                break;
-            }
-
-            pick -= w;
-        }
-
-        return PlayFile(path, priority, distance);
+        int pick = SoundRules.Pick(_weights, _random.Next(SoundRules.RollRange));
+        return pick >= 0 && Play(files[pick].Path, ChannelOf(category), priorityKey, distance, owner);
     }
 
-    /// <summary>Plays a package WAV.</summary>
-    public bool PlayFile(string path, int priority, float distance = 0f)
+    /// <summary>
+    /// Silences the sounds of an entity (1 + its index): at its new order or its death, as the original (PRES-012,
+    /// 0x4d05b0); a horseman's voice no longer runs on once it is sent elsewhere.
+    /// </summary>
+    public void StopOwner(int owner)
     {
-        if (Load(path) is not { } stream)
+        if (owner == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _voices.Length; i++)
+        {
+            if (_states[i].Owner == owner && _voices[i] is { } voice && (voice.Playing || voice.StreamPaused))
+            {
+                voice.StreamPaused = false;
+                voice.Stop();
+                _states[i] = default;
+            }
+        }
+    }
+
+    private static SoundChannel ChannelOf(SoundCategory category) => category switch
+    {
+        SoundCategory.Speech => SoundChannel.Unit,
+        SoundCategory.Buildings => SoundChannel.Building,
+        SoundCategory.Interface => SoundChannel.Interface,
+        _ => SoundChannel.Effect,
+    };
+
+    private bool Play(string path, SoundChannel channel, string key, float distance, int owner)
+    {
+        if (_catalog is null || Load(path) is not { } stream)
         {
             return false;
         }
 
-        int slot = -1;
-        for (int i = 0; i < _voices.Length && slot < 0; i++)
+        int first = SoundRules.FirstSlot(channel), count = SoundRules.Slots(channel), playing = 0;
+        for (int i = first; i < first + count; i++)
         {
-            if (!_voices[i].Playing && !_voices[i].StreamPaused)
-            {
-                slot = i;
-            }
+            bool busy = _voices[i].Playing || _voices[i].StreamPaused;
+            _states[i] = busy ? _states[i] with { Busy = true } : default;
+            playing += busy && _states[i].Category == key ? 1 : 0;
         }
 
-        if (slot < 0)
+        // Effects of a category give way to each other: each one playing lowers the next one's priority, and only a few
+        // play at once (0x4cfc87, 0xc97ad8).
+        bool effect = channel == SoundChannel.Effect;
+        int basePriority = _catalog.SoundPriority(key);
+        var sound = new VoiceState(true, key, effect ? SoundRules.EffectPriority(basePriority, playing) : basePriority, distance, owner);
+        int k = SoundRules.Choose(_states.AsSpan(first, count), sound, atLimit: effect && playing >= SoundRules.MostAtOnce(key));
+        if (k < 0)
         {
-            int lowest = 0;
-            for (int i = 1; i < _voices.Length; i++)
-            {
-                if (_priorities[i] < _priorities[lowest])
-                {
-                    lowest = i;
-                }
-            }
-
-            if (_priorities[lowest] > priority)
-            {
-                return false;
-            }
-
-            slot = lowest;
+            return false;
         }
 
-        AudioStreamPlayer voice = _voices[slot];
+        AudioStreamPlayer voice = _voices[first + k];
         voice.StreamPaused = false;
         voice.Stream = stream;
         voice.VolumeDb = Mathf.LinearToDb(Math.Clamp(1f - (distance * 0.6f), 0.05f, 1f));
         voice.Play();
-        _priorities[slot] = priority;
+        _states[first + k] = sound;
         Played++;
         return true;
     }

@@ -378,8 +378,7 @@ public partial class GameApp : Node
             }
             catch (Exception e) when (e is ArgumentException or InvalidDataException or Content.MapGen.MapGenException)
             {
-                GD.PrintErr("The save cannot be continued: " + e.Message);
-                ShowSinglePlayer();
+                ShowFailure("The save cannot be loaded", e.Message, ShowLoadGame);
                 return;
             }
 

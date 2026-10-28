@@ -245,15 +245,16 @@ public sealed class PresentationCatalog : ICardSource
             {
                 if (e.Key is { Length: > 0 } file && file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
                 {
+                    // The weight out of 1000 (PRES-012): a set adding up to less is silent for the rest of the rolls.
                     int.TryParse(e.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int weight);
-                    list.Add((SoundPath(file), Math.Max(1, weight)));
+                    list.Add((SoundPath(file), Math.Max(0, weight)));
                 }
             }
 
             return list;
         }
 
-        return set.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) ? [(SoundPath(set), 1)] : [];
+        return set.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) ? [(SoundPath(set), SoundRules.RollRange)] : [];
     }
 
     /// <summary>SOUNDS.INI <c>[priority]</c> of a category (0-255; default 128).</summary>

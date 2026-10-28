@@ -174,3 +174,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0268](0268-the-ninjas-murder-is-a-blow-of-fifteen-attacks.md) | The ninja's murder is one blow of fifteen times its attack | Accepted | 2026-10-23 |
 | [0269](0269-the-computer-picks-up-and-uses-items.md) | The computer picks up and uses items | Accepted | 2026-10-23 |
 | [0270](0270-land-units-step-cell-by-cell-one-to-a-tile.md) | Land units step cell by cell, one to a tile, as the original | Accepted | 2026-10-26 |
+| [0271](0271-saves-outlive-the-version-that-wrote-them.md) | Let saves outlive the version that wrote them | Accepted | 2026-10-28 |
