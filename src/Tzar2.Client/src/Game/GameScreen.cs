@@ -69,7 +69,7 @@ public partial class GameScreen : Node
     private readonly WorldOptions _options = new();
     private readonly List<SimEvent> _events = [];
     private readonly Dictionary<uint, int> _indexById = [];
-    private readonly Dictionary<int, (int X, int Y, ushort Type, byte Owner)> _lastByIndex = [];
+    private readonly SeenPlaces _seen = new(); // where the frames showed each entity, for the events' sounds (PRES-013)
     private readonly List<(string Text, double Until)> _messages = [];
     private readonly List<(int X, int Y, EntityId Id)> _eventHistory = [];
     private readonly List<(int X, int Y)> _locations = [];
@@ -700,11 +700,12 @@ public partial class GameScreen : Node
         _frameArrived = _now;
         _interpolator.Push(frame);
         _indexById.Clear();
+        _seen.BeginFrame();
         ReadOnlySpan<FrameEntity> entities = frame.Entities;
         for (int i = 0; i < entities.Length; i++)
         {
             _indexById[entities[i].Id.Value] = i;
-            _lastByIndex[entities[i].Id.Index] = (entities[i].X, entities[i].Y, entities[i].TypeId, entities[i].Owner);
+            _seen.Saw(entities[i].Id.Index, entities[i].X, entities[i].Y, entities[i].TypeId, entities[i].Owner);
         }
 
         RefreshCard();
@@ -1866,6 +1867,14 @@ public partial class GameScreen : Node
     {
         byte me = _session.LocalPlayer;
         int attackSounds = 0;
+        if (_hud is not null)
+        {
+            // Where the player listens from: the view's centre tile (PRES-013).
+            Vector2 view = _hud.Layout.View.Size;
+            Vector2 centre = (_pan + (view / 2)) / WorldRenderer.TilePixels;
+            _mixer?.Listen((int)centre.X, (int)centre.Y, (int)view.X, _ownerPlace ??= OwnerPlace);
+        }
+
         if (_dialog is ExchangeDialog exchange && me < frame.Players.Length)
         {
             var mine = frame.Players[me];
@@ -1891,8 +1900,8 @@ public partial class GameScreen : Node
                         Position(e.Entity, out int x, out int y);
                         _eventHistory.Add((x, y, e.Entity));
                         Message($"{v.Name} ready");
-                        _mixer?.PlaySet(v.SoundCommand, SoundCategory.Speech, "obj_unit_ready", Distance(x, y), e.Entity.Index + 1);
-                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, "obj_unit_ready", Distance(x, y)); // PRES-007
+                        _mixer?.PlaySet(v.SoundCommand, SoundCategory.Speech, "obj_unit_ready", PlaceOf(x, y), e.Entity.Index + 1);
+                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, "obj_unit_ready", PlaceOf(x, y)); // PRES-007
                     }
 
                     break;
@@ -1903,8 +1912,8 @@ public partial class GameScreen : Node
                         Position(e.Entity, out int x, out int y);
                         _eventHistory.Add((x, y, e.Entity));
                         Message($"{v.Name} completed");
-                        _mixer?.PlaySet(v.SoundSelect, SoundCategory.Buildings, "obj_building_ready", Distance(x, y));
-                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, "obj_building_ready", Distance(x, y)); // PRES-007
+                        _mixer?.PlaySet(v.SoundSelect, SoundCategory.Buildings, "obj_building_ready", PlaceOf(x, y));
+                        _mixer?.PlaySet(v.SoundCreate, SoundCategory.Buildings, "obj_building_ready", PlaceOf(x, y)); // PRES-007
                     }
 
                     break;
@@ -1912,15 +1921,16 @@ public partial class GameScreen : Node
                     Stats.Gathered += e.Arg;
                     break;
                 case SimEventKind.Damaged:
-                    if (_lastByIndex.TryGetValue(e.X, out var attacker) && attackSounds < 4)
+                    // Blows and shots (PRES-012): their own categories, a few at once; only an attacker the player sees
+                    // now is heard (PRES-013, 0x505610), not one gone into the fog where it was last seen.
+                    if (_seen.TryGet(e.X, out var attacker) && attackSounds < 4)
                     {
                         attackSounds++;
-                        // Blows and shots (PRES-012): their own categories, a few at once.
                         string kind = _rules.EntityTypes[attacker.Type].Traits.Armament is { RangeUnits: > 0 } ? "attack_far" : "attack_close";
-                        _mixer?.PlaySet(_catalog.Type(attacker.Type).SoundAttack, SoundCategory.Effects, kind, Distance(attacker.X, attacker.Y), e.X + 1);
+                        _mixer?.PlaySet(_catalog.Type(attacker.Type).SoundAttack, SoundCategory.Effects, kind, PlaceOf(attacker.X, attacker.Y), e.X + 1);
                     }
 
-                    if (_lastByIndex.TryGetValue(e.Entity.Index, out var victim) && victim.Owner == me && _now - _lastAlert > 10)
+                    if (_seen.TryGet(e.Entity.Index, out var victim) && victim.Owner == me && _now - _lastAlert > 10)
                     {
                         _lastAlert = _now;
                         _locations.Add((victim.X, victim.Y));
@@ -1943,16 +1953,16 @@ public partial class GameScreen : Node
 
                     // The dead fall silent, then cry once (PRES-012, 0x4d05b0).
                     _mixer?.StopOwner(e.Entity.Index + 1);
-                    if (_lastByIndex.TryGetValue(e.Entity.Index, out var dead) && dead.Type == (ushort)e.Arg)
+                    if (_seen.TryGet(e.Entity.Index, out var dead) && dead.Type == (ushort)e.Arg)
                     {
-                        _mixer?.PlaySet(_catalog.Type((ushort)e.Arg).SoundDie, SoundCategory.Effects, "death", Distance(dead.X, dead.Y));
+                        _mixer?.PlaySet(_catalog.Type((ushort)e.Arg).SoundDie, SoundCategory.Effects, "death", PlaceOf(dead.X, dead.Y));
                     }
 
                     break;
                 case SimEventKind.CommandRejected when e.Player == me:
                     Message(RejectionText((CommandRejection)e.Arg));
                     break;
-                case SimEventKind.ManaRaised when _lastByIndex.TryGetValue(e.Entity.Index, out var pumped):
+                case SimEventKind.ManaRaised when _seen.TryGet(e.Entity.Index, out var pumped):
                     _world?.Burst(EffectImages.ManaPump, pumped.X, pumped.Y); // MAG-027: the pump picture over the caster
                     break;
                 case SimEventKind.ProductionStalled when e.Player == me && e.Arg == 1:
@@ -1976,11 +1986,9 @@ public partial class GameScreen : Node
 
             if (w.Activity is UnitActivity.Chop or UnitActivity.Mine or UnitActivity.Build or UnitActivity.Farm && GD.Randf() < 0.004f)
             {
-                float d = Distance(w.X, w.Y);
-                if (d < 0.6f)
+                string set = w.Activity switch { UnitActivity.Chop => "chop", UnitActivity.Mine => "mine", UnitActivity.Farm => "dig", _ => "build" };
+                if (_mixer?.PlaySet(set, SoundCategory.Effects, set, PlaceOf(w.X, w.Y), w.Id.Index + 1) == true)
                 {
-                    string set = w.Activity switch { UnitActivity.Chop => "chop", UnitActivity.Mine => "mine", UnitActivity.Farm => "dig", _ => "build" };
-                    _mixer?.PlaySet(set, SoundCategory.Effects, set, d, w.Id.Index + 1);
                     _workSoundBudget--;
                 }
             }
@@ -1999,7 +2007,7 @@ public partial class GameScreen : Node
 
     private void Position(EntityId id, out int x, out int y)
     {
-        if (_lastByIndex.TryGetValue(id.Index, out var p))
+        if (_seen.TryGet(id.Index, out var p))
         {
             (x, y) = (p.X, p.Y);
         }
@@ -2010,18 +2018,13 @@ public partial class GameScreen : Node
         }
     }
 
-    private float Distance(int x, int y)
-    {
-        if (_hud is null)
-        {
-            return 0;
-        }
+    // The tile a sound at a point (world units) is heard from.
+    private static SoundPlace PlaceOf(int x, int y) => new(x / (WorldRenderer.TilePixels * WorldRenderer.UnitsPerPixel), y / (WorldRenderer.TilePixels * WorldRenderer.UnitsPerPixel));
 
-        Vector2 view = _hud.Layout.View.Size;
-        Vector2 centre = _pan + (view / 2);
-        Vector2 d = (new Vector2(x, y) / WorldRenderer.UnitsPerPixel) - centre;
-        return Math.Max(Math.Abs(d.X) / view.X, Math.Abs(d.Y) / view.Y);
-    }
+    // Where an entity (1 + its index) the frames show stands now, for its playing sounds when the view moves.
+    private SoundPlace? OwnerPlace(int owner) => _seen.TryGet(owner - 1, out var p) ? PlaceOf(p.X, p.Y) : null;
+
+    private Func<int, SoundPlace?>? _ownerPlace;
 
     private void UpdateHud(GameFrame frame, float phase)
     {

@@ -227,8 +227,11 @@ public struct CellStep : IComponent
     /// <summary>Ticks waited behind a unit entering the next tile.</summary>
     public byte Waits;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved0;
+    /// <summary>
+    /// 1 when it has searched the whole map for a way round the units in its way since its last step: it does not search
+    /// so again until it steps on or plans again (0 in saves before it was used).
+    /// </summary>
+    public byte Rerouted;
 
     /// <summary>Padding, always 0.</summary>
     public byte Reserved1;

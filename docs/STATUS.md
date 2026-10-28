@@ -444,18 +444,42 @@ owner's order of 2026-10-26.
     2. The church's priest button does nothing: **fixed** (PROD-016; log below).
     3. Pathfinding in and out of fights is wrong when the shortest way is taken by buildings or units: a unit walks
        back and forth and does not go round. Movement in fights is still odd. Large groups (30 and more) get stuck,
-       answer orders only in part, and stand while the rest of the group fights nearby.
+       answer orders only in part, and stand while the rest of the group fights nearby: **fixed as far as reproduced**
+       (WORLD-021; log below). A unit held up by units that keep their tiles now plans its whole way round them, as
+       the original. The big-group symptoms did not reproduce in probes or in a fight played on from the owner's save
+       Game 3 (87 fighters); check them in play.
     4. Guards stand too close to what they guard; in the original further away: **fixed** (ORD-001; log below).
     5. The take-down button sits on black while the others are on the card's colour; taking down should take time
        (5 to 10 s by health, the site's pictures in reverse); the tooltip should say what comes back; a building
        upgraded several times (stone towers) should give back what all its stages cost: **fixed** (BLD-027; log
        below).
-    6. Sounds still hang on where fights were, though fewer.
+    6. Sounds still hang on where fights were, though fewer: **fixed** (PRES-013; log below).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-28 — The seventh play-test, batch B: the way round units, sounds where they are (WORLD-021, PRES-013;
+  item 19.3, 6).**
+  * **The way round.** The cell steps looked for a way round the units in their way only 12 tiles each way; with none
+    there, a unit re-planned its path, which knows no units, and walked back to the same gap. Probed: a knight stood
+    about 20 s at a gap held by beasts or enemies before going round, and as long as peasants worked in one. As
+    ReTzar reads the original (0x4a9060, 0x4df540), a unit held up by units that keep their tiles now searches the
+    whole map once, with those tiles as walls, and takes the way found as its path (`RerouteNodes` 8192, four searches
+    a tick). Units that keep their tiles: enemies, Nature's, and friends at work or fighting where they stand; idle
+    friends still make way. The knight now goes round at once (676 → 356 ticks; 232 when friends make way, as
+    before). `CellStep.Reserved0` became `Rerouted`, so the snapshot format stays.
+  * **Big groups.** 36 and 64 footmen in the open, 30 through a town's gap, 40 knights attacking through a gap, an
+    idle block attacked at its corner and 87 fighters sent from the owner's save at the enemy: no unit stood near an
+    enemy without fighting. If the owner still sees it, a save just before is the way to find it.
+  * **Sounds.** Two causes. The client heard a blow from where its unit was last seen: a unit gone into the fog, or
+    an index a new unit had taken where the old one had died, sounded where a fight had been. Now only units the
+    frames show are heard (`SeenPlaces`; the original hears effects only where the fog is lifted, 0x505610). And a
+    sound kept the volume it started with. Now the original's attenuation as ReTzar reads it: the volume falls with
+    the tiles from the view's middle (0x4d00e0), effects start only above -25 dB (0x4cfc71) and stop when the view
+    leaves them behind, unit and building voices at least -4 dB (0x4cef57), the playing sounds placed again when the
+    view moves more than three tiles (0x4d01c0). The pan is not ported yet (UNK-33).
 
 * **2026-10-28 — The seventh play-test, batch A: levels, priests, guards, taking down (EXP-001, PROD-016, ORD-001,
   BLD-027; item 19.1, 2, 4, 5).**

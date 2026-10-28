@@ -41,4 +41,54 @@ public sealed class SoundRulesTests
         Assert.Equal(1, SoundRules.Choose([free, blowFar], near, atLimit: true));
         Assert.Equal(-1, SoundRules.Choose([free, death], near, atLimit: true));
     }
+
+    [Fact]
+    [Trait("Rule", "PRES-013")]
+    public void A_sound_is_as_loud_as_its_tiles_from_the_views_centre_and_effects_far_off_do_not_start()
+    {
+        // 0x4d00e0 in a 1024 pixel view: an effect loses 2500 over 96 tiles (each way added up), a unit's voice 400 over 64.
+        Assert.Equal((0, 0), SoundRules.Attenuation(0, 0, 1024, effect: true));
+        Assert.Equal((-1250, 1600), SoundRules.Attenuation(32, 16, 1024, effect: true));
+        Assert.Equal(-2500, SoundRules.Attenuation(60, 36, 1024, effect: true).Volume);
+        Assert.Equal(-10000, SoundRules.Attenuation(60, 37, 1024, effect: true).Volume); // past the reach: silent
+        Assert.Equal(-200, SoundRules.Attenuation(-16, 16, 1024, effect: false).Volume);
+        Assert.Equal(10000, SoundRules.Attenuation(200, 0, 1024, effect: true).Pan); // the pan within ±10000
+        Assert.Equal(SoundRules.Attenuation(30, 0, 1024, true), SoundRules.Attenuation(30, 0, 1920, true)); // wider views as 1024
+
+        // An effect starts only louder than -2500 (0x4cfc71); a unit's or a building's voice is never quieter than -400.
+        Assert.NotNull(SoundRules.Placement(95, 0, 1024, effect: true));
+        Assert.Null(SoundRules.Placement(96, 0, 1024, effect: true));
+        Assert.Null(SoundRules.Placement(60, 0, 640, effect: true)); // a narrower view hears less far (60 tiles)
+        Assert.Equal(-400, SoundRules.Placement(500, 0, 1024, effect: false)!.Value.Volume);
+    }
+
+    [Fact]
+    [Trait("Rule", "PRES-013")]
+    public void A_unit_is_heard_only_while_the_frames_show_it_not_where_it_was_last_seen()
+    {
+        // The seventh play-test: blows sounded where a fight had been, from units gone into the fog or dead there.
+        var seen = new SeenPlaces();
+        seen.BeginFrame();
+        seen.Saw(7, 100, 200, 3, 1);
+        seen.Saw(8, 300, 400, 4, 2);
+        Assert.True(seen.TryGet(7, out SeenPlaces.Place at));
+        Assert.Equal((100, 200, (ushort)3, (byte)1), (at.X, at.Y, at.Type, at.Owner));
+
+        // The next frame shows only 8: 7 died since (its death cry is heard where it fell) or went into the fog.
+        seen.BeginFrame();
+        seen.Saw(8, 310, 400, 4, 2);
+        Assert.True(seen.TryGet(7, out _));
+        Assert.Equal(310, seen.TryGet(8, out SeenPlaces.Place moved) ? moved.X : 0);
+
+        // A frame later 7 is no longer heard at all, though it fights on in the fog.
+        seen.BeginFrame();
+        Assert.False(seen.TryGet(7, out _));
+        Assert.False(seen.TryGet(9, out _));
+        for (int i = 0; i < 600; i++)
+        {
+            seen.BeginFrame(); // forgetting the old ones now and then
+        }
+
+        Assert.False(seen.TryGet(8, out _));
+    }
 }

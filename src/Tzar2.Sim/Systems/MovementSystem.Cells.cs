@@ -31,6 +31,15 @@ public sealed partial class MovementSystem
     /// <summary>A unit held up for a while looks for its way round only this often (ticks; a crowd costs less).</summary>
     public const int DetourEvery = 8;
 
+    /// <summary>
+    /// Most tiles a search over the whole map for a way round the units in the way looks at, when the near one finds none
+    /// (the original's re-plan with the tiles units stand on as walls, ReTzar 0x4a9060, 0x4df540).
+    /// </summary>
+    public const int RerouteNodes = 8192;
+
+    /// <summary>Most such searches in a tick; the units after wait for the next (a crowd held up at once costs less).</summary>
+    public const int ReroutesPerTick = 4;
+
     /// <summary>How long a unit that stepped aside for a friend stands before it goes back.</summary>
     public const int YieldReturnMs = 2000;
 
@@ -49,6 +58,9 @@ public sealed partial class MovementSystem
     private int[] _cost = [];
     private int[] _from = [];
     private int _search;
+    private int _reroutes;
+    private readonly List<int> _way = [];
+    private int[] _wayPoints = [];
 
     private static readonly int[] StepX = [1, 1, 0, -1, -1, -1, 0, 1];
     private static readonly int[] StepY = [0, 1, 1, 1, 0, -1, -1, -1];
@@ -98,6 +110,7 @@ public sealed partial class MovementSystem
         }
 
         _tilesSet.Clear();
+        _reroutes = 0;
         ComponentStore<Motion> motions = world.Motions;
         ComponentStore<CellStep> steps = world.CellSteps;
 
@@ -194,6 +207,7 @@ public sealed partial class MovementSystem
         s.FromY = y;
         s.Progress = Math.Min(budget, MapState.UnitsPerTile - 1);
         s.Waits = 0;
+        s.Rerouted = 0;
         int nx = layer.CenterX(next);
         int ny = layer.CenterY(next);
         m.VelocityX = nx - x;
@@ -288,6 +302,7 @@ public sealed partial class MovementSystem
             f.Out[i] = OutReplan;
             m.StallTicks = 0;
             m.BestDistance = int.MaxValue;
+            s.Rerouted = 0;
             return -1;
         }
 
@@ -338,7 +353,17 @@ public sealed partial class MovementSystem
 
         // Standing in the way, or waited long enough: round the units. The way may lead through units that make way
         // (not an enemy's), dearer than free ground; its first step then asks the one there.
-        int round = m.StallTicks < DetourEvery || (tick + i) % DetourEvery == 0 ? Detour(world, layer, f, i, here, goal, toward) : -1;
+        bool reached = true;
+        int round = m.StallTicks < DetourEvery || (tick + i) % DetourEvery == 0 ? Detour(world, layer, f, i, here, goal, toward, out reached) : -1;
+
+        // No way round near by (a gap held by enemies or beasts, a crowd across a street): as the original, the whole way
+        // is planned again with the units' tiles as walls, and the unit walks that (the seventh play-test: units walked
+        // up to a held gap and stood there instead of going round the houses).
+        if (!reached && Reroute(world, layer, f, i, ref m, ref s, here, goal) is >= 0 and var rerouted)
+        {
+            round = rerouted; // through friends, it asks them below
+        }
+
         if (round >= 0 && Free(layer, round, i))
         {
             return round;
@@ -389,6 +414,7 @@ public sealed partial class MovementSystem
             f.Out[i] = giveUp ? OutGiveUp : OutReplan;
             m.StallTicks = 0;
             m.BestDistance = int.MaxValue;
+            s.Rerouted = 0;
         }
 
         return -1;
@@ -463,9 +489,101 @@ public sealed partial class MovementSystem
     // it is near and free, else toward the tile the unit heads for (or next to it when a unit stands there); the
     // first step of the best way found, or -1 (the original searches again around the units, 0x4debb0).
     private int Detour(World world, NavLayer layer, Frame f, int i, int here, int goal, int toward)
+        => Detour(world, layer, f, i, here, goal, toward, out _);
+
+    // As above; `reached` is false when the search found no way to where it aims within DetourRadius and DetourNodes and
+    // got not even half that far on toward it (the units and the ground near by close the way).
+    private int Detour(World world, NavLayer layer, Frame f, int i, int here, int goal, int toward, out bool reached)
+    {
+        int aim = Chebyshev(layer, here, goal) <= DetourRadius ? goal : toward;
+        int end = Search(world, layer, f, i, here, aim, DetourRadius, DetourNodes, out reached);
+        int w = layer.Width;
+        reached |= end >= 0 && Octile(end % w, end / w, aim % w, aim / w) <= Octile(here % w, here / w, aim % w, aim / w) - (DetourRadius / 2 * NavLayer.StraightCost);
+        return FirstStep(here, end);
+    }
+
+    // The original's re-plan round units (ReTzar 0x4a9060, 0x4df540): a search over the whole map to the goal (next to
+    // it when a unit stands there) with the tiles of units that do not make way as walls, friends that do dearer; the
+    // unit takes the way found as its path. Returns its first step, or -1 when there is none or the tick's searches are
+    // spent. A unit searches so once until it steps on or plans again.
+    private int Reroute(World world, NavLayer layer, Frame f, int i, ref Motion m, ref CellStep s, int here, int goal)
+    {
+        if (s.Rerouted != 0 || _reroutes >= ReroutesPerTick)
+        {
+            return -1;
+        }
+
+        _reroutes++;
+        s.Rerouted = 1;
+        int end = Search(world, layer, f, i, here, goal, int.MaxValue, RerouteNodes, out bool reached);
+        if (!reached || end < 0)
+        {
+            return -1;
+        }
+
+        _way.Clear();
+        for (int t = end; t != here && t >= 0; t = _from[t])
+        {
+            _way.Add(t);
+        }
+
+        // The path's points: the tiles where the way turns, and its end (a unit steps straight along a run on its own).
+        int width = layer.Width;
+        int count = 0;
+        if (_wayPoints.Length < 2 * _way.Count)
+        {
+            _wayPoints = new int[Math.Max(2 * _way.Count, 2 * _wayPoints.Length)];
+        }
+
+        int previous = here;
+        for (int k = _way.Count - 1; k >= 0; k--)
+        {
+            int t = _way[k];
+            int next = k > 0 ? _way[k - 1] : -1;
+            bool turns = next < 0 || (t % width) - (previous % width) != (next % width) - (t % width) || (t / width) - (previous / width) != (next / width) - (t / width);
+            if (turns)
+            {
+                _wayPoints[count++] = layer.CenterX(t);
+                _wayPoints[count++] = layer.CenterY(t);
+            }
+
+            previous = t;
+        }
+
+        world.Paths.Set(f.Entity[i].Index, _wayPoints.AsSpan(0, count));
+        m.Mode = MotionMode.Path;
+        m.PathCursor = 0;
+        m.SteerX = _wayPoints[0];
+        m.SteerY = _wayPoints[1];
+        m.BestDistance = int.MaxValue;
+        m.StallTicks = 0;
+        return _way[^1];
+    }
+
+    // The first step of the way the last search found to `end`, or -1.
+    private int FirstStep(int here, int end)
+    {
+        if (end < 0)
+        {
+            return -1;
+        }
+
+        int step = end;
+        while (_from[step] != here && _from[step] >= 0)
+        {
+            step = _from[step];
+        }
+
+        return _from[step] == here ? step : -1;
+    }
+
+    // A search from `here` toward `aim` within `radius` tiles over walkable tiles: units that do not make way are walls,
+    // friends cost more; the tile it reached (`aim`, or next to it when a unit stands there), or the one nearest `aim`
+    // when it did not (`reached` false), or -1; _from leads back from it.
+    private int Search(World world, NavLayer layer, Frame f, int i, int here, int aim, int radius, int nodes, out bool reached)
     {
         int width = layer.Width;
-        int aim = Chebyshev(layer, here, goal) <= DetourRadius ? goal : toward;
+        reached = false;
         bool aimHeld = _tileUnit[aim] != 0 && _tileUnit[aim] - 1 != i;
         int ax = aim % width;
         int ay = aim / width;
@@ -486,7 +604,7 @@ public sealed partial class MovementSystem
         int bestNode = -1;
         long bestH = Octile(hx, hy, ax, ay);
         int expanded = 0;
-        while (_open.Count > 0 && expanded < DetourNodes)
+        while (_open.Count > 0 && expanded < nodes)
         {
             int node = _open.Pop(out _);
             expanded++;
@@ -496,6 +614,7 @@ public sealed partial class MovementSystem
             if (node != here && (node == aim || (aimHeld && Math.Max(Math.Abs(nx0 - ax), Math.Abs(ny0 - ay)) <= 1)))
             {
                 bestNode = node;
+                reached = true;
                 break;
             }
 
@@ -509,7 +628,7 @@ public sealed partial class MovementSystem
             {
                 int nx = nx0 + StepX[d];
                 int ny = ny0 + StepY[d];
-                if (Math.Abs(nx - hx) > DetourRadius || Math.Abs(ny - hy) > DetourRadius || !Walkable(layer, nx0, ny0, nx, ny))
+                if (Math.Abs(nx - hx) > radius || Math.Abs(ny - hy) > radius || !Walkable(layer, nx0, ny0, nx, ny))
                 {
                     continue;
                 }
@@ -519,9 +638,9 @@ public sealed partial class MovementSystem
                 if (_tileUnit[n] != 0 && _tileUnit[n] - 1 != i)
                 {
                     int k = _tileUnit[n] - 1;
-                    if (!MakesWay(world, f, i, k))
+                    if (Holds(world, f, i, k))
                     {
-                        continue; // an enemy, or a creature of Nature, is a wall
+                        continue; // an enemy, a creature of Nature, a friend at work or fighting where it stands: a wall
                     }
 
                     extra = f.Moving[k] != 0 || _tileEntering[n] != 0 ? MovingUnitCost : StandingUnitCost;
@@ -545,25 +664,20 @@ public sealed partial class MovementSystem
             }
         }
 
-        if (bestNode < 0)
-        {
-            return -1;
-        }
-
-        // Back to the first step.
-        int step = bestNode;
-        while (_from[step] != here && _from[step] >= 0)
-        {
-            step = _from[step];
-        }
-
-        return _from[step] == here ? step : -1;
+        return bestNode;
     }
 
     // What going through a unit's tile costs a way round, beyond the step: one walking on soon leaves it; one standing has
     // to make room.
     private const int MovingUnitCost = 2 * NavLayer.StraightCost;
     private const int StandingUnitCost = 6 * NavLayer.StraightCost;
+
+    // Whether unit k keeps its tile against unit i: one that does not make way, or a friend standing at work (a peasant
+    // chopping, building, farming) or fighting where it stands; those never step aside (YieldAside), so a way round goes
+    // round them as round a wall (the original's occupied tiles, ReTzar 0x4df540).
+    private static bool Holds(World world, Frame f, int i, int k)
+        => !MakesWay(world, f, i, k)
+           || (f.Moving[k] == 0 && (f.Anchored[k] != 0 || (world.Combats.IndexOf(f.Entity[k]) is >= 0 and var c && world.Combats.At(c).Target != 0)));
 
     // Whether unit j makes way for unit i (steps aside, or passes it head on): a friend, or a unit of a kingdom neither of
     // the two counts as an enemy. Enemies and creatures of Nature do not.
