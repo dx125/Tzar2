@@ -88,12 +88,15 @@ internal static class CombatMagicCommands
 
             if (!chosen.IsNone)
             {
-                // Emerge one picked unit (manual: pick a unit, Emerge, then the place); not from ships, which dock first.
-                if (!world.IsShip(holder) && world.Entities.IsAlive(chosen) && world.Helds.IndexOf(chosen) is >= 0 and var hc
+                // Emerge one picked unit (manual: pick a unit, Emerge, then the place); not to a place from ships, which
+                // dock first. Without a place (the holder's list, HOLD-011) it steps out beside the holder, from a ship onto
+                // land near by (ReTzar 0x504550).
+                if ((!toPoint || !world.IsShip(holder)) && world.Entities.IsAlive(chosen) && world.Helds.IndexOf(chosen) is >= 0 and var hc
                     && world.Helds.At(hc).Holder == holder.Value && !world.Items.Has(chosen))
                 {
                     Position from = world.Positions.Get(holder);
-                    if (world.Unload(chosen, toPoint ? command.X : from.X, toPoint ? command.Y : from.Y))
+                    byte alone = !toPoint && (command.Flags & CommandFlags.Ctrl) != 0 ? (byte)2 : (byte)0; // HOLD-011
+                    if (world.Unload(chosen, toPoint ? command.X : from.X, toPoint ? command.Y : from.Y, around: !toPoint, select: alone))
                     {
                         any = true;
                         if (toPoint)
@@ -112,8 +115,10 @@ internal static class CombatMagicCommands
                 continue;
             }
 
+            // Emerge (HOLD-010): without a place everyone comes out round the building and joins the selection.
             Position at = world.Positions.Get(holder);
-            any |= NavalSystem.UnloadNow(world, holder, toPoint ? command.X : at.X, toPoint ? command.Y : at.Y, limit, toPoint) > 0;
+            bool emerge = !toPoint && world.Footprints.Has(holder);
+            any |= NavalSystem.UnloadNow(world, holder, toPoint ? command.X : at.X, toPoint ? command.Y : at.Y, limit, toPoint, emerge, emerge ? (byte)1 : (byte)0) > 0;
         }
 
         return any ? null : CommandRejection.NoValidEntities;
@@ -266,24 +271,26 @@ internal static class CombatMagicCommands
     }
 
     // A peasant takes a resource item as its load and carries it home (NAT-004; ReTzar's reading of the original, 0x464f60,
-    // program 0x1e); any other unit, or a peasant with another load, brings it to the stockpile at once.
+    // program 0x1e), dropping another load first (ECO-026, 0x4ff350); any other unit brings it to the stockpile at once.
     private static bool TakeAsLoad(World world, EntityId unit, EntityId item, ItemDefinition def, int amount)
     {
-        if (world.Workers.IndexOf(unit) is not (>= 0 and var w) || world.TypeOf(unit).Traits.Harvester is not { } harvester || !harvester.CanGather(def.Resource))
-        {
-            return false;
-        }
-
-        ref Worker worker = ref world.Workers.At(w);
-        if (worker.CarryAmount > 0 && worker.CarryResource != def.Resource)
+        int resource = world.ItemResource(item, def);
+        if (world.Workers.IndexOf(unit) is not (>= 0 and var w) || world.TypeOf(unit).Traits.Harvester is not { } harvester || !harvester.CanGather(resource))
         {
             return false;
         }
 
         Position at = world.Positions.Get(item);
+        if (world.Workers.At(w).CarryAmount > 0 && world.Workers.At(w).CarryResource != resource)
+        {
+            world.DropLoad(unit, ref world.Workers.At(w));
+            w = world.Workers.IndexOf(unit);
+        }
+
+        ref Worker worker = ref world.Workers.At(w);
         worker.CarryAmount = (int)Math.Min((long)worker.CarryAmount + amount, int.MaxValue);
-        worker.CarryResource = (byte)def.Resource;
-        worker.NodeResource = (byte)def.Resource;
+        worker.CarryResource = (byte)resource;
+        worker.NodeResource = (byte)resource;
         worker.NodeX = at.X;
         worker.NodeY = at.Y;
         worker.Task = WorkerTask.Harvest;
@@ -329,7 +336,8 @@ internal static class CombatMagicCommands
         if (def.Kind == ItemKind.Resource)
         {
             ref PlayerState player = ref world.Players[owner];
-            player.Resources[def.Resource] = (int)Math.Min((long)player.Resources[def.Resource] + world.Items.At(s).Power, int.MaxValue);
+            int resource = world.ItemResource(item, def);
+            player.Resources[resource] = (int)Math.Min((long)player.Resources[resource] + world.Items.At(s).Power, int.MaxValue);
             world.Events.Emit(new SimEvent(SimEventKind.ItemPicked, owner, item, unit.Index, 0, type));
             world.Destroy(item);
             return;

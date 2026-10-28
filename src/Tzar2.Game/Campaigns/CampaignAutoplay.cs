@@ -1060,7 +1060,7 @@ public static class CampaignAutoplay
             foreach (int e in Unwanted(condition))
             {
                 if (triggers.State.EventValues[e] && Lying(world, triggers, scenario.Events[e]) is { } item
-                    && world.TypeOf(item).Traits.Item is { Kind: ItemKind.Resource } definition && NamedGatherer(world, triggers, condition, definition) is not null)
+                    && world.TypeOf(item).Traits.Item is { Kind: ItemKind.Resource } definition && NamedGatherer(world, triggers, condition, definition, Sim.Systems.GameplayQueries.ItemResource(world, item)) is not null)
                 {
                     return Take(world, me, triggers, scenario.Events[e].Name, item, condition);
                 }
@@ -1253,7 +1253,7 @@ public static class CampaignAutoplay
             // peasant gathers it as its load and carries it where the scenario wants it (program 0x1e, ReTzar 0x464f60);
             // any other unit would put it in its own kingdom's stockpile. Until the kingdom commands that peasant, the
             // item waits.
-            EntityId? named = definition.Kind == ItemKind.Resource && condition is not null ? NamedGatherer(world, triggers, condition, definition) : null;
+            EntityId? named = definition.Kind == ItemKind.Resource && condition is not null ? NamedGatherer(world, triggers, condition, definition, Sim.Systems.GameplayQueries.ItemResource(world, item)) : null;
             if (named is { } gatherer && !world.Diplomacy.MayCommand(me, world.Identities.Get(gatherer).Owner))
             {
                 Goal = $"{name}: waiting to command the {world.TypeOf(gatherer).Key} that takes the item";
@@ -1308,7 +1308,7 @@ public static class CampaignAutoplay
         }
 
         // A peasant that an area event of the condition names and that gathers the item's resource, or null.
-        private EntityId? NamedGatherer(World world, Scripting.Legacy.LegacyTriggerSystem triggers, Content.Compiled.Scenario.Expressions.Expr condition, ItemDefinition definition)
+        private EntityId? NamedGatherer(World world, Scripting.Legacy.LegacyTriggerSystem triggers, Content.Compiled.Scenario.Expressions.Expr condition, ItemDefinition definition, int resource)
         {
             var mates = new List<int>();
             Events(condition, mates);
@@ -1321,7 +1321,7 @@ public static class CampaignAutoplay
 
                 foreach (int index in named.ObjectIndices)
                 {
-                    if (Entity(world, triggers, index) is { } u && world.TypeOf(u).Traits.Harvester is { } harvester && harvester.CanGather(definition.Resource)
+                    if (Entity(world, triggers, index) is { } u && world.TypeOf(u).Traits.Harvester is { } harvester && harvester.CanGather(resource)
                         && definition.CanBeHeldBy(world.Identities.Get(u).TypeId))
                     {
                         return u;
@@ -2117,6 +2117,13 @@ public static class CampaignAutoplay
                 if (world.Helds.IndexOf(u) is >= 0 and var h && EntityId.FromValue(world.Helds.At(h).Holder) is var ship && world.IsShip(ship)
                     && world.Diplomacy.MayCommand(me, world.Identities.Get(ship).Owner))
                 {
+                    // A ship that went back to the shore for late boarders had its unload order dropped by the new one:
+                    // those asks were not refusals (bigisland: two slow boarders made the whole force get off again).
+                    if (world.Dockings.IndexOf(ship) is >= 0 and var dock && world.Dockings.At(dock).Purpose == DockPurpose.Board)
+                    {
+                        _asked.Remove(ship.Value);
+                    }
+
                     if (!Sails(world, ship, point) || Refused(world, ship, point))
                     {
                         // Aboard a ship on other water (a lake): out again where it is, then another ship.

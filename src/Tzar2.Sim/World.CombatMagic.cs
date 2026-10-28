@@ -274,17 +274,22 @@ public sealed partial class World
         Events.Emit(new SimEvent(SimEventKind.Boarded, Identities.Get(unit).Owner, unit, holder.Index, 0, Identities.Get(unit).TypeId));
     }
 
+    /// <summary>The rings round a building a unit leaving it looks for a free tile in (ReTzar's reading of the original, 0x504550).</summary>
+    internal const int ExitRings = 8;
+
     /// <summary>
     /// Lets a unit out of its holder at the free tile nearest to (<paramref name="towardX"/>, <paramref name="towardY"/>)
-    /// within <c>combat.exitRadiusTiles</c>.
+    /// within <c>combat.exitRadiusTiles</c>; with <paramref name="around"/>, out of a building onto a free tile around it
+    /// (HOLD-010). <paramref name="select"/> goes with the event: 1 when the unit joins its kingdom's selection (Emerge),
+    /// 2 when it becomes the selection alone (Ctrl + click in the holder's list, HOLD-011).
     /// </summary>
     /// <returns><c>false</c> (the unit stays inside) when there is no room for it.</returns>
-    internal bool Unload(EntityId unit, int towardX, int towardY)
+    internal bool Unload(EntityId unit, int towardX, int towardY, bool around = false, byte select = 0)
     {
         Held held = Helds.Get(unit);
         EntityId holder = EntityId.FromValue(held.Holder);
         EntityTypeDefinition type = TypeOf(unit);
-        if (!ExitPoint(holder, type.Id, towardX, towardY, out int x, out int y))
+        if (!(around && Footprints.Has(holder) ? ExitAround(holder, type.Id, out int x, out int y) : ExitPoint(holder, type.Id, towardX, towardY, out x, out y)))
         {
             return false;
         }
@@ -312,9 +317,140 @@ public sealed partial class World
         int cell = Map.CellIndexAt(x, y);
         OccupancyCells.Set(unit, new OccupancyCell { Cell = cell });
         Map.AddOccupant(cell);
-        Events.Emit(new SimEvent(SimEventKind.Unloaded, Identities.Get(unit).Owner, unit, holder.Index, 0, type.Id));
+        Events.Emit(new SimEvent(SimEventKind.Unloaded, Identities.Get(unit).Owner, unit, holder.Index, select, type.Id));
         return true;
     }
+
+    /// <summary>
+    /// HOLD-010 (ReTzar's reading of the original, 0x504550, 0x5073f0): a unit leaving a building steps onto a free tile
+    /// of the nearest ring round its footprint that has one, picked at random, within <see cref="ExitRings"/> rings; so
+    /// the units of an Emerge stand round the building, not in a heap at one side.
+    /// </summary>
+    private bool ExitAround(EntityId holder, ushort unitType, out int x, out int y)
+    {
+        Locomotor locomotor = Ruleset.EntityTypes[unitType].Locomotor;
+        Navigation.NavLayer? layer = Navigation.ForType(unitType);
+        (int fx, int fy, int fw, int fh) = FootprintRect(holder);
+        Span<int> free = stackalloc int[4 * (Math.Max(fw, fh) + (2 * ExitRings) + 2)];
+        for (int r = 1; r <= ExitRings; r++)
+        {
+            int x0 = fx - r;
+            int y0 = fy - r;
+            int x1 = fx + fw - 1 + r;
+            int y1 = fy + fh - 1 + r;
+            int n = 0;
+            for (int tx = x0; tx <= x1; tx++)
+            {
+                n = AddFree(free, n, tx, y0, locomotor, layer);
+                n = AddFree(free, n, tx, y1, locomotor, layer);
+            }
+
+            for (int ty = y0 + 1; ty < y1; ty++)
+            {
+                n = AddFree(free, n, x0, ty, locomotor, layer);
+                n = AddFree(free, n, x1, ty, locomotor, layer);
+            }
+
+            if (n > 0)
+            {
+                int tile = free[Rng.Misc.NextInt(n)];
+                x = ((tile % Map.Width) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2);
+                y = ((tile / Map.Width) * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2);
+                return true;
+            }
+        }
+
+        x = 0;
+        y = 0;
+        return false;
+    }
+
+    // Adds the tile to `free` when a unit of the locomotor and layer may step out onto it: on the map, passable, wide
+    // enough and with nobody on it.
+    private int AddFree(Span<int> free, int n, int tx, int ty, Locomotor locomotor, Navigation.NavLayer? layer)
+    {
+        if (n >= free.Length || !Map.ContainsTile(tx, ty) || !Map.IsPassable(locomotor, tx, ty) || TileHasUnit(tx, ty))
+        {
+            return n;
+        }
+
+        int px = (tx * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2);
+        int py = (ty * MapState.UnitsPerTile) + (MapState.UnitsPerTile / 2);
+        if (layer is not null && !layer.IsWalkablePoint(px, py))
+        {
+            return n; // too narrow for the unit's clearance (REQ-PATH-09)
+        }
+
+        free[n] = (ty * Map.Width) + tx;
+        return n + 1;
+    }
+
+    // Whether a unit stands on the tile (its occupancy cells count one).
+    private bool TileHasUnit(int tx, int ty)
+    {
+        int k = Map.CellsPerTileAxis;
+        ReadOnlySpan<int> occupancy = Map.Occupancy;
+        for (int dy = 0; dy < k; dy++)
+        {
+            for (int dx = 0; dx < k; dx++)
+            {
+                if (occupancy[(((ty * k) + dy) * Map.CellWidth) + (tx * k) + dx] != 0)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// ECO-026 (ReTzar's reading of the original, 0x4aea70): a peasant drops what it carries on the ground, as a resource
+    /// item of that resource in its picture (<c>item_wood</c>, <c>item_gold</c>...), which any peasant may take up again.
+    /// The load is gone when the rules have no such item.
+    /// </summary>
+    internal void DropLoad(EntityId worker, ref Worker w)
+    {
+        int amount = w.CarryAmount;
+        int resource = w.CarryResource;
+        w.CarryAmount = 0;
+        w.CarryResource = Worker.NoResource;
+        if (amount <= 0 || (uint)resource >= (uint)Ruleset.ResourceTypes.Count || LoadItem(resource) is not ({ } type, var look)
+            || Entities.RemainingCapacity < 1)
+        {
+            return;
+        }
+
+        Position at = Positions.Get(worker);
+        EntityId item = Spawn(type, MapObject.Nature, at.X, at.Y);
+        if (Items.IndexOf(item) is >= 0 and var it)
+        {
+            ref ItemState state = ref Items.At(it);
+            state.Power = amount;
+            state.Resource = (byte)(resource + 1);
+            state.Look = (byte)look;
+        }
+    }
+
+    // The item a load of a resource drops as: the first resource item type with a picture named item_<resource>, and
+    // 1 + that picture's index.
+    private (ushort? Type, int Look) LoadItem(int resource)
+    {
+        string name = "item_" + Ruleset.ResourceTypes[resource];
+        foreach (EntityTypeDefinition t in Ruleset.EntityTypes)
+        {
+            if (t.Traits.Item is { Kind: ItemKind.Resource } item && item.Looks.IndexOf(name) is >= 0 and var look)
+            {
+                return (t.Id, look + 1);
+            }
+        }
+
+        return (null, 0);
+    }
+
+    /// <summary>The resource a resource item holds: its own (a dropped load, ECO-026) or its type's.</summary>
+    internal int ItemResource(EntityId item, ItemDefinition def)
+        => Items.IndexOf(item) is >= 0 and var s && Items.At(s).Resource > 0 ? Items.At(s).Resource - 1 : def.Resource;
 
     /// <summary>
     /// Where a unit of <paramref name="unitType"/> leaving a holder stands: next to a building's footprint, or the
@@ -499,7 +635,7 @@ public sealed partial class World
         for (int k = 0; k < n; k++)
         {
             EntityId unit = EntityId.FromValue(inside[k]);
-            if (Entities.IsAlive(unit) && !Unload(unit, at.X, at.Y))
+            if (Entities.IsAlive(unit) && !Unload(unit, at.X, at.Y, around: true)) // as from Emerge (HOLD-010)
             {
                 Events.Emit(new SimEvent(SimEventKind.Killed, Identities.Get(unit).Owner, unit, entity.Index, Identities.Get(entity).Owner, Identities.Get(unit).TypeId));
                 Kill(unit);

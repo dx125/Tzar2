@@ -1867,6 +1867,8 @@ public partial class GameScreen : Node
     {
         byte me = _session.LocalPlayer;
         int attackSounds = 0;
+        List<EntityId>? cameOut = null;
+        EntityId alone = EntityId.None;
         if (_hud is not null)
         {
             // Where the player listens from: the view's centre tile (PRES-013).
@@ -1959,6 +1961,19 @@ public partial class GameScreen : Node
                     }
 
                     break;
+                case SimEventKind.Unloaded when e.Player == me && e.Y is 1 or 2:
+                    // HOLD-010/011: units an Emerge let out join the selection; one let out from the eye with Ctrl is
+                    // selected alone (ReTzar 0x453240, 0x453340).
+                    if (e.Y == 2)
+                    {
+                        alone = e.Entity;
+                    }
+                    else
+                    {
+                        (cameOut ??= []).Add(e.Entity);
+                    }
+
+                    break;
                 case SimEventKind.CommandRejected when e.Player == me:
                     Message(RejectionText((CommandRejection)e.Arg));
                     break;
@@ -1974,6 +1989,15 @@ public partial class GameScreen : Node
 
                     break;
             }
+        }
+
+        if (!alone.IsNone)
+        {
+            _selection.SelectOwn([alone]);
+        }
+        else if (cameOut is { Count: > 0 })
+        {
+            _selection.SelectOwn(cameOut);
         }
 
         // Work sounds of a few visible workers (chop, mine, build; ⚠ cadence not measured).

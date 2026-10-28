@@ -77,7 +77,7 @@ public sealed class WorkerSystem : ISimSystem
         {
             case WorkerPhase.ToNode:
             {
-                if (w.CarryAmount >= GameplayCommands.CarryCapacity(world, worker))
+                if (w.CarryResource == w.NodeResource && w.CarryAmount >= GameplayCommands.CarryCapacity(world, worker))
                 {
                     StartDropOff(ref w);
                     return;
@@ -114,12 +114,6 @@ public sealed class WorkerSystem : ISimSystem
                     w.Retries = 0;
                     Position p = world.Positions.Get(node);
                     (w.NodeX, w.NodeY) = (p.X, p.Y);
-                }
-
-                if (w.CarryAmount > 0 && w.CarryResource != w.NodeResource)
-                {
-                    StartDropOff(ref w);
-                    return;
                 }
 
                 if (Interaction.WorkerReaches(world, worker, node))
@@ -462,7 +456,10 @@ public sealed class WorkerSystem : ISimSystem
             long nodeBest = best;
             for (int r = 0; r < world.Ruleset.ResourceTypes.Count; r++)
             {
-                if (!harvester.CanGather(r) || Interaction.NearestDropOff(world, owner, r, at, Interaction.AccessOf(type)).IsNone)
+                // A peasant with a load takes up only work on that resource by itself: another would drop the load
+                // (ECO-026), which only an order does (a scenario's peasant carrying gold to a storage keeps it).
+                if (!harvester.CanGather(r) || (w.CarryAmount > 0 && r != w.CarryResource)
+                    || Interaction.NearestDropOff(world, owner, r, at, Interaction.AccessOf(type)).IsNone)
                 {
                     continue;
                 }

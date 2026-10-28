@@ -415,7 +415,7 @@ public partial class Hud : Control
             _card[i] = slot;
             _cardIcons[i].Texture = slot is { } s
                 ? (s.Button.OwnIcon is { } own ? _ui.OwnIcon(own)
-                    : s.Button.Action == CardAction.InventoryItem ? _ui.Cell(Icons, s.Button.ImageIndex) : _ui.Cell(Buttons, s.Button.ImageIndex)) ?? _ui.Text(ButtonText(s.Button), UiAssets.BoldFont)
+                    : s.Button.Action is CardAction.InventoryItem or CardAction.Occupant ? _ui.Cell(Icons, s.Button.ImageIndex) : _ui.Cell(Buttons, s.Button.ImageIndex)) ?? _ui.Text(ButtonText(s.Button), UiAssets.BoldFont)
                 : null;
             _cardShade[i].Visible = _dialog is null && slot is { Enabled: false };
             _cardIcons[i].Modulate = slot is { Enabled: false } ? new Color(0.5f, 0.5f, 0.5f) : Colors.White;

@@ -211,4 +211,76 @@ public class HolderTests
         d.Step();
         Assert.Contains(CommandRejection.InvalidArgument, d.Rejections());
     }
+
+    [Fact]
+    [Trait("Rule", "HOLD-010")]
+    public void Emerge_lets_everyone_out_round_the_building_and_they_join_the_selection()
+    {
+        // The sixth play-test: units came out in a heap at one side of a castle and were not selected. As the original
+        // (ReTzar 0x504550, 0x5073f0, 0x453240): each onto a free tile of the nearest ring round the footprint, at random.
+        using var d = new SimDriver(TestMap(40, 24, [Structure("euro.castle", 0, 16, 8), .. Enumerable.Range(0, 12).Select(i => Unit("euro.footman", 0, 4 + (i % 4), 4 + (i / 4)))]), ruleset: Classic);
+        EntityId castle = OfType(d.World, "euro.castle").Single();
+        EntityId[] footmen = [.. OfType(d.World, "euro.footman")];
+        d.Order(0, CommandKind.Board, footmen, target: castle);
+        d.RunUntil(() => d.World.Holders.Get(castle).Count == footmen.Length, 800);
+
+        d.Order(0, CommandKind.Unload, [castle], 0, 0);
+        d.Step();
+        Assert.All(footmen, f => Assert.False(d.World.IsHeld(f)));
+        (int fx, int fy, int fw, int fh) = d.World.FootprintRect(castle);
+        var tiles = footmen.Select(f => (X: d.PositionOf(f).X / Tile, Y: d.PositionOf(f).Y / Tile)).ToList();
+        Assert.Equal(footmen.Length, tiles.Distinct().Count()); // one to a tile
+        Assert.All(tiles, t => Assert.Equal(1, System.Math.Max(System.Math.Max(fx - t.X, t.X - (fx + fw - 1)), System.Math.Max(fy - t.Y, t.Y - (fy + fh - 1)))));
+        Assert.True(tiles.Select(t => (t.X < fx, t.X >= fx + fw, t.Y < fy, t.Y >= fy + fh)).Distinct().Count() >= 3, "round the building, not at one side");
+
+        // Each joins the selection of its kingdom (the event's Y = 1).
+        SimEvent[] out_ = [.. Of(d, SimEventKind.Unloaded)];
+        Assert.Equal(footmen.Length, out_.Length);
+        Assert.All(out_, e => Assert.Equal(1, e.Y));
+    }
+
+    [Fact]
+    [Trait("Rule", "HOLD-011")]
+    public void A_unit_let_out_from_the_holders_list_steps_out_beside_it_and_with_ctrl_is_selected()
+    {
+        // ReTzar 0x4a1830, 0x490ad0: a unit clicked in the holder's list leaves it as from Emerge, at no place; with Ctrl it
+        // becomes the selection alone (0x453340).
+        using var d = new SimDriver(TestMap(40, 24, [Structure("euro.castle", 0, 16, 8), .. Enumerable.Range(0, 3).Select(i => Unit("euro.footman", 0, 6, 5 + i))]), ruleset: Classic);
+        EntityId castle = OfType(d.World, "euro.castle").Single();
+        EntityId[] footmen = [.. OfType(d.World, "euro.footman")];
+        d.Order(0, CommandKind.Board, footmen, target: castle);
+        d.RunUntil(() => d.World.Holders.Get(castle).Count == 3, 600);
+
+        d.Order(0, CommandKind.Unload, [castle], 0, 0, target: footmen[2], flags: CommandFlags.Ctrl);
+        d.Step();
+        d.Order(0, CommandKind.Unload, [castle], 0, 0, target: footmen[0]);
+        d.Step();
+        Assert.True(d.World.IsHeld(footmen[1]));
+        (int fx, int fy, int fw, int fh) = d.World.FootprintRect(castle);
+        foreach (EntityId f in new[] { footmen[0], footmen[2] })
+        {
+            (int x, int y) = (d.PositionOf(f).X / Tile, d.PositionOf(f).Y / Tile);
+            Assert.False(d.World.IsHeld(f));
+            Assert.Equal(1, System.Math.Max(System.Math.Max(fx - x, x - (fx + fw - 1)), System.Math.Max(fy - y, y - (fy + fh - 1))));
+        }
+
+        Assert.Equal(2, Of(d, SimEventKind.Unloaded).Single(e => e.Entity == footmen[2]).Y);
+        Assert.Equal(0, Of(d, SimEventKind.Unloaded).Single(e => e.Entity == footmen[0]).Y);
+    }
+
+    [Fact]
+    [Trait("Rule", "HOLD-011")]
+    public void A_unit_let_out_from_a_ships_list_steps_onto_the_shore_near_by()
+    {
+        using var d = new SimDriver(AsciiMap(Strait, [Unit("comm.galleon", 0, 9, 2), .. Enumerable.Range(0, 2).Select(i => Unit("euro.footman", 0, 5, 1 + i))]), ruleset: Classic);
+        EntityId ship = OfType(d.World, "comm.galleon").Single();
+        EntityId[] footmen = [.. OfType(d.World, "euro.footman")];
+        d.Order(0, CommandKind.Board, footmen, target: ship);
+        d.RunUntil(() => d.World.Holders.Get(ship).Count == 2, 600);
+        d.Order(0, CommandKind.Unload, [ship], 0, 0, target: footmen[0]);
+        d.Step();
+        Assert.False(d.World.IsHeld(footmen[0]));
+        Assert.True(d.World.IsHeld(footmen[1]));
+        Assert.True(d.World.Map.IsPassableAt(Locomotor.Foot, d.PositionOf(footmen[0]).X, d.PositionOf(footmen[0]).Y));
+    }
 }

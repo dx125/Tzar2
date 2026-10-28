@@ -404,7 +404,8 @@ owner's order of 2026-10-26.
          two change places.
       8. Units walk under some buildings (peasants through the stable's picture); there may be more.
       9. Units coming out of a building (castle, outpost) should be selected, as in the original, and come out around
-         it. Check unloading ships, caravans and carpets too (HOLD-003).
+         it. Check unloading ships, caravans and carpets too (HOLD-003): **fixed** (HOLD-010, log below); unloading
+         ships and carpets at a place does not select, as in the original.
       10. Big fights:
           * a crowd jitters left and right, nobody goes round the side, and only the front fights;
           * when the front of a large group is stuck or fighting, the rear jitters in place instead of going round;
@@ -416,14 +417,15 @@ owner's order of 2026-10-26.
             tile and step from tile to tile as the original (WORLD-020, ADR 0270); attackers of one enemy take the
             tiles round it.
       11. A peasant carrying a load sent to gather something else first takes the load home. In the original it goes to
-          the new work, and drops the old load on the ground when it takes a new one.
+          the new work, and drops the old load on the ground when it takes a new one: **fixed** (ECO-026, log below).
       12. Units answer orders late, standing a while first, most when a group standing close together is selected.
           **Measured** since the cell steps (#255): a block of 4 x 4 or 6 x 6 soldiers ordered away all start within
           four ticks (0.2 s), and a command reaches the sim on the next tick; `GroupStartTests` keeps it so. To check
           in play.
       13. Wrong pointers are still shown, such as digging over repair or build (CTRL-012, CTRL-013).
       14. The outpost's button to view the units inside does nothing; check the other holders and what can be done
-          with the units inside them.
+          with the units inside them: **fixed** (HOLD-011, log below): the eye of every holder lists its units; a click
+          lets one out, Ctrl + click also selects it.
       15. A click often selects the unit below the one under the pointer, as if it covered it; a single click in a
           close, moving group often selects several units: **fixed**, the nearest picture's middle wins (CTRL-001), and
           a drag shorter than 16 pixels is a click (CTRL-019).
@@ -459,6 +461,43 @@ owner's order of 2026-10-26.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-28 — Batch 4 of the sixth play-test: out of holders, the eye of a holder, dropped loads (HOLD-010, HOLD-011,
+  ECO-026; items 9, 14, 11).** Each from ReTzar's reading of the original.
+  * **Out of a building.**
+    * Emerge without a pick sent the units to the building's edge tile nearest its middle, and on toward the middle, so
+      they came out in a heap at one side.
+    * Now each steps onto a free tile of the nearest ring round the footprint that has one, picked at random (0x504550,
+      0x5073f0). The player's units that come out are selected (0x453240): the `Unloaded` event's Y says so, 1 to join
+      the selection, 2 to be it alone.
+    * Units leave a destroyed or dismantled building the same way.
+  * **The eye of a holder.**
+    * The eye was live only for units carrying items.
+    * Now it is live while the selected castle, outpost, ship, carpet or caravan holds units, and lists them on the card
+      (0x49cc3e, 0x4a1830). A click lets one out beside the holder, from a ship onto land near by; Ctrl + click also
+      selects it alone (0x490ad0, 0x453340).
+  * **Dropped loads.**
+    * A peasant sent to other work went home with its load first.
+    * Now it goes straight there and drops the old load as a bag of that resource when it begins (0x4ae2a0, 0x4aea70).
+      It does the same before taking up a bag of another kind, and when it dies (0x4acc44).
+    * The bag is `comm.resitem` in the picture of its resource (`item_wood`...). `ItemState.Reserved0` became
+      `Resource`, so saves stay; the new pictures are not in the tables hash.
+    * Two checks sent a peasant home when its load of the old resource filled the new resource's capacity; they now
+      count only a load of the node's resource.
+    * An idle peasant with a load takes up only work on that resource by itself: only an order drops a load.
+  * **A loop on a route (found by the campaign acceptance).**
+    * The batch changed the course of Rajba, and the pilot then stalled: a mage sent off the cliff-ringed plateau walked
+      round in a ring for ever, and the ninja bringing him the book never caught him.
+    * The cause, on main too: a step toward the route's steering point cut the corner of the cluster the route had
+      just left. The route went back to that cluster's exit, and the unit walked round in a loop (likely some of the
+      seventh play-test's back and forth).
+    * Now a unit keeps its way while it still sees its steering point (`UpdateRoute`).
+    * A synthetic map did not reproduce it (the plateau's regions and corners are particular); the acceptance's Rajba
+      covers it.
+  * **The pilot's ferry (bigisland).** The dropped bags shifted the course of Bigisland, and two slow boarders now
+    sent the ship back to the shore. Each new Board order dropped the pending unload, and the pilot took three such asks
+    from one place for a ship that cannot sail, so it put the whole force off again. Now the asks start over when the
+    ship docks for boarders.
 
 * **2026-10-28 — The seventh play-test, batch B: the way round units, sounds where they are (WORLD-021, PRES-013;
   item 19.3, 6).**

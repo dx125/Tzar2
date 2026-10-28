@@ -51,6 +51,14 @@ public static class GameplayQueries
         }
     }
 
+    /// <summary>The resource a resource item holds: its own (a load a peasant dropped, ECO-026) or its type's; −1 for another entity.</summary>
+    public static int ItemResource(World world, EntityId item)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        return world.Entities.IsAlive(item) && world.Identities.Has(item) && world.TypeOf(item).Traits.Item is { Kind: Content.Compiled.ItemKind.Resource } def
+            ? world.ItemResource(item, def) : -1;
+    }
+
     /// <summary>Whether a worker of <paramref name="player"/> may gather from <paramref name="node"/> (Nature's nodes, or the player's own fields).</summary>
     public static bool MayHarvest(World world, byte player, EntityId node)
     {

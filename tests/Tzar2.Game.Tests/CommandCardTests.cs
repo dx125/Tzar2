@@ -478,15 +478,56 @@ public sealed class CommandCardTests : IDisposable
         Assert.False(world.IsHeld(peasants[1]));
         Assert.True(world.IsHeld(peasants[0]));
 
-        // Nothing picked: everyone comes out at once; then the order is greyed out.
+        // Nothing picked: everyone comes out at once, round the building at no place (HOLD-010); then the order is greyed out.
         Command all = Single(card.Press(Context([castle]), emerge));
-        Assert.Equal((CommandKind.Unload, EntityId.None), (all.Kind, all.Target));
+        Assert.Equal((CommandKind.Unload, EntityId.None, 0, 0), (all.Kind, all.Target, all.X, all.Y));
         _session.Submit(card.Press(Context([castle]), emerge).Commands!);
         _session.Step(2);
         Assert.False(world.IsHeld(peasants[0]));
         CardSlot empty = card.Build(Context([castle]))[0]!.Value;
         Assert.Equal((false, "nobody inside"), (empty.Enabled, empty.Detail));
         Assert.Empty(card.Inside(Context([castle])));
+    }
+
+    [Fact]
+    [Trait("Rule", "HOLD-011")]
+    public void The_eye_of_a_castle_lists_the_units_inside_and_a_click_lets_one_out_with_ctrl_selected()
+    {
+        // The sixth play-test: the outpost's button to view the units inside did nothing. The original's eye is live while
+        // the selected object holds something and lists it (ReTzar 0x49cc3e, 0x4a1830); a click on a unit lets it out.
+        World world = _session.Simulation.World;
+        EntityId castle = Own("euro.castle");
+        Assert.Equal(3, new CommandCard(Rules.Value, _cards, 0).EyeFrame(Context([castle]))); // nobody inside: grey
+        EntityId[] peasants = [.. world.Identities.Entities.ToArray().Where(e => world.Identities.Get(e).Owner == 0 && world.TypeOf(e).Key == "euro.peon").Take(2)];
+        var board = new CommandList();
+        board.Add(CommandKind.Board, peasants, target: castle);
+        _session.Submit(board);
+        for (int i = 0; i < 600 && world.Holders.Get(castle).Count < peasants.Length; i++)
+        {
+            _session.Step(1);
+        }
+
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        Assert.Equal(castle, card.Carrier(Context([castle])));
+        Assert.Equal(0, card.EyeFrame(Context([castle])));
+        Assert.True(card.ToggleInventory(Context([castle])));
+        CardSlot[] occupants = [.. card.Build(Context([castle])).Where(s => s is not null).Select(s => s!.Value)];
+        Assert.Equal(peasants.Select(p => p.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)).Order(), occupants.Select(s => s.Button.Argument).Order());
+        Assert.All(occupants, s => Assert.Equal(CardAction.Occupant, s.Button.Action));
+
+        CardPress first = card.Press(Context([castle]), occupants[0]);
+        Command plain = Single(first);
+        Assert.Equal((CommandKind.Unload, occupants[0].Button.Argument, 0, 0, CommandFlags.None),
+            (plain.Kind, plain.Target.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), plain.X, plain.Y, plain.Flags));
+        Assert.Equal([castle], first.Commands!.EntitiesOf(plain).ToArray());
+        Command picked = Single(card.Press(Context([castle]), occupants[1], ctrl: true));
+        Assert.Equal((occupants[1].Button.Argument, CommandFlags.Ctrl), (picked.Target.Value.ToString(System.Globalization.CultureInfo.InvariantCulture), picked.Flags));
+
+        _session.Submit(card.Press(Context([castle]), occupants[1], ctrl: true).Commands!);
+        _session.Step(2);
+        EntityId freed = EntityId.FromValue(uint.Parse(occupants[1].Button.Argument, System.Globalization.CultureInfo.InvariantCulture));
+        Assert.False(world.IsHeld(freed));
+        Assert.Single(card.Build(Context([castle])), s => s is { Button.Action: CardAction.Occupant });
     }
 
     [Fact]

@@ -60,7 +60,7 @@ public sealed class NavalSystem : ISimSystem
     /// <paramref name="sendOn"/> they then walk there.
     /// </summary>
     /// <returns>How many came out.</returns>
-    public static int UnloadNow(World world, EntityId holder, int towardX, int towardY, int limit, bool sendOn)
+    public static int UnloadNow(World world, EntityId holder, int towardX, int towardY, int limit, bool sendOn, bool around = false, byte select = 0)
     {
         ArgumentNullException.ThrowIfNull(world);
         Span<uint> inside = stackalloc uint[Content.Compiled.HolderDefinition.MaxCapacity];
@@ -78,7 +78,7 @@ public sealed class NavalSystem : ISimSystem
         for (int k = 0; k < n && moved < max; k++)
         {
             EntityId unit = EntityId.FromValue(inside[k]);
-            if (!world.Unload(unit, towardX, towardY))
+            if (!world.Unload(unit, towardX, towardY, around, select))
             {
                 break; // no room around the holder
             }

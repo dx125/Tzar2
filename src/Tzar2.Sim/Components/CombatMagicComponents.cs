@@ -243,8 +243,11 @@ public struct ItemState : IComponent
     /// <summary>Its own book properties (ADR 0265).</summary>
     public ItemStateFlags Flags;
 
-    /// <summary>Zero (layout without padding).</summary>
-    public byte Reserved0;
+    /// <summary>
+    /// 1 + the resource a resource item holds when it is not its type's: a load a peasant dropped (ECO-026); 0: the
+    /// type's (0 in saves before it was used).
+    /// </summary>
+    public byte Resource;
 
     /// <summary>Zero (layout without padding).</summary>
     public ushort Reserved1;

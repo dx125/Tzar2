@@ -156,7 +156,8 @@ public sealed partial class World
             ItemState s = Items.Components[i];
             if (!Identities.Has(ids[i]) || TypeOf(ids[i]).Traits.Item is not { } itemDef || s.Power is < 0 or > 1_000_000 || s.Charges is < 0 or > 1_000_000 || s.ReadyTick > maxFuture
                 || s.Spell > Ruleset.Spells.Count || s.Effect > ItemEffect.Mana || s.Look > itemDef.Looks.Length
-                || s.CooldownMs is < 0 or > 3_600_000 || (s.Flags & ~(ItemStateFlags.OwnCooldown | ItemStateFlags.Endless)) != 0 || s.Reserved0 != 0 || s.Reserved1 != 0
+                || s.CooldownMs is < 0 or > 3_600_000 || (s.Flags & ~(ItemStateFlags.OwnCooldown | ItemStateFlags.Endless)) != 0 || s.Reserved1 != 0
+                || s.Resource > Ruleset.ResourceTypes.Count || (s.Resource != 0 && itemDef.Kind != ItemKind.Resource)
                 || Combats.Has(ids[i]) || Motions.Has(ids[i])
                 || (s.Bound != 0 && (itemDef.Kind != ItemKind.Soul || !Entities.IsAlive(EntityId.FromValue(s.Bound)) || Items.Has(EntityId.FromValue(s.Bound)))))
             {
