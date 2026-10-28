@@ -74,6 +74,26 @@ public sealed class CommandCardTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "BLD-027")]
+    public void A_finished_building_is_taken_down_on_the_second_press_of_its_own_button()
+    {
+        EntityId castle = Own("euro.castle");
+        _cards.Menus["e_castle"] = [Train("peon", 'P')];
+        var card = new CommandCard(Rules.Value, _cards, 0);
+        IReadOnlyList<CardSlot?> slots = card.Build(Context([castle]));
+        CardSlot dismantle = slots.Last(s => s is not null)!.Value;
+        Assert.Equal((CardAction.Dismantle, "dismantle"), (dismantle.Button.Action, dismantle.Button.OwnIcon));
+
+        // The first press asks; the second takes it down (the castle with Shift); another press between asks again.
+        Assert.Contains("75 %", card.Press(Context([castle]), dismantle).Message, StringComparison.Ordinal);
+        Command taken = Single(card.Press(Context([castle]), dismantle, shift: true));
+        Assert.Equal((CommandKind.Dismantle, CommandFlags.Queue), (taken.Kind, taken.Flags));
+        Assert.NotNull(card.Press(Context([castle]), dismantle).Message);
+        card.Press(Context([castle]), slots[0]!.Value);
+        Assert.NotNull(card.Press(Context([castle]), dismantle).Message);
+    }
+
+    [Fact]
     [Trait("Rule", "HUD-019")]
     public void More_orders_than_slots_go_on_pages_of_eight_turned_by_the_arrows_and_hotkeys_reach_them_all()
     {

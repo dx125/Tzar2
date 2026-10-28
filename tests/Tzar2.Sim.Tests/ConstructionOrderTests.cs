@@ -84,6 +84,37 @@ public class ConstructionOrderTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-027")]
+    public void A_finished_building_is_taken_down_for_three_quarters_of_its_cost()
+    {
+        using var d = new SimDriver(
+            TestMap(40, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 14, 6), Unit("euro.peon", 0, 24, 10)), ruleset: Classic);
+        EntityId house = OfType(d.World, "euro.house").Single(), castle = OfType(d.World, "euro.castle").Single();
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        var cost = Classic.EntityTypes[Id("euro.house")].Traits.Cost;
+        int[] before = [.. Enumerable.Range(0, cost.Length).Select(r => d.World.Players[0].Resources[r])];
+        d.Order(0, CommandKind.Dismantle, [house]);
+        d.Step();
+
+        Assert.False(d.World.Entities.IsAlive(house));
+        Assert.Equal(1, d.Count(SimEventKind.Dismantled));
+        Assert.All(Enumerable.Range(0, cost.Length), r => Assert.Equal(cost[r] * 7_500L / 10_000, d.World.Players[0].Resources[r] - before[r]));
+
+        // The castle only with Shift, as Delete; a site is cancelled, not taken down.
+        d.Order(0, CommandKind.Dismantle, [castle]);
+        d.Step();
+        Assert.Equal(CommandRejection.ShiftDeleteRequired, d.Rejections().Last());
+        Assert.True(d.World.Entities.IsAlive(castle));
+        d.Order(0, CommandKind.Build, [peon], 24 * Tile, 4 * Tile, arg0: Id("euro.house"));
+        d.Step();
+        EntityId site = OfType(d.World, "euro.house").Single();
+        d.Order(0, CommandKind.Dismantle, [site]);
+        d.Step();
+        Assert.Equal(CommandRejection.NoValidEntities, d.Rejections().Last());
+        Assert.True(d.World.Entities.IsAlive(site));
+    }
+
+    [Fact]
     [Trait("Rule", "BLD-026")]
     public void A_wooden_wall_turns_to_stone_with_its_whole_row()
     {

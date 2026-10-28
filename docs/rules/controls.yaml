@@ -3,9 +3,10 @@ prefix: CTRL
 title: Selection, mouse and pointers
 rules:
   CTRL-001:
-    rule: A click selects a unit anywhere on its drawn figure, not only at its feet.
-    source: [owner 2026-10-20 (first play-test)]
-    status: implemented
+    rule: A click takes the unit whose picture's middle is nearest the point, within 30 pixels each way, among the units on the clicked tile and the tiles round it; else the newest object on the clicked tile, a unit standing there or a building or mine whose picture takes the tile; else a tree there. Orders find their target the same way.
+    source: [owner 2026-10-20 (first play-test), owner 2026-10-25 (sixth play-test), 'community ReTzar src/selection.rs (0x4e4280, 0x44e900, 0x44ea10, 0x44e400)']
+    status: tested
+    note: So a unit is picked anywhere on its figure, a building under a tree's crown wins over the tree (a peasant sent to build went to cut the tree), and a click between two units takes the nearer, not the one drawn in front. Ties go to the unit further left, then higher up, then the newest. A building is picked only on the tiles of its footprint its picture takes, not on a roof drawn above them, as in the original.
   CTRL-002:
     rule: Holding the right or middle mouse button drags the map; a right click gives its order when the button is released.
     source: [owner 2026-10-20 (first play-test)]
@@ -91,8 +92,9 @@ rules:
     status: implemented
   CTRL-019:
     rule: A left click selects a unit, a box dragged with the left button selects the units inside it, and Shift+click adds a unit to the selection or takes it out.
-    source: [manual Selecting And Grouping Units, manual Hints About Gameplay]
+    source: [manual Selecting And Grouping Units, manual Hints About Gameplay, 'community ReTzar src/frontend/mission.rs (0x4f4998, 0x4f4ef8)']
     status: tested
+    note: The box shows once the pointer has moved 8 pixels and selects once it has moved 16; a shorter drag is a click (the sixth play-test - a click in a close group often selected several units).
   CTRL-020:
     rule: Ctrl and a digit give the selection that number; the digit selects the group again; the number shows in the corner of the selection.
     source: [manual Selecting And Grouping Units, manual Hot Keys]

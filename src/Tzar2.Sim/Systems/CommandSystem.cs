@@ -266,6 +266,9 @@ public sealed partial class CommandSystem : ISimSystem
             case CommandKind.Cancel:
                 return GameplayCommands.Cancel(world, command, entities);
 
+            case CommandKind.Dismantle:
+                return GameplayCommands.Dismantle(world, command, entities);
+
             case CommandKind.SetRally:
                 return GameplayCommands.SetRally(world, command, entities);
 

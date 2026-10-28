@@ -225,14 +225,22 @@ public sealed class TerrainAndSpriteRuleTests
     }
 
     [Fact]
-    public void Sites_and_rocks_pick_stages()
+    [Trait("Rule", "PRES-011")]
+    public void Sites_pick_stages_and_mines_keep_their_look_until_empty()
     {
         Assert.Equal(0, SpriteRules.SiteFrame(0, 4));
         Assert.Equal(1, SpriteRules.SiteFrame(250, 4));
         Assert.Equal(3, SpriteRules.SiteFrame(1000, 4));
-        Assert.Equal(0, SpriteRules.DepletionFrame(1000, 1000, 4));
-        Assert.Equal(3, SpriteRules.DepletionFrame(10, 1000, 4));
-        Assert.Equal(0, SpriteRules.DepletionFrame(5, 0, 4));
+
+        // Four pictures: three looks of a full mine, then the pit. The look does not change as the mine is worked, nor under
+        // the fog (stock unknown).
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset("classic");
+        Assert.True(SpriteRules.IsMine(rules.EntityTypes[rules.EntityTypeId("comm.res_gold")]));
+        Assert.False(SpriteRules.IsMine(rules.EntityTypes[rules.EntityTypeId("euro.house")]));
+        Assert.Equal([2, 2, 2], new[] { 1000, 10, -1 }.Select(left => SpriteRules.MineFrame(5, left, 4)));
+        Assert.Equal(3, SpriteRules.MineFrame(5, 0, 4));
+        Assert.Equal([0, 1, 2, 0], new uint[] { 0, 1, 2, 3 }.Select(seed => SpriteRules.MineFrame(seed, 500, 4)));
+        Assert.Equal(0, SpriteRules.MineFrame(7, 500, 1));
     }
 
     [Fact]

@@ -152,18 +152,18 @@ public static class SpriteRules
     public static int WallDamageFrame(int health, int maxHealth, int frames)
         => maxHealth <= 0 || frames <= 0 ? 0 : Math.Clamp(frames - (int)((long)Math.Max(0, health) * frames / maxHealth) - 1, 0, frames - 1);
 
-    /// <summary>
-    /// The depletion frame of a rock (frame 0 = full) holding <paramref name="left"/> of <paramref name="full"/>
-    /// (⚠ the original's thresholds are not measured).
-    /// </summary>
-    public static int DepletionFrame(int left, int full, int frames)
+    /// <summary>Whether <paramref name="type"/> is a gold or stone mine, whose picture is a look, not an animation (PRES-011).</summary>
+    public static bool IsMine(EntityTypeDefinition type)
     {
-        if (full <= 0 || frames <= 1)
-        {
-            return 0;
-        }
-
-        int remaining = (int)Math.Clamp(left * (long)frames / full, 0, frames - 1);
-        return frames - 1 - remaining;
+        ArgumentNullException.ThrowIfNull(type);
+        return type.Traits.LegacyClass is "res_gold" or "res_stone";
     }
+
+    /// <summary>
+    /// The frame of a gold or stone mine (PRES-011; ReTzar's reading of the original, 0x4afeae): one of the first three
+    /// pictures, the mine's own look for its whole life, picked by <paramref name="seed"/>; the last one, the pit, once
+    /// <paramref name="left"/> is 0. A stock not known (below 0: a mine remembered under the fog) keeps the look.
+    /// </summary>
+    public static int MineFrame(uint seed, int left, int frames)
+        => frames <= 1 ? 0 : left == 0 ? frames - 1 : (int)(seed % (uint)Math.Min(frames - 1, 3));
 }

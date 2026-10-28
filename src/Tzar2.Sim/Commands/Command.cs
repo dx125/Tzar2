@@ -204,6 +204,13 @@ public enum CommandKind : ushort
     /// <summary>Explore: the units head for unexplored ground they can reach, ships on water (ADR 0143).</summary>
     Explore = 34,
 
+    /// <summary>
+    /// Take down the listed own finished buildings, getting back <c>dismantleRefundPercent</c> of what each costs the
+    /// kingdom now (BLD-027, the owner's feature); the castle and the guilds only with Shift, as Delete. Units inside come
+    /// out round it.
+    /// </summary>
+    Dismantle = 35,
+
     /// <summary>Debug: spawn Arg1 (1-64) units of type Arg0 at (X, Y); needs <see cref="SimulationConfig.CheatsAllowed"/>.</summary>
     DebugSpawn = 0xF000,
 

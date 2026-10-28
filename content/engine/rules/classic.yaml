@@ -68,6 +68,7 @@ gameplay:
   nodeSearchRadiusTiles: 12           # UNVERIFIED (UNK-17): where a worker looks for the next node of a resource
   queueCapacity: 24                   # different items queued per building at once; any number of each (ADR 0180)
   constructionRefundPercent: 100      # BLD-020 (ReTzar, 0x41d6a8): all of it before any work, then half of what is left to build
+  dismantleRefundPercent: 75          # BLD-027 (the owner's feature, not in the original): a building taken down gives this back
   productionRefundPercent: 100        # UNVERIFIED: refund of a cancelled queued unit
   researchRefundPercent: 100          # UNVERIFIED: refund of a cancelled research or upgrade
   # GAME-03: repair, fire, ruins, walls, gates (ADR 0043).

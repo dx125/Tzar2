@@ -171,6 +171,7 @@ public sealed class MatchTracer : IDisposable
             SimEventKind.ConstructionCompleted => $"p{e.Player} built {type}{who}",
             SimEventKind.ConstructionStarted => $"p{e.Player} started building {type}{who}{at}",
             SimEventKind.ConstructionCancelled => $"p{e.Player} cancelled building {type}{who}",
+            SimEventKind.Dismantled => $"p{e.Player} took down {type}{who}",
             SimEventKind.UnitTrained => $"p{e.Player} trained {type}{who}",
             SimEventKind.Captured => string.Create(CultureInfo.InvariantCulture, $"p{e.Player} captured {type}{who} from p{e.X}"),
             SimEventKind.ResearchCompleted => string.Create(CultureInfo.InvariantCulture,
