@@ -85,27 +85,54 @@ public class ConstructionOrderTests
 
     [Fact]
     [Trait("Rule", "BLD-027")]
-    public void A_finished_building_is_taken_down_for_three_quarters_of_its_cost()
+    public void A_building_is_taken_down_over_seconds_for_three_quarters_of_all_it_cost()
     {
         using var d = new SimDriver(
             TestMap(40, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 14, 6), Unit("euro.peon", 0, 24, 10)), ruleset: Classic);
         EntityId house = OfType(d.World, "euro.house").Single(), castle = OfType(d.World, "euro.castle").Single();
         EntityId peon = OfType(d.World, "euro.peon").Single();
-        var cost = Classic.EntityTypes[Id("euro.house")].Traits.Cost;
-        int[] before = [.. Enumerable.Range(0, cost.Length).Select(r => d.World.Players[0].Resources[r])];
+        var houseCost = Classic.EntityTypes[Id("euro.house")].Traits.Cost;
+        int Stock(int r) => d.World.Players[0].Resources[r];
+        int[] before = [.. Enumerable.Range(0, houseCost.Length).Select(Stock)];
         d.Order(0, CommandKind.Dismantle, [house]);
         d.Step();
 
+        // It comes down over 5 to 10 s by its health, then gives back its share.
+        Assert.True(d.World.Entities.IsAlive(house));
+        int total = d.World.Dismantlings.Get(house).TotalMs;
+        Assert.InRange(total, 5_000, 10_000);
+        Assert.Equal(before, Enumerable.Range(0, houseCost.Length).Select(Stock));
+        d.RunUntil(() => !d.World.Entities.IsAlive(house), 400);
         Assert.False(d.World.Entities.IsAlive(house));
         Assert.Equal(1, d.Count(SimEventKind.Dismantled));
-        Assert.All(Enumerable.Range(0, cost.Length), r => Assert.Equal(cost[r] * 7_500L / 10_000, d.World.Players[0].Resources[r] - before[r]));
+        Assert.All(Enumerable.Range(0, houseCost.Length), r => Assert.Equal(houseCost[r] * 7_500L / 10_000, Stock(r) - before[r]));
+
+        // A wooden tower built and raised twice gives back three quarters of all three prices.
+        ResearchTests.Grant(d, 0, Classic, "te_architecture");
+        d.World.Players[0].Resources[Resource("wood")] = 5000;
+        d.World.Players[0].Resources[Resource("stone")] = 5000;
+        d.World.Players[0].Resources[Resource("gold")] = 5000;
+        d.Order(0, CommandKind.Build, [peon], 24 * Tile, 4 * Tile, arg0: Id("comm.tower_wood"));
+        d.Step();
+        EntityId tower = OfType(d.World, "comm.tower_wood").Single();
+        d.RunUntil(() => !d.World.Constructions.Has(tower), 4000);
+        d.Order(0, CommandKind.Upgrade, [tower], arg0: Classic.UpgradeId("to_wtower2"));
+        d.RunUntil(() => d.Count(SimEventKind.UpgradeCompleted) == 1, 3000);
+        d.Order(0, CommandKind.Upgrade, [tower], arg0: Classic.UpgradeId("to_stower"));
+        d.RunUntil(() => d.Count(SimEventKind.UpgradeCompleted) == 2, 3000);
+        Assert.Equal(Id("comm.tower_stone"), d.World.Identities.Get(tower).TypeId);
+        var all = Classic.EntityTypes[Id("comm.tower_wood")].Traits.Cost.Select((c, r) => (long)c + Classic.Upgrades[Classic.UpgradeId("to_wtower2")].Cost[r] + Classic.Upgrades[Classic.UpgradeId("to_stower")].Cost[r]).ToArray();
+        Assert.True(all.Sum() > Classic.EntityTypes[Id("comm.tower_stone")].Traits.Cost.Sum());
+        int[] stock = [.. Enumerable.Range(0, all.Length).Select(Stock)];
+        d.Order(0, CommandKind.Dismantle, [tower]);
+        d.RunUntil(() => !d.World.Entities.IsAlive(tower), 400);
+        Assert.All(Enumerable.Range(0, all.Length), r => Assert.Equal(all[r] * 7_500 / 10_000, Stock(r) - stock[r]));
 
         // The castle only with Shift, as Delete; a site is cancelled, not taken down.
         d.Order(0, CommandKind.Dismantle, [castle]);
         d.Step();
         Assert.Equal(CommandRejection.ShiftDeleteRequired, d.Rejections().Last());
-        Assert.True(d.World.Entities.IsAlive(castle));
-        d.Order(0, CommandKind.Build, [peon], 24 * Tile, 4 * Tile, arg0: Id("euro.house"));
+        d.Order(0, CommandKind.Build, [peon], 30 * Tile, 4 * Tile, arg0: Id("euro.house"));
         d.Step();
         EntityId site = OfType(d.World, "euro.house").Single();
         d.Order(0, CommandKind.Dismantle, [site]);

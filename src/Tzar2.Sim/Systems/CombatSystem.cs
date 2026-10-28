@@ -89,9 +89,9 @@ public sealed partial class CombatSystem : ISimSystem
         for (int i = 0; i < world.Combats.Count; i++)
         {
             EntityId attacker = world.Combats.Entities[i];
-            if (world.IsHeld(attacker))
+            if (world.IsHeld(attacker) || (world.Dismantlings.Count != 0 && world.Dismantlings.Has(attacker)))
             {
-                continue; // inside a holder: no fighting (GAME-09)
+                continue; // inside a holder: no fighting (GAME-09); a tower being taken down neither (BLD-027)
             }
 
             Step(world, attacker, ref world.Combats.At(i), tick, tickMs, acquireEvery);

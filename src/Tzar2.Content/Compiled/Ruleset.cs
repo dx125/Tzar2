@@ -828,7 +828,7 @@ public sealed partial class Ruleset
         GameplaySettings g = Gameplay;
         hasher.Add((byte)g.GroupMoveSpeed).Add((byte)g.Movement).Add(g.PopulationLimit).Add(g.DefaultStartingResources).Add(g.MinimumDamage).Add(g.ResistanceScale)
             .Add(g.InteractionReachUnits).Add(g.StructureReachUnits).Add(g.InteractionTouchUnits).Add(g.MeleeReachUnits).Add(g.AcquireIntervalMs).Add(g.AutoChaseLeashPercent).Add(g.NodeSearchRadiusTiles)
-            .Add(g.ConstructionRefundBasisPoints).Add(g.DismantleRefundBasisPoints).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints).Add(g.CapturePointsPerSecond)
+            .Add(g.ConstructionRefundBasisPoints).Add(g.DismantleRefundBasisPoints).Add(g.DismantleBaseMs).Add(g.DismantleMaxMs).Add(g.DismantleMsPerHealth).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints).Add(g.CapturePointsPerSecond)
             .Add(g.MinimumCaptureResistance).Add(g.CaptureResetMs).Add(g.InfluenceRadiusTiles).Add(g.RepairTimeBasisPoints)
             .Add(g.BurnThresholdBasisPoints).Add(g.BurnDamagePerMinute).Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
             .Add(g.GateOpenReachUnits).Add(g.GateCloseReachUnits).Add(g.GateChangeIntervalMs).Add(g.MaxGateChangesPerTick)

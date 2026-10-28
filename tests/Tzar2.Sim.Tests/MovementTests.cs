@@ -115,7 +115,8 @@ public class MovementTests
         EntityId follower = d.Spawn(SyntheticScenario.Knight, 0, 4, 4);
         d.MoveToTile(0, [leader], 50, 50);
         d.Order(0, CommandKind.Follow, [follower], target: leader);
-        // A guard keeps within 3 tiles of what it guards (ORD-001) and walks back from further away.
+        // A guard keeps within 3 tiles of what it guards, measured from its tile grown by one (ORD-001), and walks back from
+        // further away.
         int worst = 0;
         for (int t = 0; t < 900; t++)
         {
@@ -126,8 +127,8 @@ public class MovementTests
             }
         }
 
-        Assert.True(worst <= 5, $"follower fell {worst} tiles behind");
-        Assert.True(Tiles(d.PositionOf(follower), d.PositionOf(leader)) <= 3);
+        Assert.True(worst <= 6, $"follower fell {worst} tiles behind");
+        Assert.True(Tiles(d.PositionOf(follower), d.PositionOf(leader)) <= 4);
 
         static int Tiles(Position a, Position b) => Math.Max(Math.Abs((a.X / Tile) - (b.X / Tile)), Math.Abs((a.Y / Tile) - (b.Y / Tile)));
     }

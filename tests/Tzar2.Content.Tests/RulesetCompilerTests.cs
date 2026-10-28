@@ -109,7 +109,7 @@ public class RulesetCompilerTests
         Assert.DoesNotContain("comm.res_gold", builds);
 
         EntityTypeDefinition castle = Type(Classic, "euro.castle");
-        Assert.Equal(["euro.peon"], castle.Traits.Producer!.Produces.Select(id => Classic.EntityTypes[id].Key));
+        Assert.Equal(["euro.peon", "euro.priest"], castle.Traits.Producer!.Produces.Select(id => Classic.EntityTypes[id].Key)); // the priest by its card (PROD-016)
         Assert.Equal(ProducerDefinition.MaxQueueCapacity, castle.Traits.Producer.QueueCapacity);
         Assert.Equal(24, castle.Traits.PopulationProvided);
         Assert.Equal(0b11111, castle.Traits.DropOffMask);
@@ -123,6 +123,17 @@ public class RulesetCompilerTests
         Assert.Equal(1 << Resource("wood"), Type(Classic, "euro.lumber").Traits.DropOffMask);
         Assert.Equal(12, Type(Classic, "euro.house").Traits.PopulationProvided);
         Assert.Null(Type(Classic, "euro.house").Traits.Producer);
+    }
+
+    [Fact]
+    [Trait("Rule", "PROD-016")]
+    public void A_building_trains_what_its_menu_creates_as_well_as_what_the_unit_tables_name()
+    {
+        // The seventh play-test: the church's priest did nothing. The original's MENU.INI [e_church] creates priests, though
+        // the unit table names the cathedral; a CREATE order runs on the building whose card shows it (ReTzar). The
+        // synthetic castle's card creates priests the same way.
+        Assert.Contains(Classic.EntityTypeId("euro.priest"), Type(Classic, "euro.castle").Traits.Producer!.Produces.Select(p => (int)p));
+        Assert.Contains(Classic.EntityTypeId("euro.priest"), Type(Classic, "euro.cathedral").Traits.Producer!.Produces.Select(p => (int)p));
     }
 
     [Fact]

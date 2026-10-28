@@ -186,11 +186,11 @@ internal sealed partial class LegacyImporter
             body.Trait("Mobile", ("stride", Num(moveLen)));
         }
 
+        var by = new List<string>();
         string producer = Cell(row, ColProducer);
         if (producer.Length > 0 && producers.Get(producer) is YamlScalar { IsNull: false } producerClass)
         {
             // Common units (siege, ships, cows) are trained in every civilization's building of that class.
-            var by = new List<string>();
             foreach (string candidate in imported)
             {
                 int dot = candidate.IndexOf('.', StringComparison.Ordinal);
@@ -200,14 +200,29 @@ internal sealed partial class LegacyImporter
                 }
             }
 
-            if (by.Count > 0)
-            {
-                body.Trait("Producible", ("by", "[" + string.Join(", ", by) + "]"));
-            }
-            else
+            if (by.Count == 0)
             {
                 _diagnostics.Add($"{key}: producer '{civ}.{producerClass.Value}' is not imported; the unit cannot be trained");
             }
+        }
+
+        // PROD-016 (ReTzar's reading of the original: a CREATE order runs on the building whose card shows it): a building
+        // trains what its menu creates too, its submenus included. The churches' menus create priests, though the unit
+        // tables name the cathedral and the mosque (the seventh play-test: the church's priest did nothing).
+        foreach (string building in imported)
+        {
+            int dot = building.IndexOf('.', StringComparison.Ordinal);
+            string buildingCiv = building[..dot];
+            if ((civ == "comm" || buildingCiv == civ) && !by.Contains(building)
+                && ObjectSection(buildingCiv, building[(dot + 1)..])?.Get("menu") is { Length: > 0 } menu && Creates(menu, cls, []))
+            {
+                by.Add(building);
+            }
+        }
+
+        if (by.Count > 0)
+        {
+            body.Trait("Producible", ("by", "[" + string.Join(", ", by) + "]"));
         }
 
         AddObjectTraits(body, civ, cls, source, key, building: false);
@@ -425,6 +440,36 @@ internal sealed partial class LegacyImporter
         }
 
         AddCombatObjectTraits(body, ini, section, source, key, building);
+    }
+
+    // Whether a command card or its submenus (bounded: menus are untrusted data) hold a CREATE order of class cls.
+    private bool Creates(string menu, string cls, List<string> visited)
+    {
+        if (visited.Count >= 8 || visited.Contains(menu) || !_menus.TryGetValue(menu, out List<string>? orders))
+        {
+            return false;
+        }
+
+        visited.Add(menu);
+        foreach (string order in orders)
+        {
+            if (!_orders.TryGetValue(order, out (string Action, string ClassName) o))
+            {
+                continue;
+            }
+
+            if (o.Action.StartsWith("CREATE ", StringComparison.OrdinalIgnoreCase) && string.Equals(o.Action["CREATE ".Length..].Trim(), cls, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (o.Action.StartsWith("SUBMENU ", StringComparison.Ordinal) && Creates(o.Action["SUBMENU ".Length..].Trim(), cls, visited))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Walks a command card and its submenus (bounded: menus are untrusted data) for research and upgrade orders.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Tzar2.Core.Ids;
 
@@ -206,6 +207,18 @@ public struct FrameEntity
     /// <summary>It has a name of its own (a promoted hero, or one the scenario named): the kingdom's list of heroes shows it (HUD-033).</summary>
     public bool Named;
 
+    /// <summary>Its own name (a hero's from HEROES.INI, or the scenario's), or null: shown in the place of its type's.</summary>
+    public string? Name;
+
+    /// <summary>A building being taken down (BLD-027): how much of it is still standing, 1000 at the start, or -1.</summary>
+    public int DismantlePermille;
+
+    /// <summary>The attack it fights with now (its level, items and spells included; GAME-08), or 0 for what does not fight.</summary>
+    public int Attack;
+
+    /// <summary>The defence it fights with now (its level, items and spells included; GAME-08), or 0 for what is no unit.</summary>
+    public int Defence;
+
     /// <summary>Carries a spell book: yellow stars float above it (1.09, ITEM-012).</summary>
     public bool CarriesBook;
 
@@ -398,7 +411,7 @@ public readonly record struct FrameQueueEntry(uint Entity, FrameQueueKind Kind, 
 /// <param name="Value">An item's worth on a market (TECH-030), or 0.</param>
 /// <param name="Hero">A unit promoted to hero or with a name of its own: the kingdom's list of heroes shows it (HUD-033).</param>
 /// <param name="Level">A unit's experience level, or 0.</param>
-public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth, bool IsItem = false, int Slot = -1, bool IsDefault = false, int Spell = -1, string? Look = null, int Value = 0, bool Hero = false, int Level = 0);
+public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeId, int Health, int MaxHealth, bool IsItem = false, int Slot = -1, bool IsDefault = false, int Spell = -1, string? Look = null, int Value = 0, bool Hero = false, int Level = 0, string? Name = null);
 
 /// <summary>A projectile in flight (GAME-07; ADR 0091), as far as the viewer sees it.</summary>
 /// <param name="Id">Its entity (<c>EntityId.Value</c>): the presentation follows one projectile across frames.</param>
@@ -659,6 +672,42 @@ public sealed class GameFrame
         _waypoints[index] = entry;
     }
     private FrameHeld[] _held = new FrameHeld[16];
+    private readonly Dictionary<uint, int> _refundAt = [];
+    private int[] _refunds = [];
+
+    /// <summary>
+    /// What taking down a building of the frame's kingdom would give back (BLD-027), by resource type, for the card's
+    /// tooltip; false for anything else.
+    /// </summary>
+    public bool DismantleRefund(EntityId building, Span<int> into)
+    {
+        into.Clear();
+        if (!_refundAt.TryGetValue(building.Value, out int at))
+        {
+            return false;
+        }
+
+        int count = Math.Min(into.Length, ResourceCount);
+        _refunds.AsSpan(at, count).CopyTo(into);
+        return true;
+    }
+
+    /// <summary>Resource types in <see cref="DismantleRefund"/>.</summary>
+    internal int ResourceCount { get; set; }
+
+    internal void ClearRefunds() => _refundAt.Clear();
+
+    internal Span<int> AddRefund(uint building)
+    {
+        int at = _refundAt.Count * ResourceCount;
+        if (_refunds.Length < at + ResourceCount)
+        {
+            Array.Resize(ref _refunds, Math.Max(at + ResourceCount, _refunds.Length * 2));
+        }
+
+        _refundAt[building] = at;
+        return _refunds.AsSpan(at, ResourceCount);
+    }
 
     /// <summary>The units inside the frame's kingdom's holders and the items its units carry, grouped by holder in the order they are kept.</summary>
     public ReadOnlySpan<FrameHeld> Helds => _held.AsSpan(0, HeldCount);

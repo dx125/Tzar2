@@ -381,7 +381,7 @@ internal static class GameplayCommands
         int queued = 0;
         foreach (EntityId entity in entities)
         {
-            if (!IsOwned(world, entity, command.Player) || world.Productions.IndexOf(entity) is not (>= 0 and var q)
+            if (!IsOwned(world, entity, command.Player) || world.Dismantlings.Has(entity) || world.Productions.IndexOf(entity) is not (>= 0 and var q)
                 || !world.TypeOf(entity).Traits.Producer!.CanProduce(typeId))
             {
                 continue;
@@ -439,7 +439,7 @@ internal static class GameplayCommands
         CommandRejection reason = CommandRejection.NoValidEntities;
         foreach (EntityId entity in entities)
         {
-            if (!IsOwned(world, entity, command.Player) || world.Productions.IndexOf(entity) is not (>= 0 and var q)
+            if (!IsOwned(world, entity, command.Player) || world.Dismantlings.Has(entity) || world.Productions.IndexOf(entity) is not (>= 0 and var q)
                 || !world.TypeOf(entity).Traits.Producer!.CanResearch((ushort)technology))
             {
                 continue;
@@ -487,7 +487,7 @@ internal static class GameplayCommands
         int queued = 0;
         foreach (EntityId entity in entities)
         {
-            if (!IsOwned(world, entity, command.Player) || world.Productions.IndexOf(entity) is not (>= 0 and var q)
+            if (!IsOwned(world, entity, command.Player) || world.Dismantlings.Has(entity) || world.Productions.IndexOf(entity) is not (>= 0 and var q)
                 || !world.TypeOf(entity).Traits.Producer!.CanUpgrade((ushort)upgrade)
                 || (u.IsConversion && u.ConvertedType(world.Identities.Get(entity).TypeId) < 0))
             {
@@ -558,14 +558,17 @@ internal static class GameplayCommands
         return (int)(full * f / 1000);
     }
 
-    // BLD-027 (the owner's feature, item 18.F1): a finished building is taken down for a share of what it costs now.
+    // BLD-027 (the owner's feature, item 18.F1; the seventh play-test): a finished building is taken down over 5 to 10 s by
+    // its health; its units come out and its queue is cancelled at once, and when it is down a share of what it cost comes
+    // back (StructureSystem).
     public static CommandRejection? Dismantle(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         int taken = 0;
         bool protectedSkipped = false;
+        GameplaySettings g = world.Ruleset.Gameplay;
         foreach (EntityId entity in entities)
         {
-            if (!IsOwned(world, entity, command.Player) || !world.Footprints.Has(entity) || world.Constructions.Has(entity)
+            if (!IsOwned(world, entity, command.Player) || !world.Footprints.Has(entity) || world.Constructions.Has(entity) || world.Dismantlings.Has(entity)
                 || world.TypeOf(entity) is not { Traits.Category: EntityCategory.Building } type)
             {
                 continue;
@@ -577,15 +580,59 @@ internal static class GameplayCommands
                 continue;
             }
 
-            (int add, int bp) = world.Stats.Modifier(command.Player, ModifierStat.Cost, type.Id);
-            ResearchRules.RefundFor(world, command.Player, type, new PaidModifier { Add = add, BasisPoints = bp }, world.Ruleset.Gameplay.DismantleRefundBasisPoints);
-            Position p = world.Positions.Get(entity);
-            world.Events.Emit(new SimEvent(SimEventKind.Dismantled, command.Player, entity, p.X, p.Y, type.Id));
-            world.Destroy(entity);
+            long ms = g.DismantleBaseMs + ((long)world.Healths.Get(entity).Current * g.DismantleMsPerHealth);
+            int total = (int)Math.Clamp(ms, g.DismantleBaseMs, g.DismantleMaxMs);
+            world.Dismantlings.Set(entity, new Dismantling { TotalMs = total, LeftMs = total });
+            world.EmptyHolder(entity);
+            if (world.Productions.IndexOf(entity) is >= 0 and var q)
+            {
+                ref Production production = ref world.Productions.At(q);
+                while (production.Count > 0)
+                {
+                    RefundQueueItem(world, command.Player, QueueRuns.TakeOne(ref production, production.Count - 1));
+                }
+            }
+
             taken++;
         }
 
         return taken > 0 ? null : protectedSkipped ? CommandRejection.ShiftDeleteRequired : CommandRejection.NoValidEntities;
+    }
+
+    /// <summary>What a building gives back when it is down (BLD-027): the share of what it cost, its upgrades included.</summary>
+    public static void RefundDismantled(World world, EntityId building)
+    {
+        byte owner = world.Identities.Get(building).Owner;
+        EntityTypeDefinition type = world.TypeOf(building);
+        Span<int> spent = stackalloc int[world.Ruleset.ResourceTypes.Count];
+        ResearchRules.Spent(world, building, spent);
+        ref PlayerState player = ref world.Players[owner];
+        for (int r = 0; r < spent.Length; r++)
+        {
+            player.Resources[r] = (int)Math.Min(player.Resources[r] + ((long)spent[r] * world.Ruleset.Gameplay.DismantleRefundBasisPoints / 10_000), int.MaxValue);
+        }
+
+        Position p = world.Positions.Get(building);
+        world.Events.Emit(new SimEvent(SimEventKind.Dismantled, owner, building, p.X, p.Y, type.Id));
+    }
+
+    // A queued item cancelled: its refund (research, upgrade or unit).
+    private static void RefundQueueItem(World world, byte player, QueueRun taken)
+    {
+        ushort item = taken.Item;
+        GameplaySettings g = world.Ruleset.Gameplay;
+        if (QueueItems.IsResearch(item))
+        {
+            ResearchRules.Refund(world, player, world.Ruleset.Technologies[QueueItems.Id(item)].Cost, g.ResearchRefundBasisPoints);
+        }
+        else if (QueueItems.IsUpgrade(item))
+        {
+            ResearchRules.Refund(world, player, world.Ruleset.Upgrades[QueueItems.Id(item)].Cost, g.ResearchRefundBasisPoints);
+        }
+        else
+        {
+            ResearchRules.RefundFor(world, player, world.Ruleset.EntityTypes[item], taken.Paid, g.ProductionRefundBasisPoints);
+        }
     }
 
     public static CommandRejection? Cancel(World world, in Command command, ReadOnlySpan<EntityId> entities)
@@ -623,23 +670,7 @@ internal static class GameplayCommands
                 continue;
             }
 
-            QueueRun taken = QueueRuns.TakeOne(ref production, slot);
-            ushort item = taken.Item;
-            PaidModifier itemPaid = taken.Paid;
-            GameplaySettings g = world.Ruleset.Gameplay;
-            if (QueueItems.IsResearch(item))
-            {
-                ResearchRules.Refund(world, command.Player, world.Ruleset.Technologies[QueueItems.Id(item)].Cost, g.ResearchRefundBasisPoints);
-            }
-            else if (QueueItems.IsUpgrade(item))
-            {
-                ResearchRules.Refund(world, command.Player, world.Ruleset.Upgrades[QueueItems.Id(item)].Cost, g.ResearchRefundBasisPoints);
-            }
-            else
-            {
-                ResearchRules.RefundFor(world, command.Player, world.Ruleset.EntityTypes[item], itemPaid, g.ProductionRefundBasisPoints);
-            }
-
+            RefundQueueItem(world, command.Player, QueueRuns.TakeOne(ref production, slot));
             cancelled++;
         }
 
@@ -662,7 +693,7 @@ internal static class GameplayCommands
         int applied = 0;
         foreach (EntityId entity in entities)
         {
-            if (!IsOwned(world, entity, command.Player) || world.Productions.IndexOf(entity) is not (>= 0 and var q))
+            if (!IsOwned(world, entity, command.Player) || world.Dismantlings.Has(entity) || world.Productions.IndexOf(entity) is not (>= 0 and var q))
             {
                 continue;
             }

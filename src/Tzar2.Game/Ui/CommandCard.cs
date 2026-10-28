@@ -233,6 +233,11 @@ public sealed class CommandCard
                 return card;
             }
 
+            if (e.DismantlePermille >= 0)
+            {
+                return card; // BLD-027: a building being taken down does nothing more
+            }
+
             menu = OpenMenu ?? _source.Menu(e.TypeId);
             if (OpenMenu is null && e.Cloaked)
             {
@@ -283,7 +288,7 @@ public sealed class CommandCard
         {
             (bool enabled, string detail) = Availability(context, b, civ);
             (ImmutableArray<int> cost, int timeMs) = Price(context, b, civ);
-            string description = _source.Text("orders_add", b.Order, string.Empty).Trim();
+            string description = b.Action == CardAction.Dismantle ? RefundText(context, e) : _source.Text("orders_add", b.Order, string.Empty).Trim();
             if (b.Action == CardAction.Loan && LoanHint(context, b) is { } loan)
             {
                 description = loan; // TRADE-008: what the tavern lends, or the loan to return
@@ -385,7 +390,7 @@ public sealed class CommandCard
         string civ = Lead(context) is { } lead ? _source.Civilization(context.Frame.Entities[lead].TypeId) : string.Empty;
         if (b.Action == CardAction.Dismantle)
         {
-            return Dismantle(selected, shift);
+            return Dismantle(context, selected, shift);
         }
 
         _dismantleAsked = [];
@@ -954,7 +959,7 @@ public sealed class CommandCard
             if (listed)
             {
                 list.Add(new CardButton("unit", '\0', CardAction.SelectUnit, e.Id.Value.ToString(CultureInfo.InvariantCulture), _source.TrainImage(e.TypeId),
-                    e.Level > 0 ? $"{_source.Name(e.TypeId)}, level {e.Level}" : _source.Name(e.TypeId)));
+                    $"{e.Name ?? _source.Name(e.TypeId)}{(e.Level > 0 ? $", level {e.Level}" : string.Empty)}"));
             }
         }
 
@@ -968,7 +973,7 @@ public sealed class CommandCard
                 {
                     ushort holder = context.Frame.Entities[c].TypeId;
                     list.Add(new CardButton("unit", '\0', CardAction.SelectUnit, h.Holder.ToString(CultureInfo.InvariantCulture), _source.TrainImage(h.TypeId),
-                        $"{_source.Name(h.TypeId)}, level {h.Level} (in {_source.Name(holder)})"));
+                        $"{h.Name ?? _source.Name(h.TypeId)}, level {h.Level} (in {_source.Name(holder)})"));
                 }
             }
         }
@@ -1065,9 +1070,31 @@ public sealed class CommandCard
     private EntityId[] Traders(CardContext context)
         => OwnIds(Selected(context), e => e.IsMobile && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null);
 
+    // BLD-027 (the seventh play-test): what taking the lead building down gives back, for the tooltip: the share of what it
+    // cost, its upgrades included.
+    private string RefundText(CardContext context, in FrameEntity lead)
+    {
+        Span<int> refund = stackalloc int[_rules.ResourceTypes.Count];
+        int percent = _rules.Gameplay.DismantleRefundBasisPoints / 100;
+        var parts = new List<string>();
+        if (context.Frame.DismantleRefund(lead.Id, refund))
+        {
+            for (int r = 0; r < refund.Length; r++)
+            {
+                if (refund[r] > 0)
+                {
+                    parts.Add($"{refund[r].ToString(CultureInfo.InvariantCulture)} {_rules.ResourceTypes[r]}");
+                }
+            }
+        }
+
+        string back = parts.Count > 0 ? string.Join(", ", parts) : "nothing";
+        return $"Takes {_rules.Gameplay.DismantleBaseMs / 1000} to {_rules.Gameplay.DismantleMaxMs / 1000} s and gives back {percent} % of what it cost, its upgrades included: {back}.";
+    }
+
     // BLD-027: the first press for a set of buildings asks, the second takes them down (with Shift the castle and the
     // guilds too, as Delete).
-    private CardPress Dismantle(List<EntityInfo> selected, bool shift)
+    private CardPress Dismantle(CardContext context, List<EntityInfo> selected, bool shift)
     {
         EntityId[] buildings = OwnIds(selected, e => e.Category == EntityCategory.Building && !e.UnderConstruction);
         if (buildings.Length == 0)
@@ -1078,8 +1105,29 @@ public sealed class CommandCard
         if (!_dismantleAsked.AsSpan().SequenceEqual(buildings))
         {
             _dismantleAsked = buildings;
-            int percent = _rules.Gameplay.DismantleRefundBasisPoints / 100;
-            return new CardPress(Message: $"Press again to take {(buildings.Length == 1 ? "it" : "them")} down and get back {percent} % of the cost.");
+            Span<int> refund = stackalloc int[_rules.ResourceTypes.Count];
+            Span<int> all = stackalloc int[_rules.ResourceTypes.Count];
+            foreach (EntityId b in buildings)
+            {
+                if (context.Frame.DismantleRefund(b, refund))
+                {
+                    for (int r = 0; r < all.Length; r++)
+                    {
+                        all[r] += refund[r];
+                    }
+                }
+            }
+
+            var parts = new List<string>();
+            for (int r = 0; r < all.Length; r++)
+            {
+                if (all[r] > 0)
+                {
+                    parts.Add($"{all[r].ToString(CultureInfo.InvariantCulture)} {_rules.ResourceTypes[r]}");
+                }
+            }
+
+            return new CardPress(Message: $"Press again to take {(buildings.Length == 1 ? "it" : "them")} down and get back {(parts.Count > 0 ? string.Join(", ", parts) : "nothing")}.");
         }
 
         _dismantleAsked = [];

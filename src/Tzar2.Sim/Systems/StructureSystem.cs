@@ -32,6 +32,7 @@ public sealed class StructureSystem : ISimSystem
         World world = context.World;
         int tickMs = world.Config.TickLengthMilliseconds;
         UpdateGates(world);
+        TakeDown(world, tickMs);
         Burn(world, tickMs);
         RegainMana(world, tickMs);
     }
@@ -305,6 +306,35 @@ public sealed class StructureSystem : ISimSystem
 
             long gained = ((now + tickMs) * regen / 60) - (now * regen / 60); // milli-mana: regen × 1,000 / 60,000 ms
             pools[i].MilliMana = (int)Math.Clamp(pools[i].MilliMana + gained, 0, Math.Min(max, int.MaxValue));
+        }
+    }
+
+    // BLD-027: a building being taken down goes when its time is out, and gives back a share of what it cost.
+    private readonly List<EntityId> _down = [];
+
+    private void TakeDown(World world, int tickMs)
+    {
+        if (world.Dismantlings.Count == 0)
+        {
+            return;
+        }
+
+        _down.Clear();
+        ReadOnlySpan<EntityId> ids = world.Dismantlings.Entities;
+        Span<Dismantling> all = world.Dismantlings.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            all[i].LeftMs -= tickMs;
+            if (all[i].LeftMs <= 0)
+            {
+                _down.Add(ids[i]);
+            }
+        }
+
+        foreach (EntityId building in _down)
+        {
+            GameplayCommands.RefundDismantled(world, building);
+            world.Destroy(building);
         }
     }
 }

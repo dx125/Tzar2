@@ -692,6 +692,13 @@ public sealed record CombatSettings
     /// <summary>WAR-015: the types that choose by <see cref="SiegeTargetPriority"/> (catapults), ascending.</summary>
     public ImmutableArray<ushort> SiegeScanners { get; init; } = [];
 
+    /// <summary>
+    /// GAME-08 (ReTzar's reading of the original, 0x4de7d0, 0x4de880): the bowmen, whose levels add half an attack point
+    /// each (a full one for Nature's) and a defence point every four levels, against a full attack point and a defence point
+    /// every two levels for the others (archers, longbowmen, horse archers, ballistas, xebecs), ascending.
+    /// </summary>
+    public ImmutableArray<ushort> BowLevelClasses { get; init; } = [];
+
     /// <summary>WAR-015: the types of <see cref="TargetCategory.Mage"/> (mages), ascending.</summary>
     public ImmutableArray<ushort> TargetMages { get; init; } = [];
 
@@ -866,7 +873,7 @@ public sealed record CombatSettings
             Check(p, 0, 1_000_000);
         }
 
-        foreach (ImmutableArray<ushort> list in (ReadOnlySpan<ImmutableArray<ushort>>)[SiegeScanners, TargetMages, TargetTrainers, TargetSeats])
+        foreach (ImmutableArray<ushort> list in (ReadOnlySpan<ImmutableArray<ushort>>)[SiegeScanners, TargetMages, TargetTrainers, TargetSeats, BowLevelClasses])
         {
             if (list.IsDefault)
             {

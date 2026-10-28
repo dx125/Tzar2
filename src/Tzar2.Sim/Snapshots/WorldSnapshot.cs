@@ -30,13 +30,13 @@ public static class WorldSnapshot
     public const uint Magic = 0x4E533254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 24; // 22: the land units' steps (ADR 0270); 23: the tavern exchange under way (TRADE-011); 24: the rules' tables hash (ADR 0271)
+    public const int FormatVersion = 25; // 22: the land units' steps (ADR 0270); 23: the tavern exchange under way (TRADE-011); 24: the rules' tables hash (ADR 0271); 25: buildings taken down and what they cost (BLD-027)
 
     /// <summary>The oldest format a save game is still read from (ADR 0271): 21, the saves of 2026-10-24 on.</summary>
     public const int OldestSaveVersion = 21;
 
     // The stores a format did not have yet: a save of an older one leaves them empty (ADR 0271).
-    private static readonly Dictionary<string, int> StoreSince = new(StringComparer.Ordinal) { ["core.cellstep"] = 22 };
+    private static readonly Dictionary<string, int> StoreSince = new(StringComparer.Ordinal) { ["core.cellstep"] = 22, ["game.dismantle"] = 25, ["game.invested"] = 25 };
 
     /// <summary>Writes a snapshot of <paramref name="world"/>.</summary>
     public static void Capture(World world, BinaryBufferWriter writer, StateHasher hasher)

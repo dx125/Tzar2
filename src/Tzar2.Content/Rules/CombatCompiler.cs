@@ -28,7 +28,7 @@ internal sealed class CombatCompiler
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeGather", "crusaderArrivalMs", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
         "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell", "dummyDamagePerPoint", "experienceSpeeds", "levelCapBuildings", "levelCapPerBuilding",
         "marketTechnology", "marketFirstMs", "marketEveryMs", "marketSize", "marketBuyPercent", "marketOffers", "marketBookSpells",
-        "targetPriority", "siegeTargetPriority", "siegeScanners", "targetMages", "targetTrainers", "targetSeats", "helpRadiusTiles", "guardRadiusTiles",
+        "targetPriority", "siegeTargetPriority", "siegeScanners", "bowLevelClasses", "targetMages", "targetTrainers", "targetSeats", "helpRadiusTiles", "guardRadiusTiles",
     ];
 
     private static readonly string[] SpellTraits = ["Legacy", "Spell"];
@@ -147,7 +147,7 @@ internal sealed class CombatCompiler
             spells.Add(CompileSpell((ushort)i, _spellEntries[i], types, research));
         }
 
-        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), LevelCapBuildings = Filter(research, "levelCapBuildings"), SiegeScanners = Filter(research, "siegeScanners"), TargetMages = Filter(research, "targetMages"), TargetTrainers = Filter(research, "targetTrainers"), TargetSeats = Filter(research, "targetSeats"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells), MarketOffers = Offers(types), MarketBookSpells = BookSpells(spells) }, spells, _projectiles);
+        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), LevelCapBuildings = Filter(research, "levelCapBuildings"), SiegeScanners = Filter(research, "siegeScanners"), BowLevelClasses = Filter(research, "bowLevelClasses"), TargetMages = Filter(research, "targetMages"), TargetTrainers = Filter(research, "targetTrainers"), TargetSeats = Filter(research, "targetSeats"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells), MarketOffers = Offers(types), MarketBookSpells = BookSpells(spells) }, spells, _projectiles);
     }
 
     private static EntityTypeDefinition WithTraits(EntityTypeDefinition t, EntityTraits traits)

@@ -56,8 +56,15 @@ internal static class Interaction
     }
 
     /// <summary>
+    /// The tiles between a point's tile and an entity's rect as the original measures a guard's (ORD-001; ReTzar 0x41fd70,
+    /// 0x42dd00): its footprint, or a unit's tile, grown by one; 0 on it or next to it. Guards stand within
+    /// <c>combat.guardRadiusTiles</c> of what they guard.
+    /// </summary>
+    public static int GuardTiles(World world, Position p, EntityId entity) => Math.Max(0, TilesFrom(world, p, entity) - 1);
+
+    /// <summary>
     /// The tiles between a point's tile and what an entity stands on (its footprint, or a unit's tile), the larger axis;
-    /// 0 on it. ORD-001: guards stand within <c>combat.guardRadiusTiles</c> of what they guard.
+    /// 0 on it.
     /// </summary>
     public static int TilesFrom(World world, Position p, EntityId entity)
     {

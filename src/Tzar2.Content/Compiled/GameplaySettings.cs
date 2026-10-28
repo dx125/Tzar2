@@ -106,6 +106,15 @@ public sealed record GameplaySettings
     /// <summary>The share of a building's cost given back when it is taken down (BLD-027, the owner's feature; 75 %).</summary>
     public int DismantleRefundBasisPoints { get; init; } = 7_500;
 
+    /// <summary>The shortest taking down (BLD-027; the owner: 5 to 10 s by the building's health).</summary>
+    public int DismantleBaseMs { get; init; } = 5_000;
+
+    /// <summary>The longest taking down.</summary>
+    public int DismantleMaxMs { get; init; } = 10_000;
+
+    /// <summary>Milliseconds a hit point of the building adds to its taking down.</summary>
+    public int DismantleMsPerHealth { get; init; } = 1;
+
     /// <summary>Share of the cost refunded when a queued unit is cancelled (basis points).</summary>
     public int ProductionRefundBasisPoints { get; init; } = 10_000;
 
@@ -263,6 +272,10 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfNegative(ConstructionRefundBasisPoints);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ConstructionRefundBasisPoints, 10_000);
         ArgumentOutOfRangeException.ThrowIfNegative(DismantleRefundBasisPoints);
+        ArgumentOutOfRangeException.ThrowIfLessThan(DismantleBaseMs, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(DismantleMaxMs, DismantleBaseMs);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(DismantleMaxMs, 600_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(DismantleMsPerHealth);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(DismantleRefundBasisPoints, 10_000);
         ArgumentOutOfRangeException.ThrowIfNegative(ProductionRefundBasisPoints);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ProductionRefundBasisPoints, 10_000);

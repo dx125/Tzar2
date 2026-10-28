@@ -11,6 +11,46 @@ namespace Tzar2.Sim.Systems;
 /// </summary>
 public static class GameplayQueries
 {
+    /// <summary>
+    /// The attack and defence <paramref name="entity"/> fights with now: its type's after its kingdom's technologies, its
+    /// level (GAME-08), items, potions, blessings and curses; (0, 0) for what has neither. The selection view shows these
+    /// (the seventh play-test: experienced knights showed their type's values).
+    /// </summary>
+    public static (int Attack, int Defence) Combat(World world, EntityId entity)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        if (!world.Entities.IsAlive(entity) || !world.Identities.Has(entity))
+        {
+            return (0, 0);
+        }
+
+        Content.Compiled.EntityTypeDefinition type = world.TypeOf(entity);
+        int attack = type.Traits.Armament is { } arm ? CombatStats.Attack(world, entity, type, arm) : 0;
+        int defence = type.Traits.Category == Content.Compiled.EntityCategory.Unit ? CombatStats.Defence(world, entity, type) : 0;
+        return (attack, defence);
+    }
+
+    /// <summary>
+    /// What taking <paramref name="building"/> down gives back (BLD-027): <c>dismantleRefundPercent</c> of what it cost, its
+    /// construction and every upgrade bought for it, by resource type into <paramref name="into"/>.
+    /// </summary>
+    public static void DismantleRefund(World world, EntityId building, Span<int> into)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        into.Clear();
+        if (!world.Entities.IsAlive(building) || !world.Identities.Has(building))
+        {
+            return;
+        }
+
+        Span<int> spent = stackalloc int[world.Ruleset.ResourceTypes.Count];
+        ResearchRules.Spent(world, building, spent);
+        for (int r = 0; r < into.Length && r < spent.Length; r++)
+        {
+            into[r] = (int)((long)spent[r] * world.Ruleset.Gameplay.DismantleRefundBasisPoints / 10_000);
+        }
+    }
+
     /// <summary>Whether a worker of <paramref name="player"/> may gather from <paramref name="node"/> (Nature's nodes, or the player's own fields).</summary>
     public static bool MayHarvest(World world, byte player, EntityId node)
     {

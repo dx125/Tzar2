@@ -53,6 +53,28 @@ public class ExperienceTests
     private const int Tile = Map.MapState.UnitsPerTile;
 
     [Fact]
+    [Trait("Rule", "EXP-001")]
+    public void Levels_add_attack_and_defence_as_the_original_bowmen_half_and_a_quarter()
+    {
+        // The seventh play-test: experienced knights showed their type's values. ReTzar 0x4de7d0, 0x4de880: a level adds a
+        // point of attack and half a point of defence (rounded up); a kingdom's bowman half a point and a quarter.
+        using var d = new SimDriver(TestMap(32, 16, Unit("euro.knight", 0, 4, 4), Unit("euro.archer", 0, 8, 4), Unit("euro.archer", MapObject.Nature, 12, 4)), ruleset: Classic);
+        EntityId knight = OfType(d.World, "euro.knight").Single();
+        EntityId archer = OfType(d.World, "euro.archer").Single(a => d.World.Identities.Get(a).Owner == 0);
+        EntityId wild = OfType(d.World, "euro.archer").Single(a => d.World.Identities.Get(a).Owner == MapObject.Nature);
+        (int Attack, int Defence) Base(EntityId e) => GameplayQueries.Combat(d.World, e);
+        var before = (Base(knight), Base(archer), Base(wild));
+        foreach (EntityId e in new[] { knight, archer, wild })
+        {
+            d.World.Experiences.Get(e).Level = 5;
+        }
+
+        Assert.Equal((before.Item1.Attack + 5, before.Item1.Defence + 3), Base(knight));
+        Assert.Equal((before.Item2.Attack + 3, before.Item2.Defence + 2), Base(archer));
+        Assert.Equal(before.Item3.Attack + 5, Base(wild).Attack); // Nature's bowmen gain a full point
+    }
+
+    [Fact]
     [Trait("Rule", "TECH-005")]
     public void Without_Learning_units_gain_no_levels()
     {

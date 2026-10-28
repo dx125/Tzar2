@@ -69,6 +69,9 @@ gameplay:
   queueCapacity: 24                   # different items queued per building at once; any number of each (ADR 0180)
   constructionRefundPercent: 100      # BLD-020 (ReTzar, 0x41d6a8): all of it before any work, then half of what is left to build
   dismantleRefundPercent: 75          # BLD-027 (the owner's feature, not in the original): a building taken down gives this back
+  dismantleBaseMs: 5000               # BLD-027 (the owner: 5 to 10 s by the building's health): 5 s, plus 1 ms a hit point, at most 10 s
+  dismantleMaxMs: 10000
+  dismantleMsPerHealth: 1
   productionRefundPercent: 100        # UNVERIFIED: refund of a cancelled queued unit
   researchRefundPercent: 100          # UNVERIFIED: refund of a cancelled research or upgrade
   # GAME-03: repair, fire, ruins, walls, gates (ADR 0043).
@@ -597,6 +600,9 @@ combat:
   targetPriority: [0, 2000, 3000, 4000, 4000, 6000, 7000, 8000, 500, 4000, 2800, 2200, 0]
   siegeTargetPriority: [4000, 5000, 1000, 6000, 3000, 2000, 2500, 7000, 0, 3000, 5500, 5200, 4000]
   siegeScanners: { classes: [catapult, hcatapult] }
+  # GAME-08 (ReTzar 0x4de7d0, 0x4de880): a level adds a kingdom's bowman half an attack point (rounded up) and a defence point
+  # every four levels; any other unit an attack point and a defence point every two levels.
+  bowLevelClasses: { classes: [archer, longbowman, horse_archer, ballista, xebec] }
   targetMages: { classes: [mage] }
   targetTrainers: { classes: [barrack, church, workshop] }
   targetSeats: { classes: [castle, cathedral, academy, magetower, tcguild, shaolinn, mosque] }

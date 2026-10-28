@@ -36,6 +36,8 @@ internal static class FrameBuilder
         frame.Outcome = outcome;
 
         byte? card = player ?? viewer; // whose holders show what is inside them
+        frame.ClearRefunds();
+        frame.ResourceCount = world.Ruleset.ResourceTypes.Count;
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         Span<Identity> identities = world.Identities.Components;
         // Room for the remembered structures too (at most one per entity slot), so the buffer is not reallocated below.
@@ -71,6 +73,7 @@ internal static class FrameBuilder
             e.SwingMs = -1;
             e.CarryResource = Worker.NoResource;
             e.ConstructionPermille = -1;
+            e.DismantlePermille = -1;
             e.ResourceLeft = -1;
             e.TileX = -1;
             e.TileY = -1;
@@ -130,6 +133,8 @@ internal static class FrameBuilder
             }
 
             e.Named = world.Names.Count > 0 && world.Names.Has(id);
+            e.Name = e.Named ? world.Names.Get(id).Value : null;
+            (e.Attack, e.Defence) = GameplayQueries.Combat(world, id);
 
             if (world.Holders.IndexOf(id) is >= 0 and var ho && (card is null || identity.Owner == card))
             {
@@ -260,6 +265,15 @@ internal static class FrameBuilder
             {
                 Construction site = world.Constructions.At(k);
                 e.ConstructionPermille = site.TotalMs > 0 ? (int)Math.Clamp(site.ProgressMs * 1000L / site.TotalMs, 0, 1000) : 0;
+            }
+            else if (world.Dismantlings.Count != 0 && world.Dismantlings.IndexOf(id) is >= 0 and var down)
+            {
+                Dismantling d = world.Dismantlings.At(down);
+                e.DismantlePermille = (int)Math.Clamp(d.LeftMs * 1000L / Math.Max(1, d.TotalMs), 0, 1000);
+            }
+            else if (card is { } kingdom && identity.Owner == kingdom && world.TypeOf(id).Traits.Category == EntityCategory.Building)
+            {
+                GameplayQueries.DismantleRefund(world, id, frame.AddRefund(id.Value)); // BLD-027: the card's tooltip
             }
 
             int q = world.Productions.IndexOf(id);
@@ -658,7 +672,8 @@ internal static class FrameBuilder
 
             hero |= !item && world.Names.Count > 0 && world.Names.Has(unit);
 
-            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item, slot, isDefault, spell, look, value, hero, level));
+            string? name = !item && world.Names.Count > 0 && world.Names.Has(unit) ? world.Names.Get(unit).Value : null;
+            frame.SetHeld(n++, new FrameHeld(holder.Value, unit, world.Identities.Get(unit).TypeId, health.Current, health.Max, item, slot, isDefault, spell, look, value, hero, level, name));
         }
 
         frame.HeldCount = n;
@@ -799,6 +814,7 @@ internal static class FrameBuilder
             e.SwingMs = -1;
             e.CarryResource = Worker.NoResource;
             e.ConstructionPermille = g.Site != 0 ? g.BuildPermille : -1;
+            e.DismantlePermille = -1;
             e.ResourceLeft = -1;
             e.Remembered = true;
         }

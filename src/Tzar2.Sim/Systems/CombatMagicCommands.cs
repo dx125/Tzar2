@@ -58,7 +58,8 @@ internal static class CombatMagicCommands
         if (!world.Entities.IsAlive(holder) || world.Identities.IndexOf(holder) is not (>= 0 and var h) || !world.Identities.Has(unit)
             || (world.Identities.At(h).Owner is var keeper && keeper != player && keeper != world.Identities.Get(unit).Owner
                 && !world.Diplomacy.MayCommand(keeper, world.Identities.Get(unit).Owner))
-            || world.TypeOf(holder).Traits.Holder is not { } def || !world.Holders.Has(holder) || world.IsHeld(holder) || world.IsHeld(unit))
+            || world.TypeOf(holder).Traits.Holder is not { } def || !world.Holders.Has(holder) || world.IsHeld(holder) || world.IsHeld(unit)
+            || world.Dismantlings.Has(holder))
         {
             return CommandRejection.InvalidArgument;
         }
