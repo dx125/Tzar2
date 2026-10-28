@@ -94,6 +94,64 @@ public static class SpriteRules
     public static int SiteFrame(int permille, int frames)
         => Math.Clamp(permille * frames / 1000, 0, Math.Max(0, frames - 1));
 
+    /// <summary>The material of a wall or gate (1 wood, 2 stone; 0 for anything else): walls join pieces of their own.</summary>
+    public static byte WallMaterial(EntityTypeDefinition type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        return type.Traits.LegacyClass switch
+        {
+            "wall_wood" or "gate_wood" => 1,
+            "wall_stone" or "gate_stone" => 2,
+            _ => 0,
+        };
+    }
+
+    /// <summary>
+    /// The neighbours of the wall tile (<paramref name="x"/>, <paramref name="y"/>) in <paramref name="pieces"/> (a
+    /// material per tile, <see cref="WallMaterial"/>, row by row <paramref name="width"/> wide) that are of
+    /// <paramref name="material"/>: 1 north, 2 east, 4 south, 8 west (PRES-010).
+    /// </summary>
+    public static int WallMask(ReadOnlySpan<byte> pieces, int width, int x, int y, byte material)
+    {
+        return (Joins(pieces, width, x, y - 1, material) ? 1 : 0) | (Joins(pieces, width, x + 1, y, material) ? 2 : 0)
+            | (Joins(pieces, width, x, y + 1, material) ? 4 : 0) | (Joins(pieces, width, x - 1, y, material) ? 8 : 0);
+    }
+
+    private static bool Joins(ReadOnlySpan<byte> pieces, int width, int x, int y, byte material)
+        => material != 0 && width > 0 && x >= 0 && y >= 0 && x < width && (y * width) + x < pieces.Length && pieces[(y * width) + x] == material;
+
+    /// <summary>
+    /// A wall's picture (PRES-010; ReTzar's reading of the original, 0x4fb690, 0x4fbde0, 0x4fbce0): a site
+    /// <c>walls_{wood|stone}_build</c>; a finished wall <c>_vert</c> when joined north and south only, <c>_horz</c> east
+    /// and west only, otherwise a <c>_tower</c>, each <c>_dest</c> when damaged. Null for what is no wall.
+    /// </summary>
+    public static string? WallImage(EntityTypeDefinition type, int mask, bool site, bool damaged)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        if (!type.Traits.IsWall || WallMaterial(type) is not (> 0 and var m))
+        {
+            return null;
+        }
+
+        string material = m == 1 ? "wood" : "stone";
+        if (site)
+        {
+            return $"walls_{material}_build";
+        }
+
+        string shape = mask switch
+        {
+            5 => "vert",
+            10 => "horz",
+            _ => "tower",
+        };
+        return $"walls_{material}_{shape}{(damaged ? "_dest" : "")}";
+    }
+
+    /// <summary>The frame of a damaged wall's picture (ReTzar's reading, 0x4fbde0): rows − ⌊health × rows / most⌋ − 1.</summary>
+    public static int WallDamageFrame(int health, int maxHealth, int frames)
+        => maxHealth <= 0 || frames <= 0 ? 0 : Math.Clamp(frames - (int)((long)Math.Max(0, health) * frames / maxHealth) - 1, 0, frames - 1);
+
     /// <summary>
     /// The depletion frame of a rock (frame 0 = full) holding <paramref name="left"/> of <paramref name="full"/>
     /// (⚠ the original's thresholds are not measured).

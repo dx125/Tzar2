@@ -168,13 +168,14 @@ internal static class Interaction
 
     /// <summary>
     /// Whether a unit at <paramref name="position"/> reaches <paramref name="target"/>: its footprint (structures), or
-    /// its body (units: cows, ships; footprint-less nodes: fish patches, meat) within the interaction reach; a unit still
+    /// its body (units: cows, ships; footprint-less nodes: fish patches, meat; items) within the interaction reach, a
+    /// structure's footprint within the structure reach (the neighbouring tiles, WORLD-019); a unit still
     /// <paramref name="moving"/> reaches a structure only once it stands next to it (the touch reach).
     /// </summary>
     public static bool Reaches(World world, Position position, int radius, EntityId target, bool moving = false)
     {
         GameplaySettings g = world.Ruleset.Gameplay;
-        long reach = (long)radius + (moving && world.Footprints.Has(target) ? g.InteractionTouchUnits : g.InteractionReachUnits);
+        long reach = (long)radius + (!world.Footprints.Has(target) ? g.InteractionReachUnits : moving ? g.InteractionTouchUnits : g.StructureReachUnits);
         if (!world.Footprints.Has(target))
         {
             reach += RadiusOf(world, target);
@@ -866,6 +867,29 @@ internal static class Interaction
         motion.FollowTarget = 0;
         motion.Replans = 0;
         MovementOrders.Request(world, unit, ref motion, 0, motion.OrderX, motion.OrderY);
+    }
+
+    /// <summary>Turns a unit toward an entity (the middle of a structure's footprint, a unit's position).</summary>
+    public static void Face(World world, EntityId unit, EntityId target)
+    {
+        Position p = world.Positions.Get(unit);
+        int tx;
+        int ty;
+        if (world.Footprints.Has(target))
+        {
+            (int x0, int y0, int x1, int y1) = Rect(world, target);
+            (tx, ty) = ((x0 + x1) / 2, (y0 + y1) / 2);
+        }
+        else
+        {
+            Position t = world.Positions.Get(target);
+            (tx, ty) = (t.X, t.Y);
+        }
+
+        if (tx != p.X || ty != p.Y)
+        {
+            world.Identities.Get(unit).Facing = (byte)Trig.Atan2(ty - p.Y, tx - p.X).ToDirection8();
+        }
     }
 
     /// <summary>Whether a unit is executing a movement.</summary>

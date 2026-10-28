@@ -12,6 +12,9 @@ uniform int cell_tex_width = 4096;
 uniform bool shadow_pass = false;
 // Treat the importer's baked-shadow hints (rle.md §5.4) as shadow instead of opaque colour (UNK-03 open).
 uniform bool baked_shadow_as_shadow = true;
+// The placement ghost (CTRL-023): the picture's shape in one colour, a shadow of the building, its light kept faintly.
+uniform bool silhouette = false;
+uniform vec4 silhouette_colour = vec4(0.3, 1.0, 0.3, 0.55);
 
 varying flat vec4 v_data;
 
@@ -83,6 +86,11 @@ void fragment() {
 		if (kind != 1) {
 			discard;
 		}
-		COLOR = vec4(colour, 1.0);
+		if (silhouette) {
+			float light = dot(colour, vec3(0.299, 0.587, 0.114));
+			COLOR = vec4(silhouette_colour.rgb * (0.7 + 0.3 * light), silhouette_colour.a);
+		} else {
+			COLOR = vec4(colour, 1.0);
+		}
 	}
 }

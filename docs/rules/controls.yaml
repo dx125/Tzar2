@@ -109,9 +109,9 @@ rules:
     status: implemented
   CTRL-023:
     rule: The image of the building being placed is green, without the kingdom's colours.
-    source: [manual Constructing A Building, manual Commanding Units (Build), owner 2026-10-21 (answers)]
+    source: [manual Constructing A Building, manual Commanding Units (Build), owner 2026-10-21 (answers), owner 2026-10-25 (sixth play-test)]
     status: implemented
-    note: The cells that block it turn red (CTRL-018).
+    note: It is the building's shadow, its shape in green with its light kept faintly, not the finished building tinted (the sixth play-test); where it cannot stand the shadow is red and the cells that block it turn red (CTRL-018). A wall's shadow joins the walls next to it (PRES-010).
   CTRL-024:
     rule: Holding Alt or Ctrl while placing a gate turns the direction of the gate to be built.
     source: [manual Common Buildings (Wood Gate and Stone Gate), help ITEMS.TXT HT_BUILD_WALLS_GATES, community ReTzar src/world/starting.rs (0x498373)]
@@ -144,3 +144,8 @@ rules:
     rule: In the build menu the letters of the buildings in its categories (guilds, common, rare) work directly, without opening the category.
     source: [data MENU.INI capturekeys]
     status: tested
+  CTRL-030:
+    rule: The build mode stays after a building is placed, its shadow following the pointer for more of the same, until a right click or Esc; the build menu stays open.
+    source: [owner 2026-10-25 (sixth play-test)]
+    status: implemented
+    note: ReTzar reads the original as keeping the placement going only with Shift held (0x4fb169); the owner remembers the mode staying, and Tzar2 follows the owner. Shift still queues the site after the builder's work. Without builders selected the mode ends.

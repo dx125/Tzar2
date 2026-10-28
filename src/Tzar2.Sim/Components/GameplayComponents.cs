@@ -569,6 +569,9 @@ public enum WaypointKind : byte
 
     /// <summary>A point of a patrol path (ORD-006); a queue holds either these only or none.</summary>
     Patrol = 3,
+
+    /// <summary>Build the site <see cref="Waypoint.Target"/> after the one the peasant builds now (BLD-025).</summary>
+    Build = 4,
 }
 
 /// <summary>
@@ -596,7 +599,7 @@ public struct Waypoint
     /// <summary>Padding, always 0.</summary>
     public byte Reserved2;
 
-    /// <summary>The attacked or guarded entity (<c>EntityId.Value</c>); 0 for moves and patrol points.</summary>
+    /// <summary>The attacked, guarded or built entity (<c>EntityId.Value</c>); 0 for moves and patrol points.</summary>
     public uint Target;
 }
 

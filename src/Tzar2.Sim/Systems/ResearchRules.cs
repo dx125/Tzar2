@@ -214,6 +214,20 @@ internal static class ResearchRules
     {
         UpgradeDefinition u = world.Ruleset.Upgrades[upgrade];
         Identity identity = world.Identities.Get(entity);
+        if (u.IsConversion && world.TypeOf(entity).Traits.IsWall)
+        {
+            // BLD-026 (ReTzar 0x4fab10): a wall turns to stone with its whole row, its gates too.
+            var row = new List<EntityId>();
+            WallRow(world, entity, upgrade, row);
+            foreach (EntityId piece in row)
+            {
+                if (piece != entity && RowConversion(world, piece, upgrade) is { } other && other.ConvertedType(world.Identities.Get(piece).TypeId) is >= 0 and var into)
+                {
+                    world.ConvertType(piece, (ushort)into);
+                }
+            }
+        }
+
         if (u.IsConversion)
         {
             int target = u.ConvertedType(identity.TypeId);
@@ -239,6 +253,98 @@ internal static class ResearchRules
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.UpgradeCompleted, identity.Owner, entity, identity.TypeId, world.Identities.Get(entity).TypeId, upgrade));
+    }
+
+    /// <summary>
+    /// The row of a wall (BLD-026; ReTzar's reading of the original, 0x4fa710): the wall and every finished wall or gate of
+    /// its kingdom reached through the tiles left, right, above and below each piece, that the upgrade (or, for a gate, its
+    /// own conversion) turns into the next material. The wall comes first.
+    /// </summary>
+    internal static void WallRow(World world, EntityId wall, int upgrade, List<EntityId> row)
+    {
+        row.Clear();
+        row.Add(wall);
+        byte owner = world.Identities.Get(wall).Owner;
+        var byTile = new Dictionary<int, EntityId>();
+        int width = world.Map.Width;
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
+        {
+            EntityId s = structures[i];
+            if (world.Identities.Get(s).Owner != owner || world.Constructions.Has(s) || RowConversion(world, s, upgrade) is null)
+            {
+                continue;
+            }
+
+            (int tx, int ty, int w, int h) = world.FootprintRect(s);
+            for (int y = ty; y < ty + h; y++)
+            {
+                for (int x = tx; x < tx + w; x++)
+                {
+                    byTile[(y * width) + x] = s;
+                }
+            }
+        }
+
+        for (int k = 0; k < row.Count; k++)
+        {
+            (int tx, int ty, int w, int h) = world.FootprintRect(row[k]);
+            for (int y = ty - 1; y <= ty + h; y++)
+            {
+                for (int x = tx - 1; x <= tx + w; x++)
+                {
+                    bool side = (x >= tx && x < tx + w) != (y >= ty && y < ty + h); // beside an edge, not a corner
+                    if (side && world.Map.ContainsTile(x, y) && byTile.TryGetValue((y * width) + x, out EntityId n) && !row.Contains(n))
+                    {
+                        row.Add(n);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// What a wall row's upgrade costs (BLD-026; ReTzar 0x4fab10): the upgrade's price for each wall of the row and ten
+    /// times it for each gate.
+    /// </summary>
+    internal static int RowWeight(World world, EntityId wall, int upgrade)
+    {
+        var row = new List<EntityId>();
+        WallRow(world, wall, upgrade, row);
+        int weight = 0;
+        foreach (EntityId piece in row)
+        {
+            weight += world.TypeOf(piece).Traits.Gate is not null ? 10 : 1;
+        }
+
+        return Math.Max(1, weight);
+    }
+
+    // The conversion that turns a piece of a wall row into the next material: the upgrade itself for a wall, for a gate its
+    // own (to stone); null when there is none.
+    private static UpgradeDefinition? RowConversion(World world, EntityId piece, int upgrade)
+    {
+        EntityTypeDefinition type = world.TypeOf(piece);
+        UpgradeDefinition u = world.Ruleset.Upgrades[upgrade];
+        if (type.Traits.IsWall)
+        {
+            return u.ConvertedType(type.Id) >= 0 ? u : null;
+        }
+
+        if (type.Traits.Gate is null)
+        {
+            return null;
+        }
+
+        foreach (UpgradeDefinition g in world.Ruleset.Upgrades)
+        {
+            if (g.IsConversion && g.ConvertedType(type.Id) >= 0)
+            {
+                return g;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>The level-upgrade bonus of <paramref name="entity"/> for <paramref name="stat"/> (ship cannons; 0 without levels).</summary>

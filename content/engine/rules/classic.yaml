@@ -57,7 +57,10 @@ gameplay:
   meleeReachPx: 18                    # UNVERIFIED (UNK-07/11): edge-to-edge reach of hand-to-hand attacks; with units one to a
                                       # tile (ADR 0270) a diagonal neighbour is in reach (45 - 2 x 14 px bodies = 17), the next
                                       # tile but one is not (the original: the target's tiles grown by one)
-  interactionReachPx: 32              # UNVERIFIED (UNK-17/18): worker reach to a node, drop-off or site, once stopped
+  interactionReachPx: 32              # UNVERIFIED (UNK-17/18): reach to a cow, a ship, an item, meat or a fish patch, once stopped
+  structureReachPx: 18                # UNVERIFIED (UNK-17/18): reach to a structure's footprint, once stopped; with units one to a
+                                      # tile (ADR 0270) a neighbouring tile, a diagonal one too, and no further (the sixth play-test:
+                                      # builders worked from a tile away; the original: the footprint grown by one, WORLD-019)
   interactionTouchPx: 12              # UNVERIFIED (UNK-17/18): the same while still walking there: units go up to the wall
                                       # (owner play-test 2026-10-20: they stood a tile away from what they worked on)
   acquireIntervalMs: 200              # UNVERIFIED: target scan cadence of idle armed units

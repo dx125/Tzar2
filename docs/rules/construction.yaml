@@ -44,10 +44,11 @@ rules:
     source: [guide Economy]
     status: tested
   BLD-011:
-    rule: Walls are laid by dragging a line, and the builder goes on along it.
-    source: [community TDD GAME-03]
+    rule: A wall is laid by dragging with the left button held, from the tile pressed to the tile where the button comes up, as an L with the longer side first (the other side first with Alt); the builder begins at the row's end nearer to it and goes on along it.
+    source: [community TDD GAME-03, 'community ReTzar src/gameplay.rs (0x4fb8f0: the row''s cells; 0x4fb19d: begun at the end nearer the builder) and src/frontend/mission.rs (0x4fb0be, 0x4fb169: dragged from the press, laid when the button comes up)', owner 2026-10-25 (sixth play-test)]
     status: tested
     adr: [0043]
+    note: While the button is held the row shows each segment's green shadow, joined as it will stand, and a red tile where none can go. A segment goes on each tile that takes one, at most maxWallSegments tiles of the row, each paid when placed. A straight line has no other side.
   BLD-012:
     rule: Peasants who finish a storage or a lumber mill start gathering nearby by themselves.
     source: [patch 1.05 (TZAR110.TXT)]
@@ -100,3 +101,13 @@ rules:
     status: tested
     adr: [0185]
     note: Batch J's third run (repair-mill, repair-barracks, repair-castle; manual.yaml repair). Our idle peasants came to help unasked. Whether Architecture speeds repairs, and how ships and siege weapons are repaired, are not measured; Tzar2 applies the same rule to them.
+  BLD-025:
+    rule: A peasant at work on a site that places another one builds it after its own, the sites in the order placed; one not at a site starts on the new one.
+    source: ['community ReTzar src/gameplay.rs (0x48f160: a peasant at work on its Build program takes the new site after its own)', owner 2026-10-25 (sixth play-test)]
+    status: tested
+    note: The next site waits in the peasant's queue of orders (a Build waypoint); finished, cancelled or destroyed, its site gives way to the next one still unfinished, then to the rest of a dragged wall nearby.
+  BLD-026:
+    rule: Upgrading a wooden wall to stone upgrades its whole row, the walls and gates of its kingdom joined to it side by side, for the upgrade's price for each wall and ten times it for each gate.
+    source: ['community ReTzar src/gameplay.rs (0x4fab10, 0x4fa710: the row through the cells left, right, above and below each segment; a gate counts ten)', owner 2026-10-26 (sixth play-test)]
+    status: tested
+    note: The row is taken when the order is given (the price) and again when the upgrade is done (what turns to stone); a gate turns by its own conversion. Pieces meeting only at a corner are not joined.

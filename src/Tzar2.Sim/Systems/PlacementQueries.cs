@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 
 namespace Tzar2.Sim.Systems;
@@ -19,6 +20,48 @@ public static class PlacementQueries
         ArgumentNullException.ThrowIfNull(world);
         return world.Map.ContainsTile(tileX, tileY) && world.Map.IsPassable(Locomotor.Foot, tileX, tileY)
             && world.Map.Bridges[(tileY * world.Map.Width) + tileX] == 0 && !world.IsUnderWalkableFootprint(tileX, tileY);
+    }
+
+    /// <summary>
+    /// The tiles of a wall dragged from (<paramref name="x0"/>, <paramref name="y0"/>) to (<paramref name="x1"/>,
+    /// <paramref name="y1"/>) (BLD-011; ReTzar's reading of the original, 0x4fb8f0, 0x4fb19d): the start, the longer side
+    /// first (the other one with <paramref name="alt"/>, unless the line is straight), the corner, the other side and the
+    /// end. The row begins at its end nearer <paramref name="builder"/>, a tile, when there is one.
+    /// </summary>
+    public static void WallRow(int x0, int y0, int x1, int y1, bool alt, (int X, int Y)? builder, List<(int X, int Y)> row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        row.Clear();
+        bool vertical = Math.Abs(x0 - x1) < Math.Abs(y0 - y1);
+        if (alt && x0 != x1 && y0 != y1)
+        {
+            vertical = !vertical;
+        }
+
+        (int cx, int cy) = vertical ? (x0, y1) : (x1, y0);
+        Walk(row, x0, y0, cx, cy);
+        Walk(row, cx, cy, x1, y1);
+        if (row.Count == 0 || row[^1] != (x1, y1))
+        {
+            row.Add((x1, y1));
+        }
+
+        if (builder is { } b && Chebyshev(row[0], b) > Chebyshev(row[^1], b))
+        {
+            row.Reverse();
+        }
+
+        // Every tile from (ax, ay) along a straight line, up to (bx, by) without it.
+        static void Walk(List<(int X, int Y)> row, int ax, int ay, int bx, int by)
+        {
+            int sx = Math.Sign(bx - ax), sy = Math.Sign(by - ay);
+            for (int x = ax, y = ay; x != bx || y != by; x += sx, y += sy)
+            {
+                row.Add((x, y));
+            }
+        }
+
+        static int Chebyshev((int X, int Y) a, (int X, int Y) b) => Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
     }
 
     /// <summary>

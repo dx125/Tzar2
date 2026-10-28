@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
 using Tzar2.Sim.Commands;
@@ -253,7 +254,15 @@ internal static class GameplayCommands
         world.Constructions.Get(site).Paid = paid;
         Position p = world.Positions.Get(site);
         world.Events.Emit(new SimEvent(SimEventKind.ConstructionStarted, command.Player, site, p.X, p.Y, typeId));
-        Assign(world, command.Player, site, typeId, entities, WorkerTask.Build);
+        if (type.Traits.ReadyAtOnce)
+        {
+            Assign(world, command.Player, site, typeId, entities, WorkerTask.Build);
+        }
+        else
+        {
+            AssignPlaced(world, command.Player, site, entities);
+        }
+
         if (type.Traits.ReadyAtOnce)
         {
             // ECO-025 (ReTzar 0x44c7a0, 0x48f603): a field is born complete and ripe, and its peasants dig it at once.
@@ -268,10 +277,11 @@ internal static class GameplayCommands
     }
 
     /// <summary>
-    /// Drags a wall (GAME-03; ADR 0043): one site per tile on the straight line from the start tile to the end tile
-    /// (Bresenham, at most <c>maxWallSegments</c>), each paid when placed; tiles that do not fit are skipped, and the
-    /// line stops at the first segment the player cannot pay. The builders start on the first segment and move on to
-    /// the next unfinished one when it completes.
+    /// Drags a wall (GAME-03, BLD-011; ADR 0043): one site per tile of the row from the start tile to the end tile, the
+    /// original's L (<see cref="PlacementQueries.WallRow"/>; Alt takes the other side first), from its end nearer the
+    /// first builder, at most <c>maxWallSegments</c>, each paid when placed; tiles that do not fit are skipped, and the
+    /// row stops at the first segment the player cannot pay. The builders start on the first segment (after their site
+    /// at work, BLD-025) and move on to the next unfinished one when it completes.
     /// </summary>
     public static CommandRejection? BuildWall(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
@@ -309,17 +319,24 @@ internal static class GameplayCommands
             return CommandRejection.RequirementNotMet;
         }
 
-        int x0 = command.X / MapState.UnitsPerTile;
-        int y0 = command.Y / MapState.UnitsPerTile;
-        int dx = Math.Abs(x1 - x0);
-        int dy = -Math.Abs(y1 - y0);
-        int sx = x0 < x1 ? 1 : -1;
-        int sy = y0 < y1 ? 1 : -1;
-        int error = dx + dy;
+        (int X, int Y)? near = null;
+        foreach (EntityId entity in entities)
+        {
+            if (OwnedWorker(world, entity, command.Player) >= 0 && world.TypeOf(entity).Traits.CanBuild(typeId))
+            {
+                Position b = world.Positions.Get(entity);
+                near = (b.X / MapState.UnitsPerTile, b.Y / MapState.UnitsPerTile);
+                break;
+            }
+        }
+
+        var row = new List<(int X, int Y)>();
+        PlacementQueries.WallRow(command.X / MapState.UnitsPerTile, command.Y / MapState.UnitsPerTile, x1, y1, (command.Flags & CommandFlags.Alt) != 0, near, row);
         EntityId first = EntityId.None;
         CommandRejection reason = CommandRejection.IllegalPlacement;
-        for (int n = 0; n < world.Ruleset.Gameplay.MaxWallSegments; n++)
+        for (int n = 0; n < Math.Min(row.Count, world.Ruleset.Gameplay.MaxWallSegments); n++)
         {
+            (int x0, int y0) = row[n];
             if (CanPlace(world, type, x0, y0, rotated: false))
             {
                 if (world.Entities.RemainingCapacity < 1)
@@ -340,24 +357,6 @@ internal static class GameplayCommands
                 world.Events.Emit(new SimEvent(SimEventKind.ConstructionStarted, command.Player, segment, p.X, p.Y, typeId));
                 first = first.IsNone ? segment : first;
             }
-
-            if (x0 == x1 && y0 == y1)
-            {
-                break;
-            }
-
-            int e2 = 2 * error;
-            if (e2 >= dy)
-            {
-                error += dy;
-                x0 += sx;
-            }
-
-            if (e2 <= dx)
-            {
-                error += dx;
-                y0 += sy;
-            }
         }
 
         if (first.IsNone)
@@ -365,7 +364,7 @@ internal static class GameplayCommands
             return reason;
         }
 
-        Assign(world, command.Player, first, typeId, entities, WorkerTask.Build);
+        AssignPlaced(world, command.Player, first, entities);
         return null;
     }
 
@@ -515,7 +514,21 @@ internal static class GameplayCommands
                 continue;
             }
 
-            if (!ResearchRules.TryPay(world, command.Player, u.Cost))
+            // A wall turns to stone with its row: its price for each wall, ten times it for each gate (BLD-026).
+            ImmutableArray<int> cost = u.Cost;
+            if (u.IsConversion && world.TypeOf(entity).Traits.IsWall)
+            {
+                int weight = ResearchRules.RowWeight(world, entity, upgrade);
+                var builder = ImmutableArray.CreateBuilder<int>(cost.Length);
+                foreach (int c in cost)
+                {
+                    builder.Add((int)Math.Min((long)c * weight, int.MaxValue));
+                }
+
+                cost = builder.MoveToImmutable();
+            }
+
+            if (!ResearchRules.TryPay(world, command.Player, cost))
             {
                 reason = queued > 0 ? null : CommandRejection.NotAffordable;
                 break;
@@ -1015,6 +1028,30 @@ internal static class GameplayCommands
         }
 
         return assigned;
+    }
+
+    // BLD-025 (ReTzar 0x48f160): a peasant at work on a site takes a new site it placed after its own, in the order placed;
+    // the others start on it now.
+    private static void AssignPlaced(World world, byte player, EntityId site, ReadOnlySpan<EntityId> entities)
+    {
+        foreach (EntityId entity in entities)
+        {
+            if (OwnedWorker(world, entity, player) is not (>= 0 and var w) || !world.TypeOf(entity).Traits.IsBuilder)
+            {
+                continue;
+            }
+
+            Worker worker = world.Workers.At(w);
+            EntityId current = EntityId.FromValue(worker.Target);
+            bool building = worker.Task == WorkerTask.Build && worker.Phase is WorkerPhase.ToSite or WorkerPhase.Building
+                && world.Entities.IsAlive(current) && world.Constructions.Has(current);
+            if (building && OrderQueue.Add(world, entity, new Waypoint { X = world.Positions.Get(site).X, Y = world.Positions.Get(site).Y, Kind = WaypointKind.Build, Target = site.Value }))
+            {
+                continue;
+            }
+
+            StartWork(world, entity, site, WorkerTask.Build);
+        }
     }
 
     /// <summary>Gives a builder the task of building or repairing <paramref name="target"/> (its tasks so far end).</summary>

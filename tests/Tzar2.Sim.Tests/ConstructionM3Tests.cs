@@ -136,10 +136,10 @@ public class ConstructionM3Tests
         Assert.All(segments, s => Assert.False(d.World.Constructions.Has(s)));
         Assert.Empty(d.Rejections());
 
-        // A diagonal line, and a line nobody can pay.
+        // A slanted drag lays an L (the side along x, then down: 7 tiles), and a line nobody can pay.
         d.Order(0, CommandKind.BuildWall, [peon], 22 * Tile, 2 * Tile, arg0: Id("comm.wall_wood"), arg1: (5 << 16) | 25);
         d.Step();
-        Assert.Equal(7 + 4, OfType(d.World, "comm.wall_wood").Count());
+        Assert.Equal(7 + 7, OfType(d.World, "comm.wall_wood").Count());
         d.Order(0, CommandKind.BuildWall, [peon], 2 * Tile, 12 * Tile, arg0: Id("euro.house"), arg1: (12 << 16) | 8);
         d.Step();
         Assert.Equal(CommandRejection.InvalidArgument, d.Rejections().Last()); // only walls are dragged

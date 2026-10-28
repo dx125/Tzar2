@@ -72,8 +72,8 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // guards stand within three tiles (ORD-001): the hashes.
     // (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (hashed layout 20): the hashes.
     // (ECO-025, 2026-10-27) a field is ready the moment it is placed and its farmer works its middle tile: the hashes.
-    private const ulong GoldenHashStream = 0x3E4C807032AC214EUL;
-    private const ulong GoldenFinalFullHash = 0x28BD106F3B8673D7UL;
+    private const ulong GoldenHashStream = 0xB5384059549BB0B6UL;
+    private const ulong GoldenFinalFullHash = 0xA7197F848996FAF7UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

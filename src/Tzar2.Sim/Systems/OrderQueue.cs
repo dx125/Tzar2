@@ -124,6 +124,24 @@ internal static class OrderQueue
         int c = world.Combats.IndexOf(unit);
         switch (next.Kind)
         {
+            case WaypointKind.Build:
+            {
+                // BLD-025: the next site placed, if it still stands unfinished.
+                EntityId site = EntityId.FromValue(next.Target);
+                if (!world.Entities.IsAlive(site) || !world.Constructions.Has(site) || world.Workers.IndexOf(unit) is not (>= 0 and var w)
+                    || world.Identities.Get(site).Owner != world.Identities.Get(unit).Owner)
+                {
+                    return false;
+                }
+
+                ref Worker worker = ref world.Workers.At(w);
+                worker.Task = WorkerTask.Build;
+                worker.Phase = WorkerPhase.ToSite;
+                worker.Target = site.Value;
+                worker.Retries = 0;
+                return true;
+            }
+
             case WaypointKind.Attack:
             {
                 EntityId target = EntityId.FromValue(next.Target);
