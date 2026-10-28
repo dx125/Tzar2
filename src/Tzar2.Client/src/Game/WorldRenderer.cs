@@ -57,7 +57,9 @@ public sealed class WorldRenderer : IDisposable
     /// <summary>World units per pixel (TDD §8.2).</summary>
     public const int UnitsPerPixel = 64;
 
-    private const int TilePixels = 32;
+    /// <summary>Pixels of a map tile.</summary>
+    public const int TilePixels = 32;
+
     private readonly Ruleset _rules;
     private readonly PresentationCatalog _catalog;
     private readonly SpriteBank _bank;

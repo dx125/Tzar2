@@ -28,9 +28,10 @@ public enum SoundCategory
 /// Sound effects (REQ-AUD-01): the imported WAVs played losslessly through <see cref="MaxVoices"/> voices, mixed by the
 /// original's rules as ReTzar reads them (<see cref="SoundRules"/>, PRES-012): a set's clip picked by a roll of R(0, 1000)
 /// that may pick none; the voices split into channels (effects, the voices of units and of buildings); at most a few
-/// effects of a category at once, each one more lowering the next one's priority; and an entity's sounds silenced at its
-/// new order or its death. Per-category toggles and distance attenuation from the screen centre (⚠ UNK-33: the
-/// original's attenuation and panning are not measured; no panning yet). Presentation only.
+/// effects of a category at once, each one more lowering the next one's priority; an entity's sounds silenced at its new
+/// order or its death; and each sound as loud as its tiles from the view's centre make it, heard again from there when
+/// the view moves (PRES-013: effects left far behind stop). Per-category toggles. No panning yet (UNK-33). Presentation
+/// only.
 /// </summary>
 public partial class SoundMixer : Node
 {
@@ -46,6 +47,12 @@ public partial class SoundMixer : Node
     private readonly Dictionary<string, AudioStreamWav?> _streams = new(StringComparer.Ordinal);
     private readonly AudioStreamPlayer[] _voices = new AudioStreamPlayer[MaxVoices];
     private readonly VoiceState[] _states = new VoiceState[MaxVoices];
+    private readonly SoundPlace?[] _places = new SoundPlace?[MaxVoices];
+    private int _centreX;
+    private int _centreY;
+    private int _heardX;
+    private int _heardY;
+    private int _viewWidth = SoundRules.WidestView;
     private readonly List<int> _weights = [];
     private readonly Random _random = new(1234);
     private readonly bool[] _enabled = [true, true, true, true];
@@ -139,17 +146,82 @@ public partial class SoundMixer : Node
     }
 
     /// <summary>
-    /// Plays a clip of a SOUNDS.INI set (or a direct file reference) in <paramref name="category"/>'s channel, with the
-    /// priority of its <c>[priority]</c> key <paramref name="priorityKey"/>, at <paramref name="distance"/> (0 = screen
-    /// centre, 1 = a screen away; beyond 1.5 inaudible), for <paramref name="owner"/> (1 + an entity's index, or 0).
-    /// False when nothing plays: the roll picked no clip, the category is muted or no voice is free.
+    /// Where the player listens from (PRES-013, 0x4d01c0): the view's centre tile and its width in pixels. Once the centre
+    /// has moved more than <see cref="SoundRules.RelocateTiles"/> tiles the playing sounds are heard again from it, each at
+    /// its owner's tile now (<paramref name="ownerAt"/>, for 1 + an entity's index; null keeps where it was): an effect
+    /// left too far behind stops, the voices of units and buildings keep their least volume.
     /// </summary>
-    public bool PlaySet(string? set, SoundCategory category, string priorityKey, float distance = 0f, int owner = 0)
+    public void Listen(int tileX, int tileY, int viewWidth, Func<int, SoundPlace?> ownerAt)
+    {
+        ArgumentNullException.ThrowIfNull(ownerAt);
+        (_centreX, _centreY, _viewWidth) = (tileX, tileY, viewWidth);
+        if (Math.Abs(tileX - _heardX) + Math.Abs(tileY - _heardY) <= SoundRules.RelocateTiles)
+        {
+            return;
+        }
+
+        (_heardX, _heardY) = (tileX, tileY);
+        int first = SoundRules.FirstSlot(SoundChannel.Effect);
+        int last = SoundRules.FirstSlot(SoundChannel.Interface);
+        for (int i = first; i < last; i++)
+        {
+            AudioStreamPlayer voice = _voices[i];
+            if (voice is null || !(voice.Playing || voice.StreamPaused) || _places[i] is not { } at)
+            {
+                continue;
+            }
+
+            if (_states[i].Owner != 0 && ownerAt(_states[i].Owner) is { } now)
+            {
+                at = now;
+                _places[i] = now;
+            }
+
+            bool effect = i < SoundRules.FirstSlot(SoundChannel.Unit);
+            int dx = at.TileX - tileX;
+            int dy = at.TileY - tileY;
+            if (SoundRules.Placement(dx, dy, viewWidth, effect) is not { } placed)
+            {
+                voice.StreamPaused = false;
+                voice.Stop();
+                _states[i] = default;
+                _places[i] = null;
+                continue;
+            }
+
+            voice.VolumeDb = placed.Volume / 100f;
+            _states[i] = _states[i] with { Distance = Math.Abs(dx) + Math.Abs(dy) };
+        }
+    }
+
+    /// <summary>
+    /// Plays a clip of a SOUNDS.INI set (or a direct file reference) in <paramref name="category"/>'s channel, with the
+    /// priority of its <c>[priority]</c> key <paramref name="priorityKey"/>, heard from <paramref name="place"/> (null:
+    /// the view's centre), for <paramref name="owner"/> (1 + an entity's index, or 0). False when nothing plays: the
+    /// category is muted, an effect is too far from the view to start, the roll picked no clip or no voice is free.
+    /// </summary>
+    public bool PlaySet(string? set, SoundCategory category, string priorityKey, SoundPlace? place = null, int owner = 0)
     {
         ArgumentNullException.ThrowIfNull(priorityKey);
-        if (_catalog is null || !_enabled[(int)category] || distance > 1.5f)
+        if (_catalog is null || !_enabled[(int)category])
         {
             return false;
+        }
+
+        SoundChannel channel = ChannelOf(category);
+        int volume = 0;
+        int distance = 0;
+        if (place is { } at && channel != SoundChannel.Interface)
+        {
+            int dx = at.TileX - _centreX;
+            int dy = at.TileY - _centreY;
+            if (SoundRules.Placement(dx, dy, _viewWidth, channel == SoundChannel.Effect) is not { } placed)
+            {
+                return false; // 0x4cfc71: too far to start
+            }
+
+            volume = placed.Volume;
+            distance = Math.Abs(dx) + Math.Abs(dy);
         }
 
         IReadOnlyList<(string Path, int Weight)> files = _catalog.Sounds(set);
@@ -160,7 +232,7 @@ public partial class SoundMixer : Node
         }
 
         int pick = SoundRules.Pick(_weights, _random.Next(SoundRules.RollRange));
-        return pick >= 0 && Play(files[pick].Path, ChannelOf(category), priorityKey, distance, owner);
+        return pick >= 0 && Play(files[pick].Path, channel, priorityKey, distance, volume, channel == SoundChannel.Interface ? null : place, owner);
     }
 
     /// <summary>
@@ -181,6 +253,7 @@ public partial class SoundMixer : Node
                 voice.StreamPaused = false;
                 voice.Stop();
                 _states[i] = default;
+                _places[i] = null;
             }
         }
     }
@@ -193,7 +266,7 @@ public partial class SoundMixer : Node
         _ => SoundChannel.Effect,
     };
 
-    private bool Play(string path, SoundChannel channel, string key, float distance, int owner)
+    private bool Play(string path, SoundChannel channel, string key, int distance, int volume, SoundPlace? place, int owner)
     {
         if (_catalog is null || Load(path) is not { } stream)
         {
@@ -222,9 +295,10 @@ public partial class SoundMixer : Node
         AudioStreamPlayer voice = _voices[first + k];
         voice.StreamPaused = false;
         voice.Stream = stream;
-        voice.VolumeDb = Mathf.LinearToDb(Math.Clamp(1f - (distance * 0.6f), 0.05f, 1f));
+        voice.VolumeDb = volume / 100f; // hundredths of a decibel
         voice.Play();
         _states[first + k] = sound;
+        _places[first + k] = place;
         Played++;
         return true;
     }

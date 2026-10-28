@@ -26,9 +26,12 @@ public enum SoundChannel
 /// <param name="Busy">Whether it plays (or is held by the pause).</param>
 /// <param name="Category">Its SOUNDS.INI <c>[priority]</c> key.</param>
 /// <param name="Priority">The priority it started with.</param>
-/// <param name="Distance">How far from the view's centre it was when it started (screens).</param>
+/// <param name="Distance">How far from the view's centre tile it is (tiles each way added up).</param>
 /// <param name="Owner">The entity it belongs to (1 + its index), or 0.</param>
 public readonly record struct VoiceState(bool Busy, string Category, int Priority, float Distance, int Owner);
+
+/// <summary>The map tile a sound is heard from.</summary>
+public readonly record struct SoundPlace(int TileX, int TileY);
 
 /// <summary>
 /// The original's mixing rules as ReTzar reads them (PRES-012; 0x455210, 0x4ceaac, 0xc97ad8, 0x4cfc87, 0x4cfb50,
@@ -39,6 +42,58 @@ public static class SoundRules
 {
     /// <summary>The roll a set's clip is picked with: R(0, 1000), both ends included (0x455210).</summary>
     public const int RollRange = 1001;
+
+    /// <summary>
+    /// The widest view the original was played in (LAYOUT.INI LAYOUT1024H, pixels). A wider view is heard as this one, so
+    /// a blow falls silent 96 tiles away instead of across the map (ReTzar's choice for modern screens).
+    /// </summary>
+    public const int WidestView = 1024;
+
+    /// <summary>Effects start only louder than this (hundredths of a decibel, 0x4cfc71), and stop when the view leaves them so far behind (0x4d01c0).</summary>
+    public const int QuietestEffect = -2500;
+
+    /// <summary>The voices of units and buildings are never quieter (hundredths of a decibel, 0x4cef57).</summary>
+    public const int QuietestVoice = -400;
+
+    /// <summary>Playing sounds are heard again from the view's centre once it has moved more than this many tiles (0x4d01c0).</summary>
+    public const int RelocateTiles = 3;
+
+    /// <summary>
+    /// The volume and pan (hundredths of a decibel) of a sound <paramref name="dx"/>, <paramref name="dy"/> tiles from the
+    /// view's centre tile, heard in a view <paramref name="viewWidth"/> pixels wide (0x4d00e0). The volume falls with the
+    /// tiles each way added up: by 2500 over 3/32 of the view's width in pixels for effects, by 400 over 2/32 for the
+    /// voices of units and buildings; past that it is silent (−10000). The pan is the tiles across times 51200 over the
+    /// width, within ±10000. The width counts from 32 to <see cref="WidestView"/>.
+    /// </summary>
+    public static (int Volume, int Pan) Attenuation(int dx, int dy, int viewWidth, bool effect)
+    {
+        long most = effect ? 2500 : 400;
+        long tiles = Math.Min((long)Math.Abs(dx) + Math.Abs(dy), 1 << 20);
+        long width = Math.Clamp(viewWidth, 32, WidestView);
+        long volume = -tiles * most / (width * (effect ? 3 : 2) / 32);
+        if (volume < -most)
+        {
+            volume = -10000;
+        }
+
+        long pan = Math.Clamp(Math.Clamp(dx, -(1 << 20), 1 << 20) * 51200L / width, -10000, 10000);
+        return ((int)volume, (int)pan);
+    }
+
+    /// <summary>
+    /// The volume and pan a sound plays at, as <see cref="Attenuation"/>; null for an effect too quiet to start
+    /// (<see cref="QuietestEffect"/>); the voices of units and buildings at least <see cref="QuietestVoice"/>.
+    /// </summary>
+    public static (int Volume, int Pan)? Placement(int dx, int dy, int viewWidth, bool effect)
+    {
+        (int volume, int pan) = Attenuation(dx, dy, viewWidth, effect);
+        if (effect)
+        {
+            return volume > QuietestEffect ? (volume, pan) : null;
+        }
+
+        return (Math.Max(volume, QuietestVoice), pan);
+    }
 
     /// <summary>The voices of a channel (0x4ceaac: 3 + 19 + 4 + 4 of 32; the last 2 are Tzar2's interface).</summary>
     public static int Slots(SoundChannel channel) => channel switch

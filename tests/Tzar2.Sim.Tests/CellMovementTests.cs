@@ -148,4 +148,69 @@ public class CellMovementTests
 
         Assert.True(most >= 6, $"only {most} footmen stood round the knight");
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    [Trait("Rule", "WORLD-021")]
+    public void A_unit_goes_the_long_way_round_a_gap_held_by_units_that_keep_it(bool workers)
+    {
+        // The seventh play-test: a unit walked up to a gap held by units and stood there instead of going round. A row of
+        // houses across the map, its gap held by creatures of Nature, or by peasants chopping the trees at its sides.
+        var objects = new List<Tzar2.Content.Compiled.MapObject> { Structure("euro.castle", 0, 2, 2), Unit("euro.knight", 0, 10, 16) };
+        for (int y = 2; y < 30; y += 2)
+        {
+            if (y != 16 && !(workers && y is 14 or 18))
+            {
+                objects.Add(Structure("euro.house", 0, 20, y));
+            }
+        }
+
+        if (workers)
+        {
+            foreach (int y in new[] { 14, 15, 18, 19 })
+            {
+                objects.Add(Tree(20, y));
+                objects.Add(Tree(21, y));
+            }
+        }
+
+        byte holder = workers ? (byte)0 : Tzar2.Content.Compiled.MapObject.Nature;
+        string kind = workers ? "euro.peon" : "euro.footman";
+        foreach ((int x, int y) in new[] { (20, 16), (21, 16), (20, 17), (21, 17) })
+        {
+            objects.Add(Unit(kind, holder, x, y));
+        }
+
+        using var d = new SimDriver(TestMap(48, 34, [.. objects]), ruleset: Classic);
+        if (workers)
+        {
+            EntityId[] trees = [.. OfType(d.World, "comm.tree")];
+            foreach (EntityId peon in OfType(d.World, "euro.peon"))
+            {
+                (int X, int Y) at = TileOf(d, peon);
+                EntityId tree = trees.OrderBy(t => Math.Abs(TileOf(d, t).X - at.X) + Math.Abs(TileOf(d, t).Y - at.Y)).ThenBy(t => t.Value).First();
+                d.Order(0, CommandKind.Harvest, [peon], target: tree);
+            }
+        }
+
+        EntityId knight = OfType(d.World, "euro.knight").Single();
+        d.MoveToTile(0, [knight], 36, 16);
+        int stood = 0;
+        int longest = 0;
+        (int X, int Y) last = TileOf(d, knight);
+        int ticks = d.RunUntil(() =>
+        {
+            (int X, int Y) now = TileOf(d, knight);
+            stood = now == last ? stood + 1 : 0;
+            longest = Math.Max(longest, stood);
+            last = now;
+            return now == (36, 16) && !d.IsMoving(knight);
+        }, 1200);
+
+        // It goes round at once (the long way takes about 350 ticks); it stood about 20 s at the gap before, and as long as
+        // the peasants worked there.
+        Assert.True(ticks < 450, $"arrived after {ticks} ticks");
+        Assert.True(longest < 40, $"stood {longest} ticks on one tile");
+    }
 }
