@@ -417,6 +417,9 @@ owner's order of 2026-10-26.
       11. A peasant carrying a load sent to gather something else first takes the load home. In the original it goes to
           the new work, and drops the old load on the ground when it takes a new one.
       12. Units answer orders late, standing a while first, most when a group standing close together is selected.
+          **Measured** since the cell steps (#255): a block of 4 x 4 or 6 x 6 soldiers ordered away all start within
+          four ticks (0.2 s), and a command reaches the sim on the next tick; `GroupStartTests` keeps it so. To check
+          in play.
       13. Wrong pointers are still shown, such as digging over repair or build (CTRL-012, CTRL-013).
       14. The outpost's button to view the units inside does nothing; check the other holders and what can be done
           with the units inside them.
@@ -437,7 +440,7 @@ Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisi
 the process decisions that have no ADR.
 
 * **2026-10-28 — The tavern's exchange comes a unit at a time; the card's dialogs and the chat window are fixed
-  (TRADE-011, HUD-011; item 18.S7, S9).**
+  (TRADE-011, HUD-011, WORLD-020; item 18.S7, S9, N12).**
   * **The exchange.** As ReTzar reads the original (0x4d3104): paid at once, received a unit every 300 ms
     (`world.exchangeUnitMs`), one exchange under way per kingdom (a new rejection, `ExchangeUnderWay`), ended if the
     tavern is lost. Before, it was instant. The kingdom's state holds the exchange under way: snapshot format 23, hashed
@@ -446,6 +449,8 @@ the process decisions that have no ADR.
   * **The card's dialogs** (exchange, gambling, trade) are centred on the card's slots: their first cells were aligned
     with the card's first slot, but the original's panels have their cells closer together, so the card's last column
     showed beside them. Their cells light up under the pointer, and their buttons darken when pressed.
+  * **Orders answered late (N12)** were the old movement: with the cell steps a close block starts within 0.2 s
+    (`GroupStartTests`).
   * **The chat window** stood on an opaque black backdrop; it now shows the game dimmed behind it. Its recipient buttons
     kept their pictures' 48 x 48 (the picture was set before the size) and crossed the frame; they are 28 x 28 inside
     it. It names who the line goes to and the keys.
