@@ -409,6 +409,9 @@ internal static class FrameBuilder
             fp.LoanLimit = k.LoanRaiseTick >= 0 && world.Tick.Value >= k.LoanRaiseTick ? (int)Math.Min((long)k.LoanLimit + world.Ruleset.World.LoanStepAmount, 100_000_000) : k.LoanLimit;
             fp.LoanDue = k.LoanDue;
             fp.LoanResource = k.LoanResource;
+            fp.ExchangeLeft = k.ExchangeLeft;
+            fp.ExchangeTotal = k.ExchangeTotal;
+            fp.ExchangeReceive = k.ExchangeReceive;
             for (int w = 0; w < TechnologyRow.Capacity / 64; w++)
             {
                 fp.Technologies[w] = state.Technologies[w];

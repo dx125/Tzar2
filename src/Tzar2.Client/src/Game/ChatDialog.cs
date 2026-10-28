@@ -21,7 +21,7 @@ public partial class ChatDialog : ArtScreen
 
     /// <summary>Creates the window for <paramref name="model"/>.</summary>
     public ChatDialog(UiAssets ui, Vector2I screen, ChatScreen model, Func<string, string, string, string> text, Func<int, string> name, Func<int, Color> colour)
-        : base(ui, screen, Art + (model.Large ? "back_big.t2img" : "back_small.t2img"), dim: false, missing: new Vector2I(500, model.Large ? 320 : 143))
+        : base(ui, screen, Art + (model.Large ? "back_big.t2img" : "back_small.t2img"), dim: true, missing: new Vector2I(500, model.Large ? 320 : 143))
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(text);
@@ -37,14 +37,16 @@ public partial class ChatDialog : ArtScreen
         (int X, string Image, ChatTarget To)[] recipients = [(37, "all", ChatTarget.All), (93, "ally", ChatTarget.Allies), (149, "enemy", ChatTarget.Enemies), (425, "custom", ChatTarget.Custom)];
         foreach ((int x, string image, ChatTarget to) in recipients)
         {
+            // The size is set after the expand mode: with the 48 x 48 picture set first the control kept 48 x 48 and the
+            // buttons crossed the window's frame (the sixth play-test).
             var icon = new TextureRect
             {
-                Texture = Ui.Texture(Art + image + ".t2img"),
-                Position = Origin + new Vector2I(x, 87),
-                Size = new Vector2(28, 28),
                 ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
                 StretchMode = TextureRect.StretchModeEnum.Scale,
                 MouseFilter = MouseFilterEnum.Ignore,
+                Position = Origin + new Vector2I(x, 87),
+                Size = new Vector2(28, 28),
+                Texture = Ui.Texture(Art + image + ".t2img"),
             };
             AddChild(icon);
             _recipients.Add((icon, to));
@@ -85,8 +87,14 @@ public partial class ChatDialog : ArtScreen
             }
         }
 
+        // Who it goes to, and the keys (the window had no word of either).
+        _to = new TextureRect { Position = Origin + new Vector2I(190, 95), MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_to);
+        Text(new Vector2I(250, 32), "Enter: send   Esc: close", UiAssets.SmallFont, new Color(0.7f, 0.65f, 0.5f), 210);
         Modulates();
     }
+
+    private readonly TextureRect _to;
 
     /// <summary>SEND: the line and its recipients.</summary>
     public event Action<string, ChatTarget, byte>? Sent;
@@ -137,13 +145,22 @@ public partial class ChatDialog : ArtScreen
 
     private Texture2D? Check(bool on) => Ui.Region("art/screens/common/chk.t2img", new Rect2I(0, on ? 0 : 31, 31, 31));
 
-    // The chosen recipients bright, the others dimmed.
+    // The chosen recipients bright, the others dimmed, and their name.
     private void Modulates()
     {
         foreach ((TextureRect icon, ChatTarget to) in _recipients)
         {
             icon.Modulate = _model.To == to ? Colors.White : new Color(0.55f, 0.55f, 0.55f);
         }
+
+        string who = _model.To switch
+        {
+            ChatTarget.All => "To everyone",
+            ChatTarget.Allies => "To the allies",
+            ChatTarget.Enemies => "To the enemies",
+            _ => "To the kingdoms ticked",
+        };
+        _to.Texture = Ui.Text(who, UiAssets.SmallFont, new Color(1f, 0.92f, 0.65f));
     }
 
     private void Send()

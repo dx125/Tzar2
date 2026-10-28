@@ -73,6 +73,7 @@ public sealed class TradeSystem : ISimSystem
     {
         ArgumentNullException.ThrowIfNull(context);
         World world = context.World;
+        KingdomCommands.DeliverExchanges(world); // the taverns' exchanges, a unit at a time (TRADE-011)
         if (world.TradeRoutes.Count == 0)
         {
             return;

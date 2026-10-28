@@ -47,6 +47,19 @@ public abstract partial class CardDialog : Control
     /// <summary>Closes the dialog.</summary>
     public void Close() => Closed?.Invoke();
 
+    /// <summary>
+    /// A gold outline over <paramref name="target"/>'s frame while the pointer is on it, so the cells read as controls (the
+    /// sixth play-test: the tavern's dialog felt like a picture).
+    /// </summary>
+    protected void Hover(Control target, Rect2I frame)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        var outline = new ReferenceRect { Position = frame.Position, Size = frame.Size, BorderColor = Gold, BorderWidth = 2, EditorOnly = false, MouseFilter = MouseFilterEnum.Ignore, Visible = false };
+        AddChild(outline);
+        target.MouseEntered += () => outline.Visible = true;
+        target.MouseExited += () => outline.Visible = false;
+    }
+
     /// <summary>A clickable cell over <paramref name="interior"/>; left click and wheel up step +1, right click and wheel down −1.</summary>
     protected TextureRect Cell(Rect2I interior, Action<int>? step)
     {
@@ -80,6 +93,11 @@ public abstract partial class CardDialog : Control
         }
 
         AddChild(picture);
+        if (step is not null)
+        {
+            Hover(picture, interior.Grow(2));
+        }
+
         return picture;
     }
 
@@ -100,7 +118,12 @@ public abstract partial class CardDialog : Control
     {
         var button = new TextureButton { Position = interior - new Vector2I(3, 3), Size = new Vector2(48, 48), TextureNormal = Ui.Texture($"art/screens/{Folder}/{image}.t2img"), IgnoreTextureSize = true, StretchMode = TextureButton.StretchModeEnum.Keep };
         button.Pressed += pressed;
+
+        // Pressed, it darkens; disabled, it greys (the original's buttons have no pressed picture in these folders).
+        button.ButtonDown += () => button.SelfModulate = new Color(0.7f, 0.7f, 0.7f);
+        button.ButtonUp += () => button.SelfModulate = Colors.White;
         AddChild(button);
+        Hover(button, new Rect2I(interior - new Vector2I(3, 3), new Vector2I(48, 48)));
         return button;
     }
 
@@ -245,15 +268,22 @@ public partial class GambleDialog : CardDialog
 /// </summary>
 public partial class ExchangeDialog : CardDialog
 {
-    private static readonly int[] Amounts = [100, 200, 500, 1000];
+    // What may be given: up to 10,000, by 500 above 1,000 (the owner's sixth play-test; the original offers 500 to 20,000).
+    private static readonly int[] Amounts = [100, 200, 500, .. Enumerable.Range(2, 19).Select(n => n * 500)];
+
+    // The last exchange asked for, which the dialog opens with (as the original's D_TRADE1).
+    private static (int Give, int Get, int Amount) _last = (1, 0, 0);
+
     private readonly int _ratio;
     private readonly TextureRect _give;
     private readonly TextureRect _get;
     private readonly TextureRect _amount;
     private readonly TextureRect _result;
-    private int _giveIndex = 1;
-    private int _getIndex;
-    private int _amountIndex;
+    private readonly TextureButton _trade;
+    private int _giveIndex = _last.Give;
+    private int _getIndex = _last.Get;
+    private int _amountIndex = _last.Amount;
+    private (int Left, int Total, int Receive)? _underWay;
 
     /// <summary>Creates the dialog; <paramref name="ratio"/> units are given for one received.</summary>
     public ExchangeDialog(UiAssets ui, int ratio)
@@ -276,10 +306,11 @@ public partial class ExchangeDialog : CardDialog
             Refresh();
         });
         _result = Label(new Rect2I(72, 68, 42, 42));
-        Button(new Vector2I(128, 68), "trade", () =>
+        _trade = Button(new Vector2I(128, 68), "trade", () =>
         {
-            if (_giveIndex != _getIndex)
+            if (_giveIndex != _getIndex && _underWay is null)
             {
+                _last = (_giveIndex, _getIndex, _amountIndex);
                 Exchange?.Invoke(Resources[_giveIndex], Resources[_getIndex], Amounts[_amountIndex]);
             }
         });
@@ -290,11 +321,34 @@ public partial class ExchangeDialog : CardDialog
     /// <summary>TRADE: the resource given, the resource received, the amount given.</summary>
     public event Action<string, string, int>? Exchange;
 
+    /// <summary>
+    /// The kingdom's exchange under way (TRADE-011): what has come of it so far, shown in the result's cell, TRADE greyed
+    /// until it is over; null when none is under way.
+    /// </summary>
+    public void ShowProgress((int Left, int Total, int Receive)? underWay)
+    {
+        if (underWay == _underWay)
+        {
+            return;
+        }
+
+        _underWay = underWay;
+        _trade.Disabled = underWay is not null;
+        _trade.Modulate = underWay is null ? Colors.White : new Color(0.5f, 0.5f, 0.5f);
+        Refresh();
+    }
+
     private void Refresh()
     {
         _give.Texture = ResourceIcon(_giveIndex);
         _get.Texture = ResourceIcon(_getIndex);
         SetText(_amount, Amounts[_amountIndex].ToString(CultureInfo.InvariantCulture));
+        if (_underWay is { } w)
+        {
+            SetText(_result, $"{w.Total - w.Left}/{w.Total}", UiAssets.SmallFont);
+            return;
+        }
+
         SetText(_result, _giveIndex == _getIndex ? "-" : "+" + (Amounts[_amountIndex] / _ratio).ToString(CultureInfo.InvariantCulture));
     }
 }

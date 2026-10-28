@@ -453,6 +453,15 @@ public struct FramePlayer
     /// <summary>The resource of the loan taken (a resource type id), or -1 for none.</summary>
     public int LoanResource;
 
+    /// <summary>Units of the tavern exchange under way still to come, or 0 (TRADE-011).</summary>
+    public int ExchangeLeft;
+
+    /// <summary>Units the exchange under way gives in all.</summary>
+    public int ExchangeTotal;
+
+    /// <summary>The resource the exchange under way gives (a resource type id).</summary>
+    public int ExchangeReceive;
+
     /// <summary>The kingdom's civilization key (the diplomacy screen's race icon), or empty.</summary>
     public string? Civilization;
 

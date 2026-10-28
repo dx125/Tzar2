@@ -8,8 +8,8 @@ indexed in [decisions/README.md](decisions/README.md).
 
 * **Last updated:** 2026-10-28 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
   targets and answer enemies as the original; land units step cell by cell; fields ready at once; construction; taking
-  buildings down; the mines' look; the click's pick as the original. The slow checks now run once per batch of three or
-  four fixes)
+  buildings down; the mines' look; the click's pick as the original; the tavern's exchange and the chat window. The
+  slow checks now run once per batch of three or four fixes)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -331,7 +331,8 @@ owner's order of 2026-10-26.
        **fixed** (BLD-026, log below);
     5. taking buildings down (F1) with an icon of its own, the usual pictogram for it; no setting for now: **done**
        (BLD-027, log below);
-    6. the rest of the items with screenshots (S2, S7, S9), while the screenshots are at hand;
+    6. the rest of the items with screenshots (S2, S7, S9), while the screenshots are at hand: **done** (S7 and S9 in
+       the log below; S2 with #258);
     7. everything else, by its weight on the play and whether it has a workaround.
 
     S = with screenshots, N = without, F = new features, below.
@@ -365,13 +366,16 @@ owner's order of 2026-10-26.
          * it is instant, not gradual as in the original;
          * the card feels like a picture, not like controls.
 
-         The owner also asks for amounts up to 10,000 (steps of 500 above 1,000) instead of 1,000.
+         The owner also asks for amounts up to 10,000 (steps of 500 above 1,000) instead of 1,000. **Fixed** (TRADE-011,
+         log below): the dialog sits on the card's slots, its cells light up under the pointer and its buttons darken
+         when pressed, the exchange comes a unit every 300 ms with its progress shown, and the amounts go to 10,000.
       8. The Warriors' Guild is empty and offers nothing to research; check every other special building. **Fixed**
          (HUD-035, log below): the card skipped MENU.INI's lines without a letter, so every guild, temple and mage
          tower lacked its research. Every building's card now has its menu's orders (audited on the original's
          package); whether each special building's orders work is still to check.
       9. Enter opens the chat line over a black screen, with the world and the HUD gone; the dialog looks unfinished
-         (HUD-011).
+         (HUD-011): **fixed**, the window stands over the dimmed game, its buttons inside its frame, with whom the line
+         goes to and the keys.
     * **Without screenshots:**
       1. Sites placed one after another: the builders leave the one they build for the last one placed, and do not
          come back to the earlier ones. In the original they build them in the order placed, each after the one
@@ -432,6 +436,19 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-10-28 — The tavern's exchange comes a unit at a time; the card's dialogs and the chat window are fixed
+  (TRADE-011, HUD-011; item 18.S7, S9).**
+  * **The exchange.** As ReTzar reads the original (0x4d3104): paid at once, received a unit every 300 ms
+    (`world.exchangeUnitMs`), one exchange under way per kingdom (a new rejection, `ExchangeUnderWay`), ended if the
+    tavern is lost. Before, it was instant. The kingdom's state holds the exchange under way: snapshot format 23, hashed
+    layout 21. The dialog shows what has come so far and greys TRADE until it is over; messages tell when it starts and
+    ends. The amounts are 100, 200, 500, then by 500 up to 10,000 (the owner's wish; the original offers 500 to 20,000).
+  * **The card's dialogs** (exchange, gambling, trade) are centred on the card's slots: their first cells were aligned
+    with the card's first slot, but the original's panels have their cells closer together, so the card's last column
+    showed beside them. Their cells light up under the pointer, and their buttons darken when pressed.
+  * **The chat window** stood on an opaque black backdrop; it now shows the game dimmed behind it. Its recipient buttons
+    kept their pictures' 48 x 48 (the picture was set before the size) and crossed the frame; they are 28 x 28 inside
+    it. It names who the line goes to and the keys.
 * **2026-10-28 — Buildings are taken down; mines keep their look; the click picks as the original (BLD-027, PRES-011,
   CTRL-001, CTRL-019; item 18.F1, S2, S3, N4, N5, N15).**
   * **Taking down (the owner's feature).** A finished building's card has Tzar2's own order: the first press asks, the

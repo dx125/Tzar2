@@ -12,7 +12,7 @@ internal static class WorldReader
     [
         "defaultSightTiles", "nightSightPercent", "memoryRefreshTicks", "diplomacyChangeIntervalMs", "tributeIntervalMs",
         "maxTributeAmount", "stockpileCap", "tradeProfitPercent", "tradeMinDistanceTiles",
-        "tradeDockMs", "convertRatio", "gambleOdds", "gambleHouseEdgePercent", "maxGambleStake", "loanStartAmount", "loanStepAmount",
+        "tradeDockMs", "convertRatio", "exchangeUnitMs", "gambleOdds", "gambleHouseEdgePercent", "maxGambleStake", "loanStartAmount", "loanStepAmount",
         "loanGrowDelayMs", "loanInterestPercent", "claimReachPx", "claimIntervalMs", "guardRadiusTiles", "wanderRadiusTiles",
         "wanderIntervalMs", "dayLengthMs", "dayStartMinute", "nightStartMinute", "nightEndMinute", "weatherPeriodMs",
         "weatherChancePercent", "weather", "scoreGatherDivisor", "scoreKillDivisor", "scoreBuildDivisor", "scorePerTechnology",
@@ -55,6 +55,7 @@ internal static class WorldReader
             TradeMinDistanceTiles = Range(settings, "tradeMinDistanceTiles", d.TradeMinDistanceTiles, 0, 1024),
             TradeDockMs = Range(settings, "tradeDockMs", d.TradeDockMs, 0, 600_000),
             ConvertRatio = Range(settings, "convertRatio", d.ConvertRatio, 1, 1000),
+            ExchangeUnitMs = Range(settings, "exchangeUnitMs", d.ExchangeUnitMs, 0, 60_000),
             GambleOdds = Odds(settings) ?? d.GambleOdds,
             GambleHouseEdgeBasisPoints = Range(settings, "gambleHouseEdgePercent", d.GambleHouseEdgeBasisPoints / 100, 0, 100) * 100,
             MaxGambleStake = Range(settings, "maxGambleStake", d.MaxGambleStake, 1, 10_000_000),

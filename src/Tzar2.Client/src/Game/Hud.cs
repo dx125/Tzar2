@@ -393,7 +393,11 @@ public partial class Hud : Control
 
         if (dialog is not null)
         {
-            dialog.Position = _layout.CardSlot(0).Position - CardDialog.FirstCell - new Vector2I(3, 3);
+            // Centred on the card's slots, frames included: the panel's own cells are closer together than the card's, so
+            // aligning their first cells left the last column of the card showing (the sixth play-test).
+            Rect2I first = _layout.CardSlot(0), last = _layout.CardSlot(HudLayout.CardSlots - 1);
+            var slots = new Rect2I(first.Position - new Vector2I(3, 3), last.End - first.Position + new Vector2I(6, 6));
+            dialog.Position = slots.Position + ((slots.Size - CardDialog.PanelSize) / 2);
             AddChild(dialog);
             HideTooltip();
         }

@@ -128,7 +128,7 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // then: (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it.
             // then: (WAR-015/016/017, 2026-10-26) the original's choice of targets, the next target at once, calls for help.
             // then: (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (hashed layout 20).
-            Assert.Equal("DE301E7753B2BAE4", d.Hashes[^1].ToString("X16"));
+            Assert.Equal("1E110E954DDD9D0E", d.Hashes[^1].ToString("X16"));
         }
     }
 
