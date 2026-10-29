@@ -20,12 +20,12 @@ public class MatchTests
     [Trait("Rule", "NAT-005")]
     public void The_day_clock_turns_to_night_and_back_and_night_can_shorten_sight()
     {
-        // 24 s days (test rules): 16.7 ms per clock minute; 10:00 → 19:00 is 9,000 ms = 180 ticks.
+        // 24 s days (test rules): 16.7 ms per clock minute; 10:00 → 22:00 (PRES-015) is 12,000 ms = 240 ticks.
         using var d = new SimDriver(TestMap(48, 16, Unit("euro.peon", 0, 5, 8)), ruleset: ShortDays);
         World w = d.World;
         Assert.Equal(600, w.MinuteAt(0));
-        Assert.False(w.IsNightAt(w.MinuteAt(179)));
-        Assert.True(w.IsNightAt(w.MinuteAt(180)));
+        Assert.False(w.IsNightAt(w.MinuteAt(239)));
+        Assert.True(w.IsNightAt(w.MinuteAt(240)));
         Assert.True(w.IsNightAt(w.MinuteAt(359))); // 01:00
         Assert.False(w.IsNightAt(w.MinuteAt(420))); // 06:00 + a bit
 
@@ -97,6 +97,28 @@ public class MatchTests
         d.Order(0, CommandKind.Stop, [OfType(w, "euro.footman").Single()]);
         d.Step();
         Assert.Contains(CommandRejection.InvalidPlayer, d.Rejections());
+    }
+
+    [Fact]
+    [Trait("Rule", "DIP-010")]
+    public void Caravans_fishing_boats_and_the_dummy_do_not_keep_a_kingdom_in_the_game_but_its_cows_do()
+    {
+        using var d = new SimDriver(
+            TestMap(48, 16, Unit("euro.footman", 0, 4, 8), Unit("euro.trader", 1, 20, 4), Structure("comm.dummy", 1, 24, 10), Unit("comm.cow", 2, 40, 8)),
+            players: 3,
+            ruleset: Classic,
+            configure: c => c with { Victory = VictoryCondition.Standard });
+        World w = d.World;
+        d.RunUntil(() => (w.Players[1].Flags & PlayerFlags.Defeated) != 0, 120);
+        Assert.True((w.Players[1].Flags & PlayerFlags.Defeated) != 0); // a caravan and a dummy only
+        d.RunUntil(() => false, 120);
+        Assert.Equal(PlayerFlags.None, w.Players[2].Flags & PlayerFlags.Defeated); // a cow keeps it in, as in the original
+        Assert.False(VictorySystem.IsOver(w));
+        d.Order(0, CommandKind.DebugKill, [OfType(w, "comm.cow", 2).Single()]);
+        d.RunUntil(() => VictorySystem.IsOver(w), 120);
+        Assert.True((w.Players[0].Flags & PlayerFlags.Victorious) != 0);
+        Assert.True(Classic.EntityTypes[Classic.EntityTypeId("comm.fishing_boat")].Traits.IsMinor);
+        Assert.False(Classic.EntityTypes[Classic.EntityTypeId("euro.peon")].Traits.IsMinor);
     }
 
     [Fact]

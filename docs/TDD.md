@@ -630,7 +630,7 @@ Windows is required for 1.0. The other rows apply to the platform-expansion phas
 * A per-player visibility texture (1 texel per half-tile) uploaded from the render snapshot. The shader renders **unexplored = black** and **explored-not-visible = original fog look** (UNK-27: colour, dithering and edge softness to be measured). Enemy buildings show their last-seen state (“ghosts”) in explored areas.
 
 ### 13.7 Day/night and lighting
-* An ambient multiply that follows the day clock (the clock globe UI shows the phase), plus **light sources** stamped from the terrain set's `LIGHT.BMP` pattern into a light buffer (around own units and buildings, per the original rules, UNK-32), composited before fog. The `DAYNIGHT` setting can disable it.
+* An ambient multiply that follows the day clock (the clock globe UI shows the phase), under the fog: red to 55 % and green to 68 % of the map's colours at full night, from 22:00 to 06:00 after half an hour of dusk and before half an hour of dawn (PRES-015, ReTzar's reading of the original). No light sources: ReTzar reads none in the original, and the terrain sets' `LIGHT.BMP` is not used (UNK-32). The `DAYNIGHT` setting can disable it.
 
 ### 13.8 Effects, weather, cursors
 * Frame-based effects from `IMAGES/ANIMS` (explosions, fire, spells, bless/curse/healing, nets, fish), fire on damaged buildings, projectile trails. Weather overlays (rain, snow) and moving cloud shadows (`CLOUD` objects). Hardware cursors from `IMAGES/CURSORS` with original hotspots (UNK-40); software-cursor fallback.
@@ -941,7 +941,7 @@ Original, FX *Gold Edition* and community campaigns are never shipped or committ
 | UNK-29 | Score formula | Measurement | P3 |
 | UNK-30 | Full cheat list | Strings + testing. Names known ([original-switches-and-cheats.md](mechanics/original-switches-and-cheats.md)); effects mostly untested | P3 |
 | UNK-31 | Transparency key in 16-bit BMPs | File analysis | P0 |
-| UNK-32 | Day/night lighting model (light-source stamping) | Captures | P1 |
+| UNK-32 | Day/night lighting model: the tint and the hours are ReTzar's reading (PRES-015); what `LIGHT.BMP` is for | Captures | P2 |
 | UNK-33 | Sound attenuation/panning and priority eviction | Listening tests + data | P2 |
 | UNK-34 | Selection size limit | Testing | P2 |
 | UNK-35 | AI DSL semantics | Script experiments + static analysis | P0 for M3 |

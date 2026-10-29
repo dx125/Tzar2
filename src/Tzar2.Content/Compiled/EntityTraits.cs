@@ -328,6 +328,12 @@ public sealed partial record EntityTraits
     public bool IsSeat { get; init; }
 
     /// <summary>
+    /// Whether the type does not keep its kingdom in the game (trait <c>Minor</c>; classic: caravans, fishing boats and the
+    /// training dummy, DIP-010). Walls, gates, bridges and fields never do either.
+    /// </summary>
+    public bool IsMinor { get; init; }
+
+    /// <summary>
     /// Whether the type is a kingdom's starting worker (trait <c>StartingWorker</c>; classic: the peasant): map builders
     /// place it next to the seat (<see cref="Ruleset.StartingWorkerTypeId"/>). A fork names its own in data.
     /// </summary>

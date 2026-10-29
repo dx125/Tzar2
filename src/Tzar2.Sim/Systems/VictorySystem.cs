@@ -13,9 +13,10 @@ namespace Tzar2.Sim.Systems;
 /// then, every <c>victoryIntervalTicks</c>, defeat and victory per the match's victory condition and allied victory.
 /// </summary>
 /// <remarks>
-/// <para><b>Defeat</b> (UNVERIFIED rule): Standard, Score Limit and Time Limit — a kingdom with no unit and no building
-/// left (walls, gates, bridges and fields do not count); Destroy Castles — a kingdom without a castle. Resigning defeats
-/// at once. A defeated kingdom's commands are refused; what it has left stays on the map.</para>
+/// <para><b>Defeat</b> (DIP-010, ReTzar's reading of the original, 0x442d10): Standard, Score Limit and Time Limit — a
+/// kingdom with no unit and no building left that keeps it in the game (all but the <c>Minor</c> types, walls, gates,
+/// bridges and fields; its cows count); Destroy Castles — a kingdom without a castle. Resigning defeats at once. A
+/// defeated kingdom's commands are refused; what it has left stays on the map.</para>
 /// <para><b>Victory</b>: kingdoms win together when they are mutual allies sharing victory (allied victory, manual ch. 5
 /// §8). Standard and Destroy Castles: when the kingdoms still in the game form one such team. Score Limit: the first team
 /// whose summed score reaches the limit. Time Limit: at the limit, the team with the highest score (ties: the team with
@@ -233,8 +234,8 @@ public sealed class VictorySystem : ISimSystem
             EntityTraits t = world.Ruleset.EntityTypes[identities[i].TypeId].Traits;
             alive[owner] = condition == VictoryCondition.DestroyCastles
                 ? t.Category == EntityCategory.Building && t.IsSeat
-                : (t.Category == EntityCategory.Unit && !t.World.IsAmbient)
-                    || (t.Category == EntityCategory.Building && !t.IsWall && t.Gate is null && !t.IsBridge && t.Decay is null);
+                : !t.IsMinor && ((t.Category == EntityCategory.Unit && !t.World.IsAmbient)
+                    || (t.Category == EntityCategory.Building && !t.IsWall && t.Gate is null && !t.IsBridge && t.Decay is null));
         }
 
         for (int p = 0; p < players; p++)

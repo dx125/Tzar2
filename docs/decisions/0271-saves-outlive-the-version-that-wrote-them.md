@@ -29,6 +29,7 @@ Replays, rejoins and desync reports need the exact state: a lockstep peer must h
   * the keys of terrains, entity types (with their footprints), resources, technologies, upgrades, spells and civilizations, in order.
 
   A save made under other rules with the same tables goes on under the current rules; other tables are refused. Older formats carry no tables hash and are taken as they come.
+* **What the current rules give is added.** A save of an older format or other rules gets what an entity's type gives it now and the save did not hold: a completed entity of a kingdom whose type has become a producer gets its production queue (`World.UpgradeRestoredState`; the eighth play-test, 2026-10-29: a church built before churches trained priests could not train them).
 * **What is still checked.** The state is always validated (ADR 0019). The stored full-state hash is checked only when the format and the rules are the same.
 * **The player is told.** A save that does not load says why, and the player goes back to the load screen. A save that continued under other rules says so in the game's message lines (`GameSession.RestoredExactly`).
 * **A fixture guards the path.** `tests/Tzar2.Sim.Tests/Fixtures/save-format21.t2snap` was taken by the format 21 code on a synthetic map. `SaveCompatibilityTests` restores it, plays on, and checks the rules and tables cases.

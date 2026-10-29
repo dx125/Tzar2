@@ -20,7 +20,7 @@ rules:
     source: [help ITEMS.TXT HT_TEND_COWS, 'community ReTzar src/gameplay.rs (cow_meat, 0x464f60)']
     status: tested
     adr: [0256]
-    note: In the original another unit carries the item in its bag and drops it into a castle or storage; Tzar2 brings it to the stockpile at once, as it does every resource item (ITEM-006).
+    note: In the original another unit carries the item in its bag and drops it into a castle or storage; Tzar2 brings it to the stockpile at once, as it does every resource item (ITEM-006). The items wear the original's item_meat picture (a resource item of the original); before the eighth play-test they were not drawn.
   NAT-005:
     rule: The clock globe turns through day and night; a day lasts 37.5 minutes and a game starts at 10:00.
     source: [manual The Clock, capture capture-20261019-195053]

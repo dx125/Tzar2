@@ -208,6 +208,7 @@ public class EconomyM3Tests
         d.Step();
         int[] pieces = [.. OfType(d.World, "comm.meat").Select(m => d.World.Items.Get(m).Power).OrderBy(p => p)];
         Assert.Equal([50, 100, 100], pieces);
+        Assert.All(OfType(d.World, "comm.meat"), m => Assert.Equal(1, d.World.Items.Get(m).Look)); // item_meat (the eighth play-test)
         int food = d.World.Players[0].Resources[Resource("food")];
         EntityId first = OfType(d.World, "comm.meat").First();
         int power = d.World.Items.Get(first).Power;

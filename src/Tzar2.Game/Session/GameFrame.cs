@@ -282,6 +282,9 @@ public struct FrameEntity
     /// <summary>An item's power on the ground (a potion's health, a weapon's attack; the selection view's POWER, HUD-016), or 0.</summary>
     public int ItemPower;
 
+    /// <summary>The resource a resource item on the ground holds (<see cref="ItemPower"/> of it; HUD-037), or -1.</summary>
+    public int ItemResource;
+
     /// <summary>The node or site a worker works (a fishing boat's fish patch, HUD-025), or none; may be stale.</summary>
     public EntityId WorkTarget;
 

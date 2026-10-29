@@ -45,3 +45,8 @@ rules:
     source: [patch 1.09 (TZAR110.TXT), data AI/RESIGN.AI]
     status: tested
     note: On random maps and in multiplayer the AI resign flag decides (SHELL-013); computer kingdoms of a scenario or campaign map never resign (the flag is only on the random map and multiplayer screens and is off for a campaign mission: ReTzar src/world.rs GameRules.ai_resign; ADR 0220). An AI assisting a human never resigns for it.
+  DIP-010:
+    rule: A kingdom stays in the game while it has a unit or a building other than caravans, fishing boats, the training dummy, walls, gates, bridges and fields; its cows keep it in.
+    source: ['community ReTzar src/gameplay/scripting.rs (0x442d10 the defeat test; 0x442bd0 the classes that keep a kingdom alive)', owner 2026-10-29 (eighth play-test)]
+    status: tested
+    note: 'The eighth play-test: no victory came when every enemy was beaten; two kingdoms had only cows left, at the edges of the map, where passing peasants had pushed them before NAT-007. The original keeps such a kingdom in the game too. Tzar2 counted caravans, fishing boats and the dummy as well. The original does not test a kingdom that has spies, hidden ones included (0x442d6c); a Tzar2 spy stays its kingdom''s unit in its disguise, so it keeps the kingdom in anyway.'

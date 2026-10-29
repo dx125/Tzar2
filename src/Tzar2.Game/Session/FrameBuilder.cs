@@ -71,6 +71,7 @@ internal static class FrameBuilder
             e.Owner = identity.Owner;
             e.Facing = identity.Facing;
             e.SwingMs = -1;
+            e.ItemResource = -1;
             e.CarryResource = Worker.NoResource;
             e.ConstructionPermille = -1;
             e.DismantlePermille = -1;
@@ -145,6 +146,10 @@ internal static class FrameBuilder
             if (world.Items.Count != 0 && world.Items.IndexOf(id) is >= 0 and var power)
             {
                 e.ItemPower = world.Items.At(power).Power;
+                if (world.Ruleset.EntityTypes[identity.TypeId].Traits.Item is { Kind: ItemKind.Resource } held)
+                {
+                    e.ItemResource = world.Items.At(power).Resource > 0 ? world.Items.At(power).Resource - 1 : held.Resource; // HUD-037
+                }
             }
 
             if (world.Items.Count != 0 && world.Items.IndexOf(id) is >= 0 and var it && world.Items.At(it).Look is > 0 and var itemLook
@@ -812,10 +817,12 @@ internal static class FrameBuilder
             e.MaxHealth = type.MaxHealth;
             e.Health = (int)((long)type.MaxHealth * g.HealthPermille / 1000);
             e.SwingMs = -1;
+            e.ItemResource = -1;
             e.CarryResource = Worker.NoResource;
             e.ConstructionPermille = g.Site != 0 ? g.BuildPermille : -1;
             e.DismantlePermille = -1;
             e.ResourceLeft = -1;
+            e.SeemsOwner = -1; // in its kingdom's colours, as last seen (the eighth play-test: 0 drew the player's flags)
             e.Remembered = true;
         }
 

@@ -248,7 +248,7 @@ public partial class GameScreen : Node
                 continue;
             }
 
-            foreach (string image in v.Images.Values)
+            foreach (string image in _catalog.Images(type.Id))
             {
                 _bank.Add(image);
                 if (Placement.CanTurn(type) && SpriteRules.Turned(image, rotated: true) is { } turned && turned != image)
@@ -300,8 +300,7 @@ public partial class GameScreen : Node
         TerrainSet set = _set!;
         _bank!.Upload();
         long uploaded = watch.ElapsedMilliseconds;
-        Image? light = set.Light is { } l ? _ui.Image(l) : null;
-        _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, _grid!, _store.LoadImage, light, _composed);
+        _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, _grid!, _store.LoadImage, _composed);
         _composed = null;
         MinimapFromData(set, _grid!);
         if (set.Table is { } treeTable && _store.Vfs.Exists(treeTable))
@@ -493,7 +492,7 @@ public partial class GameScreen : Node
 
         long timeMs = (long)_animMs;
         float phase = DayPhase(frame);
-        _world.Render(frame, fresh, _interpolator, alpha, _pan, layout.View.Position, layout.View.Size, timeMs, _selection.Selected, _session.LocalPlayer, Barred(), Darkness(phase), CurrentGhost(frame));
+        _world.Render(frame, fresh, _interpolator, alpha, _pan, layout.View.Position, layout.View.Size, timeMs, _selection.Selected, _session.LocalPlayer, Barred(), NightLight.Amount(frame.DayMinute), CurrentGhost(frame));
         DrawBox();
         UpdateHud(frame, phase);
         UpdateCursor();
@@ -622,23 +621,6 @@ public partial class GameScreen : Node
         {
             _messages.RemoveAt(0);
         }
-    }
-
-    /// <summary>
-    /// Night darkness for a time of day (0 = midnight, 0.5 = noon; the clock globe's 24 frames follow the same hours).
-    /// ⚠ UNK-32 placeholder curve: night until 05:00, dawn to 07:00, day, dusk from 18:00 to 20:30.
-    /// </summary>
-    public static float Darkness(float phase)
-    {
-        const float night = 0.55f;
-        return phase switch
-        {
-            < 0.21f => night,
-            < 0.29f => (0.29f - phase) / 0.08f * night,
-            < 0.75f => 0f,
-            < 0.855f => (phase - 0.75f) / 0.105f * night,
-            _ => night,
-        };
     }
 
     /// <summary>Time of day of a frame (0 = midnight): the sim's day clock (GAME-16, ADR 0105).</summary>
@@ -2162,7 +2144,12 @@ public partial class GameScreen : Node
             stats.Add(("art/icons/level.t2img", HudText.Number(e.Level)));
         }
 
-        if (e.ItemPower > 0)
+        if (e.ItemResource >= 0 && e.ItemResource < _rules.ResourceTypes.Count)
+        {
+            // A resource item: the resource and how much (HUD-037; the original shows nothing, the owner asked for it).
+            stats.Add(($"art/icons/res{_rules.ResourceTypes[e.ItemResource]}.t2img", HudText.Number(e.ItemPower)));
+        }
+        else if (e.ItemPower > 0)
         {
             stats.Add(("art/icons/power.t2img", HudText.Number(e.ItemPower))); // POWER of an item on the ground (HUD-016)
         }
@@ -2234,7 +2221,9 @@ public partial class GameScreen : Node
         // A spy's disguise meter follows its name, as in the original: "Spy (100)" in its own look (MAG-021, batch J). A
         // working peasant is named by its job: Woodcutter, Farmer, Miner, Builder... (STRINGS.INI [peons], HUD-032).
         string name = e.Name is { Length: > 0 } own ? own // a hero's or the scenario's name (the seventh play-test)
-            : t.LegacyClass == "peon" && FrameJobs.StringKey(e.Job) is { } job ? _catalog.Text("peons", job, v.Name) : v.Name;
+            : t.LegacyClass == "peon" && FrameJobs.StringKey(e.Job) is { } job ? _catalog.Text("peons", job, v.Name)
+            : t.Item is not null ? _catalog.ItemName(e.TypeId, e.ItemLook, e.ItemResource) // HUD-037
+            : v.Name;
         return new SelectionInfo
         {
             Name = e.DisguiseMastery >= 0 ? string.Create(CultureInfo.InvariantCulture, $"{(e.SpyType >= 0 ? _catalog.Type((ushort)e.SpyType).Name : v.Name)} ({e.DisguiseMastery})") : name,

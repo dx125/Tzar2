@@ -10,6 +10,7 @@ rules:
     rule: Once explored, ground keeps showing its resources and the enemy's buildings; enemy units, ships and siege weapons show only while one of the kingdom's units or buildings sees them.
     source: [manual Exploring The Map]
     status: tested
+    note: A building remembered under the fog shows as it was last seen, in its kingdom's colours (the eighth play-test - remembered enemy buildings flew the player's flags).
   FOG-003:
     rule: No Fog shows enemy units in every explored part of the map, even where the kingdom has nobody.
     source: [manual Single Player Setup Screen]

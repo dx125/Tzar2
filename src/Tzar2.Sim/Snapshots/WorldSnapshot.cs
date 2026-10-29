@@ -200,6 +200,10 @@ public static class WorldSnapshot
 
         // A save of an older format or other rules hashes differently by construction; everything else must match.
         bool exact = version == FormatVersion && sameRules;
+        if (!exact)
+        {
+            world.UpgradeRestoredState(); // what the current rules give that the save did not hold
+        }
         ulong actual = StateHashing.ComputeFullHash(world, new StateHasher());
         if (exact && actual != expected)
         {
