@@ -76,13 +76,12 @@ public sealed class WorldRenderer : IDisposable
     private readonly Rid _marksUnder;
     private readonly Rid _marksOver;
     private readonly Rid _fogItem;
+    private readonly Rid _nightItem;
     private readonly ShaderMaterial _fogMaterial;
+    private readonly CanvasItemMaterial _nightMaterial;
     private readonly ImageTexture _fogTexture;
-    private readonly ImageTexture _lightTexture;
     private readonly Image _fogImage;
-    private readonly Image _lightImage;
     private readonly byte[] _fogBytes;
-    private readonly byte[] _lightBytes;
     private readonly List<Pickable> _pickables = [];
     private readonly HashSet<uint> _selected = [];
     private HashSet<uint> _fished = [];
@@ -97,11 +96,9 @@ public sealed class WorldRenderer : IDisposable
     private GameFrame? _current; // the frame being drawn
     private readonly int _thirdSwing; // the technology that gives a third swing (Kung Fu, PRES-005), or -1
     private static readonly StringName FogEnabledParam = "fog_enabled";
-    private static readonly StringName DarknessParam = "darkness";
     private bool? _fogEnabled;
-    private float _darkness = float.NaN;
+    private float _night = float.NaN;
     private (int X, int Y, uint Target, long StartMs, BlinkColour Colour)? _order;
-    private bool _lightsValid;
 
     // The blows each unit has struck, counted when its swing starts again (PRES-005's alternate swings).
     private readonly Dictionary<uint, (int LastSwingMs, uint Blows)> _swings = [];
@@ -109,10 +106,9 @@ public sealed class WorldRenderer : IDisposable
 
     /// <summary>Where trees and their shadows are drawn and which pictures grow where (PRES-009; set by the game screen from the terrain set's data).</summary>
     public TreeLayout Trees { get; set; } = TreeLayout.Default;
-    private ImageTexture? _lightPatternTexture;
 
     /// <summary>Creates the renderer for a match; the terrain is <paramref name="composed"/> already, or composed here.</summary>
-    public WorldRenderer(Node host, Rid canvas, Ruleset rules, PresentationCatalog catalog, SpriteBank bank, TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load, Image? lightPattern, TerrainLayer.ComposedTerrain? composed = null)
+    public WorldRenderer(Node host, Rid canvas, Ruleset rules, PresentationCatalog catalog, SpriteBank bank, TerrainSet set, TerrainGrid grid, Func<string, ImageAsset?> load, TerrainLayer.ComposedTerrain? composed = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         _rules = rules;
@@ -143,20 +139,17 @@ public sealed class WorldRenderer : IDisposable
         MapHeight = grid.Height;
         _fogBytes = new byte[MapWidth * MapHeight];
         _wallPieces = new byte[MapWidth * MapHeight];
-        _lightBytes = new byte[MapWidth * MapHeight];
         _fogImage = Image.CreateFromData(MapWidth, MapHeight, false, Image.Format.L8, _fogBytes);
-        _lightImage = Image.CreateFromData(MapWidth, MapHeight, false, Image.Format.L8, _lightBytes);
         _fogTexture = ImageTexture.CreateFromImage(_fogImage);
-        _lightTexture = ImageTexture.CreateFromImage(_lightImage);
         _fogMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://shaders/fog_night.gdshader") };
         _fogMaterial.SetShaderParameter("fog_tex", _fogTexture);
-        _fogMaterial.SetShaderParameter("light_tex", _lightTexture);
-        _fogMaterial.SetShaderParameter("map_pixels", new Vector2(MapWidth * TilePixels, MapHeight * TilePixels));
-        if (lightPattern is not null)
-        {
-            _lightPatternTexture = ImageTexture.CreateFromImage(lightPattern);
-            _fogMaterial.SetShaderParameter("light_pattern", _lightPatternTexture);
-        }
+
+        // The night (PRES-015): the map's colours multiplied by the clock's tint, under the fog.
+        _nightItem = Item(45);
+        _nightMaterial = new CanvasItemMaterial { BlendMode = CanvasItemMaterial.BlendModeEnum.Mul };
+        RS.CanvasItemSetMaterial(_nightItem, _nightMaterial.GetRid());
+        RS.CanvasItemAddRect(_nightItem, new Rect2(0, 0, MapWidth * TilePixels, MapHeight * TilePixels), Colors.White);
+        RS.CanvasItemSetVisible(_nightItem, false);
 
         _fogItem = Item(50);
         RS.CanvasItemSetMaterial(_fogItem, _fogMaterial.GetRid());
@@ -208,7 +201,7 @@ public sealed class WorldRenderer : IDisposable
         IReadOnlyList<EntityId> selection,
         byte localPlayer,
         WorldOptions options,
-        float darkness,
+        float night,
         Ghost? ghost)
     {
         ArgumentNullException.ThrowIfNull(frame);
@@ -230,6 +223,7 @@ public sealed class WorldRenderer : IDisposable
         RS.CanvasItemSetTransform(_marksUnder, view);
         RS.CanvasItemSetTransform(_marksOver, view);
         RS.CanvasItemSetTransform(_fogItem, view);
+        RS.CanvasItemSetTransform(_nightItem, view);
         RS.CanvasItemClear(_marksUnder);
         RS.CanvasItemClear(_marksOver);
         _ground.Clear();
@@ -313,7 +307,7 @@ public sealed class WorldRenderer : IDisposable
         _objects.Commit();
         _ghostLayer.Commit();
 
-        UpdateFogAndLight(frame, fresh, useFog, localPlayer, options.DayNight ? darkness : 0f);
+        UpdateFogAndNight(frame, fresh, useFog, options.DayNight ? night : 0f);
     }
 
     /// <inheritdoc/>
@@ -325,17 +319,15 @@ public sealed class WorldRenderer : IDisposable
         _translucent.Dispose();
         _glow.Dispose();
         _ghostLayer.Dispose();
-        foreach (Rid rid in new[] { _marksUnder, _marksOver, _fogItem, _root })
+        foreach (Rid rid in new[] { _marksUnder, _marksOver, _fogItem, _nightItem, _root })
         {
             RS.FreeRid(rid);
         }
 
         _fogMaterial.Dispose();
+        _nightMaterial.Dispose();
         _fogTexture.Dispose();
-        _lightTexture.Dispose();
-        _lightPatternTexture?.Dispose();
         _fogImage.Dispose();
-        _lightImage.Dispose();
     }
 
     private int Fog(byte[] fog, int x, int y)
@@ -1095,7 +1087,7 @@ public sealed class WorldRenderer : IDisposable
         }
     }
 
-    private void UpdateFogAndLight(GameFrame frame, bool fresh, bool useFog, byte localPlayer, float darkness)
+    private void UpdateFogAndNight(GameFrame frame, bool fresh, bool useFog, float night)
     {
         // Every drawn frame: cached names, and only what changed (the code review: a StringName per call otherwise).
         if (useFog != _fogEnabled)
@@ -1104,21 +1096,16 @@ public sealed class WorldRenderer : IDisposable
             _fogMaterial.SetShaderParameter(FogEnabledParam, useFog);
         }
 
-        if (darkness != _darkness)
+        if (night != _night)
         {
-            _darkness = darkness;
-            _fogMaterial.SetShaderParameter(DarknessParam, darkness);
+            _night = night;
+            (float r, float g, float b) = NightLight.Tint(night);
+            RS.CanvasItemSetModulate(_nightItem, new Color(r, g, b));
+            RS.CanvasItemSetVisible(_nightItem, night > 0f);
         }
 
-        // The layers change with the sim (fog every 4 ticks, lights as units move): upload on new frames only.
-        bool lightsNeeded = darkness > 0f;
-        if (!fresh && !(lightsNeeded && !_lightsValid))
-        {
-            return;
-        }
-
-        _lightsValid = lightsNeeded;
-        if (useFog)
+        // The fog changes with the sim (every 4 ticks): upload on new frames only.
+        if (fresh && useFog)
         {
             byte[] fog = frame.Visibility;
             for (int i = 0; i < _fogBytes.Length; i++)
@@ -1128,38 +1115,6 @@ public sealed class WorldRenderer : IDisposable
 
             _fogImage.SetData(MapWidth, MapHeight, false, Image.Format.L8, _fogBytes);
             _fogTexture.Update(_fogImage);
-        }
-
-        if (darkness > 0f)
-        {
-            // ⚠ UNK-32 placeholder: light discs of 3 tiles around own units and 5 around own buildings.
-            Array.Clear(_lightBytes);
-            foreach (ref readonly FrameEntity e in frame.Entities)
-            {
-                if (e.Owner != localPlayer)
-                {
-                    continue;
-                }
-
-                int r = e.TileX >= 0 ? 5 : 3;
-                int tx = e.X / (TilePixels * UnitsPerPixel), ty = e.Y / (TilePixels * UnitsPerPixel);
-                for (int y = Math.Max(0, ty - r); y <= Math.Min(MapHeight - 1, ty + r); y++)
-                {
-                    for (int x = Math.Max(0, tx - r); x <= Math.Min(MapWidth - 1, tx + r); x++)
-                    {
-                        int d2 = ((x - tx) * (x - tx)) + ((y - ty) * (y - ty));
-                        if (d2 <= r * r)
-                        {
-                            int v = 255 - (d2 * 200 / (r * r));
-                            int o = (y * MapWidth) + x;
-                            _lightBytes[o] = (byte)Math.Max(_lightBytes[o], v);
-                        }
-                    }
-                }
-            }
-
-            _lightImage.SetData(MapWidth, MapHeight, false, Image.Format.L8, _lightBytes);
-            _lightTexture.Update(_lightImage);
         }
     }
 

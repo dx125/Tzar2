@@ -23,6 +23,7 @@ public sealed class WorldFrameTests
     private static readonly Lazy<Ruleset> Rules = new(() => SyntheticLegacyContent.CompileRuleset());
 
     [Fact]
+    [Trait("Rule", "FOG-002")]
     public void Frames_show_the_sims_fog_only_visible_units_and_remembered_structures()
     {
         using var session = new GameSession(SessionTests.Setup() with { CheatsAllowed = true, ComputerAi = false }, Rules.Value);
@@ -42,6 +43,7 @@ public sealed class WorldFrameTests
         session.Step(1);
         frame = session.AcquireFrame(out _)!;
         Assert.Contains(frame.Entities.ToArray(), e => e.Owner == 1 && e.Remembered && Rules.Value.EntityTypes[e.TypeId].Traits.LegacyClass == "castle");
+        Assert.All(frame.Entities.ToArray().Where(e => e.Remembered), e => Assert.Equal(-1, e.SeemsOwner)); // its own kingdom's flags
         Assert.DoesNotContain(frame.Visibility, v => v == (byte)TileVisibility.Unexplored);
     }
 

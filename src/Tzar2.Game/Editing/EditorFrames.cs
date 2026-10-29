@@ -50,6 +50,7 @@ public static class EditorFrames
             e.MaxHealth = o.Info.MaxHealth ?? type.MaxHealth;
             e.Activity = UnitActivity.Idle;
             e.SwingMs = -1;
+            e.ItemResource = -1;
             e.CarryResource = Worker.NoResource;
             e.ConstructionPermille = -1;
             e.ResourceLeft = o.Placement.Amount > 0 ? o.Placement.Amount : type.Traits.ResourceNode?.Amount ?? -1;

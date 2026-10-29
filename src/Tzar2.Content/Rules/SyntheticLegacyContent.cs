@@ -357,7 +357,7 @@ public static class SyntheticLegacyContent
         }
 
         orders.Add(("e_peon", [("ACTION", "CREATE peon"), ("CLASSNAME", "peon"), ("IMG", "3")]));
-        orders.Add(("e_priest", [("ACTION", "CREATE priest"), ("CLASSNAME", "priest"), ("IMG", "114")]));
+        orders.Add(("e_priest", [("ACTION", "CREATE priest"), ("CLASSNAME", "priest"), ("IMG", "5")]));
         orders.Add(("gateopen", [("ACTION", "gateopen"), ("IMG", "4")]));
         foreach (string spell in SpellOrders)
         {

@@ -116,7 +116,7 @@ public partial class MapView : Control
                 _bank.Upload();
             }
 
-            _world = new WorldRenderer(this, _viewport.World2D.Canvas, _controller.Ruleset, _catalog, _bank, _set, Grid(doc), _store.LoadImage, null);
+            _world = new WorldRenderer(this, _viewport.World2D.Canvas, _controller.Ruleset, _catalog, _bank, _set, Grid(doc), _store.LoadImage);
         }
 
         _pan = Vector2I.Zero;

@@ -460,6 +460,23 @@ owner's order of 2026-10-26.
        upgraded several times (stone towers) should give back what all its stages cost: **fixed** (BLD-027; log
        below).
     6. Sounds still hang on where fights were, though fewer: **fixed** (PRES-013; log below).
+20. **The eighth play-test (2026-10-29, the owner, build 0d48ae4; the save Game 5, read locally only).** For each item
+    that the original's files cannot settle, look first at how ReTzar does it. In two batches: A (items 4 to 8), then B
+    (1 to 3).
+    1. Troops behave oddly: the back ranks do not go round the front ones when those stop. Open (batch B).
+    2. A knight's walk can stop its animation in a crowd while it still moves. Open (batch B).
+    3. In a fight among buildings some troops stand still, unable to reach their target, while other enemies are near
+       (Game 5, saved before the battle at the enemy base). Open (batch B).
+    4. No victory came when every enemy was beaten: **explained and the rule fixed** (DIP-010; log below). Two kingdoms
+       had only cows left, at the map's edges where peasants had pushed them before NAT-007; cows keep a kingdom in the
+       game in the original too. Caravans, fishing boats and the dummy no longer do, as in the original.
+    5. The church still trains no priest (Game 5): **fixed** (ADR 0271 amended; log below). The church was built before
+       churches trained priests and had no queue; a save continued under newer rules now gets it.
+    6. Units seem to see too little: **fixed** (PRES-015; log below). Their sight is the original's; the night was a
+       placeholder that showed three tiles round each unit for half the day. It is now the original's tint.
+    7. Enemy buildings under the fog fly the player's flags: **fixed** (FOG-002; log below).
+    8. A killed cow's meat is not drawn though it can be selected, and the selection says treasure instead of the meat's
+       icon and amount; other resources the same: **fixed** (HUD-037, NAT-004, ECO-026; log below).
 
 ## Decision and event log
 

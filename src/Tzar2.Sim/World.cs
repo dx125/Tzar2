@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Diagnostics;
 using Tzar2.Core.Ids;
@@ -880,6 +881,10 @@ public sealed partial class World
                     if (Items.IndexOf(item) is >= 0 and var it)
                     {
                         Items.At(it).Power = piece;
+                        if (Ruleset.EntityTypes[type.Traits.SpawnOnDeath].Traits.Item is { Looks.Length: > 0 })
+                        {
+                            Items.At(it).Look = 1; // its own picture (the original's item_meat; the eighth play-test: it was not drawn)
+                        }
                     }
                 }
 
@@ -939,6 +944,32 @@ public sealed partial class World
         Entities.Destroy(entity);
         Events.Emit(new SimEvent(SimEventKind.Destroyed, (byte)owner, entity, 0, 0, typeId));
         return true;
+    }
+
+    /// <summary>
+    /// A save continued under other rules or from an older format (ADR 0271): what an entity's type gives it now and the
+    /// save did not hold. A completed entity of a kingdom whose type has become a producer gets its production queue (the
+    /// eighth play-test: a church built before it trained priests could not train them, PROD-016).
+    /// </summary>
+    internal void UpgradeRestoredState()
+    {
+        ReadOnlySpan<EntityId> ids = Identities.Entities;
+        Span<Identity> identities = Identities.Components;
+        List<EntityId>? producers = null;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            EntityId entity = ids[i];
+            if (Ruleset.EntityTypes[identities[i].TypeId].Traits.Producer is not null && HasPlayer(identities[i].Owner)
+                && !Productions.Has(entity) && !Constructions.Has(entity))
+            {
+                (producers ??= []).Add(entity);
+            }
+        }
+
+        foreach (EntityId entity in producers ?? [])
+        {
+            Productions.Set(entity, default);
+        }
     }
 
     /// <summary>

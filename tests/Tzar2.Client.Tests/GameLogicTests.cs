@@ -35,7 +35,7 @@ public sealed class PresentationCatalogTests
         tables.Add("tables/data/sounds.ini.json", Ini(("foot_cmd", [("command\\Foot1.wav", "100"), ("command\\foot2.wav", "300")]), ("priority", [("obj_select", "255")])));
         tables.Add("tables/data/keys.ini.json", Ini(("Ctrl", [("C", "castle"), ("T", "tower_wood,tower_stone2")])));
         tables.Add("tables/data/icons.ini.json", Ini(("e_peon", [("image", "ICONS\\icons.bmp"), ("index", "33")])));
-        tables.Add("tables/local/strings.ini.json", Ini(("objects", [("peon e", "Peasant"), ("castle", "Castle")]), ("orders_names", [("move", "Move")]), ("mainscr", [("single", "SINGLE PLAYER| Single player game")])));
+        tables.Add("tables/local/strings.ini.json", Ini(("objects", [("peon e", "Peasant"), ("castle", "Castle"), ("resitem", "Treasury Item")]), ("orders_names", [("move", "Move")]), ("mainscr", [("single", "SINGLE PLAYER| Single player game")]), ("images", [("item_food", "Food"), ("item_gold", "Gold")])));
         var vfs = new VirtualFileSystem();
         vfs.Mount(new EngineDefaultsSource());
         vfs.Mount(tables);
@@ -46,6 +46,24 @@ public sealed class PresentationCatalogTests
     {
         (Ruleset rules, MemorySource tables) = Data.Value;
         return new PresentationCatalog(rules, p => tables.Contains(p) ? tables.ReadAllBytes(p) : null, tables.Paths.Where(p => p.StartsWith(PresentationCatalog.ObjectsFolder, StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-037")]
+    public void Items_on_the_ground_are_named_by_their_picture_or_resource_and_their_looks_are_loaded()
+    {
+        PresentationCatalog catalog = Catalog();
+        Ruleset rules = catalog.Ruleset;
+        ushort resitem = (ushort)rules.EntityTypeId("comm.resitem");
+        ushort meat = (ushort)rules.EntityTypeId("comm.meat");
+        int food = rules.ResourceId("food");
+        Assert.Equal("Gold", catalog.ItemName(resitem, "item_gold", rules.ResourceId("gold"))); // a dropped load, as the original
+        Assert.Equal("Food", catalog.ItemName(meat, "item_meat", food)); // no name of its picture: its resource's
+        Assert.Equal("Treasury Item", catalog.ItemName(resitem, null, -1));
+
+        // The eighth play-test: the looks of loads and meat were not loaded, so they were not drawn.
+        Assert.Contains("item_meat", catalog.Images(meat));
+        Assert.Contains("item_food", catalog.Images(resitem));
     }
 
     [Fact]
@@ -173,6 +191,24 @@ public sealed class TerrainAndSpriteRuleTests
         Assert.True(SpriteRules.PainterKey((10 * 32) + 16, 2) > stables); // one on a free corner of its top row
         Assert.True(SpriteRules.PainterKey((9 * 32) + 16, 2) < stables);  // one on the row above it
         Assert.True(SpriteRules.PainterKey(10 * 32) < stables);           // a tree on the row above (ordered by its foot)
+    }
+
+    [Fact]
+    [Trait("Rule", "PRES-015")]
+    public void The_night_tints_the_map_from_dusk_at_half_past_nine_to_dawn_at_half_past_six()
+    {
+        // The eighth play-test: units seemed to see too little, under a placeholder night that lit three tiles round them.
+        Assert.Equal(0f, NightLight.Amount(10 * 60));
+        Assert.Equal(0f, NightLight.Amount((21 * 60) + 29));
+        Assert.Equal(0.5f, NightLight.Amount((21 * 60) + 45));
+        Assert.Equal(1f, NightLight.Amount(22 * 60));
+        Assert.Equal(1f, NightLight.Amount(3 * 60));
+        Assert.Equal(1f, NightLight.Amount((5 * 60) + 59));
+        Assert.Equal(0.5f, NightLight.Amount((6 * 60) + 15));
+        Assert.Equal(0f, NightLight.Amount((6 * 60) + 30));
+        Assert.Equal((1f, 1f, 1f), NightLight.Tint(0f));
+        (float r, float g, float b) = NightLight.Tint(1f);
+        Assert.Equal((0.55f, 0.68f, 1f), (MathF.Round(r, 3), MathF.Round(g, 3), b));
     }
 
     [Fact]

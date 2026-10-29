@@ -223,6 +223,46 @@ public sealed class PresentationCatalog : ICardSource
     /// <inheritdoc/>
     public int ItemIcon(ushort typeId, string? look) => IconIndex(look ?? _types[typeId].Image(UnitAnim.Base));
 
+    /// <summary>
+    /// The pictures type <paramref name="typeId"/> may show: its object INI's, and an item's looks (a dropped load's
+    /// item_gold, the meat's item_meat...; the eighth play-test: they were not loaded, so loads and meat were not drawn).
+    /// </summary>
+    public IEnumerable<string> Images(ushort typeId)
+    {
+        foreach (string image in _types[typeId].Images.Values)
+        {
+            yield return image;
+        }
+
+        if (Ruleset.EntityTypes[typeId].Traits.Item is { } item)
+        {
+            foreach (string look in item.Looks)
+            {
+                yield return look;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The name of an item on the ground (HUD-037): its picture's (STRINGS.INI [images], the original's description of an
+    /// item, ReTzar 0x4e4850), else for a resource item its resource's ("Food" for the meat, whose picture has none, where
+    /// the original says Treasury Item), else its type's.
+    /// </summary>
+    public string ItemName(ushort typeId, string? look, int resource)
+    {
+        if (look is not null && _strings.Get("images", look) is { Length: > 0 } named)
+        {
+            return named;
+        }
+
+        if ((uint)resource < (uint)Ruleset.ResourceTypes.Count && _strings.Get("images", "item_" + Ruleset.ResourceTypes[resource]) is { Length: > 0 } held)
+        {
+            return held;
+        }
+
+        return _types[typeId].Name;
+    }
+
     /// <inheritdoc/>
     public int UnitIcon(ushort typeId, bool hero) => typeId < _types.Length ? _types[typeId].Portrait(hero) : -1;
 

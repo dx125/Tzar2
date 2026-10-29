@@ -141,8 +141,10 @@ world:
   # day-clock: 8 steps from 10:00 to 18:00; ADR 0173). The night's hours were not seen; they are assumed as long.
   dayLengthMs: 2250000                # VERIFIED (UNK-32): 24 hours of 93.75 s
   dayStartMinute: 600                 # VERIFIED (same capture): the globe shows 10:00 when a match starts
-  nightStartMinute: 1140              # UNVERIFIED: night from 19:00
-  nightEndMinute: 360                 # UNVERIFIED: to 06:00
+  # PRES-015 (ReTzar's reading of the original, src/simulation.rs night_amount): full night from 22:00 to 06:00, after half
+  # an hour of dusk and before half an hour of dawn.
+  nightStartMinute: 1320              # ReTzar: night from 22:00
+  nightEndMinute: 360                 # ReTzar: to 06:00
   weatherPeriodMs: 180000             # UNVERIFIED (UNK-09): weather comes and goes in 3-minute periods
   weatherChancePercent: 25            # UNVERIFIED: share of periods with weather
   weather: { grass: rain, summer: rain, snow: snow, desert: clear }   # the rain/snow flags of <SET>.TERRAIN.INI (structural facts)
@@ -224,9 +226,12 @@ legacy:
   # Re-pinned 2026-10-23 (code review): measured at every pinning commit on a clean install, the pin matched its own
   # commit up to #131 (D13ECBADA7B58867); #168 (only ninjas climb cliffs) moved it to 2B10D506FB5D9D5A without a re-pin,
   # and #133 and #139 pinned values measured on branches made before #168 (8E099B69A78D8E17, 8EB08346ED82C438), which no
-  # commit of main ever produced. Main has given 7F4CCBEEEC76AD36 since #139 (#187 and later moved nothing).
+  # commit of main ever produced. Main has given 7F4CCBEEEC76AD36 since #139 (#187 and later moved nothing). Re-pinned
+  # 2026-10-29 (the eighth play-test: the owner's import said "modified installation"): #261 (PROD-016, a building trains
+  # what its menu creates) moved it to 2CCD38D8AC5BB241 without a re-pin; 9aff5af gives the old value on the clean GOG
+  # install, #261 the new one.
   referenceEdition: GOG v1.10 EN
-  referenceDataHash: "7F4CCBEEEC76AD36"
+  referenceDataHash: "2CCD38D8AC5BB241"
 
 # ---- templates ---------------------------------------------------------------------------------------------------
 
@@ -292,8 +297,11 @@ legacy:
     # (capture-20261019-232318, gather-rate burst: chopping from ~41.3 s, the log carried off at 50.3 s; ADR 0175)
     gatherMs: { food: 900, wood: 900, stone: 900, gold: 900, iron: 900 }   # per unit
 
+# DIP-010 (ReTzar's reading of the original, 0x442bd0): caravans, fishing boats and the training dummy do not keep a
+# kingdom in the game (walls, gates, bridges and fields neither, by their own traits).
 ^class.fishing_boat:
   inherits: [^Ship]
+  Minor: {}
   Armament: { projectile: arrow }     # UNVERIFIED (UNK-22)
   Harvester:
     capacity: 20                      # UNVERIFIED (UNK-17)
@@ -310,6 +318,7 @@ legacy:
 ^class.trader:                             # caravans: cycle between two markets (GAME-14, ADR 0103)
   Mobile: { speed: 4 }                     # UNVERIFIED (UNK-12)
   Trader: { capacity: 100, access: land, technology: te_traderoutes }
+  Minor: {}                                # DIP-010
 # TRADE-004 (ReTzar's reading of the original, 0x4e8060): the load per trip is 500 for European caravans, 300 for Arabian
 # ones and 100 for Asian peasants, who trade instead of caravans (MENU.INI [a_peon] trade; TECHTREE ASIA trade).
 ^euro.trader: { Trader: { capacity: 500 } }
@@ -438,6 +447,7 @@ legacy:
 ^class.crusader: { BribeImmune: {}, Mobile: { pixelsPerSecond: 72 } }    # TDD GAME-11: crusaders cannot be bribed; speed VERIFIED (ADR 0172)
 ^class.dummy:
   TrainingDummy: {}                   # GAME-08: training against dummies (Tactics); they take no damage
+  Minor: {}                           # DIP-010
   -Burnable:
   -RuinOnDeath:
 ^class.outpost:
@@ -468,12 +478,12 @@ comm.tree:
   ResourceNode: { resource: wood, amount: 100 }   # UNVERIFIED (UNK-17): wood per tree
 
 # Meat left by a slaughtered cow (GAME-02, NAT-004): resource items of food (ReTzar: item_meat, a RESITEM) that a peasant
-# carries home and any other unit brings in at once; they rot (never block, ORIG-01/05).
+# carries home and any other unit brings in at once; they rot (never block, ORIG-01/05). They wear the original's picture.
 comm.meat:
   new: true
   inherits: [^Item]
   Legacy: { class: meat, civ: comm }
-  Item: { kind: resource, resource: food, power: 100, holders: [infantryunits, mountedunits] }
+  Item: { kind: resource, resource: food, power: 100, holders: [infantryunits, mountedunits], looks: [item_meat] }
   Lifetime: { ms: 120000 }                        # UNVERIFIED (UNK-17)
 
 # Ambient birds (OBJECTS BIRD.INI / EAGLE.INI, teren = 0; not in the tables): they fly around, nobody fights them.

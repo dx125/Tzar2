@@ -66,4 +66,27 @@ public class SaveCompatibilityTests
         using Simulation same = Simulation.Restore(now, Classic, FixtureMap(), tolerance: SnapshotTolerance.SaveGame);
         Assert.True(same.RestoredExactly);
     }
+
+    [Fact]
+    [Trait("Rule", "PROD-016")]
+    public void A_building_whose_type_has_become_a_producer_since_the_save_gets_its_queue()
+    {
+        // The eighth play-test: a church built before churches trained priests had no queue, so its priest button did
+        // nothing in the save continued under the rules that give it priests.
+        using var before = new SimDriver(FixtureMap(), ruleset: Classic);
+        before.RunUntil(() => false, 4);
+        byte[] save = WorldSnapshot.Capture(before.World);
+        Ruleset trains = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        {
+            OverrideTexts = [new("trains.yaml", "euro.house:\n  Producer: { queue: 5 }\neuro.priest:\n  Producible: { by: [euro.castle, euro.house] }\n")],
+        });
+        Assert.Equal(Classic.TablesHash, trains.TablesHash);
+        using Simulation sim = Simulation.Restore(save, trains, FixtureMap(), tolerance: SnapshotTolerance.SaveGame);
+        Core.Ids.EntityId house = OfType(sim.World, "euro.house").Single();
+        Assert.True(sim.World.Productions.Has(house));
+        var train = new CommandList();
+        train.Add(CommandKind.Train, [house], arg0: trains.EntityTypeId("euro.priest"), arg1: 1, player: 0);
+        sim.Tick(train);
+        Assert.Equal(0, sim.World.Events.Events.ToArray().Count(e => e.Kind == Events.SimEventKind.CommandRejected));
+    }
 }

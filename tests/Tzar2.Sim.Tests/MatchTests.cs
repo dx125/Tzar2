@@ -100,6 +100,28 @@ public class MatchTests
     }
 
     [Fact]
+    [Trait("Rule", "DIP-010")]
+    public void Caravans_fishing_boats_and_the_dummy_do_not_keep_a_kingdom_in_the_game_but_its_cows_do()
+    {
+        using var d = new SimDriver(
+            TestMap(48, 16, Unit("euro.footman", 0, 4, 8), Unit("euro.trader", 1, 20, 4), Structure("comm.dummy", 1, 24, 10), Unit("comm.cow", 2, 40, 8)),
+            players: 3,
+            ruleset: Classic,
+            configure: c => c with { Victory = VictoryCondition.Standard });
+        World w = d.World;
+        d.RunUntil(() => (w.Players[1].Flags & PlayerFlags.Defeated) != 0, 120);
+        Assert.True((w.Players[1].Flags & PlayerFlags.Defeated) != 0); // a caravan and a dummy only
+        d.RunUntil(() => false, 120);
+        Assert.Equal(PlayerFlags.None, w.Players[2].Flags & PlayerFlags.Defeated); // a cow keeps it in, as in the original
+        Assert.False(VictorySystem.IsOver(w));
+        d.Order(0, CommandKind.DebugKill, [OfType(w, "comm.cow", 2).Single()]);
+        d.RunUntil(() => VictorySystem.IsOver(w), 120);
+        Assert.True((w.Players[0].Flags & PlayerFlags.Victorious) != 0);
+        Assert.True(Classic.EntityTypes[Classic.EntityTypeId("comm.fishing_boat")].Traits.IsMinor);
+        Assert.False(Classic.EntityTypes[Classic.EntityTypeId("euro.peon")].Traits.IsMinor);
+    }
+
+    [Fact]
     [Trait("Rule", "DIP-006")]
     public void Destroy_castles_defeats_a_kingdom_without_a_castle_even_with_units_left()
     {
