@@ -115,8 +115,11 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // the final hash.
     // (NAT-004, 2026-10-29) the meat of the cows killed at the center wears its own picture (the item's look): the stream
     // and the final hash.
-    private const ulong GoldenHashStream = 0x0B6629B5AAC88126UL;
-    private const ulong GoldenFinalFullHash = 0xCD4FB48116013E99UL;
+    // (WORLD-021, WAR-016, PRES-016; 2026-10-29) a unit held up goes round every unit's tile, waits only behind one entering
+    // its tile, takes another target when its walks end short, and faces where it steps: the stream and
+    // the final hash.
+    private const ulong GoldenHashStream = 0x7118F2F67426E446UL;
+    private const ulong GoldenFinalFullHash = 0x11F830D29C4E18A9UL;
 
     private const int Ticks = 1600;
 

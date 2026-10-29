@@ -188,8 +188,15 @@ public class NatureTests
         d.RunUntil(() => false, 12_000); // ten minutes
         foreach (EntityId c in cows)
         {
-            Position p = d.PositionOf(c);
-            Assert.True(Math.Max(Math.Abs(p.X - start[c].X), Math.Abs(p.Y - start[c].Y)) <= 3 * SimDriver.Tile, $"{start[c]} -> {p}");
+            // The tile it stands on or steps into: a cow that makes way for a peasant may be in the middle of a step.
+            int width = w.Map.Width;
+            int to = w.CellSteps.IndexOf(c) is >= 0 and var s && w.CellSteps.At(s).To >= 0 ? w.CellSteps.At(s).To : -1;
+            (int X, int Y) tile = to >= 0 ? (to % width, to / width) : (d.PositionOf(c).X / SimDriver.Tile, d.PositionOf(c).Y / SimDriver.Tile);
+            (int X, int Y) first = (start[c].X / SimDriver.Tile, start[c].Y / SimDriver.Tile);
+            (int X, int Y) home = (w.NatureHomes.Get(c).X / SimDriver.Tile, w.NatureHomes.Get(c).Y / SimDriver.Tile);
+            Assert.True(Math.Max(Math.Abs(home.X - first.X), Math.Abs(home.Y - first.Y)) <= 2, $"home {first} -> {home}"); // no drift
+            // Two tiles of its grazing, and up to three steps aside for a peasant passing by (WORLD-020).
+            Assert.True(Math.Max(Math.Abs(tile.X - home.X), Math.Abs(tile.Y - home.Y)) <= 5, $"{home} -> {tile}");
         }
     }
 }
