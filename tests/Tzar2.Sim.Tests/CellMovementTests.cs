@@ -213,4 +213,32 @@ public class CellMovementTests
         Assert.True(ticks < 450, $"arrived after {ticks} ticks");
         Assert.True(longest < 40, $"stood {longest} ticks on one tile");
     }
+
+    [Fact]
+    [Trait("Rule", "WORLD-021")]
+    public void The_back_ranks_go_round_the_front_ones_that_have_stopped()
+    {
+        // The eighth play-test: the back ranks did not go round the front ones when those stopped. A rank of friends
+        // standing idle between a knight and its goal on open ground: the knight goes round it, as the original plans its
+        // way again with every unit's tile a wall, and nobody in the rank has to step aside.
+        var objects = new List<Tzar2.Content.Compiled.MapObject> { Structure("euro.castle", 0, 2, 2), Unit("euro.knight", 0, 10, 16) };
+        for (int y = 10; y < 23; y++)
+        {
+            objects.Add(Unit("euro.footman", 0, 16, y));
+        }
+
+        using var d = new SimDriver(TestMap(40, 34, [.. objects]), ruleset: Classic);
+        EntityId[] block = [.. OfType(d.World, "euro.footman")];
+        var places = block.ToDictionary(e => e, e => TileOf(d, e));
+        EntityId knight = OfType(d.World, "euro.knight").Single();
+        d.MoveToTile(0, [knight], 24, 16);
+        int stepped = 0;
+        int ticks = d.RunUntil(() =>
+        {
+            stepped += block.Count(e => TileOf(d, e) != places[e]);
+            return TileOf(d, knight) == (24, 16) && !d.IsMoving(knight);
+        }, 1200);
+        Assert.True(TileOf(d, knight) == (24, 16), $"the knight is at {TileOf(d, knight)} after {ticks} ticks");
+        Assert.Equal(0, stepped); // nobody stepped aside on its way: it went round
+    }
 }

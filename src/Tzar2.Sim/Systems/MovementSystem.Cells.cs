@@ -344,24 +344,37 @@ public sealed partial class MovementSystem
             return best;
         }
 
-        // A unit entering the tile, or making room, is waited for (the original: ten times 250 ms).
-        if (blocker >= 0 && (_tileEntering[best] != 0 || f.Moving[blocker] != 0 || MakingRoom(world, f, blocker)) && s.Waits < CellWaitMs / tickMs)
+        // A unit entering the tile, or making room, is waited for (the original: ten times 250 ms); one standing there,
+        // with an order to walk or not, is gone round at once (ReTzar 0x4dec92: only a unit entering the cell is waited for;
+        // the eighth play-test: units waited behind ones that waited themselves, and a crowd stood).
+        if (blocker >= 0 && (_tileEntering[best] != 0 || MakingRoom(world, f, blocker)) && s.Waits < CellWaitMs / tickMs)
         {
             s.Waits++;
             return -1;
         }
 
-        // Standing in the way, or waited long enough: round the units. The way may lead through units that make way
-        // (not an enemy's), dearer than free ground; its first step then asks the one there.
+        // Standing in the way, or waited long enough: as the original, the way is planned again with every unit's tile a
+        // wall, friends and those on the move too (ReTzar 0x4debb0, 0x4df540 with flag 1): near by first, and over the
+        // whole map when the near search cannot get on (the seventh play-test: units stood at a held gap instead of going
+        // round the houses; the eighth: the back ranks did not go round the front ones that had stopped).
+        bool due = m.StallTicks < DetourEvery || (tick + i) % DetourEvery == 0;
         bool reached = true;
-        int round = m.StallTicks < DetourEvery || (tick + i) % DetourEvery == 0 ? Detour(world, layer, f, i, here, goal, toward, out reached) : -1;
-
-        // No way round near by (a gap held by enemies or beasts, a crowd across a street): as the original, the whole way
-        // is planned again with the units' tiles as walls, and the unit walks that (the seventh play-test: units walked
-        // up to a held gap and stood there instead of going round the houses).
-        if (!reached && Reroute(world, layer, f, i, ref m, ref s, here, goal) is >= 0 and var rerouted)
+        int round = due ? Detour(world, layer, f, i, here, goal, toward, everyUnit: true, out reached) : -1;
+        if (due && !reached && Reroute(world, layer, f, i, ref m, ref s, here, goal, everyUnit: true) is >= 0 and var rerouted)
         {
-            round = rerouted; // through friends, it asks them below
+            round = rerouted;
+        }
+
+        // No way round the units at all (a crowd across a street, a bridge): Tzar2's own, the way may lead through units
+        // that make way (not an enemy's), dearer than free ground, and its first step asks the one there to step aside
+        // (the sixth play-test: friends make way and come back instead of being shoved).
+        if (due && round < 0)
+        {
+            round = Detour(world, layer, f, i, here, goal, toward, everyUnit: false, out reached);
+            if (!reached && Reroute(world, layer, f, i, ref m, ref s, here, goal, everyUnit: false) is >= 0 and var through)
+            {
+                round = through; // through friends, it asks them below
+            }
         }
 
         if (round >= 0 && Free(layer, round, i))
@@ -489,33 +502,36 @@ public sealed partial class MovementSystem
     // it is near and free, else toward the tile the unit heads for (or next to it when a unit stands there); the
     // first step of the best way found, or -1 (the original searches again around the units, 0x4debb0).
     private int Detour(World world, NavLayer layer, Frame f, int i, int here, int goal, int toward)
-        => Detour(world, layer, f, i, here, goal, toward, out _);
+        => Detour(world, layer, f, i, here, goal, toward, everyUnit: false, out _);
 
-    // As above; `reached` is false when the search found no way to where it aims within DetourRadius and DetourNodes and
-    // got not even half that far on toward it (the units and the ground near by close the way).
-    private int Detour(World world, NavLayer layer, Frame f, int i, int here, int goal, int toward, out bool reached)
+    // As above, with every unit's tile a wall when `everyUnit` (the original's re-plan); `reached` is false when the search
+    // found no way to where it aims within DetourRadius and DetourNodes and got not even half that far on toward it (the
+    // units and the ground near by close the way).
+    private int Detour(World world, NavLayer layer, Frame f, int i, int here, int goal, int toward, bool everyUnit, out bool reached)
     {
         int aim = Chebyshev(layer, here, goal) <= DetourRadius ? goal : toward;
-        int end = Search(world, layer, f, i, here, aim, DetourRadius, DetourNodes, out reached);
+        int end = Search(world, layer, f, i, here, aim, DetourRadius, DetourNodes, everyUnit, out reached);
         int w = layer.Width;
         reached |= end >= 0 && Octile(end % w, end / w, aim % w, aim / w) <= Octile(here % w, here / w, aim % w, aim / w) - (DetourRadius / 2 * NavLayer.StraightCost);
         return FirstStep(here, end);
     }
 
     // The original's re-plan round units (ReTzar 0x4a9060, 0x4df540): a search over the whole map to the goal (next to
-    // it when a unit stands there) with the tiles of units that do not make way as walls, friends that do dearer; the
-    // unit takes the way found as its path. Returns its first step, or -1 when there is none or the tick's searches are
-    // spent. A unit searches so once until it steps on or plans again.
-    private int Reroute(World world, NavLayer layer, Frame f, int i, ref Motion m, ref CellStep s, int here, int goal)
+    // it when a unit stands there) with every unit's tile a wall when `everyUnit`, else the tiles of units that do not
+    // make way, friends that do dearer; the unit takes the way found as its path. Returns its first step, or -1 when
+    // there is none or the tick's searches are spent. A unit searches so once a way (every unit, then through friends)
+    // until it steps on or plans again.
+    private int Reroute(World world, NavLayer layer, Frame f, int i, ref Motion m, ref CellStep s, int here, int goal, bool everyUnit)
     {
-        if (s.Rerouted != 0 || _reroutes >= ReroutesPerTick)
+        byte flag = everyUnit ? (byte)1 : (byte)2;
+        if ((s.Rerouted & flag) != 0 || _reroutes >= ReroutesPerTick)
         {
             return -1;
         }
 
         _reroutes++;
-        s.Rerouted = 1;
-        int end = Search(world, layer, f, i, here, goal, int.MaxValue, RerouteNodes, out bool reached);
+        s.Rerouted |= flag;
+        int end = Search(world, layer, f, i, here, goal, int.MaxValue, RerouteNodes, everyUnit, out bool reached);
         if (!reached || end < 0)
         {
             return -1;
@@ -577,10 +593,10 @@ public sealed partial class MovementSystem
         return _from[step] == here ? step : -1;
     }
 
-    // A search from `here` toward `aim` within `radius` tiles over walkable tiles: units that do not make way are walls,
-    // friends cost more; the tile it reached (`aim`, or next to it when a unit stands there), or the one nearest `aim`
-    // when it did not (`reached` false), or -1; _from leads back from it.
-    private int Search(World world, NavLayer layer, Frame f, int i, int here, int aim, int radius, int nodes, out bool reached)
+    // A search from `here` toward `aim` within `radius` tiles over walkable tiles: every unit is a wall when `everyUnit`,
+    // else units that do not make way are walls and friends cost more; the tile it reached (`aim`, or next to it when a
+    // unit stands there), or the one nearest `aim` when it did not (`reached` false), or -1; _from leads back from it.
+    private int Search(World world, NavLayer layer, Frame f, int i, int here, int aim, int radius, int nodes, bool everyUnit, out bool reached)
     {
         int width = layer.Width;
         reached = false;
@@ -638,7 +654,7 @@ public sealed partial class MovementSystem
                 if (_tileUnit[n] != 0 && _tileUnit[n] - 1 != i)
                 {
                     int k = _tileUnit[n] - 1;
-                    if (Holds(world, f, i, k))
+                    if (everyUnit || Holds(world, f, i, k))
                     {
                         continue; // an enemy, a creature of Nature, a friend at work or fighting where it stands: a wall
                     }

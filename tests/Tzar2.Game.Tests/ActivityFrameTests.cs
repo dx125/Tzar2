@@ -44,6 +44,30 @@ public class ActivityFrameTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-016")]
+    public void A_unit_in_the_middle_of_a_step_is_drawn_walking_whatever_its_order()
+    {
+        // The eighth play-test: a knight's walk could freeze in a crowd while it still moved. A unit stopped mid-step (a
+        // fight halts it, it makes way for a friend) ends its step (ADR 0270), with no order and no velocity left; it slid
+        // there with its standing or its attack picture.
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset();
+        MapData map = Tzar2.Sim.Scenarios.ScenarioMaps.WithObjects(Tzar2.Sim.Scenarios.ScenarioMaps.Build("step", 32, 16, new byte[32 * 16], []),
+            [At("euro.castle", 0, 2, 2), At("euro.knight", 0, 12, 8)]);
+        using var sim = new Simulation(rules, map, new SimulationConfig { PlayerCount = 1, MatchSeed = 3 });
+        World world = sim.World;
+        EntityId knight = world.Identities.Entities.ToArray().First(e => world.TypeOf(e).Key == "euro.knight");
+        sim.Tick(new CommandList());
+        ref CellStep step = ref world.CellSteps.Get(knight);
+        step.To = (8 * map.Width) + 13; // entering the tile east of it
+        step.Progress = Tile / 4;
+        Assert.Equal(MotionState.Idle, world.Motions.Get(knight).State);
+        Assert.Equal(0, world.Motions.Get(knight).VelocityX);
+        var frame = new GameFrame();
+        FrameBuilder.Fill(frame, world, 0, MatchOutcome.None);
+        Assert.Equal(UnitActivity.Walk, frame.Entities.ToArray().Single(e => e.Id == knight).Activity);
+    }
+
+    [Fact]
     public void The_new_activities_keep_the_old_numbers()
     {
         // The new activities come after Milk, so the old ones keep their values.

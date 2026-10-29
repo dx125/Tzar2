@@ -122,4 +122,26 @@ public class TargetChoiceTests
         Assert.Equal(MotionOrder.Follow, d.MotionOf(footman).Order);
         Assert.Equal(site.Value, d.MotionOf(footman).FollowTarget);
     }
+    [Fact]
+    [Trait("Rule", "WAR-016")]
+    public void Knights_with_no_place_left_at_a_house_take_the_house_beside_it()
+    {
+        // The eighth play-test: in a fight among buildings some knights stood behind the others round a barracks, unable to
+        // reach it, while other enemies were near. Twenty-four knights attack a house with sixteen places round it; a
+        // second house stands beside it. Those with no place, and those held off by the others, take the second house.
+        var objects = new System.Collections.Generic.List<Tzar2.Content.Compiled.MapObject> { Structure("euro.castle", 0, 2, 2), Structure("euro.castle", 1, 40, 24), Structure("euro.house", 1, 20, 14), Structure("euro.house", 1, 25, 14) };
+        for (int k = 0; k < 24; k++)
+        {
+            objects.Add(Unit("euro.knight", 0, 10 + (k % 6), 12 + (k / 6)));
+        }
+
+        using var d = new SimDriver(TestMap(48, 32, [.. objects]), ruleset: Classic);
+        EntityId[] knights = [.. OfType(d.World, "euro.knight")];
+        EntityId[] houses = [.. OfType(d.World, "euro.house", 1).OrderBy(h => d.PositionOf(h).X)];
+        d.Order(0, CommandKind.Attack, knights, target: houses[0]);
+        // Within six seconds (it took ten, until their walks gave up).
+        d.RunUntil(() => knights.Count(k => d.World.Combats.Get(k).Target == houses[1].Value) >= 3, 120);
+        Assert.True(knights.Count(k => d.World.Combats.Get(k).Target == houses[1].Value) >= 3,
+            $"{knights.Count(k => d.World.Combats.Get(k).Target == houses[1].Value)} knights took the second house");
+    }
 }
