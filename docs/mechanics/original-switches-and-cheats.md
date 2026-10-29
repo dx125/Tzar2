@@ -8,7 +8,9 @@ copied from the executable beyond the names.
 ## Chat cheats (UNK-30)
 
 Typed into the chat line with the prefix `hm` (e.g. `hmreveal`). Names followed by "‹arg›" appear in the executable
-with a trailing space, so they take an argument.
+with a trailing space, so they take an argument. In a game alone they work and mark the player a cheater; while another
+human plays they are refused (`nompcheat`). What each does is now read from ReTzar (`src/gameplay/cheats.rs`); Tzar2
+takes them in a game alone (HUD-036).
 
 | Code | What we know |
 |---|---|
@@ -16,11 +18,11 @@ with a trailing space, so they take an argument.
 | `nofog` | **Observed:** switches the fog of war off. |
 | `spawn ‹unit›` | **Observed:** shows the named unit at the cursor as an all-green figure that neither moved nor fought; probably waits for a click to place it (the next session checks). Our implementation: ADR 0107. |
 | `kingdom ‹n›` | **Observed:** no visible effect when sent with nothing selected (the diplomacy screen still showed kingdom 1 as the viewer). Either switches the controlled kingdom in a way we did not see, or acts on the selection; the next session checks both. |
-| `next` | Community list: wins the game. Our implementation: ADR 0107. UNVERIFIED. |
-| `notech` | Community list: removes technology requirements. UNVERIFIED. |
-| `god` | Community list: own units and buildings take no damage. UNVERIFIED. |
-| `buildozer` | Community list: instant construction. UNVERIFIED. |
-| `dvaleva`, `petleva` | Community list: resources (our placeholder: 2,000 / 5,000 of each). UNVERIFIED. |
+| `next` | ReTzar: opens the next map the scripts name (campaigns). Ours wins the match (ADR 0107, HUD-036). |
+| `notech` | ReTzar: no requirements, on or off. |
+| `god` | ReTzar: the selected objects take no damage, on or off. Ours: the whole kingdom (HUD-036). |
+| `buildozer` | ReTzar: build at once, on or off, saying "Build at once: ON/OFF" for 2 s. |
+| `dvaleva`, `petleva` | ReTzar: 10,000 of each resource; `petleva` gives it five times (HUD-036). |
 | `discover ‹arg›`, `spy`, `usurp`, `hunt`, `time ‹arg›`, `nopop`, `dclr ‹arg›`, `dset ‹arg›`, `give ‹arg›`, `resign`, `general`, `cont ‹arg›`, `calc ‹arg›`, `hoseed`, `threads`, `timer`, `showgrid`, `ischeater`, `debugpath`, `prettypleasewithsugarontop`, `nompcheat`, `cheatsenabled` | Names only. Effects untested; several look like debugging aids (grid, path, timer, thread display) or cheat-permission switches. |
 | `ainone`, `aieco`, `aiwar`, `aifull` | Names only; they look like switches for the computer player's economy and war parts (compare the map flags "Economy AI" / "War AI", ai-placeholders.md S26). UNVERIFIED. |
 

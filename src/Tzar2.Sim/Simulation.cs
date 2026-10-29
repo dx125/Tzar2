@@ -140,9 +140,18 @@ public sealed class Simulation : IDisposable
     /// <see cref="SnapshotTolerance.SaveGame"/>: a player's save, read from an older format or under other rules with the
     /// same tables (ADR 0271); replays, rejoins and desync reports stay <see cref="SnapshotTolerance.Exact"/>.
     /// </param>
-    public static Simulation Restore(ReadOnlySpan<byte> snapshot, Ruleset ruleset, MapData map, int workerCount = 1, Action<SystemScheduler>? configureSystems = null, SnapshotTolerance tolerance = SnapshotTolerance.Exact)
+    /// <param name="allowCheats">
+    /// A player's save continued in a game alone, where the original's cheat codes work (HUD-036): cheats are allowed
+    /// though the save was made without them.
+    /// </param>
+    public static Simulation Restore(ReadOnlySpan<byte> snapshot, Ruleset ruleset, MapData map, int workerCount = 1, Action<SystemScheduler>? configureSystems = null, SnapshotTolerance tolerance = SnapshotTolerance.Exact, bool allowCheats = false)
     {
         SimulationConfig config = WorldSnapshot.ReadConfig(snapshot, ruleset, map, tolerance);
+        if (allowCheats && tolerance == SnapshotTolerance.SaveGame && !config.Ranked)
+        {
+            config = config with { CheatsAllowed = true };
+        }
+
         var world = new World(ruleset, map, config);
         bool exact = WorldSnapshot.Restore(world, snapshot, tolerance);
         world.IsLocked = true;

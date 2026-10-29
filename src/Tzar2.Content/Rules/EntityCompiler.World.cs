@@ -52,6 +52,7 @@ internal sealed partial class EntityCompiler
                 Wanders = animal.Get("wanders") is not { } wa || RulesetCompiler.Bool(wa.Node, wa.Source, $"{key}.Animal.wanders"),
                 Guards = animal.Get("guards") is { } g && RulesetCompiler.Bool(g.Node, g.Source, $"{key}.Animal.guards"),
                 IsAmbient = animal.Get("ambient") is { } am && RulesetCompiler.Bool(am.Node, am.Source, $"{key}.Animal.ambient"),
+                Grazes = animal.Get("grazes") is { } gr && RulesetCompiler.Bool(gr.Node, gr.Source, $"{key}.Animal.grazes"),
             };
         }
 

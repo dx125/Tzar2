@@ -283,7 +283,8 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
     }
 
     /// <summary>A custom map's save continued on <paramref name="mission"/> (the map it names), with the loading client's AI.</summary>
-    public GameSession ResumeCustomMap(MissionContent mission, Ruleset ruleset, SkirmishAi ai)
+    /// <param name="cheats">Whether the chat's cheat codes work (a game alone, HUD-036).</param>
+    public GameSession ResumeCustomMap(MissionContent mission, Ruleset ruleset, SkirmishAi ai, bool cheats = false)
     {
         ArgumentNullException.ThrowIfNull(mission);
         ArgumentNullException.ThrowIfNull(ai);
@@ -292,11 +293,12 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
             throw new InvalidDataException("Not a custom map save.");
         }
 
-        return GameSession.Restore(ScenarioMatch.Setup(mission, ruleset, custom: (Custom ?? new CustomMapSettings()) with { Ai = ai }), ruleset, Snapshot, saveGame: true);
+        return GameSession.Restore(ScenarioMatch.Setup(mission, ruleset, cheats: cheats, custom: (Custom ?? new CustomMapSettings()) with { Ai = ai }), ruleset, Snapshot, saveGame: true);
     }
 
     /// <summary>A skirmish's save continued: its description rebuilds the map, the snapshot the match.</summary>
-    public GameSession ResumeSkirmish(Ruleset ruleset, SkirmishAi ai)
+    /// <param name="cheats">Whether the chat's cheat codes work (a game alone, HUD-036).</param>
+    public GameSession ResumeSkirmish(Ruleset ruleset, SkirmishAi ai, bool cheats = false)
     {
         ArgumentNullException.ThrowIfNull(ai);
         if (Kind != SaveKind.Skirmish)
@@ -304,7 +306,8 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
             throw new InvalidDataException("Not a skirmish save.");
         }
 
-        return GameSession.Restore(MatchDescriptor.Parse(Descriptor).ToSetup(ai, multiplayer: false, localSlot: null), ruleset, Snapshot, saveGame: true);
+        MatchSetup setup = MatchDescriptor.Parse(Descriptor).ToSetup(ai, multiplayer: false, localSlot: null);
+        return GameSession.Restore(cheats && !setup.Ranked ? setup with { CheatsAllowed = true } : setup, ruleset, Snapshot, saveGame: true);
     }
 
     /// <summary>

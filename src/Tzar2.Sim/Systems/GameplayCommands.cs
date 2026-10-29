@@ -29,6 +29,11 @@ internal static class GameplayCommands
         world.Dockings.Remove(unit); // a ship's way to the shore and exploring end too (ADRs 0140, 0143)
         world.Explorers.Remove(unit);
         world.WaypointQueues.Remove(unit); // and the waypoints (ORD-005)
+        if (world.NatureHomes.IndexOf(unit) is >= 0 and var home && world.TypeOf(unit).Traits.World.Grazes)
+        {
+            world.NatureHomes.At(home).Pasture = 2; // a cow grazes where the order leaves it (NAT-007)
+        }
+
         int w = world.Workers.IndexOf(unit);
         if (w >= 0)
         {

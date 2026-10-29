@@ -160,6 +160,22 @@ public sealed class PresentationCatalogTests
 public sealed class TerrainAndSpriteRuleTests
 {
     [Fact]
+    [Trait("Rule", "PRES-014")]
+    public void A_building_is_drawn_behind_the_units_beside_it_and_on_its_free_tiles()
+    {
+        // The sixth play-test: peasants walked under the European stables. Its 4 x 4 footprint (here at tile 10, 10)
+        // leaves the bottom row free (its DAT grid), the front of the yard its picture covers; the units there were drawn
+        // under the picture, which the original draws behind them.
+        int top = 10 * 32;
+        uint stables = SpriteRules.PainterKey(SpriteRules.StructureOrderY(top));
+        Assert.True(SpriteRules.PainterKey((13 * 32) + 16, 2) > stables); // a peasant on the free bottom row
+        Assert.True(SpriteRules.PainterKey((11 * 32) + 16, 2) > stables); // one beside its second row
+        Assert.True(SpriteRules.PainterKey((10 * 32) + 16, 2) > stables); // one on a free corner of its top row
+        Assert.True(SpriteRules.PainterKey((9 * 32) + 16, 2) < stables);  // one on the row above it
+        Assert.True(SpriteRules.PainterKey(10 * 32) < stables);           // a tree on the row above (ordered by its foot)
+    }
+
+    [Fact]
     public void Facings_map_onto_the_sheet_columns()
     {
         // Sim east (0) → column 2 (E); south (2) → 0 (S); north (6) → 4 (N); south-west (3) → 7 (SW).

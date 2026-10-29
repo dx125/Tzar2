@@ -453,7 +453,15 @@ internal static class KingdomCommands
                 return CommandRejection.InvalidArgument;
         }
 
-        world.Events.Emit(new SimEvent(SimEventKind.CheatUsed, command.Player, EntityId.None, 0, 0, command.Arg0));
+        CheatFlags on = (CheatCode)command.Arg0 switch
+        {
+            CheatCode.NoFog => CheatFlags.NoFog,
+            CheatCode.NoTech => CheatFlags.NoTech,
+            CheatCode.God => CheatFlags.God,
+            CheatCode.Buildozer => CheatFlags.Buildozer,
+            _ => CheatFlags.None,
+        };
+        world.Events.Emit(new SimEvent(SimEventKind.CheatUsed, command.Player, EntityId.None, (k.Cheats & on) != 0 ? 1 : 0, 0, command.Arg0));
         return null;
     }
 

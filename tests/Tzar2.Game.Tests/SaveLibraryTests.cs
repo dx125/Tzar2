@@ -60,6 +60,35 @@ public sealed class SaveLibraryTests : IDisposable
     }
 
     [Fact]
+    [Trait("Rule", "HUD-036")]
+    public void A_game_alone_takes_the_original_cheat_codes_and_so_does_its_save_made_before()
+    {
+        // The sixth play-test: the codes did nothing, since a game alone did not allow them. A save made then takes them
+        // once continued alone; the original's amounts (10,000 of each, five times that).
+        Assert.Equal((10_000, 50_000), (Rules.Value.World.CheatSmallResources, Rules.Value.World.CheatLargeResources));
+        int gold = Rules.Value.ResourceId("gold");
+        using var old = new GameSession(SessionTests.Setup(2, 64), Rules.Value, fog: false);
+        old.Step(5);
+        SaveGame save = SaveGame.FromBytes(SaveGame.CaptureMatch(old, "before").ToBytes());
+
+        using GameSession strict = save.ResumeSkirmish(Rules.Value, SkirmishAi.EngineDefault);
+        int before = strict.Simulation.World.Players[0].Resources[gold];
+        Assert.True(strict.SubmitChat("hmdvaleva"));
+        strict.Step(1);
+        Assert.Equal(before, strict.Simulation.World.Players[0].Resources[gold]); // the old way: refused
+
+        using GameSession alone = save.ResumeSkirmish(Rules.Value, SkirmishAi.EngineDefault, cheats: true);
+        Assert.Equal(old.Simulation.ComputeFullHash(), alone.Simulation.ComputeFullHash()); // the same match
+        Assert.True(alone.SubmitChat("hmdvaleva"));
+        alone.Step(1);
+        Assert.Equal(before + 10_000, alone.Simulation.World.Players[0].Resources[gold]);
+        before = alone.Simulation.World.Players[0].Resources[gold];
+        Assert.True(alone.SubmitChat("hmpetleva"));
+        alone.Step(1);
+        Assert.Equal(before + 50_000, alone.Simulation.World.Players[0].Resources[gold]);
+    }
+
+    [Fact]
     [Trait("Rule", "SHELL-021")]
     public void A_custom_map_save_keeps_its_setup_and_names_are_plain_file_names()
     {

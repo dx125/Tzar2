@@ -374,7 +374,7 @@ public partial class GameApp : Node
         {
             try
             {
-                session = resume.ResumeSkirmish(_rules, _ai);
+                session = resume.ResumeSkirmish(_rules, _ai, cheats: true);
             }
             catch (Exception e) when (e is ArgumentException or InvalidDataException or Content.MapGen.MapGenException)
             {
@@ -505,6 +505,7 @@ public partial class GameApp : Node
             Explored = options.Explore,
             Ai = _ai,
             AiAssist = true, // the kingdom's card offers AI assistance (ADR 0183; the original only in its lobby)
+            CheatsAllowed = true, // HUD-036: in a game alone the chat takes the original's cheat codes
         };
     }
 

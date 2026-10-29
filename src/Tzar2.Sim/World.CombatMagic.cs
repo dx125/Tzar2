@@ -385,6 +385,14 @@ public sealed partial class World
         return n + 1;
     }
 
+    /// <summary>Whether <paramref name="unit"/> could step onto tile (tx, ty) now: on the map, passable for it, wide enough, and nobody on it.</summary>
+    internal bool CanStepInto(EntityId unit, int tx, int ty)
+    {
+        ushort type = Identities.Get(unit).TypeId;
+        Span<int> one = stackalloc int[1];
+        return AddFree(one, 0, tx, ty, Ruleset.EntityTypes[type].Locomotor, Navigation.ForType(type)) == 1;
+    }
+
     // Whether a unit stands on the tile (its occupancy cells count one).
     private bool TileHasUnit(int tx, int ty)
     {

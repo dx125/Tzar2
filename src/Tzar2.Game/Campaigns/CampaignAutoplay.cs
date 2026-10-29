@@ -2137,7 +2137,21 @@ public static class CampaignAutoplay
                         return true;
                     }
 
-                    if (stranded.Any(o => !world.IsHeld(o)) && _ferried.TryGetValue(ship.Value, out int boarded) && _tick - boarded < 1200)
+                    // A full ship takes over what it holds, and the rest wait for another. One with room waits while the
+                    // others still walk to it (bigisland: the ship sailed off as they came, their errand called it back to
+                    // the shore, and it went to and fro for an hour).
+                    bool full = Full(world, ship);
+                    bool coming = !full && Coming(world, stranded, ship);
+                    if (!coming)
+                    {
+                        _comingSince.Remove(ship.Value);
+                    }
+                    else if (!_comingSince.TryAdd(ship.Value, _tick) && _tick - _comingSince[ship.Value] >= ComingPatience)
+                    {
+                        coming = false; // they have had their time
+                    }
+
+                    if (!full && stranded.Any(o => !world.IsHeld(o)) && ((_ferried.TryGetValue(ship.Value, out int boarded) && _tick - boarded < 1200) || coming))
                     {
                         // The ones whose boarding gave up (no errand) are sent again, to the same ship.
                         EntityId[] again = Unboarding(world, stranded);
@@ -2152,7 +2166,8 @@ public static class CampaignAutoplay
                         return true;
                     }
 
-                    if (world.Dockings.Has(ship) || !Due(ship))
+                    bool boarding = world.Dockings.IndexOf(ship) is >= 0 and var docking && world.Dockings.At(docking).Purpose == DockPurpose.Board;
+                    if ((world.Dockings.Has(ship) && !(full && boarding)) || !Due(ship))
                     {
                         Goal = $"{name}: ferrying to ({point.X / Tile},{point.Y / Tile})";
                         return true;
@@ -2211,6 +2226,21 @@ public static class CampaignAutoplay
         }
 
         private int _reboarded = int.MinValue / 2;
+
+        // A ship with no room left for another unit (Landing Tactics counted).
+        private static bool Full(World world, EntityId ship)
+            => world.Holders.IndexOf(ship) is >= 0 and var h && world.Holders.At(h).Count >= world.HolderCapacity(ship);
+
+        // How long a ship waits for boarders still walking to it (two and a half minutes).
+        private const int ComingPatience = 3000;
+
+        // Since when each ship waits for boarders walking to it.
+        private readonly Dictionary<uint, int> _comingSince = [];
+
+        // Whether one of the units not aboard walks to board this ship.
+        private static bool Coming(World world, List<EntityId> units, EntityId ship)
+            => units.Exists(u => !world.IsHeld(u) && world.Errands.IndexOf(u) is >= 0 and var e
+                && world.Errands.At(e).Kind == ErrandKind.Board && world.Errands.At(e).Target == ship.Value);
 
         // Unload orders per ship: where it was, and how many it refused there (no dock for that point from its water).
         private readonly Dictionary<uint, (Position At, int Times)> _asked = [];

@@ -152,11 +152,11 @@ public sealed record WorldSettings
     /// <summary>The starting-resource level of a Deathmatch (a key of <c>gameplay.startingResources</c>; empty = the match's level).</summary>
     public string DeathmatchStartingResources { get; init; } = string.Empty;
 
-    /// <summary>Resources the <c>hmdvaleva</c> cheat gives (each resource).</summary>
-    public int CheatSmallResources { get; init; } = 2_000;
+    /// <summary>Resources the <c>hmdvaleva</c> cheat gives (each resource; the original's 10,000, HUD-036).</summary>
+    public int CheatSmallResources { get; init; } = 10_000;
 
-    /// <summary>Resources the <c>hmpetleva</c> cheat gives (each resource).</summary>
-    public int CheatLargeResources { get; init; } = 5_000;
+    /// <summary>Resources the <c>hmpetleva</c> cheat gives (each resource; the original sends hmdvaleva five times).</summary>
+    public int CheatLargeResources { get; init; } = 50_000;
 
     /// <summary>The tavern's offers change every this long (one set per kingdom and period; UNK-28).</summary>
     public int TavernRefreshMs { get; init; } = 120_000;
@@ -371,6 +371,12 @@ public sealed record WorldTraits
 
     /// <summary>Whether a Nature-owned unit of this type wanders around its home.</summary>
     public bool Wanders { get; init; }
+
+    /// <summary>
+    /// Whether a unit of this type grazes, whoever owns it (cows, NAT-007): it stands and eats a while, then walks to a
+    /// cell near where it was last sent, unless it is milked.
+    /// </summary>
+    public bool Grazes { get; init; }
 
     /// <summary>Whether a Nature-owned unit of this type guards its home (returns when lured away).</summary>
     public bool Guards { get; init; }

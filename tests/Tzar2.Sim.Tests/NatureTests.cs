@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Tzar2.Core.Ids;
 using Tzar2.Core.Numerics;
@@ -109,12 +110,86 @@ public class NatureTests
         }
 
         Assert.Equal(0, w.Identities.Get(cow).Owner);
-        Assert.False(w.NatureHomes.Has(cow));
-        Assert.NotEqual(MotionState.Moving, w.Motions.Get(cow).State); // a claimed cow stops wandering (play-test 2026-10-20)
+        Assert.NotEqual(MotionState.Moving, w.Motions.Get(cow).State); // a claimed cow stops its walk (play-test 2026-10-20)
         d.RunUntil(() => !d.IsMoving(cow), 40); // it ends the step it began onto its tile (ADR 0270)
         Position claimedAt = d.PositionOf(cow);
         d.Order(0, CommandKind.Stop, [peon]);
         d.RunUntil(() => false, 400);
-        Assert.Equal(claimedAt, d.PositionOf(cow));
+        Assert.Equal(claimedAt, d.PositionOf(cow)); // it grazes there a while (NAT-007)
+    }
+
+    [Fact]
+    [Trait("Rule", "NAT-007")]
+    public void A_cow_grazes_and_walks_only_near_where_it_was_sent_and_stands_while_it_is_milked()
+    {
+        using var d = new SimDriver(
+            TestMap(48, 32, Unit("comm.cow", 0, 10, 10), Unit("comm.cow", 0, 30, 10), Unit("euro.peon", 0, 30, 12), Structure("euro.castle", 0, 36, 20)),
+            ruleset: Classic);
+        World w = d.World;
+        EntityId[] cows = [.. OfType(w, "comm.cow").OrderBy(c => d.PositionOf(c).X)];
+        (EntityId free, EntityId milked) = (cows[0], cows[1]);
+        d.Order(0, CommandKind.Harvest, [OfType(w, "euro.peon").Single()], target: milked);
+        Position home = d.PositionOf(free);
+        Position milkedAt = d.PositionOf(milked);
+
+        // Five minutes: the free cow walks now and then, never more than two tiles from its home; the milked one stands.
+        bool walked = false;
+        for (int t = 0; t < 6000; t++)
+        {
+            d.Step();
+            Position p = d.PositionOf(free);
+            walked |= !p.Equals(home);
+            Assert.True(Math.Abs(p.X - home.X) <= 2 * SimDriver.Tile && Math.Abs(p.Y - home.Y) <= 2 * SimDriver.Tile, $"tick {t}: {p}");
+            Assert.Equal(milkedAt, d.PositionOf(milked));
+        }
+
+        Assert.True(walked);
+
+        // An order moves its home: it grazes where it was sent.
+        d.MoveToTile(0, [free], 20, 20);
+        d.RunUntil(() => !d.IsMoving(free) && w.Tick.Value > 6010, 600);
+        Position sent = d.PositionOf(free);
+        Assert.Equal((20, 20), (sent.X / SimDriver.Tile, sent.Y / SimDriver.Tile));
+        for (int t = 0; t < 3000; t++)
+        {
+            d.Step();
+            Position p = d.PositionOf(free);
+            Assert.True(Math.Abs(p.X - sent.X) <= 2 * SimDriver.Tile && Math.Abs(p.Y - sent.Y) <= 2 * SimDriver.Tile, $"tick {t}: {p}");
+        }
+    }
+
+    [Fact]
+    [Trait("Rule", "NAT-007")]
+    public void Cows_by_a_busy_farm_stay_by_it()
+    {
+        // The sixth play-test: cows walked off far from the farms. Peasants milking them and carrying the milk home push
+        // them aside; a cow that could not get back to its tile used to stay where it was pushed, and drifted away.
+        var objects = new System.Collections.Generic.List<Content.Compiled.MapObject> { Structure("euro.castle", 0, 20, 20), Structure("euro.farm", 0, 34, 20) };
+        for (int i = 0; i < 8; i++)
+        {
+            objects.Add(Unit("comm.cow", 0, 28 + (i % 4), 28 + (i / 4)));
+        }
+
+        for (int i = 0; i < 16; i++)
+        {
+            objects.Add(Unit("euro.peon", 0, 22 + (i % 8), 32 + (i / 8)));
+        }
+
+        using var d = new SimDriver(TestMap(64, 64, [.. objects]), ruleset: Classic);
+        World w = d.World;
+        EntityId[] cows = [.. OfType(w, "comm.cow")];
+        EntityId[] peons = [.. OfType(w, "euro.peon")];
+        var start = cows.ToDictionary(c => c, d.PositionOf);
+        for (int i = 0; i < peons.Length; i++)
+        {
+            d.Order(0, CommandKind.Harvest, [peons[i]], target: cows[i % 4]); // half the cows milked, half not
+        }
+
+        d.RunUntil(() => false, 12_000); // ten minutes
+        foreach (EntityId c in cows)
+        {
+            Position p = d.PositionOf(c);
+            Assert.True(Math.Max(Math.Abs(p.X - start[c].X), Math.Abs(p.Y - start[c].Y)) <= 3 * SimDriver.Tile, $"{start[c]} -> {p}");
+        }
     }
 }
