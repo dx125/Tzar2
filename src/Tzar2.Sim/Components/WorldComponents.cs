@@ -65,7 +65,7 @@ public struct TradeRoute : IComponent
     public short Reserved1;
 }
 
-/// <summary>The home of a wandering or guarding Nature unit (GAME-15, ADR 0104).</summary>
+/// <summary>The home of a wandering or guarding Nature unit, or of a grazing animal of any kingdom (GAME-15, ADR 0104; NAT-007).</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct NatureHome : IComponent
 {
@@ -81,14 +81,14 @@ public struct NatureHome : IComponent
     /// <summary>1 while walking back home after being lured away.</summary>
     public byte Returning;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved0;
+    /// <summary>A grazing animal (NAT-007): 0 grazing, 1 on its own walk, 2 sent by an order (home moves where it stops).</summary>
+    public byte Pasture;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved1;
+    /// <summary>A grazing animal: the cycles of its grazing left.</summary>
+    public byte Cycles;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved2;
+    /// <summary>A grazing animal: the step of its grazing (bits 0-2) and the picture shown (bits 3-4).</summary>
+    public byte Graze;
 }
 
 #pragma warning restore CA1051

@@ -118,7 +118,7 @@ public sealed class GameSession : IDisposable
         }
         else
         {
-            Simulation = Simulation.Restore(snapshot, ruleset, Map, tolerance: tolerance);
+            Simulation = Simulation.Restore(snapshot, ruleset, Map, tolerance: tolerance, allowCheats: setup.CheatsAllowed);
         }
 
         _slots = setup.Players.Count;

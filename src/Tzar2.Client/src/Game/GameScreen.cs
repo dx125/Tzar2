@@ -1961,6 +1961,10 @@ public partial class GameScreen : Node
                     }
 
                     break;
+                case SimEventKind.CheatUsed when e.Player == me && e.Arg == (int)Sim.Systems.CheatCode.Buildozer:
+                    // HUD-036: the original says so on the status line (0x424311, never translated).
+                    Message("Build at once: " + (e.X != 0 ? "ON" : "OFF"));
+                    break;
                 case SimEventKind.Unloaded when e.Player == me && e.Y is 1 or 2:
                     // HOLD-010/011: units an Emerge let out join the selection; one let out from the eye with Ctrl is
                     // selected alone (ReTzar 0x453240, 0x453340).
@@ -2507,7 +2511,8 @@ public partial class GameScreen : Node
         {
             _chatTo = to;
             layer.QueueFree();
-            if (!_session.SubmitChat(text, to, mask))
+            (int cx, int cy) = ToWorld(_hud.Layout.View.Position + (_hud.Layout.View.Size / 2)); // where hmspawn puts its units
+            if (!_session.SubmitChat(text, to, mask, cx, cy))
             {
                 Message($"{KingdomName(_session.LocalPlayer)}: {text}"); // single player: nobody else reads it
             }

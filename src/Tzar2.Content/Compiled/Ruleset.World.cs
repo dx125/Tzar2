@@ -55,7 +55,7 @@ public sealed partial class Ruleset
             throw new System.ArgumentException($"{where}: invalid dock or claim.");
         }
 
-        if (w.Wanders && !e.IsMobile)
+        if ((w.Wanders || w.Grazes) && !e.IsMobile)
         {
             throw new System.ArgumentException($"{where}: only units wander.");
         }
@@ -67,7 +67,7 @@ public sealed partial class Ruleset
     private static void AddWorldTraits(StateHasher hasher, WorldTraits w)
     {
         hasher.Add(w.IsMilitary).Add((byte)w.TradeDock).Add(w.IsTavern).Add(w.Claim.HasValue).Add((byte)(w.Claim ?? 0))
-            .Add(w.Wanders).Add(w.Guards).Add(w.IsAmbient).Add(w.DetectUnits).Add(w.Trader is not null);
+            .Add(w.Wanders).Add(w.Guards).Add(w.IsAmbient).Add(w.DetectUnits).Add(w.Trader is not null).Add(w.Grazes);
         if (w.Trader is { } t)
         {
             hasher.Add(t.Capacity).Add((byte)t.Access).Add(t.RequiredTechnology);

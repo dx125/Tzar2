@@ -10,6 +10,7 @@ rules:
     rule: Animals live on the map; wild cows wander and join the kingdom that touches them; birds are never attacked.
     source: [manual Terrain (Life), community TDD GAME-15]
     status: tested
+    note: How a cow wanders, wild or a kingdom's - NAT-007.
   NAT-003:
     rule: Bears and other guarding creatures fight near their home and go back when lured away.
     source: [community TDD GAME-15]
@@ -30,3 +31,8 @@ rules:
     rule: Each terrain set has its weather, rain or snow; the preferences switch the weather effects and the day and night pictures on or off.
     source: [manual Preferences Screen, data TERRAIN.INI]
     status: tested
+  NAT-007:
+    rule: A cow of any kingdom grazes where it was last sent and now and then walks to a cell at most two away from there; a cow being milked stays where it is.
+    source: [owner 2026-10-25 (sixth play-test), 'community ReTzar src/gameplay.rs (pasture, graze and wander; 0x42f450, 0x4ed120, 0x4ecb13, 0x4e0a23)', 'data IMAGES.INI cow_idle, cow_down, cow_eat']
+    status: tested
+    note: It grazes 30 cycles of its pictures - each draws R(0, 2), and on 0 a standing cow lowers its head and eats, an eating one raises it (cow_idle 2.6 s, cow_down and cow_eat 1 s) - then, unless a peasant milks it, it walks to a cell drawn within two of its home in each axis (one it cannot step into is drawn again 200 ms later) and grazes again; a milked cow grazes 4 cycles more instead. Its home is where an order or a claim left it; its own walks keep it, and so does being pushed aside by a passer-by. The sixth play-test - cows walked off far from the farms, all one way. Peasants passing pushed them aside, and a cow that could not get back to its tile in 30 s stayed where it was pushed; the computer kingdoms' busy farms pushed theirs to the map's edges. Not drawn yet - a grazing cow shows its standing picture, not lowering its head or eating.

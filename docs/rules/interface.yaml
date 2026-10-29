@@ -171,3 +171,8 @@ rules:
     source: ['data MENU.INI (e_warguild, cathedral, e_tcguild, e_magetower)', owner 2026-10-25 (sixth play-test)]
     status: tested
     note: MENU.INI lists that research as bare lines (te_heroism) with no letter; the card had skipped them, so the Warriors' Guild was empty and the other guilds, the temples and the mage towers lacked their research. A bare word that is no order (capturekeys) is a flag of the menu, not a button.
+  HUD-036:
+    rule: In a game alone the chat line takes the original's codes, hm and a word (hmdvaleva, hmpetleva, hmreveal, hmnofog, hmbuildozer, hmnotech, hmgod, hmnext, hmspawn); in a multiplayer game only when the lobby allows cheats.
+    source: [owner 2026-10-25 (sixth play-test), 'community ReTzar src/gameplay/cheats.rs (the parser 0x424c40, the gate 0x4240e0, hmdvaleva 0x424277, hmpetleva 0x424dc4, hmbuildozer 0x424311)']
+    status: tested
+    note: hmdvaleva gives 10,000 of each resource and hmpetleva sends it five times; hmbuildozer says Build at once ON or OFF. The sixth play-test - the codes did nothing, since Tzar2 allowed them only by the lobby's flag, which a game alone never set; a save made before then takes them when continued. The original's gate refuses them while another human plays (nompcheat) and marks a player alone a cheater; Tzar2 keeps the lobby's flag for multiplayer and keeps no mark. Tzar2's own - a code in any case of letters; hmgod makes the whole kingdom invulnerable (the original the selected objects); hmnext wins the match (the original opens the scripts' next map); hmspawn puts its units at the middle of the view at once (the original waits for a click). Not ported - kingdom, dset, dclr, nopop, time, hunt, usurp, spy and discover.

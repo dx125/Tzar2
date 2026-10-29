@@ -141,7 +141,7 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Defeat | Standard: no unit and no building (walls, gates, bridges, fields excluded); Destroy Castles: no castle | code (`VictorySystem`) | — | end-of-game captures |
 | Time limit tie | the team with the lower slot | code (`VictorySystem`) | — | — |
 | Deathmatch | every kingdom starts on the High resources | YAML `world.deathmatchStartingResources` | — | lobby captures |
-| Cheat resources | hmdvaleva 2,000, hmpetleva 5,000 of each | YAML `world.cheat*` | UNK-30 | testing the codes (names confirmed in the executable, [list](original-switches-and-cheats.md); amounts not measured) |
+| Cheat resources | hmdvaleva 10,000, hmpetleva 50,000 of each (ReTzar's reading of the original, HUD-036) | YAML `world.cheat*` | UNK-30 | — |
 | Cheat semantics | hmgod: no damage to own units and buildings; hmbuildozer: instant; hmnotech: no requirements; hmnext: win | code (`KingdomCommands.Cheat`) | UNK-30 | testing the codes |
 | Tavern offers refresh | every 2 minutes, one set per kingdom (seeded) | YAML `world.tavernRefreshMs` | UNK-28 | tavern menu captures over time |
 | Tavern offers | 3 mercenary groups and 1 hero at a time | YAML `world.mercenaryOffers`, `heroOffers` | UNK-28 | tavern menu captures |

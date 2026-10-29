@@ -7,6 +7,20 @@ namespace Tzar2.Client.Logic;
 public static class SpriteRules
 {
     /// <summary>
+    /// The painter's order of a picture whose place is <paramref name="y"/> (world pixels; higher is drawn later, in
+    /// front), with <paramref name="sub"/> to order the pictures of one place.
+    /// </summary>
+    public static uint PainterKey(int y, uint sub = 0) => ((uint)(y + 4096) << 6) | sub;
+
+    /// <summary>
+    /// PRES-014 (ReTzar's reading of the original's painter, 0x500950 and 0x4f1000): a building takes its place in the
+    /// painter's order from the top of its footprint, not from its foot, so the units on the tiles beside it and on the
+    /// free tiles of its footprint (the front of the stables) are drawn in front of it, and those behind its top row
+    /// behind it. One pixel lower keeps a tree on the row above it behind it.
+    /// </summary>
+    public static int StructureOrderY(int footprintTop) => footprintTop + 1;
+
+    /// <summary>
     /// The sheet column of a sim facing. Sim: 0 = east, clockwise (ADR 0005). 8-direction sheets: S, SE, E, NE, N, NW,
     /// W, SW (counter-clockwise from south, as the viewer labels them).
     /// </summary>

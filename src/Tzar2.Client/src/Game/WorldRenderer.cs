@@ -435,7 +435,8 @@ public sealed class WorldRenderer : IDisposable
             }
 
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
-            AddSheet(ground ? _ground : _objects, sheet, origin, variant, frameIndex, player, (uint)((ground ? 0 : foot) + 4096) << 6, shadows: true);
+            // PRES-014: a building is ordered by its top row, so units beside it and on its free tiles stand in front.
+            AddSheet(ground ? _ground : _objects, sheet, origin, variant, frameIndex, player, SpriteRules.PainterKey(ground ? 0 : SpriteRules.StructureOrderY(top)), shadows: true);
             if (e.Burning)
             {
                 DrawFire(in e, def, left, top, foot);
@@ -513,7 +514,7 @@ public sealed class WorldRenderer : IDisposable
         }
 
         var cellOrigin = new Vector2I(px - s.Object.Position.X - (s.Object.Size.X / 2), py - s.Object.Position.Y - (s.Object.Size.Y / 2));
-        AddSheet(_objects, s, cellOrigin, dir, frame, player, ((uint)(py + 4096) << 6) | 2, shadows: true);
+        AddSheet(_objects, s, cellOrigin, dir, frame, player, SpriteRules.PainterKey(py, 2), shadows: true);
         var selection = new Rect2(cellOrigin + s.Selection.Position, s.Selection.Size);
         if (e.CarriesBook)
         {

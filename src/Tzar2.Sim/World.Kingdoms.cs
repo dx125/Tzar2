@@ -397,7 +397,10 @@ public sealed partial class World
         {
             NatureHome h = NatureHomes.Components[i];
             WorldTraits w = TypeOf(ids[i]).Traits.World;
-            if ((!w.Wanders && !w.Guards) || !Map.ContainsPoint(h.X, h.Y) || h.Returning > 1 || h.Reserved0 != 0 || h.Reserved1 != 0 || h.Reserved2 != 0)
+            bool grazes = w.Grazes;
+            if ((!w.Wanders && !w.Guards && !grazes) || !Map.ContainsPoint(h.X, h.Y) || h.Returning > 1
+                || (!grazes && (h.Pasture != 0 || h.Cycles != 0 || h.Graze != 0))
+                || h.Pasture > 2 || h.Cycles > Systems.NatureSystem.GrazeCycles || (h.Graze & 7) > 4 || (h.Graze >> 3) > 2)
             {
                 throw new InvalidDataException("Snapshot violates a world invariant: invalid Nature home.");
             }

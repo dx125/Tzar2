@@ -9,8 +9,9 @@ indexed in [decisions/README.md](decisions/README.md).
 * **Last updated:** 2026-10-28 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
   targets and answer enemies as the original; land units step cell by cell; fields ready at once; construction; taking
   buildings down; the mines' look; the click's pick as the original; the tavern's exchange and the chat window; the
-  sounds mixed as the original; saves of older versions load. The slow checks run once per batch of three or four fixes,
-  with the re-pin script and a faster campaign acceptance)
+  sounds mixed as the original; saves of older versions load; the last four items: units in front of buildings, cows
+  grazing near home, the cheat codes in a game alone, the pointers checked. The slow checks run once per batch of three
+  or four fixes, with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -402,7 +403,8 @@ owner's order of 2026-10-26.
          when there is no other way, but the friends should step aside and come back: **fixed** (WORLD-020): movers go
          round; with no way round an idle friend walks to a free tile off the way and goes back, or in a corridor the
          two change places.
-      8. Units walk under some buildings (peasants through the stable's picture); there may be more.
+      8. Units walk under some buildings (peasants through the stable's picture); there may be more: **fixed**
+         (PRES-014, log below): a building is drawn behind the units beside it and on its free tiles, as the original.
       9. Units coming out of a building (castle, outpost) should be selected, as in the original, and come out around
          it. Check unloading ships, caravans and carpets too (HOLD-003): **fixed** (HOLD-010, log below); unloading
          ships and carpets at a place does not select, as in the original.
@@ -422,7 +424,9 @@ owner's order of 2026-10-26.
           **Measured** since the cell steps (#255): a block of 4 x 4 or 6 x 6 soldiers ordered away all start within
           four ticks (0.2 s), and a command reaches the sim on the next tick; `GroupStartTests` keeps it so. To check
           in play.
-      13. Wrong pointers are still shown, such as digging over repair or build (CTRL-012, CTRL-013).
+      13. Wrong pointers are still shown, such as digging over repair or build (CTRL-012, CTRL-013): **checked**
+          (CTRL-012, log below): the shovel over a site is the original's; over a building to repair it was a tree's
+          crown taking the pointer, fixed with the click's pick (CTRL-001).
       14. The outpost's button to view the units inside does nothing; check the other holders and what can be done
           with the units inside them: **fixed** (HOLD-011, log below): the eye of every holder lists its units; a click
           lets one out, Ctrl + click also selects it.
@@ -430,8 +434,8 @@ owner's order of 2026-10-26.
           close, moving group often selects several units: **fixed**, the nearest picture's middle wins (CTRL-001), and
           a drag shorter than 16 pixels is a click (CTRL-019).
       16. Cows walk off far from the farms, all in one direction; in the original they seemed to wander aimlessly
-          (NAT-002).
-      17. The original's cheat codes do not work (HUD-011).
+          (NAT-002): **fixed** (NAT-007, log below): a cow grazes where it was sent and walks only near there.
+      17. The original's cheat codes do not work (HUD-011): **fixed** (HUD-036, log below): a game alone takes them.
     * **New features (the owner's):**
       1. Take a building down for 75 % of its cost: **done** (BLD-027, log below).
       2. Cancel a site that no peasant has begun on. The sim gives the whole cost back (BLD-020), and a site's card
@@ -461,6 +465,42 @@ owner's order of 2026-10-26.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-28 — Batch 5 of the sixth play-test: buildings behind units, cows near home, the cheat codes, the pointers
+  (PRES-014, NAT-007, HUD-036, CTRL-012; items 8, 16, 17, 13).** The last four items of the sixth play-test, each from
+  ReTzar's reading of the original.
+  * **Units under buildings (PRES-014).**
+    * The European stables' bottom row is free in its DAT grid (the front of its yard, which its picture covers), in the
+      original too (0x41de21), so peasants walk along it.
+    * Tzar2 drew a building in the painter's order of its foot, so they walked under its picture. The original orders
+      it by its top row (0x500950, 0x4f1000): units beside a building and on its free tiles stand in front of it.
+      `SpriteRules.StructureOrderY` gives that place.
+  * **Cows (NAT-007).**
+    * The owner's saves showed it: the computer kingdoms' cows stood at the map's edges, 20 to 40 tiles from their
+      farms.
+    * The cause: passing peasants pushed them aside (WORLD-020), and a cow that could not get back to its tile within
+      30 s stayed where it was pushed. A busy farm pushed its cows off, one way.
+    * Now a cow of any kingdom grazes 30 cycles of its pictures, then walks to a cell within two of its home, unless it
+      is milked (0x42f450, 0x4ecb13, 0x4e0a23). Its home is where an order or a claim left it.
+    * The program lives in `NatureHome`, whose padding became `Pasture`, `Cycles` and `Graze`, so the snapshot format
+      is unchanged; cows of older saves get a home where they stand. The grazing pictures are not drawn yet.
+  * **The cheat codes (HUD-036).**
+    * They did nothing: the sim takes them only with the match's cheats flag, which only the lobby set. The original
+      takes them in a game alone (0x4240e0).
+    * Campaigns, custom maps and skirmishes now allow them, and so does a save made before when continued; a save's
+      configuration may gain the flag (`Simulation.Restore(allowCheats)`), nothing else.
+    * hmdvaleva gives the original's 10,000 of each resource and hmpetleva five times that (0x424298, 0x424dc4; were
+      2,000 and 5,000 placeholders). hmbuildozer says "Build at once: ON/OFF"; hmspawn puts its units at the middle
+      of the view (it was the map's corner).
+  * **Pointers (CTRL-012).** ReTzar's table (0x42da60) gives the shovel to Build and the hammer to Repair, as Tzar2
+    does. The shovel the owner saw over a building to repair came from a tree's crown taking the pointer, which the
+    click's pick fixed (CTRL-001).
+  * **The pilot's ferry (bigisland, `CampaignAutoplay`).** The cows changed the course of Bigisland: eight soldiers were
+    left on the west island when every unit had to cross the line at x 380.
+    * Their boarding errand called the one galleon back to the shore. The pilot sent it off again before they reached
+      it, and it went to and fro for the rest of the hour.
+    * Now a ship with room waits while units still walk to board it, for two and a half minutes at most. A full ship
+      (Landing Tactics counted) sails with what it holds.
 
 * **2026-10-28 — Batch 4 of the sixth play-test: out of holders, the eye of a holder, dropped loads (HOLD-010, HOLD-011,
   ECO-026; items 9, 14, 11).** Each from ReTzar's reading of the original.

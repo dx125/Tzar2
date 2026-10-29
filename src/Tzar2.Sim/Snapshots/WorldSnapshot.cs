@@ -118,7 +118,9 @@ public static class WorldSnapshot
         ArgumentNullException.ThrowIfNull(world);
         var reader = new BinaryBufferReader(snapshot);
         SimulationConfig config = ReadHeader(ref reader, world.Ruleset, world.Map.Data, tolerance, out int version, out bool sameRules);
-        if (config != world.Config)
+        // A save may be continued with cheats allowed (Simulation.Restore, HUD-036); nothing else may differ.
+        bool cheatsAdded = tolerance == SnapshotTolerance.SaveGame && world.Config.CheatsAllowed && !config.CheatsAllowed;
+        if ((cheatsAdded ? config with { CheatsAllowed = true } : config) != world.Config)
         {
             throw new InvalidDataException("The world was not created with the snapshot's configuration.");
         }

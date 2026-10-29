@@ -118,7 +118,7 @@ public enum SimEventKind : ushort
     /// <summary>A kingdom won (GAME-17).</summary>
     PlayerVictorious = 51,
 
-    /// <summary>A cheat code was applied (GAME-19): Arg = <c>CheatCode</c>.</summary>
+    /// <summary>A cheat code was applied (GAME-19): Arg = <c>CheatCode</c>; X = 1 when a switch was turned on.</summary>
     CheatUsed = 52,
 
     /// <summary>Mercenaries or a hero were hired (GAME-14): Entity = the first unit, X = offer slot, Y = units, Arg = type id.</summary>

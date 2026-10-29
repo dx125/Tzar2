@@ -153,9 +153,10 @@ world:
   scorePerTechnology: 100             # UNVERIFIED (UNK-29)
   victoryIntervalTicks: 20            # engine: victory is evaluated once per second
   deathmatchStartingResources: high   # UNVERIFIED: a Deathmatch starts every kingdom on the High level
-  # GAME-19 cheats (UNK-30).
-  cheatSmallResources: 2000           # UNVERIFIED (UNK-30): hmdvaleva
-  cheatLargeResources: 5000           # UNVERIFIED (UNK-30): hmpetleva
+  # GAME-19 cheats (HUD-036, ReTzar's reading of the original): hmdvaleva gives 10,000 of each resource (0x424298) and
+  # hmpetleva sends it five times (0x424dc4).
+  cheatSmallResources: 10000          # hmdvaleva
+  cheatLargeResources: 50000          # hmpetleva
   # GAME-14 tavern hiring (ADR 0108; manual ch. 6: Mercenaries "small groups of soldiers", Heroes' Quest, Fame "more,
   # and better, mercenaries who will be cheaper and more experienced"; MENU.INI [tavern_merc]/[tavern_hero] are filled
   # by the game at run time, so the offers below are ours).
@@ -333,7 +334,9 @@ legacy:
   SpawnOnDeath: { type: comm.meat, start: 300, perSecond: 2, max: 600, piece: 100 }
   Capturable: { instant: true, technology: te_cowpoaching }
   ClaimOnTouch: { by: any }           # UNVERIFIED: a wild (Nature) cow joins the first kingdom whose unit touches it (GAME-15)
-  Animal: { wanders: true }           # UNVERIFIED: wild cows wander around their spot
+  # NAT-007 (ReTzar's reading of the original, 0x42f450, 0x4ecb13, 0x4e0a23): a cow of any kingdom grazes, then walks to a
+  # cell within two of where it was last sent; not while it is milked.
+  Animal: { grazes: true }
 ^class.bear:
   Mobile: { pixelsPerSecond: 26 }    # VERIFIED (ADR 0172)
   Animal: { wanders: true, guards: true }   # UNVERIFIED: bears roam their area and return when lured away

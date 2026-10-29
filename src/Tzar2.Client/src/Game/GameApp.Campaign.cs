@@ -171,7 +171,8 @@ public partial class GameApp
         GameSession session;
         try
         {
-            session = resume is not null ? resume.Resume(source, _rules) : new GameSession(ScenarioMatch.Setup(source.Load(map), _rules, progress, difficulty: _campaignDifficulty), _rules);
+            // HUD-036: in a game alone the chat takes the original's cheat codes.
+            session = resume is not null ? resume.Resume(source, _rules, cheats: true) : new GameSession(ScenarioMatch.Setup(source.Load(map), _rules, progress, cheats: true, difficulty: _campaignDifficulty), _rules);
         }
         catch (Exception e) when (e is ArgumentException or InvalidDataException or KeyNotFoundException)
         {

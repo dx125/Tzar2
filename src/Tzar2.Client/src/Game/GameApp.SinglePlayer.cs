@@ -90,7 +90,8 @@ public partial class GameApp
         CustomMapSettings settings = resume?.Custom is { } saved ? saved with { Ai = _ai } : (options ?? new CustomMapSettings()) with { Ai = _ai };
         try
         {
-            session = resume is not null ? resume.ResumeCustomMap(map.Mission, _rules, _ai) : new GameSession(ScenarioMatch.Setup(map.Mission, _rules, custom: settings), _rules);
+            // HUD-036: in a game alone the chat takes the original's cheat codes.
+            session = resume is not null ? resume.ResumeCustomMap(map.Mission, _rules, _ai, cheats: true) : new GameSession(ScenarioMatch.Setup(map.Mission, _rules, cheats: true, custom: settings), _rules);
         }
         catch (Exception e) when (e is ArgumentException or InvalidDataException or KeyNotFoundException)
         {
