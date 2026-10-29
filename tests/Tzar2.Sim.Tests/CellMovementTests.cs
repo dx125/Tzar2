@@ -216,6 +216,21 @@ public class CellMovementTests
 
     [Fact]
     [Trait("Rule", "WORLD-021")]
+    public void A_unit_that_searched_both_ways_round_is_saved_and_restored()
+    {
+        // Both searches over the whole map are marked (bits 1 and 2): a snapshot holds them (CI: a rejoin refused the
+        // snapshot of a unit marked so).
+        using var d = new SimDriver(TestMap(24, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.knight", 0, 10, 8)), ruleset: Classic);
+        d.Step();
+        EntityId knight = OfType(d.World, "euro.knight").Single();
+        d.World.CellSteps.Get(knight).Rerouted = 3;
+        byte[] snapshot = Tzar2.Sim.Snapshots.WorldSnapshot.Capture(d.World);
+        using Simulation restored = Simulation.Restore(snapshot, Classic, d.World.Map.Data);
+        Assert.Equal(3, restored.World.CellSteps.Get(knight).Rerouted);
+    }
+
+    [Fact]
+    [Trait("Rule", "WORLD-021")]
     public void The_back_ranks_go_round_the_front_ones_that_have_stopped()
     {
         // The eighth play-test: the back ranks did not go round the front ones when those stopped. A rank of friends

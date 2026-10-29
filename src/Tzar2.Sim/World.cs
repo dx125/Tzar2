@@ -1080,7 +1080,7 @@ public sealed partial class World
             CellStep s = steps[i];
             if (s.To < -1 || s.To >= tiles || s.Home < -1 || s.Home >= tiles || s.Aside < -1 || s.Aside >= tiles || s.Progress < 0
                 || s.Progress > MapState.UnitsPerTile || s.HomeTick < 0 || s.HomeTick > Tick.Value || !Map.ContainsPoint(s.FromX, s.FromY)
-                || s.Rerouted > 1 || s.Reserved1 != 0 || s.Reserved2 != 0)
+                || s.Rerouted > 3 || s.Reserved1 != 0 || s.Reserved2 != 0)
             {
                 throw Invalid("invalid cell step");
             }
