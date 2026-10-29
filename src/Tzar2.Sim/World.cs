@@ -1080,7 +1080,7 @@ public sealed partial class World
             CellStep s = steps[i];
             if (s.To < -1 || s.To >= tiles || s.Home < -1 || s.Home >= tiles || s.Aside < -1 || s.Aside >= tiles || s.Progress < 0
                 || s.Progress > MapState.UnitsPerTile || s.HomeTick < 0 || s.HomeTick > Tick.Value || !Map.ContainsPoint(s.FromX, s.FromY)
-                || s.Rerouted > 1 || s.Reserved1 != 0 || s.Reserved2 != 0)
+                || s.Rerouted > 3 || s.Reserved1 != 0 || s.Reserved2 != 0)
             {
                 throw Invalid("invalid cell step");
             }
@@ -1153,7 +1153,7 @@ public sealed partial class World
             ArmamentDefinition? arm = TypeOf(ids[i]).Traits.Armament;
             if (arm is null || c.Mode > CombatMode.Sneak || c.HitInMs < -1 || c.HitInMs > arm.HitDelayMs
                 || c.CooldownMs < -Config.TickLengthMilliseconds || c.CooldownMs > arm.CooldownMs
-                || c.ChaseTick < -1 || c.ChaseTick > Tick.Value || c.Resume > 1 || c.Striking > 1 || c.Reserved1 != 0)
+                || c.ChaseTick < -1 || c.ChaseTick > Tick.Value || c.Resume > 1 || c.Striking > 1 || c.Futile > Systems.CombatSystem.FutileChases)
             {
                 throw Invalid("invalid combat state");
             }

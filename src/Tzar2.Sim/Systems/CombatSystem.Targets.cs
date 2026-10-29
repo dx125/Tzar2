@@ -106,6 +106,7 @@ public sealed partial class CombatSystem
         c.Target = target.Value;
         c.ChaseTick = -1;
         c.Striking = 0;
+        c.Futile = 0;
         if (target.Index < _attackers.Length)
         {
             _attackers[target.Index]++;

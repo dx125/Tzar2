@@ -72,8 +72,11 @@ public struct Combat : IComponent
     /// <summary>1 while the target is in reach and the unit strikes it (WAR-015: a building struck is left to them).</summary>
     public byte Striking;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved1;
+    /// <summary>
+    /// The unit's walks to its target in a row that ended short of it, other units in the way (WAR-016; up to
+    /// <c>CombatSystem.FutileChases</c>; it was padding, so saves stay).
+    /// </summary>
+    public byte Futile;
 }
 
 /// <summary>A worker's current task (GAME-02/03).</summary>

@@ -44,6 +44,12 @@ public sealed partial class CombatSystem : ISimSystem
     /// <summary>A chased target that moved further than this from the last chase point triggers a new request.</summary>
     public const int ChaseRetargetUnits = MapState.UnitsPerTile;
 
+    /// <summary>
+    /// Walks in a row that end short of the target, other units in the way, after which the unit cannot reach it (WAR-016;
+    /// the eighth play-test: knights stood behind the others round a barracks while other enemies were near).
+    /// </summary>
+    public const int FutileChases = 3;
+
     /// <summary>Owner bit of Nature in the per-cell owner masks (player slots use bits 0-15).</summary>
     private const int NatureBit = 31;
 
@@ -241,6 +247,7 @@ public sealed partial class CombatSystem : ISimSystem
         if (!onItsWay && distance <= reach && distance >= arm.MinRangeUnits)
         {
             c.Striking = 1;
+            c.Futile = 0;
             Interaction.Halt(world, attacker);
             Position tp = world.Positions.Get(target);
             if (tp.X != position.X || tp.Y != position.Y)
@@ -299,12 +306,15 @@ public sealed partial class CombatSystem : ISimSystem
             return; // an explicit target inside the minimum range: the unit waits (UNVERIFIED: no backing off)
         }
 
-        // WAR-016: a target the unit cannot reach (its walk gave up, or it made no progress since its last plan) gives way
-        // to an enemy it reaches now, or, once the walk gave up, to the best other one in sight.
+        // WAR-016: a target the unit cannot reach (its walk gave up, it made no progress since its last plan, or its walks
+        // to it end short again and again, held off by other units or with no place left at a building) gives way to an
+        // enemy it reaches now, or, once the walk gave up, to the best other one in sight.
         if (c.Mode != CombatMode.Scripted && c.ChaseTick >= 0 && (attacker.Index + tick) % acquireEvery == 0
-            && world.Motions.IndexOf(attacker) is >= 0 and var mi && (world.Motions.At(mi).State == MotionState.Blocked || world.Motions.At(mi).Replans > 0)
+            && world.Motions.IndexOf(attacker) is >= 0 and var mi
+            && (world.Motions.At(mi).State == MotionState.Blocked || world.Motions.At(mi).Replans > 0 || c.Futile >= FutileChases)
             && Search(world, attacker, self, type, arm, position, target) is { IsNone: false } other
-            && (world.Motions.At(mi).State == MotionState.Blocked || Interaction.EdgeDistance(world, position, radius, other) <= Math.Max(range, world.Ruleset.Gameplay.MeleeReachUnits)))
+            && (world.Motions.At(mi).State == MotionState.Blocked || c.Futile >= FutileChases
+                || Interaction.EdgeDistance(world, position, radius, other) <= Math.Max(range, world.Ruleset.Gameplay.MeleeReachUnits)))
         {
             Interaction.Halt(world, attacker);
             Engage(world, ref c, other);
@@ -792,6 +802,9 @@ public sealed partial class CombatSystem : ISimSystem
             return;
         }
 
+        // Not walking, and not in reach: its last walk to the target ended short (WAR-016). A walk cut off because the
+        // target moved on does not count.
+        c.Futile = moving ? (byte)0 : (byte)Math.Min(c.Futile + 1, FutileChases);
         int x = tp.X;
         int y = tp.Y;
         bool melee = type.Traits.Armament is not { } armament || armament.RangeUnits <= 0;
@@ -800,9 +813,17 @@ public sealed partial class CombatSystem : ISimSystem
         {
             (x, y) = (sx, sy); // a tile of its own next to the building (WORLD-019)
         }
-        else if (world.Footprints.Has(target) && !Interaction.ApproachPoint(world, target, position.X, position.Y, type.Locomotor, out x, out y))
+        else
         {
-            (x, y) = (tp.X, tp.Y);
+            if (world.Footprints.Has(target) && melee && type.Locomotor != Locomotor.Ship)
+            {
+                c.Futile = FutileChases; // no place left round the building: as the original's walk to it fails (ReTzar 0x451cc0)
+            }
+
+            if (world.Footprints.Has(target) && !Interaction.ApproachPoint(world, target, position.X, position.Y, type.Locomotor, out x, out y))
+            {
+                (x, y) = (tp.X, tp.Y);
+            }
         }
 
         c.ChaseX = tp.X;

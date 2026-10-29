@@ -74,3 +74,8 @@ rules:
     source: ['community ReTzar src/simulation.rs (night_amount and lighting, the test clock_and_night_match_original_boundaries; the night lights of src/frontend/lights.rs are its own addition)', owner 2026-10-29 (eighth play-test)]
     status: tested
     note: 'The eighth play-test - units seemed to see too little; the original''s troops showed more round them. Their sight is the tables'' (the knight 5 tiles, the archer 10), as in the original. But Tzar2''s night was a placeholder: black at 55 % from 20:30 to 05:00, with dusk from 18:00 and dawn to 07:00, lifted only by discs of light of three tiles round each unit and five round each building, so for half the day a unit showed three tiles round it. The steps of dusk and dawn are three game minutes, as the clock''s. The tint is a multiply of the map''s colours, under the fog; the original works in RGB555.'
+  PRES-016:
+    rule: A unit is drawn in its walk for as long as it steps from one tile to the next, and faces where it steps, whether it walks on an order of its own, makes way for another or finishes a step it was stopped in.
+    source: ['community ReTzar src/gameplay/movement.rs (0x4debb0: the step takes the picture''s direction; 0x4e138b: the picture slides through the step)', owner 2026-10-29 (eighth play-test)]
+    status: tested
+    note: 'The eighth play-test - a knight''s walk could stop while it still moved in a crowd. A unit stopped mid-step (a fight halts it, it makes way for a friend) slid with its standing or attack picture, and kept the facing it had; and a unit standing a tick between two steps started its walk again at every step. A picture that comes back within 300 ms now goes on where it was.'

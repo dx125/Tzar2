@@ -44,6 +44,20 @@ public class AnimationStartsTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-016")]
+    public void A_walk_broken_off_for_a_moment_goes_on_where_it_was()
+    {
+        // The eighth play-test: a knight in a crowd stood a tick between two steps, and its walk began again at each.
+        var starts = new AnimationStarts();
+        Assert.Equal(0, starts.Elapsed(7, 2, 1_000)); // walking
+        Assert.Equal(400, starts.Elapsed(7, 2, 1_400));
+        Assert.Equal(0, starts.Elapsed(7, 0, 1_450)); // a tick standing
+        Assert.Equal(500, starts.Elapsed(7, 2, 1_500)); // walking on: the cycle goes on
+        Assert.Equal(100, starts.Elapsed(7, 0, 1_550)); // standing again: its own picture goes on too
+        Assert.Equal(0, starts.Elapsed(7, 2, 2_000)); // standing longer than ResumeMs: the walk starts again
+    }
+
+    [Fact]
     public void Units_no_longer_drawn_are_dropped()
     {
         var starts = new AnimationStarts();

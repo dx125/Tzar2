@@ -708,8 +708,9 @@ public sealed partial class MovementSystem : ISimSystem
                 }
             }
 
+            // A unit faces where it steps, also one stepping aside with no order of its own (PRES-016; ReTzar 0x4debb0).
             ref Motion m = ref motions.At(i);
-            if (f.Moving[i] != 0 && (m.VelocityX != 0 || m.VelocityY != 0))
+            if ((f.Moving[i] != 0 || f.Cell[i] != 0) && (m.VelocityX != 0 || m.VelocityY != 0))
             {
                 world.Identities.Get(entity).Facing = (byte)Trig.Atan2(m.VelocityY, m.VelocityX).ToDirection8();
             }

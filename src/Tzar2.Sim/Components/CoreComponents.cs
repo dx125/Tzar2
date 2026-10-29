@@ -228,8 +228,9 @@ public struct CellStep : IComponent
     public byte Waits;
 
     /// <summary>
-    /// 1 when it has searched the whole map for a way round the units in its way since its last step: it does not search
-    /// so again until it steps on or plans again (0 in saves before it was used).
+    /// The searches of the whole map for a way round the units in its way since its last step, as bits: 1 round every
+    /// unit, 2 through friends that make way (WORLD-021). It does not search so again until it steps on or plans again
+    /// (0 in saves before it was used).
     /// </summary>
     public byte Rerouted;
 

@@ -122,8 +122,11 @@ internal static class FrameBuilder
                 e.Mana = world.Manas.IndexOf(id) is >= 0 and var mana ? Math.Min(world.Manas.At(mana).MilliMana / 1000, e.MaxMana) : 0;
             }
 
+            // A land unit in a step walks, whatever its order says (PRES-016: a unit stepping aside, or one stopped mid-step
+            // to strike, slid with its standing picture, and a knight's walk froze in a crowd; the eighth play-test).
             int m = world.Motions.IndexOf(id);
-            bool moving = m >= 0 && (world.Motions.At(m).VelocityX != 0 || world.Motions.At(m).VelocityY != 0);
+            bool stepping = world.CellSteps.Count != 0 && world.CellSteps.IndexOf(id) is >= 0 and var step && world.CellSteps.At(step).To >= 0;
+            bool moving = m >= 0 && (world.Motions.At(m).VelocityX != 0 || world.Motions.At(m).VelocityY != 0 || stepping);
             e.Activity = moving ? UnitActivity.Walk : UnitActivity.Idle;
 
             e.CraftPermille = -1;

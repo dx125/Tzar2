@@ -6,10 +6,11 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-29 (item 20, the eighth play-test, batch A: victory as the original's defeat test, the
+* **Last updated:** 2026-10-29 (item 20, the eighth play-test: batch A, victory as the original's defeat test, the
   church's priest in older saves, the flags of remembered buildings, the meat and the dropped loads drawn and counted,
-  the night as the original's tint. Before: item 18, the sixth play-test, done. The slow checks run once per batch of
-  three or four fixes, with the re-pin script and a faster campaign acceptance)
+  the night as the original's tint; batch B, units go round every unit in their way, a unit in a step is drawn walking,
+  and attackers whose walks end short take another target. The slow checks run once per batch of three or four fixes,
+  with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -461,10 +462,11 @@ owner's order of 2026-10-26.
 20. **The eighth play-test (2026-10-29, the owner, build 0d48ae4; the save Game 5, read locally only).** For each item
     that the original's files cannot settle, look first at how ReTzar does it. In two batches: A (items 4 to 8), then B
     (1 to 3).
-    1. Troops behave oddly: the back ranks do not go round the front ones when those stop. Open (batch B).
-    2. A knight's walk can stop its animation in a crowd while it still moves. Open (batch B).
+    1. Troops behave oddly: the back ranks do not go round the front ones when those stop: **fixed** (WORLD-021,
+       WORLD-020; log below).
+    2. A knight's walk can stop its animation in a crowd while it still moves: **fixed** (PRES-016; log below).
     3. In a fight among buildings some troops stand still, unable to reach their target, while other enemies are near
-       (Game 5, saved before the battle at the enemy base). Open (batch B).
+       (Game 5, saved before the battle at the enemy base): **fixed** (WAR-016, WORLD-020; log below).
     4. No victory came when every enemy was beaten: **explained and the rule fixed** (DIP-010; log below). Two kingdoms
        had only cows left, at the map's edges where peasants had pushed them before NAT-007; cows keep a kingdom in the
        game in the original too. Caravans, fishing boats and the dummy no longer do, as in the original.
@@ -480,6 +482,31 @@ owner's order of 2026-10-26.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-29 — The eighth play-test, batch B: the way round every unit, the walk through a step, the next target
+  when walks end short (WORLD-021, WORLD-020, PRES-016, WAR-016; items 1 to 3).** Movement had had several passes, so
+  the owner's rule held: how ReTzar reads the original first. A probe plays the fight of Game 5 on from the save (42
+  knights ordered at a barracks, 60 s): about ten knights stood each second, a few for 3 s and more.
+  * **The way round (WORLD-021).** The original's path search takes the tile of every standing unit as a wall, friends
+    too, and on a re-plan after a block the tiles of units on the move as well (ReTzar 0x4df540, 0x4debb0). Tzar2's way
+    round went through idle friends as dearer ground and asked them to step aside, which none could in a crowd. A unit
+    held up now plans round every unit, near by and then over the whole map; going through friends that make way is
+    what is left with no way round at all (the sixth play-test's wish: they step aside and come back).
+  * **Waiting (WORLD-020).** A unit waited up to 2.5 s behind any unit with an order to walk, those waiting themselves
+    too, and crowds stood in chains. As the original (0x4dec92), it waits only behind a unit entering its tile or making
+    room, and goes round one standing there.
+  * **The next target (WAR-016).** The chase gave a unit its place again every half second and so cleared its walk's
+    signs of failure: a knight went to and fro beside a barracks for a minute. Three walks in a row that end short of
+    the target, or no place left round a building, now count as cannot reach; the unit takes the best other enemy in
+    sight (`Combat.Futile`, which was padding).
+  * **The walk (PRES-016).** A unit stopped mid-step slid with its standing or attack picture, and one stepping aside
+    kept its old facing; a unit standing a tick between two steps began its walk again each time. A unit in a step is
+    drawn walking and faces its step, and a picture back within 300 ms goes on where it was.
+  * **The probe after.** Knights standing 3 s or more: 1.4 a second on average before, 0.2 after; striking 11 to 16,
+    walking 18 to 23; the enemy's units by the base fall faster (9 left after two minutes against 36), its buildings a
+    little later (11 against 8), as the knights take the fighters first (WAR-015).
+  * **Hashes.** The goldens (gameplay stream and final, AI commands and hashes), the trigger snapshot, the gameplay and
+    AI benches: units go round, wait and choose targets otherwise.
 
 * **2026-10-29 — The eighth play-test, batch A: victory, the church's priest, flags under the fog, meat and loads, the
   night (DIP-010, PROD-016, FOG-002, HUD-037, PRES-015; items 4 to 8).** The owner played build 0d48ae4 from the save
