@@ -6,12 +6,10 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-28 (item 18, the sixth play-test, in the owner's order: the guilds' research; troops choose
-  targets and answer enemies as the original; land units step cell by cell; fields ready at once; construction; taking
-  buildings down; the mines' look; the click's pick as the original; the tavern's exchange and the chat window; the
-  sounds mixed as the original; saves of older versions load; the last four items: units in front of buildings, cows
-  grazing near home, the cheat codes in a game alone, the pointers checked. The slow checks run once per batch of three
-  or four fixes, with the re-pin script and a faster campaign acceptance)
+* **Last updated:** 2026-10-29 (item 20, the eighth play-test, batch A: victory as the original's defeat test, the
+  church's priest in older saves, the flags of remembered buildings, the meat and the dropped loads drawn and counted,
+  the night as the original's tint. Before: item 18, the sixth play-test, done. The slow checks run once per batch of
+  three or four fixes, with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -482,6 +480,38 @@ owner's order of 2026-10-26.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-10-29 — The eighth play-test, batch A: victory, the church's priest, flags under the fog, meat and loads, the
+  night (DIP-010, PROD-016, FOG-002, HUD-037, PRES-015; items 4 to 8).** The owner played build 0d48ae4 from the save
+  Game 5 (read locally only; a probe loads it, never committed).
+  * **No victory (DIP-010).** Two kingdoms had only cows left, at the map's edges where passing peasants had pushed them
+    before NAT-007. The original keeps such a kingdom in the game too: its defeat test counts every unit and building
+    but caravans, fishing boats, the training dummy, walls, gates, bridges and fields (ReTzar 0x442d10, 0x442bd0).
+    Tzar2 counted caravans, fishing boats and the dummy as well; they now carry the trait `Minor`.
+  * **No priest at the church (ADR 0271 amended).** The church in the save was built before churches trained priests
+    (#261), so it had no production queue, and the save does not hold one. A save continued under other rules or from an
+    older format now gets what an entity's type gives it now: a completed producer of a kingdom gets its queue
+    (`World.UpgradeRestoredState`).
+  * **Flags under the fog (FOG-002).** A remembered building was framed with the player's look (`SeemsOwner` 0); it
+    keeps its own kingdom's.
+  * **Meat and loads (HUD-037, NAT-004, ECO-026).** The items' looks (item_meat, item_food, item_gold...) were not
+    loaded for the match, so the meat and the dropped loads were not drawn. The meat wears the original's item_meat. The
+    selection names an item by its picture as the original (Gold, Wood, Stone, Food), the meat and milk by their
+    resource (the original says Treasury Item), and shows the resource's icon and the amount, which the original does
+    not (the owner's wish).
+  * **Units see too little (PRES-015).** Their sight is the tables', as in the original (ReTzar: SIGHT tiles from the
+    unit's cell). The night was a placeholder: black from 18:00 to 07:00 lifted by discs of three tiles round each unit,
+    so half of every day a unit showed three tiles round it. The night is now the original's (ReTzar): the map tinted to
+    55 % red and 68 % green from 22:00 to 06:00, with half an hour of dusk and of dawn, no lights; `world.nightStartMinute`
+    follows (22:00).
+  * **Local checks with the original.** The reference data hash had not followed #261 (the menus' CREATE orders): the
+    owner's import said "modified installation". Re-pinned (2CCD38D8AC5BB241, measured at 9aff5af and #261 on the clean
+    GOG install). The synthetic priest order copied the original's image index; it has its own. `OriginImportTests`'s
+    package sha256 differs on the owner's PC at every commit since its pin, a1d9af4 included (90f94f80...): the package is
+    stored uncompressed, so an import step gives other bytes on this machine (its locale, or the install's files changed
+    by the captures); open, to look into.
+  * **Hashes.** The gameplay golden's ruleset (the Minor trait, the night's hours, the meat's look), stream and final hash
+    (the meat of the cows killed at the center wears its picture). The benches are unchanged.
 
 * **2026-10-28 — Batch 5 of the sixth play-test: buildings behind units, cows near home, the cheat codes, the pointers
   (PRES-014, NAT-007, HUD-036, CTRL-012; items 8, 16, 17, 13).** The last four items of the sixth play-test, each from

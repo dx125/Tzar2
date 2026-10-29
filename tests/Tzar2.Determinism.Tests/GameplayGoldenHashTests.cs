@@ -89,7 +89,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (WAR-015, 2026-10-26) the target categories and priorities, the help and guard radii (combat settings): the ruleset hash.
     // (ADR 0270, 2026-10-27) gameplay.movement cells and meleeReachPx 18: the ruleset hash.
     // (ECO-025, 2026-10-27) the field's trait ReadyAtOnce: the ruleset hash only (this scenario places no field).
-    private const ulong GoldenRulesetHash = 0xA9198D3D5EDE8419UL;
+    // (DIP-010, PRES-015, NAT-004; 2026-10-29) the Minor trait, the night's hours, the meat's picture: the ruleset hash.
+    private const ulong GoldenRulesetHash = 0xF12CFAC950C2C0F4UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -112,8 +113,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // guards stand within three tiles (ORD-001): the stream and the final hash.
     // (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (a new store, hashed layout 20): the stream and
     // the final hash.
-    private const ulong GoldenHashStream = 0x1F92FEA41DE93D3DUL;
-    private const ulong GoldenFinalFullHash = 0xA5AF98359B233B84UL;
+    // (NAT-004, 2026-10-29) the meat of the cows killed at the center wears its own picture (the item's look): the stream
+    // and the final hash.
+    private const ulong GoldenHashStream = 0x0B6629B5AAC88126UL;
+    private const ulong GoldenFinalFullHash = 0xCD4FB48116013E99UL;
 
     private const int Ticks = 1600;
 

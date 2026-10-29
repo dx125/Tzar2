@@ -101,16 +101,16 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Combat](combat.yaml) (WAR) | 17 | 13 | 4 | 0 | 0 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 25 | 21 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 30 | 21 | 9 | 0 | 0 | 0 | 0 |
-| [Diplomacy and victory](diplomacy.yaml) (DIP) | 9 | 8 | 1 | 0 | 0 | 0 | 0 |
+| [Diplomacy and victory](diplomacy.yaml) (DIP) | 10 | 9 | 1 | 0 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 26 | 21 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 11 | 11 | 0 | 0 | 0 | 0 | 0 |
-| [The screen](interface.yaml) (HUD) | 36 | 16 | 15 | 1 | 0 | 3 | 1 |
+| [The screen](interface.yaml) (HUD) | 37 | 17 | 15 | 1 | 0 | 3 | 1 |
 | [Items](items.yaml) (ITEM) | 19 | 14 | 3 | 0 | 0 | 1 | 1 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 28 | 28 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 7 | 7 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 14 | 4 | 0 | 0 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 14 | 11 | 3 | 0 | 0 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 15 | 12 | 3 | 0 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 16 | 11 | 4 | 0 | 0 | 1 | 0 |
 | [Scenario scripts](scenario.yaml) (SCN) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 16 | 9 | 1 | 0 | 2 | 0 |
@@ -118,7 +118,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 11 | 10 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 21 | 14 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 377 | 289 | 72 | 2 | 0 | 10 | 4 |
+| **All** | 380 | 292 | 72 | 2 | 0 | 10 | 4 |
 
 ## Not done yet
 

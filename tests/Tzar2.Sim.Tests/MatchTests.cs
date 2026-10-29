@@ -20,12 +20,12 @@ public class MatchTests
     [Trait("Rule", "NAT-005")]
     public void The_day_clock_turns_to_night_and_back_and_night_can_shorten_sight()
     {
-        // 24 s days (test rules): 16.7 ms per clock minute; 10:00 → 19:00 is 9,000 ms = 180 ticks.
+        // 24 s days (test rules): 16.7 ms per clock minute; 10:00 → 22:00 (PRES-015) is 12,000 ms = 240 ticks.
         using var d = new SimDriver(TestMap(48, 16, Unit("euro.peon", 0, 5, 8)), ruleset: ShortDays);
         World w = d.World;
         Assert.Equal(600, w.MinuteAt(0));
-        Assert.False(w.IsNightAt(w.MinuteAt(179)));
-        Assert.True(w.IsNightAt(w.MinuteAt(180)));
+        Assert.False(w.IsNightAt(w.MinuteAt(239)));
+        Assert.True(w.IsNightAt(w.MinuteAt(240)));
         Assert.True(w.IsNightAt(w.MinuteAt(359))); // 01:00
         Assert.False(w.IsNightAt(w.MinuteAt(420))); // 06:00 + a bit
 
