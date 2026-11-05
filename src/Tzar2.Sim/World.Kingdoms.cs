@@ -110,13 +110,28 @@ public sealed partial class World
 
         Identity identity = Identities.At(i);
         WorldTraits w = Ruleset.EntityTypes[identity.TypeId].Traits.World;
-        if (w.IsAmbient || (w.Claim is not null && !HasPlayer(identity.Owner)))
+        if (w.IsAmbient || w.Indestructible || (w.Claim is not null && !HasPlayer(identity.Owner)))
         {
             return false;
         }
 
+        if (attackerOwner != identity.Owner && IsRescue(identity.Owner))
+        {
+            return false; // NAT-008 (ReTzar's reading, the relation R[x][9] = 0x40): nobody attacks the rescue kingdom
+        }
+
         return Diplomacy.MayAttack(attackerOwner, identity.Owner, w.IsMilitary);
     }
+
+    /// <summary>Whether <paramref name="owner"/> is the map's rescue pseudo-kingdom (NAT-008).</summary>
+    public bool IsRescue(int owner) => HasPlayer(owner) && (Players[owner].Flags & PlayerFlags.Rescue) != 0;
+
+    /// <summary>
+    /// Whether <paramref name="owner"/> is a kingdom that may free prisoners and take magic gateways (NAT-008, NAT-001;
+    /// ReTzar 0x5028a0): in the match, not defeated, not the rescue kingdom, and not barred by <c>@kingdomcanrescue</c>.
+    /// </summary>
+    public bool MayRescue(int owner)
+        => HasPlayer(owner) && (Players[owner].Flags & (PlayerFlags.Active | PlayerFlags.Defeated | PlayerFlags.Rescue | PlayerFlags.NoRescue)) == PlayerFlags.Active;
 
     /// <summary>Whether a kingdom's units and buildings take no damage (<c>hmgod</c>, GAME-19).</summary>
     public bool IsInvulnerable(int owner) => HasPlayer(owner) && (_kingdoms[owner].Cheats & CheatFlags.God) != 0;

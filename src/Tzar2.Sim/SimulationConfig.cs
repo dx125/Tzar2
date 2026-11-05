@@ -181,6 +181,15 @@ public enum PlayerFlags
     /// 0183): set by <see cref="Commands.CommandKind.SetAiAssist"/>.
     /// </summary>
     AssistWar = 64,
+
+    /// <summary>
+    /// The map's rescue pseudo-kingdom (the original's owner 9; NAT-008, ADR 0275): its units wait to be freed by the first
+    /// kingdom whose fighter comes beside them, nobody attacks it, and its towers fight the kingdoms.
+    /// </summary>
+    Rescue = 128,
+
+    /// <summary>The kingdom may not free prisoners nor take magic gateways (<c>@kingdomcanrescue</c> off; ReTzar K+0x122).</summary>
+    NoRescue = 256,
 }
 
 /// <summary>A stockpile: one amount per resource type id of the ruleset (GAME-01; at most <see cref="Ruleset.MaxResourceTypes"/>).</summary>

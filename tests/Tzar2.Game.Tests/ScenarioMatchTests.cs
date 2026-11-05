@@ -15,8 +15,11 @@ public sealed class ScenarioMatchTests
     private static readonly Ruleset Rules = SyntheticLegacyContent.CompileRuleset();
 
     [Fact]
-    public void Owner_less_working_buildings_and_rescue_objects_go_to_a_passive_neutral_kingdom()
+    [Trait("Rule", "NAT-008")]
+    public void Rescue_objects_go_to_a_passive_rescue_kingdom_and_natures_working_ones_to_another_at_war_with_all()
     {
+        // NAT-008 (ADR 0275): the original's owner 9 is a rescue kingdom nobody attacks and which fights the kingdoms;
+        // Nature's working buildings and units (which the sim does not give to Nature) are at war with everyone.
         var b = new ScenarioBuilder();
         b.Unit("euro.footman", 0, 4, 4);
         b.Unit("euro.footman", 1, 30, 4);
@@ -24,18 +27,23 @@ public sealed class ScenarioMatchTests
         int lost = b.Unit("euro.peon", MapObject.Nature, 20, 20, new ObjectInfo("lost", "", ObjectFlags.Rescue));
         MissionContent mission = new(b.Map(), b.Scenario());
         MatchSetup setup = ScenarioMatch.Setup(mission, Rules, computerAi: true);
-        Assert.Equal(3, setup.Players.Count);
+        Assert.Equal(4, setup.Players.Count);
         Assert.Equal(ControllerKind.Passive, setup.Players[2].Controller);
+        Assert.Equal(ControllerKind.Passive, setup.Players[3].Controller);
         using var session = new GameSession(setup, Rules);
         Sim.World world = session.Simulation.World;
         Core.Ids.EntityId castle = Core.Ids.EntityId.FromValue(session.Scenario!.Triggers.State.MapEntities[keep]);
         Core.Ids.EntityId peon = Core.Ids.EntityId.FromValue(session.Scenario.Triggers.State.MapEntities[lost]);
-        Assert.Equal(2, world.Identities.Get(castle).Owner);
         Assert.Equal(2, world.Identities.Get(peon).Owner);
-        Assert.Equal(Sim.Kingdoms.Stance.Neutral, world.Diplomacy.StanceOf(0, 2));
-        Assert.Equal(Sim.Kingdoms.Stance.Neutral, world.Diplomacy.StanceOf(2, 1));
+        Assert.Equal(3, world.Identities.Get(castle).Owner);
+        Assert.True(world.IsRescue(2));
+        Assert.False(world.IsRescue(3));
+        Assert.Equal(Sim.Kingdoms.Stance.Enemy, world.Diplomacy.StanceOf(2, 1)); // it fights the kingdoms...
+        Assert.False(world.MayAttack(0, peon)); // ...and nobody attacks it
+        Assert.Equal(Sim.Kingdoms.Stance.Enemy, world.Diplomacy.StanceOf(0, 3)); // Nature's working ones are at war with all
+        Assert.Equal(Sim.Kingdoms.Stance.Enemy, world.Diplomacy.StanceOf(3, 1));
         Assert.NotNull(session.Ai); // the computer kingdom runs the AI…
-        Assert.DoesNotContain(session.Ai!.Players, p => p.Settings.Slot == 2); // …the passive one does not
+        Assert.DoesNotContain(session.Ai!.Players, p => p.Settings.Slot is 2 or 3); // …the passive ones do not
     }
 
     [Fact]

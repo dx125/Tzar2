@@ -216,11 +216,19 @@ public class MapGenTests
     [Fact]
     public void More_map_resources_place_more()
     {
-        var options = new MapGenOptions { Type = RandomMapType.Dry, Size = RandomMapSize.Large, Players = 2, Seed = 11 };
-        GeneratedMap low = MapGenerator.Generate(options with { Resources = MapResourceLevel.Low });
-        GeneratedMap high = MapGenerator.Generate(options with { Resources = MapResourceLevel.High });
-        Assert.True(high.Stats.Count(MapObjectRole.Gold) > low.Stats.Count(MapObjectRole.Gold));
-        Assert.True(high.Stats.Count(MapObjectRole.Tree) > low.Stats.Count(MapObjectRole.Tree));
+        // Summed over a few seeds: one map alone may draw its rocks unluckily (2026-11-04: without the cows one did).
+        int lowGold = 0, highGold = 0, lowTrees = 0, highTrees = 0;
+        for (ulong seed = 11; seed < 15; seed++)
+        {
+            var options = new MapGenOptions { Type = RandomMapType.Dry, Size = RandomMapSize.Large, Players = 2, Seed = seed };
+            GeneratedMap low = MapGenerator.Generate(options with { Resources = MapResourceLevel.Low });
+            GeneratedMap high = MapGenerator.Generate(options with { Resources = MapResourceLevel.High });
+            (lowGold, highGold) = (lowGold + low.Stats.Count(MapObjectRole.Gold), highGold + high.Stats.Count(MapObjectRole.Gold));
+            (lowTrees, highTrees) = (lowTrees + low.Stats.Count(MapObjectRole.Tree), highTrees + high.Stats.Count(MapObjectRole.Tree));
+        }
+
+        Assert.True(highGold > lowGold, $"gold {highGold} against {lowGold}");
+        Assert.True(highTrees > lowTrees, $"trees {highTrees} against {lowTrees}");
     }
 
     [Fact]

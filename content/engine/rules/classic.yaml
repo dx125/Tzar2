@@ -132,8 +132,8 @@ world:
   loanGrowDelayMs: 120000             # UNVERIFIED (UNK-28): "after some time"
   loanInterestPercent: 0              # UNVERIFIED (UNK-28): the manual names no interest
   # GAME-15 gateways and nature (ADR 0104).
-  claimReachPx: 16                    # UNVERIFIED: a touch claims a gateway or a wild cow from this close
-  claimIntervalMs: 500                # engine: claim scan cadence
+  claimReachPx: 16                    # UNVERIFIED: a ClaimOnTouch { by: any } takes from this close (no classic type has one since NAT-002)
+  claimIntervalMs: 1000               # NAT-001 (ReTzar 0x420fad): a gateway looks round every second
   guardRadiusTiles: 10                # UNVERIFIED: guarding Nature units return home beyond this
   wanderRadiusTiles: 6                # UNVERIFIED: animals wander this far from home
   wanderIntervalMs: 8000              # UNVERIFIED: mean time between two wander moves
@@ -343,7 +343,6 @@ legacy:
   # as items of at most 100 food when the cow dies.
   SpawnOnDeath: { type: comm.meat, start: 300, perSecond: 2, max: 600, piece: 100 }
   Capturable: { instant: true, technology: te_cowpoaching }
-  ClaimOnTouch: { by: any }           # UNVERIFIED: a wild (Nature) cow joins the first kingdom whose unit touches it (GAME-15)
   # NAT-007 (ReTzar's reading of the original, 0x42f450, 0x4ecb13, 0x4e0a23): a cow of any kingdom grazes, then walks to a
   # cell within two of where it was last sent; not while it is milked.
   Animal: { grazes: true }
@@ -353,7 +352,8 @@ legacy:
 # Magic gateways (manual ch. 5 §4.4.2): neutral until a military unit touches them; they summon dwarves, orcs, ghosts and
 # skeletons (producer column "Gate"; ghosts and skeletons by the gateway's command card, MENU.INI [magic_gateway]).
 ^class.magicgateway:
-  ClaimOnTouch: { by: military }
+  ClaimOnTouch: { by: military }      # NAT-001 (ReTzar 0x420fd0): the fighters beside it take it when they are all of one kingdom
+  Indestructible: {}                  # ReTzar 0x4b6740, 0x421190: nothing hurts it, its owner cannot delete it
   -Burnable:
   -RuinOnDeath:
 ^class.ghost: { Producible: { by: [comm.magicgateway] }, Mobile: { pixelsPerSecond: 67 }, Banshee: {} }    # speed VERIFIED (ADR 0172); WAR-009

@@ -3,14 +3,17 @@ prefix: NAT
 title: Nature, gateways, day and weather
 rules:
   NAT-001:
-    rule: A magic gateway becomes the kingdom's once one of its military units has found and touched it; it then summons dwarves, orcs, ghosts and skeletons for gold.
-    source: [manual Common Buildings (Magic Gateway), guide Campaign Discussion]
+    rule: A magic gateway goes to the kingdom whose fighters alone stand beside it, from whoever held it, Nature, the rescue kingdom or another kingdom; it then summons dwarves, orcs, ghosts and skeletons for gold. Nothing hurts it and its owner cannot delete it.
+    source: [manual Common Buildings (Magic Gateway), guide Campaign Discussion, 'community ReTzar src/gameplay.rs (capture_points 0x420fd0 over 0x41fd70 every 1000 ms; 0x4b6740 takes no damage; 0x421190 no delete)', owner 2026-11-04 (after the ninth play-test)]
     status: tested
+    adr: [0104, 0275]
+    note: The fighters are the military units in its footprint grown by one tile, of kingdoms that may rescue (not barred by @kingdomcanrescue); fighters of two kingdoms there keep it where it is. Before 2026-11-04 only Nature's gateway was taken, by the nearest military unit within 16 px, and a kingdom's gateway could be hurt and deleted.
   NAT-002:
-    rule: Animals live on the map; wild cows wander and join the kingdom that touches them; birds are never attacked.
-    source: [manual Terrain (Life), community TDD GAME-15]
+    rule: Animals live on the map and birds are never attacked. A cow of nobody's or of another kingdom goes to the kingdom of a peasant beside it who knows Cow Poaching, unless a peasant of its own kingdom or of an ally stands beside it too; touching it does nothing more. Nature's cows are fought like its other creatures. Random maps place no cows.
+    source: [manual Terrain (Life), help ITEMS.TXT T_R_COW_POACHING, 'community ReTzar src/gameplay.rs (poach_cows 0x4ec944 every 2000 ms; Tend Cows only the kingdom''s own cows 0x4adf02; relation 0x47 and 0x10)', 'community ReTzar src/random_map.rs (0x4b1560: cows are never placed)', owner 2026-11-04 (after the ninth play-test)]
     status: tested
-    note: How a cow wanders, wild or a kingdom's - NAT-007.
+    adr: [0104, 0275]
+    note: How a cow wanders, wild or a kingdom's - NAT-007. The thief is the last poacher beside it, and it loses its invisibility. Tzar2 keeps its own Capture order on a cow under Cow Poaching (a peasant walks to it and takes it). Before 2026-11-04 any unit took a wild cow by touching it, nobody fought one, and random maps gave each kingdom four Nature cows near its castle and scattered more.
   NAT-003:
     rule: Bears and other guarding creatures fight near their home and go back when lured away.
     source: [community TDD GAME-15]
@@ -21,6 +24,12 @@ rules:
     status: tested
     adr: [0256]
     note: In the original another unit carries the item in its bag and drops it into a castle or storage; Tzar2 brings it to the stockpile at once, as it does every resource item (ITEM-006). The items wear the original's item_meat picture (a resource item of the original); before the eighth play-test they were not drawn.
+  NAT-008:
+    rule: The units of a map's rescue kingdom wait to be freed; once a second, each joins the kingdom of the first fighter standing on a tile beside it, with what it holds. Nobody attacks the rescue kingdom, its units attack nobody, and its towers fight the kingdoms. It shows grey and a right click on its units walks up to them. A scenario may bar a kingdom from rescuing.
+    source: ['community ReTzar src/gameplay.rs (hold_prisoners 0x44092d; the Rescue program, op 0x7e at 0x502e18; rescuing_kingdom 0x5028a0; relation R[x][9] = 0x40, R[9][x] = 0x10; @kingdomcanrescue 0x4b82b0)', 'data STRINGS3.INI rescue3', owner 2026-11-04 (after the ninth play-test; the yellow peasants whose attack was refused)]
+    status: tested
+    adr: [0275]
+    note: The original's owner 9 - peasants, cows, houses, towers, a castle, magic gateways on its maps. A fighter is a military unit, not a peasant, trader, spy, cow or fishing boat. Its buildings stay its own, and its gateways are taken as any (NAT-001). Nature's working buildings and units, which the sim does not give to Nature, belong to another passive kingdom at war with everyone, as Nature is. Before 2026-11-04 the rescue kingdom was neutral both ways, showed a kingdom's colour, and nobody could free its units (UNK-66).
   NAT-005:
     rule: The clock globe turns through day and night; a day lasts 37.5 minutes and a game starts at 10:00.
     source: [manual The Clock, capture capture-20261019-195053]

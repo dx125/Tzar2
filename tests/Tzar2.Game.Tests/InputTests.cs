@@ -335,6 +335,19 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "NAT-008")]
+    [Trait("Rule", "NAT-001")]
+    public void A_right_click_on_a_prisoner_or_a_gateway_not_yours_walks_up_to_it()
+    {
+        // Nobody attacks the rescue kingdom's units, and a magic gateway takes no harm: a soldier walks up instead, which
+        // frees the prisoner or takes the gateway (the ninth play-test: the knights' attacks were refused).
+        EntityInfo soldier = SelectionTests.Unit(2);
+        EntityInfo prisoner = SelectionTests.Unit(5, owner: 3) with { TakenByComing = true };
+        Assert.Equal(DefaultAction.Move, OrderResolver.ActionOf(soldier, prisoner, Me));
+        Assert.Equal(DefaultAction.Attack, OrderResolver.ActionOf(soldier, prisoner with { TakenByComing = false }, Me));
+    }
+
+    [Fact]
     [Trait("Rule", "CTRL-007")]
     [Trait("Rule", "CTRL-009")]
     public void Peasants_capture_enemy_buildings_soldiers_attack_them_and_items_are_picked_up()

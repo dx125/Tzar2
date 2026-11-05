@@ -75,6 +75,7 @@ internal sealed partial class EntityCompiler
         ["TradeDock"] = ["access"],
         ["Tavern"] = [],
         ["ClaimOnTouch"] = ["by"],
+        ["Indestructible"] = [],
         ["Animal"] = ["wanders", "guards", "ambient", "grazes"],
         ["Detector"] = ["radius"],
     };

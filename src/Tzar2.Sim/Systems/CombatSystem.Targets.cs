@@ -479,6 +479,11 @@ public sealed partial class CombatSystem
     // The best target in the unit's sight (its reach when it stands its ground), or none; never `except`.
     private EntityId Search(World world, EntityId unit, Identity self, EntityTypeDefinition type, ArmamentDefinition arm, Position position, EntityId except)
     {
+        if (type.IsMobile && world.IsRescue(self.Owner))
+        {
+            return EntityId.None; // NAT-008: prisoners wait to be freed (ReTzar, the Rescue program); the rescue kingdom's towers fight
+        }
+
         int range = Range(world, unit, self, type, arm);
         long sight = Math.Max(Sight(world, self, type), range);
         if (StanceOf(world, unit) == CombatStance.StandGround || !type.IsMobile)

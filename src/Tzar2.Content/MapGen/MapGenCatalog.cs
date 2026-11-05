@@ -141,7 +141,7 @@ public sealed class MapGenCatalog
             new MapObjectKind("comm.res_gold", 2, 2),
             new MapObjectKind("comm.res_stone", 2, 2),
             new MapObjectKind("comm.fishpatch", 0, 0),
-            new MapObjectKind("comm.cow", 0, 0),
+            null, // NAT-002 (ReTzar's reading of the original, 0x4b1560): random maps place no cows
             new MapObjectKind("comm.bear", 0, 0),
             new MapObjectKind("comm.magicgateway", 3, 3),
             new MapObjectKind("comm.tower_stone", 2, 2),

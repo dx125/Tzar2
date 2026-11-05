@@ -204,9 +204,9 @@ public sealed partial class CommandSystem : ISimSystem
                 bool protectedSkipped = false;
                 foreach (EntityId entity in entities)
                 {
-                    if (!IsOwned(world, entity, command.Player))
+                    if (!IsOwned(world, entity, command.Player) || world.TypeOf(entity).Traits.World.Indestructible)
                     {
-                        continue;
+                        continue; // NAT-001 (ReTzar 0x421190): a magic gateway's owner cannot delete it
                     }
 
                     // GAME-04: the castle and guilds are deleted only with Shift + Delete.

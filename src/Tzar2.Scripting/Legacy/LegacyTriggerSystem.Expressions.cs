@@ -210,6 +210,19 @@ public sealed partial class LegacyTriggerSystem
 
             case CallKind.GetTime:
                 return _world.MinuteAt(_world.Tick.Value) / 60; // the hour of the day clock (UNVERIFIED unit, UNK-64)
+            case CallKind.KingdomCanRescue:
+            {
+                // NAT-008 (ReTzar 0x4b82b0): whether a kingdom may free prisoners and take magic gateways.
+                int k = Arg(c, 0) - 1;
+                bool on = Arg(c, 1) != 0;
+                if (_world.HasPlayer(k))
+                {
+                    _world.Players[k].Flags = on ? _world.Players[k].Flags & ~Sim.PlayerFlags.NoRescue : _world.Players[k].Flags | Sim.PlayerFlags.NoRescue;
+                }
+
+                return 0;
+            }
+
             case CallKind.Select:
             case CallKind.Unselect:
             case CallKind.ClearSelection:
@@ -218,7 +231,7 @@ public sealed partial class LegacyTriggerSystem
                 EvalArguments(c);
                 return 0;
             default:
-                // SetTime, God, SetAi, KingdomCanRescue, SetNoAttackTime, Count, InProgress, Build: not yet (UNK-64).
+                // SetTime, God, SetAi, SetNoAttackTime, Count, InProgress, Build: not yet (UNK-64).
                 EvalArguments(c);
                 Fault(ScenarioFault.UnsupportedFunction);
                 return 0;

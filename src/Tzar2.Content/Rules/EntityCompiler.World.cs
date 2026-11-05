@@ -45,6 +45,11 @@ internal sealed partial class EntityCompiler
             };
         }
 
+        if (entry.Find("Indestructible") is not null)
+        {
+            w = w with { Indestructible = true };
+        }
+
         if (entry.Find("Animal") is { } animal)
         {
             w = w with
