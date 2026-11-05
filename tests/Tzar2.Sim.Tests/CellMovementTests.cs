@@ -256,4 +256,39 @@ public class CellMovementTests
         Assert.True(TileOf(d, knight) == (24, 16), $"the knight is at {TileOf(d, knight)} after {ticks} ticks");
         Assert.Equal(0, stepped); // nobody stepped aside on its way: it went round
     }
+
+    [Fact]
+    [Trait("Rule", "WORLD-022")]
+    public void A_unit_in_a_pocket_of_standing_friends_walks_out_of_it_and_round()
+    {
+        // The ninth play-test: units stuck in half-closed pockets and did not know where to go. A knight inside a pocket of
+        // friends standing idle, closed toward its goal and open away from it: each step it took round them, toward its
+        // point brought it back in. It walks out of the pocket and round it, and nobody steps aside.
+        var objects = new List<Tzar2.Content.Compiled.MapObject> { Structure("euro.castle", 0, 2, 2), Unit("euro.knight", 0, 10, 12) };
+        for (int y = 8; y <= 16; y++)
+        {
+            objects.Add(Unit("euro.footman", 0, 12, y)); // the side toward the goal
+        }
+
+        for (int x = 6; x < 12; x++)
+        {
+            objects.Add(Unit("euro.footman", 0, x, 8));
+            objects.Add(Unit("euro.footman", 0, x, 16));
+        }
+
+        using var d = new SimDriver(TestMap(40, 26, [.. objects]), ruleset: Classic);
+        EntityId[] pocket = [.. OfType(d.World, "euro.footman")];
+        var places = pocket.ToDictionary(e => e, e => TileOf(d, e));
+        EntityId knight = OfType(d.World, "euro.knight").Single();
+        d.MoveToTile(0, [knight], 30, 12);
+        int stepped = 0;
+        int ticks = d.RunUntil(() =>
+        {
+            stepped += pocket.Count(e => TileOf(d, e) != places[e]);
+            return TileOf(d, knight) == (30, 12) && !d.IsMoving(knight);
+        }, 1600);
+        Assert.True(TileOf(d, knight) == (30, 12), $"the knight is at {TileOf(d, knight)} after {ticks} ticks");
+        Assert.True(ticks < 700, $"arrived after {ticks} ticks");
+        Assert.Equal(0, stepped);
+    }
 }

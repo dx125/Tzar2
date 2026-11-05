@@ -6,10 +6,11 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-11-04 (item 21, the ninth play-test, batch A: gates as the original's (drawn with their
+* **Last updated:** 2026-11-04 (item 21, the ninth play-test: batch A, gates as the original's (drawn with their
   towers, their orders the right way round, their card by their state, open unless a stranger is at the door), walls
-  drawn joined, and a match on a map with richer nodes loads again. Before: item 20, the eighth play-test, done. The slow
-  checks run once per batch of three or four fixes, with the re-pin script and a faster campaign acceptance)
+  drawn joined, and a match on a map with richer nodes loads again; batch B, each step of a unit comes from a short
+  search round the units standing in its way (ADR 0272). Before: item 20, the eighth play-test, done. The slow checks
+  run once per batch of three or four fixes, with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -480,10 +481,11 @@ owner's order of 2026-10-26.
 21. **The ninth play-test (2026-11-04, the owner, build fc8a2c2 on Conquer the World; its replay and the save Game 6,
     read locally only).** A probe plays the replay again (every hash matches) and reports what stood still. In two
     batches: A (items 4 to 7), then B (1 to 3).
-    1. Troops still often get in each other's way. Open (batch B).
-    2. Units now and then stick in half-closed pockets and do not know where to go. Open (batch B).
+    1. Troops still often get in each other's way: **fixed** (WORLD-022, WORLD-020; ADR 0272; log below).
+    2. Units now and then stick in half-closed pockets and do not know where to go: **fixed** (WORLD-022; log below).
     3. The owner asks to compare Tzar2's pathfinding with ReTzar's reading of the original, and whether an improved
-       algorithm of our own should rule out the problems met so far. Open (batch B).
+       algorithm of our own should rule out the problems met so far: **answered** (ADR 0272 has the comparison; Tzar2's
+       own step on the original's rule for units).
     4. A gate looks unfinished, as if its sides were missing: **fixed** (PRES-017; log below).
     5. A gate closed as an enemy came near and never opened again, even from its card: **fixed** (ORD-013; log below).
     6. Walls still stand as separate pieces side by side, not one line: **fixed** (PRES-010; log below).
@@ -493,6 +495,25 @@ owner's order of 2026-10-26.
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-11-04 — The ninth play-test, batch B: each step from a short search round the units standing in the way
+  (WORLD-022, WORLD-020; ADR 0272; items 1 to 3).** The owner asked how Tzar2's pathfinding compares with the original's
+  and whether one of our own should rule out the problems met so far; ADR 0272 has the comparison (ReTzar: pathing.rs,
+  movement.rs).
+  * **The cause.** Tzar2's ways (routes, flow fields, paths) know terrain and buildings only, and the cell step was the
+    neighbour nearest a point ahead. In a pocket of standing units closed toward the point, the way round led away from
+    it; the search for it gave only its first step, and the next greedy step took the unit back in.
+  * **The step (WORLD-022).** On every tile, a unit with an order searches toward its point (the goal within 12 tiles,
+    else its steering point), 12 tiles round and at most 256 tiles, with every unit standing a wall (as the original's
+    search) and units walking on two tiles dearer, and takes the first step. A unit held up 8 ticks searches every 8
+    ticks (`CellStep.Stood`, which was padding).
+  * **Waiting (WORLD-020).** A unit also waits behind one walking on (not held up 16 ticks), up to 2.5 s, as the original
+    waits behind a unit on the move; behind one standing it searches again with every unit a wall.
+  * **Measured.** A probe restores the owner's replay at each ten-minute keyframe and plays a minute with his commands:
+    a unit stood 4 s or more with an order to walk, more than two tiles from its goal, 111 times before and 17 after;
+    units gave up 6 times before, once after. Game 5's fight (42 knights, 120 s): 18.6 fighting on average against
+    17.3, 0.12 frozen against 0.27. The gameplay bench's tick p50 is about 0.8 ms against 1.4 ms.
+  * **Hashes.** The goldens and the gameplay and AI benches: units step otherwise.
 
 * **2026-11-04 — The ninth play-test, batch A: gates, walls, and saves on richer maps (ORD-013, PRES-017, PRES-010;
   items 4 to 7).** The owner played build fc8a2c2 on Conquer the World; a probe plays his replay again (every stored hash

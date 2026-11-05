@@ -46,7 +46,8 @@ ADR 0188 named this model as the faithful one, and kept the continuous one only 
   * The unit walks at its (or its group's) speed, carrying what is left of a tick into the next step.
   * A unit that has begun a step ends it, stopped or not. `Interaction.IsMoving` is true until then, so work and fights
     wait for the step's end, as the original's programs wait for it.
-* **The next tile.**
+* **The next tile** (amended by ADR 0272, the ninth play-test: the first step of a short search round the units standing
+  in the way, on every tile).
   * It is the neighbour that brings the unit nearest the point it heads for (its path's next point, flow field, route
     or goal), on walkable ground and cutting no corner, and through gates only for their friends (ADR 0102).
   * If the neighbour is free, the unit steps.

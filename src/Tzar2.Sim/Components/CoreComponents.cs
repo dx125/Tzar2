@@ -234,8 +234,11 @@ public struct CellStep : IComponent
     /// </summary>
     public byte Rerouted;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved1;
+    /// <summary>
+    /// Ticks the unit has stood on its tile with an order to walk since its last step (at most 255; 0 in saves before it
+    /// was used): a unit held up that long looks for its way only every few ticks (WORLD-022).
+    /// </summary>
+    public byte Stood;
 
     /// <summary>Padding, always 0.</summary>
     public byte Reserved2;

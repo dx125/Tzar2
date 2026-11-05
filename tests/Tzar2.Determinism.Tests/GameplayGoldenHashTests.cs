@@ -121,8 +121,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // the final hash.
     // (ORD-013, 2026-11-04) the bot's gate stands open and closes for strangers at its door, as the original's: the stream
     // and the final hash.
-    private const ulong GoldenHashStream = 0xBE4B1A61317F591FUL;
-    private const ulong GoldenFinalFullHash = 0xC152B8E97F648A14UL;
+    // (WORLD-022, 2026-11-04) each step from a short search round the units standing in the way: the stream and the final
+    // hash.
+    private const ulong GoldenHashStream = 0x6C2566674F7A0A67UL;
+    private const ulong GoldenFinalFullHash = 0x2B6F2AA64FB998C6UL;
 
     private const int Ticks = 1600;
 

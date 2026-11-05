@@ -50,7 +50,8 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (WORLD-019, 2026-10-24) soldiers attacking a building take tiles of their own around it: the fights, so the commands.
     // (WORLD-021, WAR-016, PRES-016; 2026-10-29) a unit held up goes round every unit's tile, waits only behind one entering
     // its tile, takes another target when its walks end short, and faces where it steps: the commands.
-    private const ulong GoldenCommandStream = 0x0E07AF476ACAADE6UL;
+    // (WORLD-022, 2026-11-04) each step from a short search round the units standing in the way: the commands.
+    private const ulong GoldenCommandStream = 0xAB091F7249C8FDE9UL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
@@ -76,8 +77,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (ECO-025, 2026-10-27) a field is ready the moment it is placed and its farmer works its middle tile: the hashes.
     // (WORLD-021, WAR-016, PRES-016; 2026-10-29) a unit held up goes round every unit's tile, waits only behind one entering
     // its tile, takes another target when its walks end short, and faces where it steps: the hashes.
-    private const ulong GoldenHashStream = 0x3AF2848248F93A20UL;
-    private const ulong GoldenFinalFullHash = 0x94ABE5838BAA0AA2UL;
+    // (WORLD-022, 2026-11-04) each step from a short search round the units standing in the way: the hashes.
+    private const ulong GoldenHashStream = 0x3F73C16B51266316UL;
+    private const ulong GoldenFinalFullHash = 0x8026A4EC5374E657UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;
