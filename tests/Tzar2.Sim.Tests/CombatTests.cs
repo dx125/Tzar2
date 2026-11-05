@@ -193,6 +193,67 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-018")]
+    public void A_cannon_ball_on_a_building_hurts_the_peasants_round_its_corner_and_its_own_side()
+    {
+        // The owner (after the ninth play-test): in the original, peasants repairing a tower under a catapult's or a cannon
+        // ship's fire were hurt. ReTzar's reading (0x433770, 0x4ed74a, 0x44de50): the ball lands on the building's first
+        // tile, hurts what holds it, and half its attack to everything else meeting the 5 x 5 tiles round that tile, of
+        // any kingdom.
+        EntityTypeDefinition house = Classic.EntityTypes[Classic.EntityTypeId("euro.house")];
+        int hx = 12, hy = 4, w = house.FootprintWidth, h = house.FootprintHeight;
+        using var d = new SimDriver(
+            TestMap(32, 16,
+            [
+                Structure("comm.tower_stone2", 1, 4, 4), Structure("euro.house", 0, hx, hy),
+                Unit("euro.peon", 0, hx - 1, hy), // beside the corner it lands on
+                Unit("euro.peon", 0, hx + Math.Max(w, 3), hy + Math.Max(h, 3)), // by the far corner, out of the square
+                Unit("euro.footman", 1, hx - 2, hy + 2), // the tower's own, in the square
+            ]),
+            ruleset: Classic);
+        EntityId tower = OfType(d.World, "comm.tower_stone2").Single();
+        EntityId target = OfType(d.World, "euro.house").Single();
+        EntityId[] peasants = [.. OfType(d.World, "euro.peon")];
+        EntityId own = OfType(d.World, "euro.footman").Single();
+        d.Order(0, CommandKind.SetStance, peasants, arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [own], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.Attack, [tower], target: target);
+        d.RunUntil(() => Hp(target) < d.World.Healths.Get(target).Max, 3000);
+        d.Step();
+        Assert.True(Hp(target) < d.World.Healths.Get(target).Max);
+        Assert.True(Hp(peasants[0]) < d.World.Healths.Get(peasants[0]).Max);
+        Assert.Equal(d.World.Healths.Get(peasants[1]).Max, Hp(peasants[1]));
+        Assert.True(Hp(own) < d.World.Healths.Get(own).Max);
+
+        int Hp(EntityId e) => d.World.Healths.Get(e).Current;
+    }
+
+    [Fact]
+    [Trait("Rule", "WAR-018")]
+    public void A_stone_on_an_empty_tile_hurts_nobody_and_a_bolt_only_what_stands_on_its_tile()
+    {
+        // ReTzar (0x433770): a shell whose tile is empty when it lands hurts nobody, not even beside it; a ballista's bolt
+        // (0x434120) hurts what stands on its tile only. The synthetic tables have no ballista: an archer shoots bolts.
+        Ruleset rules = ClassicWith("euro.archer: { Armament: { projectile: bolt } }");
+        using var d = new SimDriver(TestMap(40, 12, Unit("comm.catapult", 0, 4, 5), Unit("euro.archer", 0, 8, 8), Unit("euro.footman", 1, 14, 6), Unit("euro.footman", 1, 14, 8), Unit("euro.footman", 1, 15, 8)), ruleset: rules);
+        EntityId catapult = OfType(d.World, "comm.catapult").Single();
+        EntityId ballista = OfType(d.World, "euro.archer").Single();
+        EntityId[] enemies = [.. OfType(d.World, "euro.footman")];
+        d.Order(1, CommandKind.SetStance, enemies, arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.SetStance, [catapult, ballista], arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.AttackGround, [catapult], (14 * Tile) + (Tile / 2), (5 * Tile) + (Tile / 2));
+        d.RunUntil(() => d.Count(SimEventKind.ProjectileLaunched) >= 1, 1500);
+        d.RunUntil(() => false, 200);
+        Assert.Equal(d.World.Healths.Get(enemies[0]).Max, d.World.Healths.Get(enemies[0]).Current); // a tile from where it fell
+
+        d.Order(0, CommandKind.Stop, [catapult]);
+        d.Order(0, CommandKind.Attack, [ballista], target: enemies[1]);
+        d.RunUntil(() => d.World.Healths.Get(enemies[1]).Current < d.World.Healths.Get(enemies[1]).Max, 1500);
+        Assert.True(d.World.Healths.Get(enemies[1]).Current < d.World.Healths.Get(enemies[1]).Max);
+        Assert.Equal(d.World.Healths.Get(enemies[2]).Max, d.World.Healths.Get(enemies[2]).Current); // the tile beside
+    }
+
+    [Fact]
     [Trait("Rule", "ORD-005")]
     public void Shift_adds_waypoints_walked_in_order_with_their_own_mode_and_a_plain_order_drops_them()
     {

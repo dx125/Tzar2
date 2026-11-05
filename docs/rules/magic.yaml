@@ -139,6 +139,12 @@ rules:
     status: tested
     adr: [0268]
     note: The mana the murder order needs (50) is UNVERIFIED.
+  MAG-029:
+    rule: A flame bolt burns its way to its target - on its first three tiles the first unit or building there that is no friend of the caster takes twice its 60 damage; from the fourth tile on, everything but the caster meeting the three by three tiles round it takes 60 on its own tile and 30 beside it, the caster's own side too - and does nothing more where it lands.
+    source: ['community ReTzar src/gameplay.rs (spell_flamebolt 0x473b44; the flame ball 0x431f40 at 700 px/s, a step each 50 ms)', owner 2026-11-04 (after the ninth play-test; every attack that hurts an area)]
+    status: tested
+    adr: [0274]
+    note: A tile the ball crosses within one step is not burnt, as in the original. Before 2026-11-04 the bolt followed its target and dealt 60 to it alone.
   MAG-021:
     rule: A spy's name in the selection view carries its disguise meter, "Spy (N)", up to 100. In its own look it shows 100; a new look starts it at 0, and it gains a point every 1.25 s; the fuller it is, the closer the copied kingdom's spies must come to unmask it, right next to it at 100.
     source: [owner 2026-10-21 (disguise meter), capture capture-20261021-203846, capture capture-20261022-011438]

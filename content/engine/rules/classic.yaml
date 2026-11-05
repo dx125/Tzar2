@@ -703,15 +703,20 @@ combat:
   # GAME-07 projectiles (speeds, homing and splash are UNVERIFIED, UNK-22; strategy guide: peasants step away from
   # catapult stones "just as the projectiles are about to land", so stones land where the target stood).
   projectiles:
+    # WAR-018 (ReTzar's reading of the original, 0x433770, 0x434120, 0x4ed74a, 0x44de50): a catapult's stone, a ship's or
+    # cannon tower's ball and a rocket tower's rocket land on the tile their target stood on (a building's first tile),
+    # hurt everything there and half their attack to everything else on the 5 x 5 tiles round it, any kingdom's; a
+    # ballista's bolt hurts everything on its tile; nothing when the tile is empty. The dragon's fire hurts its target
+    # only (no missile, 0x4e9b60); a flame bolt burns its way (MAG-029, 0x431f40) at 700 px/s.
     arrow: { pixelsPerSecond: 400, homing: true }
-    bolt: { pixelsPerSecond: 480, homing: true }
-    stone: { pixelsPerSecond: 200, homing: false, hitRadiusPx: 24, splashRadiusPx: 32, splashPercent: 50, friendlyFire: true }   # WAR-013: siege weapons hurt every unit
-    cannon: { pixelsPerSecond: 320, homing: false, hitRadiusPx: 20, splashRadiusPx: 24, splashPercent: 50 }
-    rocket_arrow: { pixelsPerSecond: 360, homing: true, splashRadiusPx: 16, splashPercent: 50 }
+    bolt: { pixelsPerSecond: 480, homing: false, onTile: true }
+    stone: { pixelsPerSecond: 200, homing: false, onTile: true, splashTiles: 2, splashPercent: 50 }   # WAR-013: siege weapons hurt every unit
+    cannon: { pixelsPerSecond: 320, homing: false, onTile: true, splashTiles: 2, splashPercent: 50 }
+    rocket_arrow: { pixelsPerSecond: 360, homing: false, onTile: true, splashTiles: 2, splashPercent: 50 }
     magic: { pixelsPerSecond: 320, homing: true }
-    flame_ball: { pixelsPerSecond: 280, homing: true, splashRadiusPx: 16, splashPercent: 50 }
+    flame_ball: { pixelsPerSecond: 280, homing: true }
     freeze_bolt: { pixelsPerSecond: 320, homing: true }
-    flame_bolt: { pixelsPerSecond: 320, homing: true }
+    flame_bolt: { pixelsPerSecond: 700, homing: false, burns: true }
 
 # ---- spells (GAME-11, ADR 0095) -----------------------------------------------------------------------------------
 # Which caster has which spell and which technology unlocks it come from the data (command cards, TECHTREE [orders]);

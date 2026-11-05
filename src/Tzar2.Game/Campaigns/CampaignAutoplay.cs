@@ -448,9 +448,98 @@ public static class CampaignAutoplay
                 }
             }
 
+            _woundWait.TryAdd(e, _tick);
+            _woundHeroes[e] = (name, [.. heroes]);
             Goal = $"{name}: waiting for the scenario to wound its units";
-            return false; // nothing to order: the rest of the solver keeps going
+            return false; // nothing else to order: the rest of the solver keeps going
         }
+
+        // The scenario's blow may not come (bigisland: its wounder ran at an ally's knights and died once the shells of
+        // 2026-11-04 changed the fight before). A hero the scenario waits to see hurt picks a fight with the nearest armed
+        // unit that may hurt it or that it may attack; with nobody left, a soldier of a kingdom at war with it comes beside it.
+        private void ProvokeWounds(World world)
+        {
+            // The scenario's blow may not come: its wounder goes after someone else and dies (bigisland: Kaffar ran at an
+            // ally's knights once the shells of 2026-11-04 changed the fight before). After a while the hero picks a fight
+            // with the nearest armed unit that may hurt it or that it may attack (which then fights back).
+            foreach ((int e, (string name, List<EntityId> heroes)) in _woundHeroes)
+            {
+                if (session.Scenario?.Triggers is not { } state || (uint)e >= (uint)state.State.EventValues.Length || state.State.EventValues[e]
+                    || _tick - _woundWait[e] < WoundPatienceTicks)
+                {
+                    continue;
+                }
+
+                foreach (EntityId hero in heroes)
+                {
+                    if (!world.Entities.IsAlive(hero) || world.IsHeld(hero) || !world.Positions.Has(hero) || !world.MayCommand(session.LocalPlayer, hero))
+                    {
+                        continue;
+                    }
+
+                    byte owner = world.Identities.Get(hero).Owner;
+
+                    Position at = Pos(world, hero);
+                    EntityId nearest = EntityId.None;
+                    long best = (long)WoundReachTiles * Sim.Map.MapState.UnitsPerTile * WoundReachTiles * Sim.Map.MapState.UnitsPerTile;
+                    foreach (EntityId other in world.Identities.Entities)
+                    {
+                        Identity o = world.Identities.Get(other);
+                        EntityTraits ot = world.Ruleset.EntityTypes[o.TypeId].Traits;
+                        if (!world.HasPlayer(o.Owner) || o.Owner == owner || world.IsHeld(other) || !world.Positions.Has(other)
+                            || ot.Category != EntityCategory.Unit || ot.Armament is null || !(world.MayAttack(o.Owner, hero) || world.MayAttack(owner, other)))
+                        {
+                            continue;
+                        }
+
+                        long d = Core.Numerics.IntMath.DistanceSquared(at.X, at.Y, Pos(world, other).X, Pos(world, other).Y);
+                        if (d < best)
+                        {
+                            (best, nearest) = (d, other);
+                        }
+                    }
+
+                    if (!nearest.IsNone)
+                    {
+                        var fight = new CommandList();
+                        fight.Add(CommandKind.Attack, [hero], 0, 0, nearest);
+                        EnsureAllowed(fight);
+                        session.SubmitAs(owner, fight);
+                        Note($"{name}: the hero picks a fight to be wounded");
+                    }
+                    else if (_tick - _woundWait[e] >= 2 * WoundPatienceTicks && _tick % 1000 == 107)
+                    {
+                        // Nobody is left to land the blow (its wounder died): a footman of a kingdom at war with the hero's
+                        // comes beside it (cheat assistance, as the solver's other spawns).
+                        for (int k = 0; k < world.Players.Length; k++)
+                        {
+                            int type = new[] { "footman", "maceman", "pikeman" }.Select(c => world.Ruleset.EntityTypeId(world.PlayerCivilization(k) + "." + c)).FirstOrDefault(t => t >= 0, -1);
+                            if (k != owner && world.HasPlayer(k) && (world.Players[k].Flags & PlayerFlags.Defeated) == 0 && type >= 0
+                                && world.Diplomacy.StanceOf(k, owner) == Sim.Kingdoms.Stance.Enemy)
+                            {
+                                var spawn = new CommandList();
+                                spawn.Add(CommandKind.DebugSpawn, [], at.X + Sim.Map.MapState.UnitsPerTile, at.Y, default, type, 1);
+                                EnsureAllowed(spawn);
+                                session.SubmitAs((byte)k, spawn);
+                                Assist = Assist is "play" or "resources" ? "spawned" : Assist;
+                                Note($"{name}: a foe comes to wound the hero");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+
+        private readonly SortedDictionary<int, (string Name, List<EntityId> Heroes)> _woundHeroes = [];
+        private readonly SortedSet<int> _woundsSeen = [];
+        private int _godRecheck;
+
+        // How long the solver waits for the scenario's own blow before the hero picks a fight, and how far it looks.
+        private const int WoundPatienceTicks = 1200;
+        private const int WoundReachTiles = 24;
+        private readonly Dictionary<int, int> _woundWait = [];
         private readonly SortedSet<int> _god = [];
 
         private void GrantGod()
@@ -542,6 +631,31 @@ public static class CampaignAutoplay
             if (_protect && tick % 200 == 107)
             {
                 GrantGod();
+            }
+
+            if (_woundHeroes.Count > 0 && tick % 200 == 107)
+            {
+                ProvokeWounds(world);
+            }
+
+            // A wound the scenario waited for may hand the hero to another kingdom (bigisland: Woolin is captured): the
+            // kingdom that now holds a unit the scenario must keep alive is made invulnerable at once, before the army
+            // that stands round the hero cuts it down.
+            if (_protect && _woundHeroes.Count > 0 && tick % 5 == 3 && session.Scenario?.Triggers is { } wounds)
+            {
+                foreach (int e in _woundHeroes.Keys)
+                {
+                    if ((uint)e < (uint)wounds.State.EventValues.Length && wounds.State.EventValues[e] && _woundsSeen.Add(e))
+                    {
+                        _godRecheck = tick + 2;
+                    }
+                }
+
+                if (_godRecheck > 0 && tick >= _godRecheck)
+                {
+                    _godRecheck = 0;
+                    GrantGod();
+                }
             }
 
             if (tick % 40 != 7)

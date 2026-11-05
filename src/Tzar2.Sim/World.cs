@@ -76,6 +76,7 @@ public sealed partial class World
         CellSteps = Components.RegisterHot<CellStep>("core.cellstep"); // ADR 0270; appended after the others
         Dismantlings = Components.RegisterHot<Dismantling>("game.dismantle"); // BLD-027 (format 25, ADR 0271)
         Investments = Components.RegisterHot<Investment>("game.invested");
+        Trails = Components.RegisterHot<Trail>("game.trail"); // MAG-029 (format 27)
     }
 
     /// <summary>The compiled ruleset.</summary>

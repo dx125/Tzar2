@@ -59,7 +59,7 @@ rules:
     rule: Siege weapons hurt every unit where their shots land, their own kingdom's included.
     source: [help ITEMS.TXT WI_SIEGE_WEAPON]
     status: tested
-    note: Catapult stones (catapult and heavy catapult) have friendly fire. Ballista bolts strike only their target, and the towers' and ships' cannon shells still spare their own side (they are not siege weapons in the help).
+    note: How a shot lands and whom it hurts is WAR-018. Before 2026-11-04 only catapult stones hurt their own side, and the towers' and ships' shells spared it; in the original none does.
   WAR-014:
     rule: An attack's blow lands at the frame of its animation that the data marks (the action row), so each unit strikes at its own moment of the swing.
     source: [data IMAGES.INI actionrow]
@@ -75,6 +75,12 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x42df70)', owner 2026-10-25 (sixth play-test), owner 2026-10-29 (eighth play-test)]
     status: tested
     note: "Cannot reach is a walk that gave up, one that made no progress since its last plan (two seconds), three walks in a row that ended short of the target (other units in the way), or no place left round a building to strike it from (the original's walk to the building fails then, 0x451cc0); then the unit takes an enemy it reaches now, or once the walk gave up or ended short the best other one in sight. The eighth play-test: in a fight among buildings knights stood behind the others round a barracks, their walks ending short again and again, while other enemies were near."
+  WAR-018:
+    rule: A catapult's stone, a cannon ball of a ship or cannon tower and a rocket tower's rocket land on the tile their target stood on when they were shot (a building's first tile) and hurt everything holding that tile, then half their attack to everything else meeting the five by five tiles round it, whoever's it is; a ballista's bolt hurts everything on its tile; a shot whose tile is empty when it lands hurts nobody. The dragon's fire hurts its target only.
+    source: ['community ReTzar src/gameplay.rs (land_projectiles 0x433770, 0x434120; the splash 0x4ed74a over 0x44de50 in_square; missile 0x4e9b60: the dragon has none)', owner 2026-11-04 (after the ninth play-test; peasants repairing a tower under a catapult's or a cannon ship's fire were hurt)]
+    status: tested
+    adr: [0274]
+    note: Half the attack before defence. The square is the tiles within two of the tile each way, so a building's peasants on the side away from its first tile are out of it. Before 2026-11-04 the shells hurt what was within 24 to 32 px of where they fell, the towers' and ships' sparing their own side, and the ballista's bolt and the rockets followed their target.
   WAR-017:
     rule: A unit or building that is hit, and a unit that takes on an enemy by itself, calls for help; the fighters and towers of its kingdom and its allies within three tiles, and its guards wherever they are, answer the attacker.
     source: ['community ReTzar src/gameplay.rs (0x413950, 0x413410)', owner 2026-10-25 (sixth play-test)]

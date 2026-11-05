@@ -6,10 +6,11 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-11-04 (item 22, the owner's list after the ninth play-test, batch A: a gate's site as the
+* **Last updated:** 2026-11-04 (item 22, the owner's list after the ninth play-test: batch A, a gate's site as the
   original's, over any walls and with the way before its door clear, in all four facings; walls and gates leave rubble
-  that stays, every ruin is drawn (ADR 0273); a galleon's card follows its cannon level. Next: batch B, damage over an
-  area; batch C, the neutral creatures. Before: item 21, the ninth play-test, done. The slow checks run once per batch
+  that stays, every ruin is drawn (ADR 0273); a galleon's card follows its cannon level. Batch B, shells and bolts land
+  on a tile and hurt the square round it, any kingdom's; flame bolts burn their way (ADR 0274). Next: batch C, the
+  neutral creatures. Before: item 21, the ninth play-test, done. The slow checks run once per batch
   of three or four fixes, with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
@@ -500,7 +501,8 @@ owner's order of 2026-10-26.
     3. A ship cannot be upgraded, though it could in the original: **fixed** (TECH-036; log below). Level 2 is on the
        galleon card's second page, as in the original; past it the card never changed.
     4. Ships firing at buildings do no damage around them; in the original, peasants repairing a tower under a catapult's
-       or a cannon ship's fire were hurt. Check every attack that hurts an area: open (batch B).
+       or a cannon ship's fire were hurt. Check every attack that hurts an area: **fixed** (WAR-018, MAG-029; ADR 0274;
+       log below). The fire rain, freeze and whirlpool were already the original's.
     5. The yellow peasants whose attack was refused (NotAllied) were the original's neutral ones, which a unit takes by
        coming close; review the whole mechanics of the neutral creatures: open (batch C).
 
@@ -509,6 +511,24 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-04 — The owner's list after the ninth play-test, batch B: shots that land on a tile, flame bolts that
+  burn their way (WAR-018, MAG-029, WAR-013; ADR 0274; item 22, item 4).** ReTzar's reading of the original's code:
+  * **Shells (WAR-018; 0x433770, 0x4ed74a, 0x44de50).** Catapults, cannon ships and towers and rocket towers shoot
+    them. A shell lands on the tile its target stood on at launch, a building's first tile. It hurts everything
+    holding that tile, then half its attack, before defence, to everything else on the 5 x 5 tiles round it, of any
+    kingdom. On an empty tile it hurts nobody. Tzar2's splash was 24 to 32 px round where it fell, so it never reached
+    a building's repairers, and the towers' and ships' shells spared their own side.
+  * **Ballista bolts** hurt everything on their tile (0x434120). The dragon's fire hurts its target only.
+  * **The flame bolt (MAG-029; 0x431f40)** is a ball at 700 px/s.
+    * Its first three tiles: the first unit there that is no friend of the caster takes 120.
+    * From the fourth tile on: everything but the caster meeting the 3 x 3 tiles round it takes 60, or 30 beside it.
+    * Its way is a new store, `game.trail` (snapshot 27).
+  * **Already the original's:** the fire rain (5 x 5 round each fireball), freeze (3 tiles each way) and the whirlpool.
+  * **The campaign solver (ADR 0220).** On bigisland the fight before the ambush now goes otherwise. Kaffar, who must
+    wound Woolin, ran at the solver's knights and died, so Woolin was never wounded and the mission ran out of time.
+    A hero the scenario waits to see wounded now picks a fight after a minute with the nearest armed unit that may
+    hurt it or that it may attack. With nobody left, a soldier of a kingdom at war with it comes beside it (cheat
+    assistance, as the solver's other spawns).
 * **2026-11-04 — The owner's list after the ninth play-test, batch A: gates over walls, rubble that stays, the
   galleon's levels (BLD-018, BLD-028, CTRL-024, TECH-036; ADR 0273; item 22, items 1 to 3).** The owner checked these in
   the original; ReTzar's reading of its code gives the rules.

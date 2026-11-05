@@ -442,13 +442,74 @@ public sealed partial class CombatSystem : ISimSystem
             {
                 p.X += (int)(dx * step / dist);
                 p.Y += (int)(dy * step / dist);
+                if (def.Burns)
+                {
+                    Burn(world, ids[i], p);
+                }
+
                 continue;
             }
 
             p.X = p.TargetX;
             p.Y = p.TargetY;
             _spent.Add(ids[i]);
+            if (def.Burns)
+            {
+                Burn(world, ids[i], p); // a flame ball hurts the tiles it crosses, and nothing more where it lands
+                continue;
+            }
+
             Impact(world, p, def, target, targetAlive);
+        }
+    }
+
+    // MAG-029 (ReTzar's reading of the original, 0x431f40): a flame ball entering a tile burns it. On its first three
+    // tiles the first unit or building there that is not the caster's nor its ally's takes twice the spell's damage; from
+    // the fourth on, everything but the caster meeting the 3 x 3 tiles round it takes it, half when the tile is not its
+    // own. Its own kingdom is not spared from the fourth tile on.
+    private void Burn(World world, EntityId ball, in Projectile p)
+    {
+        if (world.Trails.IndexOf(ball) is not (>= 0 and var t) || p.Spell == Projectile.NoSpell || p.Spell >= world.Ruleset.Spells.Count)
+        {
+            return;
+        }
+
+        MapState map = world.Map;
+        int tx = Math.Clamp(p.X / MapState.UnitsPerTile, 0, map.Width - 1), ty = Math.Clamp(p.Y / MapState.UnitsPerTile, 0, map.Height - 1);
+        ref Trail trail = ref world.Trails.At(t);
+        int tile = (ty * map.Width) + tx;
+        if (tile == trail.Tile)
+        {
+            return;
+        }
+
+        trail.Tile = tile;
+        int entered = trail.Entered++;
+        int amount = world.Ruleset.Spells[p.Spell].Amount;
+        EntityId caster = EntityId.FromValue(p.Attacker);
+        _splash.Clear();
+        WithinTiles(world, tx - (entered < 3 ? 0 : 1), ty - (entered < 3 ? 0 : 1), tx + (entered < 3 ? 0 : 1), ty + (entered < 3 ? 0 : 1), _splash);
+        foreach (EntityId victim in _splash)
+        {
+            if (victim == caster)
+            {
+                continue;
+            }
+
+            if (entered < 3)
+            {
+                byte owner = world.Identities.Get(victim).Owner;
+                if (owner == p.Owner || (world.HasPlayer(owner) && world.HasPlayer(p.Owner) && world.Diplomacy.StanceOf(p.Owner, owner) == Kingdoms.Stance.Ally))
+                {
+                    continue;
+                }
+
+                _hits.Add(new HitRecord(caster, victim, p.Owner, p.AttackerType, amount * 2, 0, 100, p.DamageClass, false) { Spell = p.Spell });
+                return;
+            }
+
+            bool own = TileRect(world, victim) is var r && tx >= r.X0 && tx <= r.X1 && ty >= r.Y0 && ty <= r.Y1;
+            _hits.Add(new HitRecord(caster, victim, p.Owner, p.AttackerType, own ? amount : amount / 2, 0, 100, p.DamageClass, false) { Spell = p.Spell });
         }
     }
 
@@ -464,6 +525,12 @@ public sealed partial class CombatSystem : ISimSystem
                 _hits.Add(new HitRecord(attacker, target, p.Owner, p.AttackerType, 0, 0, 100, p.DamageClass, false) { Spell = p.Spell });
             }
 
+            return;
+        }
+
+        if (def.OnTile)
+        {
+            OnTile(world, p, def, attacker, target, targetAlive);
             return;
         }
 
@@ -497,6 +564,108 @@ public sealed partial class CombatSystem : ISimSystem
             bool atPoint = p.Target == 0 && Interaction.EdgeDistance(world, new Position(p.X, p.Y), 0, victim) <= def.HitRadiusUnits;
             _hits.Add(new HitRecord(attacker, victim, p.Owner, p.AttackerType, p.Attack, p.MaxAttack, atPoint ? 100 : def.SplashPercent, p.DamageClass, p.FromHero != 0));
         }
+    }
+
+    // WAR-018 (ReTzar's reading of the original, 0x433770, 0x434120, 0x4ed74a, 0x44de50): a shell or bolt lands on the tile
+    // its target stood on when it was shot, a building's first tile, or the tile shot at. Everything whose tiles hold that
+    // tile takes the blow, of whatever kingdom; on an empty tile nobody is hurt. A shell then hurts everything else meeting
+    // the square round the tile with its share of the attack, before defence.
+    private void OnTile(World world, in Projectile p, ProjectileDefinition def, EntityId attacker, EntityId target, bool targetAlive)
+    {
+        int tx, ty;
+        if (targetAlive && world.Footprints.IndexOf(target) is >= 0 and var f)
+        {
+            (tx, ty) = (world.Footprints.At(f).TileX, world.Footprints.At(f).TileY);
+        }
+        else
+        {
+            (tx, ty) = (p.TargetX / MapState.UnitsPerTile, p.TargetY / MapState.UnitsPerTile);
+        }
+
+        _splash.Clear();
+        WithinTiles(world, tx, ty, tx, ty, _splash);
+        if (_splash.Count == 0)
+        {
+            return;
+        }
+
+        int struck = _splash.Count;
+        foreach (EntityId victim in _splash)
+        {
+            _hits.Add(new HitRecord(attacker, victim, p.Owner, p.AttackerType, p.Attack, p.MaxAttack, 100, p.DamageClass, p.FromHero != 0));
+        }
+
+        int n = def.SplashTiles;
+        if (n <= 0 || def.SplashPercent <= 0)
+        {
+            return;
+        }
+
+        WithinTiles(world, tx - n, ty - n, tx + n, ty + n, _splash);
+        for (int i = struck; i < _splash.Count; i++)
+        {
+            EntityId victim = _splash[i];
+            if (_splash.IndexOf(victim, 0, struck) >= 0)
+            {
+                continue;
+            }
+
+            int attack = (int)((long)p.Attack * def.SplashPercent / 100);
+            int roll = (int)((long)p.MaxAttack * def.SplashPercent / 100);
+            _hits.Add(new HitRecord(attacker, victim, p.Owner, p.AttackerType, attack, roll, 100, p.DamageClass, p.FromHero != 0));
+        }
+    }
+
+    /// <summary>
+    /// The combatants (units and buildings on the map, alive, not stone) whose tiles meet the tiles from
+    /// (<paramref name="x0"/>, <paramref name="y0"/>) to (<paramref name="x1"/>, <paramref name="y1"/>), appended in grid
+    /// order: a unit by the tile it stands on, a building by its footprint. Uses this tick's grid.
+    /// </summary>
+    internal void WithinTiles(World world, int x0, int y0, int x1, int y1, List<EntityId> output)
+    {
+        int tile = MapState.UnitsPerTile;
+        long slack = (EntityTypeDefinition.MaxFootprintTiles * tile) + EntityTypeDefinition.MaxRadius;
+        int cx0 = (int)Math.Max(0, ((long)x0 * tile - slack) / CellSize);
+        int cy0 = (int)Math.Max(0, ((long)y0 * tile - slack) / CellSize);
+        int cx1 = (int)Math.Min(_gridW - 1, (((long)x1 + 1) * tile + slack) / CellSize);
+        int cy1 = (int)Math.Min(_gridH - 1, (((long)y1 + 1) * tile + slack) / CellSize);
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        for (int cy = cy0; cy <= cy1; cy++)
+        {
+            for (int cx = cx0; cx <= cx1; cx++)
+            {
+                int cell = (cy * _gridW) + cx;
+                for (int k = _cellStart[cell]; k < _cellStart[cell + 1]; k++)
+                {
+                    EntityId candidate = ids[_cellItems[k]];
+                    if (!world.Entities.IsAlive(candidate) || world.Healths.Get(candidate).Current <= 0 || world.IsStone(candidate))
+                    {
+                        continue;
+                    }
+
+                    (int ax, int ay, int bx, int by) = TileRect(world, candidate);
+                    if (ax <= x1 && bx >= x0 && ay <= y1 && by >= y0)
+                    {
+                        output.Add(candidate);
+                    }
+                }
+            }
+        }
+    }
+
+    // The tiles an entity holds: a building its footprint, anything else the tile it stands on.
+    private static (int X0, int Y0, int X1, int Y1) TileRect(World world, EntityId e)
+    {
+        if (world.Footprints.IndexOf(e) is >= 0 and var f)
+        {
+            Footprint fp = world.Footprints.At(f);
+            EntityTypeDefinition type = world.TypeOf(e);
+            return (fp.TileX, fp.TileY, fp.TileX + fp.Width(type) - 1, fp.TileY + fp.Height(type) - 1);
+        }
+
+        Position p = world.Positions.Get(e);
+        int tx = p.X / MapState.UnitsPerTile, ty = p.Y / MapState.UnitsPerTile;
+        return (tx, ty, tx, ty);
     }
 
     /// <summary>
@@ -554,6 +723,12 @@ public sealed partial class CombatSystem : ISimSystem
 
         if (hit.Spell != Projectile.NoSpell)
         {
+            if (hit.Attack > 0)
+            {
+                MagicSystem.SpellDamage(world, hit.Attacker, hit.Owner, hit.Target, hit.Attack, deaths); // a flame ball's burn (MAG-029)
+                return;
+            }
+
             MagicSystem.ApplyEffect(world, hit.Spell, hit.Attacker, hit.Owner, hit.Target, 0, 0, deaths);
             return;
         }

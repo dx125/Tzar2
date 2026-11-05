@@ -273,6 +273,20 @@ public enum ItemStateFlags : byte
     Endless = 2,
 }
 
+/// <summary>
+/// The way a flame ball has burnt so far (MAG-029; ReTzar's reading of the original, 0x431f40): the tile it is on and how
+/// many tiles it has entered. On the projectile's own entity.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct Trail : IComponent
+{
+    /// <summary>The tile it is on (y × map width + x).</summary>
+    public int Tile;
+
+    /// <summary>Tiles entered since it was cast.</summary>
+    public int Entered;
+}
+
 /// <summary>A projectile in flight (GAME-07; ADR 0091): an entity with this component only (no identity, never a target).</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Projectile : IComponent

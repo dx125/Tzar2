@@ -323,6 +323,12 @@ public sealed class MagicSystem : ISimSystem
                 Kind = (byte)s.Projectile,
                 Owner = owner,
             });
+            if (world.Ruleset.Projectiles[s.Projectile].Burns)
+            {
+                // MAG-029: a flame ball starts on its caster's tile, which it does not burn.
+                int tile = (Math.Clamp(at.Y / MapState.UnitsPerTile, 0, world.Map.Height - 1) * world.Map.Width) + Math.Clamp(at.X / MapState.UnitsPerTile, 0, world.Map.Width - 1);
+                world.Trails.Set(p, new Trail { Tile = tile });
+            }
         }
         else
         {
@@ -514,6 +520,10 @@ public sealed class MagicSystem : ISimSystem
     }
 
     // Spell damage: the amount, without defence or bonuses (UNVERIFIED, UNK-26); stone and units inside holders are immune.
+    /// <summary>A spell's damage to one unit or building (no defence; the Messiah takes none).</summary>
+    internal static void SpellDamage(World world, EntityId caster, byte owner, EntityId target, int amount, List<Death> deaths)
+        => Damage(world, caster, owner, target, amount, deaths);
+
     private static void Damage(World world, EntityId caster, byte owner, EntityId target, int amount, List<Death> deaths)
     {
         if (amount <= 0 || world.IsStone(target) || world.IsHeld(target) || world.IsInvulnerable(world.Identities.Get(target).Owner)

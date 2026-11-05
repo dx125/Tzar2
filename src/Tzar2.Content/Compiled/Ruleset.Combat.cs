@@ -211,7 +211,7 @@ public sealed partial class Ruleset
         foreach (ProjectileDefinition p in _projectiles)
         {
             hasher.Add(Encoding.UTF8.GetBytes(p.Key)).Add(p.SpeedUnitsPerSecond).Add(p.Homing).Add(p.HitRadiusUnits).Add(p.SplashRadiusUnits)
-                .Add(p.SplashPercent).Add(p.FriendlyFire);
+                .Add(p.SplashPercent).Add(p.FriendlyFire).Add(p.OnTile).Add(p.SplashTiles).Add(p.Burns);
         }
 
         hasher.Add(_spells.Length);

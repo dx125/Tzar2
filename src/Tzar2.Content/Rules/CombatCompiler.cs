@@ -39,7 +39,7 @@ internal sealed class CombatCompiler
         "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs",
     ];
 
-    private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire"];
+    private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire", "onTile", "splashTiles", "burns"];
 
     private readonly RulesetCompiler.SectionSet _settings;
     private readonly List<string> _diagnostics;
@@ -261,7 +261,13 @@ internal sealed class CombatCompiler
                 Px("hitRadiusPx", 16, 512),
                 Px("splashRadiusPx", 0, 512),
                 splash is >= 0 and <= 1000 ? splash : throw new RulesException(source, p.Line, $"combat.projectiles.{key}.splashPercent must be 0..1000"),
-                p.Get("friendlyFire") is { } ff && RulesetCompiler.Bool(ff, source, $"combat.projectiles.{key}.friendlyFire")));
+                p.Get("friendlyFire") is { } ff && RulesetCompiler.Bool(ff, source, $"combat.projectiles.{key}.friendlyFire"))
+            {
+                OnTile = p.Get("onTile") is { } onTile && RulesetCompiler.Bool(onTile, source, $"combat.projectiles.{key}.onTile"),
+                SplashTiles = p.Get("splashTiles") is { } st ? RulesetCompiler.Int(st, source, $"combat.projectiles.{key}.splashTiles") is >= 0 and <= 4 and var tiles ? tiles
+                    : throw new RulesException(source, p.Line, $"combat.projectiles.{key}.splashTiles must be 0..4") : 0,
+                Burns = p.Get("burns") is { } burns && RulesetCompiler.Bool(burns, source, $"combat.projectiles.{key}.burns"),
+            });
         }
     }
 

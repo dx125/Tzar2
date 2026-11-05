@@ -63,17 +63,21 @@ public class CombatM3eTests
 
     [Fact]
     [Trait("Rule", "WAR-004")]
+    [Trait("Rule", "WAR-018")]
     public void Catapult_stones_land_where_the_target_stood_and_splash_its_neighbours()
     {
-        // Catapult attack 11 - footman defence 2 = 9; the neighbour 1/4 tile away takes the 50% splash: 4.
-        using var d = new SimDriver(TestMap(40, 20, Unit("comm.catapult", 0, 2, 10), Unit("euro.footman", 1, 14, 10), Unit("euro.footman", 1, 14, 11) with { Y = (10 * Tile) + 1500 }), ruleset: Classic);
+        // Catapult attack 11 - footman defence 2 = 9 on the tile it lands on; the neighbours on the next tiles take half the
+        // attack before defence (WAR-018): 11 / 2 - 2 = 3.
+        using var d = new SimDriver(TestMap(40, 20, Unit("comm.catapult", 0, 2, 10), Unit("euro.footman", 1, 14, 10), Unit("euro.footman", 1, 14, 11), Unit("euro.footman", 1, 15, 11)), ruleset: Classic);
         EntityId catapult = OfType(d.World, "comm.catapult").Single();
         EntityId[] footmen = [.. OfType(d.World, "euro.footman")];
+        d.Order(1, CommandKind.SetStance, footmen, arg0: (int)CombatStance.HoldFire);
         d.Order(0, CommandKind.Attack, [catapult], target: footmen[0]);
         d.RunUntil(() => Of(d, SimEventKind.Damaged).Any(e => e.X == catapult.Index), 600);
         SimEvent[] hits = [.. Of(d, SimEventKind.Damaged).Where(e => e.X == catapult.Index)];
         Assert.Contains(hits, h => h.Entity == footmen[0] && h.Arg == 9);
-        Assert.Contains(hits, h => h.Entity == footmen[1] && h.Arg == 4);
+        Assert.Contains(hits, h => h.Entity == footmen[1] && h.Arg == 3);
+        Assert.Contains(hits, h => h.Entity == footmen[2] && h.Arg == 3);
     }
 
     [Fact]
