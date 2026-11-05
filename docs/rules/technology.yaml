@@ -197,7 +197,7 @@ rules:
     status: tested
   TECH-036:
     rule: Each cannon level of a ship, up to level six, makes its cannons fire more often.
-    source: [help ITEMS.TXT HT_UPGRADE_SHIPS, community ReTzar src/gameplay.rs (0x4e8f00)]
+    source: [help ITEMS.TXT HT_UPGRADE_SHIPS, community ReTzar src/gameplay.rs (0x4e8f00), data MENU.INI e_galleon ... e_galleon6, owner 2026-11-04 (after the ninth play-test)]
     status: tested
-    note: The firing period goes 3000, 2400, 1900, 1500, 1200, 800 by the level.
+    note: The firing period goes 3000, 2400, 1900, 1500, 1200, 800 by the level. A galleon's card follows its level (MENU.INI e_galleon, e_galleon2 ... e_galleon6; ReTzar object_menu), each offering the next one on its second page; before 2026-11-04 it stayed e_galleon, and no level past 2 could be bought.
     adr: [0190]

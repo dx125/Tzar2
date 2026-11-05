@@ -78,8 +78,9 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (WORLD-021, WAR-016, PRES-016; 2026-10-29) a unit held up goes round every unit's tile, waits only behind one entering
     // its tile, takes another target when its walks end short, and faces where it steps: the hashes.
     // (WORLD-022, 2026-11-04) each step from a short search round the units standing in the way: the hashes.
-    private const ulong GoldenHashStream = 0x3F73C16B51266316UL;
-    private const ulong GoldenFinalFullHash = 0x8026A4EC5374E657UL;
+    // (BLD-028, 2026-11-04) the decals carry their look and the rubble that stays (hashed state): the hashes.
+    private const ulong GoldenHashStream = 0x3B72CEEAB47B63DAUL;
+    private const ulong GoldenFinalFullHash = 0xDBD44EE357C7C732UL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

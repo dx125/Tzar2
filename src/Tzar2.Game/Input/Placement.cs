@@ -21,8 +21,11 @@ public static class Placement
     /// <summary><see cref="Session.GameFrame.Terrain"/> bit: no cliff, structure or bridge (a bridge may cover it).</summary>
     public const byte Free = 4;
 
-    /// <summary><see cref="Session.GameFrame.Terrain"/> bit: a finished piece of the frame's kingdom's wall, which a gate may replace (BLD-018).</summary>
-    public const byte OwnWall = 8;
+    /// <summary><see cref="Session.GameFrame.Terrain"/> bit: a piece of wall, of any kingdom and built or not, which a gate may replace (BLD-018).</summary>
+    public const byte Wall = 8;
+
+    /// <summary><see cref="Session.GameFrame.Terrain"/> bit: no building, tree, bridge or field but walls, where a gate's drawbridge may come down (BLD-018).</summary>
+    public const byte Clear = 16;
 
     /// <summary>Whether <paramref name="type"/> fits with its footprint's top-left at (<paramref name="tileX"/>, <paramref name="tileY"/>).</summary>
     public static bool IsLegal(ReadOnlySpan<byte> buildable, int width, int height, EntityTypeDefinition type, int tileX, int tileY)
@@ -34,6 +37,14 @@ public static class Placement
     /// <paramref name="terrain"/>, coast and bridge placements are judged as land.
     /// </summary>
     public static bool IsLegal(ReadOnlySpan<byte> buildable, ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool rotated)
+        => IsLegal(buildable, terrain, width, height, type, tileX, tileY, rotated, mirrored: false);
+
+    /// <summary>
+    /// <see cref="IsLegal(ReadOnlySpan{byte}, ReadOnlySpan{byte}, int, int, EntityTypeDefinition, int, int, bool)"/> for
+    /// a gate facing the other way along its axis when <paramref name="mirrored"/> (CTRL-024): the tiles before its door
+    /// change sides.
+    /// </summary>
+    public static bool IsLegal(ReadOnlySpan<byte> buildable, ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool rotated, bool mirrored)
     {
         ArgumentNullException.ThrowIfNull(type);
         if (!type.HasFootprint)
@@ -41,7 +52,7 @@ public static class Placement
             return false;
         }
 
-        return BlockedCells(buildable, terrain, width, height, type, tileX, tileY, rotated).Count == 0
+        return BlockedCells(buildable, terrain, width, height, type, tileX, tileY, rotated, mirrored).Count == 0
             && (terrain.Length != width * height || type.Traits.Placement != PlacementKind.Coast || NearWater(terrain, width, height, type, tileX, tileY, rotated))
             && (terrain.Length != width * height || type.Traits.Placement != PlacementKind.Bridge || CrossesWater(terrain, width, type, tileX, tileY, rotated));
     }
@@ -59,6 +70,14 @@ public static class Placement
     /// an end off the land.
     /// </summary>
     public static List<(int Dx, int Dy)> BlockedCells(ReadOnlySpan<byte> buildable, ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool rotated)
+        => BlockedCells(buildable, terrain, width, height, type, tileX, tileY, rotated, mirrored: false);
+
+    /// <summary>
+    /// The cells (offsets from the top-left) where <paramref name="type"/> cannot stand, as above; for a gate, also the
+    /// tiles before its door (they lie outside its footprint) that are off the map or hold a building, tree, bridge or
+    /// field (BLD-018). <paramref name="mirrored"/>: the gate faces the other way along its axis.
+    /// </summary>
+    public static List<(int Dx, int Dy)> BlockedCells(ReadOnlySpan<byte> buildable, ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool rotated, bool mirrored)
     {
         ArgumentNullException.ThrowIfNull(type);
         var blocked = new List<(int Dx, int Dy)>();
@@ -93,11 +112,16 @@ public static class Placement
                         blocked.Add((dx, dy));
                     }
                 }
-                else if (buildable[(y * width) + x] == 0 && !(gate && (terrain[(y * width) + x] & OwnWall) != 0))
+                else if (buildable[(y * width) + x] == 0 && !(gate && (terrain[(y * width) + x] & Wall) != 0))
                 {
-                    blocked.Add((dx, dy)); // a gate may stand on the kingdom's own wall (BLD-018)
+                    blocked.Add((dx, dy)); // a gate may stand on walls, which it replaces (BLD-018)
                 }
             }
+        }
+
+        if (gate)
+        {
+            Approach(terrain, width, height, type, tileX, tileY, turned, mirrored, w, h, blocked);
         }
 
         return blocked;
@@ -139,6 +163,30 @@ public static class Placement
     }
 
     private static bool Turned(EntityTypeDefinition type, bool rotated) => rotated && type.CanTurn;
+
+    // The tiles before a gate's door where its drawbridge comes down, as the sim's site test (BLD-018): blocked when off
+    // the map or not clear.
+    private static void Approach(ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool turned, bool mirrored, int w, int h, List<(int Dx, int Dy)> blocked)
+    {
+        ReadOnlySpan<byte> door = type.Traits.Gate!.PassageOf(turned);
+        int reach = type.Traits.Gate.ApproachOf((turned ? 2 : 0) + (mirrored ? 1 : 0));
+        (int sx, int sy) = w >= h ? (0, mirrored ? -1 : 1) : (mirrored ? 1 : -1, 0);
+        for (int dy = 0; dy < h && door.Length == w * h; dy++)
+        {
+            for (int dx = 0; dx < w; dx++)
+            {
+                for (int n = 1; door[(dy * w) + dx] != 0 && n <= reach; n++)
+                {
+                    int ax = dx + (sx * n), ay = dy + (sy * n);
+                    int x = tileX + ax, y = tileY + ay;
+                    if (x < 0 || y < 0 || x >= width || y >= height || (terrain[(y * width) + x] & Clear) == 0)
+                    {
+                        blocked.Add((ax, ay));
+                    }
+                }
+            }
+        }
+    }
 
     // A harbor needs water for its ships within its type's reach of its footprint (as the sim).
     private static bool NearWater(ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool rotated)

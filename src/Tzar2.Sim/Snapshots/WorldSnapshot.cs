@@ -30,7 +30,7 @@ public static class WorldSnapshot
     public const uint Magic = 0x4E533254;
 
     /// <summary>Current format version.</summary>
-    public const int FormatVersion = 25; // 22: the land units' steps (ADR 0270); 23: the tavern exchange under way (TRADE-011); 24: the rules' tables hash (ADR 0271); 25: buildings taken down and what they cost (BLD-027)
+    public const int FormatVersion = 26; // 22: the land units' steps (ADR 0270); 23: the tavern exchange under way (TRADE-011); 24: the rules' tables hash (ADR 0271); 25: buildings taken down and what they cost (BLD-027); 26: lasting rubble and the decals' looks (BLD-028)
 
     /// <summary>The oldest format a save game is still read from (ADR 0271): 21, the saves of 2026-10-24 on.</summary>
     public const int OldestSaveVersion = 21;
@@ -142,7 +142,7 @@ public static class WorldSnapshot
         world.Rng = rng;
         reader.ReadBytes(world.Players.Length * System.Runtime.CompilerServices.Unsafe.SizeOf<PlayerState>()).CopyTo(MemoryMarshal.AsBytes(world.Players));
         world.Map.ReadFrom(ref reader);
-        world.Decals.ReadFrom(ref reader);
+        world.Decals.ReadFrom(ref reader, lasting: version >= 26);
         ulong nextGroup = reader.ReadVarUInt64();
         if (nextGroup is 0 or > int.MaxValue)
         {

@@ -435,6 +435,18 @@ public readonly record struct FrameProjectile(uint Id, int X, int Y, int TargetX
 /// <param name="AgeMs">Time since death.</param>
 public readonly record struct FrameCorpse(int X, int Y, ushort TypeId, byte Owner, int AgeMs);
 
+/// <summary>
+/// What a destroyed building left (BLD-028): its ruin, <paramref name="AgeMs"/> old, or the rubble of a wall or gate, which
+/// stays (<paramref name="Lasting"/>). Never blocks.
+/// </summary>
+/// <param name="X">The building's centre, world units.</param>
+/// <param name="Y">The building's centre, world units.</param>
+/// <param name="TypeId">The building's type.</param>
+/// <param name="Look">Its facing: bit 0 mirrored, bit 1 turned (gates and bridges).</param>
+/// <param name="AgeMs">Time since it was destroyed (0 for rubble that stays).</param>
+/// <param name="Lasting">Rubble that stays for the rest of the match.</param>
+public readonly record struct FrameRuin(int X, int Y, ushort TypeId, byte Look, int AgeMs, bool Lasting);
+
 /// <summary>A kingdom's stockpile and population.</summary>
 public struct FramePlayer
 {
@@ -563,6 +575,7 @@ public sealed class GameFrame
 {
     private FrameEntity[] _entities = new FrameEntity[256];
     private FrameCorpse[] _corpses = new FrameCorpse[64];
+    private FrameRuin[] _ruins = new FrameRuin[16];
     private FrameProjectile[] _projectiles = new FrameProjectile[64];
 
     /// <summary>The tick the frame shows the result of.</summary>
@@ -579,6 +592,12 @@ public sealed class GameFrame
 
     /// <summary>Corpses.</summary>
     public ReadOnlySpan<FrameCorpse> Corpses => _corpses.AsSpan(0, CorpseCount);
+
+    /// <summary>What destroyed buildings left: their ruins for a while, and the rubble of walls and gates (BLD-028).</summary>
+    public ReadOnlySpan<FrameRuin> Ruins => _ruins.AsSpan(0, RuinCount);
+
+    /// <summary>Number of valid entries in <see cref="Ruins"/>.</summary>
+    public int RuinCount { get; internal set; }
 
     /// <summary>Projectiles in flight the viewer sees.</summary>
     public ReadOnlySpan<FrameProjectile> Projectiles => _projectiles.AsSpan(0, ProjectileCount);
@@ -810,6 +829,16 @@ public sealed class GameFrame
         }
 
         return _projectiles;
+    }
+
+    internal FrameRuin[] RuinBuffer(int count)
+    {
+        if (_ruins.Length < count)
+        {
+            _ruins = new FrameRuin[Math.Max(count, _ruins.Length * 2)];
+        }
+
+        return _ruins;
     }
 
     internal FrameCorpse[] CorpseBuffer(int count)

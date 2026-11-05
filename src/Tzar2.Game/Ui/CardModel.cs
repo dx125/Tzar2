@@ -266,6 +266,12 @@ public interface ICardSource
     string? MenuVariant(string? menu, string state);
 
     /// <summary>
+    /// The card of <paramref name="menu"/>'s object at <paramref name="level"/> of its upgrades in place, when the data has
+    /// one (a galleon with cannons of level 2 shows <c>e_galleon2</c>, which offers level 3; TECH-036), or null.
+    /// </summary>
+    string? LevelMenu(string? menu, int level) => null;
+
+    /// <summary>
     /// Buttons added to the card of a unit with an ability (<c>impersonate</c>: a spy's impersonate and reveal, MENU.INI
     /// <c>spy_add</c>), or none.
     /// </summary>

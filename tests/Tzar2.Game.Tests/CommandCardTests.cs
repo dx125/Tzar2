@@ -822,6 +822,35 @@ public sealed class CommandCardTests : IDisposable
         Assert.Equal(1, card.Press(Context([gate]), slots[0]!.Value).Commands!.Commands[0].Arg0);
     }
 
+    [Fact]
+    [Trait("Rule", "TECH-036")]
+    public void A_galleons_card_follows_its_cannon_level_and_offers_the_next()
+    {
+        // MENU.INI e_galleon offers level 2, e_galleon2 level 3 ... (ReTzar's reading, object_menu); 2026-11-04:
+        // the card stayed e_galleon, so no level past 2 could be bought.
+        World world = _session.Simulation.World;
+        ushort type = (ushort)Rules.Value.EntityTypeId("comm.galleon");
+        _cards.MenuOverride[type] = "e_galleon";
+        CardButton[] levels = [.. Enumerable.Range(2, 3).Select(n => new CardButton($"to_ship_level{n}", 'L', CardAction.Upgrade, $"to_ship_level{n}", 1, $"Upgrade Cannons to Level {n}"))];
+        _cards.Menus["e_galleon"] = [levels[0]];
+        _cards.Menus["e_galleon2"] = [levels[1]];
+        _cards.Menus["e_galleon3"] = [levels[2]];
+        world.Players[0].Resources[Rules.Value.ResourceId("wood")] = 5000;
+        EntityId ship = world.Spawn(type, 0, 20 * 32 * 64, 20 * 32 * 64);
+        _session.Step(1);
+        var card = new CommandCard(Rules.Value, _cards, 0);
+
+        CardSlot two = card.Build(Context([ship]))[0]!.Value;
+        Assert.Equal(("to_ship_level2", true), (two.Button.Order, two.Enabled));
+        _session.Submit(card.Press(Context([ship]), two).Commands!);
+        _session.Step(2);
+        Assert.Equal("to_ship_level2", card.Build(Context([ship]))[0]!.Value.Button.Order); // still the first while it is made
+
+        _session.Step(Rules.Value.Upgrades[Rules.Value.UpgradeId("to_ship_level2")].TimeMs / 50 + 40);
+        CardSlot three = card.Build(Context([ship]))[0]!.Value;
+        Assert.Equal(("to_ship_level3", true), (three.Button.Order, three.Enabled));
+    }
+
     private CardContext Context(EntityId[] selection) => new(_session.AcquireFrame(out _) ?? Step(), selection);
 
     private GameFrame Step()
@@ -852,6 +881,8 @@ public sealed class CommandCardTests : IDisposable
         public CardButton? OrderButton(string order) => rules.SpellId(order) >= 0 ? new CardButton(order, '\0', CardAction.Spell, order, 7, order) : null;
 
         public string? MenuVariant(string? menu, string state) => menu is not null && Menus.ContainsKey(menu + "_" + state) ? menu + "_" + state : null;
+
+        public string? LevelMenu(string? menu, int level) => menu is not null && Menus.ContainsKey($"{menu}{level}") ? $"{menu}{level}" : null;
 
         public IReadOnlyList<CardButton> Card(string? menu) => menu is not null && Menus.TryGetValue(menu, out List<CardButton>? b) ? b : [];
 

@@ -57,10 +57,10 @@ internal sealed partial class EntityCompiler
         ["InfluenceEmitter"] = ["own", "other"],
         ["Repairable"] = [],
         ["Burnable"] = [],
-        ["RuinOnDeath"] = [],
+        ["RuinOnDeath"] = ["lasting"],
         ["ManaPool"] = ["max", "regenPerMinute"],
         ["Wall"] = [],
-        ["Gate"] = ["passage", "turnedPassage"],
+        ["Gate"] = ["passage", "turnedPassage", "approachTiles"],
         ["Bridge"] = [],
         ["ProtectedDelete"] = [],
         ["Seat"] = [],
@@ -193,6 +193,7 @@ internal sealed partial class EntityCompiler
                 IsRepairable = d.IsRepairable,
                 Burnable = d.Burnable,
                 LeavesRuin = d.LeavesRuin,
+                RuinLasts = d.RuinLasts,
                 IsWall = d.IsWall,
                 Gate = d.Gate,
                 IsBridge = d.IsBridge,
@@ -631,6 +632,7 @@ internal sealed partial class EntityCompiler
         {
             d.GateRows = gate.Get("passage");
             d.GateTurnedRows = gate.Get("turnedPassage");
+            d.GateApproach = gate.Get("approachTiles");
         }
 
         if (entry.Find("Decay") is not null)
@@ -652,6 +654,7 @@ internal sealed partial class EntityCompiler
         d.IsRepairable = entry.Find("Repairable") is not null;
         d.Burnable = entry.Find("Burnable") is not null;
         d.LeavesRuin = entry.Find("RuinOnDeath") is not null;
+        d.RuinLasts = entry.Find("RuinOnDeath")?.Get("lasting") is { } lasts && RulesetCompiler.Bool(lasts.Node, lasts.Source, Where("RuinOnDeath", "lasting"));
         d.IsWall = entry.Find("Wall") is not null;
         d.IsBridge = entry.Find("Bridge") is not null;
         d.ProtectedDelete = entry.Find("ProtectedDelete") is not null;
@@ -673,7 +676,22 @@ internal sealed partial class EntityCompiler
                 throw Error(passage, $"{Where("Gate", "turnedPassage")} needs the turned footprint's {turned.Width} x {turned.Height} cells");
             }
 
-            d.Gate = new GateDefinition([.. cells]) { TurnedPassage = [.. turnedCells] };
+            var approach = new List<byte>();
+            if (d.GateApproach is { } reach)
+            {
+                foreach (string tiles in RulesDocument.StringList(reach.Node, reach.Source, Where("Gate", "approachTiles")))
+                {
+                    approach.Add(byte.TryParse(tiles, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out byte v) && v <= 4
+                        ? v : throw Error(reach, $"{Where("Gate", "approachTiles")} entries must be 0..4"));
+                }
+
+                if (approach.Count != 4)
+                {
+                    throw Error(reach, $"{Where("Gate", "approachTiles")} needs four entries, one per facing");
+                }
+            }
+
+            d.Gate = new GateDefinition([.. cells]) { TurnedPassage = [.. turnedCells], ApproachTiles = [.. approach] };
         }
 
         d.World = ReadWorldTraits(entry, key);
@@ -790,6 +808,7 @@ internal sealed partial class EntityCompiler
         public byte[]? Mask;
         public TurnedFootprint? Turned;
         public RuleValue? GateTurnedRows;
+        public RuleValue? GateApproach;
         public bool LeavesCorpse;
         public ImmutableArray<int> Cost = [];
         public int BuildTimeMs;
@@ -826,6 +845,7 @@ internal sealed partial class EntityCompiler
         public bool IsRepairable;
         public bool Burnable;
         public bool LeavesRuin;
+        public bool RuinLasts;
         public bool IsWall;
         public RuleValue? GateRows;
         public GateDefinition? Gate;

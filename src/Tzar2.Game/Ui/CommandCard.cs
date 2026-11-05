@@ -276,6 +276,13 @@ public sealed class CommandCard
             {
                 menu = GateMenu(menu, e.Gate);
             }
+
+            if (OpenMenu is null && LevelOf(context, e) is > 1 and var level)
+            {
+                // TECH-036: a galleon's card follows its cannons' level (ReTzar's reading of the original, object_menu:
+                // e_galleon2 ... e_galleon6), each offering the next level (the owner, 2026-11-04: only level 2 was offered).
+                menu = _source.LevelMenu(menu, level) ?? menu;
+            }
         }
         else
         {
@@ -1359,6 +1366,26 @@ public sealed class CommandCard
         CardAction.Gate => Lead(context) is { } g && GateButtonOn(b.Argument, context.Frame.Entities[g].Gate),
         _ => false,
     };
+
+    // The level of an object's upgrades in place: 1 and one more for each upgrade it has finished that changes no type (a
+    // galleon's cannon levels); the frame's bits also hold those still in its queue.
+    private int LevelOf(CardContext context, in FrameEntity e)
+    {
+        uint queued = 0;
+        foreach (FrameQueueEntry q in context.Frame.QueueEntries)
+        {
+            queued |= q.Entity == e.Id.Value && q.Kind == FrameQueueKind.Upgrade && q.Id < 32 ? 1u << q.Id : 0;
+        }
+
+        int level = 1;
+        for (uint bits = e.Upgrades & ~queued; bits != 0; bits &= bits - 1)
+        {
+            int up = System.Numerics.BitOperations.TrailingZeroCount(bits);
+            level += up < _rules.Upgrades.Count && !_rules.Upgrades[up].IsConversion ? 1 : 0;
+        }
+
+        return level;
+    }
 
     // ORD-013: a gate's card follows its state, as the original's (ReTzar 0x457d40): gate_{wood|stone}_{open}{automatic},
     // so it offers Open gate when closed and Close gate when open, Gate AI off when automatic and Gate AI on when not.

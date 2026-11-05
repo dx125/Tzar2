@@ -202,6 +202,15 @@ public sealed record GateDefinition(ImmutableArray<byte> Passage)
 
     /// <summary>The passage as placed, turned or not.</summary>
     public ReadOnlySpan<byte> PassageOf(bool turned) => turned && !TurnedPassage.IsDefaultOrEmpty ? TurnedPassage.AsSpan() : Passage.AsSpan();
+
+    /// <summary>
+    /// The tiles before the door that its site also needs clear, in each of the four facings (0 and 1 across, 2 and 3
+    /// down; BLD-018, ReTzar's reading of the original, 0x457980): where the drawbridge comes down. Empty: none.
+    /// </summary>
+    public ImmutableArray<byte> ApproachTiles { get; init; } = [];
+
+    /// <summary>The tiles before the door in <paramref name="facing"/> (0 to 3).</summary>
+    public int ApproachOf(int facing) => (uint)facing < (uint)ApproachTiles.Length ? ApproachTiles[facing] : 0;
 }
 
 /// <summary>Trait <c>Decay</c> (GAME-02: neglected fields decay and disappear, manual ch. 5; UNK-17).</summary>
@@ -320,6 +329,12 @@ public sealed partial record EntityTraits
 
     /// <summary>Whether a destroyed entity leaves a ruin decal (never blocking, ORIG-01).</summary>
     public bool LeavesRuin { get; init; }
+
+    /// <summary>
+    /// Whether its ruin lasts (<c>RuinOnDeath.lasting</c>): walls and gates leave rubble that stays on the ground for the
+    /// rest of the match (BLD-028; ReTzar's reading of the original, 0x4578c0, 0x4fbd10).
+    /// </summary>
+    public bool RuinLasts { get; init; }
 
     /// <summary>
     /// Whether the type is a kingdom's seat (trait <c>Seat</c>; classic: the castle): the "destroy the castles" victory

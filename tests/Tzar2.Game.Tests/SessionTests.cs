@@ -214,15 +214,17 @@ public sealed class SessionTests
     }
 
     [Theory]
-    [InlineData("euro.harbor", false)]
-    [InlineData("comm.bridge", false)]
-    [InlineData("comm.bridge", true)]
-    [InlineData("comm.gate_wood", true)]
-    [InlineData("comm.gate_wood", false)]
+    [InlineData("euro.harbor", false, false)]
+    [InlineData("comm.bridge", false, false)]
+    [InlineData("comm.bridge", true, false)]
+    [InlineData("comm.gate_wood", true, false)]
+    [InlineData("comm.gate_wood", false, false)]
+    [InlineData("comm.gate_wood", true, true)]
+    [InlineData("comm.gate_wood", false, true)]
     [Trait("Rule", "BLD-018")]
     [Trait("Rule", "BLD-019")]
     [Trait("Rule", "CTRL-024")]
-    public void Coast_bridge_and_turned_placements_match_the_sim_placement_query(string key, bool rotated)
+    public void Coast_bridge_and_turned_placements_match_the_sim_placement_query(string key, bool rotated, bool mirrored)
     {
         ushort id = (ushort)Rules.Value.EntityTypeId(key);
         EntityTypeDefinition type = Rules.Value.EntityTypes[id];
@@ -237,8 +239,8 @@ public sealed class SessionTests
             {
                 for (int tx = 0; tx < world.Map.Width; tx++)
                 {
-                    bool expected = PlacementQueries.CanPlaceFor(world, 0, id, tx, ty, rotated);
-                    Assert.True(expected == Placement.IsLegal(frame.Buildable, frame.Terrain, world.Map.Width, world.Map.Height, type, tx, ty, rotated), $"{key} at {tx},{ty} on {map.Name}: the sim says {expected}");
+                    bool expected = PlacementQueries.CanPlaceFor(world, id, tx, ty, rotated, mirrored);
+                    Assert.True(expected == Placement.IsLegal(frame.Buildable, frame.Terrain, world.Map.Width, world.Map.Height, type, tx, ty, rotated, mirrored), $"{key} at {tx},{ty} on {map.Name}: the sim says {expected}");
                     legal += expected ? 1 : 0;
                 }
             }

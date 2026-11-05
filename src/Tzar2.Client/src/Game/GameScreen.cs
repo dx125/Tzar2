@@ -262,6 +262,11 @@ public partial class GameScreen : Node
                 _bank.Add(wall); // the joined pieces (PRES-010; the ninth play-test: never loaded, every wall drew its plain picture)
             }
 
+            foreach (string ruin in SpriteRules.RuinImages(type))
+            {
+                _bank.Add(ruin); // what it leaves when destroyed (BLD-028)
+            }
+
             for (int facing = 0; facing < 4 && type.Traits.Gate is not null; facing++)
             {
                 _bank.Add(SpriteRules.GateImage(type, facing, site: false)); // the drawbridges (CTRL-024)
@@ -1525,7 +1530,7 @@ public partial class GameScreen : Node
             return new Ghost(_placing, tx, ty, any, Row: row);
         }
 
-        List<(int Dx, int Dy)> blocked = Placement.BlockedCells(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned);
+        List<(int Dx, int Dy)> blocked = Placement.BlockedCells(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned, mirrored);
         (int width, int height) = Placement.Size(type, turned);
         for (int dy = 0; dy < height; dy++)
         {
@@ -1539,7 +1544,7 @@ public partial class GameScreen : Node
             }
         }
 
-        bool legal = blocked.Count == 0 && Placement.IsLegal(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned);
+        bool legal = blocked.Count == 0 && Placement.IsLegal(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned, mirrored);
         return new Ghost(_placing, tx, ty, legal, blocked, turned, mirrored);
     }
 

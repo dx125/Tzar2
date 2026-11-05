@@ -202,7 +202,7 @@ internal static class GameplayCommands
             return Assign(world, command.Player, site, typeId, entities, WorkerTask.Build) > 0 ? null : CommandRejection.NoValidEntities;
         }
 
-        if ((uint)command.Arg0 >= (uint)world.Ruleset.EntityTypes.Count || command.Arg1 is < 0 or > 1)
+        if ((uint)command.Arg0 >= (uint)world.Ruleset.EntityTypes.Count || command.Arg1 is < 0 or > 3)
         {
             return CommandRejection.InvalidArgument;
         }
@@ -232,9 +232,9 @@ internal static class GameplayCommands
         int tileX = command.X / MapState.UnitsPerTile;
         int tileY = command.Y / MapState.UnitsPerTile;
         bool rotated = (command.Arg1 & 1) != 0; // Arg1 bit 0: turned; bit 1: a gate facing the other way (CTRL-024)
-        bool mirrored = (command.Arg1 & 2) != 0;
+        bool mirrored = (command.Arg1 & 2) != 0 && type.Traits.Gate is not null; // until 2026-11-04 refused (Arg1 was 0 or 1): two facings of four never built
         List<EntityId>? walls = null;
-        if (!CanPlace(world, type, tileX, tileY, rotated) && (walls = WallsUnderGate(world, command.Player, type, tileX, tileY, rotated)) is null)
+        if (type.Traits.Gate is not null ? (walls = GateSite(world, type, tileX, tileY, rotated, mirrored)) is null : !CanPlace(world, type, tileX, tileY, rotated))
         {
             return CommandRejection.IllegalPlacement;
         }
@@ -253,7 +253,7 @@ internal static class GameplayCommands
         {
             foreach (EntityId wall in walls)
             {
-                world.Destroy(wall); // the gate takes the place of these pieces of wall (BLD-018)
+                world.Destroy(wall); // the gate takes the place of the walls under it, of any kingdom (BLD-018, 0x455e20)
             }
         }
 
@@ -972,13 +972,15 @@ internal static class GameplayCommands
     }
 
     /// <summary>
-    /// The pieces of the player's own finished wall a gate placed at (tileX, tileY) would replace (BLD-018: a gate can be
-    /// placed over a wall already built): null when the gate is no gate, covers no such piece, or a tile of it is neither
-    /// one of them nor free land.
+    /// Whether a gate's site fits at (tileX, tileY), as the original's site test of a gate (BLD-018; ReTzar's reading,
+    /// 0x456b50, 0x455e20): every tile of it free land or a wall, of any kingdom, built or not, which the gate replaces;
+    /// and the tiles before its door where the drawbridge comes down (<see cref="GateDefinition.ApproachTiles"/>) on the
+    /// map, with no building, tree or field but walls. Returns the walls to replace (maybe none), or null when it does
+    /// not fit or the type is no gate.
     /// </summary>
-    internal static List<EntityId>? WallsUnderGate(World world, byte player, EntityTypeDefinition type, int tileX, int tileY, bool rotated)
+    internal static List<EntityId>? GateSite(World world, EntityTypeDefinition type, int tileX, int tileY, bool rotated, bool mirrored)
     {
-        if (type.Traits.Gate is null)
+        if (type.Traits.Gate is not { } gate)
         {
             return null;
         }
@@ -986,7 +988,8 @@ internal static class GameplayCommands
         var f = new Footprint { TileX = tileX, TileY = tileY, Rotated = rotated && type.CanTurn ? (byte)1 : (byte)0 };
         int w = f.Width(type);
         int h = f.Height(type);
-        if (!world.Map.ContainsTile(tileX, tileY) || !world.Map.ContainsTile(tileX + w - 1, tileY + h - 1))
+        MapState map = world.Map;
+        if (!map.ContainsTile(tileX, tileY) || !map.ContainsTile(tileX + w - 1, tileY + h - 1))
         {
             return null;
         }
@@ -1003,9 +1006,9 @@ internal static class GameplayCommands
             }
 
             EntityId e = structures[i];
-            if (!world.TypeOf(e).Traits.IsWall || world.Identities.Get(e).Owner != player || world.Constructions.Has(e))
+            if (!world.TypeOf(e).Traits.IsWall)
             {
-                return null; // something else stands there
+                continue; // anything else is judged by the tiles it blocks
             }
 
             walls.Add(e);
@@ -1013,19 +1016,32 @@ internal static class GameplayCommands
         }
 
         ReadOnlySpan<byte> mask = f.Mask(type);
+        ReadOnlySpan<byte> door = f.Passage(type);
+        bool across = w >= h;
+        int reach = gate.ApproachOf((f.Rotated != 0 ? 2 : 0) + (mirrored ? 1 : 0));
+        (int sx, int sy) = across ? (0, mirrored ? -1 : 1) : (mirrored ? 1 : -1, 0);
         for (int dy = 0; dy < h; dy++)
         {
             for (int dx = 0; dx < w; dx++)
             {
-                if (mask[(dy * w) + dx] != 0 && !covered[(dy * w) + dx]
-                    && !PlacementQueries.IsBuildableTile(world, tileX + dx, tileY + dy))
+                int k = (dy * w) + dx;
+                if (mask[k] != 0 && !covered[k] && !PlacementQueries.IsBuildableTile(world, tileX + dx, tileY + dy))
                 {
                     return null;
+                }
+
+                for (int n = 1; door.Length == w * h && door[k] != 0 && n <= reach; n++)
+                {
+                    int x = tileX + dx + (sx * n), y = tileY + dy + (sy * n);
+                    if (!map.ContainsTile(x, y) || !map.OnlyWallsOn(x, y) || map.Bridges[(y * map.Width) + x] != 0 || world.IsUnderWalkableFootprint(x, y))
+                    {
+                        return null;
+                    }
                 }
             }
         }
 
-        return walls.Count > 0 ? walls : null;
+        return walls;
     }
 
     // A bridge runs along its long axis: its first and last rows across that axis stand on walkable land, every tile is

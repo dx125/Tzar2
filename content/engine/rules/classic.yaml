@@ -408,28 +408,32 @@ legacy:
   -Burnable:
   -RuinOnDeath:
 
-# Walls are dragged as lines; gates open; bridges carry land units over water (GAME-03, ADR 0043).
+# Walls are dragged as lines; gates open; bridges carry land units over water (GAME-03, ADR 0043). A wall or gate destroyed
+# leaves rubble for the rest of the match, a bridge its broken deck a moment (BLD-028; ReTzar's reading, 0x41db50).
 ^class.wall_wood:
   Wall: {}
   -Burnable:
-  -RuinOnDeath:
+  RuinOnDeath: { lasting: true }
 ^class.wall_stone:
   Wall: {}
   -Burnable:
-  -RuinOnDeath:
+  RuinOnDeath: { lasting: true }
 # A gate's cells are those of its drawbridge picture (gw0_anim 7 x 1, gw2_anim 1 x 6); its door is the middle three across
-# and the three below the top down (ReTzar's reading of the original, 0x456210, 0x4576bc; CTRL-024).
+# and the three below the top down (ReTzar's reading of the original, 0x456210, 0x4576bc; CTRL-024). Its site also needs
+# clear the tiles before the door where the drawbridge comes down, two in every facing but a wooden gate's facing 1, one
+# (BLD-018, 0x456b50 over 0x457980).
 ^class.gate_wood:
-  Gate: { passage: ["0011100"], turnedPassage: ["0", "1", "1", "1", "0", "0"] }
+  Gate: { passage: ["0011100"], turnedPassage: ["0", "1", "1", "1", "0", "0"], approachTiles: [2, 1, 2, 2] }
   -Burnable:
+  RuinOnDeath: { lasting: true }
 ^class.gate_stone:
-  Gate: { passage: ["0011100"], turnedPassage: ["0", "1", "1", "1", "0", "0"] }
+  Gate: { passage: ["0011100"], turnedPassage: ["0", "1", "1", "1", "0", "0"], approachTiles: [2, 2, 2, 2] }
   -Burnable:
+  RuinOnDeath: { lasting: true }
 ^class.bridge:
   Building: { placement: bridge }
   Bridge: {}
   -Burnable:
-  -RuinOnDeath:
 
 # ---- GAME-07...11: combat, experience, holders, items, magic (ADRs 0090-0095) ----------------------------------------
 # Projectiles per shooter (TDD §10 GAME-07: arrow, bolt, cannon, rocket arrow, stone). Which unit fires which is not in
