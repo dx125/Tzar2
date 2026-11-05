@@ -385,6 +385,27 @@ internal static class FrameBuilder
 
         frame.CorpseCount = nc;
 
+        // Ruins for a while, and the rubble of walls and gates for good (BLD-028); none in the ring is younger than its TTL.
+        FrameRuin[] ruins = frame.RuinBuffer(decals.Count + decals.LastingCount);
+        int nr = 0;
+        for (int i = 0; i < decals.Count; i++)
+        {
+            Decal d = decals[i];
+            if (d.Kind == DecalKind.Ruin)
+            {
+                int age = Math.Max(0, ttl - (d.ExpiresTick - world.Tick.Value));
+                ruins[nr++] = new FrameRuin(d.X, d.Y, d.TypeId, d.Look, age * tickMs, Lasting: false);
+            }
+        }
+
+        for (int i = 0; i < decals.LastingCount; i++)
+        {
+            Decal d = decals.Lasting(i);
+            ruins[nr++] = new FrameRuin(d.X, d.Y, d.TypeId, d.Look, 0, Lasting: true);
+        }
+
+        frame.RuinCount = nr;
+
         // Projectiles where the viewer sees them.
         ReadOnlySpan<EntityId> shots = world.Projectiles.Entities;
         Span<Projectile> flights = world.Projectiles.Components;
@@ -522,19 +543,19 @@ internal static class FrameBuilder
                 buildable[i] = PlacementQueries.IsBuildableTile(world, tx, ty) ? (byte)1 : (byte)0;
                 terrain[i] = (byte)((map.IsPassable(Locomotor.Ship, tx, ty) ? Input.Placement.Water : 0)
                     | (map.IsPassable(Locomotor.Foot, tx, ty) ? Input.Placement.Land : 0)
-                    | (map.Data.CliffTiles[i] == 0 && map.Blockers[i] == 0 && map.Bridges[i] == 0 ? Input.Placement.Free : 0));
+                    | (map.Data.CliffTiles[i] == 0 && map.Blockers[i] == 0 && map.Bridges[i] == 0 ? Input.Placement.Free : 0)
+                    | (map.OnlyWallsOn(tx, ty) && map.Bridges[i] == 0 && !world.IsUnderWalkableFootprint(tx, ty) ? Input.Placement.Clear : 0));
             }
         }
 
-        // The card kingdom's finished walls, which its gates may replace (BLD-018).
+        // The walls, of any kingdom and built or not, which a gate may replace (BLD-018).
         ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
-        for (int s = 0; s < structures.Length && card is { } kingdom; s++)
+        for (int s = 0; s < structures.Length; s++)
         {
-            EntityId e = structures[s];
             Footprint piece = world.Footprints.Components[s];
-            if (world.TypeOf(e).Traits.IsWall && world.Identities.Get(e).Owner == kingdom && !world.Constructions.Has(e) && map.ContainsTile(piece.TileX, piece.TileY))
+            if (world.TypeOf(structures[s]).Traits.IsWall && map.ContainsTile(piece.TileX, piece.TileY))
             {
-                terrain[(piece.TileY * width) + piece.TileX] |= Input.Placement.OwnWall;
+                terrain[(piece.TileY * width) + piece.TileX] |= Input.Placement.Wall;
             }
         }
     }

@@ -296,6 +296,29 @@ public sealed class TerrainAndSpriteRuleTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-028")]
+    public void A_destroyed_building_leaves_the_originals_ruin_pictures()
+    {
+        // ReTzar's reading of the original (0x41db50, 0x4578c0, 0x4fbd10, 0x444bd0): a gate leaves its fallen drawbridge for
+        // its facing, a wall its debris, both for good; other buildings their size's debris, a frame every two seconds.
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset();
+        EntityTypeDefinition Type(string key) => rules.EntityTypes[rules.EntityTypeId(key)];
+        Assert.Equal("gw0_demol", SpriteRules.RuinImage(Type("comm.gate_wood"), 0));
+        Assert.Equal("gs3_demol", SpriteRules.RuinImage(Type("comm.gate_stone"), 3));
+        Assert.Equal("walls_wood_debris", SpriteRules.RuinImage(Type("comm.wall_wood"), 0));
+        Assert.Equal("walls_stone_debris", SpriteRules.RuinImage(Type("comm.wall_stone"), 0));
+        Assert.Equal("bridge_vert_demol", SpriteRules.RuinImage(Type("comm.bridge"), 2));
+        EntityTypeDefinition castle = Type("euro.castle");
+        Assert.Equal($"debris{Math.Min(6, castle.FootprintWidth)}x{Math.Min(6, castle.FootprintHeight)}", SpriteRules.RuinImage(castle, 0));
+        Assert.Equal(["gw0_demol", "gw1_demol", "gw2_demol", "gw3_demol", SpriteRules.RuinFallback], SpriteRules.RuinImages(Type("comm.gate_wood")));
+        Assert.True(Type("comm.gate_wood").Traits.RuinLasts && Type("comm.wall_stone").Traits.RuinLasts && !castle.Traits.RuinLasts);
+
+        Assert.Equal([0, 0, 1, 3, null], new[] { 0, 1999, 2000, 7999, 8000 }.Select(ms => SpriteRules.RuinFrame(ms, 4, lasting: false)));
+        Assert.Equal(0, SpriteRules.RuinFrame(0, 1, lasting: true));
+        Assert.Equal(3, SpriteRules.RuinFrame(0, 4, lasting: true));
+    }
+
+    [Fact]
     [Trait("Rule", "BLD-019")]
     public void A_turned_bridge_draws_the_vertical_picture()
     {

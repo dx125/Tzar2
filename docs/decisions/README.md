@@ -176,3 +176,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0270](0270-land-units-step-cell-by-cell-one-to-a-tile.md) | Land units step cell by cell, one to a tile, as the original | Accepted | 2026-10-26 |
 | [0271](0271-saves-outlive-the-version-that-wrote-them.md) | Let saves outlive the version that wrote them | Accepted | 2026-10-28 |
 | [0272](0272-each-step-follows-a-short-way-round-the-units-standing.md) | Take each step from a short search round the units standing in the way | Accepted | 2026-11-04 |
+| [0273](0273-walls-and-gates-leave-rubble-that-stays.md) | Keep the rubble of walls and gates with the decals, and lay gates as the original does | Accepted | 2026-11-04 |

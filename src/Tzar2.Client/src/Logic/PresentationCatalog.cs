@@ -507,6 +507,11 @@ public sealed class PresentationCatalog : ICardSource
         => menu is not null && _menus.Section(menu + "_" + state) is not null ? menu + "_" + state : null;
 
     /// <inheritdoc/>
+    public string? LevelMenu(string? menu, int level)
+        => menu is not null && level > 1 && _menus.Section(menu + level.ToString(CultureInfo.InvariantCulture)) is not null
+            ? menu + level.ToString(CultureInfo.InvariantCulture) : null;
+
+    /// <inheritdoc/>
     public string? KingdomMenu(bool aiAssist) => _menus.Section(aiAssist ? "ownership_ai" : "ownership") is null ? null : aiAssist ? "ownership_ai" : "ownership";
 
     /// <inheritdoc/>

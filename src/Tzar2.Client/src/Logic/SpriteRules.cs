@@ -205,6 +205,89 @@ public static class SpriteRules
         }
     }
 
+    /// <summary>
+    /// What a destroyed building of <paramref name="type"/> leaves (BLD-028; ReTzar's reading of the original, 0x41db50):
+    /// a gate <c>g{w|s}{facing}_demol</c>, its drawbridge fallen; a wall <c>walls_{wood|stone}_debris</c>; a bridge
+    /// <c>bridge_{horz|vert}_demol</c>; a harbor <c>debris harbor</c>; any other building <c>debris{W}x{H}</c> of its size up
+    /// to 6 (<see cref="RuinFallback"/> when there is none). <paramref name="look"/>: bit 0 mirrored, bit 1 turned.
+    /// </summary>
+    public static string RuinImage(EntityTypeDefinition type, int look)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        int facing = look & 3;
+        if (GateImage(type, facing, site: false) is { } gate)
+        {
+            return gate[..^"anim".Length] + "demol";
+        }
+
+        if (type.Traits.IsWall && WallMaterial(type) is > 0 and var m)
+        {
+            return m == 1 ? "walls_wood_debris" : "walls_stone_debris";
+        }
+
+        if (type.Traits.IsBridge)
+        {
+            return (facing & 2) != 0 ? "bridge_vert_demol" : "bridge_horz_demol";
+        }
+
+        if (type.Traits.LegacyClass == "harbor")
+        {
+            return "debris harbor";
+        }
+
+        (int w, int h) = type.FootprintSize((facing & 2) != 0 && type.CanTurn);
+        return $"debris{Math.Clamp(w, 1, 6)}x{Math.Clamp(h, 1, 6)}";
+    }
+
+    /// <summary>The ruin picture of a building whose size has no <c>debris{W}x{H}</c> of its own (0x41dba0).</summary>
+    public const string RuinFallback = "debris3x3";
+
+    /// <summary>
+    /// Every ruin picture a destroyed <paramref name="type"/> may leave (BLD-028), for the match to load: its gate's four
+    /// facings or a bridge's two ways; none for what leaves no ruin.
+    /// </summary>
+    public static IEnumerable<string> RuinImages(EntityTypeDefinition type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        if (!type.HasFootprint || !type.Traits.LeavesRuin)
+        {
+            yield break;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int look = 0; look < 4; look++)
+        {
+            if (seen.Add(RuinImage(type, look)))
+            {
+                yield return RuinImage(type, look);
+            }
+        }
+
+        if (seen.Add(RuinFallback))
+        {
+            yield return RuinFallback;
+        }
+    }
+
+    /// <summary>
+    /// The frame a ruin shows (ReTzar's reading, 0x444bd0): the next one every two seconds; rubble that stays rests on its
+    /// last, a ruin is gone past its last (null).
+    /// </summary>
+    public static int? RuinFrame(int ageMs, int frames, bool lasting)
+    {
+        int last = Math.Max(1, frames) - 1;
+        if (lasting)
+        {
+            return last;
+        }
+
+        int f = Math.Max(0, ageMs) / RuinFrameMs;
+        return f <= last ? f : null;
+    }
+
+    /// <summary>How long a ruin shows each of its frames (0x444ba8: 2000 ms).</summary>
+    public const int RuinFrameMs = 2000;
+
     /// <summary>The frame of a damaged wall's picture (ReTzar's reading, 0x4fbde0): rows − ⌊health × rows / most⌋ − 1.</summary>
     public static int WallDamageFrame(int health, int maxHealth, int frames)
         => maxHealth <= 0 || frames <= 0 ? 0 : Math.Clamp(frames - (int)((long)Math.Max(0, health) * frames / maxHealth) - 1, 0, frames - 1);

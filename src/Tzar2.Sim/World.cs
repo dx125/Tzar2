@@ -854,7 +854,24 @@ public sealed partial class World
             EntityTypeDefinition type = Ruleset.EntityTypes[identity.TypeId];
             Position position = Positions.At(q);
             bool ruin = type.HasFootprint && type.Traits.LeavesRuin && !Constructions.Has(entity);
-            if (CorpseTtlTicks > 0 && ((type.LeavesCorpse && !type.HasFootprint) || ruin))
+            byte look = ruin && Footprints.IndexOf(entity) is >= 0 and var fp
+                ? (byte)((Footprints.At(fp).Rotated != 0 ? 2 : 0) | (Footprints.At(fp).Mirrored != 0 ? 1 : 0)) : (byte)0;
+            if (ruin && type.Traits.RuinLasts)
+            {
+                // BLD-028 (ReTzar 0x4578c0, 0x4fbd10): a wall or gate leaves rubble for the rest of the match. It never
+                // blocks: a gate destroyed closed lets everyone through.
+                Decals.AddLasting(new Decal
+                {
+                    X = position.X,
+                    Y = position.Y,
+                    ExpiresTick = int.MaxValue,
+                    TypeId = identity.TypeId,
+                    Owner = identity.Owner,
+                    Kind = DecalKind.Rubble,
+                    Look = look,
+                });
+            }
+            else if (CorpseTtlTicks > 0 && ((type.LeavesCorpse && !type.HasFootprint) || ruin))
             {
                 // Corpses and ruins never block (ORIG-01, REQ-PATH-08); they share the decal lifetime.
                 Decals.Add(new Decal
@@ -865,6 +882,7 @@ public sealed partial class World
                     TypeId = identity.TypeId,
                     Owner = identity.Owner,
                     Kind = ruin ? DecalKind.Ruin : DecalKind.Corpse,
+                    Look = look,
                 });
             }
 

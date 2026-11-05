@@ -77,9 +77,11 @@ rules:
     source: [help ITEMS.TXT HT_BUILD_WALLS_GATES]
     status: implemented
   BLD-018:
-    rule: A wall shows green where it can be laid; a gate can be placed over a wall already built, or anywhere it fits.
-    source: [help ITEMS.TXT HT_BUILD_WALLS_GATES]
+    rule: A wall shows green where it can be laid; a gate can be placed over walls of any kingdom, built or not, which it replaces, or anywhere it fits, as long as the tiles before its door where the drawbridge comes down hold no building or tree.
+    source: [help ITEMS.TXT HT_BUILD_WALLS_GATES, 'community ReTzar src/gameplay.rs (gate_site 0x456b50 over the footprint and gate_passage 0x457980; found_site 0x455e20)', owner 2026-11-04 (after the ninth play-test)]
     status: tested
+    adr: [0273]
+    note: Walls never stop a gate's site, whatever their direction or kingdom, and the walls on its tiles go when it is laid; walls before its door stay. The way before the door is two tiles in every facing but a wooden gate's facing 1, one tile (Gate.approachTiles). Tzar2 keeps asking land for the gate's own tiles, which the original does not. Before 2026-11-04 only the kingdom's own finished walls, the way before the door was not looked at, and two facings of four were refused (Build took argument 1 only as 0 or 1).
   BLD-019:
     rule: Holding Alt while placing a bridge turns it.
     source: [help ITEMS.TXT HT_BUILD_BRIDGES]
@@ -111,6 +113,12 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x4fab10, 0x4fa710: the row through the cells left, right, above and below each segment; a gate counts ten)', owner 2026-10-26 (sixth play-test)]
     status: tested
     note: The row is taken when the order is given (the price) and again when the upgrade is done (what turns to stone); a gate turns by its own conversion. Pieces meeting only at a corner are not joined.
+  BLD-028:
+    rule: A destroyed wall or gate leaves its rubble on the ground for the rest of the match, a gate its drawbridge fallen; other buildings leave ruins that crumble away in seconds. None of it stops anyone, so a gate destroyed while closed lets everyone through.
+    source: ['community ReTzar src/gameplay.rs (leave_debris 0x41db50: g{w|s}<n>_demol 0x4578c0 and walls_{wood|stone}_debris 0x4fbd10 lasting, debris<W>x<H> 0x41dba0; crumble 0x444bd0 a frame every 2000 ms)', 'data IMAGES.INI gw0_demol ... gs3_demol, walls_wood_debris, debris1x1 ... debris6x6, debris harbor, bridge_horz_demol', owner 2026-11-04 (after the ninth play-test)]
+    status: tested
+    adr: [0273]
+    note: Tzar2 keeps the rubble with the decals (format 26), at most the decal cap, a piece rebuilt and destroyed again leaving one. A ruin shows a frame of its picture every two seconds and goes after the last; rubble rests on its last. Before 2026-11-04 no ruin was drawn, and walls left none.
   BLD-027:
     rule: A finished building of the kingdom can be taken down from its card over 5 to 10 seconds by its health, giving back 75 % of all it cost - its construction and every upgrade bought for it; the order asks once more before it is carried out, the tooltip says what comes back, and the castle and the guilds need Shift as for Delete.
     source: [owner 2026-10-25 (sixth play-test; a new feature), owner 2026-10-28 (seventh play-test)]

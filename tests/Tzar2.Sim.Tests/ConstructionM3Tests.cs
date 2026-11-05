@@ -76,26 +76,100 @@ public class ConstructionM3Tests
 
     [Fact]
     [Trait("Rule", "BLD-018")]
-    public void A_gate_placed_over_the_kingdoms_own_wall_replaces_its_pieces_but_not_another_kingdoms()
+    public void A_gate_takes_the_place_of_any_walls_under_it_and_needs_the_way_before_its_door_clear()
     {
+        // ReTzar's reading of the original (0x456b50, 0x455e20): walls never stop a gate's site, whoever's they are, and
+        // the gate replaces those under it; the tiles before its door, where the drawbridge comes down, hold no building
+        // or tree but walls.
         MapObject[] walls =
         [
             .. Enumerable.Range(10, 6).Select(x => Structure("comm.wall_wood", 0, x, 6)),
+            Structure("comm.wall_wood", 0, 14, 7), // a wall across the way before the door stays
             .. Enumerable.Range(20, 4).Select(x => Structure("comm.wall_wood", 1, x, 6)),
         ];
-        using var d = new SimDriver(TestMap(40, 16, [Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 8), .. walls]), ruleset: Classic);
+        using var d = new SimDriver(TestMap(40, 16, [Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 9), Tree(27, 12), .. walls]), ruleset: Classic);
+        d.World.Players[0].Resources[Resource("wood")] = 5000;
         EntityId peon = OfType(d.World, "euro.peon").Single();
         d.Order(0, CommandKind.Build, [peon], 11 * Tile, 6 * Tile, arg0: Id("comm.gate_wood")); // 7 x 1 on tiles 11..17
         d.Step();
         Assert.Empty(d.Rejections());
-        Assert.Single(OfType(d.World, "comm.gate_wood"));
-        Assert.Single(OfType(d.World, "comm.wall_wood", 0)); // 10 is left
-        Assert.DoesNotContain(OfType(d.World, "comm.wall_wood", 0), w => d.World.Footprints.Get(w).TileX is >= 11 and <= 17);
+        Assert.Equal(2, OfType(d.World, "comm.wall_wood", 0).Count()); // 10, and 14 before the door
+        Assert.DoesNotContain(OfType(d.World, "comm.wall_wood", 0), w => d.World.Footprints.Get(w).TileY == 6 && d.World.Footprints.Get(w).TileX >= 11);
 
+        // Another kingdom's wall is no obstacle either.
         d.Order(0, CommandKind.Build, [peon], 20 * Tile, 6 * Tile, arg0: Id("comm.gate_wood"));
         d.Step();
+        Assert.Empty(d.Rejections());
+        Assert.Empty(OfType(d.World, "comm.wall_wood", 1));
+
+        // Nor a wall still being built.
+        d.Order(0, CommandKind.BuildWall, [peon], 30 * Tile, 2 * Tile, arg0: Id("comm.wall_wood"), arg1: (2 << 16) | 33);
+        d.Step();
+        Assert.Equal(4, OfType(d.World, "comm.wall_wood", 0).Count(w => d.World.Constructions.Has(w)));
+        d.Order(0, CommandKind.Build, [peon], 29 * Tile, 2 * Tile, arg0: Id("comm.gate_wood"));
+        d.Step();
+        Assert.Empty(d.Rejections());
+        Assert.DoesNotContain(OfType(d.World, "comm.wall_wood", 0), w => d.World.Footprints.Get(w).TileY == 2);
+
+        // A tree two tiles before the door stops it (door 26..28 at row 10, its way down rows 11 and 12); facing the other
+        // way (Build's argument 1 bit 1), the way is the one tile above, and it fits.
+        d.Order(0, CommandKind.Build, [peon], 24 * Tile, 10 * Tile, arg0: Id("comm.gate_wood"));
+        d.Step();
         Assert.Equal(CommandRejection.IllegalPlacement, d.Rejections().Last());
-        Assert.Equal(4, OfType(d.World, "comm.wall_wood", 1).Count());
+        Assert.False(Systems.PlacementQueries.CanPlaceFor(d.World, Id("comm.gate_wood"), 24, 10));
+        Assert.True(Systems.PlacementQueries.CanPlaceFor(d.World, Id("comm.gate_wood"), 24, 10, mirrored: true));
+        int before = d.Rejections().Count;
+        d.Order(0, CommandKind.Build, [peon], 24 * Tile, 10 * Tile, arg0: Id("comm.gate_wood"), arg1: 2);
+        d.Step();
+        Assert.Equal([], d.Rejections().Skip(before));
+        Assert.Equal(4, OfType(d.World, "comm.gate_wood").Count());
+    }
+
+    [Fact]
+    [Trait("Rule", "BLD-028")]
+    public void A_gate_destroyed_closed_leaves_its_rubble_and_lets_everyone_through()
+    {
+        // A wooden wall across the map, row 6, with a gate in it (tiles 8..14, the door 10..12), closed by hand.
+        MapObject[] walls = [.. Enumerable.Range(0, 24).Where(x => x is < 8 or > 14).Select(x => Structure("comm.wall_wood", 0, x, 6))];
+        using var d = new SimDriver(TestMap(24, 14, [Structure("euro.castle", 0, 1, 1), Structure("comm.gate_wood", 0, 8, 6), Unit("euro.footman", 1, 11, 10), .. walls]), ruleset: Classic);
+        EntityId gate = OfType(d.World, "comm.gate_wood").Single();
+        d.Order(0, CommandKind.SetGate, [gate], arg0: 3); // its automatism off
+        d.RunUntil(() => false, 30);
+        d.Order(0, CommandKind.SetGate, [gate], arg0: 0); // closed
+        d.RunUntil(() => false, 30);
+        Assert.False(d.World.Map.IsPassable(Locomotor.Foot, 11, 6));
+
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        d.MoveToTile(1, [footman], 11, 2);
+        d.RunUntil(() => false, 200);
+        Assert.True(d.PositionOf(footman).Y / Tile > 6); // the gate holds it
+
+        d.Order(0, CommandKind.DebugKill, [gate]);
+        d.Step();
+        Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 11, 6));
+        Assert.Equal(1, d.World.Decals.LastingCount);
+        Decal rubble = d.World.Decals.Lasting(0);
+        Assert.Equal((DecalKind.Rubble, Id("comm.gate_wood"), 0), (rubble.Kind, rubble.TypeId, (int)rubble.Look));
+        d.MoveToTile(1, [footman], 11, 2);
+        d.RunUntil(() => d.PositionOf(footman).Y / Tile <= 3, 1500);
+        Assert.True(d.PositionOf(footman).Y / Tile <= 3); // through the rubble
+
+        // A wall leaves its rubble too, and it stays (a snapshot keeps it).
+        EntityId wall = OfType(d.World, "comm.wall_wood").First(w => d.World.Footprints.Get(w).TileX == 3);
+        d.Order(0, CommandKind.DebugKill, [wall]);
+        d.Step();
+        Assert.Equal(2, d.World.Decals.LastingCount);
+        d.RunUntil(() => false, 2000);
+        Assert.Equal(2, d.World.Decals.LastingCount);
+        Simulation restored = Simulation.Restore(Snapshots.WorldSnapshot.Capture(d.World), Classic, d.World.Map.Data);
+        Assert.Equal(d.Sim.ComputeFullHash(), restored.ComputeFullHash());
+        Assert.Equal(2, restored.World.Decals.LastingCount);
+
+        // A wall built again there and destroyed again leaves one piece, not two.
+        var index = new DecalIndex(4);
+        index.AddLasting(new Decal { X = 100, Y = 100, Kind = DecalKind.Rubble, ExpiresTick = int.MaxValue, TypeId = 1 });
+        index.AddLasting(new Decal { X = 100, Y = 100, Kind = DecalKind.Rubble, ExpiresTick = int.MaxValue, TypeId = 2 });
+        Assert.Equal((1, (ushort)2), (index.LastingCount, index.Lasting(0).TypeId));
     }
 
     [Fact]

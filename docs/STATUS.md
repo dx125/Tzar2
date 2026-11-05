@@ -6,11 +6,11 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-11-04 (item 21, the ninth play-test: batch A, gates as the original's (drawn with their
-  towers, their orders the right way round, their card by their state, open unless a stranger is at the door), walls
-  drawn joined, and a match on a map with richer nodes loads again; batch B, each step of a unit comes from a short
-  search round the units standing in its way (ADR 0272). Before: item 20, the eighth play-test, done. The slow checks
-  run once per batch of three or four fixes, with the re-pin script and a faster campaign acceptance)
+* **Last updated:** 2026-11-04 (item 22, the owner's list after the ninth play-test, batch A: a gate's site as the
+  original's, over any walls and with the way before its door clear, in all four facings; walls and gates leave rubble
+  that stays, every ruin is drawn (ADR 0273); a galleon's card follows its cannon level. Next: batch B, damage over an
+  area; batch C, the neutral creatures. Before: item 21, the ninth play-test, done. The slow checks run once per batch
+  of three or four fixes, with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -490,11 +490,39 @@ owner's order of 2026-10-26.
     5. A gate closed as an enemy came near and never opened again, even from its card: **fixed** (ORD-013; log below).
     6. Walls still stand as separate pieces side by side, not one line: **fixed** (PRES-010; log below).
     7. Found by the probe: the save Game 6 could not be loaded ("invalid resource stock"): **fixed** (log below).
+22. **The owner's list after the ninth play-test (2026-11-04; checked in the original).** In three batches: A (items 1
+    to 3), B (item 4), C (item 5).
+    1. Check that a gate can be built over walls running its way, or meeting only its ends, by the original's whole
+       rule: **fixed** (BLD-018, CTRL-024; ADR 0273; log below). Tzar2 took only the kingdom's own finished walls, and
+       refused two facings of four.
+    2. Check that a gate destroyed while closed, its picture turned to a gate with its door fallen, lets units through:
+       **fixed** (BLD-028; ADR 0273; log below). It let them through, but no ruin was drawn.
+    3. A ship cannot be upgraded, though it could in the original: **fixed** (TECH-036; log below). Level 2 is on the
+       galleon card's second page, as in the original; past it the card never changed.
+    4. Ships firing at buildings do no damage around them; in the original, peasants repairing a tower under a catapult's
+       or a cannon ship's fire were hurt. Check every attack that hurts an area: open (batch B).
+    5. The yellow peasants whose attack was refused (NotAllied) were the original's neutral ones, which a unit takes by
+       coming close; review the whole mechanics of the neutral creatures: open (batch C).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-11-04 — The owner's list after the ninth play-test, batch A: gates over walls, rubble that stays, the
+  galleon's levels (BLD-018, BLD-028, CTRL-024, TECH-036; ADR 0273; item 22, items 1 to 3).** The owner checked these in
+  the original; ReTzar's reading of its code gives the rules.
+  * **A gate's site (BLD-018; 0x456b50, 0x455e20).** Walls never stop it, of any kingdom and built or not, and the
+    walls on its tiles go when it is laid. The tiles before its door, where the drawbridge comes down, hold no building,
+    tree, bridge or field (`Gate.approachTiles`). The ghost shows the same.
+  * **Two facings of four were refused (CTRL-024).** Build took its argument 1 only as 0 or 1, and the client sends
+    bit 1 for a gate facing the other way.
+  * **Rubble (BLD-028; 0x41db50).** A destroyed wall or gate leaves its rubble for good: the gate its drawbridge fallen
+    (`g{w|s}<n>_demol`). It never blocks, so a gate destroyed closed lets everyone through. Other buildings leave
+    `debris<W>x<H>`, a frame every two seconds, then gone. No ruin was drawn before. The rubble is kept with the decals
+    (snapshot format 26; older saves load without it).
+  * **The galleon's levels (TECH-036).** Its card is `e_galleon<level>`, as the original's, so each level offers the
+    next. Level 2 was on the card's second page, as in the original; past it nothing was offered.
 
 * **2026-11-04 — The ninth play-test, batch B: each step from a short search round the units standing in the way
   (WORLD-022, WORLD-020; ADR 0272; items 1 to 3).** The owner asked how Tzar2's pathfinding compares with the original's

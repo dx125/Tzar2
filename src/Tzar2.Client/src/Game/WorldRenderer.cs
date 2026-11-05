@@ -244,6 +244,11 @@ public sealed class WorldRenderer : IDisposable
         bool useFog = options.Fog && fog.Length == MapWidth * MapHeight;
         var cull = new Rect2I(visible.Position - new Vector2I(256, 256), visible.Size + new Vector2I(512, 512));
 
+        foreach (FrameRuin ruin in frame.Ruins)
+        {
+            DrawRuin(ruin, cull, useFog ? fog : null);
+        }
+
         foreach (FrameCorpse corpse in frame.Corpses)
         {
             int px = corpse.X / UnitsPerPixel, py = corpse.Y / UnitsPerPixel;
@@ -334,6 +339,33 @@ public sealed class WorldRenderer : IDisposable
     {
         int tx = Math.Clamp(x / (TilePixels * UnitsPerPixel), 0, MapWidth - 1), ty = Math.Clamp(y / (TilePixels * UnitsPerPixel), 0, MapHeight - 1);
         return fog[(ty * MapWidth) + tx];
+    }
+
+    // A destroyed building's ruin, or the rubble of a wall or gate (BLD-028), on the ground where the building stood: its
+    // picture placed on the footprint as the building's was, without colours (the original's rubble belongs to nobody).
+    private void DrawRuin(in FrameRuin ruin, Rect2I cull, byte[]? fog)
+    {
+        if ((uint)ruin.TypeId >= (uint)_rules.EntityTypes.Count || (fog is not null && Fog(fog, ruin.X, ruin.Y) == 0))
+        {
+            return;
+        }
+
+        EntityTypeDefinition def = _rules.EntityTypes[ruin.TypeId];
+        SheetRef? sheet = _bank.Get(SpriteRules.RuinImage(def, ruin.Look)) ?? _bank.Get(SpriteRules.RuinFallback);
+        if (sheet is null || SpriteRules.RuinFrame(ruin.AgeMs, sheet.Sheet.FramesPerDirection, ruin.Lasting) is not { } frame)
+        {
+            return;
+        }
+
+        (int w, int h) = def.FootprintSize((ruin.Look & 2) != 0 && def.CanTurn);
+        int left = (ruin.X / UnitsPerPixel) - (w * TilePixels / 2), top = (ruin.Y / UnitsPerPixel) - (h * TilePixels / 2);
+        if (!cull.HasPoint(new Vector2I(left, top)))
+        {
+            return;
+        }
+
+        var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
+        AddSheet(_ground, sheet, origin, 0, frame, -1, (uint)(top + 4096) << 6, shadows: true);
     }
 
     private void DrawEntity(in FrameEntity e, int index, EntityTypeDefinition def, int px, int py, int player, long timeMs, WorldOptions options)

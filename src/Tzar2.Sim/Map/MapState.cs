@@ -180,6 +180,13 @@ public sealed class MapState
     /// <summary>Blocker count per tile.</summary>
     public ReadOnlySpan<ushort> Blockers => _blockers;
 
+    /// <summary>Whether every footprint obstacle on a tile, if any, is a wall's (a gate's site may cover walls; BLD-018).</summary>
+    public bool OnlyWallsOn(int tx, int ty)
+    {
+        int i = TileIndex(tx, ty);
+        return _blockers[i] == _walls[i];
+    }
+
     /// <summary>Occupant count per cell.</summary>
     public ReadOnlySpan<int> Occupancy => _occupancy;
 

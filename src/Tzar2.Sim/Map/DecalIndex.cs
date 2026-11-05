@@ -17,6 +17,12 @@ public enum DecalKind : byte
 
     /// <summary>The ruin of a destroyed building (GAME-03; never blocks, ORIG-01). Type id = the building's.</summary>
     Ruin = 2,
+
+    /// <summary>
+    /// The rubble a destroyed wall or gate leaves for the rest of the match (BLD-028; ReTzar's reading of the original,
+    /// 0x4578c0, 0x4fbd10). Never blocks. Type id = the wall's or gate's.
+    /// </summary>
+    Rubble = 3,
 }
 
 /// <summary>A footprint-less leftover on the ground (REQ-PATH-08). Never part of passability, costs or occupancy.</summary>
@@ -41,6 +47,9 @@ public struct Decal
 
     /// <summary>What it is.</summary>
     public DecalKind Kind;
+
+    /// <summary>The facing of the gate or bridge it was: bit 0 mirrored, bit 1 turned (CTRL-024); 0 for the rest.</summary>
+    public byte Look;
 #pragma warning restore CA1051
 }
 
@@ -57,14 +66,62 @@ public struct Decal
 public sealed class DecalIndex
 {
     private readonly Decal[] _ring;
+    private readonly Decal[] _lasting; // rubble that stays (BLD-028), oldest first from _lastingHead; capped like the ring
     private int _head;
     private int _count;
+    private int _lastingHead;
+    private int _lastingCount;
 
     /// <summary>Creates an empty index.</summary>
     public DecalIndex(int capacity)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(capacity);
         _ring = new Decal[capacity];
+        _lasting = new Decal[capacity];
+    }
+
+    /// <summary>Pieces of lasting rubble (<see cref="DecalKind.Rubble"/>), which never expire.</summary>
+    public int LastingCount => _lastingCount;
+
+    /// <summary>The lasting rubble at age rank <paramref name="i"/> (0 = oldest).</summary>
+    public Decal Lasting(int i)
+        => (uint)i < (uint)_lastingCount ? _lasting[(_lastingHead + i) % _lasting.Length] : throw new ArgumentOutOfRangeException(nameof(i));
+
+    /// <summary>
+    /// Adds lasting rubble (BLD-028): it replaces rubble already at the same point (a wall rebuilt and destroyed again);
+    /// at the cap the oldest piece goes.
+    /// </summary>
+    public void AddLasting(in Decal rubble)
+    {
+        if (_lasting.Length == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _lastingCount; i++)
+        {
+            ref Decal d = ref _lasting[(_lastingHead + i) % _lasting.Length];
+            if (d.X == rubble.X && d.Y == rubble.Y)
+            {
+                for (int k = i; k < _lastingCount - 1; k++)
+                {
+                    _lasting[(_lastingHead + k) % _lasting.Length] = _lasting[(_lastingHead + k + 1) % _lasting.Length];
+                }
+
+                _lastingCount--;
+                break;
+            }
+        }
+
+        if (_lastingCount == _lasting.Length)
+        {
+            _lastingHead = (_lastingHead + 1) % _lasting.Length;
+            _lastingCount--;
+            Evicted++;
+        }
+
+        _lasting[(_lastingHead + _lastingCount) % _lasting.Length] = rubble;
+        _lastingCount++;
     }
 
     /// <summary>Most decals at once.</summary>
@@ -186,7 +243,14 @@ public sealed class DecalIndex
         for (int i = 0; i < _count; i++)
         {
             Decal d = _ring[(_head + i) % _ring.Length];
-            hasher.Add(d.X).Add(d.Y).Add(d.ExpiresTick).Add((int)d.TypeId).Add(d.Owner).Add((byte)d.Kind);
+            hasher.Add(d.X).Add(d.Y).Add(d.ExpiresTick).Add((int)d.TypeId).Add(d.Owner).Add((byte)d.Kind).Add(d.Look);
+        }
+
+        hasher.Add(_lastingCount);
+        for (int i = 0; i < _lastingCount; i++)
+        {
+            Decal d = Lasting(i);
+            hasher.Add(d.X).Add(d.Y).Add((int)d.TypeId).Add(d.Owner).Add(d.Look);
         }
     }
 
@@ -204,12 +268,31 @@ public sealed class DecalIndex
             writer.WriteUInt16(d.TypeId);
             writer.WriteByte(d.Owner);
             writer.WriteByte((byte)d.Kind);
+            writer.WriteByte(d.Look);
+        }
+
+        writer.WriteVarUInt64((ulong)_lastingCount);
+        for (int i = 0; i < _lastingCount; i++)
+        {
+            Decal d = Lasting(i);
+            writer.WriteInt32(d.X);
+            writer.WriteInt32(d.Y);
+            writer.WriteUInt16(d.TypeId);
+            writer.WriteByte(d.Owner);
+            writer.WriteByte(d.Look);
         }
     }
 
     /// <summary>Replaces the contents with data written by <see cref="WriteTo"/>.</summary>
     /// <exception cref="InvalidDataException">The data is malformed.</exception>
-    public void ReadFrom(ref BinaryBufferReader reader)
+    public void ReadFrom(ref BinaryBufferReader reader) => ReadFrom(ref reader, lasting: true);
+
+    /// <summary>
+    /// Replaces the contents with data written by <see cref="WriteTo"/>, or by an older format without the looks and the
+    /// lasting rubble when <paramref name="lasting"/> is false (saves before format 26).
+    /// </summary>
+    /// <exception cref="InvalidDataException">The data is malformed.</exception>
+    public void ReadFrom(ref BinaryBufferReader reader, bool lasting)
     {
         ulong count = reader.ReadVarUInt64();
         if (count > (ulong)_ring.Length)
@@ -229,7 +312,8 @@ public sealed class DecalIndex
             d.TypeId = reader.ReadUInt16();
             d.Owner = reader.ReadByte();
             d.Kind = (DecalKind)reader.ReadByte();
-            if (d.Kind is not (DecalKind.Corpse or DecalKind.Ruin) || d.ExpiresTick < previousExpiry)
+            d.Look = lasting ? reader.ReadByte() : (byte)0;
+            if (d.Kind is not (DecalKind.Corpse or DecalKind.Ruin) || d.ExpiresTick < previousExpiry || d.Look > 3)
             {
                 throw new InvalidDataException("Invalid decal in snapshot.");
             }
@@ -237,5 +321,34 @@ public sealed class DecalIndex
             previousExpiry = d.ExpiresTick;
             _ring[i] = d;
         }
+
+        _lastingHead = 0;
+        _lastingCount = 0;
+        Array.Clear(_lasting);
+        ulong rubble = lasting ? reader.ReadVarUInt64() : 0;
+        if (rubble > (ulong)_lasting.Length)
+        {
+            throw new InvalidDataException($"Snapshot has {rubble} pieces of rubble, the cap is {_lasting.Length}.");
+        }
+
+        for (int i = 0; i < (int)rubble; i++)
+        {
+            Decal d = default;
+            d.X = reader.ReadInt32();
+            d.Y = reader.ReadInt32();
+            d.ExpiresTick = int.MaxValue;
+            d.TypeId = reader.ReadUInt16();
+            d.Owner = reader.ReadByte();
+            d.Kind = DecalKind.Rubble;
+            d.Look = reader.ReadByte();
+            if (d.Look > 3)
+            {
+                throw new InvalidDataException("Invalid rubble in snapshot.");
+            }
+
+            _lasting[i] = d;
+        }
+
+        _lastingCount = (int)rubble;
     }
 }
