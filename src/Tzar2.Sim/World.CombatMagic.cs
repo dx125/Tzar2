@@ -74,6 +74,9 @@ public sealed partial class World
     /// <summary>Projectiles in flight (hot; GAME-07).</summary>
     public ComponentStore<Projectile> Projectiles { get; private set; } = null!;
 
+    /// <summary>The way the flame balls in flight have burnt (hot; MAG-029).</summary>
+    public ComponentStore<Trail> Trails { get; private set; } = null!;
+
     /// <summary>Area spells in progress (hot; GAME-11).</summary>
     public ComponentStore<AreaEffect> AreaEffects { get; private set; } = null!;
 

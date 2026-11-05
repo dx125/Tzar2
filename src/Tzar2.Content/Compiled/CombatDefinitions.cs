@@ -367,7 +367,26 @@ public sealed record SpellDefinition(
 /// <param name="SplashRadiusUnits">Units and buildings this close to the impact take splash damage (0 = none).</param>
 /// <param name="SplashPercent">Splash damage as a share of the hit's damage.</param>
 /// <param name="FriendlyFire">Whether splash hurts the attacker's own kingdom.</param>
-public sealed record ProjectileDefinition(ushort Id, string Key, int SpeedUnitsPerSecond, bool Homing, int HitRadiusUnits, int SplashRadiusUnits, int SplashPercent, bool FriendlyFire);
+public sealed record ProjectileDefinition(ushort Id, string Key, int SpeedUnitsPerSecond, bool Homing, int HitRadiusUnits, int SplashRadiusUnits, int SplashPercent, bool FriendlyFire)
+{
+    /// <summary>
+    /// A shell or bolt (<c>onTile</c>; WAR-018, ReTzar's reading of the original, 0x433770, 0x434120): it lands on the
+    /// tile its target stood on at launch (a building's first tile) and hits everything whose tiles hold that tile, of any
+    /// kingdom; on an empty tile it hurts nobody.
+    /// </summary>
+    public bool OnTile { get; init; }
+
+    /// <summary>
+    /// After a hit on its tile, everything else meeting the square of this many tiles round it takes
+    /// <see cref="SplashPercent"/> of the attack before defence (<c>splashTiles</c>; WAR-018, 0x4ed74a, 0x44de50). 0: none.
+    /// </summary>
+    public int SplashTiles { get; init; }
+
+    /// <summary>
+    /// A flame ball (<c>burns</c>; MAG-029, 0x431f40): it hurts what it crosses, tile by tile, and nothing where it lands.
+    /// </summary>
+    public bool Burns { get; init; }
+}
 
 /// <summary>Per-unit special abilities (GAME-11; flags, append only).</summary>
 [Flags]

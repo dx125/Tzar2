@@ -146,6 +146,49 @@ public class MagicTests
         Assert.Equal(1, d.Count(SimEventKind.SpellCast));
     }
 
+    [Fact]
+    [Trait("Rule", "MAG-029")]
+    public void A_flame_bolt_burns_its_way_the_first_enemy_on_its_first_tiles_then_all_round_it()
+    {
+        // ReTzar's reading of the original (0x431f40): on its first three tiles the first unit there that is no friend of
+        // the caster takes twice the spell's 60; from the fourth on, everything but the caster meeting the 3 x 3 tiles
+        // round it takes 60 on its own tile and 30 beside it, the caster's own side too; nothing more where it lands.
+        Ruleset rules = ClassicWith("euro.mage: { Spellcaster: { spells+=: [spell_flamebolt] } }");
+        using var d = new SimDriver(
+            TestMap(32, 16,
+            [
+                Unit("euro.mage", 0, 2, 8),
+                Unit("euro.footman", 1, 3, 8), // its first tile
+                Unit("euro.footman", 0, 4, 8), // its second tile: a friend, spared
+                Unit("euro.footman", 0, 9, 7), // beside its way further on: the caster's own, burnt
+                Unit("euro.footman", 1, 16, 8), // the target
+            ]),
+            ruleset: rules);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId[] enemies = [.. OfType(d.World, "euro.footman", 1)];
+        EntityId[] friends = [.. OfType(d.World, "euro.footman", 0)];
+        EntityId first = enemies.Single(e => d.PositionOf(e).X / Tile == 3), target = enemies.Single(e => e != first);
+        EntityId spared = friends.Single(e => d.PositionOf(e).X / Tile == 4), beside = friends.Single(e => e != spared);
+        d.Order(1, CommandKind.SetStance, enemies, arg0: (int)CombatStance.HoldFire);
+        d.Order(0, CommandKind.SetStance, [mage, .. friends], arg0: (int)CombatStance.HoldFire);
+        foreach (EntityId e in (EntityId[])[.. enemies, .. friends])
+        {
+            d.World.Healths.Get(e).Current = d.World.Healths.Get(e).Max = 1000;
+        }
+
+        GrantOrder(d, "spell_flamebolt", "euro");
+        d.World.Manas.Get(mage).MilliMana = 90_000;
+        Cast(d, mage, "spell_flamebolt", target);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1 && d.World.Projectiles.Count == 0, 400);
+        Assert.Equal(0, d.World.Projectiles.Count);
+        Assert.Equal(1000 - 120, Hp(d, first));
+        Assert.Equal(1000, Hp(d, spared));
+        Assert.True(Hp(d, beside) < 1000);
+        Assert.True(Hp(d, target) < 1000);
+        Assert.Equal(0, (1000 - Hp(d, beside)) % 30);
+        Assert.False(d.World.Trails.Count > 0);
+    }
+
     // The synthetic tables have no ninja: a footman that can murder, with a pool.
     private static readonly Ruleset Ninjas = ClassicWith("euro.footman: { Spellcaster: { spells: [murder] }, ManaPool: { max: 100 } }");
 
