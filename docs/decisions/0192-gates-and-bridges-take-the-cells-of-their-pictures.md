@@ -37,7 +37,8 @@ ReTzar reads the original's code:
 * **The footprint keeps a mirror bit**, in what was padding. Build's argument 1 carries it (bit 1, beside the turn in
   bit 0), and maps carry it as `MapObjectFlags.Mirrored`.
 * **The client draws gates** with the drawbridge of their facing: row 0 closed, row 6 open, and the `…_build` picture
-  for a site. Alt or Ctrl turns a gate's ghost through its four facings.
+  for a site. Alt or Ctrl turns a gate's ghost through its four facings. **Amended (the ninth play-test, 2026-11-04;
+  PRES-017):** under the drawbridge it draws row 8, the two towers, each column of a gate drawn down back to front.
 
 ## Alternatives considered
 

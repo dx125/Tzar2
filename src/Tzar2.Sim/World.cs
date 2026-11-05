@@ -1206,8 +1206,10 @@ public sealed partial class World
         Span<ResourceStock> stocks = ResourceStocks.Components;
         for (int i = 0; i < ids.Length; i++)
         {
+            // A map may give a node more than its type's amount (ADR 0152: a fish patch of 1,000 on Conquer the World), so the
+            // amount has no upper bound here (the ninth play-test: such a match was saved and could not be loaded).
             if (TypeOf(ids[i]).Traits.ResourceNode is not { } node || stocks[i].Amount < -1 || (stocks[i].Amount == -1) != (node.Amount == -1)
-                || (node.Amount >= 0 && stocks[i].Amount > node.Amount) || stocks[i].RegenMs < 0 || stocks[i].RegenMs > Math.Max(node.RegenMs, 0))
+                || stocks[i].RegenMs < 0 || stocks[i].RegenMs > Math.Max(node.RegenMs, 0))
             {
                 throw Invalid("invalid resource stock");
             }
@@ -1344,7 +1346,7 @@ public sealed partial class World
         for (int i = 0; i < ids.Length; i++)
         {
             GateState g = Gates.Components[i];
-            if (TypeOf(ids[i]).Traits.Gate is null || Constructions.Has(ids[i]) || g.Open > 1 || g.Mode > GateMode.Automatic || g.Desired > 1 || g.Reserved != 0 || g.LastChangeTick > Tick.Value)
+            if (TypeOf(ids[i]).Traits.Gate is null || Constructions.Has(ids[i]) || g.Open > 1 || g.Mode > GateMode.Automatic || g.Desired > 1 || (g.Hold != 0 && g.Mode != GateMode.Automatic) || g.LastChangeTick > Tick.Value)
             {
                 throw Invalid("invalid gate state");
             }

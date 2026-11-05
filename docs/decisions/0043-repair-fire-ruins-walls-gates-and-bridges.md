@@ -43,7 +43,11 @@ UNK-42 new).
   sooner are rejected for it (`GateBusy` when no listed gate takes the order); step 10 applies at most
   `maxGateChangesPerTick` (4; 16 cost 15 ms p99 under 200-gate spam, review) changes per tick in ascending entity order and only touches the passage tiles. Automatic
   mode (the default, `gate_subai_on`) wants the gate open while an own unit is within `gateOpenReachPx` (32) and closed
-  once none is within `gateCloseReachPx` (64): hysteresis. The units come from a coarse grid (8-tile cells) rebuilt per
+  once none is within `gateCloseReachPx` (64): hysteresis. **Amended (the ninth play-test, 2026-11-04; ORD-013 from
+  ReTzar's reading of the original, 0x4571a0, 0x456fd0):** an automatic gate stands open and closes while a land unit of
+  a kingdom it does not open for is within `gateWatchTiles` (4) of its door; an order to open or close keeps it automatic
+  and holds that rule away for `gateOrderHoldMs` (10 s, `GateState.Hold`, which was padding); `SetGate` Arg0 3 turns the
+  automatism off (`gate_subai_off`). The units come from a coarse grid (8-tile cells) rebuilt per
   tick, so the work is bounded by the units near gates. A gate never closes on a unit standing in its passage. Every
   kingdom passes an open gate: per-player passability (REQ-PATH-01, acceptance test §9.2.5) needs per-player
   navigation layers and is left to a pathfinding follow-up.

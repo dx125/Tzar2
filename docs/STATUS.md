@@ -6,11 +6,10 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-10-29 (item 20, the eighth play-test: batch A, victory as the original's defeat test, the
-  church's priest in older saves, the flags of remembered buildings, the meat and the dropped loads drawn and counted,
-  the night as the original's tint; batch B, units go round every unit in their way, a unit in a step is drawn walking,
-  and attackers whose walks end short take another target. The slow checks run once per batch of three or four fixes,
-  with the re-pin script and a faster campaign acceptance)
+* **Last updated:** 2026-11-04 (item 21, the ninth play-test, batch A: gates as the original's (drawn with their
+  towers, their orders the right way round, their card by their state, open unless a stranger is at the door), walls
+  drawn joined, and a match on a map with richer nodes loads again. Before: item 20, the eighth play-test, done. The slow
+  checks run once per batch of three or four fixes, with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -478,10 +477,44 @@ owner's order of 2026-10-26.
     8. A killed cow's meat is not drawn though it can be selected, and the selection says treasure instead of the meat's
        icon and amount; other resources the same: **fixed** (HUD-037, NAT-004, ECO-026; log below).
 
+21. **The ninth play-test (2026-11-04, the owner, build fc8a2c2 on Conquer the World; its replay and the save Game 6,
+    read locally only).** A probe plays the replay again (every hash matches) and reports what stood still. In two
+    batches: A (items 4 to 7), then B (1 to 3).
+    1. Troops still often get in each other's way. Open (batch B).
+    2. Units now and then stick in half-closed pockets and do not know where to go. Open (batch B).
+    3. The owner asks to compare Tzar2's pathfinding with ReTzar's reading of the original, and whether an improved
+       algorithm of our own should rule out the problems met so far. Open (batch B).
+    4. A gate looks unfinished, as if its sides were missing: **fixed** (PRES-017; log below).
+    5. A gate closed as an enemy came near and never opened again, even from its card: **fixed** (ORD-013; log below).
+    6. Walls still stand as separate pieces side by side, not one line: **fixed** (PRES-010; log below).
+    7. Found by the probe: the save Game 6 could not be loaded ("invalid resource stock"): **fixed** (log below).
+
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-11-04 — The ninth play-test, batch A: gates, walls, and saves on richer maps (ORD-013, PRES-017, PRES-010;
+  items 4 to 7).** The owner played build fc8a2c2 on Conquer the World; a probe plays his replay again (every stored hash
+  matches) and loads his save, both locally only and never committed.
+  * **The gate's orders and card (ORD-013).** The original's order names describe the drawbridge: `gateopen` raises it and
+    closes the passage ("Close gate" in its strings), `gateclose` lowers it and opens it. Tzar2 took them the other way
+    round, and always showed the first of the gate's four menus (`gate_*_00`: Open gate, Gate AI on). The owner's three
+    presses on Open gate all closed the gate. The card now follows the gate's state (`gate_*_{open}{automatic}`, ReTzar
+    0x457d40), and the orders go the right way.
+  * **The automatic gate (ORD-013).** The original's gate stands open and closes while a land unit not allied to its
+    kingdom is within four tiles of its door; an order keeps that rule away for ten seconds (ReTzar 0x4571a0, 0x456fd0).
+    Tzar2's stood closed and opened only for its own units within 32 px, an UNVERIFIED placeholder. `gateWatchTiles` and
+    `gateOrderHoldMs` replace `gateOpenReachPx` and `gateCloseReachPx`; `GateState.Hold` was padding; `SetGate` Arg0 3
+    turns the automatism off.
+  * **The gate's picture (PRES-017).** Rows 0 to 6 of `g{w|s}{0-3}_anim` are the drawbridge, row 8 the two towers;
+    Tzar2 drew only the drawbridge. It now draws the towers under it, each column of a gate drawn down back to front.
+  * **Walls (PRES-010).** The rule that joins a wall to its neighbours was the original's since #257, but the match never
+    loaded `walls_*_vert`, `_horz`, `_tower` and `_build`, so every wall drew its type's plain picture. The match loads
+    them all now (`SpriteRules.WallImages`).
+  * **Saves on richer maps.** Conquer the World gives its fish patches 1,000 where the type has 500 (map extras, ADR
+    0152); a restore refused a node above its type's amount, so the owner's save could not be loaded. The bound is gone.
+  * **Hashes.** The rulesets' hash (the gate settings), the gameplay golden and the benches where gates stand.
 
 * **2026-10-29 — The eighth play-test, batch B: the way round every unit, the walk through a step, the next target
   when walks end short (WORLD-021, WORLD-020, PRES-016, WAR-016; items 1 to 3).** Movement had had several passes, so

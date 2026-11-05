@@ -177,7 +177,7 @@ public class DiplomacyTests
     [Trait("Rule", "ORD-013")]
     public void An_open_gate_lets_its_owner_and_allies_through_but_never_enemies(bool allied)
     {
-        // A wall across the map with player 0's gate in it; player 0's peasant keeps the automatic gate open.
+        // A wall across the map with player 0's gate in it, open.
         var objects = new List<Content.Compiled.MapObject>();
         for (int x = 0; x < 48; x++)
         {
@@ -202,6 +202,10 @@ public class DiplomacyTests
         d.Step();
         d.RunUntil(() => w.Gates.Get(gate).Open != 0, 100);
         Assert.Equal(1, w.Gates.Get(gate).Open);
+
+        // The gate's AI off: it stays open whoever comes (an automatic gate closes for an enemy near its door, ORD-013).
+        d.Order(0, CommandKind.SetGate, [gate], arg0: 3);
+        d.Step();
         d.MoveToTile(1, [intruder], 23, 3);
         d.RunUntil(() => d.PositionOf(intruder).Y < 8 * SimDriver.Tile, 600);
         Assert.Equal(allied, d.PositionOf(intruder).Y < 8 * SimDriver.Tile);

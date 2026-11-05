@@ -93,8 +93,9 @@ gameplay:
   unmaskReachFreshPercent: 400        # MAG-012 (the owner: 4 tiles at a meter of 8; batch J run 10 about 3.4): how close, in
                                       # % of a tile, a spy of the copied kingdom must come in front of an empty meter's disguise
   unmaskReachFullPercent: 100         # ... and of a full one (batch J run 10: right next to it); in between in proportion
-  gateOpenReachPx: 32                 # UNVERIFIED: an automatic gate opens for its owner's units this close
-  gateCloseReachPx: 64                # UNVERIFIED: ... and closes when none is this close (hysteresis)
+  gateWatchTiles: 4                   # ORD-013 (ReTzar 0x4571a0): an automatic gate closes while a land unit not allied to
+                                      # its kingdom is within 4 tiles of its door, and stands open otherwise
+  gateOrderHoldMs: 10000              # ORD-013 (ReTzar 0x456fd0): an order to open or close keeps the automatism away 20 x 500 ms
   gateChangeIntervalMs: 1000          # UNVERIFIED: least time between two changes of one gate (owner decision)
   maxGateChangesPerTick: 4            # engine bound: gate changes applied per tick (the rest wait); 16 cost 15 ms p99 (review)
   # GAME-04: capture (ADR 0044; ⚠ HYPOTHESIS UNK-19 for the EMIT influence).

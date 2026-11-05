@@ -404,8 +404,10 @@ public sealed class PresentationCatalog : ICardSource
             "move_sneak" or "default_sneak" => (CardAction.MoveSneak, string.Empty),
             "stand_ground" or "hold_steady" => (CardAction.Stance, "1"),
             "holdfire" => (CardAction.Stance, "toggle"),
-            "gateopen" => (CardAction.Gate, "open"),
-            "gateclose" => (CardAction.Gate, "close"),
+            // The original's names describe the drawbridge: gateopen raises it and closes the passage ("Close gate"),
+            // gateclose lowers it and opens the passage ("Open gate"; ORD-013, ReTzar 0x456fd0).
+            "gateopen" => (CardAction.Gate, "close"),
+            "gateclose" => (CardAction.Gate, "open"),
             "gate_subai_on" => (CardAction.Gate, "auto"),
             "gate_subai_off" => (CardAction.Gate, "manual"),
             "explore" => (CardAction.Explore, string.Empty),

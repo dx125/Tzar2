@@ -271,6 +271,11 @@ public sealed class CommandCard
             {
                 menu = _source.MenuVariant(menu, "cloaked") ?? menu;
             }
+
+            if (OpenMenu is null && e.Gate != FrameGate.None)
+            {
+                menu = GateMenu(menu, e.Gate);
+            }
         }
         else
         {
@@ -507,7 +512,7 @@ public sealed class CommandCard
                 foreach (EntityInfo gate in selected.Where(e => e.Owner == _me))
                 {
                     FrameGate state = Index(context.Frame).TryGetValue(gate.Id.Value, out int gi) ? context.Frame.Entities[gi].Gate : FrameGate.None;
-                    int mode = b.Argument switch { "open" => 1, "close" => 0, "auto" => 2, _ => (state & FrameGate.Open) != 0 ? 1 : 0 };
+                    int mode = b.Argument switch { "open" => 1, "close" => 0, "auto" => 2, _ => 3 };
                     if (state != FrameGate.None)
                     {
                         gates.Add(CommandKind.SetGate, [gate.Id], arg0: mode);
@@ -1354,6 +1359,19 @@ public sealed class CommandCard
         CardAction.Gate => Lead(context) is { } g && GateButtonOn(b.Argument, context.Frame.Entities[g].Gate),
         _ => false,
     };
+
+    // ORD-013: a gate's card follows its state, as the original's (ReTzar 0x457d40): gate_{wood|stone}_{open}{automatic},
+    // so it offers Open gate when closed and Close gate when open, Gate AI off when automatic and Gate AI on when not.
+    private string? GateMenu(string? menu, FrameGate gate)
+    {
+        if (menu is not { Length: > 3 } || menu[^3] != '_' || menu[^2] is not ('0' or '1') || menu[^1] is not ('0' or '1'))
+        {
+            return menu;
+        }
+
+        string state = string.Concat((gate & FrameGate.Open) != 0 ? "1" : "0", (gate & FrameGate.Automatic) != 0 ? "1" : "0");
+        return _source.MenuVariant(menu[..^3], state) ?? menu;
+    }
 
     private static bool GateButtonOn(string argument, FrameGate gate) => argument switch
     {

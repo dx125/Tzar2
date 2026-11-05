@@ -447,7 +447,10 @@ public enum GateMode : byte
     /// <summary>Opened and closed by orders only.</summary>
     Manual = 0,
 
-    /// <summary>Opens while one of its owner's units is near, closes when none is (the default).</summary>
+    /// <summary>
+    /// Stands open, and closes while a land unit of a kingdom it does not open for is near its door (the default; ORD-013,
+    /// ReTzar's reading of the original's gate, 0x4571a0).
+    /// </summary>
     Automatic = 1,
 }
 
@@ -467,8 +470,8 @@ public struct GateState : IComponent
     /// <summary>1 = should be open (manual orders and the automatic rule set it; step 10 applies it).</summary>
     public byte Desired;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved;
+    /// <summary>Ticks an automatic gate still leaves its own rule alone after an order to open or close it (gateOrderHoldMs).</summary>
+    public byte Hold;
 
     /// <summary>Tick of the last change of <see cref="Open"/> (or the order that set <see cref="Desired"/>).</summary>
     public int LastChangeTick;

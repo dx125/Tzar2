@@ -57,9 +57,10 @@ rules:
     source: [data ORDERS.INI attack_ground]
     status: tested
   ORD-013:
-    rule: Gates open and close on order, or open by themselves for the kingdom's units.
-    source: [manual Common Buildings (Wood Gate), data ORDERS.INI gateopen gateclose gate_subai_on gate_subai_off]
+    rule: A gate stands open and closes by itself while a land unit of a kingdom not allied to its own is within four tiles of its door; Open gate and Close gate change it, and keep it from changing by itself for ten seconds; with the gate's AI off it changes only on order. Its card offers what it can do now.
+    source: [manual Common Buildings (Wood Gate), data ORDERS.INI gateopen gateclose gate_subai_on gate_subai_off, data MENU.INI gate_wood_00 ... gate_stone_11, 'strings orders_names (gateopen Close gate; gateclose Open gate)', 'community ReTzar src/gameplay.rs (0x4571a0: the automatic gate every 500 ms; 0x456fd0: the orders, which keep the automatism away for 20 of its steps) and src/world.rs (0x457d40: the menu by the drawbridge and the AI)', owner 2026-11-04 (ninth play-test)]
     status: tested
+    note: 'The original''s order names describe the drawbridge: gateopen raises it and closes the passage, gateclose lowers it and opens the passage. The ninth play-test - a gate closed and never opened again, even from its card. Tzar2 took the names the other way round and always showed the first of the four menus (Open gate and Gate AI on), so Open gate closed it; and its automatic gate stood closed and opened only for its own units. The units the original''s gate of the player''s kingdom watches are those it sees; Tzar2 takes every land unit near the door. Nothing changes while a gate is upgraded in the original; Tzar2 does not wait.'
   ORD-014:
     rule: Unload makes a loaded vehicle let its units out at the clicked place; the pointer's colour shows whether they can land there.
     source: [manual Commanding Units (Unload)]

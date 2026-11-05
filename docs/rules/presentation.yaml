@@ -48,7 +48,7 @@ rules:
     rule: A wall's picture follows its neighbours of the same material, walls and gates of any kingdom - upright when joined above and below only, across when joined left and right only, a tower otherwise - and shows its damage; a wall's site has a picture of its own.
     source: ['data IMAGES.INI walls_wood_* walls_stone_*', 'community ReTzar src/world/walls.rs (0x4fb690, 0x4fbde0: the neighbours and the damage pictures) and src/world.rs (0x4fbce0: walls_wood_build, walls_stone_build)', owner 2026-10-25 (sixth play-test)]
     status: tested
-    note: The neighbours are the tiles above, right, below and left of the wall (1, 2, 4, 8); 5 is walls_*_vert, 10 walls_*_horz, any other walls_*_tower, always the first column. A damaged wall shows the *_dest picture's row rows - floor(health x rows / most) - 1. A site shows walls_*_build by its progress. Only finished walls and gates join. The kingdom's flag on the towers (image_c) is not drawn.
+    note: The neighbours are the tiles above, right, below and left of the wall (1, 2, 4, 8); 5 is walls_*_vert, 10 walls_*_horz, any other walls_*_tower, always the first column. A damaged wall shows the *_dest picture's row rows - floor(health x rows / most) - 1. A site shows walls_*_build by its progress. Only finished walls and gates join. The kingdom's flag on the towers (image_c) is not drawn. The ninth play-test - walls still stood as separate pieces side by side; the rule was right but the match never loaded these pictures, so every wall drew its type's plain picture. The match now loads them all.
   PRES-011:
     rule: A gold or stone mine keeps one of its three looks while it lasts, under the fog too, and shows the empty pit once it is used up.
     source: ['data IMAGES.INI res_gold res_stone (four pictures)', 'community ReTzar src/world.rs (0x4afeae: the look drawn at loading; the last picture the exhausted pit)', owner 2026-10-25 (sixth play-test)]
@@ -79,3 +79,8 @@ rules:
     source: ['community ReTzar src/gameplay/movement.rs (0x4debb0: the step takes the picture''s direction; 0x4e138b: the picture slides through the step)', owner 2026-10-29 (eighth play-test)]
     status: tested
     note: 'The eighth play-test - a knight''s walk could stop while it still moved in a crowd. A unit stopped mid-step (a fight halts it, it makes way for a friend) slid with its standing or attack picture, and kept the facing it had; and a unit standing a tick between two steps started its walk again at every step. A picture that comes back within 300 ms now goes on where it was.'
+  PRES-017:
+    rule: A finished gate is drawn as its two towers with its drawbridge between them, raised when it is closed and lowered when it is open.
+    source: [data IMAGES.INI gw0_anim ... gs3_anim (nine rows), 'community ReTzar src/world.rs (the gate''s picture: row 8 the towers, rows 0 to 6 the drawbridge, a gate drawn down two columns back to front)', owner 2026-11-04 (ninth play-test)]
+    status: tested
+    note: 'The ninth play-test - a gate looked unfinished, as if its sides were missing. Tzar2 drew only the drawbridge''s row; row 8 of the same picture holds the two towers, drawn first. The flags of gates c on the towers are not drawn, as no building''s flag is yet.'
