@@ -22,7 +22,8 @@ public class MapGenGoldenHashTests(ITestOutputHelper output)
     // on purpose: update them in the same commit and say why. Order: type (Random…Dry) × set (grass, summer, desert,
     // winter) × size (tiny…real-world). History: (M3 part C) first; (M3-C review) starting resources only where their
     // own castle is the nearest one, validator: castles block walking; (WORLD-013, ADR 0201) the original's forests from
-    // the plasma field and [randomtreeset]; (ADR 0264) the original's three item classes, their counts and properties.
+    // the plasma field and [randomtreeset]; (ADR 0264) the original's three item classes, their counts and properties;
+    // (NAT-002, ADR 0275, #272) no cows, as the original's random maps.
     private static readonly ulong[] Golden =
     [
         // Random Grass
