@@ -110,6 +110,23 @@ public class EconomyM3Tests
 
     [Fact]
     [Trait("Rule", "ECO-010")]
+    public void A_match_whose_map_gives_a_node_more_than_its_type_saves_and_loads()
+    {
+        // Conquer the World gives its fish patches 1,000 where the type has 500 (the ninth play-test: the match was saved
+        // and could not be loaded, "invalid resource stock").
+        int amount = Classic.EntityTypes[Classic.EntityTypeId("comm.fishpatch")].Traits.ResourceNode!.Amount * 2;
+        using var d = new SimDriver(
+            AsciiMap(Coast, Structure("euro.castle", 0, 0, 0), new MapObject("comm.fishpatch", MapObject.Nature, (16 * Tile) + (Tile / 2), (4 * Tile) + (Tile / 2)) { Amount = amount }),
+            ruleset: Classic);
+        d.Step();
+        EntityId fish = OfType(d.World, "comm.fishpatch").Single();
+        Assert.Equal(amount, d.World.ResourceStocks.Get(fish).Amount);
+        Simulation restored = Simulation.Restore(Snapshots.WorldSnapshot.Capture(d.World), Classic, d.World.Map.Data);
+        Assert.Equal(amount, restored.World.ResourceStocks.Get(fish).Amount);
+    }
+
+    [Fact]
+    [Trait("Rule", "ECO-010")]
     public void Fishing_boats_fish_and_deliver_at_the_harbor_not_on_land()
     {
         using var d = new SimDriver(

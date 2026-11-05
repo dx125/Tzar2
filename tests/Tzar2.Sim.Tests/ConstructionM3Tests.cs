@@ -146,10 +146,12 @@ public class ConstructionM3Tests
     }
 
     [Fact]
-    public void Gates_can_be_turned_and_open_for_their_owner_but_not_for_enemies()
+    [Trait("Rule", "ORD-013")]
+    public void Gates_can_be_turned_stand_open_and_close_for_a_stranger_near_the_door()
     {
-        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 10), Unit("euro.footman", 1, 26, 6)), ruleset: Classic);
+        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 12, 10), Unit("euro.footman", 1, 28, 6)), ruleset: Classic);
         EntityId peon = OfType(d.World, "euro.peon").Single();
+        EntityId stranger = OfType(d.World, "euro.footman").Single();
         d.Order(0, CommandKind.Build, [peon], 16 * Tile, 5 * Tile, arg0: Id("comm.gate_wood"), arg1: 1); // 1 x 6 when turned (gw2_anim)
         d.Step();
         EntityId gate = OfType(d.World, "comm.gate_wood").Single();
@@ -158,7 +160,7 @@ public class ConstructionM3Tests
         Assert.True(d.World.Gates.Has(gate));
         Assert.Equal(GateMode.Automatic, d.World.Gates.Get(gate).Mode);
 
-        // The peasant is next to the gate: it opens (its door, the second to fourth tiles down), the rest stays blocked.
+        // Nobody of another kingdom near: it stands open (its door, the second to fourth tiles down), the rest stays blocked.
         d.Step();
         Assert.Equal(1, d.World.Gates.Get(gate).Open);
         Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 16, 6));
@@ -166,24 +168,43 @@ public class ConstructionM3Tests
         Assert.False(d.World.Map.IsPassable(Locomotor.Foot, 16, 5));
         Assert.False(d.World.Map.IsPassable(Locomotor.Foot, 16, 9));
 
-        // The peasant walks away: it closes; an enemy coming close does not open it.
+        // The peasant walks away: it stays open. A stranger comes within four tiles of the door: it closes, and opens
+        // again once the stranger has gone (ReTzar 0x4571a0).
         d.MoveToTile(0, [peon], 4, 12);
-        d.MoveToTile(1, [OfType(d.World, "euro.footman").Single()], 18, 6);
-        d.RunUntil(() => false, 300);
-        Assert.Equal(0, d.World.Gates.Get(gate).Open);
-        Assert.False(d.World.Map.IsPassable(Locomotor.Foot, 16, 6));
-
-        // Manual control.
-        d.Order(0, CommandKind.SetGate, [gate], arg0: 1);
-        d.Step();
-        Assert.Equal((1, GateMode.Manual), (d.World.Gates.Get(gate).Open, d.World.Gates.Get(gate).Mode));
-        d.Order(0, CommandKind.SetGate, [gate], arg0: 0); // within 1 s of the last change: rejected (owner decision)
-        d.Step();
-        Assert.Equal(CommandRejection.GateBusy, d.Rejections().Last());
+        d.RunUntil(() => false, 100);
         Assert.Equal(1, d.World.Gates.Get(gate).Open);
-        d.RunUntil(() => false, 20);
+        d.MoveToTile(1, [stranger], 20, 7);
+        d.RunUntil(() => d.World.Gates.Get(gate).Open == 0, 300);
+        Assert.False(d.World.Map.IsPassable(Locomotor.Foot, 16, 6));
+        d.MoveToTile(1, [stranger], 29, 13);
+        d.RunUntil(() => d.World.Gates.Get(gate).Open == 1, 400);
+        Assert.Equal(1, d.World.Gates.Get(gate).Open);
+
+        // Close gate: it closes and stays closed while the order holds the automatism away (10 s), then stands open again.
+        d.RunUntil(() => false, 40);
         d.Order(0, CommandKind.SetGate, [gate], arg0: 0);
         d.Step();
+        Assert.Equal((0, GateMode.Automatic), (d.World.Gates.Get(gate).Open, d.World.Gates.Get(gate).Mode));
+        d.Order(0, CommandKind.SetGate, [gate], arg0: 1); // within 1 s of the last change: rejected (owner decision)
+        d.Step();
+        Assert.Equal(CommandRejection.GateBusy, d.Rejections().Last());
+        int hold = Tzar2.Sim.Systems.GameplayCommands.GateHoldTicks(d.World);
+        d.RunUntil(() => false, hold - 10);
+        Assert.Equal(0, d.World.Gates.Get(gate).Open);
+        d.RunUntil(() => d.World.Gates.Get(gate).Open == 1, 40);
+        Assert.Equal(1, d.World.Gates.Get(gate).Open);
+
+        // Gate AI off: the gate keeps its state, a stranger at the door changes nothing; orders open and close it.
+        d.Order(0, CommandKind.SetGate, [gate], arg0: 3);
+        d.Step();
+        Assert.Equal((1, GateMode.Manual), (d.World.Gates.Get(gate).Open, d.World.Gates.Get(gate).Mode));
+        d.MoveToTile(1, [stranger], 20, 7);
+        d.RunUntil(() => false, 300);
+        Assert.Equal(1, d.World.Gates.Get(gate).Open);
+        d.Order(0, CommandKind.SetGate, [gate], arg0: 0);
+        d.Step();
+        Assert.Equal(0, d.World.Gates.Get(gate).Open);
+        d.RunUntil(() => false, 300);
         Assert.Equal(0, d.World.Gates.Get(gate).Open);
     }
 

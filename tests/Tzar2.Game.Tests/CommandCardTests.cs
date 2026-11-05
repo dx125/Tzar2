@@ -782,6 +782,46 @@ public sealed class CommandCardTests : IDisposable
         Assert.Null(card.Trade(context, trader, 0, 0, source).Commands);
     }
 
+    [Fact]
+    [Trait("Rule", "ORD-013")]
+    public void A_gates_card_follows_its_state_and_open_gate_opens_it()
+    {
+        // The original's four menus of a gate (MENU.INI gate_wood_{open}{automatic}); the type names the first.
+        World world = _session.Simulation.World;
+        ushort type = (ushort)Rules.Value.EntityTypeId("comm.gate_wood");
+        _cards.MenuOverride[type] = "gate_wood_00";
+        CardButton open = new("gateclose", 'O', CardAction.Gate, "open", 22, "Open gate");
+        CardButton close = new("gateopen", 'C', CardAction.Gate, "close", 21, "Close gate");
+        CardButton aiOn = new("gate_subai_on", 'N', CardAction.Gate, "auto", 250, "Gate AI on");
+        CardButton aiOff = new("gate_subai_off", 'F', CardAction.Gate, "manual", 251, "Gate AI off");
+        _cards.Menus["gate_wood_00"] = [open, aiOn];
+        _cards.Menus["gate_wood_01"] = [open, aiOff];
+        _cards.Menus["gate_wood_10"] = [close, aiOn];
+        _cards.Menus["gate_wood_11"] = [close, aiOff];
+        (int x, int y) = Enumerable.Range(8, 48).SelectMany(yy => Enumerable.Range(8, 40).Select(xx => (xx, yy)))
+            .First(p => Enumerable.Range(0, 7).All(dx => world.Map.IsPassable(Locomotor.Foot, p.xx + dx, p.yy) && world.Map.Blockers[(p.yy * world.Map.Width) + p.xx + dx] == 0));
+        EntityId gate = world.PlaceStructure(type, 0, x, y);
+        _session.Step(2);
+        var card = new CommandCard(Rules.Value, _cards, 0);
+
+        // Automatic and open (nobody of another kingdom near): Close gate and Gate AI off.
+        IReadOnlyList<CardSlot?> slots = card.Build(Context([gate]));
+        Assert.Equal(["gateopen", "gate_subai_off"], slots.Where(b => b is not null).Select(b => b!.Value.Button.Order).Take(2));
+        Assert.Equal(0, card.Press(Context([gate]), slots[0]!.Value).Commands!.Commands[0].Arg0); // closes it
+        Assert.Equal(3, card.Press(Context([gate]), slots[1]!.Value).Commands!.Commands[0].Arg0); // the automatism off
+
+        // Closed by hand (a second after it opened): Open gate opens it (the ninth play-test: it sent close, and the gate
+        // never opened again).
+        _session.Step(30);
+        var batch = new CommandList();
+        batch.Add(CommandKind.SetGate, [gate], arg0: 0);
+        _session.Submit(batch);
+        _session.Step(2);
+        slots = card.Build(Context([gate]));
+        Assert.Equal(["gateclose", "gate_subai_off"], slots.Where(b => b is not null).Select(b => b!.Value.Button.Order).Take(2));
+        Assert.Equal(1, card.Press(Context([gate]), slots[0]!.Value).Commands!.Commands[0].Arg0);
+    }
+
     private CardContext Context(EntityId[] selection) => new(_session.AcquireFrame(out _) ?? Step(), selection);
 
     private GameFrame Step()

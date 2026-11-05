@@ -368,6 +368,7 @@ public sealed class WorldRenderer : IDisposable
 
             SheetRef? sheet;
             int frameIndex = 0, variant = 0;
+            bool wholeGate = false;
             // Fields and bridges lie on the ground: units walk over them and are drawn on top (a bridge hid the units
             // crossing it, the owner's fourth play-test).
             bool field = def.Traits.WalkableFootprint;
@@ -392,6 +393,7 @@ public sealed class WorldRenderer : IDisposable
                 sheet = gate;
                 frameIndex = site >= 0 ? SpriteRules.SiteFrame(site, gate.Sheet.FramesPerDirection)
                     : SpriteRules.GateFrame((e.Gate & FrameGate.Open) != 0);
+                wholeGate = site < 0;
             }
             else if (site >= 0 && !field)
             {
@@ -428,7 +430,19 @@ public sealed class WorldRenderer : IDisposable
 
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
             // PRES-014: a building is ordered by its top row, so units beside it and on its free tiles stand in front.
-            AddSheet(ground ? _ground : _objects, sheet, origin, variant, frameIndex, player, SpriteRules.PainterKey(ground ? 0 : SpriteRules.StructureOrderY(top)), shadows: true);
+            uint order = SpriteRules.PainterKey(ground ? 0 : SpriteRules.StructureOrderY(top));
+            if (wholeGate)
+            {
+                // PRES-017: a gate is its towers and its drawbridge, column by column (the ninth play-test: the towers were missing).
+                foreach ((int column, int layer) in SpriteRules.GateLayers(sheet.Sheet.Directions, sheet.Sheet.FramesPerDirection, frameIndex))
+                {
+                    AddSheet(_objects, sheet, origin, column, layer, player, order, shadows: true);
+                }
+            }
+            else
+            {
+                AddSheet(ground ? _ground : _objects, sheet, origin, variant, frameIndex, player, order, shadows: true);
+            }
             if (e.Burning)
             {
                 DrawFire(in e, def, left, top, foot);

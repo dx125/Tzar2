@@ -257,6 +257,11 @@ public partial class GameScreen : Node
                 }
             }
 
+            foreach (string wall in SpriteRules.WallImages(type))
+            {
+                _bank.Add(wall); // the joined pieces (PRES-010; the ninth play-test: never loaded, every wall drew its plain picture)
+            }
+
             for (int facing = 0; facing < 4 && type.Traits.Gate is not null; facing++)
             {
                 _bank.Add(SpriteRules.GateImage(type, facing, site: false)); // the drawbridges (CTRL-024)

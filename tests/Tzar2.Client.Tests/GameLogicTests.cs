@@ -125,6 +125,9 @@ public sealed class PresentationCatalogTests
     [InlineData("move_advance", null, CardAction.MoveAdvance, "")]
     [InlineData("stand_ground", null, CardAction.Stance, "1")]
     [InlineData("gate_subai_on", null, CardAction.Gate, "auto")]
+    [InlineData("gate_subai_off", null, CardAction.Gate, "manual")]
+    [InlineData("gateopen", null, CardAction.Gate, "close")] // ORD-013: "Close gate", the drawbridge raised
+    [InlineData("gateclose", null, CardAction.Gate, "open")] // "Open gate", the drawbridge lowered
     [InlineData("die", null, CardAction.Delete, "")]
     [InlineData("emerge", null, CardAction.Unload, "")]
     [InlineData("become_priest", null, CardAction.Become, "priest")]
@@ -233,6 +236,16 @@ public sealed class TerrainAndSpriteRuleTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-017")]
+    public void A_gate_draws_its_towers_and_its_drawbridge_column_by_column_back_to_front()
+    {
+        // Across: one column, the towers (row 8) under the drawbridge; down: two columns, the back one first.
+        Assert.Equal([(0, 8), (0, 6)], SpriteRules.GateLayers(columns: 1, frames: 9, bridgeFrame: 6));
+        Assert.Equal([(1, 8), (1, 0), (0, 8), (0, 0)], SpriteRules.GateLayers(columns: 2, frames: 9, bridgeFrame: 0));
+        Assert.Equal([(0, 3)], SpriteRules.GateLayers(columns: 1, frames: 7, bridgeFrame: 3)); // no towers' row: the bridge alone
+    }
+
+    [Fact]
     [Trait("Rule", "PRES-010")]
     public void A_wall_joins_its_neighbours_of_its_material_and_shows_its_damage()
     {
@@ -261,6 +274,22 @@ public sealed class TerrainAndSpriteRuleTests
         Assert.Equal("walls_stone_tower", SpriteRules.WallImage(stone, 2, site: false, damaged: false));
         Assert.Equal("walls_wood_build", SpriteRules.WallImage(wood, 10, site: true, damaged: false));
         Assert.Null(SpriteRules.WallImage(gate, 10, site: false, damaged: false));
+
+        // The match loads every picture a wall may show (the ninth play-test: the pieces were never loaded, and each wall
+        // drew its plain picture).
+        foreach (EntityTypeDefinition type in new[] { wood, stone })
+        {
+            var loaded = SpriteRules.WallImages(type).ToHashSet();
+            foreach (int mask in Enumerable.Range(0, 16))
+            {
+                foreach ((bool site, bool damaged) in new[] { (false, false), (false, true), (true, false) })
+                {
+                    Assert.Contains(SpriteRules.WallImage(type, mask, site, damaged)!, loaded);
+                }
+            }
+        }
+
+        Assert.Empty(SpriteRules.WallImages(gate));
 
         // Five damage pictures: a scratch shows the first, a wall near its end the last.
         Assert.Equal([0, 0, 1, 3, 4], new[] { 99, 81, 61, 21, 1 }.Select(h => SpriteRules.WallDamageFrame(h, 100, 5)));

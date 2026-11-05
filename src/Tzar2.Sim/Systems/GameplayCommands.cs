@@ -856,14 +856,15 @@ internal static class GameplayCommands
     }
 
     /// <summary>
-    /// Gates (GAME-03; ADR 0043): Arg0 0 = close, 1 = open (manual control), 2 = automatic. An open/close order on a gate
-    /// that changed less than <c>gateChangeIntervalMs</c> ago is rejected for that gate (<see cref="CommandRejection.GateBusy"/>
-    /// when no listed gate takes it); step 10 carries the order out within the per-tick change budget, and never closes a
-    /// gate on a unit standing in it.
+    /// Gates (GAME-03; ADR 0043; ORD-013): Arg0 0 = close, 1 = open, 2 = automatic on (gate_subai_on), 3 = automatic off
+    /// (gate_subai_off). An order to open or close keeps an automatic gate automatic and its own rule away for
+    /// <c>gateOrderHoldMs</c>. An open/close order on a gate that changed less than <c>gateChangeIntervalMs</c> ago is
+    /// rejected for that gate (<see cref="CommandRejection.GateBusy"/> when no listed gate takes it); step 10 carries the
+    /// order out within the per-tick change budget, and never closes a gate on a unit standing in it.
     /// </summary>
     public static CommandRejection? SetGate(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
-        if (command.Arg0 is < 0 or > 2)
+        if (command.Arg0 is < 0 or > 3)
         {
             return CommandRejection.InvalidArgument;
         }
@@ -879,9 +880,12 @@ internal static class GameplayCommands
             }
 
             ref GateState gate = ref world.Gates.At(g);
-            if (command.Arg0 == 2)
+            if (command.Arg0 >= 2)
             {
-                gate.Mode = GateMode.Automatic;
+                // gate_subai_on / gate_subai_off: the automatism on or off; off, the gate keeps the state it has.
+                gate.Mode = command.Arg0 == 2 ? GateMode.Automatic : GateMode.Manual;
+                gate.Desired = gate.Open;
+                gate.Hold = 0;
                 applied++;
                 continue;
             }
@@ -892,13 +896,19 @@ internal static class GameplayCommands
                 continue;
             }
 
-            gate.Mode = GateMode.Manual;
+            // Open or close: an automatic gate stays automatic and leaves its own rule alone for a while (ORD-013; ReTzar
+            // 0x456fd0: 20 of its 500 ms steps).
             gate.Desired = command.Arg0 == 1 ? (byte)1 : (byte)0;
+            gate.Hold = gate.Mode == GateMode.Automatic ? (byte)Math.Min(255, GateHoldTicks(world)) : (byte)0;
             applied++;
         }
 
         return applied > 0 ? null : busy ? CommandRejection.GateBusy : CommandRejection.NoValidEntities;
     }
+
+    /// <summary>The ticks an order keeps an automatic gate's own rule away (gateOrderHoldMs, at most 255).</summary>
+    internal static int GateHoldTicks(World world)
+        => (world.Ruleset.Gameplay.GateOrderHoldMs + world.Config.TickLengthMilliseconds - 1) / world.Config.TickLengthMilliseconds;
 
     /// <summary>The least ticks between two state changes of one gate.</summary>
     internal static int GateIntervalTicks(World world)

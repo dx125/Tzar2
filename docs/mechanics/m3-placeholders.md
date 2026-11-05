@@ -65,7 +65,7 @@ Shift + Delete; what each technology does (not how much).
 | Ruin lifetime | the corpse decal lifetime (120 s) | code (`World.Kill`) | — | observation |
 | Wall drag | at most 64 segments; builders move on within 6 tiles | YAML `gameplay.maxWallSegments`, `wallContinueRadiusTiles` | — | editor/game captures |
 | Gate footprint | **the cells of the drawbridge picture**: 7 × 1 across (`gw0_anim`), 1 × 6 down (`gw2_anim`), the door the middle three; four facings (ReTzar, ADR 0192) | importer; YAML `^class.gate_*` doors | UNK-02 | done; the passage in front of a gate is not modelled |
-| Gate opening | automatic by default; opens for the owner's units within 32 px, closes when none is within 64 px | YAML `gameplay.gateOpenReachPx`, `gateCloseReachPx` | — | observation |
+| Gate opening | **the original's** (ReTzar 0x4571a0, 0x456fd0; ORD-013): an automatic gate stands open and closes while a land unit not allied to its kingdom is within 4 tiles of its door; an order holds that rule away 10 s | YAML `gameplay.gateWatchTiles`, `gateOrderHoldMs` | — | done (community source) |
 | Gate change rate | at most one change per gate per second; at most 4 changes per tick (owner decision: bounded work; 16 cost 15 ms p99 under 200-gate spam) | YAML `gameplay.gateChangeIntervalMs`, `maxGateChangesPerTick` | — | observation |
 | Bridge footprint | the sprite box (`bridge_horz`), ends on land | import + code | UNK-02 | editor placement |
 | Harbor water | within 2 tiles of the footprint | code (`GameplayCommands.CoastReachTiles`) | UNK-02 | editor placement |

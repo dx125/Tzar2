@@ -154,11 +154,14 @@ public sealed record GameplaySettings
     /// <summary>Radius in tiles in which an idle peasant looks for work.</summary>
     public int IdleWorkRadiusTiles { get; init; } = 12;
 
-    /// <summary>An automatic gate opens while a unit of its owner is this close to it (world units, edge to edge).</summary>
-    public int GateOpenReachUnits { get; init; } = 2048;
+    /// <summary>
+    /// An automatic gate closes while a land unit of a kingdom not allied to its own is within this many tiles of its door,
+    /// and stands open otherwise (ORD-013; ReTzar's reading of the original, 0x4571a0).
+    /// </summary>
+    public int GateWatchTiles { get; init; } = 4;
 
-    /// <summary>An automatic gate closes when no unit of its owner is this close (more than the open reach: hysteresis).</summary>
-    public int GateCloseReachUnits { get; init; } = 4096;
+    /// <summary>After an order to open or close it, an automatic gate leaves its own rule alone this long (the original: 20 steps of 500 ms).</summary>
+    public int GateOrderHoldMs { get; init; } = 10_000;
 
     /// <summary>Least time between two state changes of one gate (orders earlier are rejected).</summary>
     public int GateChangeIntervalMs { get; init; } = 1000;
@@ -227,10 +230,10 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(WallContinueRadiusTiles, 64);
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxWallSegments, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxWallSegments, 256);
-        ArgumentOutOfRangeException.ThrowIfNegative(GateOpenReachUnits);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(GateOpenReachUnits, 8 * 2048);
-        ArgumentOutOfRangeException.ThrowIfLessThan(GateCloseReachUnits, GateOpenReachUnits);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(GateCloseReachUnits, 16 * 2048);
+        ArgumentOutOfRangeException.ThrowIfNegative(GateWatchTiles);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(GateWatchTiles, 16);
+        ArgumentOutOfRangeException.ThrowIfNegative(GateOrderHoldMs);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(GateOrderHoldMs, 12_000);
         ArgumentOutOfRangeException.ThrowIfNegative(GateChangeIntervalMs);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(GateChangeIntervalMs, 600_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxGateChangesPerTick, 1);

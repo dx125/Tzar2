@@ -168,21 +168,26 @@ public class M3ReviewRegressionTests
 
     [Fact]
     [Trait("Rule", "ORD-013")]
-    public void An_automatic_gate_has_hysteresis()
+    public void An_automatic_gate_closes_only_for_strangers_near_its_door()
     {
-        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.footman", 0, 20, 12)), ruleset: Classic);
+        using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("euro.footman", 0, 20, 12), Unit("euro.footman", 1, 28, 2)), ruleset: Classic);
         EntityId gate = d.World.PlaceStructure(Id("comm.gate_wood"), 0, 15, 8);
-        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId own = OfType(d.World, "euro.footman").Single(f => d.World.Identities.Get(f).Owner == 0);
+        EntityId stranger = OfType(d.World, "euro.footman").Single(f => d.World.Identities.Get(f).Owner == 1);
         d.Step();
-        Assert.Equal(0, d.World.Gates.Get(gate).Open);
-        d.MoveToTile(0, [footman], 16, 9); // right below the gate: opens
-        d.RunUntil(() => d.World.Gates.Get(gate).Open == 1, 300);
+        Assert.Equal(1, d.World.Gates.Get(gate).Open); // nobody near: open
+
+        // Its own unit at the door, and right in the passage: still open.
+        d.MoveToTile(0, [own], 17, 9);
+        d.RunUntil(() => !d.IsMoving(own), 300);
         Assert.Equal(1, d.World.Gates.Get(gate).Open);
-        d.MoveToTile(0, [footman], 16, 10); // 1.5 tiles away: beyond the open reach, within the close reach
-        d.RunUntil(() => !d.IsMoving(footman), 300);
+
+        // A stranger five tiles from the door: open; four tiles: closed.
+        d.MoveToTile(1, [stranger], 23, 3);
+        d.RunUntil(() => !d.IsMoving(stranger), 400);
         d.RunUntil(() => false, 40);
         Assert.Equal(1, d.World.Gates.Get(gate).Open);
-        d.MoveToTile(0, [footman], 16, 14);
+        d.MoveToTile(1, [stranger], 22, 4);
         d.RunUntil(() => d.World.Gates.Get(gate).Open == 0, 300);
         Assert.Equal(0, d.World.Gates.Get(gate).Open);
     }

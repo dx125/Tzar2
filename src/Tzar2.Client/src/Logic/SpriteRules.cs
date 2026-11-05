@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 
 namespace Tzar2.Client.Logic;
@@ -96,6 +97,27 @@ public static class SpriteRules
     /// <summary>The drawbridge's frame: raised (closed) on row 0, lowered (open) on row 6 (ReTzar's reading, 0x456080).</summary>
     public static int GateFrame(bool open) => open ? 6 : 0;
 
+    /// <summary>The frame of a gate's picture that holds its two towers (row 8 of <c>g{w|s}{0-3}_anim</c>).</summary>
+    public const int GateTowersFrame = 8;
+
+    /// <summary>
+    /// What a finished gate draws, in order (PRES-017; ReTzar's reading of the original): for each column of its picture
+    /// from the last to the first (a gate drawn down is two columns, back to front), the towers (row 8), then the drawbridge
+    /// (<paramref name="bridgeFrame"/>). A picture without the towers' row draws the drawbridge alone.
+    /// </summary>
+    public static IEnumerable<(int Column, int Frame)> GateLayers(int columns, int frames, int bridgeFrame)
+    {
+        for (int column = Math.Max(1, columns) - 1; column >= 0; column--)
+        {
+            if (frames > GateTowersFrame)
+            {
+                yield return (column, GateTowersFrame);
+            }
+
+            yield return (column, bridgeFrame);
+        }
+    }
+
     /// <summary>The construction-site sheet for a footprint (<c>build1x1</c> … <c>build8x8</c> of IMAGES.INI).</summary>
     public static string BuildSiteName(EntityTypeDefinition type)
     {
@@ -160,6 +182,27 @@ public static class SpriteRules
             _ => "tower",
         };
         return $"walls_{material}_{shape}{(damaged ? "_dest" : "")}";
+    }
+
+    /// <summary>
+    /// Every picture a wall or gate of <paramref name="type"/> may show (PRES-010): the wall's site and its upright, across
+    /// and tower pieces, each also damaged; none for anything else. The match loads them all, as it loads the gates'.
+    /// </summary>
+    public static IEnumerable<string> WallImages(EntityTypeDefinition type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        if (!type.Traits.IsWall || WallMaterial(type) is not (> 0 and var m))
+        {
+            yield break;
+        }
+
+        string material = m == 1 ? "wood" : "stone";
+        yield return $"walls_{material}_build";
+        foreach (string shape in new[] { "vert", "horz", "tower" })
+        {
+            yield return $"walls_{material}_{shape}";
+            yield return $"walls_{material}_{shape}_dest";
+        }
     }
 
     /// <summary>The frame of a damaged wall's picture (ReTzar's reading, 0x4fbde0): rows − ⌊health × rows / most⌋ − 1.</summary>

@@ -10,9 +10,9 @@ using Tzar2.Sim.Map;
 namespace Tzar2.Sim.Systems;
 
 /// <summary>
-/// Pipeline step 10 (status effects, TDD §8.5) for structures and casters (GAME-01/03; ADR 0043): automatic gates open
-/// while one of their owner's units is near and close when none is (never on a unit); badly damaged buildings burn and
-/// lose hit points until repaired above the threshold or burned down; casters regain mana.
+/// Pipeline step 10 (status effects, TDD §8.5) for structures and casters (GAME-01/03; ADR 0043): automatic gates close
+/// while a stranger's land unit is near their door and stand open otherwise (never closed on a unit); badly damaged
+/// buildings burn and lose hit points until repaired above the threshold or burned down; casters regain mana.
 /// </summary>
 public sealed class StructureSystem : ISimSystem
 {
@@ -72,12 +72,12 @@ public sealed class StructureSystem : ISimSystem
         return false;
     }
 
-    // Gates (ADR 0043). Automatic gates (gate_subai_on, the default) want to be open while one of the owner's units is
-    // within gateOpenReachPx of the footprint and closed once none is within gateCloseReachPx (hysteresis); the units are
-    // found through a coarse grid rebuilt this tick, so the work is bounded by the units near gates. Then every gate whose
-    // wanted state differs is changed, at most maxGateChangesPerTick per tick (ascending entity order, the rest wait),
-    // never sooner than gateChangeIntervalMs after its last change, and never closed on a unit standing in it. Every
-    // kingdom's units pass an open gate (per-player portals are a pathfinding follow-up).
+    // Gates (ADR 0043; ORD-013 as the original, ReTzar 0x4571a0, 0x456fd0). An automatic gate (gate_subai_on, the default)
+    // closes while a land unit of a kingdom it does not open for (ADR 0102) is within gateWatchTiles of its door, and stands
+    // open otherwise; an order to open or close keeps that rule away for gateOrderHoldMs. The units are found through a
+    // coarse grid rebuilt this tick, so the work is bounded by the units near gates. Then every gate whose wanted state
+    // differs is changed, at most maxGateChangesPerTick per tick (ascending entity order, the rest wait), never sooner than
+    // gateChangeIntervalMs after its last change, and never closed on a unit standing in it.
     private void UpdateGates(World world)
     {
         if (world.Gates.Count == 0)
@@ -105,17 +105,14 @@ public sealed class StructureSystem : ISimSystem
                     continue;
                 }
 
+                if (state.Hold > 0)
+                {
+                    state.Hold--;
+                    continue;
+                }
+
                 byte owner = world.Identities.Get(gates[i]).Owner;
-                (int X0, int Y0, int X1, int Y1) rect = Interaction.Rect(world, gates[i]);
-                long nearest = NearestOwnMover(world, owner, rect, g.GateCloseReachUnits);
-                if (state.Open == 0 && nearest <= g.GateOpenReachUnits)
-                {
-                    state.Desired = 1;
-                }
-                else if (state.Open != 0 && nearest > g.GateCloseReachUnits)
-                {
-                    state.Desired = 0;
-                }
+                state.Desired = StrangerNear(world, gates[i], owner, g.GateWatchTiles) ? (byte)0 : (byte)1;
             }
         }
 
@@ -137,7 +134,7 @@ public sealed class StructureSystem : ISimSystem
         }
     }
 
-    // Player-owned movers bucketed by 8-tile cells (stable counting sort, ascending entity order per cell).
+    // Movers bucketed by 8-tile cells (stable counting sort, ascending entity order per cell).
     private void BuildMoverGrid(World world)
     {
         _gridW = (world.Map.WorldWidth + GridCell - 1) / GridCell;
@@ -177,17 +174,43 @@ public sealed class StructureSystem : ISimSystem
         }
     }
 
-    // The edge distance from a gate's footprint to the nearest own mover within `limit` (beyond it: long.MaxValue).
-    private long NearestOwnMover(World world, byte owner, (int X0, int Y0, int X1, int Y1) rect, long limit)
+    // Whether a land unit of a kingdom the gate does not open for stands within `watch` tiles of its door (the original's
+    // gate looks at land units not allied to its kingdom within 4 cells of the passage, ReTzar 0x4571a0).
+    private bool StrangerNear(World world, EntityId gate, byte owner, int watch)
     {
-        long reach = limit + EntityTypeDefinition.MaxRadius;
-        int cx0 = (int)Math.Max(0, (rect.X0 - reach) / GridCell);
-        int cy0 = (int)Math.Max(0, (rect.Y0 - reach) / GridCell);
-        int cx1 = (int)Math.Min(_gridW - 1, (rect.X1 + reach) / GridCell);
-        int cy1 = (int)Math.Min(_gridH - 1, (rect.Y1 + reach) / GridCell);
-        long best = long.MaxValue;
+        Footprint f = world.Footprints.Get(gate);
+        EntityTypeDefinition type = world.TypeOf(gate);
+        int w = f.Width(type);
+        int h = f.Height(type);
+        ReadOnlySpan<byte> door = f.Passage(type);
+        int x0 = int.MaxValue, y0 = int.MaxValue, x1 = int.MinValue, y1 = int.MinValue;
+        for (int dy = 0; dy < h; dy++)
+        {
+            for (int dx = 0; dx < w; dx++)
+            {
+                if (door.Length == w * h && door[(dy * w) + dx] == 0)
+                {
+                    continue;
+                }
+
+                x0 = Math.Min(x0, f.TileX + dx);
+                y0 = Math.Min(y0, f.TileY + dy);
+                x1 = Math.Max(x1, f.TileX + dx);
+                y1 = Math.Max(y1, f.TileY + dy);
+            }
+        }
+
+        if (x0 > x1)
+        {
+            return false;
+        }
+
+        (x0, y0, x1, y1) = (x0 - watch, y0 - watch, x1 + watch, y1 + watch);
+        int cx0 = Math.Max(0, x0 * MapState.UnitsPerTile / GridCell);
+        int cy0 = Math.Max(0, y0 * MapState.UnitsPerTile / GridCell);
+        int cx1 = Math.Min(_gridW - 1, ((x1 + 1) * MapState.UnitsPerTile) / GridCell);
+        int cy1 = Math.Min(_gridH - 1, ((y1 + 1) * MapState.UnitsPerTile) / GridCell);
         ReadOnlySpan<EntityId> movers = world.Motions.Entities;
-        Span<Motion> motions = world.Motions.Components;
         for (int cy = cy0; cy <= cy1; cy++)
         {
             for (int cx = cx0; cx <= cx1; cx++)
@@ -195,20 +218,22 @@ public sealed class StructureSystem : ISimSystem
                 int cell = (cy * _gridW) + cx;
                 for (int k = _cellStart[cell]; k < _cellStart[cell + 1]; k++)
                 {
-                    int m = _items[k];
-                    if (!world.Diplomacy.OpensGateFor(owner, world.Identities.Get(movers[m]).Owner))
+                    EntityId unit = movers[_items[k]];
+                    Position p = world.Positions.Get(unit);
+                    int tx = p.X / MapState.UnitsPerTile;
+                    int ty = p.Y / MapState.UnitsPerTile;
+                    if (tx < x0 || tx > x1 || ty < y0 || ty > y1 || world.Diplomacy.OpensGateFor(owner, world.Identities.Get(unit).Owner)
+                        || world.TypeOf(unit).Locomotor is Locomotor.Air or Locomotor.Ship || world.IsHeld(unit))
                     {
                         continue;
                     }
 
-                    Position p = world.Positions.Get(movers[m]);
-                    long d = IntMath.ISqrt(Interaction.DistanceSquaredToRect(p.X, p.Y, rect)) - motions[m].Radius;
-                    best = Math.Min(best, Math.Max(0, d));
+                    return true;
                 }
             }
         }
 
-        return best;
+        return false;
     }
 
     private const int GridCell = 8 * MapState.UnitsPerTile;

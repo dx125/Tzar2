@@ -90,7 +90,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ADR 0270, 2026-10-27) gameplay.movement cells and meleeReachPx 18: the ruleset hash.
     // (ECO-025, 2026-10-27) the field's trait ReadyAtOnce: the ruleset hash only (this scenario places no field).
     // (DIP-010, PRES-015, NAT-004; 2026-10-29) the Minor trait, the night's hours, the meat's picture: the ruleset hash.
-    private const ulong GoldenRulesetHash = 0xF12CFAC950C2C0F4UL;
+    // (ORD-013, 2026-11-04) gateWatchTiles and gateOrderHoldMs replace the gate's reaches: the ruleset hash.
+    private const ulong GoldenRulesetHash = 0x16AD7ED401F2900AUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -118,8 +119,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (WORLD-021, WAR-016, PRES-016; 2026-10-29) a unit held up goes round every unit's tile, waits only behind one entering
     // its tile, takes another target when its walks end short, and faces where it steps: the stream and
     // the final hash.
-    private const ulong GoldenHashStream = 0x7118F2F67426E446UL;
-    private const ulong GoldenFinalFullHash = 0x11F830D29C4E18A9UL;
+    // (ORD-013, 2026-11-04) the bot's gate stands open and closes for strangers at its door, as the original's: the stream
+    // and the final hash.
+    private const ulong GoldenHashStream = 0xBE4B1A61317F591FUL;
+    private const ulong GoldenFinalFullHash = 0xC152B8E97F648A14UL;
 
     private const int Ticks = 1600;
 
