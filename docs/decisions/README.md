@@ -70,7 +70,7 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0101](0101-incremental-per-kingdom-visibility.md) | Compute visibility in the sim: per-kingdom reference-counted grids, bitsets and last-seen records | Accepted | 2026-10-17 |
 | [0102](0102-diplomacy-sharing-tribute-and-gate-passage.md) | Asymmetric stances, consented sharing, bounded tribute, and gates that bar non-allies | Accepted | 2026-10-17 |
 | [0103](0103-trade-routes-and-the-tavern.md) | Trade routes between two docks with distance profit; tavern conversion, gambling and loans | Accepted | 2026-10-17 |
-| [0104](0104-gateways-and-nature.md) | Claim gateways and wild animals by touch; Nature's units wander and guard their home | Accepted | 2026-10-17 |
+| [0104](0104-gateways-and-nature.md) | Claim gateways and wild animals by touch; Nature's units wander and guard their home | Accepted (with notes) | 2026-10-17 |
 | [0105](0105-day-clock-and-weather.md) | Derive the day clock and the weather from the tick and the seed | Accepted | 2026-10-17 |
 | [0106](0106-victory-conditions-and-statistics.md) | Evaluate victory in the sim with allied victory; count statistics from events | Accepted | 2026-10-17 |
 | [0107](0107-cheat-codes-goldens-and-benchmarks.md) | Make the hm* codes sim commands gated by the match; extend the golden scenario to the world systems | Accepted | 2026-10-17 |
@@ -178,3 +178,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0272](0272-each-step-follows-a-short-way-round-the-units-standing.md) | Take each step from a short search round the units standing in the way | Accepted | 2026-11-04 |
 | [0273](0273-walls-and-gates-leave-rubble-that-stays.md) | Keep the rubble of walls and gates with the decals, and lay gates as the original does | Accepted | 2026-11-04 |
 | [0274](0274-shots-land-on-a-tile-and-flame-balls-burn-their-way.md) | Let shells and bolts land on a tile, and flame balls burn their way, as the original's | Accepted | 2026-11-04 |
+| [0275](0275-the-neutral-creatures-as-the-original-has-them.md) | Give the neutral creatures the original's rules: prisoners freed, gateways taken by presence, cows only poached | Accepted | 2026-11-04 |

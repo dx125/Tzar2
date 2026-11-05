@@ -289,7 +289,7 @@ public sealed class WorldRenderer : IDisposable
                 }
             }
 
-            int player = e.SeemsOwner >= 0 ? e.SeemsOwner : e.Owner < 8 ? e.Owner : -1; // a taken-over unit keeps its old colours
+            int player = e.SeemsOwner >= 0 ? e.SeemsOwner : e.Owner < 8 && !(e.Owner < frame.Players.Length && frame.Players[e.Owner].Rescue) ? e.Owner : -1; // a taken-over unit keeps its old colours; the rescue kingdom has none (NAT-008)
             DrawEntity(in e, i, def, px, py, player, timeMs, options);
         }
 

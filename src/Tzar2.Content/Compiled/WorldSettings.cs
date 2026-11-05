@@ -384,6 +384,12 @@ public sealed record WorldTraits
     /// <summary>Whether the type is ambient life (birds): never a combat target, never counted for victory.</summary>
     public bool IsAmbient { get; init; }
 
+    /// <summary>
+    /// Whether nothing hurts it and its owner cannot delete it (<c>Indestructible</c>; the magic gateway, NAT-001; ReTzar's
+    /// reading of the original, 0x4b6740, 0x421190).
+    /// </summary>
+    public bool Indestructible { get; init; }
+
     /// <summary>Detection radius against cloaked units (spies, ninjas), in world units (0 = no detector).</summary>
     public int DetectUnits { get; init; }
 }

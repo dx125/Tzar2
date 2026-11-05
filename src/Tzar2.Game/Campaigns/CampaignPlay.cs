@@ -179,28 +179,39 @@ public static class ScenarioMatch
         ScenarioData s = mission.Scenario;
         int players = KingdomCount(mission, ruleset.MaxPlayers);
 
-        // The legacy Rescue pseudo-kingdom (objects flagged Rescue, owned by Nature in the IR) becomes one more,
-        // passive kingdom: Nature may not own working buildings in the sim. Rescuing itself (its units joining whoever
-        // reaches them) is not implemented yet (UNVERIFIED, UNK-66).
+        // The legacy Rescue pseudo-kingdom (objects flagged Rescue, owned by Nature in the IR) becomes one more, passive
+        // kingdom: its units wait to be freed (NAT-008, ADR 0275). Nature's own buildings and units that work (the sim gives
+        // Nature no workers, producers or drop-offs) go to another passive kingdom, at war with everyone as Nature is; with
+        // no slot left for it they join the rescue kingdom.
         MapData map = mission.Map;
-        int rescue = -1;
-        for (int i = 0; i < map.Objects.Length && rescue < 0; i++)
+        int rescue = -1, idle = -1;
+        bool anyRescue = false, anyIdle = false;
+        for (int i = 0; i < map.Objects.Length; i++)
         {
-            if (Passive(s, ruleset, map.Objects, i))
-            {
-                // A free slot, else an inactive kingdom that owns nothing.
-                rescue = players < ruleset.MaxPlayers ? players++ : FreeInactive(s, map, players);
-                break;
-            }
+            anyRescue |= RescueObject(s, i);
+            anyIdle |= !RescueObject(s, i) && IdleNature(ruleset, map.Objects, i);
         }
 
-        if (rescue >= 0)
+        if (anyRescue)
+        {
+            // A free slot, else an inactive kingdom that owns nothing.
+            rescue = players < ruleset.MaxPlayers ? players++ : FreeInactive(s, map, players, -1);
+        }
+
+        if (anyIdle)
+        {
+            idle = players < ruleset.MaxPlayers ? players++ : FreeInactive(s, map, players, rescue);
+            idle = idle >= 0 ? idle : rescue;
+        }
+
+        if (rescue >= 0 || idle >= 0)
         {
             var objects = new MapObject[map.Objects.Length];
             for (int i = 0; i < objects.Length; i++)
             {
                 MapObject o = map.Objects[i];
-                objects[i] = Passive(s, ruleset, map.Objects, i) ? o with { Owner = (byte)rescue } : o;
+                objects[i] = RescueObject(s, i) && rescue >= 0 ? o with { Owner = (byte)rescue }
+                    : IdleNature(ruleset, map.Objects, i) && (idle >= 0 ? idle : rescue) is >= 0 and var slot ? o with { Owner = (byte)slot } : o;
             }
 
             map = new MapData(map.Name, map.Width, map.Height, map.TerrainCorners, map.HeightCorners, map.CliffTiles, objects, map.TerrainSet, map.SetTerrainCorners);
@@ -216,7 +227,7 @@ public static class ScenarioMatch
         }
 
         human = Math.Max(0, human);
-        HashSet<int>? left = Taking(s, mission.Map, players, human, rescue, custom?.Players ?? 0);
+        HashSet<int>? left = Taking(s, mission.Map, players, human, rescue, idle, custom?.Players ?? 0);
         var list = new PlayerSetup[players];
         var converted = new HashSet<int>(); // the kingdoms whose civilization the setup chose
         for (int p = 0; p < players; p++)
@@ -241,8 +252,8 @@ public static class ScenarioMatch
                 civ = FirstPlayable(ruleset);
             }
 
-            bool absent = p != human && p != rescue && left is not null && !left.Contains(p);
-            list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue || absent ? ControllerKind.Passive : ControllerKind.Computer,
+            bool absent = p != human && p != rescue && p != idle && left is not null && !left.Contains(p);
+            list[p] = new PlayerSetup((byte)p, civ, p == human ? ControllerKind.Human : p == rescue || p == idle || absent ? ControllerKind.Passive : ControllerKind.Computer,
                 custom?.Difficulty ?? difficulty ?? Difficulty.Normal, Colour: custom?.KingdomAt(p)?.Colour ?? 255);
         }
 
@@ -276,7 +287,7 @@ public static class ScenarioMatch
             Ai = custom?.Ai ?? SkirmishAi.EngineDefault,
             ComputerAi = computerAi,
             CheatsAllowed = cheats,
-            Preparation = new Preparation(s, carry, (byte)human, rescue, mapStockpiles: custom is not { StartingResources: >= 0 }, Absent(left, list), teams),
+            Preparation = new Preparation(s, carry, (byte)human, rescue, idle, mapStockpiles: custom is not { StartingResources: >= 0 }, Absent(left, list), teams),
         };
         return setup with
         {
@@ -401,7 +412,7 @@ public static class ScenarioMatch
 
     // The kingdoms that take part when only `count` of them should (0: all): the player and the first others in
     // kingdom order. Null: all of them.
-    private static HashSet<int>? Taking(ScenarioData s, MapData map, int players, int human, int rescue, int count)
+    private static HashSet<int>? Taking(ScenarioData s, MapData map, int players, int human, int rescue, int idle, int count)
     {
         if (count <= 0)
         {
@@ -411,7 +422,7 @@ public static class ScenarioMatch
         var left = new HashSet<int> { human };
         for (int p = 0; p < players && left.Count < count; p++)
         {
-            if (p != rescue && TakesPart(s, map, p))
+            if (p != rescue && p != idle && TakesPart(s, map, p))
             {
                 left.Add(p);
             }
@@ -470,11 +481,11 @@ public static class ScenarioMatch
         return changed ? new MapData(map.Name, map.Width, map.Height, map.TerrainCorners, map.HeightCorners, map.CliffTiles, objects.ToImmutable(), map.TerrainSet, map.SetTerrainCorners) : map;
     }
 
-    private static int FreeInactive(ScenarioData s, MapData map, int players)
+    private static int FreeInactive(ScenarioData s, MapData map, int players, int taken)
     {
         for (int p = players - 1; p >= 0; p--)
         {
-            if (Kingdom(s, p + 1) is { Active: false })
+            if (p != taken && Kingdom(s, p + 1) is { Active: false })
             {
                 bool owns = false;
                 foreach (MapObject o in map.Objects)
@@ -492,15 +503,12 @@ public static class ScenarioMatch
         return -1;
     }
 
-    // Objects of the passive kingdom: those of the Rescue pseudo-kingdom, and owner-less buildings and units that work
-    // for a kingdom (the sim gives Nature no workers, producers or drop-offs; legacy owner 0 "none").
-    private static bool Passive(ScenarioData s, Ruleset ruleset, System.Collections.Immutable.ImmutableArray<MapObject> objects, int i)
-    {
-        if (i < s.ObjectCount && (s.ObjectAt(i).Flags & ObjectFlags.Rescue) != 0)
-        {
-            return true;
-        }
+    // An object of the Rescue pseudo-kingdom (legacy owner 9).
+    private static bool RescueObject(ScenarioData s, int i) => i < s.ObjectCount && (s.ObjectAt(i).Flags & ObjectFlags.Rescue) != 0;
 
+    // A building or unit of Nature's that works for a kingdom (the sim gives Nature no workers, producers or drop-offs).
+    private static bool IdleNature(Ruleset ruleset, System.Collections.Immutable.ImmutableArray<MapObject> objects, int i)
+    {
         MapObject o = objects[i];
         if (o.Owner != MapObject.Nature || ruleset.EntityTypeId(o.TypeKey) is not (>= 0 and var type))
         {
@@ -532,7 +540,7 @@ public static class ScenarioMatch
 
     // absent: kingdoms left out on the setup (SHELL-007), whose map objects are not created; teams: the setup's teams
     // (SHELL-006), allied over the map's diplomacy.
-    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, bool mapStockpiles = true, HashSet<int>? absent = null, ulong teams = 0) : IMatchPreparation
+    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, int idle, bool mapStockpiles = true, HashSet<int>? absent = null, ulong teams = 0) : IMatchPreparation
     {
         public void Prepare(Simulation simulation, LegacyTriggerSystem? triggers)
         {
@@ -613,16 +621,26 @@ public static class ScenarioMatch
                 }
             }
 
-            // The rescue kingdom is neutral to everyone (UNVERIFIED, UNK-66).
+            // NAT-008 (ReTzar's reading of the original, the relations R[x][9] = 0x40 and R[9][x] = 0x10): nobody attacks the
+            // rescue kingdom (the sim's rule for its flag), and it fights the kingdoms; Nature's working buildings and units
+            // are at war with everyone, as Nature is (R[x][10] = 0x10).
             if (world.HasPlayer(rescue))
             {
-                for (int p = 0; p < world.Players.Length; p++)
+                world.Players[rescue].Flags |= PlayerFlags.Rescue;
+            }
+
+            for (int p = 0; p < world.Players.Length; p++)
+            {
+                if (world.HasPlayer(rescue) && p != rescue)
                 {
-                    if (p != rescue)
-                    {
-                        ScenarioOperations.SetDiplomacy(world, rescue, p, SimStance.Neutral, Sharing.None);
-                        ScenarioOperations.SetDiplomacy(world, p, rescue, SimStance.Neutral, Sharing.None);
-                    }
+                    ScenarioOperations.SetDiplomacy(world, rescue, p, SimStance.Enemy, Sharing.None);
+                    ScenarioOperations.SetDiplomacy(world, p, rescue, SimStance.Neutral, Sharing.None);
+                }
+
+                if (world.HasPlayer(idle) && idle != rescue && p != idle)
+                {
+                    ScenarioOperations.SetDiplomacy(world, idle, p, SimStance.Enemy, Sharing.None);
+                    ScenarioOperations.SetDiplomacy(world, p, idle, SimStance.Enemy, Sharing.None);
                 }
             }
 

@@ -47,7 +47,7 @@ internal static class KingdomCommands
     public static CommandRejection? SetDiplomacy(World world, in Command command)
     {
         int other = command.X;
-        if (!world.HasPlayer(other) || other == command.Player || command.Arg0 is < 0 or > (int)Stance.Ally
+        if (!world.HasPlayer(other) || other == command.Player || world.IsRescue(other) || world.IsRescue(command.Player) || command.Arg0 is < 0 or > (int)Stance.Ally
             || (command.Arg1 & ~(int)(Sharing.Vision | Sharing.Resources | Sharing.UnitControl | Sharing.Victory)) != 0)
         {
             return CommandRejection.InvalidArgument;

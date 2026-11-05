@@ -54,7 +54,8 @@ public readonly record struct EntityInfo(
     int Level = -1,
     int X = 0,
     int Y = 0,
-    ulong LearnedSpells = 0);
+    ulong LearnedSpells = 0,
+    bool TakenByComing = false);
 
 /// <summary>
 /// The local selection and control groups with the original's mouse semantics (Appendix E.6, HK.TXT): click, Shift+click

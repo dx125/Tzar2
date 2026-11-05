@@ -466,6 +466,9 @@ public struct FramePlayer
     /// <summary>Whether the kingdom won (GAME-17).</summary>
     public bool Victorious;
 
+    /// <summary>The map's rescue pseudo-kingdom: its units wait to be freed and nobody attacks it (NAT-008).</summary>
+    public bool Rescue;
+
     /// <summary>Score (F4; GAME-17, UNK-29 placeholder formula).</summary>
     public long Score;
 

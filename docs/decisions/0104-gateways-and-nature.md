@@ -1,6 +1,6 @@
 # 0104. Claim gateways and wild animals by touch; Nature's units wander and guard their home
 
-* **Status:** Accepted
+* **Status:** Accepted; the claims and the wild cows amended by [0275](0275-the-neutral-creatures-as-the-original-has-them.md) (2026-11-04)
 * **Date:** 2026-10-17
 * **Deciders:** implementation agent (M3 stream F)
 * **Related:** TDD §10 GAME-15, ADRs 0042, 0060, 0100

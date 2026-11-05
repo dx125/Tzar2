@@ -526,7 +526,7 @@ public sealed class MagicSystem : ISimSystem
 
     private static void Damage(World world, EntityId caster, byte owner, EntityId target, int amount, List<Death> deaths)
     {
-        if (amount <= 0 || world.IsStone(target) || world.IsHeld(target) || world.IsInvulnerable(world.Identities.Get(target).Owner)
+        if (amount <= 0 || world.IsStone(target) || world.IsHeld(target) || world.IsInvulnerable(world.Identities.Get(target).Owner) || world.TypeOf(target).Traits.World.Indestructible
             || IsMagicImmune(world, target)) // spells are magic: the Messiah takes none (WAR-010)
         {
             return;

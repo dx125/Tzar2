@@ -91,7 +91,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ECO-025, 2026-10-27) the field's trait ReadyAtOnce: the ruleset hash only (this scenario places no field).
     // (DIP-010, PRES-015, NAT-004; 2026-10-29) the Minor trait, the night's hours, the meat's picture: the ruleset hash.
     // (ORD-013, 2026-11-04) gateWatchTiles and gateOrderHoldMs replace the gate's reaches: the ruleset hash.
-    private const ulong GoldenRulesetHash = 0x2BC9E525458D9339UL;
+    private const ulong GoldenRulesetHash = 0xD092F7E944C20D79UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -127,8 +127,10 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // rubble that stays, every decal with its look (hashed state, snapshot 26): the ruleset, the stream and the final hash.
     // (WAR-018, MAG-029, 2026-11-04) shells and bolts land on a tile and hurt the square round it (the ruleset), a store for
     // the flame balls' way (hashed layout 21, snapshot 27): the ruleset, the stream and the final hash.
-    private const ulong GoldenHashStream = 0xB33B88FDFB67CFD4UL;
-    private const ulong GoldenFinalFullHash = 0x726305D8617D3811UL;
+    // (NAT-001, NAT-002, ADR 0275, 2026-11-04) gateways taken by presence and indestructible, cows taken only by Cow Poaching
+    // (the ruleset): the scenario's Nature cow is no longer claimed by touch; the ruleset, the stream and the final hash.
+    private const ulong GoldenHashStream = 0x393C920C938D235AUL;
+    private const ulong GoldenFinalFullHash = 0x57251365821E450DUL;
 
     private const int Ticks = 1600;
 

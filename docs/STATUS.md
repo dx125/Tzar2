@@ -9,8 +9,9 @@ indexed in [decisions/README.md](decisions/README.md).
 * **Last updated:** 2026-11-04 (item 22, the owner's list after the ninth play-test: batch A, a gate's site as the
   original's, over any walls and with the way before its door clear, in all four facings; walls and gates leave rubble
   that stays, every ruin is drawn (ADR 0273); a galleon's card follows its cannon level. Batch B, shells and bolts land
-  on a tile and hurt the square round it, any kingdom's; flame bolts burn their way (ADR 0274). Next: batch C, the
-  neutral creatures. Before: item 21, the ninth play-test, done. The slow checks run once per batch
+  on a tile and hurt the square round it, any kingdom's; flame bolts burn their way (ADR 0274). Batch C, the neutral
+  creatures as the original's: prisoners freed by a fighter beside them, gateways taken by presence, cows only by Cow
+  Poaching, no cows on random maps (ADR 0275). Before: item 21, the ninth play-test, done. The slow checks run once per batch
   of three or four fixes, with the re-pin script and a faster campaign acceptance)
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
@@ -504,13 +505,32 @@ owner's order of 2026-10-26.
        or a cannon ship's fire were hurt. Check every attack that hurts an area: **fixed** (WAR-018, MAG-029; ADR 0274;
        log below). The fire rain, freeze and whirlpool were already the original's.
     5. The yellow peasants whose attack was refused (NotAllied) were the original's neutral ones, which a unit takes by
-       coming close; review the whole mechanics of the neutral creatures: open (batch C).
+       coming close; review the whole mechanics of the neutral creatures: **fixed** (NAT-001, NAT-002, NAT-008; ADR
+       0275; log below).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-04 — The owner's list after the ninth play-test, batch C: the neutral creatures as the original's (NAT-001,
+  NAT-002, NAT-008; ADR 0275; item 22, item 5).** A probe of the original's 33 maps (local only) lists owner 9, the
+  rescue kingdom (peasants, cows, gateways, houses, towers, a castle), and owner 10, Nature (animals, monsters, walls,
+  bridges, towers, fields). ReTzar's reading gives the rules:
+  * **Prisoners (NAT-008; 0x44092d, 0x502e18).** The rescue kingdom's units join the kingdom of a fighter beside them
+    within a second, with what they hold.
+    * Nobody attacks the rescue kingdom; its units attack nobody; its towers fight the kingdoms.
+    * It draws grey. A right click on a prisoner walks up to it.
+    * `@kingdomcanrescue` bars a kingdom (`PlayerFlags.Rescue`, `NoRescue`).
+    * Before, it was neutral both ways in a kingdom's colour, and nobody could free its units (UNK-66). The owner's
+      knights' attacks were refused.
+  * **Nature's working buildings and units** (a smithy, fields, dwarves) go to another passive kingdom, at war with
+    everyone as Nature is. Before, they joined the rescue kingdom, neutral.
+  * **Magic gateways (NAT-001; 0x420fd0).** The fighters beside one take it when they are all of one kingdom, from
+    whoever held it. Nothing hurts it and its owner cannot delete it (`Indestructible`).
+  * **Cows (NAT-002; 0x4ec944).** A cow of nobody's or another kingdom goes to a peasant beside it who knows Cow
+    Poaching, unless its own kingdom or an ally stands by. Touching does nothing; Nature's cows are fought. Random maps
+    place none (0x4b1560); before, each kingdom had four Nature cows near its castle.
 * **2026-11-04 — The owner's list after the ninth play-test, batch B: shots that land on a tile, flame bolts that
   burn their way (WAR-018, MAG-029, WAR-013; ADR 0274; item 22, item 4).** ReTzar's reading of the original's code:
   * **Shells (WAR-018; 0x433770, 0x4ed74a, 0x44de50).** Catapults, cannon ships and towers and rocket towers shoot

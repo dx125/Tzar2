@@ -162,7 +162,7 @@ public sealed class AiCensus
 
     private static bool IsLive(World world, int player, int other)
         => other != player && world.HasPlayer(other) && (world.PlayersView[other].Flags & PlayerFlags.Active) != 0
-            && (world.PlayersView[other].Flags & PlayerFlags.Defeated) == 0;
+            && (world.PlayersView[other].Flags & (PlayerFlags.Defeated | PlayerFlags.Rescue)) == 0;
 
     /// <summary>Recomputes the census unless it is already from this tick.</summary>
     internal void Update(World world)

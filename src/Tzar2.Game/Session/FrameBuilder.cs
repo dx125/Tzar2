@@ -444,6 +444,7 @@ internal static class FrameBuilder
             fp.PopulationCap = state.PopulationCap;
             fp.Defeated = (state.Flags & PlayerFlags.Defeated) != 0;
             fp.Victorious = (state.Flags & PlayerFlags.Victorious) != 0;
+            fp.Rescue = (state.Flags & PlayerFlags.Rescue) != 0;
             fp.AiAssist = (byte)(((state.Flags & PlayerFlags.AssistEconomy) != 0 ? 1 : 0) | ((state.Flags & PlayerFlags.AssistWar) != 0 ? 2 : 0));
             fp.Civilization = world.PlayerCivilization(p);
             fp.Statistics = KingdomStatistics.From(world.Kingdoms[p]);

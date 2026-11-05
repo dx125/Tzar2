@@ -177,6 +177,11 @@ public static class OrderResolver
             return unit.CanPickItems ? DefaultAction.PickItem : DefaultAction.Move;
         }
 
+        if (t.TakenByComing)
+        {
+            return DefaultAction.Move; // a prisoner to free or a magic gateway to take: walk up to it (NAT-008, NAT-001)
+        }
+
         // Enemies are units and buildings of another owner, Nature's animals and creatures included (as in the sim), and
         // another kingdom's fields and cows; Nature's trees and rocks are anyone's resources.
         bool kingdom = t.Owner != MapObject.Nature;

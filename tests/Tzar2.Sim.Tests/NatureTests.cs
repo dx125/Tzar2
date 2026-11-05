@@ -82,8 +82,110 @@ public class NatureTests
     }
 
     [Fact]
+    [Trait("Rule", "NAT-001")]
+    public void A_gateway_goes_to_the_only_kingdom_whose_fighters_stand_beside_it_from_whoever_held_it_and_nothing_hurts_it()
+    {
+        // ReTzar's reading of the original (0x420fd0 over 0x41fd70, 0x4b6740, 0x421190).
+        using var d = new SimDriver(
+            TestMap(48, 16, Structure("comm.magicgateway", Nature, 20, 6), Unit("euro.footman", 0, 19, 5), Unit("euro.footman", 1, 23, 9), Structure("euro.castle", 0, 2, 2), Structure("euro.castle", 1, 40, 9)),
+            ruleset: Classic);
+        World w = d.World;
+        EntityId gateway = OfType(w, "comm.magicgateway").Single();
+        EntityId ours = OfType(w, "euro.footman", 0).Single(), theirs = OfType(w, "euro.footman", 1).Single();
+        d.Order(0, CommandKind.SetStance, [ours], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [theirs], arg0: (int)CombatStance.HoldFire);
+        d.RunUntil(() => false, 60);
+        Assert.Equal(Nature, w.Identities.Get(gateway).Owner); // fighters of two kingdoms beside it: nobody takes it
+
+        d.MoveToTile(1, [theirs], 30, 12);
+        d.RunUntil(() => w.Identities.Get(gateway).Owner == 0, 400);
+        Assert.Equal(0, w.Identities.Get(gateway).Owner);
+
+        // Another kingdom takes it from a kingdom alike, when it stands there alone.
+        d.MoveToTile(0, [ours], 4, 12);
+        d.MoveToTile(1, [theirs], 23, 7);
+        d.RunUntil(() => w.Identities.Get(gateway).Owner == 1, 800);
+        Assert.Equal(1, w.Identities.Get(gateway).Owner);
+
+        // Nothing hurts it, and its owner cannot delete it.
+        Assert.False(w.MayAttack(0, gateway));
+        d.Order(1, CommandKind.Delete, [gateway]);
+        d.Step();
+        Assert.True(w.Entities.IsAlive(gateway));
+    }
+
+    [Fact]
+    [Trait("Rule", "NAT-008")]
+    public void The_rescue_kingdoms_units_join_the_kingdom_of_a_fighter_beside_them_and_nobody_attacks_them()
+    {
+        // ReTzar's reading of the original (0x44092d, 0x502e18; the relations R[x][9] = 0x40, R[9][x] = 0x10).
+        using var d = new SimDriver(
+            TestMap(48, 16, Unit("euro.peon", 2, 20, 8), Unit("euro.peon", 2, 30, 8), Unit("euro.peon", 0, 21, 8), Unit("euro.footman", 0, 12, 8), Unit("euro.footman", 1, 40, 8), Structure("euro.castle", 0, 2, 2)),
+            players: 3, ruleset: Classic);
+        World w = d.World;
+        w.Players[2].Flags |= PlayerFlags.Rescue;
+        Sim.Systems.ScenarioOperations.SetDiplomacy(w, 2, 0, Kingdoms.Stance.Enemy, Kingdoms.Sharing.None);
+        Sim.Systems.ScenarioOperations.SetDiplomacy(w, 0, 2, Kingdoms.Stance.Neutral, Kingdoms.Sharing.None);
+        EntityId[] prisoners = [.. OfType(w, "euro.peon", 2)];
+        EntityId first = prisoners.Single(p => d.PositionOf(p).X / SimDriver.Tile == 20), second = prisoners.Single(p => p != first);
+        EntityId footman = OfType(w, "euro.footman", 0).Single();
+        d.RunUntil(() => false, 60);
+        Assert.Equal(2, w.Identities.Get(first).Owner); // a peasant beside it frees nobody, nor a fighter far off
+
+        // Nobody attacks a prisoner, and it attacks nobody.
+        Assert.False(w.MayAttack(0, first));
+        Assert.False(w.MayAttack(1, first));
+        d.Order(0, CommandKind.Attack, [footman], target: second);
+        d.Step();
+        Assert.NotEmpty(d.Rejections());
+        Assert.Equal(0, d.Events.Count(e => e.Event.Kind == SimEventKind.Damaged));
+        d.Order(0, CommandKind.SetDiplomacy, [], 2, 0, arg0: (int)Kingdoms.Stance.Enemy);
+        d.Step();
+        Assert.Equal(CommandRejection.InvalidArgument, d.Rejections().Last()); // no stance toward the rescue kingdom
+
+        // A fighter comes beside it: within a second it joins the fighter's kingdom.
+        d.MoveToTile(0, [footman], 19, 9);
+        d.RunUntil(() => w.Identities.Get(first).Owner == 0, 600);
+        Assert.Equal(0, w.Identities.Get(first).Owner);
+        Assert.Equal(2, w.Identities.Get(second).Owner);
+
+        // A kingdom the scenario bars from rescuing (@kingdomcanrescue off) frees nobody.
+        w.Players[0].Flags |= PlayerFlags.NoRescue;
+        d.MoveToTile(0, [footman], 29, 9);
+        d.RunUntil(() => false, 400);
+        Assert.Equal(2, w.Identities.Get(second).Owner);
+    }
+
+    [Fact]
     [Trait("Rule", "NAT-002")]
-    public void Wild_cows_wander_and_join_the_kingdom_that_touches_them_and_birds_are_never_attacked()
+    public void A_wild_cow_goes_only_to_a_peasant_who_knows_cow_poaching_and_a_guarded_cow_stays()
+    {
+        // ReTzar's reading of the original (poach_cows 0x4ec944): no touch takes a cow of nobody's; the peasants beside it
+        // take it with Cow Poaching, unless its own kingdom or an ally stands by it. Nature's cows are fought as its other
+        // creatures; birds never.
+        using var d = new SimDriver(
+            TestMap(48, 16, Unit("comm.cow", Nature, 20, 8), Unit("comm.bird", Nature, 30, 3), Unit("euro.footman", 0, 21, 8), Unit("euro.peon", 0, 19, 8),
+                Unit("comm.cow", 1, 34, 8), Unit("euro.peon", 1, 35, 8), Unit("euro.peon", 0, 33, 8), Structure("euro.castle", 0, 2, 2), Structure("euro.castle", 1, 40, 2)),
+            ruleset: Classic);
+        World w = d.World;
+        EntityId wild = OfType(w, "comm.cow", Nature).Single(), theirs = OfType(w, "comm.cow", 1).Single();
+        EntityId footman = OfType(w, "euro.footman").Single();
+        d.Order(0, CommandKind.SetStance, [footman], arg0: (int)CombatStance.HoldFire);
+        d.RunUntil(() => false, 100);
+        Assert.Equal(Nature, w.Identities.Get(wild).Owner); // a footman and a peasant beside it take nothing
+        Assert.True(w.MayAttack(0, wild));
+        Assert.False(w.MayAttack(0, OfType(w, "comm.bird").Single()));
+
+        CombatMagicFixtures.Grant(w, 0, "te_cowpoaching");
+        d.RunUntil(() => w.Identities.Get(wild).Owner == 0, 200);
+        Assert.Equal(0, w.Identities.Get(wild).Owner);
+        d.RunUntil(() => false, 100);
+        Assert.Equal(1, w.Identities.Get(theirs).Owner); // its own kingdom's peasant guards it
+    }
+
+    [Fact]
+    [Trait("Rule", "NAT-002")]
+    public void Wild_cows_wander_and_birds_are_never_attacked()
     {
         using var d = new SimDriver(
             TestMap(48, 16, Unit("comm.cow", Nature, 20, 8), Unit("comm.bird", Nature, 30, 8), Unit("euro.footman", 0, 30, 9), Unit("euro.peon", 0, 5, 8)),
@@ -99,23 +201,7 @@ public class NatureTests
         }
 
         Assert.True(wandered);
-        Assert.Equal(0, d.Events.Count(e => e.Event.Kind == SimEventKind.Damaged)); // the footman ignores bird and cow
-
-        EntityId peon = OfType(w, "euro.peon").Single();
-        for (int round = 0; round < 10 && w.Identities.Get(cow).Owner == Nature; round++)
-        {
-            Position c = d.PositionOf(cow);
-            d.Order(0, CommandKind.Move, [peon], c.X, c.Y);
-            d.RunUntil(() => w.Identities.Get(cow).Owner != Nature, 200);
-        }
-
-        Assert.Equal(0, w.Identities.Get(cow).Owner);
-        Assert.NotEqual(MotionState.Moving, w.Motions.Get(cow).State); // a claimed cow stops its walk (play-test 2026-10-20)
-        d.RunUntil(() => !d.IsMoving(cow), 40); // it ends the step it began onto its tile (ADR 0270)
-        Position claimedAt = d.PositionOf(cow);
-        d.Order(0, CommandKind.Stop, [peon]);
-        d.RunUntil(() => false, 400);
-        Assert.Equal(claimedAt, d.PositionOf(cow)); // it grazes there a while (NAT-007)
+        Assert.DoesNotContain(d.Events, e => e.Event.Kind == SimEventKind.Damaged && e.Event.Entity != cow); // nobody hurts the bird
     }
 
     [Fact]

@@ -11,10 +11,12 @@ using Tzar2.Sim.Map;
 namespace Tzar2.Sim.Systems;
 
 /// <summary>
-/// Pipeline step 6 (activities, GAME-15, ADR 0104): Nature's entities. A magic gateway (or a wild cow) owned by Nature
-/// becomes the kingdom whose unit touches it first (gateways: a military unit; ties: the nearer, then the lower entity
-/// index); animals wander around their home; guarding units (bears, guarded-town defenders) drop the chase and walk back
-/// when lured further than <c>guardRadiusTiles</c> from home. Cows of every kingdom graze (NAT-007).
+/// Pipeline step 6 (activities, GAME-15, ADR 0104, ADR 0275): Nature's entities and the neutral ones. A magic gateway goes
+/// to the kingdom whose fighters alone stand beside it, from whoever held it (NAT-001); the rescue kingdom's units join the
+/// kingdom of a fighter beside them (NAT-008); a cow goes to a peasant beside it who knows Cow Poaching, unless its own
+/// kingdom or an ally stands by it too (NAT-002); animals wander around their home; guarding units (bears,
+/// guarded-town defenders) drop the chase and walk back when lured further than <c>guardRadiusTiles</c> from home. Cows
+/// of every kingdom graze (NAT-007).
 /// </summary>
 public sealed class NatureSystem : ISimSystem
 {
@@ -39,6 +41,12 @@ public sealed class NatureSystem : ISimSystem
     // The lengths of the grazing pictures (IMAGES.INI): cow_idle (800 + 9 x 200 ms), cow_down and cow_eat (1000 ms).
     private static readonly int[] PictureMs = [2600, 1000, 1000];
 
+    // NAT-008 (ReTzar's reading of the original, op 0x7e at 0x502e18): a prisoner looks round every second.
+    private const int RescueMs = 1000;
+
+    // NAT-002 (ReTzar 0x4ec944, 0x4ecff8): Cow Poaching looks round a cow every two seconds.
+    private const int PoachMs = 2000;
+
     private readonly List<(EntityId Entity, byte Owner)> _claims = [];
 
     /// <inheritdoc />
@@ -57,6 +65,17 @@ public sealed class NatureSystem : ISimSystem
         if (tick % every == 0)
         {
             Claims(world);
+        }
+
+        int tickMs = world.Config.TickLengthMilliseconds;
+        if (tick % Math.Max(1, RescueMs / tickMs) == 0)
+        {
+            Rescue(world);
+        }
+
+        if (tick % Math.Max(1, PoachMs / tickMs) == 0)
+        {
+            Poach(world);
         }
 
         if (tick % AdoptTicks == 0)
@@ -82,6 +101,171 @@ public sealed class NatureSystem : ISimSystem
         }
     }
 
+    // The tile a unit stands on.
+    private static (int X, int Y) TileOf(World world, EntityId e)
+    {
+        Position p = world.Positions.Get(e);
+        return (p.X / MapState.UnitsPerTile, p.Y / MapState.UnitsPerTile);
+    }
+
+    // A unit that takes gateways and frees prisoners (ReTzar 0x5028a0, flag 0x10000): a military unit of a kingdom that may
+    // rescue, on the map and alive.
+    private static bool Fighter(World world, EntityId e, out byte owner)
+    {
+        owner = world.Identities.Get(e).Owner;
+        EntityTraits t = world.TypeOf(e).Traits;
+        return t.Category == EntityCategory.Unit && t.World.IsMilitary && world.MayRescue(owner) && !world.IsHeld(e) && world.Positions.Has(e)
+            && world.Healths.IndexOf(e) is >= 0 and var h && world.Healths.At(h).Current > 0;
+    }
+
+    // NAT-001 (ReTzar's reading of the original, 0x420fd0 over 0x41fd70): the fighters standing in a gateway's footprint
+    // grown by one take it when they all belong to one kingdom, from whoever held it.
+    private static void TakenByPresence(World world, EntityId gateway, byte holder, List<(EntityId, byte)> claims)
+    {
+        if (world.Footprints.IndexOf(gateway) is not (>= 0 and var f))
+        {
+            return;
+        }
+
+        Footprint fp = world.Footprints.At(f);
+        EntityTypeDefinition type = world.TypeOf(gateway);
+        int x0 = fp.TileX - 1, y0 = fp.TileY - 1, x1 = fp.TileX + fp.Width(type), y1 = fp.TileY + fp.Height(type);
+        int taker = -1;
+        ReadOnlySpan<EntityId> movers = world.Motions.Entities;
+        for (int m = 0; m < movers.Length; m++)
+        {
+            if (!Fighter(world, movers[m], out byte owner))
+            {
+                continue;
+            }
+
+            (int tx, int ty) = TileOf(world, movers[m]);
+            if (tx < x0 || tx > x1 || ty < y0 || ty > y1)
+            {
+                continue;
+            }
+
+            if (taker >= 0 && taker != owner)
+            {
+                return; // fighters of two kingdoms: nobody takes it
+            }
+
+            taker = owner;
+        }
+
+        if (taker >= 0 && taker != holder)
+        {
+            claims.Add((gateway, (byte)taker));
+        }
+    }
+
+    // NAT-008 (ReTzar's reading of the original, 0x44092d, 0x502e18): a unit of the rescue kingdom joins the kingdom of
+    // the first fighter standing on the tiles round it; what it holds goes with it.
+    private void Rescue(World world)
+    {
+        _claims.Clear();
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            EntityId prisoner = ids[i];
+            if (!world.IsRescue(world.Identities.Get(prisoner).Owner) || world.TypeOf(prisoner).Traits.Category != EntityCategory.Unit
+                || world.IsHeld(prisoner) || !world.Positions.Has(prisoner))
+            {
+                continue;
+            }
+
+            (int px, int py) = TileOf(world, prisoner);
+            for (int k = 0; k < ids.Length; k++)
+            {
+                if (k != i && world.Motions.Has(ids[k]) && Fighter(world, ids[k], out byte owner) && TileOf(world, ids[k]) is var t
+                    && Math.Abs(t.X - px) <= 1 && Math.Abs(t.Y - py) <= 1)
+                {
+                    _claims.Add((prisoner, owner));
+                    break;
+                }
+            }
+        }
+
+        foreach ((EntityId prisoner, byte owner) in _claims)
+        {
+            Take(world, prisoner, owner);
+            ReadOnlySpan<EntityId> held = world.Helds.Entities;
+            for (int h = held.Length - 1; h >= 0; h--)
+            {
+                if (world.Helds.Components[h].Holder == prisoner.Value && world.Identities.Has(held[h]))
+                {
+                    world.ChangeOwner(held[h], owner);
+                }
+            }
+        }
+    }
+
+    // NAT-002 (ReTzar's reading of the original, poach_cows 0x4ec944): every two seconds, the peasants on the tiles round a
+    // cow take it to their kingdom when none of them is of its kingdom or an ally of it and one of them knows Cow Poaching
+    // (the last of them); that one loses its invisibility.
+    private void Poach(World world)
+    {
+        _claims.Clear();
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            EntityId cow = ids[i];
+            if (world.TypeOf(cow).Traits.Capturable is not { Instant: true, RequiredTechnology: >= 0 and var tech } || world.IsHeld(cow) || !world.Positions.Has(cow))
+            {
+                continue;
+            }
+
+            byte holder = world.Identities.Get(cow).Owner;
+            (int cx, int cy) = TileOf(world, cow);
+            EntityId thief = EntityId.None;
+            bool guarded = false;
+            ReadOnlySpan<EntityId> movers = world.Motions.Entities;
+            for (int m = 0; m < movers.Length && !guarded; m++)
+            {
+                EntityId p = movers[m];
+                if (p == cow || !world.TypeOf(p).Traits.IsCapturer || world.IsHeld(p) || !world.Positions.Has(p) || TileOf(world, p) is var t && (Math.Abs(t.X - cx) > 1 || Math.Abs(t.Y - cy) > 1))
+                {
+                    continue;
+                }
+
+                byte owner = world.Identities.Get(p).Owner;
+                guarded = owner == holder || (world.HasPlayer(holder) && world.HasPlayer(owner) && world.Diplomacy.StanceOf(holder, owner) == Kingdoms.Stance.Ally);
+                if (!guarded && world.HasPlayer(owner) && world.Players[owner].HasTechnology(tech))
+                {
+                    thief = p;
+                }
+            }
+
+            if (!guarded && !thief.IsNone)
+            {
+                _claims.Add((cow, world.Identities.Get(thief).Owner));
+                if (world.Statuses.IndexOf(thief) is >= 0 and var s)
+                {
+                    world.Statuses.At(s).CloakUntil = 0;
+                }
+            }
+        }
+
+        foreach ((EntityId cow, byte owner) in _claims)
+        {
+            Take(world, cow, owner);
+        }
+    }
+
+    // An entity changes hands: its tasks end, it stops, and the new owner hears of it.
+    private static void Take(World world, EntityId target, byte owner)
+    {
+        if (!world.TypeOf(target).Traits.World.Grazes)
+        {
+            world.NatureHomes.Remove(target);
+        }
+
+        GameplayCommands.ClearTasks(world, target);
+        Interaction.Halt(world, target);
+        world.ChangeOwner(target, owner);
+        world.Events.Emit(new SimEvent(SimEventKind.Claimed, owner, target, 0, 0, world.Identities.Get(target).TypeId));
+    }
+
     private void Claims(World world)
     {
         _claims.Clear();
@@ -90,8 +274,18 @@ public sealed class NatureSystem : ISimSystem
         long reach = world.Ruleset.World.ClaimReachUnits;
         for (int i = 0; i < ids.Length; i++)
         {
-            if (identities[i].Owner != MapObject.Nature || world.Ruleset.EntityTypes[identities[i].TypeId].Traits.World.Claim is not { } by
-                || world.Constructions.Has(ids[i]))
+            if (world.Ruleset.EntityTypes[identities[i].TypeId].Traits.World.Claim is not { } by || world.Constructions.Has(ids[i]))
+            {
+                continue;
+            }
+
+            if (by == ClaimBy.Military)
+            {
+                TakenByPresence(world, ids[i], identities[i].Owner, _claims);
+                continue;
+            }
+
+            if (identities[i].Owner != MapObject.Nature)
             {
                 continue;
             }
@@ -130,14 +324,7 @@ public sealed class NatureSystem : ISimSystem
 
         foreach ((EntityId target, byte owner) in _claims)
         {
-            if (!world.TypeOf(target).Traits.World.Grazes)
-            {
-                world.NatureHomes.Remove(target);
-            }
-            GameplayCommands.ClearTasks(world, target);
-            Interaction.Halt(world, target); // a claimed cow stops wandering and stays by the peasant who milks it
-            world.ChangeOwner(target, owner);
-            world.Events.Emit(new SimEvent(SimEventKind.Claimed, owner, target, 0, 0, world.Identities.Get(target).TypeId));
+            Take(world, target, owner);
         }
     }
 

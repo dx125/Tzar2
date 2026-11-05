@@ -858,7 +858,8 @@ public sealed class CommandCard
             t.GainsExperience ? e.Level : -1,
             e.X,
             e.Y,
-            e.LearnedSpells);
+            e.LearnedSpells,
+            TakenByComing: (e.Owner < frame.Players.Length && frame.Players[e.Owner].Rescue) || (t.World.Claim == ClaimBy.Military && e.Owner != localPlayer));
     }
 
     // An item of the open inventory (HUD-018): right click drops it, Alt + click makes it the default item, a click uses
