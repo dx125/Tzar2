@@ -129,7 +129,8 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // then: (WAR-015/016/017, 2026-10-26) the original's choice of targets, the next target at once, calls for help.
             // then: (ADR 0270, 2026-10-27) land units step cell by cell, one to a tile (hashed layout 20).
             // then: (WORLD-021, WAR-016, PRES-016; 2026-10-29) the way round every unit, the next target when walks end short.
-            Assert.Equal("FA9439929171561F", d.Hashes[^1].ToString("X16"));
+            // then: (WORLD-022, 2026-11-04) each step from a short search round the units standing in the way.
+            Assert.Equal("5D7129D35575AC09", d.Hashes[^1].ToString("X16"));
         }
     }
 
