@@ -295,6 +295,29 @@ public sealed class TerrainAndSpriteRuleTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-020")]
+    public void Spells_sound_as_the_originals_and_whirlpools_and_meteors_show_their_pictures()
+    {
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset("classic");
+        SpellDefinition Spell(string key) => rules.Spells[rules.SpellId(key)];
+        Assert.Equal(@"spells\heal.wav", SpellPictures.Sound(Spell("spell_heal")));
+        Assert.Equal(@"spells\confusion.wav", SpellPictures.Sound(Spell("spell_berserk")));
+        Assert.Equal(@"spells\turn to stone.wav", SpellPictures.Sound(Spell("spell_turntostone")));
+        Assert.Equal(@"spells\whirlpool.wav", SpellPictures.Sound(Spell("spell_whirlpool")));
+        Assert.Equal(@"spells\reveal.wav", SpellPictures.Sound(Spell("spell_magicvision")));
+        Assert.Equal(@"spells\ressurect.wav", SpellPictures.Sound(Spell("raisedead")));
+        Assert.Equal(@"spells\teach.wav", SpellPictures.Sound(Spell("spell_raiseexp")));
+        Assert.Equal("summon_spell", SpellPictures.Sound(Spell("spell_spawndragon")));
+        Assert.Null(SpellPictures.Sound(Spell("spell_firerain"))); // its meteors sound instead
+        Assert.Equal("explosion", SpellPictures.SoundPriority(Spell("spell_flamebolt")));
+        Assert.Equal("attack_far", SpellPictures.SoundPriority(Spell("spell_bless")));
+        Assert.Equal(SpellPictures.Whirlpool, SpellPictures.Area(Spell("spell_whirlpool")));
+        Assert.Null(SpellPictures.Area(Spell("spell_firerain")));
+        Assert.Equal(SpellPictures.Meteor, EffectImages.Look("meteor", null)!.Body);
+        Assert.All(SpellPictures.All, p => Assert.Contains(p, EffectImages.All));
+    }
+
+    [Fact]
     [Trait("Rule", "PRES-018")]
     public void A_gate_flies_two_flags_of_its_kingdom_from_the_column_of_its_facing_and_material()
     {

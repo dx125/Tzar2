@@ -424,6 +424,24 @@ internal static class FrameBuilder
 
         frame.ProjectileCount = np;
 
+        // Spells' areas where the viewer sees them (a whirlpool; PRES-020).
+        ReadOnlySpan<EntityId> spots = world.AreaEffects.Entities;
+        Span<AreaEffect> areas = world.AreaEffects.Components;
+        FrameArea[] shown = frame.AreaBuffer(spots.Length);
+        int na = 0;
+        for (int i = 0; i < spots.Length; i++)
+        {
+            AreaEffect a = areas[i];
+            if (viewer is { } sees && !world.Visibility.IsVisibleAt(sees, a.X, a.Y))
+            {
+                continue;
+            }
+
+            shown[na++] = new FrameArea(spots[i].Value, a.X, a.Y, a.Spell);
+        }
+
+        frame.AreaCount = na;
+
         int players = world.Players.Length;
         if (frame.Players.Length != players)
         {
