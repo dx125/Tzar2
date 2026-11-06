@@ -593,8 +593,7 @@ internal static class CombatMagicCommands
             case MagicSystem.CommandRejectionReason.NotReady:
                 return CommandRejection.SpellNotReady;
             case MagicSystem.CommandRejectionReason.NoMana:
-                MagicSystem.RaiseMaxToCost(world, caster, spell); // a pool below the cost grows to it (ReTzar 0x4e1c30, ADR 0267)
-                return CommandRejection.NotEnoughMana;
+                break; // MAG-030: the caster waits for its mana with the order kept (ReTzar 0x4e1c30)
         }
 
         SpellDefinition s = world.Ruleset.Spells[spell];

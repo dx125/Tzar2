@@ -232,9 +232,11 @@ public class ExperienceTests
         Grant(d.World, 0, "te_learning");
         EntityId footman = OfType(d.World, "euro.footman").Single();
         EntityId dummy = OfType(d.World, "comm.dummy").Single();
-        d.Order(0, CommandKind.Attack, [footman], target: OfType(d.World, "euro.peon").Single());
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        d.Order(0, CommandKind.Attack, [footman], target: peon); // an own peasant may be struck on order (WAR-020)...
+        d.RunUntil(() => !d.World.Entities.IsAlive(peon), 600);
         d.Step();
-        Assert.Contains(CommandRejection.InvalidArgument, d.Rejections()); // own peasants are no target
+        Assert.Equal(0, d.World.Experiences.Get(footman).PendingXp + d.World.Experiences.Get(footman).Level); // ...and teaches nothing
 
         d.Order(0, CommandKind.Attack, [footman], target: dummy);
         d.RunUntil(() => false, 2000);

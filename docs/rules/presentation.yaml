@@ -90,3 +90,9 @@ rules:
     status: tested
     adr: [0277]
     note: The left flag is the column's row of the drawbridge's frame, the right one eight rows down, each at its offset from the top-left of the gate's picture. Until the tenth play-test the flags were not drawn, and a blue kingdom's gate showed a red flag.
+  PRES-019:
+    rule: Spells show the original's pictures - the lightning as three wandering bolts from the caster to its target, the freeze and flame balls as a trail of puffs, the heal, the blessing, the curse and confusion, hypnosis and teaching over the unit they take, turning to stone where it strikes, invisibility as stars, and a summoned golem, carpet, jinn or dragon coming out of the spawn picture, a raised skeleton rising.
+    source: ['data IMAGES.INI healing, bless, curse, hypnotise, convert_exp, turn_to_stone, spawn, skeleton_rise, pump, freeze_ball_trail, magic_star', 'community ReTzar src/gameplay.rs (overlay, appear 0x473ab3, 0x4737dd; lightning bolts 0x472e83, 700 ms)', 'community ReTzar src/frontend/effects.rs (trails every 45 ms, 0x432350, 0x4325e0)', owner 2026-11-06 (tenth play-test)]
+    status: tested
+    adr: [0278]
+    note: Until the tenth play-test the client drew none of these - a lightning on a bird struck with no bolt - and the freeze ball showed one puff at its head. Tzar2 draws the bolts as lines of its own (white over blue), not the original's pictures, which it draws by code.

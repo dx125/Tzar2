@@ -98,7 +98,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 |---|---|---|---|---|---|---|---|
 | [Computer opponents](ai.yaml) (AI) | 5 | 4 | 0 | 0 | 0 | 1 | 0 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
-| [Combat](combat.yaml) (WAR) | 19 | 15 | 4 | 0 | 0 | 0 | 0 |
+| [Combat](combat.yaml) (WAR) | 20 | 16 | 4 | 0 | 0 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 27 | 23 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 30 | 21 | 9 | 0 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 10 | 9 | 1 | 0 | 0 | 0 | 0 |
@@ -107,10 +107,10 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Holders and transport](holders.yaml) (HOLD) | 11 | 11 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 37 | 18 | 14 | 1 | 0 | 3 | 1 |
 | [Items](items.yaml) (ITEM) | 19 | 14 | 3 | 0 | 0 | 1 | 1 |
-| [Magic, religion and spies](magic.yaml) (MAG) | 29 | 29 | 0 | 0 | 0 | 0 | 0 |
+| [Magic, religion and spies](magic.yaml) (MAG) | 33 | 33 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 14 | 4 | 0 | 0 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 18 | 15 | 3 | 0 | 0 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 19 | 16 | 3 | 0 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 16 | 11 | 4 | 0 | 0 | 1 | 0 |
 | [Scenario scripts](scenario.yaml) (SCN) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 16 | 9 | 1 | 0 | 2 | 0 |
@@ -118,7 +118,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 11 | 10 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 22 | 15 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 390 | 303 | 71 | 2 | 0 | 10 | 4 |
+| **All** | 396 | 309 | 71 | 2 | 0 | 10 | 4 |
 
 ## Not done yet
 

@@ -728,27 +728,25 @@ internal static class GameplayCommands
 
         Identity identity = world.Identities.At(t);
         EntityTraits traits = world.Ruleset.EntityTypes[identity.TypeId].Traits;
-        // Nature's units are hostile to everyone and can be attacked; resources cannot (combat targets, ADR 0038). Own
-        // animals that leave meat (cows) may be butchered (GAME-02, ADR 0042).
-        bool butcher = identity.Owner == command.Player && traits.SpawnOnDeath >= 0 && traits.Category == EntityCategory.Unit;
-        bool training = CombatSystem.IsTrainingTarget(world, command.Player, target); // own dummies (GAME-08)
-        if ((identity.Owner == command.Player && !butcher && !training) || traits.Category is not (EntityCategory.Unit or EntityCategory.Building)
-            || world.IsHeld(target))
+        // WAR-020 (ReTzar's reading of the original: only the right click asks the relations, 0x435500): the Attack order
+        // strikes any unit or building, the kingdom's own and its allies' too; resources, ambient life and what nothing can
+        // hurt (the magic gateway) are no targets.
+        if (traits.Category is not (EntityCategory.Unit or EntityCategory.Building) || world.IsHeld(target)
+            || traits.World.IsAmbient || traits.World.Indestructible || (traits.World.Claim is not null && !world.HasPlayer(identity.Owner)))
         {
             return CommandRejection.InvalidArgument;
         }
 
-        if (!butcher && !training && !world.MayAttack(command.Player, target))
+        if (identity.Owner != command.Player && world.IsRescue(identity.Owner))
         {
-            return CommandRejection.NotAllied; // allies (and neutrals' non-military units) cannot be attacked (GAME-13)
+            return CommandRejection.NotAllied; // NAT-008: the prisoners wait to be freed; Tzar2 keeps them out of any fight
         }
 
         int applied = 0;
         foreach (EntityId entity in entities)
         {
             // Shared unit control (GAME-13) covers fighting; economic orders stay with the owner (their costs and refunds).
-            if (!world.MayCommand(command.Player, entity) || world.Combats.IndexOf(entity) < 0 || entity == target
-                || (world.Identities.Get(entity).Owner != command.Player && !world.MayAttack(world.Identities.Get(entity).Owner, target)))
+            if (!world.MayCommand(command.Player, entity) || world.Combats.IndexOf(entity) < 0 || entity == target)
             {
                 continue;
             }

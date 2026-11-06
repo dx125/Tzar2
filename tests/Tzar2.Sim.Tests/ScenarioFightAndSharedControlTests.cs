@@ -53,7 +53,9 @@ public class ScenarioFightAndSharedControlTests
         Ally(d, 0, 1);
         d.Order(0, CommandKind.Attack, [mine], target: ally);
         d.Step();
-        Assert.Contains(CommandRejection.NotAllied, d.Rejections()); // players cannot attack an ally
+        Assert.Empty(d.Rejections()); // the Attack order strikes an ally too (WAR-020)
+        d.Order(0, CommandKind.Stop, [mine]);
+        d.Step();
 
         probe.Action = world => Assert.True(ScenarioOperations.ScriptedAttack(world, mine, ally));
         Assert.Throws<System.InvalidOperationException>(() => ScenarioOperations.ScriptedAttack(w, mine, ally)); // between ticks

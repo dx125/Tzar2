@@ -362,7 +362,9 @@ public static class OrderResolver
             OrderMode.Guard when alt && target is { } g && g.Id != EntityId.None && !g.IsResourceNode && g.Owner == player
                 => Set(CommandKind.Follow, SameType(g, onScreen), queue, own),
             OrderMode.Move => [new PlannedCommand(CommandKind.Move, Flags(mods), EntityId.None, x, y, 0, 0, own)],
-            OrderMode.Attack when target is { } t && t.Owner != player && !t.IsResourceNode
+            // WAR-020: the Attack order strikes what it is given, the kingdom's own and its allies' too (ReTzar 0x435500: only
+            // the right click asks the relations).
+            OrderMode.Attack when target is { } t && t.Id != EntityId.None && !t.IsResourceNode
                 => [new PlannedCommand(CommandKind.Attack, queue, t.Id, x, y, 0, 0, own)],
             OrderMode.Attack => [new PlannedCommand(CommandKind.Move, CommandFlags.Ctrl | queue, EntityId.None, x, y, 0, 0, own)],
             OrderMode.Harvest when target is { IsResourceNode: true } n => [new PlannedCommand(CommandKind.Harvest, queue, n.Id, x, y, 0, 0, own)],

@@ -523,7 +523,8 @@ owner's order of 2026-10-26.
        freeze's animation and effect are wrong; bats come one at a time instead of taking all the mana; no gathering of
        mana for the golem, which is not summoned by itself at 600 mana, and the mage's mana cap goes from 100 to 600.
        Review every skill of every mage and priest of every civilization (animations, effects, cursors) and attacking
-       allies: open (batch C).
+       allies: **fixed** (MAG-030 to MAG-033, WAR-020, PRES-019; ADR 0278; log below). The mana cap raised to the golem's
+       600 is the original's (MAG-027).
     6. A move order into unexplored land shows no confirmation (the red cross), as the original does: **fixed** (CTRL-016;
        ADR 0277; log below).
     7. Gun towers hurt ships too much, like catapults, and ships' cannons hurt buildings too much: **fixed** (WAR-001,
@@ -535,6 +536,21 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-06 — The tenth play-test, batch C: mages and priests as the original's, and the Attack order on anyone
+  (MAG-030, MAG-031, MAG-032, MAG-033, WAR-020, PRES-019; ADR 0278; item 23, item 5).** ReTzar's reading of the spell code
+  (0x4723e0 to 0x473bf0):
+  * **Short of mana** a caster keeps its order, raises its pool to the cost (the `pump` picture, now loaded) and casts
+    once the mana is there. The golem comes by itself at 600.
+  * **Summons** spend the mana in multiples, one creature each: four bats from 100 mana.
+  * **Targets.** The lightning, flame ball, heal, invisibility, stone, hypnosis and teaching take any kingdom's units or
+    objects. The freeze, confusion and the blessing are cast at a point: the freeze's ball flies there and freezes every
+    unit within 3 tiles, own ones too.
+  * **The heal** goes on while its unit is wounded.
+  * **The Attack order** strikes allies and own units and buildings (only the right click asks the relations), not the
+    prisoners.
+  * **Pictures.** Lightning bolts, trails of freeze and flame balls, the heal's, bless's, curse's, hypnosis's and
+    teaching's pictures over the unit, `turn_to_stone`, the stars, and summons coming out of `spawn` or rising.
+  * **Hashes.** The gameplay golden is re-pinned: the scenario's heal goes on.
 * **2026-11-06 — The tenth play-test, batch A: the placement ghost, the selection, the gates' flags and the move cross as
   the original's (CTRL-016, CTRL-023, CTRL-024, BLD-019, HUD-007, PRES-018, ECO-026; ADR 0277; item 23, items 1, 3, 6).**
   * **The ghost.** As ReTzar's preview: the building's picture tinted green (red where it cannot stand) and a square on

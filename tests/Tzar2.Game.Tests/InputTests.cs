@@ -286,6 +286,17 @@ public sealed class OrderTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-020")]
+    public void The_attack_order_strikes_the_kingdoms_own_units_and_buildings_but_a_right_click_does_not()
+    {
+        EntityInfo[] sel = [SelectionTests.Unit(1)];
+        PlannedCommand own = OrderResolver.WithMode(OrderMode.Attack, sel, SelectionTests.Unit(2), 0, 0, KeyMods.None, Me)[0];
+        Assert.Equal((CommandKind.Attack, SelectionTests.Unit(2).Id), (own.Kind, own.Target));
+        Assert.Equal(CommandKind.Attack, OrderResolver.WithMode(OrderMode.Attack, sel, SelectionTests.Building(8), 0, 0, KeyMods.None, Me)[0].Kind);
+        Assert.NotEqual(CommandKind.Attack, OrderResolver.RightClick(sel, SelectionTests.Unit(2), 0, 0, KeyMods.None, Me)[0].Kind);
+    }
+
+    [Fact]
     public void Card_orders_target_the_clicked_object_or_point()
     {
         EntityInfo[] sel = [SelectionTests.Unit(1)];
