@@ -98,7 +98,6 @@ public partial class GameScreen : Node
     private ushort _placing = ushort.MaxValue;
     private (int X, int Y)? _wallFrom; // the tile a wall is being dragged from, the left button held (BLD-011)
     private readonly List<PickCandidate> _pickCandidates = []; // reused by PickAt
-    private int _facing; // the placement ghost's facing: 0, 2 turned by 90° (gates and bridges); 1, 3 a gate facing the other way (CTRL-024, BLD-019)
     private int _eventCursor = -1;
     private int _locationCursor = -1;
     private int _buildingCursor;
@@ -265,6 +264,11 @@ public partial class GameScreen : Node
             foreach (string ruin in SpriteRules.RuinImages(type))
             {
                 _bank.Add(ruin); // what it leaves when destroyed (BLD-028)
+            }
+
+            if (type.Traits.Gate is not null)
+            {
+                _bank.Add(SpriteRules.GateFlagsImage); // the gates' flags in their kingdom's colours (PRES-018)
             }
 
             for (int facing = 0; facing < 4 && type.Traits.Gate is not null; facing++)
@@ -972,19 +976,10 @@ public partial class GameScreen : Node
         SendAndConfirm(OrderResolver.RightClick(SelectedInfos(), PickAt(position), x, y, mods, _session.LocalPlayer, _rules, (mods & KeyMods.Alt) != 0 ? OnScreen() : null), x, y);
     }
 
-    // Alt or Ctrl turns a gate to be built through its four facings, Alt a bridge across or down (CTRL-024, BLD-019; the
-    // manual: Alt + Ctrl for gates).
+    // Alt and Ctrl held while placing turn a gate or a bridge (CTRL-024, BLD-019: the original's help, "by holding down
+    // the Alt or Ctrl key"); their presses do nothing else meanwhile. The facing is read from the keys held, each frame.
     private bool TurnGhost(Key key)
-    {
-        if (_placing == ushort.MaxValue || key is not (Key.Alt or Key.Ctrl) || !Placement.CanTurn(_rules.EntityTypes[_placing])
-            || (key == Key.Ctrl && _rules.EntityTypes[_placing].Traits.IsBridge))
-        {
-            return false;
-        }
-
-        _facing = _rules.EntityTypes[_placing].Traits.Gate is not null ? (_facing + 1) % 4 : (_facing == 0 ? 2 : 0);
-        return true;
-    }
+        => _placing != ushort.MaxValue && key is Key.Alt or Key.Ctrl && Placement.CanTurn(_rules.EntityTypes[_placing]);
 
     // Drag scrolling: the map follows the pointer while the right (or middle) button is held, after a few pixels of
     // travel so that a click stays a click.
@@ -1511,8 +1506,9 @@ public partial class GameScreen : Node
         }
 
         EntityTypeDefinition type = _rules.EntityTypes[_placing];
-        bool turned = _facing >= 2 && Placement.CanTurn(type);
-        bool mirrored = (_facing & 1) != 0 && type.Traits.Gate is not null;
+        int facing = Placement.FacingOf(type, Input.IsKeyPressed(Key.Alt), Input.IsKeyPressed(Key.Ctrl));
+        bool turned = facing >= 2;
+        bool mirrored = (facing & 1) != 0;
         (int x, int y) = ToWorld(_mouse);
         (int tx, int ty) = Placement.TopLeftFor(type, x, y, turned);
         if (_wallFrom is { } from && type.Traits.IsWall)
@@ -1550,7 +1546,7 @@ public partial class GameScreen : Node
         }
 
         bool legal = blocked.Count == 0 && Placement.IsLegal(frame.Buildable, frame.Terrain, _world.MapWidth, _world.MapHeight, type, tx, ty, turned, mirrored);
-        return new Ghost(_placing, tx, ty, legal, blocked, turned, mirrored);
+        return new Ghost(_placing, tx, ty, legal, blocked, turned, mirrored) { Approach = Placement.ApproachTiles(type, turned, mirrored) };
     }
 
     // Whether a tile of the map is explored (a tile off the map is left to the placement check).
@@ -1589,7 +1585,6 @@ public partial class GameScreen : Node
         {
             _placing = type;
             _wallFrom = null;
-            _facing = 0;
         }
 
         if (press.Message is { } text)
@@ -2253,11 +2248,30 @@ public partial class GameScreen : Node
         };
     }
 
-    // HUD-030: the terrain set's [minidatargb] colours each tile by its terrain, and cliffs by their own colour.
+    // "255,255,255" → the colour; null when it is not three numbers.
+    private static Color? SelectionColourOf(string? text)
+    {
+        string[] parts = (text ?? string.Empty).Split(',', StringSplitOptions.TrimEntries);
+        return parts.Length == 3 && byte.TryParse(parts[0], out byte r) && byte.TryParse(parts[1], out byte g) && byte.TryParse(parts[2], out byte b)
+            ? Color.Color8(r, g, b) : null;
+    }
+
+    // HUD-030: the terrain set's [minidatargb] colours each tile by its terrain, and cliffs by their own colour. HUD-007:
+    // its [colors] selection colours the selection's brackets.
     private void MinimapFromData(TerrainSet set, TerrainGrid grid)
     {
-        if (set.Table is not { } table || !_store.Vfs.Exists(table)
-            || MinimapColours.FromSection(IniTable.Parse(_store.Read(table)).Section("minidatargb")) is not { } colours)
+        if (set.Table is not { } table || !_store.Vfs.Exists(table))
+        {
+            return;
+        }
+
+        IniTable terrainIni = IniTable.Parse(_store.Read(table));
+        if (SelectionColourOf(terrainIni.Get("colors", "selection")) is { } selection && _world is not null)
+        {
+            _world.SelectionColour = selection;
+        }
+
+        if (MinimapColours.FromSection(terrainIni.Section("minidatargb")) is not { } colours)
         {
             return;
         }

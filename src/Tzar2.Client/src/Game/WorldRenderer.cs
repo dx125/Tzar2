@@ -69,6 +69,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly SpriteRenderer _objects;
     private readonly SpriteRenderer _translucent;
     private readonly SpriteRenderer _ghostLayer; // the building being placed: its green shadow (CTRL-023)
+    private readonly SpriteRenderer _signals; // over the fog: the cross of a move order, on unexplored land too (CTRL-017)
     private bool? _ghostLegal; // the colour the ghost layer is set to: green when legal, red when not
     private readonly byte[] _wallPieces; // the material of the finished wall or gate on each tile (PRES-010), refilled each frame
     private readonly List<int> _wallTiles = []; // the tiles set in _wallPieces, cleared with the next frame
@@ -129,6 +130,9 @@ public sealed class WorldRenderer : IDisposable
         _ghostLayer = new SpriteRenderer(host, _root, 38);
         _ghostLayer.SetShadowsVisible(false);
         _marksOver = Item(40);
+        _signals = new SpriteRenderer(host, _root, 55);
+        _signals.SetShadowsVisible(false);
+        _signals.SetAtlas(bank.Gpu);
         _ground.SetAtlas(bank.Gpu);
         _objects.SetAtlas(bank.Gpu);
         _translucent.SetAtlas(bank.Gpu);
@@ -218,6 +222,7 @@ public sealed class WorldRenderer : IDisposable
         _translucent.SetView(view, screen);
         _glow.SetView(view, screen);
         _ghostLayer.SetView(view, screen);
+        _signals.SetView(view, screen);
         _ground.SetShadowsVisible(options.Shadows);
         _objects.SetShadowsVisible(options.Shadows);
         RS.CanvasItemSetTransform(_marksUnder, view);
@@ -231,6 +236,7 @@ public sealed class WorldRenderer : IDisposable
         _translucent.Clear();
         _glow.Clear();
         _ghostLayer.Clear();
+        _signals.Clear();
         _pickables.Clear();
         _selected.Clear();
         foreach (EntityId id in selection)
@@ -311,6 +317,7 @@ public sealed class WorldRenderer : IDisposable
 
         _objects.Commit();
         _ghostLayer.Commit();
+        _signals.Commit();
 
         UpdateFogAndNight(frame, fresh, useFog, options.DayNight ? night : 0f);
     }
@@ -324,6 +331,7 @@ public sealed class WorldRenderer : IDisposable
         _translucent.Dispose();
         _glow.Dispose();
         _ghostLayer.Dispose();
+        _signals.Dispose();
         foreach (Rid rid in new[] { _marksUnder, _marksOver, _fogItem, _nightItem, _root })
         {
             RS.FreeRid(rid);
@@ -476,6 +484,15 @@ public sealed class WorldRenderer : IDisposable
                 {
                     AddSheet(_objects, sheet, origin, column, layer, player, order, shadows: true);
                 }
+
+                // PRES-018: its two flags in its kingdom's colours (gates c; the tenth play-test: the picture's own red ones).
+                if (_bank.Get(SpriteRules.GateFlagsImage) is { } flags)
+                {
+                    foreach ((int column, int row, int dx, int dy) in SpriteRules.GateFlags(facing, def.Traits.LegacyClass == "gate_stone", frameIndex))
+                    {
+                        Add(_objects, flags, origin + new Vector2I(dx, dy), column, row, player, order | 1, shadowOnly: false);
+                    }
+                }
             }
             else
             {
@@ -528,7 +545,9 @@ public sealed class WorldRenderer : IDisposable
             bool third = visual.Images.ContainsKey(UnitAnim.Attack3) && _thirdSwing >= 0 && _current is { } now && e.Owner < now.Players.Length && now.Players[e.Owner].HasTechnology(_thirdSwing);
             anim = SpriteRules.Swing(visual.Images.ContainsKey(UnitAnim.Attack2), third, NextSwing(e));
         }
-        SheetRef? s = _bank.Get(visual.Image(anim)) ?? _bank.Get(visual.Image(UnitAnim.Base));
+        // An item on the ground shows its own look (ITEM-016, ECO-026): a bag of gold its item_gold. The tenth play-test: bags
+        // drew their type's picture, the original's empty item (item_none, a slot's frame), as pieces of a selection frame.
+        SheetRef? s = (e.ItemLook is { } own ? _bank.Get(own) : null) ?? _bank.Get(visual.Image(anim)) ?? _bank.Get(visual.Image(UnitAnim.Base));
         if (s is null)
         {
             var stand = new Rect2(px - 8, py - 16, 16, 24);
@@ -854,21 +873,13 @@ public sealed class WorldRenderer : IDisposable
                 continue;
             }
 
-            Color mark = e.Owner == localPlayer ? new Color(0.25f, 1f, 0.25f) : e.Owner >= 8 ? new Color(1f, 1f, 0.4f) : new Color(1f, 0.3f, 0.25f);
+            Color mark = SelectionColour;
             if (selected)
             {
-                if (def.HasFootprint)
-                {
-                    // Structures: the footprint outline (⚠ the original's selection look is not measured yet).
-                    (int w, int h) = def.FootprintSize(e.Rotated && def.CanTurn);
-                    var r = new Rect2(e.TileX * TilePixels, e.TileY * TilePixels, Math.Max(1, w) * TilePixels, Math.Max(1, h) * TilePixels);
-                    Corners(_marksOver, r, mark);
-                }
-                else
-                {
-                    // Units: the square of the original's selection box (IMAGES.INI selection), as on structures.
-                    Corners(_marksOver, p.Rect, mark);
-                }
+                // HUD-007 (ReTzar's reading of the original): six-pixel corner brackets, one pixel thick, in the terrain's
+                // selection colour (TERRAIN.INI [colors] selection: white, orange on snow), round the object's selection box
+                // (IMAGES.INI selection), a building's as a unit's.
+                Brackets(_marksOver, p.Rect, mark);
 
                 if (options.GroupOf?.Invoke(e.Id) is > 0 and var group)
                 {
@@ -1023,8 +1034,9 @@ public sealed class WorldRenderer : IDisposable
             return;
         }
 
+        // Over the fog: the original shows the cross on unexplored land too (the tenth play-test).
         var at = new Vector2I(order.X / UnitsPerPixel, order.Y / UnitsPerPixel) - cross.Anchor;
-        Add(_ground, cross, at, 0, cross.Animation.FrameAt(Math.Max(0, age)), -1, (uint)(order.Y / UnitsPerPixel + 4096) << 6, shadowOnly: false);
+        Add(_signals, cross, at, 0, cross.Animation.FrameAt(Math.Max(0, age)), -1, (uint)(order.Y / UnitsPerPixel + 4096) << 6, shadowOnly: false);
     }
 
     // The finished walls and gates of the frame by tile and material, for the walls to join (PRES-010). Walls join those
@@ -1069,13 +1081,13 @@ public sealed class WorldRenderer : IDisposable
         EntityTypeDefinition def = _rules.EntityTypes[ghost.TypeId];
         int left = ghost.TileX * TilePixels, top = ghost.TileY * TilePixels;
         (int width, int height) = def.FootprintSize(ghost.Rotated && def.CanTurn);
-        var rect = new Rect2(left, top, width * TilePixels, height * TilePixels);
         bool green = ghost.Legal || ghost.Row is not null;
         if (_ghostLegal != green)
         {
-            // The shadow of the building, green, or red where it cannot stand (CTRL-023; the owner's sixth play-test).
+            // The building's own picture tinted green, or red where it cannot stand (CTRL-023; ReTzar's preview, the tenth
+            // play-test: the flat shadow did not look like the original's).
             _ghostLegal = green;
-            _ghostLayer.SetSilhouette(green ? new Color(0.3f, 1f, 0.3f, 0.55f) : new Color(1f, 0.25f, 0.2f, 0.55f));
+            _ghostLayer.SetSilhouette(green ? new Color(0.3f, 1f, 0.3f, 0.6f) : new Color(1f, 0.2f, 0.2f, 0.6f));
         }
 
         if (ghost.Row is { } row)
@@ -1085,28 +1097,52 @@ public sealed class WorldRenderer : IDisposable
         }
 
         byte material = SpriteRules.WallMaterial(def);
+        SheetRef? gate = _bank.Get(SpriteRules.GateImage(def, (ghost.Rotated ? 2 : 0) + (ghost.Mirrored ? 1 : 0), site: false));
         SheetRef? image = _bank.Get(SpriteRules.WallImage(def, SpriteRules.WallMask(_wallPieces, MapWidth, ghost.TileX, ghost.TileY, material), site: false, damaged: false))
-            ?? _bank.Get(SpriteRules.GateImage(def, (ghost.Rotated ? 2 : 0) + (ghost.Mirrored ? 1 : 0), site: false))
+            ?? gate
             ?? _bank.Get(SpriteRules.Turned(_catalog.Type(ghost.TypeId).Image(UnitAnim.Base), ghost.Rotated));
         if (image is { } sheet)
         {
             var origin = new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y);
-            // Its shadow, without the kingdom's colours (the owner, 2026-10-21 and the sixth play-test; CTRL-023).
-            AddSheet(_ghostLayer, sheet, origin, 0, 0, -1, uint.MaxValue >> 1, shadows: false);
-        }
-
-        // The green building shows where it goes (no fill over a legal site); only the cells that block it turn red.
-        if (!ghost.Legal)
-        {
-            var red = new Color(1f, 0.15f, 0.1f, 0.45f);
-            foreach ((int dx, int dy) in ghost.Blocked ?? [])
+            if (ReferenceEquals(sheet, gate))
             {
-                RS.CanvasItemAddRect(_marksOver, new Rect2(left + (dx * TilePixels), top + (dy * TilePixels), TilePixels, TilePixels), red);
+                // A gate shows its towers and its drawbridge lowered, so the way it opens can be seen (CTRL-024; the tenth
+                // play-test: the drawbridge alone, and its way hard to tell).
+                foreach ((int column, int layer) in SpriteRules.GateLayers(sheet.Sheet.Directions, sheet.Sheet.FramesPerDirection, SpriteRules.GateFrame(open: true)))
+                {
+                    AddSheet(_ghostLayer, sheet, origin, column, layer, -1, uint.MaxValue >> 1, shadows: false);
+                }
+            }
+            else
+            {
+                // Without the kingdom's colours (the owner, 2026-10-21 and the sixth play-test; CTRL-023).
+                AddSheet(_ghostLayer, sheet, origin, 0, 0, -1, uint.MaxValue >> 1, shadows: false);
             }
         }
 
-        Corners(_marksOver, rect, ghost.Legal ? new Color(0.4f, 1f, 0.4f) : new Color(1f, 0.25f, 0.2f));
+        // Each of its tiles a square (ReTzar's preview): green where it can stand, red where something stops it; a gate's
+        // tiles before its door fainter, where its drawbridge comes down.
+        var ok = new Color(0.3f, 1f, 0.3f, 0.25f);
+        var no = new Color(1f, 0.2f, 0.2f, 0.3f);
+        var blocked = new HashSet<(int, int)>(ghost.Blocked ?? []);
+        bool allRed = !ghost.Legal && blocked.Count == 0;
+        for (int dy = 0; dy < height; dy++)
+        {
+            for (int dx = 0; dx < width; dx++)
+            {
+                Square(left + (dx * TilePixels), top + (dy * TilePixels), allRed || blocked.Contains((dx, dy)) ? no : ok);
+            }
+        }
+
+        foreach ((int dx, int dy) in ghost.Approach ?? [])
+        {
+            Square(left + (dx * TilePixels), top + (dy * TilePixels), allRed || blocked.Contains((dx, dy)) ? no : new Color(0.3f, 1f, 0.3f, 0.12f));
+        }
     }
+
+    // A tile's square of the placement ghost: 30 pixels, a pixel inside the tile.
+    private void Square(int left, int top, Color colour)
+        => RS.CanvasItemAddRect(_marksOver, new Rect2(left + 1, top + 1, TilePixels - 2, TilePixels - 2), colour);
 
     // A wall being dragged (BLD-011): the shadow of each segment where one can go, joined as the row will stand, and a red
     // tile where none can.
@@ -1179,6 +1215,18 @@ public sealed class WorldRenderer : IDisposable
         return item;
     }
 
+    /// <summary>The colour of the selection's brackets: the terrain's (TERRAIN.INI <c>[colors] selection</c>; HUD-007).</summary>
+    public Color SelectionColour { get; set; } = Colors.White;
+
+    // The original's selection mark (HUD-007): corner brackets of six pixels (shorter on a small box), one pixel thick.
+    private static void Brackets(Rid item, Rect2 r, Color colour)
+    {
+        foreach ((float x, float y, float w, float h) in SelectionMarks.Brackets(r.Position.X, r.Position.Y, r.Size.X, r.Size.Y))
+        {
+            RS.CanvasItemAddRect(item, new Rect2(x, y, w, h), colour);
+        }
+    }
+
     private static void Corners(Rid item, Rect2 r, Color colour)
     {
         float l = Math.Min(10f, r.Size.X / 3);
@@ -1200,7 +1248,11 @@ public sealed class WorldRenderer : IDisposable
 /// <param name="Rotated">Turned by 90° (gates and bridges; CTRL-024, BLD-019).</param>
 /// <param name="Mirrored">A gate facing the other way along its axis (CTRL-024).</param>
 /// <param name="Row">The tiles of a wall being dragged (BLD-011), each with whether a segment can go there; null otherwise.</param>
-public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null, bool Rotated = false, bool Mirrored = false, IReadOnlyList<GhostCell>? Row = null);
+public readonly record struct Ghost(ushort TypeId, int TileX, int TileY, bool Legal, IReadOnlyList<(int Dx, int Dy)>? Blocked = null, bool Rotated = false, bool Mirrored = false, IReadOnlyList<GhostCell>? Row = null)
+{
+    /// <summary>A gate's tiles before its door, where its drawbridge comes down (offsets from the top-left; CTRL-024).</summary>
+    public IReadOnlyList<(int Dx, int Dy)>? Approach { get; init; }
+}
 
 /// <summary>A tile of a wall being dragged.</summary>
 /// <param name="TileX">Tile X.</param>

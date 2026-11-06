@@ -123,7 +123,8 @@ public sealed class ContentStore : IDisposable
     public SpriteSheet? LoadSheet(string asset, SpriteIndexEntry? entry)
     {
         bool shadow = entry is not null && (entry.Name.EndsWith("_s", StringComparison.Ordinal) || entry.Name.EndsWith("_shadow", StringComparison.Ordinal));
-        bool overlay = entry is not null && entry.Name.EndsWith("_c", StringComparison.Ordinal);
+        // An overlay in the kingdom's colours: <picture>_c, and the gates' flags (IMAGES.INI [gates c]; PRES-018).
+        bool overlay = entry is not null && (entry.Name.EndsWith("_c", StringComparison.Ordinal) || entry.Name.EndsWith(" c", StringComparison.Ordinal));
         int cols = entry?.GetInt("cols", 1) ?? 1, rows = entry?.GetInt("rows", 1) ?? 1;
         string key = $"{asset}|{cols}|{rows}|{shadow}|{overlay}";
         lock (_gate)

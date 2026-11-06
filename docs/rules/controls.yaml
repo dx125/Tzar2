@@ -76,10 +76,11 @@ rules:
     source: [data IMAGES.INI s_def, owner 2026-10-20 (second play-test)]
     status: implemented
   CTRL-016:
-    rule: A move order plays the red cross animation where the ground was clicked.
-    source: ['data IMAGES.INI [cursor]', owner 2026-10-20 (third play-test)]
+    rule: A move order plays the red cross animation where the ground was clicked, over unexplored land and the fog too.
+    source: ['data IMAGES.INI [cursor]', owner 2026-10-20 (third play-test), owner 2026-11-06 (tenth play-test)]
     status: implemented
-    adr: [0179]
+    note: Until the tenth play-test Tzar2 drew the cross on the ground under the fog, so it was hidden on unexplored land.
+    adr: [0179, 0277]
   CTRL-017:
     rule: An order on an object (a building to enter, repair or attack) is confirmed by an animation around the object.
     source: [owner 2026-10-20 (third play-test)]
@@ -110,16 +111,17 @@ rules:
     source: [manual Hints About Gameplay]
     status: implemented
   CTRL-023:
-    rule: The image of the building being placed is green, without the kingdom's colours.
+    rule: The image of the building being placed is green, without the kingdom's colours, each of its tiles marked by a square.
     source: [manual Constructing A Building, manual Commanding Units (Build), owner 2026-10-21 (answers), owner 2026-10-25 (sixth play-test)]
     status: implemented
-    note: It is the building's shadow, its shape in green with its light kept faintly, not the finished building tinted (the sixth play-test); where it cannot stand the shadow is red and the cells that block it turn red (CTRL-018). A wall's shadow joins the walls next to it (PRES-010).
+    note: As ReTzar's preview, the building's picture tinted green (its colours times 0.3, 1, 0.3), at 60 % opacity, and a 30-pixel square on each tile; where it cannot stand the picture is red and the tiles that block it red (CTRL-018). A wall's ghost joins the walls next to it (PRES-010). The sixth play-test had it a flat green shadow; the tenth found that unlike the original and asked for ReTzar's look.
+    adr: [0277]
   CTRL-024:
-    rule: Holding Alt or Ctrl while placing a gate turns the direction of the gate to be built.
+    rule: Holding Alt or Ctrl while placing a gate turns the direction of the gate to be built; the ghost shows which way it opens.
     source: [manual Common Buildings (Wood Gate and Stone Gate), help ITEMS.TXT HT_BUILD_WALLS_GATES, community ReTzar src/world/starting.rs (0x498373)]
     status: tested
-    note: Alt or Ctrl turns a gate's ghost through its four facings; a gate is 7 x 1 across and 1 x 6 down, the cells of its drawbridge picture, with a door of three tiles. Until 2026-11-04 the sim refused facings 1 and 3 (Build's argument 1 bit 1).
-    adr: [0189, 0192]
+    note: Tzar2 reads "by holding down the Alt or Ctrl key" as keys held, not pressed - Alt turns the gate by 90° as it turns a bridge, Ctrl has it face the other way, both together do both (until the tenth play-test each press stepped through the four facings). The ghost shows the gate's towers with its drawbridge lowered, and its tiles before the door fainter; a gate is 7 x 1 across and 1 x 6 down, the cells of its drawbridge picture, with a door of three tiles. Until 2026-11-04 the sim refused facings 1 and 3 (Build's argument 1 bit 1).
+    adr: [0189, 0192, 0277]
   CTRL-025:
     rule: The waypoints of the selection appear while Shift is held.
     source: [manual Commanding Units (Move)]

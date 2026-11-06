@@ -180,3 +180,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0274](0274-shots-land-on-a-tile-and-flame-balls-burn-their-way.md) | Let shells and bolts land on a tile, and flame balls burn their way, as the original's | Accepted | 2026-11-04 |
 | [0275](0275-the-neutral-creatures-as-the-original-has-them.md) | Give the neutral creatures the original's rules: prisoners freed, gateways taken by presence, cows only poached | Accepted | 2026-11-04 |
 | [0276](0276-blows-firing-periods-and-fields-as-the-original-has-them.md) | Deal blows, time towers and ships, and keep fields as the original does | Accepted | 2026-11-06 |
+| [0277](0277-placement-selection-and-gate-flags-as-the-original-draws-them.md) | Draw the placement ghost, the selection and the gates' flags as the original does | Accepted | 2026-11-06 |
