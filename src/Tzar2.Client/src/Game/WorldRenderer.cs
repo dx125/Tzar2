@@ -203,7 +203,7 @@ public sealed class WorldRenderer : IDisposable
         {
             int dx = (int)(((GD.Randf() * 2) - 1) * halfPixels) * UnitsPerPixel;
             int dy = (int)(((GD.Randf() * 2) - 1) * halfPixels) * UnitsPerPixel;
-            _bursts.Add((star, x + dx, y + dy, _timeMs + (long)(GD.Randf() * 400), 0));
+            _bursts.Add((star, x + dx, y + dy, _timeMs, 0)); // a burst that starts later would be dropped at once (age < 0)
         }
     }
 
