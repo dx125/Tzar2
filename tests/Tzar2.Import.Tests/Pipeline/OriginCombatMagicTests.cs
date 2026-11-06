@@ -176,14 +176,16 @@ public sealed class OriginCombatMagicTests(ITestOutputHelper output) : IDisposab
                 foreach (EntityId c in w.Casters.Entities.ToArray())
                 {
                     EntityTraits traits = w.TypeOf(c).Traits;
-                    if (w.Identities.Get(c).Owner != 0 || traits.Spells.IsEmpty || w.Casters.Get(c).Phase != CastPhase.None)
+                    Caster now = w.Casters.Get(c);
+                    bool healing = now.Phase != CastPhase.None && rules.Spells[now.Spell].Effect == SpellEffect.Heal && next.GetValueOrDefault(c.Value) > 0;
+                    if (w.Identities.Get(c).Owner != 0 || traits.Spells.IsEmpty || (now.Phase != CastPhase.None && !healing))
                     {
-                        continue; // a new order would start the cast again (no spell waits, ADR 0266)
+                        continue; // a new order would start the cast again (no spell waits, ADR 0266); a heal goes on round it (MAG-037)
                     }
 
                     ushort spell = traits.Spells[next.GetValueOrDefault(c.Value) % traits.Spells.Length]; // the next spell once one took effect
                     SpellDefinition s = rules.Spells[spell];
-                    EntityId target = Nearest(w, c, own: s.Affects == SpellAffects.Own, s);
+                    EntityId target = Nearest(w, c, own: s.Affects == SpellAffects.Own || s.Effect is SpellEffect.Heal or SpellEffect.Experience or SpellEffect.Cloak, s); // MAG-032: these take any kingdom's; the test gives them its own
                     if (s.Effect == SpellEffect.Experience)
                     {
                         w.Experiences.Get(c).Level = 5; // a teacher above its pupil (ReTzar, 0x473bf0)
