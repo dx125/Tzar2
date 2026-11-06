@@ -185,6 +185,28 @@ public sealed class WorldRenderer : IDisposable
     /// </summary>
     public void ConfirmOrder(int x, int y, EntityId target, BlinkColour colour = BlinkColour.Green) => _order = (x, y, target.Value, _timeMs, colour);
 
+    /// <summary>Called with a meteor's point when one first shows (its sound; PRES-020).</summary>
+    public Action<int, int>? MeteorShown { get; set; }
+
+    /// <summary>
+    /// Scatters <paramref name="count"/> twinkling stars (<c>magic_star</c>) over the square of <paramref name="halfPixels"/>
+    /// round world (<paramref name="x"/>, <paramref name="y"/>): a magic vision's point, a raised skeleton (PRES-020).
+    /// </summary>
+    public void Stars(int x, int y, int count, int halfPixels)
+    {
+        if (_bank.Get(EffectImages.BookStars) is not { } star)
+        {
+            return;
+        }
+
+        for (int i = 0; i < count && _bursts.Count < 512; i++)
+        {
+            int dx = (int)(((GD.Randf() * 2) - 1) * halfPixels) * UnitsPerPixel;
+            int dy = (int)(((GD.Randf() * 2) - 1) * halfPixels) * UnitsPerPixel;
+            _bursts.Add((star, x + dx, y + dy, _timeMs + (long)(GD.Randf() * 400), 0));
+        }
+    }
+
     /// <summary>Plays IMAGES.INI picture <paramref name="name"/> once at world (<paramref name="x"/>, <paramref name="y"/>), if the package has it.</summary>
     public void Burst(string name, int x, int y)
     {
@@ -314,6 +336,7 @@ public sealed class WorldRenderer : IDisposable
             DrawEntity(in e, i, def, px, py, player, timeMs, options);
         }
 
+        DrawAreas(frame, cull);
         DrawProjectiles(frame, fresh, alpha, cull);
         DrawOrder(frame, localPlayer);
         _ground.Commit();
@@ -683,6 +706,27 @@ public sealed class WorldRenderer : IDisposable
 
     private const int ShotLift = 14; // shots leave and hit at a body's height (pixels)
 
+    // Spells' areas (PRES-020): a whirlpool whirls on the water round its tile, under the ships.
+    private void DrawAreas(GameFrame frame, Rect2I cull)
+    {
+        foreach (FrameArea a in frame.Areas)
+        {
+            if (a.Spell >= _rules.Spells.Count || SpellPictures.Area(_rules.Spells[a.Spell]) is not { } name || _bank.Get(name) is not { } sheet)
+            {
+                continue;
+            }
+
+            int tile = TilePixels * UnitsPerPixel;
+            int px = ((a.X / tile) * TilePixels) + (TilePixels / 2), py = ((a.Y / tile) * TilePixels) + (TilePixels / 2);
+            if (!cull.HasPoint(new Vector2I(px, py)))
+            {
+                continue;
+            }
+
+            Add(_ground, sheet, new Vector2I(px, py) - sheet.Anchor, 0, sheet.Animation.FrameAt(_timeMs + (a.Id * 37)), -1, 2, shadowOnly: false);
+        }
+    }
+
     // Projectiles in flight (GAME-07, PRES-002): the original's picture of each kind and shooter, raised on its arc from
     // where it was first seen to its target and turned along its flight; shells, bolts and rockets leave a hole, a splash
     // or a blast where they vanish, spells their burst.
@@ -730,9 +774,15 @@ public sealed class WorldRenderer : IDisposable
             {
                 ShotLook? look = LookOf(s);
                 _shotCurrent[s.Id] = (s.X, s.Y, look);
-                if (_shotStart.TryAdd(s.Id, (s.X, s.Y)) && look is { Muzzle: true } && _bank.Get("explosion_small") is { } flash)
+                bool first = _shotStart.TryAdd(s.Id, (s.X, s.Y));
+                if (first && look is { Muzzle: true } && _bank.Get("explosion_small") is { } flash)
                 {
                     _bursts.Add((flash, s.X, s.Y - ((24 - ShotLift) * UnitsPerPixel), _timeMs, 0)); // the muzzle flash, 24 px up
+                }
+
+                if (first && look is { Body: SpellPictures.Meteor })
+                {
+                    MeteorShown?.Invoke(s.TargetX, s.TargetY);
                 }
             }
         }

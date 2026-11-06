@@ -535,13 +535,18 @@ owner's order of 2026-10-26.
     1. Rain of fire, the freeze ball, the far cast's look, magic vision and the heal's round: **fixed** (MAG-034 to
        MAG-037; ADR 0279; log below). The summons, turn to stone, the whirlpool, confusion, the flame bolt, raise dead,
        the blessing and teaching already matched.
-    2. The pictures and sounds of these spells: open (batch E).
+    2. The pictures and sounds of these spells: **fixed** (PRES-020; ADR 0279; log below). No spell had a sound, and the
+       whirlpool and the fire rain were not drawn.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-06 — The Arabian and Asian casters, batch E: their sounds and pictures (PRES-020; ADR 0279; item 24).** Every
+  spell now sounds as the original's (`SOUND\SPELLS`, the `summon_spell` set, a meteor three times in ten), from its
+  caster. The frame carries the spells' areas (`FrameArea`), so a whirlpool whirls on the water. The fire rain's meteors
+  fall as `fire_rain`. A magic vision scatters stars over its point, and a raised skeleton rises with three.
 * **2026-11-06 — The Arabian and Asian casters, batch D: falls, the far cast's look, magic vision and the heal's round
   (MAG-034, MAG-035, MAG-036, MAG-037; ADR 0279; item 24).** Checked against ReTzar's reading of the original:
   * **Rain of fire** is twenty meteors falling 150 px onto their tiles; the **freeze ball** falls from 500 px above its

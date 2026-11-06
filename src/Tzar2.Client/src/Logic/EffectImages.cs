@@ -48,7 +48,8 @@ public static class EffectImages
     /// (<c>cb_metal</c>) from 24 to 64, the cannon tower's (<c>cb_fire</c>) from 32 to 64, all with
     /// <c>cb_metal_shadow</c>; the rocket tower's rocket turns;</item>
     /// <item>the ballista's bolt turns and arcs from 16 to 64 with its shadow;</item>
-    /// <item>freeze and flame balls show only their trails, the freeze bursting in <c>freeze_bolt_expl</c>.</item>
+    /// <item>freeze and flame balls show only their trails, the freeze bursting in <c>freeze_bolt_expl</c>;</item>
+    /// <item>the fire rain's meteors fall as <c>fire_rain</c> and leave a hole or a splash.</item>
     /// </list>
     /// Shells, bolts and rockets leave a hole (<c>expl_small_hole</c>), a splash on water (<c>expl_small_water</c>) or,
     /// shells on a building, a blast (<c>expl64</c>; 0x43392a).
@@ -67,6 +68,7 @@ public static class EffectImages
         ("freeze_bolt", _) => new("freeze_ball_trail", null, 0, 0, Turns: false, Glows: true, Impact: "freeze_bolt_expl", Trail: true),
         ("flame_ball" or "flame_bolt", _) => new("flame_ball_trail", null, 0, 0, Turns: false, Glows: true, Impact: "flame_bolt_expl", Trail: true),
         ("magic", _) => new("magic_star", null, 0, 0, Turns: false, Glows: true),
+        ("meteor", _) => new(SpellPictures.Meteor, null, 0, 0, Turns: false, Glows: true, Impact: Hole), // the fire rain (0x450620)
         _ => null,
     };
 

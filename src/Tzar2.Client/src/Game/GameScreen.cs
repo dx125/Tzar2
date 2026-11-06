@@ -321,6 +321,13 @@ public partial class GameScreen : Node
         _bank!.Upload();
         long uploaded = watch.ElapsedMilliseconds;
         _world = new WorldRenderer(this, GetViewport().FindWorld2D().Canvas, _rules, _catalog, _bank, set, _grid!, _store.LoadImage, _composed);
+        _world.MeteorShown = (x, y) =>
+        {
+            if (GD.Randi() % 100 < SpellPictures.MeteorSoundPercent)
+            {
+                _mixer?.PlaySet(SpellPictures.MeteorSound, SoundCategory.Effects, "explosion", PlaceOf(x, y)); // PRES-020 (0x4507b0)
+            }
+        };
         _composed = null;
         MinimapFromData(set, _grid!);
         if (set.Table is { } treeTable && _store.Vfs.Exists(treeTable))
@@ -1982,18 +1989,39 @@ public partial class GameScreen : Node
                     // PRES-019: what plays over a unit a spell takes; the stone's strikes on its middle.
                     _world?.Burst(picture, taken.X, picture == "turn_to_stone" ? taken.Y : taken.Y - OverHead);
                     break;
+                case SimEventKind.SpellCast when (uint)e.Arg < (uint)_rules.Spells.Count && _rules.Spells[e.Arg] is { } cast && cast.Key != SpellPictures.LightningKey
+                    && (SpellPictures.Sound(cast) is not null || cast.Effect == SpellEffect.Reveal):
+                    {
+                        // PRES-020: the spell's sound from its caster, or from its point when the caster is not seen; a magic
+                        // vision's stars over its point (ReTzar 0x4735ac).
+                        (int sx, int sy) = ((e.Y & 0xFFFF) * 64, (e.Y >> 16) * 64);
+                        (int hx, int hy) = _seen.TryGet(e.Entity.Index, out var spoke) ? (spoke.X, spoke.Y) : (sx, sy);
+                        _mixer?.PlaySet(SpellPictures.Sound(cast), SoundCategory.Effects, SpellPictures.SoundPriority(cast), PlaceOf(hx, hy));
+                        if (cast.Effect == SpellEffect.Reveal)
+                        {
+                            _world?.Stars(sx, sy, SpellPictures.VisionStars, 64);
+                        }
+                    }
+
+                    break;
                 case SimEventKind.SpellCast when (uint)e.Arg < (uint)_rules.Spells.Count && _rules.Spells[e.Arg].Key == SpellPictures.LightningKey
                     && _seen.TryGet(e.Entity.Index, out var caster):
                     {
                         // PRES-019: the lightning's bolts from the caster to its target (or the point it was cast at).
                         (int lx, int ly) = e.X >= 0 && _seen.TryGet(e.X, out var struck) ? (struck.X, struck.Y) : ((e.Y & 0xFFFF) * 64, (e.Y >> 16) * 64);
                         _world?.Lightning(caster.X, caster.Y, lx, ly);
+                        _mixer?.PlaySet(SpellPictures.Sound(_rules.Spells[e.Arg]), SoundCategory.Effects, "explosion", PlaceOf(caster.X, caster.Y));
                     }
 
                     break;
                 case SimEventKind.Summoned when (uint)e.Arg < (uint)_rules.EntityTypes.Count && SpellPictures.Appearance(_rules.EntityTypes[e.Arg].Traits.LegacyClass) is { } appear
                     && _seen.TryGet(e.Entity.Index, out var called):
                     _world?.Burst(appear, called.X, called.Y); // PRES-019: how a summoned creature comes out
+                    if (appear == "skeleton_rise")
+                    {
+                        _world?.Stars(called.X, called.Y - OverHead, SpellPictures.RaisedStars, 16); // PRES-020: raised with stars (0x47367c)
+                    }
+
                     break;
                 case SimEventKind.ProductionStalled when e.Player == me && e.Arg == 1:
                     if (_now - _lastAlert > 5)

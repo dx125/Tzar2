@@ -96,3 +96,9 @@ rules:
     status: tested
     adr: [0278]
     note: Until the tenth play-test the client drew none of these - a lightning on a bird struck with no bolt - and the freeze ball showed one puff at its head. Tzar2 draws the bolts as lines of its own (white over blue), not the original's pictures, which it draws by code.
+  PRES-020:
+    rule: Spells sound as the original's - heal, bless, confusion, freeze, turn to stone, invisibility, lightning, flame ball, whirlpool, reveal (magic vision), teach, resurrect (raise dead) and curse from SOUND\SPELLS, a summon from the summon_spell set, a meteor of the fire rain as it is made three times in ten - from the caster, or from the point when the caster is not seen; a whirlpool whirls on the water, the fire rain's meteors fall as fire_rain, a magic vision scatters sixteen stars over its point and a raised skeleton three.
+    source: ['data SOUND\SPELLS, SOUNDS.INI summon_spell, IMAGES.INI whirlpool, fire_rain, magic_star', 'community ReTzar src/gameplay.rs (spell sounds 0x473c7a to 0x473fd9; meteor sound 0x4507b0; stars 0x4735ac, 0x47367c)', 'community ReTzar src/frontend/effects.rs (the meteor 0x450620)']
+    status: tested
+    adr: [0279]
+    note: Until then the client played no spell's sound, drew no whirlpool and no fire rain. The bolts' (lightning, stone, flame ball, freeze) sounds take the explosion priority, the others the far attack's, as ReTzar maps the original's categories 19 and 13.

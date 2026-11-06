@@ -425,6 +425,13 @@ public readonly record struct FrameHeld(uint Holder, EntityId Unit, ushort TypeI
 /// <param name="Kind">The projectile kind (<c>Ruleset.Projectiles</c>).</param>
 /// <param name="Spell">The spell it carries, or 0xFFFF.</param>
 /// <param name="ShooterType">The shooter's type (how the shot looks, PRES-002), or <see cref="ushort.MaxValue"/>.</param>
+/// <summary>A spell's area on the ground the viewer sees (a whirlpool, the fire rain's point; PRES-020).</summary>
+/// <param name="Id">The area's entity value.</param>
+/// <param name="X">Its centre, world units.</param>
+/// <param name="Y">Its centre, world units.</param>
+/// <param name="Spell">The spell (<c>Ruleset.Spells</c>).</param>
+public readonly record struct FrameArea(uint Id, int X, int Y, ushort Spell);
+
 public readonly record struct FrameProjectile(uint Id, int X, int Y, int TargetX, int TargetY, byte Kind, ushort Spell, ushort ShooterType = ushort.MaxValue);
 
 /// <summary>A corpse on the ground (decal).</summary>
@@ -580,6 +587,7 @@ public sealed class GameFrame
     private FrameCorpse[] _corpses = new FrameCorpse[64];
     private FrameRuin[] _ruins = new FrameRuin[16];
     private FrameProjectile[] _projectiles = new FrameProjectile[64];
+    private FrameArea[] _areas = new FrameArea[8];
 
     /// <summary>The tick the frame shows the result of.</summary>
     public Tick Tick { get; internal set; }
@@ -607,6 +615,12 @@ public sealed class GameFrame
 
     /// <summary>Number of valid entries in <see cref="Projectiles"/>.</summary>
     public int ProjectileCount { get; internal set; }
+
+    /// <summary>Spells' areas the viewer sees (PRES-020).</summary>
+    public ReadOnlySpan<FrameArea> Areas => _areas.AsSpan(0, AreaCount);
+
+    /// <summary>Number of valid entries in <see cref="Areas"/>.</summary>
+    public int AreaCount { get; internal set; }
 
     /// <summary>Number of corpses.</summary>
     public int CorpseCount { get; internal set; }
@@ -822,6 +836,16 @@ public sealed class GameFrame
         }
 
         return _entities;
+    }
+
+    internal FrameArea[] AreaBuffer(int count)
+    {
+        if (_areas.Length < count)
+        {
+            _areas = new FrameArea[Math.Max(count, _areas.Length * 2)];
+        }
+
+        return _areas;
     }
 
     internal FrameProjectile[] ProjectileBuffer(int count)
