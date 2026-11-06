@@ -3,14 +3,17 @@ prefix: WAR
 title: Combat
 rules:
   WAR-001:
-    rule: Every unit has its own attack, defence and hit points; attack is the damage dealt, defence lowers the damage taken, and resistance lowers the damage a building takes.
-    source: [manual Production Of Units, manual The Selection View]
+    rule: Every unit has its own attack, defence and hit points; attack is the damage dealt and defence lowers the damage taken. A blow deals A² / (A + D), at least 1, where A is the attack grown by its bonus and D the defence; magic (mages, dragons, the Messiah, priests that shoot) ignores the defence. A building has no defence, and its resistance is against capture, not damage. A holder (castle, outpost, ships) takes its share of each blow from its damage table, the units inside sharing the rest.
+    source: [manual Production Of Units, manual The Selection View, 'community ReTzar src/gameplay.rs (wound 0x504900: physical_damage A²/(A+D), category 3 ignores defence, the [damage] fractions; damage_category 0x4df6e0, 0x431baf, 0x4eea56)', owner 2026-11-06 (tenth play-test)]
     status: tested
-    note: The damage formula and its rounding are placeholders (UNK-08).
+    adr: [0276]
+    note: Tzar2 dealt attack × bonus − defence (UNK-08 placeholder, ADR 0038) and cut a building's damage by 1000 / (1000 + RESISTANCE) (ADR 0045); a holder took its share only with units inside. The captured duels (attack-timing facts) all have defence 0 and match either formula.
   WAR-002:
     rule: Some units have bonuses or penalties against others, from the bonus table; catapults are very good against ships, towers, catapults and buildings, pikemen against chariots and mounted units, macemen against catapults and ballistas, arrows bad against pikemen and chariots, priests very good against mages and magic creatures, dwarves excellent against buildings.
-    source: [manual Hints About Gameplay, guide Unit Discussion, data BONUS.INI]
+    source: [manual Hints About Gameplay, guide Unit Discussion, data BONUS.INI, 'community ReTzar src/gameplay.rs (Catalog::bonus 0x499ff1: one matrix entry per pair, a later entry overwriting)']
     status: tested
+    adr: [0276]
+    note: Of several BONUS.INI entries for one pair the last holds; Tzar2 summed them until 2026-11-06, which doubled the ships' and catapults' bonus against the castle (named twice in buildings_no_towers_walls).
   WAR-003:
     rule: Each unit attacks at its own rate and range; ranged units shoot arrows, bolts, stones, cannon balls or rockets that fly to the target.
     source: [manual The Selection View, data UNITS.TXT, capture capture-20261018-155421]
@@ -86,3 +89,9 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x413950, 0x413410)', owner 2026-10-25 (sixth play-test)]
     status: tested
     note: 'An idle helper takes the better of the attacker and its own best target; one on a move-advance, a sneak or a patrol turns at once; one fighting by itself changes only for a better target, and one on the player''s order keeps it; a tower answers within its range, a unit standing its ground within its reach. The original calls at most every 100 ms per victim (Tzar2 once per tick) and reaches six tiles for a computer''s kingdom (Tzar2 three for all, combat.helpRadiusTiles).'
+  WAR-019:
+    rule: Towers and warships fire on a fixed period of their own, with no attack animation, not at their table rate - the watch, guard and keep towers every second, the cannon and rocket towers every 3 seconds, the galleon and the hulk every 3 seconds (2.4, 1.9, 1.5, 1.2 and 0.8 seconds with their cannon levels 2 to 6), the xebec every 1.3 seconds.
+    source: ['community ReTzar src/gameplay.rs (attack 0x4dba30 towers, 0x4e8f00 ship_period)', owner 2026-11-06 (tenth play-test)]
+    status: tested
+    adr: [0276]
+    note: Tzar2 timed them by 6000 / RATE (UNK-07), so ships fired every 1.5 seconds and cannon towers every 2, about twice the original's; with the summed bonuses, cannon ships tore down buildings and cannon towers sank ships too fast.

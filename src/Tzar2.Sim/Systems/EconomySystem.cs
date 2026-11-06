@@ -92,6 +92,25 @@ public sealed class EconomySystem : ISimSystem
         if (world.Neglects.IndexOf(node) is >= 0 and var n)
         {
             world.Neglects.At(n).UntendedMs = 0; // a field is tended while it is worked
+            if (nodeType.Traits.Decay is { } decay && world.Healths.IndexOf(node) is >= 0 and var fh && world.Healths.At(fh).Current < world.Healths.At(fh).Max)
+            {
+                // ECO-012 (ReTzar's reading, 0x44cc70): a field short of its health grows back by a dig at a time, and bears
+                // food again only once whole.
+                ref Health grown = ref world.Healths.At(fh);
+                w.TimerMs += tickMs;
+                while (w.TimerMs >= decay.GrowMs && grown.Current < grown.Max)
+                {
+                    w.TimerMs -= decay.GrowMs;
+                    grown.Current = Math.Min(grown.Max, grown.Current + decay.Health);
+                }
+
+                if (grown.Current >= grown.Max)
+                {
+                    w.TimerMs = 0;
+                }
+
+                return;
+            }
         }
 
         // Gather time: the node's own (cows) or the harvester's, sped up by the owner's technologies for this node
@@ -268,7 +287,7 @@ public sealed class EconomySystem : ISimSystem
         }
     }
 
-    // Fields neglected longer than Decay.afterMs lose hit points; at 0 they disappear (GAME-02, UNK-17).
+    // Fields neglected longer than Decay.afterMs lose Decay.health every Decay.everyMs; at 0 they disappear (ECO-012).
     private void Decay(World world, int tickMs)
     {
         _depleted.Clear();
@@ -278,22 +297,21 @@ public sealed class EconomySystem : ISimSystem
         {
             ref Neglect n = ref neglects[i];
             DecayDefinition decay = world.TypeOf(ids[i]).Traits.Decay!;
-            if (n.UntendedMs <= decay.AfterMs || decay.HealthPerMinute <= 0)
+            if (n.UntendedMs <= decay.AfterMs || decay.Health <= 0)
             {
                 n.AccumMs = 0;
                 continue;
             }
 
-            int msPerPoint = Math.Max(1, 60_000 / decay.HealthPerMinute);
             n.AccumMs += tickMs;
             ref Health health = ref world.Healths.Get(ids[i]);
-            while (n.AccumMs >= msPerPoint && health.Current > 0)
+            while (n.AccumMs >= decay.EveryMs && health.Current > 0)
             {
-                n.AccumMs -= msPerPoint;
-                health.Current--;
+                n.AccumMs -= decay.EveryMs;
+                health.Current = Math.Max(0, health.Current - decay.Health);
             }
 
-            n.AccumMs = Math.Min(n.AccumMs, 59_999);
+            n.AccumMs = Math.Min(n.AccumMs, decay.EveryMs - 1);
             if (health.Current <= 0)
             {
                 _depleted.Add(ids[i]);

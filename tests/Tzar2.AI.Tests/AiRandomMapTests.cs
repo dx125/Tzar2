@@ -22,7 +22,7 @@ public class AiRandomMapTests(ITestOutputHelper output)
         string civ = generated.Starts[0].Civilization;
         Assert.All(generated.Starts, s => Assert.Equal(civ, s.Civilization));
         using var scenario = new AiSkirmishScenario(AiFixtures.Classic, AiFixtures.Skirmish, generated.Map, new AiSkirmishOptions { Players = players, Civilization = civ });
-        for (int t = 0; t < 8 * 60 * 20; t++)
+        for (int t = 0; t < 9 * 60 * 20; t++)
         {
             scenario.RunTick();
         }
@@ -33,7 +33,8 @@ public class AiRandomMapTests(ITestOutputHelper output)
             Assert.True(scenario.Delivered(p) > 1000 && scenario.Built(p) > 2 && scenario.Trained(p) > 5, scenario.Describe());
         }
 
-        // Every type: the kingdoms reach each other within eight minutes, overseas by ship (ADR 0144).
+        // Every type: the kingdoms reach each other within nine minutes, overseas by ship (ADR 0144; eight until the
+        // original's damage rule, ADR 0276, slowed the first blow on Island).
         Assert.True(Enumerable.Range(0, players).Sum(scenario.DamageDealt) > 0, scenario.Describe());
         if (generated.ResolvedType != RandomMapType.Archipelagos)
         {

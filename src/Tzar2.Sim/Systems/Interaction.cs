@@ -129,8 +129,9 @@ internal static class Interaction
         if (world.Footprints.Has(target) && world.TypeOf(target).Traits.WalkableFootprint && !world.Constructions.Has(target)
             && world.TypeOf(worker).Locomotor != Locomotor.Ship)
         {
-            // A farmer works on the field, not beside it: at its own tile of the field, or wherever it stopped on it when
-            // that tile is taken.
+            // A farmer works on the field, not beside it: on its middle tile, or, when another unit stands there, wherever
+            // it stopped on the field (ECO-008; ReTzar 0x42e600: the peasant digs where it stands after a failed move). The
+            // tenth play-test: a farmer back from a farm next to its field stopped at the field's edge and dug there.
             Position at = world.Positions.Get(worker);
             if (DistanceSquaredTo(world, at.X, at.Y, target) != 0)
             {
@@ -139,7 +140,19 @@ internal static class Interaction
 
             (int wx, int wy) = WorkPoint(world, target, at, world.TypeOf(worker).Locomotor, worker);
             const long near = MapState.UnitsPerTile / 3;
-            return IntMath.DistanceSquared(at.X, at.Y, wx, wy) <= near * near || !IsMoving(world, worker);
+            int mx = wx / MapState.UnitsPerTile, my = wy / MapState.UnitsPerTile;
+            bool onMiddle = at.X / MapState.UnitsPerTile == mx && at.Y / MapState.UnitsPerTile == my;
+            if (IntMath.DistanceSquared(at.X, at.Y, wx, wy) <= near * near)
+            {
+                return true;
+            }
+
+            if (IsMoving(world, worker))
+            {
+                return false;
+            }
+
+            return onMiddle || world.StandingAt(mx, my) > 0;
         }
 
         EntityTypeDefinition type = world.TypeOf(worker);

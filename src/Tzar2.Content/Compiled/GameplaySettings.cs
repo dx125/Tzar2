@@ -61,12 +61,6 @@ public sealed record GameplaySettings
     public int MinimumDamage { get; init; } = 1;
 
     /// <summary>
-    /// Damage to a building with resistance R is multiplied by <c>scale / (scale + R)</c> (UNK-08; the manual only says
-    /// resistance "reduces the amount of damage a building suffers").
-    /// </summary>
-    public int ResistanceScale { get; init; } = 100;
-
-    /// <summary>
     /// How far (world units, edge to edge) a worker or a unit on an errand may be from a target without a footprint (a
     /// cow, a ship, an item, meat, a fish patch) it works on, boards or picks up (UNK-17/18).
     /// </summary>
@@ -257,7 +251,6 @@ public sealed record GameplaySettings
 
         ArgumentOutOfRangeException.ThrowIfNegative(PopulationLimit);
         ArgumentOutOfRangeException.ThrowIfNegative(MinimumDamage);
-        ArgumentOutOfRangeException.ThrowIfLessThan(ResistanceScale, 1);
         ArgumentOutOfRangeException.ThrowIfNegative(InteractionReachUnits);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(InteractionReachUnits, 8 * 2048);
         ArgumentOutOfRangeException.ThrowIfNegative(StructureReachUnits);

@@ -244,7 +244,7 @@ internal static class FidelitySuite
         new("m3.spell-effects", "22.3", "m3-gameplay", "UNK-26", "Lightning damage = spell_lightning amount", SpellEffects),
         new("m3.mana-regeneration", "22.3", "m3-gameplay", "UNK-26", "Mana regained per minute = gameplay.manaRegenPerMinute", ManaRegeneration),
         new("m3.technology-effects", "22.3", "m3-gameplay", "UNK-21", "Feudalism: peasant cost change = te_feudalism percent", TechnologyEffects),
-        new("m3.field-decay", "22.3", "m3-gameplay", "UNK-17", "Field decay: start after Decay.afterMs, Decay.healthPerMinute", FieldDecay),
+        new("m3.field-decay", "22.3", "m3-gameplay", "UNK-17", "Field decay: start after Decay.afterMs, Decay.health every Decay.everyMs", FieldDecay),
         new("m3.fire", "22.3", "m3-gameplay", "UNK-42", "Burning below burnThresholdPercent at burnDamagePerMinute", Fire),
         new("m3.score", "22.3", "m3-gameplay", "UNK-29", "Score = gathered/10 + killed/10 + built/10 + 100 per technology (end screen)", Score),
         new("mapgen.statistics", "22.3", "mapgen", "RE-10", "Random maps per type: castle spacing and gold per kingdom like the original's", MapgenStatistics),
@@ -612,15 +612,15 @@ internal static class FidelitySuite
 
     private static double Num(YamlMapping m, string key) => FactsIndex.Number(m.Get(key)) ?? double.NaN;
 
-    /// <summary>The engine's damage per hit with a bonus (percent) and a building's RESISTANCE (0 for units).</summary>
+    /// <summary>
+    /// The engine's damage per hit with a bonus (percent): A² / (A + D) (WAR-001). <paramref name="resistance"/> is kept for
+    /// the callers; a building's RESISTANCE no longer lowers damage.
+    /// </summary>
     public static int EngineDamage(EngineModel e, int attack, int defence, int bonusPercent, int resistance)
     {
-        long raw = (long)attack * (100 + bonusPercent) / 100 - defence;
-        if (resistance > 0)
-        {
-            raw = raw * e.Ruleset.Gameplay.ResistanceScale / (e.Ruleset.Gameplay.ResistanceScale + resistance);
-        }
-
+        _ = resistance;
+        long a = Math.Max(0, (long)attack * (100 + bonusPercent) / 100);
+        long raw = a == 0 ? 0 : a * a / (a + Math.Max(0, defence));
         return (int)Math.Max(e.Ruleset.Gameplay.MinimumDamage, raw);
     }
 
@@ -973,7 +973,7 @@ internal static class FidelitySuite
         }
 
         double start = Num(phase, "first_step_s"), rate = -Num(phase, "rate_per_min") * Num(phase, "duration_s") / Math.Max(1, Num(phase, "duration_s") - start);
-        double engineStart = (e.Rule("^class.field", "Decay", "afterMs") ?? double.NaN) / 1000, engineRate = e.Rule("^class.field", "Decay", "healthPerMinute") ?? double.NaN;
+        double engineStart = (e.Rule("^class.field", "Decay", "afterMs") ?? double.NaN) / 1000, engineRate = (e.Rule("^class.field", "Decay", "health") ?? double.NaN) * 60_000 / (e.Rule("^class.field", "Decay", "everyMs") ?? double.NaN);
         return Verdict(Math.Abs(start - engineStart) <= 15 && Within(rate, engineRate, 0.15), string.Create(CultureInfo.InvariantCulture, $"decay from {start:0} s at {rate:0.#} HP/min; engine {engineStart:0} s, {engineRate:0} HP/min"));
     }
 

@@ -42,7 +42,7 @@ rules:
     rule: Units can walk over fields, farmers work on the field's own tiles, and nothing can be built on a field.
     source: [owner 2026-10-20 (before the second play-test), 'community ReTzar src/gameplay.rs (0x42e600: the Dig program walks to the field''s cell x + 1, y + 1)', owner 2026-10-25 (sixth play-test)]
     status: tested
-    note: The farmer works on the field's middle tile; one taken, it digs where it stands on the field. A farmer coming back from the drop-off keeps its field against idle peasants looking for work.
+    note: The farmer works on the field's middle tile; when another unit stands there, it digs where it stopped on the field. A farmer coming back from the drop-off keeps its field against idle peasants looking for work. Until the tenth play-test a farmer that stopped anywhere on the field dug there, so one back from a farm beside its field dug at the field's edge.
   ECO-009:
     rule: There are four resources in the stockpile, gold (golden rocks), stone (rocks), wood (trees) and food (fields, cows, fish); mana belongs to each caster.
     source: [manual Resources]
@@ -57,9 +57,11 @@ rules:
     source: [manual Resources]
     status: tested
   ECO-012:
-    rule: Fields give unlimited food but need constant care; neglected fields disappear.
-    source: [manual Resources]
+    rule: Fields give unlimited food but need constant care. A field nobody works for a minute withers, losing 10 of its 100 hit points every 5 seconds and showing its growth stage, and disappears at 0; its farmer grows it back by 10 a dig, and it bears food again only once whole.
+    source: [manual Resources, 'community ReTzar src/gameplay.rs (decay_fields 0x44d1e0, every 5000 ms after 60 s; growth 0x44cc70; the field_grow picture at row health × 4 / 100, 0x44c880)', 'data IMAGES.INI field_grow rows 4, e_peon_dig anim_time 1196', owner 2026-11-06 (tenth play-test)]
     status: tested
+    adr: [0276]
+    note: Tzar2 let a neglected field lose 30 hit points a minute (UNK-17), showed it ripe to the end and never grew it back; the tenth play-test saw fields that did not wither.
   ECO-013:
     rule: Each load goes to the finished building nearest to where it was gathered that takes it, even one built after the worker's first trip; the castle takes everything, the farm food, the lumber mill wood, the harbor fish.
     source: [manual Civilizations (Castle Farm Lumbermill Harbor), owner 2026-10-21 (fourth play-test)]

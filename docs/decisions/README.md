@@ -179,3 +179,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0273](0273-walls-and-gates-leave-rubble-that-stays.md) | Keep the rubble of walls and gates with the decals, and lay gates as the original does | Accepted | 2026-11-04 |
 | [0274](0274-shots-land-on-a-tile-and-flame-balls-burn-their-way.md) | Let shells and bolts land on a tile, and flame balls burn their way, as the original's | Accepted | 2026-11-04 |
 | [0275](0275-the-neutral-creatures-as-the-original-has-them.md) | Give the neutral creatures the original's rules: prisoners freed, gateways taken by presence, cows only poached | Accepted | 2026-11-04 |
+| [0276](0276-blows-firing-periods-and-fields-as-the-original-has-them.md) | Deal blows, time towers and ships, and keep fields as the original does | Accepted | 2026-11-06 |

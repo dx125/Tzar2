@@ -173,8 +173,8 @@ public class CombatM3eTests
     [Trait("Rule", "HOLD-004")]
     public void A_holder_spreads_its_damage_share_over_the_units_inside()
     {
-        // Castle (synthetic): cannon damage 85% taken, 15% spread; a 200-attack catapult: 200 x 1000 / 1700 = 117 ->
-        // the castle takes 99, the four footmen inside share 17 (5, 4, 4, 4).
+        // Castle (synthetic): cannon damage 85% taken, 15% spread; a 200-attack catapult (a building has no defence and its
+        // RESISTANCE is against capture, WAR-001) -> the castle takes 170, the four footmen inside share 30 (8, 8, 7, 7).
         Ruleset rules = ClassicWith("comm.catapult: { Armament: { attack: 200 } }\neuro.castle: { Holder: { healPerMinute: 0 } }");
         using var d = new SimDriver(
             TestMap(48, 20, [Structure("euro.castle", 0, 20, 8), Unit("comm.catapult", 1, 6, 10), .. Enumerable.Range(0, 4).Select(i => Unit("euro.footman", 0, 18, 8 + i))]),
@@ -188,8 +188,21 @@ public class CombatM3eTests
         d.RunUntil(() => d.Count(SimEventKind.DamageShared) > 0, 800);
         SimEvent shared = Of(d, SimEventKind.DamageShared).First();
         Assert.Equal(4, shared.X);
-        Assert.Equal(17, shared.Arg);
-        Assert.Contains(Of(d, SimEventKind.Damaged), e => e.Entity == castle && e.Arg == 99);
-        Assert.Equal(70 * 4 - 17, footmen.Sum(f => Hp(d, f)));
+        Assert.Equal(30, shared.Arg);
+        Assert.Contains(Of(d, SimEventKind.Damaged), e => e.Entity == castle && e.Arg == 170);
+        Assert.Equal(70 * 4 - 30, footmen.Sum(f => Hp(d, f)));
+    }
+
+    [Fact]
+    [Trait("Rule", "WAR-001")]
+    public void An_empty_holder_still_takes_only_its_share_of_a_blow()
+    {
+        // ReTzar 0x504900: the [damage] table's taken share holds whether anyone is inside: 85% of 200 for the castle.
+        Ruleset rules = ClassicWith("comm.catapult: { Armament: { attack: 200 } }");
+        using var d = new SimDriver(TestMap(48, 20, Structure("euro.castle", 0, 20, 8), Unit("comm.catapult", 1, 6, 10)), ruleset: rules);
+        EntityId castle = OfType(d.World, "euro.castle").Single();
+        d.Order(1, CommandKind.Attack, [OfType(d.World, "comm.catapult").Single()], target: castle);
+        d.RunUntil(() => Of(d, SimEventKind.Damaged).Any(e => e.Entity == castle), 800);
+        Assert.Equal(170, Of(d, SimEventKind.Damaged).First(e => e.Entity == castle).Arg);
     }
 }

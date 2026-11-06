@@ -594,7 +594,7 @@ public sealed partial class Ruleset
             throw new ArgumentException($"{where}: wall, bridge, burning, ruin, protected delete, walkable footprint and placement rules need a footprint.");
         }
 
-        if (t.Decay is { } decay && (decay.AfterMs < 0 || decay.HealthPerMinute < 0))
+        if (t.Decay is { } decay && (decay.AfterMs < 0 || decay.EveryMs <= 0 || decay.Health < 0 || decay.GrowMs <= 0))
         {
             throw new ArgumentException($"{where}: invalid decay.");
         }
@@ -826,7 +826,7 @@ public sealed partial class Ruleset
         }
 
         GameplaySettings g = Gameplay;
-        hasher.Add((byte)g.GroupMoveSpeed).Add((byte)g.Movement).Add(g.PopulationLimit).Add(g.DefaultStartingResources).Add(g.MinimumDamage).Add(g.ResistanceScale)
+        hasher.Add((byte)g.GroupMoveSpeed).Add((byte)g.Movement).Add(g.PopulationLimit).Add(g.DefaultStartingResources).Add(g.MinimumDamage)
             .Add(g.InteractionReachUnits).Add(g.StructureReachUnits).Add(g.InteractionTouchUnits).Add(g.MeleeReachUnits).Add(g.AcquireIntervalMs).Add(g.AutoChaseLeashPercent).Add(g.NodeSearchRadiusTiles)
             .Add(g.ConstructionRefundBasisPoints).Add(g.DismantleRefundBasisPoints).Add(g.DismantleBaseMs).Add(g.DismantleMaxMs).Add(g.DismantleMsPerHealth).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints).Add(g.CapturePointsPerSecond)
             .Add(g.MinimumCaptureResistance).Add(g.CaptureResetMs).Add(g.InfluenceRadiusTiles).Add(g.RepairTimeBasisPoints)
@@ -941,7 +941,7 @@ public sealed partial class Ruleset
         hasher.Add(t.Decay is not null);
         if (t.Decay is { } decay)
         {
-            hasher.Add(decay.AfterMs).Add(decay.HealthPerMinute);
+            hasher.Add(decay.AfterMs).Add(decay.EveryMs).Add(decay.Health).Add(decay.GrowMs);
         }
         hasher.Add(t.Armament is not null);
         if (t.Armament is { } a)

@@ -81,6 +81,17 @@ public sealed class PresentationCatalogTests
     }
 
     [Fact]
+    [Trait("Rule", "BLD-029")]
+    public void A_build_button_finds_its_building_whatever_the_case_of_its_class()
+    {
+        // ORDERS.INI builds the Merchants' Guild with "BUILD TCGuild": the tenth play-test could build neither it nor the
+        // market, which needs it.
+        PresentationCatalog catalog = Catalog();
+        Assert.Equal(catalog.Ruleset.EntityTypeId("euro.house"), catalog.TypeOfClass("euro", "House"));
+        Assert.Equal(catalog.Ruleset.EntityTypeId("euro.castle"), catalog.TypeOfClass("euro", "CASTLE"));
+    }
+
+    [Fact]
     [Trait("Rule", "HUD-029")]
     public void Cards_classify_orders_and_keep_menu_letters()
     {
