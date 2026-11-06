@@ -219,7 +219,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Crusade | **ReTzar's reading of the original (ADR 0190):** 16 gathered at the start, one per cathedral every 12/8/4/1 s by the time played, ceiling 16 + 4 per full crusade (36), one arriving every 500 ms, 4 again after the crusaders died | YAML `combat.crusade*`; `MagicSystem` | UNK-26 | a crusade capture would confirm it |
 | Curse, hypnosis, banshee, Messiah | **ReTzar's reading of the original (ADR 0250):** the curse halves attack and zeroes defence of enemy non-machines within the caster's sight for 30 s; hypnosis hands the unit over for 30 s; a ghost's blow curses in 71 of 1001; the Messiah refuses lasting spells. Mana, range, cooldown and cast time stay UNVERIFIED | YAML `spell_curse`, `spell_hypnotize`, `combat.banshee*`; `MagicSystem` | UNK-26 | a capture would confirm it |
 | Bribe price | 200% of the unit's cost, in gold | YAML `combat.bribeCostPercent` | UNK-26 | bribe captures |
-| Magic vision | the revealer lasts 30 s | YAML `comm.fog_revealer.Lifetime` | UNK-26 | captures |
+| Magic vision | **ReTzar's reading of the original (ADR 0279):** the unit it is cast on shows what it sees for 60 s; a point far away is seen 8 tiles round for 4 s | YAML `spell_magicvision`; `MagicSystem` | — | captures |
 
 ## Rules in code
 

@@ -351,6 +351,12 @@ public sealed record SpellDefinition(
     /// </summary>
     public int MoveMs { get; init; }
 
+    /// <summary>
+    /// Cast at a point beyond the caster's sight less this many tiles, the spell lets the caster's kingdom see this many
+    /// tiles round the point for a while (<c>reveal</c>; MAG-035, ReTzar's reading of the original, 0x472ab0); 0: never.
+    /// </summary>
+    public int RevealTiles { get; init; }
+
     /// <summary>Whether <paramref name="typeId"/> may be affected (by its type).</summary>
     public bool AffectsType(ushort typeId) => TargetTypes.IsDefaultOrEmpty || TargetTypes.BinarySearch(typeId) >= 0;
 }
@@ -386,6 +392,13 @@ public sealed record ProjectileDefinition(ushort Id, string Key, int SpeedUnitsP
     /// A flame ball (<c>burns</c>; MAG-029, 0x431f40): it hurts what it crosses, tile by tile, and nothing where it lands.
     /// </summary>
     public bool Burns { get; init; }
+
+    /// <summary>
+    /// A ball that falls straight down onto its point from this high (<c>dropPx</c>, world units; the freeze ball from 500
+    /// pixels, a meteor of the fire rain from 150: MAG-034, ReTzar's reading of the original, 0x432350, 0x450620), wherever
+    /// its caster stands. 0: it flies from its shooter.
+    /// </summary>
+    public int DropUnits { get; init; }
 }
 
 /// <summary>Per-unit special abilities (GAME-11; flags, append only).</summary>

@@ -716,7 +716,15 @@ public sealed partial class CombatSystem : ISimSystem
     {
         if (hit.Spell != Projectile.NoSpell && hit.Target.IsNone)
         {
-            MagicSystem.ApplyEffect(world, hit.Spell, hit.Attacker, hit.Owner, EntityId.None, hit.X, hit.Y, deaths);
+            if (world.Ruleset.Spells[hit.Spell].Effect == SpellEffect.AreaDamage)
+            {
+                MagicSystem.Land(world, hit.Spell, hit.Attacker, hit.Owner, hit.X, hit.Y, deaths); // a fire rain's meteor (MAG-034)
+            }
+            else
+            {
+                MagicSystem.ApplyEffect(world, hit.Spell, hit.Attacker, hit.Owner, EntityId.None, hit.X, hit.Y, deaths);
+            }
+
             return;
         }
 

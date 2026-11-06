@@ -530,11 +530,27 @@ owner's order of 2026-10-26.
     7. Gun towers hurt ships too much, like catapults, and ships' cannons hurt buildings too much: **fixed** (WAR-001,
        WAR-002, WAR-019; ADR 0276; log below).
     8. Fields do not wither without peasants: **fixed** (ECO-012; ADR 0276; log below).
+24. **Before the eleventh play-test (2026-11-06, the owner): check every skill of the Arabian and Asian mages and
+    priests as the European mage's were (item 23.5).** In two batches: D (the simulation), then E (pictures and sounds).
+    1. Rain of fire, the freeze ball, the far cast's look, magic vision and the heal's round: **fixed** (MAG-034 to
+       MAG-037; ADR 0279; log below). The summons, turn to stone, the whirlpool, confusion, the flame bolt, raise dead,
+       the blessing and teaching already matched.
+    2. The pictures and sounds of these spells: open (batch E).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
+
+* **2026-11-06 — The Arabian and Asian casters, batch D: falls, the far cast's look, magic vision and the heal's round
+  (MAG-034, MAG-035, MAG-036, MAG-037; ADR 0279; item 24).** Checked against ReTzar's reading of the original:
+  * **Rain of fire** is twenty meteors falling 150 px onto their tiles; the **freeze ball** falls from 500 px above its
+    point at 700 px/s.
+  * **A spell cast far away** shows its point for 4 s: 8 tiles for magic vision, 3 for the others.
+  * **Magic vision** on a unit or building follows it with its sight for 60 s, instead of a revealer at a point.
+  * **The heal** passes to the nearest wounded friend in sight, and stone takes no healing.
+  * The other spells of these casters already matched. The ruleset hash changes (new fields, the meteor, the freeze
+    ball's speed).
 
 * **2026-11-06 — The tenth play-test, batch C: mages and priests as the original's, and the Attack order on anyone
   (MAG-030, MAG-031, MAG-032, MAG-033, WAR-020, PRES-019; ADR 0278; item 23, item 5).** ReTzar's reading of the spell code

@@ -91,7 +91,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ECO-025, 2026-10-27) the field's trait ReadyAtOnce: the ruleset hash only (this scenario places no field).
     // (DIP-010, PRES-015, NAT-004; 2026-10-29) the Minor trait, the night's hours, the meat's picture: the ruleset hash.
     // (ORD-013, 2026-11-04) gateWatchTiles and gateOrderHoldMs replace the gate's reaches: the ruleset hash.
-    private const ulong GoldenRulesetHash = 0x1EC77C537F6377A6UL;
+    private const ulong GoldenRulesetHash = 0x7C43E834A586C52DUL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.

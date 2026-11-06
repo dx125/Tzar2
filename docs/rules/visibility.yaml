@@ -31,3 +31,4 @@ rules:
     rule: Magic Vision lets eagles and other units lift the fog over an area.
     source: [manual Arabian technologies (Magic Vision)]
     status: implemented
+    note: Cast on a unit (an eagle, a bear, an enemy), the kingdom sees what it sees for 60 s (MAG-036).

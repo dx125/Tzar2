@@ -89,7 +89,7 @@ public sealed partial class Ruleset
                 || s.CooldownMs is < 0 or > 3_600_000 || s.CastMs is < 0 or > 60_000 || s.Amount is < 0 or > 1_000_000
                 || s.DurationMs is < 0 or > 3_600_000 || s.RadiusUnits is < 0 or > 32 * 2048 || s.Summon < -1 || s.Summon >= _entityTypes.Length
                 || s.Projectile < -1 || s.Projectile >= _projectiles.Length || s.PulseMs is < 1 or > 60_000 || s.Count is < 1 or > 64
-                || (s.Effect is SpellEffect.Summon or SpellEffect.RaiseDead or SpellEffect.Reveal && s.Summon < 0))
+                || (s.Effect is SpellEffect.Summon or SpellEffect.RaiseDead && s.Summon < 0))
             {
                 throw new ArgumentException($"Spell '{s.Key}' must have id {i}, a unique key and values in range.", nameof(combat));
             }
@@ -211,7 +211,7 @@ public sealed partial class Ruleset
         foreach (ProjectileDefinition p in _projectiles)
         {
             hasher.Add(Encoding.UTF8.GetBytes(p.Key)).Add(p.SpeedUnitsPerSecond).Add(p.Homing).Add(p.HitRadiusUnits).Add(p.SplashRadiusUnits)
-                .Add(p.SplashPercent).Add(p.FriendlyFire).Add(p.OnTile).Add(p.SplashTiles).Add(p.Burns);
+                .Add(p.SplashPercent).Add(p.FriendlyFire).Add(p.OnTile).Add(p.SplashTiles).Add(p.Burns).Add(p.DropUnits);
         }
 
         hasher.Add(_spells.Length);
@@ -220,7 +220,7 @@ public sealed partial class Ruleset
             hasher.Add(Encoding.UTF8.GetBytes(s.Key)).Add((byte)s.Effect).Add((byte)s.Target).Add((byte)s.Affects).Add(s.ManaCost).Add(s.RangeUnits)
                 .Add(s.CooldownMs).Add(s.CastMs).Add(s.Amount).Add(s.DurationMs).Add(s.RadiusUnits).Add(s.Summon).Add(s.Projectile)
                 .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan()).Add(s.BookValue).Add(s.DurationMaxMs)
-                .Add(s.Square).Add(s.ScatterUnits).Add(s.DelayMs).Add(s.MoveMs);
+                .Add(s.Square).Add(s.ScatterUnits).Add(s.DelayMs).Add(s.MoveMs).Add(s.RevealTiles);
         }
     }
 
