@@ -27,6 +27,9 @@ public sealed class MagicSystem : ISimSystem
     /// <summary>How long a caster short of mana waits before it looks again (MAG-030; ReTzar 0x4e1c30: 2000 ms).</summary>
     public const int ManaWaitMs = 2000;
 
+    /// <summary>How long a spell cast far away lets its kingdom see round its point (MAG-035; ReTzar 0x472ab0: 4000 ms).</summary>
+    public const int RevealMs = 4000;
+
     private readonly List<Death> _deaths = [];
     private readonly List<EntityId> _done = [];
     private readonly List<EntityId> _casting = [];
@@ -218,6 +221,22 @@ public sealed class MagicSystem : ISimSystem
         byte owner = world.Identities.Get(caster).Owner;
         EntityId target = EntityId.FromValue(c.Target);
         EntityId book = EntityId.FromValue(c.Book);
+        if (s.Effect == SpellEffect.Heal && c.Book == 0 && !Wounded(world, s, owner, target))
+        {
+            // MAG-037 (ReTzar's reading of the original's Heal program, op 0x51 at 0x4e2dcb): a unit no longer wounded (or
+            // gone) hands the heal to the nearest wounded friend within the healer's sight; with none the order ends.
+            target = NearestWounded(world, s, caster, owner);
+            if (target.IsNone)
+            {
+                world.StopCasting(caster);
+                return;
+            }
+
+            c.Target = target.Value;
+            c.Phase = CastPhase.Approach;
+            c.CastLeftMs = 0;
+        }
+
         bool bookGone = c.Book != 0 && !(world.Helds.IndexOf(book) is >= 0 and var bh && world.Helds.At(bh).Holder == caster.Value);
         bool targetGone = s.Target == SpellTarget.Unit && (!Affects(world, s, owner, target) || !Teachable(world, s, caster, target));
         if (bookGone || targetGone || !world.CanAct(caster))
@@ -346,14 +365,17 @@ public sealed class MagicSystem : ISimSystem
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.SpellCast, owner, caster, s.Target == SpellTarget.Unit ? target.Index : -1, (tx / 64) | ((ty / 64) << 16), s.Id));
-        if (s.Projectile >= 0 && s.Target is SpellTarget.Unit or SpellTarget.Ground && world.Entities.RemainingCapacity >= 1)
+        RevealFar(world, s, caster, owner, at, tx, ty);
+        if (s.Projectile >= 0 && s.Effect != SpellEffect.AreaDamage && s.Target is SpellTarget.Unit or SpellTarget.Ground && world.Entities.RemainingCapacity >= 1)
         {
-            // A spell's ball flies to its target, or to the point (the freeze: MAG-032, ReTzar 0x432590), and acts there.
+            // A spell's ball flies to its target, or to the point (the freeze: MAG-032, ReTzar 0x432590), and acts there; the
+            // freeze ball falls onto its point from high above, wherever the caster stands (MAG-034, 0x432350).
+            int drop = world.Ruleset.Projectiles[s.Projectile].DropUnits;
             EntityId p = world.Entities.Create();
             world.Projectiles.Set(p, new Projectile
             {
-                X = at.X,
-                Y = at.Y,
+                X = drop > 0 ? tx : at.X,
+                Y = drop > 0 ? Math.Max(0, ty - drop) : at.Y,
                 TargetX = tx,
                 TargetY = ty,
                 Target = s.Target == SpellTarget.Unit ? target.Value : 0,
@@ -376,16 +398,20 @@ public sealed class MagicSystem : ISimSystem
         }
 
         // MAG-033 (ReTzar's reading of the original, 0x4e00a0): the heal goes on, a cast every castMs, while its unit is
-        // still wounded and the caster's mana lasts (waiting for it when short, MAG-030).
-        if (s.Effect == SpellEffect.Heal && !usedBook && world.Entities.IsAlive(caster) && world.Entities.IsAlive(target)
-            && world.Healths.IndexOf(target) is >= 0 and var wounded && world.Healths.At(wounded).Current < world.Healths.At(wounded).Max
-            && Affects(world, s, owner, target))
+        // still wounded and the caster's mana lasts (waiting for it when short, MAG-030); then on the nearest wounded friend
+        // within the healer's sight (MAG-037, 0x4e2dcb).
+        if (s.Effect == SpellEffect.Heal && !usedBook && world.Entities.IsAlive(caster) && world.CanAct(caster))
         {
-            ref Caster again = ref world.Casters.Get(caster);
-            again.Spell = s.Id;
-            again.Target = target.Value;
-            again.Phase = CastPhase.Casting;
-            again.CastLeftMs = s.CastMs;
+            EntityId next = Wounded(world, s, owner, target) ? target : NearestWounded(world, s, caster, owner);
+            if (!next.IsNone)
+            {
+                ref Caster again = ref world.Casters.Get(caster);
+                again.Spell = s.Id;
+                again.Target = next.Value;
+                again.Phase = next == target ? CastPhase.Casting : CastPhase.Approach;
+                again.CastLeftMs = next == target ? s.CastMs : 0;
+                again.MoveTick = -1;
+            }
         }
 
         if (usedBook && world.Items.IndexOf(bookEntity) is >= 0 and var used && world.TypeOf(bookEntity).Traits.Item is { } usedType && world.Items.At(used).LimitedCharges(usedType) && world.Items.At(used).Charges <= 0)
@@ -397,6 +423,97 @@ public sealed class MagicSystem : ISimSystem
     // Whether the cast in hand costs mana: always without a book, a book only when its kind does.
     private static bool NeedsMana(World world, in Caster c)
         => c.Book == 0 || (world.Entities.IsAlive(EntityId.FromValue(c.Book)) && world.TypeOf(EntityId.FromValue(c.Book)).Traits.Item is { NeedsMana: true });
+
+    // A unit a heal still takes: alive, of a kind the heal takes, hurt and not stone (ReTzar 0x4e2dcb, query 0x2719).
+    private static bool Wounded(World world, SpellDefinition s, byte owner, EntityId unit)
+        => Affects(world, s, owner, unit) && world.TypeOf(unit).Traits.Category == EntityCategory.Unit && !world.IsStone(unit)
+            && world.Healths.Get(unit).Current < world.Healths.Get(unit).Max;
+
+    // MAG-037 (ReTzar's reading of the original, 0x4e2dcb): the nearest wounded unit of the healer's kingdom or of a kingdom
+    // allied to it, within the healer's sight on both axes.
+    private static EntityId NearestWounded(World world, SpellDefinition s, EntityId healer, byte owner)
+    {
+        if (!world.Entities.IsAlive(healer) || !world.Positions.Has(healer))
+        {
+            return EntityId.None;
+        }
+
+        Identity self = world.Identities.Get(healer);
+        long sight = world.Stats.Apply(owner, ModifierStat.Sight, self.TypeId, world.Ruleset.EntityTypes[self.TypeId].Traits.SightUnits);
+        Position at = world.Positions.Get(healer);
+        EntityId best = EntityId.None;
+        long bestDistance = long.MaxValue;
+        ReadOnlySpan<EntityId> ids = world.Identities.Entities;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            EntityId e = ids[i];
+            byte other = world.Identities.At(i).Owner;
+            if ((other != owner && world.Diplomacy.StanceOf(other, owner) != Kingdoms.Stance.Ally) || !world.Positions.Has(e) || !Wounded(world, s, owner, e))
+            {
+                continue;
+            }
+
+            Position p = world.Positions.Get(e);
+            if (Math.Max(Math.Abs((long)p.X - at.X), Math.Abs((long)p.Y - at.Y)) > sight)
+            {
+                continue;
+            }
+
+            long d = IntMath.DistanceSquared(at.X, at.Y, p.X, p.Y);
+            if (d < bestDistance)
+            {
+                (best, bestDistance) = (e, d);
+            }
+        }
+
+        return best;
+    }
+
+    // MAG-035 (ReTzar's reading of the original, 0x472ab0): a spell cast at a point beyond the caster's sight less its reveal
+    // radius (squared tiles from the caster's tile) lets the caster's kingdom see that many tiles round the point for 4 s.
+    private static void RevealFar(World world, SpellDefinition s, EntityId caster, byte owner, Position at, int x, int y)
+    {
+        if (s.RevealTiles <= 0 || !world.HasPlayer(owner) || !world.Map.ContainsPoint(x, y) || !world.Identities.Has(caster))
+        {
+            return;
+        }
+
+        int tile = MapState.UnitsPerTile;
+        Identity self = world.Identities.Get(caster);
+        long sight = world.Stats.Apply(owner, ModifierStat.Sight, self.TypeId, world.Ruleset.EntityTypes[self.TypeId].Traits.SightUnits) / tile;
+        long dx = (at.X / tile) - (x / tile), dy = (at.Y / tile) - (y / tile);
+        long reach = sight - s.RevealTiles;
+        if (sight < s.RevealTiles || (reach * reach) >= (dx * dx) + (dy * dy))
+        {
+            return;
+        }
+
+        int tickMs = world.Config.TickLengthMilliseconds;
+        world.Visibility.Reveal(world, owner, x / tile, y / tile, Math.Min(s.RevealTiles, Kingdoms.Visibility.MaxRadiusTiles), world.Tick.Value + ((RevealMs + tickMs - 1) / tickMs));
+    }
+
+    // MAG-036 (ReTzar's reading of the original, 0x4735ac; the help's "if you select a unit it will reveal the fog for you"):
+    // the kingdom of a magic vision sees what its unit or building sees, from where it stands now, until the next look. False
+    // when the unit is gone or inside a holder: the vision ends.
+    private static bool Watch(World world, ref AreaEffect a, SpellDefinition s)
+    {
+        EntityId seen = EntityId.FromValue(a.Caster);
+        if (!world.Entities.IsAlive(seen) || !world.Positions.Has(seen) || world.IsHeld(seen) || !world.HasPlayer(a.Owner))
+        {
+            return false;
+        }
+
+        Position p = world.Positions.Get(seen);
+        EntityTypeDefinition type = world.TypeOf(seen);
+        int tile = MapState.UnitsPerTile;
+        int sight = type.Traits.SightUnits > 0 ? world.Stats.Apply(world.Identities.Get(seen).Owner, ModifierStat.Sight, type.Id, type.Traits.SightUnits) : world.Ruleset.World.DefaultSightTiles * tile;
+        long reach = ((long)Math.Max(0, sight) * (world.IsNight ? world.Ruleset.World.NightSightBasisPoints : 10_000) / 10_000) + (Math.Max(type.FootprintWidth, type.FootprintHeight) * tile / 2);
+        int radius = (int)Math.Clamp((reach + (tile / 2)) / tile, 0, Kingdoms.Visibility.MaxRadiusTiles);
+        (a.X, a.Y) = (Math.Clamp(p.X, 0, world.Map.WorldWidth - 1), Math.Clamp(p.Y, 0, world.Map.WorldHeight - 1));
+        int tickMs = world.Config.TickLengthMilliseconds;
+        world.Visibility.Reveal(world, a.Owner, a.X / tile, a.Y / tile, radius, world.Tick.Value + ((s.PulseMs + tickMs - 1) / tickMs) + 1);
+        return true;
+    }
 
     private static void UncloakCaster(World world, EntityId caster)
     {
@@ -435,10 +552,17 @@ public sealed class MagicSystem : ISimSystem
                 RaiseDead(world, caster, owner, s, x, y);
                 return;
             case SpellEffect.Reveal:
-                if (world.Entities.RemainingCapacity >= 1 && world.Map.ContainsPoint(x, y))
+                // MAG-036: on a unit or building of any kingdom, a vision that follows it for the spell's time; at a point
+                // only the far cast's look round it (MAG-035).
+                if (world.Entities.IsAlive(target) && world.Identities.Has(target) && world.TypeOf(target).Traits.Category is EntityCategory.Unit or EntityCategory.Building
+                    && world.Entities.RemainingCapacity >= 1)
                 {
-                    EntityId r = world.Spawn((ushort)s.Summon, owner, x, y);
-                    world.Events.Emit(new SimEvent(SimEventKind.Summoned, owner, r, caster.Index, 0, s.Summon));
+                    var vision = new AreaEffect { RemainingMs = s.DurationMs, Caster = target.Value, Spell = s.Id, Owner = owner };
+                    if (Watch(world, ref vision, s))
+                    {
+                        world.AreaEffects.Set(world.Entities.Create(), vision);
+                        world.Events.Emit(new SimEvent(SimEventKind.SpellEffect, world.Identities.Get(target).Owner, target, caster.Index, 0, s.Id));
+                    }
                 }
 
                 return;
@@ -481,7 +605,11 @@ public sealed class MagicSystem : ISimSystem
             case SpellEffect.Heal:
             {
                 ref Health h = ref world.Healths.Get(target);
-                h.Current = (int)Math.Min((long)h.Current + s.Amount, h.Max);
+                if (!world.IsStone(target))
+                {
+                    h.Current = (int)Math.Min((long)h.Current + s.Amount, h.Max); // stone takes no healing (ReTzar 0x472ff1, 0x504d00)
+                }
+
                 break;
             }
 
@@ -911,7 +1039,18 @@ public sealed class MagicSystem : ISimSystem
             while (a.PulseAccumMs >= s.PulseMs)
             {
                 a.PulseAccumMs -= s.PulseMs;
-                Pulse(world, a, s);
+                if (s.Effect == SpellEffect.Reveal)
+                {
+                    if (!Watch(world, ref a, s))
+                    {
+                        a.RemainingMs = 0;
+                        break;
+                    }
+                }
+                else
+                {
+                    Pulse(world, a, s);
+                }
             }
 
             // The moves due in this tick: every MoveMs since the cast (the time is the state: nothing more to keep).
@@ -937,7 +1076,6 @@ public sealed class MagicSystem : ISimSystem
 
     private void Pulse(World world, in AreaEffect a, SpellDefinition s)
     {
-        long r2 = (long)s.RadiusUnits * s.RadiusUnits;
         EntityId caster = EntityId.FromValue(a.Caster);
         (int x, int y) = (a.X, a.Y);
         if (s.ScatterUnits > 0)
@@ -954,17 +1092,54 @@ public sealed class MagicSystem : ISimSystem
             (x, y) = (((x / tile) * tile) + (tile / 2), ((y / tile) * tile) + (tile / 2));
         }
 
+        if (s.Projectile >= 0)
+        {
+            // MAG-034 (ReTzar's reading of the original, 0x472ddb, 0x450620): the fire rain's pulse makes a meteor that falls
+            // onto its point and strikes there when it lands (Land).
+            if (world.Entities.RemainingCapacity >= 1)
+            {
+                EntityId m = world.Entities.Create();
+                world.Projectiles.Set(m, new Projectile
+                {
+                    X = x,
+                    Y = Math.Max(0, y - world.Ruleset.Projectiles[s.Projectile].DropUnits),
+                    TargetX = x,
+                    TargetY = y,
+                    Attacker = a.Caster,
+                    AttackerType = world.Entities.IsAlive(caster) && world.Identities.Has(caster) ? world.Identities.Get(caster).TypeId : (ushort)0,
+                    Spell = s.Id,
+                    Kind = (byte)s.Projectile,
+                    Owner = a.Owner,
+                });
+            }
+
+            return;
+        }
+
+        Strike(world, s, caster, a.Owner, x, y, _deaths);
+    }
+
+    /// <summary>A meteor of an area spell lands (MAG-034): it strikes the area round its point once.</summary>
+    internal static void Land(World world, ushort spell, EntityId caster, byte owner, int x, int y, List<Death> deaths)
+        => Strike(world, world.Ruleset.Spells[spell], caster, owner, x, y, deaths);
+
+    // One strike of an area spell at a point: every unit and building it may affect within its radius (a square: meeting the
+    // tiles round the point's tile) takes its amount.
+    private static void Strike(World world, SpellDefinition s, EntityId caster, byte owner, int x, int y, List<Death> deaths)
+    {
+        long r2 = (long)s.RadiusUnits * s.RadiusUnits;
+        int tile = MapState.UnitsPerTile;
         ReadOnlySpan<EntityId> ids = world.Identities.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
             EntityId e = ids[i];
             bool inside = s.Square ? Interaction.ChebyshevTo(world, x, y, e) < s.RadiusUnits + (tile / 2) : Interaction.DistanceSquaredTo(world, x, y, e) <= r2;
-            if (!inside || !Affects(world, s, a.Owner, e))
+            if (!inside || !Affects(world, s, owner, e))
             {
                 continue;
             }
 
-            Damage(world, caster, a.Owner, e, s.Amount, _deaths);
+            Damage(world, caster, owner, e, s.Amount, deaths);
         }
     }
 

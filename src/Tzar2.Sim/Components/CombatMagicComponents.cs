@@ -353,13 +353,13 @@ public struct AreaEffect : IComponent
     /// <summary>Time accumulated toward the next pulse (below zero while a delayed first pulse waits, SpellDefinition.DelayMs).</summary>
     public int PulseAccumMs;
 
-    /// <summary>The caster (<c>EntityId.Value</c>; credited while alive).</summary>
+    /// <summary>The caster (<c>EntityId.Value</c>; credited while alive); for a magic vision, the unit or building it follows (MAG-036).</summary>
     public uint Caster;
 
     /// <summary>The spell.</summary>
     public ushort Spell;
 
-    /// <summary>The caster's owner.</summary>
+    /// <summary>The caster's owner (a magic vision's: the kingdom that sees).</summary>
     public byte Owner;
 
     /// <summary>Padding, always 0.</summary>

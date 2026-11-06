@@ -115,7 +115,7 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x472ff1, 0x4e5809, 0x472e83, 0x432590, 0x4734a1, 0x473913, 0x473250, 0x473b44, 0x4735ac, 0x47367c)']
     status: tested
     adr: [0261, 0263]
-    note: Fire rain is twenty fireballs of 40, one every 170 ms, each falling 375 ms on a random tile within 2 of the point and hitting what meets the 5 by 5 tiles around it; the whirlpool forms on water only, deals 20 to every ship on its 3 by 3 tiles each 250 ms, wanders a tile every 2 s and is gone after 30 s (ADR 0263). The cooldowns and cast times stay UNVERIFIED (UNK-26). The original's heal casts again while the unit is hurt; Tzar2's casts once.
+    note: Fire rain is twenty meteors of 40, one made every 170 ms, each falling 375 ms on a random tile within 2 of the point and hitting what meets the 5 by 5 tiles around it (MAG-034); the whirlpool forms on water only, deals 20 to every ship on its 3 by 3 tiles each 250 ms, wanders a tile every 2 s and is gone after 30 s (ADR 0263). Magic vision follows the unit it is cast on for 60 s (MAG-036). The cooldowns and cast times stay UNVERIFIED (UNK-26). The heal goes on (MAG-033, MAG-037).
   MAG-025:
     rule: A caster waits for nothing between its spells but its mana; a spell costs no time of waiting after it is cast.
     source: ['community ReTzar src/gameplay.rs (0x4e1c30, 0x4e1d2e)']
@@ -174,3 +174,25 @@ rules:
     source: ['community ReTzar src/gameplay.rs (cast intent 0x4e00a0: a spell that returns 2 after image_spell is cast again a whole anim_time later; the heal returns 2 while its unit is wounded)']
     status: tested
     adr: [0278]
+  MAG-034:
+    rule: The freeze ball falls straight down onto its point from 500 pixels above at 700 pixels a second, and each meteor of the fire rain from 150 pixels in 375 ms, wherever the caster stands; a meteor strikes where it lands.
+    source: ['community ReTzar src/gameplay.rs (launch 0x432350: the freeze bolt from 500 px above its goal at 700 px/s; push_projectile 0x450620: a meteor 150 px straight down; 0x472ddb: one made every 170 ms, landing 375 ms later)']
+    status: tested
+    adr: [0279]
+    note: Before, the freeze ball flew from the caster at 320 px/s and the fire rain struck the ground with nothing in the air.
+  MAG-035:
+    rule: A spell cast at a point beyond the caster's sight less its radius lets the caster's kingdom see that radius round the point for 4 s - 8 tiles for magic vision, 3 for the lightning, fire rain, bless, curse, confusion, freeze, whirlpool, invisibility, hypnosis, turn to stone and flame bolt.
+    source: ['community ReTzar src/gameplay.rs (0x472ab0: a fog revealer of radius r at the point for 4000 ms, 0x435069; squared distances from the caster''s cell)']
+    status: tested
+    adr: [0279]
+  MAG-036:
+    rule: Magic vision cast on a unit or building of any kingdom lets the caster's kingdom see what it sees, following it, for 60 s; cast at a point it gives only the far cast's look (MAG-035).
+    source: ['community ReTzar src/gameplay.rs (spell_magicvision 0x4735ac: a vision bound to the target for 60 s with its sight, shared by the caster''s allies)', 'help ITEMS.TXT C_MAGICVISION ("select a location or unit ... If you select a unit it will reveal the fog for you for a certain period of time"), bear ("used to explore the map")']
+    status: tested
+    adr: [0279]
+    note: Before, magic vision left a revealer of 8 tiles at its point for 60 s.
+  MAG-037:
+    rule: A heal whose unit is well, gone or turned to stone passes to the nearest wounded unit of the healer's kingdom or an ally within the healer's sight; with none the order ends. Stone takes no healing.
+    source: ['community ReTzar src/gameplay.rs (the Heal program, op 0x51 at 0x4e2dcb: the target while alive and damaged, otherwise the nearest damaged friend - relation 0x40 - within the healer''s sight; 0x504d00 does not heal stone)']
+    status: tested
+    adr: [0279]

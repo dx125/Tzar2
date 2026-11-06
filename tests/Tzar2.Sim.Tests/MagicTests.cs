@@ -342,6 +342,110 @@ public class MagicTests
     }
 
     [Fact]
+    [Trait("Rule", "MAG-034")]
+    public void A_freeze_ball_falls_onto_its_point_from_500_pixels_above_wherever_the_caster_stands()
+    {
+        using var d = new SimDriver(TestMap(32, 24, Unit("euro.mage", 0, 4, 20), Unit("euro.footman", 1, 12, 20)), ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId enemy = OfType(d.World, "euro.footman", 1).Single();
+        d.Order(0, CommandKind.SetStance, [mage], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [enemy], arg0: (int)CombatStance.HoldFire);
+        Grant(d.World, 0, "te_freeze");
+        int px = (13 * Tile) + (Tile / 2), py = (20 * Tile) + (Tile / 2);
+        Cast(d, mage, "spell_freeze", default, px, py);
+        d.RunUntil(() => d.World.Projectiles.Count > 0, 200);
+        Projectile ball = d.World.Projectiles.Components[0];
+        Assert.Equal(px, ball.X); // above the point, not at the caster (ReTzar 0x432350)
+        Assert.InRange(py - ball.Y, 32_000 - 2_240, 32_000); // 500 pixels up, at most one 50 ms step of 700 px/s down already
+        int flight = d.RunUntil(() => d.World.Statuses.Has(enemy), 40);
+        Assert.InRange(flight, 13, 15); // 500 pixels at 700 px/s: 714 ms
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-035")]
+    public void A_spell_cast_far_beyond_the_casters_sight_lets_its_kingdom_see_round_the_point_for_four_seconds()
+    {
+        using var d = new SimDriver(TestMap(48, 12, Unit("euro.mage", 0, 2, 5), Unit("euro.footman", 1, 24, 5)), ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId enemy = OfType(d.World, "euro.footman", 1).Single();
+        d.Order(0, CommandKind.SetStance, [mage], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [enemy], arg0: (int)CombatStance.HoldFire);
+        Cast(d, mage, "spell_turntostone", enemy); // reaches 20 tiles, beyond the mage's sight less 3
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 400);
+        Position at = d.PositionOf(enemy);
+        Assert.Contains(d.World.Visibility.TemporaryReveals, r => r.Player == 0 && r.Radius == 3 && r.Tile == ((at.Y / Tile) * 48) + (at.X / Tile));
+        d.RunUntil(() => false, (4000 / 50) + 1);
+        Assert.DoesNotContain(d.World.Visibility.TemporaryReveals, r => r.Player == 0 && r.Radius == 3);
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-036")]
+    public void Magic_vision_on_a_unit_lets_the_kingdom_see_what_it_sees_following_it_for_60_s_and_at_a_point_only_a_glimpse()
+    {
+        using var d = new SimDriver(TestMap(64, 16, Unit("euro.mage", 0, 2, 8), Unit("euro.footman", 1, 50, 8)), ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId enemy = OfType(d.World, "euro.footman", 1).Single();
+        d.Order(0, CommandKind.SetStance, [mage], arg0: (int)CombatStance.HoldFire);
+        d.Step();
+        Assert.False(d.World.Visibility.IsVisible(0, 50, 8));
+        Cast(d, mage, "spell_magicvision", enemy, d.PositionOf(enemy).X, d.PositionOf(enemy).Y);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
+        d.Step();
+        Assert.Empty(d.Rejections());
+        Assert.True(d.World.Visibility.IsVisible(0, 50, 8)); // what the footman sees
+        d.Order(1, CommandKind.Move, [enemy], 40 * Tile, 3 * Tile);
+        d.RunUntil(() => d.PositionOf(enemy).X / Tile == 40 && d.PositionOf(enemy).Y / Tile == 3, 600);
+        d.Step();
+        Assert.Equal(1, d.World.AreaEffects.Count);
+        Assert.True(d.World.Visibility.IsVisible(0, 40, 3)); // the vision went with it
+        Assert.All(d.World.Visibility.TemporaryReveals.Where(r => r.Player == 0), r => Assert.Equal((3 * 64) + 40, r.Tile)); // and left where it was
+        int left = d.RunUntil(() => d.World.AreaEffects.Count == 0, 1300);
+        Assert.InRange(left, 1, 60_000 / 50);
+        d.RunUntil(() => false, 10); // the last look fades
+        Assert.False(d.World.Visibility.IsVisible(0, 40, 3)); // gone after 60 s
+
+        // At a point with nobody there: the far cast's glimpse of 8 tiles for 4 s, and nothing that lasts.
+        d.World.Manas.Get(mage).MilliMana = 100_000;
+        Cast(d, mage, "spell_magicvision", default, (55 * Tile) + 32, (12 * Tile) + 32);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
+        Assert.Equal(0, d.World.AreaEffects.Count);
+        Assert.Contains(d.World.Visibility.TemporaryReveals, r => r.Player == 0 && r.Radius == 8 && r.Tile == (12 * 64) + 55);
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-037")]
+    [Trait("Rule", "MAG-033")]
+    public void A_heal_goes_on_to_the_nearest_wounded_friend_in_sight_and_never_heals_stone()
+    {
+        using var d = new SimDriver(
+            TestMap(32, 12, Unit("euro.priest", 0, 4, 4), Unit("euro.footman", 0, 6, 4), Unit("euro.footman", 0, 8, 4), Unit("euro.footman", 0, 5, 6), Unit("euro.footman", 1, 6, 6)),
+            ruleset: Classic);
+        EntityId priest = OfType(d.World, "euro.priest").Single();
+        EntityId first = OfType(d.World, "euro.footman", 0).Single(f => d.PositionOf(f).X / Tile == 6);
+        EntityId second = OfType(d.World, "euro.footman", 0).Single(f => d.PositionOf(f).X / Tile == 8);
+        EntityId stone = OfType(d.World, "euro.footman", 0).Single(f => d.PositionOf(f).X / Tile == 5);
+        EntityId enemy = OfType(d.World, "euro.footman", 1).Single();
+        d.Order(0, CommandKind.SetStance, [priest, first, second, stone], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [enemy], arg0: (int)CombatStance.HoldFire);
+        Grant(d.World, 0, "te_healing");
+        d.World.Manas.Get(priest).RaisedMax = 1_000;
+        d.World.Manas.Get(priest).MilliMana = 1_000_000;
+        d.World.Healths.Get(first).Current = 40;
+        d.World.Healths.Get(second).Current = 50;
+        d.World.Healths.Get(stone).Current = 10;
+        d.World.Healths.Get(enemy).Current = 10;
+        d.World.Statuses.Set(stone, new StatusEffects { StoneUntil = 100_000 });
+        Cast(d, priest, "spell_heal", stone); // stone takes no healing: the heal goes to the nearest wounded friend
+        d.RunUntil(() => Hp(d, first) == d.World.Healths.Get(first).Max && Hp(d, second) == d.World.Healths.Get(second).Max, 800);
+        Assert.Equal(10, Hp(d, stone));
+        Assert.Equal(10, Hp(d, enemy)); // not a friend
+        int casts = d.Count(SimEventKind.SpellCast);
+        d.RunUntil(() => false, 60);
+        Assert.Equal(casts, d.Count(SimEventKind.SpellCast)); // nobody left to heal: the order ends
+        Assert.Equal(CastPhase.None, d.World.Casters.Get(priest).Phase);
+    }
+
+    [Fact]
     [Trait("Rule", "MAG-032")]
     public void A_lightning_strikes_any_object_the_kingdoms_own_buildings_too()
     {
@@ -404,7 +508,8 @@ public class MagicTests
 
     [Fact]
     [Trait("Rule", "MAG-024")]
-    public void Fire_rain_is_twenty_fireballs_of_40_that_start_falling_after_545_ms()
+    [Trait("Rule", "MAG-034")]
+    public void Fire_rain_is_twenty_meteors_of_40_made_every_170_ms_each_falling_onto_its_tile()
     {
         // A ship under the point: every fireball's 5 x 5 tiles meet it, wherever within 2 tiles it falls (ReTzar 0x472ddb).
         using var d = new SimDriver(
@@ -417,12 +522,17 @@ public class MagicTests
         d.Step();
         int hp = Hp(d, target);
         var s = d.World.Ruleset.Spells[Spell(d.World.Ruleset, "spell_firerain")];
-        Assert.Equal((40, 170, 375, 3775), (s.Amount, s.PulseMs, s.DelayMs, s.DurationMs));
+        Assert.Equal((40, 170, 3400), (s.Amount, s.PulseMs, s.DurationMs));
         var p = d.PositionOf(target);
-        d.World.AreaEffects.Set(d.World.Entities.Create(), new AreaEffect { X = p.X, Y = p.Y, RemainingMs = s.DurationMs, PulseAccumMs = -s.DelayMs, Spell = s.Id, Owner = 0 });
-        d.RunUntil(() => false, (540 / 50) - 1);
-        Assert.Equal(hp, Hp(d, target)); // nothing has fallen yet
-        d.RunUntil(() => d.World.AreaEffects.Count == 0, 200);
+        d.World.AreaEffects.Set(d.World.Entities.Create(), new AreaEffect { X = p.X, Y = p.Y, RemainingMs = s.DurationMs, Spell = s.Id, Owner = 0 });
+        d.RunUntil(() => d.World.Projectiles.Count > 0, 10); // the first meteor is made after 170 ms (ReTzar 0x472ddb)
+        Projectile meteor = d.World.Projectiles.Components[0];
+        Assert.Equal("meteor", d.World.Ruleset.Projectiles[meteor.Kind].Key);
+        Assert.Equal(meteor.TargetX, meteor.X); // it falls straight down onto its tile (0x450620)
+        Assert.True(meteor.Y < meteor.TargetY);
+        d.RunUntil(() => false, 5);
+        Assert.Equal(hp, Hp(d, target)); // nothing has fallen yet: a meteor takes 375 ms
+        d.RunUntil(() => d.World.AreaEffects.Count == 0 && d.World.Projectiles.Count == 0, 200);
         Assert.Equal(hp - (20 * 40), Hp(d, target));
     }
 

@@ -624,7 +624,8 @@ internal static class CombatMagicCommands
         ref Caster c = ref world.Casters.Get(caster);
         c.Spell = spell;
         c.Phase = CastPhase.Approach;
-        c.Target = s.Target == SpellTarget.Unit ? target.Value : 0;
+        // A magic vision at a point keeps the unit or building under the cursor: the vision follows it (MAG-036).
+        c.Target = s.Target == SpellTarget.Unit || (s.Effect == SpellEffect.Reveal && world.Entities.IsAlive(target)) ? target.Value : 0;
         c.X = s.Target == SpellTarget.Ground ? x : 0;
         c.Y = s.Target == SpellTarget.Ground ? y : 0;
         c.Book = book.Value;

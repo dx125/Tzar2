@@ -36,10 +36,10 @@ internal sealed class CombatCompiler
     private static readonly string[] SpellFields =
     [
         "effect", "target", "affects", "mana", "range", "cooldownMs", "castMs", "amount", "durationMs", "radius", "summon", "projectile",
-        "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs",
+        "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs", "reveal",
     ];
 
-    private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire", "onTile", "splashTiles", "burns"];
+    private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire", "onTile", "splashTiles", "burns", "dropPx"];
 
     private readonly RulesetCompiler.SectionSet _settings;
     private readonly List<string> _diagnostics;
@@ -267,6 +267,7 @@ internal sealed class CombatCompiler
                 SplashTiles = p.Get("splashTiles") is { } st ? RulesetCompiler.Int(st, source, $"combat.projectiles.{key}.splashTiles") is >= 0 and <= 4 and var tiles ? tiles
                     : throw new RulesException(source, p.Line, $"combat.projectiles.{key}.splashTiles must be 0..4") : 0,
                 Burns = p.Get("burns") is { } burns && RulesetCompiler.Bool(burns, source, $"combat.projectiles.{key}.burns"),
+                DropUnits = Px("dropPx", 0, 1000),
             });
         }
     }
@@ -513,7 +514,7 @@ internal sealed class CombatCompiler
             }
         }
 
-        if (effect is SpellEffect.Summon or SpellEffect.RaiseDead or SpellEffect.Reveal or SpellEffect.SoulBind && summon < 0)
+        if (effect is SpellEffect.Summon or SpellEffect.RaiseDead or SpellEffect.SoulBind && summon < 0)
         {
             throw new RulesException(spell.Source, spell.Line, $"{e.Key}: a {effectText} spell needs Spell.summon");
         }
@@ -543,6 +544,7 @@ internal sealed class CombatCompiler
             ScatterUnits = Int("scatter", 0, 32) * UnitsPerTile,
             DelayMs = Int("delayMs", 0, 60_000),
             MoveMs = Int("moveMs", 0, 60_000),
+            RevealTiles = Int("reveal", 0, 64),
         };
     }
 
