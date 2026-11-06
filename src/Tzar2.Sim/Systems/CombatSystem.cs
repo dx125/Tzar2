@@ -763,12 +763,17 @@ public sealed partial class CombatSystem : ISimSystem
         }
 
         int dealt = Damage(world, hit, targetType);
-        if (world.Holders.Count != 0 && world.Holders.IndexOf(hit.Target) is >= 0 and var hs && world.Holders.At(hs).Count > 0 && targetType.Traits.Holder is { } holder)
+        if (targetType.Traits.Holder is { } holder)
         {
+            // The holder's [damage] table (ReTzar's reading, 0x504900): it takes its share of every blow, empty or not, and
+            // the units inside share the rest (a galleon takes 70 % of a cannon ball).
             DamageShare share = holder.ShareFor(hit.DamageClass);
-            int spread = (int)((long)dealt * share.DistributePercent / 100);
+            if (world.Holders.Count != 0 && world.Holders.IndexOf(hit.Target) is >= 0 and var hs && world.Holders.At(hs).Count > 0)
+            {
+                Share(world, hit, (int)((long)dealt * share.DistributePercent / 100), deaths);
+            }
+
             dealt = (int)((long)dealt * share.TakePercent / 100);
-            Share(world, hit, spread, deaths);
         }
 
         if (dealt <= 0)
@@ -838,11 +843,12 @@ public sealed partial class CombatSystem : ISimSystem
         MagicSystem.ApplyEffect(world, (ushort)settings.BansheeSpell, hit.Attacker, hit.Owner, EntityId.None, at.X, at.Y, deaths);
     }
 
-    // The damage formula (UNK-08 placeholder, ADR 0038): attack (rolled up to max_damage), BONUS.INI, Honor, defence,
-    // the minimum, building resistance, then the splash share.
+    // The damage of a blow (WAR-001; ReTzar's reading of the original, 0x504900, 0x4dd983): the attack (rolled up to
+    // max_damage, Honor between heroes) grown by its BONUS.INI entry, then A² / (A + D) against the defence, at least the
+    // minimum; magic (mages, dragons, the Messiah, priests that shoot) ignores the defence. A building's RESISTANCE is how
+    // hard it is to capture (CAP-002), not to hurt. Then the splash share.
     private static int Damage(World world, in HitRecord hit, EntityTypeDefinition targetType)
     {
-        byte targetOwner = world.Identities.Get(hit.Target).Owner;
         long attack = hit.Attack;
         if (hit.MaxRoll > 0)
         {
@@ -857,16 +863,11 @@ public sealed partial class CombatSystem : ISimSystem
         }
 
         int bonus = world.Ruleset.BonusBasisPoints(hit.AttackerType, targetType.Id);
-        int defence = CombatStats.Defence(world, hit.Target, targetType);
-        int resistance = world.Stats.Apply(targetOwner, ModifierStat.Resistance, targetType.Id, targetType.Traits.Resistance);
-        long damage = (attack * (10_000 + bonus) / 10_000) - defence;
-        if (resistance > 0)
-        {
-            // Buildings: RESISTANCE reduces the damage (manual ch. 4; the scale is UNVERIFIED, UNK-08).
-            int scale = world.Ruleset.Gameplay.ResistanceScale;
-            damage = damage * scale / (scale + resistance);
-        }
-
+        attack = Math.Max(0, attack * (10_000 + bonus) / 10_000);
+        EntityTypeDefinition attackerType = world.Ruleset.EntityTypes[hit.AttackerType];
+        bool magic = attackerType.Traits.Armament is { RangeUnits: > 0 } && combat.MagicAttackers.AsSpan().BinarySearch(hit.AttackerType) >= 0;
+        long defence = magic ? 0 : Math.Max(0, CombatStats.Defence(world, hit.Target, targetType));
+        long damage = attack == 0 ? 0 : attack * attack / (attack + defence);
         long dealt = Math.Clamp(damage, world.Ruleset.Gameplay.MinimumDamage, int.MaxValue);
         if (hit.Percent != 100)
         {

@@ -277,6 +277,11 @@ public partial class GameScreen : Node
             {
                 _bank.Add(SpriteRules.BuildSiteName(type));
             }
+
+            if (type.Traits.Decay is not null)
+            {
+                _bank.Add(SpriteRules.FieldGrowImage); // a field growing back or withering (ECO-012)
+            }
         }
 
         foreach (string effect in EffectImages.All)

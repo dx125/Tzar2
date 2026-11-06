@@ -261,13 +261,57 @@ public class EconomyM3Tests
         EntityId[] fields = [.. OfType(d.World, "comm.field")];
         EntityId peon = OfType(d.World, "euro.peon").Single();
         d.Order(0, CommandKind.Harvest, [peon], target: fields[0]);
-        d.RunUntil(() => false, 1200 + 40); // 60 s grace (UNVERIFIED) + 2 s
-        Assert.True(d.World.Healths.Get(fields[1]).Current < 130); // neglected: decaying at 30 HP/min (UNVERIFIED)
+        d.RunUntil(() => false, 1200 + 120); // a minute untended, then 10 hit points every 5 s (ReTzar 0x44d1e0)
+        Assert.Equal(120, d.World.Healths.Get(fields[1]).Current); // neglected: withering
         Assert.Equal(130, d.World.Healths.Get(fields[0]).Current); // tended
         int ticks = d.RunUntil(() => !d.World.Entities.IsAlive(fields[1]), 6000);
-        Assert.InRange(ticks, 4500, 5300); // 130 HP at 30 per minute ~ 260 s
+        Assert.InRange(ticks, 1100, 1260); // 130 HP at 10 per 5 s: 13 steps, the last at about 125 s
         Assert.Contains(d.Events, e => e.Event.Kind == SimEventKind.Decayed && e.Event.Entity == fields[1]);
         Assert.True(d.World.Entities.IsAlive(fields[0]));
+    }
+
+    [Fact]
+    [Trait("Rule", "ECO-012")]
+    public void A_withered_field_grows_back_under_its_farmer_before_it_bears_food_again()
+    {
+        // ReTzar 0x44cc70: a field short of its health grows 10 a dig (e_peon_dig, 1196 ms) and bears no food until whole.
+        using var d = new SimDriver(
+            TestMap(40, 16, Structure("euro.castle", 0, 2, 2), Structure("comm.field", 0, 12, 2), Unit("euro.peon", 0, 13, 3)),
+            ruleset: Classic);
+        EntityId field = OfType(d.World, "comm.field").Single();
+        EntityId peon = OfType(d.World, "euro.peon").Single();
+        d.World.Healths.Get(field).Current = 70;
+        d.Order(0, CommandKind.Harvest, [peon], target: field);
+        d.RunUntil(() => d.World.Workers.Get(peon).Phase == WorkerPhase.Gathering, 200);
+        int start = d.World.Tick.Value;
+        d.RunUntil(() => d.World.Healths.Get(field).Current >= 130, 400);
+        int grown = d.World.Tick.Value - start;
+        Assert.InRange(grown, 6 * 1196 / 50, (6 * 1196 / 50) + 3); // six digs for 60 hit points
+        Assert.Equal(0, d.World.Workers.Get(peon).CarryAmount); // no food while it grew
+        d.RunUntil(() => d.World.Workers.Get(peon).CarryAmount > 0 || d.World.Workers.Get(peon).Phase == WorkerPhase.ToDropOff, 600);
+        Assert.True(d.World.Workers.Get(peon).CarryAmount > 0);
+    }
+
+    [Fact]
+    [Trait("Rule", "ECO-008")]
+    public void A_farmer_back_from_a_store_beside_its_field_digs_on_the_fields_middle_tile()
+    {
+        // The tenth play-test: a farmer that stopped at the edge of its field, next to the castle it brought its food to,
+        // dug there. It walks to the middle tile, unless another unit stands there.
+        using var d = new SimDriver(
+            TestMap(40, 16, Structure("euro.castle", 0, 8, 2), Structure("comm.field", 0, 12, 2), Unit("euro.peon", 0, 12, 3)),
+            ruleset: Classic);
+        World w = d.World;
+        EntityId field = OfType(w, "comm.field").Single();
+        EntityId peon = OfType(w, "euro.peon").Single();
+        d.Order(0, CommandKind.Harvest, [peon], target: field);
+        for (int trip = 0; trip < 2; trip++)
+        {
+            d.RunUntil(() => w.Workers.Get(peon).Phase == WorkerPhase.ToDropOff, 1200);
+            d.RunUntil(() => w.Workers.Get(peon).Phase == WorkerPhase.Gathering, 1200);
+            Position at = d.PositionOf(peon);
+            Assert.Equal((13, 3), (at.X / Tile, at.Y / Tile));
+        }
     }
 
     [Fact]

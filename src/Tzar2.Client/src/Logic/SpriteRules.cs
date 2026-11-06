@@ -292,6 +292,13 @@ public static class SpriteRules
     public static int WallDamageFrame(int health, int maxHealth, int frames)
         => maxHealth <= 0 || frames <= 0 ? 0 : Math.Clamp(frames - (int)((long)Math.Max(0, health) * frames / maxHealth) - 1, 0, frames - 1);
 
+    /// <summary>The picture of a field short of its full health, growing or withering (ECO-012; ReTzar's reading, 0x44c880).</summary>
+    public const string FieldGrowImage = "field_grow";
+
+    /// <summary>The growth stage a field short of full health shows (0x44c89b): ⌊health × rows / most⌋, at most the last row.</summary>
+    public static int FieldGrowFrame(int health, int maxHealth, int frames)
+        => maxHealth <= 0 || frames <= 0 ? 0 : Math.Clamp((int)((long)Math.Max(0, health) * frames / maxHealth), 0, frames - 1);
+
     /// <summary>Whether <paramref name="type"/> is a gold or stone mine, whose picture is a look, not an animation (PRES-011).</summary>
     public static bool IsMine(EntityTypeDefinition type)
     {

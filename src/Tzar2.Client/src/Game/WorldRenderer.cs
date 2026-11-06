@@ -427,6 +427,12 @@ public sealed class WorldRenderer : IDisposable
                     : SpriteRules.GateFrame((e.Gate & FrameGate.Open) != 0);
                 wholeGate = site < 0;
             }
+            else if (field && site < 0 && damaged && _bank.Get(SpriteRules.FieldGrowImage) is { } grow)
+            {
+                // A field short of its health shows its growth stage, withering untended or growing back (ECO-012).
+                sheet = grow;
+                frameIndex = SpriteRules.FieldGrowFrame(e.Health, e.MaxHealth, grow.Sheet.FramesPerDirection);
+            }
             else if (site >= 0 && !field)
             {
                 sheet = _bank.Get(SpriteRules.BuildSiteName(def));

@@ -51,9 +51,9 @@ gameplay:
                                       # animation does not mark it (IMAGES.INI actionrow gives the others, WAR-014)
   manaRegenPerMinute: 120             # ReTzar (0x502ea2): a kingdom's caster regains 2 mana a second, once a second (ADR 0267)
   # Combat and work constants.
-  minimumDamage: 1                    # UNVERIFIED (UNK-08)
-  resistanceScale: 1000               # UNVERIFIED (UNK-08): building damage x 1000 / (1000 + RESISTANCE) (manual ch. 4); owner
-                                      # decision: 100 made castles (1000) practically immune to melee; capture uses RESISTANCE alone
+  # WAR-001 (ReTzar's reading of the original, 0x504900): a blow deals A² / (A + D), at least 1; a building's RESISTANCE
+  # is how hard it is to capture, not to hurt (the old resistanceScale is gone).
+  minimumDamage: 1
   meleeReachPx: 18                    # UNVERIFIED (UNK-07/11): edge-to-edge reach of hand-to-hand attacks; with units one to a
                                       # tile (ADR 0270) a diagonal neighbour is in reach (45 - 2 x 14 px bodies = 17), the next
                                       # tile but one is not (the original: the target's tiles grown by one)
@@ -246,7 +246,7 @@ legacy:
   Experience: {}                      # GAME-08: units gain experience in combat (manual ch. 5 §2.1)
 
 ^Building:
-  Armor: { defence: 0 }               # RESISTANCE (from the table) reduces damage instead, see gameplay.resistanceScale
+  Armor: { defence: 0 }               # the tables give buildings no DEFENCE (RESISTANCE is against capture, CAP-002)
   Repairable: {}                      # GAME-03: peasants repair buildings
   Burnable: {}                        # GAME-03: badly damaged buildings burn (threshold and damage UNVERIFIED, UNK-42)
   RuinOnDeath: {}                     # GAME-03: ruins (a decal that never blocks, ORIG-01)
@@ -307,9 +307,13 @@ legacy:
   Harvester:
     capacity: 20                      # UNVERIFIED (UNK-17)
     gatherMs: { food: 1000 }          # UNVERIFIED (UNK-17)
-^class.galleon: { inherits: [^Ship], Trader: { capacity: 200, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon } }   # UNVERIFIED (UNK-28, UNK-22)
-^class.hulk: { inherits: [^Ship], Trader: { capacity: 150, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon } }      # UNVERIFIED (UNK-28, UNK-22)
-^class.xebec: { inherits: [^Ship], Trader: { capacity: 100, access: water, technology: te_traderoutes }, Armament: { projectile: arrow } }     # UNVERIFIED (UNK-28); BONUS.INI arrow_attack lists xebecs
+# WAR-019 (ReTzar's reading of the original, 0x4dba30, 0x4e8f00): towers and warships fire on a fixed period, with no
+# attack animation, not by the tables' RATE: the arrow towers every 1000 ms, the cannon and rocket towers every 3000 ms,
+# the galleon and the hulk every 3000 ms (their cannon levels shorten it), the xebec every 1300 ms. The tenth play-test:
+# by RATE (6000 / RATE) ships fired twice as often as the original's.
+^class.galleon: { inherits: [^Ship], Trader: { capacity: 200, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon, cooldownMs: 3000, hitDelayMs: 0 } }   # UNVERIFIED capacity (UNK-28)
+^class.hulk: { inherits: [^Ship], Trader: { capacity: 150, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon, cooldownMs: 3000, hitDelayMs: 0 } }      # UNVERIFIED capacity (UNK-28)
+^class.xebec: { inherits: [^Ship], Trader: { capacity: 100, access: water, technology: te_traderoutes }, Armament: { projectile: arrow, cooldownMs: 1300, hitDelayMs: 0 } }     # UNVERIFIED capacity (UNK-28); BONUS.INI arrow_attack lists xebecs
 ^class.catapult: { inherits: [^Siege], Armament: { damage: cannon, projectile: stone } }    # UNVERIFIED (UNK-22): stones land where the target stood
 ^class.hcatapult: { inherits: [^Siege], Armament: { damage: cannon, projectile: stone } }   # UNVERIFIED (UNK-22)
 ^class.ballista: { inherits: [^Siege], Armament: { projectile: bolt } }                     # UNVERIFIED (UNK-22)
@@ -404,7 +408,10 @@ legacy:
   WalkableFootprint: {}               # UNVERIFIED: units walk over fields and the farmer works on the field (play-test 2026-10-20)
   ReadyAtOnce: {}                     # ECO-025 (ReTzar 0x44c7a0): a field is born complete and ripe; its peasants farm at once
   DropOff: { autoGather: true }       # UNVERIFIED: the builder starts farming the new field
-  Decay: { afterMs: 60000, healthPerMinute: 30 }   # UNVERIFIED (UNK-17)
+  # ECO-012 (ReTzar's reading of the original, 0x44d1e0, 0x44cc70): untended for 60 s, a field loses 10 of its 100 hit
+  # points every 5 s and goes at 0; a farmer's dig (e_peon_dig, 1196 ms) gives a field short of 100 its 10 back, and
+  # it bears food again only once whole.
+  Decay: { afterMs: 60000, everyMs: 5000, health: 10, growMs: 1196 }
   -Burnable:
   -RuinOnDeath:
 
@@ -441,11 +448,11 @@ legacy:
 ^class.archer: { Armament: { projectile: arrow }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
 ^class.longbowman: { Armament: { projectile: arrow }, Mobile: { pixelsPerSecond: 40 } }    # speed VERIFIED (ADR 0172)
 ^class.horse_archer: { Armament: { projectile: arrow } }
-^class.tower_wood: { Armament: { projectile: arrow } }
-^class.tower_wood2: { Armament: { projectile: arrow } }
-^class.tower_stone: { Armament: { projectile: arrow } }
-^class.tower_stone2: { Armament: { damage: cannon, projectile: cannon } }        # cannon tower
-^class.tower_rocket: { Armament: { damage: cannon, projectile: rocket_arrow } }  # UNVERIFIED (UNK-22)
+^class.tower_wood: { Armament: { projectile: arrow, cooldownMs: 1000, hitDelayMs: 0 } }   # WAR-019 (0x4dba30)
+^class.tower_wood2: { Armament: { projectile: arrow, cooldownMs: 1000, hitDelayMs: 0 } }
+^class.tower_stone: { Armament: { projectile: arrow, cooldownMs: 1000, hitDelayMs: 0 } }
+^class.tower_stone2: { Armament: { damage: cannon, projectile: cannon, cooldownMs: 3000, hitDelayMs: 0 } }        # cannon tower
+^class.tower_rocket: { Armament: { damage: cannon, projectile: rocket_arrow, cooldownMs: 3000, hitDelayMs: 0 } }
 ^class.mage: { Armament: { projectile: magic }, Mobile: { pixelsPerSecond: 40 } }    # UNVERIFIED: the mage's bolt (OBJECTS MAGIC); speed VERIFIED (ADR 0172)
 ^class.priest: { Armament: { projectile: magic }, Mobile: { pixelsPerSecond: 40 } }    # exorcism (order exorcism = attack); speed VERIFIED (ADR 0172)
 ^class.dragon: { Armament: { projectile: flame_ball } }                          # UNVERIFIED (OBJECTS FLAME_BALL)

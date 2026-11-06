@@ -507,12 +507,47 @@ owner's order of 2026-10-26.
     5. The yellow peasants whose attack was refused (NotAllied) were the original's neutral ones, which a unit takes by
        coming close; review the whole mechanics of the neutral creatures: **fixed** (NAT-001, NAT-002, NAT-008; ADR
        0275; log below).
+23. **The tenth play-test (2026-11-06, the owner, build 26f93aa on Conquer the World from the save Game 6; its session
+    log read locally only).** In three batches: B (items 2, 4, 7, 8), then A (1, 3, 6), then C (5).
+    1. The gate's green shadow has the wrong picture, which way it will open is hard to tell when Alt turns it, the
+       turning keys may differ from the original's, the green shadows do not look as the original's (compare ReTzar),
+       and a built gate of the blue kingdom flies a red flag: open (batch A).
+    2. The Merchants' Guild and the market cannot be built ("not available to this kingdom"); check every building's
+       rules and requirements against ReTzar: **fixed** (BLD-029; ADR 0276; log below).
+    3. Gold and the other resources on the ground show pieces of selection frames instead of their pictures, and the
+       selection frames of units and buildings do not look as the original's: open (batch A).
+    4. Peasants still dig off the middle of their fields now and then: **fixed** (ECO-008; ADR 0276; log below).
+    5. Mages: no attack on allied units or buildings by a direct order; lightning hit a bird without its animation; the
+       freeze's animation and effect are wrong; bats come one at a time instead of taking all the mana; no gathering of
+       mana for the golem, which is not summoned by itself at 600 mana, and the mage's mana cap goes from 100 to 600.
+       Review every skill of every mage and priest of every civilization (animations, effects, cursors) and attacking
+       allies: open (batch C).
+    6. A move order into unexplored land shows no confirmation (the red cross), as the original does: open (batch A).
+    7. Gun towers hurt ships too much, like catapults, and ships' cannons hurt buildings too much: **fixed** (WAR-001,
+       WAR-002, WAR-019; ADR 0276; log below).
+    8. Fields do not wither without peasants: **fixed** (ECO-012; ADR 0276; log below).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-06 — The tenth play-test, batch B: buildings' requirements, blows, firing periods and fields as the
+  original's (BLD-029, WAR-001, WAR-002, WAR-019, ECO-008, ECO-012; ADR 0276; item 23, items 2, 4, 7, 8).**
+  * **The Merchants' Guild.** ORDERS.INI builds it as `TCGuild`, and Tzar2 looked classes up case by case. Neither the
+    guild nor the market, which needs it, could be built. The class is now lower-cased.
+  * **Farmers.** A probe of Game 6 (local only) found every farmer one tile off its field's middle, on the edge by the
+    farm. A farmer now digs on the middle tile, or where it stopped when another unit stands there.
+  * **Blows (ReTzar's reading, 0x504900).** A blow deals A² / (A + D), and magic ignores the defence. The last BONUS.INI
+    entry holds; the sum had given ships and catapults their bonus twice against the castle. Buildings' RESISTANCE
+    (against capture) no longer cuts damage (`resistanceScale` is gone), and a holder takes its share of every blow.
+  * **Firing periods (0x4dba30, 0x4e8f00).** Towers and warships fire on their own period: arrow towers 1 s, cannon and
+    rocket towers 3 s, galleons and hulks 3 s (down to 0.8 s with cannon levels), xebecs 1.3 s. By RATE, ships had
+    fired every 1.5 s.
+  * **Fields (0x44d1e0, 0x44cc70).** Untended for a minute, a field loses 10 of its 100 hit points every 5 s and shows
+    `field_grow` by health. Its farmer grows it back by 10 a dig before it bears food.
+  * **Hashes.** Re-pinned: the gameplay and AI goldens and benches, and the trigger snapshot. The AI's random-map test
+    waits nine minutes for the first blow on Island instead of eight.
 * **2026-11-04 — The owner's list after the ninth play-test, batch C: the neutral creatures as the original's (NAT-001,
   NAT-002, NAT-008; ADR 0275; item 22, item 5).** A probe of the original's 33 maps (local only) lists owner 9, the
   rescue kingdom (peasants, cows, gateways, houses, towers, a castle), and owner 10, Nature (animals, monsters, walls,

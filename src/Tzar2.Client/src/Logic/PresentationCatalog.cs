@@ -517,9 +517,14 @@ public sealed class PresentationCatalog : ICardSource
     /// <inheritdoc/>
     public string Name(ushort typeId) => _types[typeId].Name;
 
-    /// <summary>The ruleset type a card button trains or builds for <paramref name="civilization"/>, or −1.</summary>
+    /// <summary>
+    /// The ruleset type a card button trains or builds for <paramref name="civilization"/>, or −1. The original names
+    /// classes in any case (ORDERS.INI <c>BUILD TCGuild</c>, the Merchants' Guild; the tenth play-test).
+    /// </summary>
     public int TypeOfClass(string civilization, string cls)
     {
+        ArgumentNullException.ThrowIfNull(cls);
+        cls = cls.ToLowerInvariant();
         int id = Ruleset.EntityTypeId(civilization + "." + cls);
         return id >= 0 ? id : Ruleset.EntityTypeId("comm." + cls);
     }

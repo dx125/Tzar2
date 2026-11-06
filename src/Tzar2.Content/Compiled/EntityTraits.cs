@@ -213,10 +213,15 @@ public sealed record GateDefinition(ImmutableArray<byte> Passage)
     public int ApproachOf(int facing) => (uint)facing < (uint)ApproachTiles.Length ? ApproachTiles[facing] : 0;
 }
 
-/// <summary>Trait <c>Decay</c> (GAME-02: neglected fields decay and disappear, manual ch. 5; UNK-17).</summary>
-/// <param name="AfterMs">Untended time before the decay starts.</param>
-/// <param name="HealthPerMinute">Hit points lost per minute while neglected; at 0 the entity disappears.</param>
-public sealed record DecayDefinition(int AfterMs, int HealthPerMinute);
+/// <summary>
+/// Trait <c>Decay</c>: a field nobody works withers and disappears, and its farmer grows it back (ECO-012; ReTzar's reading of
+/// the original, 0x44d1e0, 0x44cc70).
+/// </summary>
+/// <param name="AfterMs">Untended time before the withering starts.</param>
+/// <param name="EveryMs">How often a withering field loses <paramref name="Health"/>; at 0 it disappears.</param>
+/// <param name="Health">Hit points lost each <paramref name="EveryMs"/>, and won back each <paramref name="GrowMs"/> of work.</param>
+/// <param name="GrowMs">The farmer's work that grows a field short of its health by <paramref name="Health"/> (one dig).</param>
+public sealed record DecayDefinition(int AfterMs, int EveryMs, int Health, int GrowMs);
 
 /// <summary>
 /// The gameplay traits of a compiled entity type (REQ-SIM-09, TDD §11.2). Every array is immutable; ids refer to the

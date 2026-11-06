@@ -50,7 +50,7 @@ public class LaterBatchAnalysisTests
         Assert.Equal(1, FidelitySuite.EngineDuel(Engine, (120, 12, 6, 4, 0), (65, 6, 3, 5, 0)));
         Assert.Equal(1, FidelitySuite.EngineDuel(Engine, (75, 8, 4, 2, 600), (120, 12, 6, 4, 0)));
         Assert.Equal(50, FidelitySuite.EngineDamage(Engine, 8, 6, 600, 0));
-        Assert.Equal(11, FidelitySuite.EngineDamage(Engine, 12, 0, 0, 80));
+        Assert.Equal(12, FidelitySuite.EngineDamage(Engine, 12, 0, 0, 80)); // RESISTANCE no longer lowers damage (WAR-001)
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class LaterBatchAnalysisTests
         Facts("attack-timing", "attack-timing", """
             measurements:
               - {trial: pike-knight, rate_stat: "2", attack_stat: "8", defence_stat: "6", bonus_percent: "600", resistance: "0", hits: 3, period_ms_median: 3000, sample_interval_ms: 10, damage_values: [50x2]}
-              - {trial: knight-lumber, rate_stat: "4", attack_stat: "12", defence_stat: "0", bonus_percent: "0", resistance: "80", hits: 9, period_ms_median: 1500, sample_interval_ms: 10, damage_values: [11x9]}
+              - {trial: knight-lumber, rate_stat: "4", attack_stat: "12", defence_stat: "0", bonus_percent: "0", resistance: "80", hits: 9, period_ms_median: 1500, sample_interval_ms: 10, damage_values: [12x9]}
             """);
         Facts("combat-outcomes", "combat-outcomes", """
             measurements:
@@ -96,7 +96,7 @@ public class LaterBatchAnalysisTests
               - {subject: lumber, phases: [{sample: hp-attack, start: 800, end: 300, rate_per_min: -1500, steps: 40}, {sample: hp-burn, start: 300, end: 260, rate_per_min: -{{I(Engine.Rule("gameplay", "burnDamagePerMinute")!.Value)}}, steps: 40}, {sample: hp-repair, start: 260, end: 800, rate_per_min: 480, steps: 40, step_values: ["{{Engine.Ruleset.Gameplay.RepairBlowHp(800, 37_500)}}x30", "{{2 * Engine.Ruleset.Gameplay.RepairBlowHp(800, 37_500)}}x10"]}]}
               - {subject: lumber, phases: [{sample: hp-attack, start: 800, end: 600, rate_per_min: -1500, steps: 20}, {sample: hp-burn, start: 600, end: 600, rate_per_min: 0, steps: 0}]}
               - {subject: peon, phases: [{sample: hp-held, start: 20, end: 50, rate_per_min: {{I(Engine.Rule("^class.castle", "Holder", "healPerMinute")!.Value)}}, steps: 30}]}
-              - {subject: field, phases: [{sample: field-stable-series, start: 100, end: 0, duration_s: 300, first_step_s: {{I(Engine.Rule("^class.field", "Decay", "afterMs")!.Value / 1000)}}, rate_per_min: -{{I(Engine.Rule("^class.field", "Decay", "healthPerMinute")!.Value * (300 - (Engine.Rule("^class.field", "Decay", "afterMs")!.Value / 1000)) / 300)}}, steps: 100}]}
+              - {subject: field, phases: [{sample: field-stable-series, start: 100, end: 0, duration_s: 300, first_step_s: {{I(Engine.Rule("^class.field", "Decay", "afterMs")!.Value / 1000)}}, rate_per_min: -{{I(Engine.Rule("^class.field", "Decay", "health")!.Value * 60_000 / Engine.Rule("^class.field", "Decay", "everyMs")!.Value * (300 - (Engine.Rule("^class.field", "Decay", "afterMs")!.Value / 1000)) / 300)}}, steps: 100}]}
               - {subject: te_feudalism, phases: [{sample: food-series, start: 950, end: 910, rate_per_min: -40, steps: 1, step_values: ["{{I(-50 * (100 + Engine.Rule("te_feudalism", "Technology", "effects", "0", "percent")!.Value) / 100)}}x1"]}]}
               - {subject: spell_lightning, phases: [{sample: tgt-series, start: 50, end: 10, rate_per_min: -400, steps: 1, step_values: ["-{{I(Engine.Rule("spell_lightning", "Spell", "amount")!.Value)}}x1"]}]}
               - {subject: mage, phases: [{sample: mana-series, start: 70, end: 100, rate_per_min: {{I(Engine.Rule("gameplay", "manaRegenPerMinute")!.Value)}}, steps: 30}]}

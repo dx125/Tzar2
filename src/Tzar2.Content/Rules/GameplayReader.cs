@@ -10,7 +10,7 @@ internal sealed class GameplayReader
 {
     private static readonly string[] KnownFields =
     [
-        "groupMoveSpeed", "movement", "populationLimit", "startingResources", "defaultStartingResources", "minimumDamage", "resistanceScale",
+        "groupMoveSpeed", "movement", "populationLimit", "startingResources", "defaultStartingResources", "minimumDamage",
         "interactionReachPx", "structureReachPx", "interactionTouchPx", "meleeReachPx", "acquireIntervalMs", "autoChaseLeashPercent", "nodeSearchRadiusTiles", "constructionRefundPercent", "dismantleRefundPercent", "dismantleBaseMs", "dismantleMaxMs", "dismantleMsPerHealth",
         "productionRefundPercent", "queueCapacity", "speedPixelsPerSecondPerPoint", "attackCycleMs", "hitDelayPercent",
         "researchRefundPercent", "capturePointsPerSecond", "minimumCaptureResistance", "captureResetMs", "influenceRadiusTiles",
@@ -80,7 +80,6 @@ internal sealed class GameplayReader
             StartingResources = levels,
             DefaultStartingResources = defaultLevel,
             MinimumDamage = Range("minimumDamage", d.MinimumDamage, 0, 1_000_000),
-            ResistanceScale = Range("resistanceScale", d.ResistanceScale, 1, 1_000_000),
             InteractionReachUnits = Range("interactionReachPx", d.InteractionReachUnits / 64, 0, 256) * 64,
             StructureReachUnits = Range("structureReachPx", d.StructureReachUnits / 64, 0, 256) * 64,
             InteractionTouchUnits = Range("interactionTouchPx", d.InteractionTouchUnits / 64, 0, 256) * 64,

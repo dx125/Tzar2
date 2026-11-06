@@ -29,10 +29,11 @@ public class CombatTests
     [Fact]
     [Trait("Rule", "WAR-001")]
     [Trait("Rule", "WAR-002")]
-    public void Damage_is_attack_times_bonus_minus_defence_with_a_minimum()
+    public void Damage_is_the_attack_grown_by_its_bonus_squared_over_attack_plus_defence_with_a_minimum()
     {
-        // archer (7) vs footman (defence 2), BONUS.INI arrow_unit vs footman -25%: 7 x 0.75 = 5 - 2 = 3.
-        // footman (9) vs knight (defence 5), footman vs mounted +55%: 9 x 1.55 = 13 - 5 = 8. peon (3) vs knight: 3 - 5 -> 1 (minimum).
+        // A² / (A + D) (ReTzar 0x504900). archer (7) vs footman (defence 2), BONUS.INI arrow_unit vs footman -25%: A = 5,
+        // 25 / 7 = 3. footman (9) vs knight (defence 5), footman vs mounted +55%: A = 13, 169 / 18 = 9. peon (3) vs knight:
+        // 9 / 8 = 1.
         using var d = new SimDriver(
             TestMap(24, 12, Unit("euro.archer", 0, 4, 4), Unit("euro.footman", 1, 8, 4), Unit("euro.footman", 0, 4, 8), Unit("euro.knight", 1, 5, 8), Unit("euro.peon", 0, 6, 9)),
             ruleset: Classic);
@@ -47,7 +48,7 @@ public class CombatTests
 
         var byAttacker = d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).GroupBy(e => e.Event.X).ToDictionary(g => g.Key, g => g.Select(x => x.Event.Arg).Distinct().ToArray());
         Assert.Equal([3], byAttacker[archer.Index]);
-        Assert.Equal([8], byAttacker[footman.Index]);
+        Assert.Equal([9], byAttacker[footman.Index]);
         Assert.Equal([1], byAttacker[peon.Index]);
     }
 
@@ -300,13 +301,38 @@ public class CombatTests
     }
 
     [Fact]
+    [Trait("Rule", "WAR-019")]
+    public void Towers_and_warships_fire_on_their_own_period_not_their_table_rate()
+    {
+        // ReTzar 0x4dba30, 0x4e8f00: an arrow tower every 1000 ms, a cannon tower and a galleon every 3000 ms (20 and 60 ticks).
+        using var d = new SimDriver(
+            AsciiMap(
+                ["......................~~~~~~", "......................~~~~~~", "......................~~~~~~", "......................~~~~~~", "......................~~~~~~", "......................~~~~~~", "......................~~~~~~", "......................~~~~~~"],
+                Structure("comm.tower_stone", 1, 2, 1), Structure("comm.tower_stone2", 1, 2, 5), Unit("comm.galleon", 1, 24, 3),
+                Structure("euro.castle", 0, 12, 2)),
+            ruleset: ClassicWith("euro.castle: { Health: { max: 100000 } }"));
+        EntityId keep = OfType(d.World, "comm.tower_stone").Single();
+        EntityId cannon = OfType(d.World, "comm.tower_stone2").Single();
+        EntityId galleon = OfType(d.World, "comm.galleon").Single();
+        EntityId castle = OfType(d.World, "euro.castle").Single();
+        d.Order(1, CommandKind.Attack, [keep, cannon, galleon], target: castle);
+        d.RunUntil(() => false, 400);
+        foreach ((EntityId shooter, int period) in new[] { (keep, 20), (cannon, 60), (galleon, 60) })
+        {
+            int[] hits = [.. d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged && e.Event.Entity == castle && e.Event.X == shooter.Index).Select(e => e.Tick)];
+            Assert.True(hits.Length >= 3, $"{d.World.TypeOf(shooter).Key} hit {hits.Length} times");
+            Assert.All(hits.Zip(hits.Skip(1)), p => Assert.Equal(period, p.Second - p.First));
+        }
+    }
+
+    [Fact]
     public void A_move_advance_answers_a_tower_that_outranges_its_sight_and_a_plain_move_does_not()
     {
-        // A stone tower (range 13 tiles) shoots footmen (sight 6) passing 10 tiles away.
+        // A stone tower (range 13 tiles, a shot a second: WAR-019) shoots knights (sight 5) passing 10 tiles away.
         foreach (bool advance in new[] { true, false })
         {
-            using var d = new SimDriver(TestMap(40, 16, Structure("comm.tower_stone", 1, 20, 1), Unit("euro.footman", 0, 3, 12)), ruleset: Classic);
-            EntityId footman = OfType(d.World, "euro.footman").Single();
+            using var d = new SimDriver(TestMap(40, 16, Structure("comm.tower_stone", 1, 20, 1), Unit("euro.knight", 0, 3, 12)), ruleset: Classic);
+            EntityId footman = OfType(d.World, "euro.knight").Single();
             EntityId tower = OfType(d.World, "comm.tower_stone").Single();
             d.Order(0, CommandKind.Move, [footman], (37 * Tile) + (Tile / 2), (12 * Tile) + (Tile / 2), flags: advance ? CommandFlags.Ctrl : CommandFlags.None);
             d.RunUntil(() => !d.World.Entities.IsAlive(footman) || (!d.IsMoving(footman) && d.World.Combats.Get(footman).Target == 0), 3000);
@@ -406,8 +432,8 @@ public class CombatTests
         d.Order(0, CommandKind.Attack, squad, target: house);
         d.RunUntil(() => !d.World.Entities.IsAlive(house), 2000);
         Assert.False(d.World.Entities.IsAlive(house));
-        // RESISTANCE 40 (manual ch. 4, scale UNVERIFIED): 9 x 1000 / 1040 = 8 per hit.
-        Assert.Equal([8], d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).Select(e => e.Event.Arg).Distinct());
+        // A building has no defence, and its RESISTANCE is against capture (WAR-001): the footman's 9 per hit.
+        Assert.Equal([9], d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).Select(e => e.Event.Arg).Distinct());
         Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 12, 4));
         Assert.Equal(1, d.World.Decals.Count); // GAME-03: a ruin decal that never blocks (ORIG-01), no corpse
         Assert.Equal(DecalKind.Ruin, d.World.Decals[0].Kind);
@@ -418,8 +444,7 @@ public class CombatTests
     [Fact]
     public void Ten_footmen_destroy_an_enemy_barracks_in_bounded_time()
     {
-        // Owner decision (PR #21, UNK-08): resistanceScale 1000, so melee can take buildings down. Barracks (synthetic):
-        // 1,250 HP, RESISTANCE 300: 9 x 1000 / 1300 = 6 per hit, a hit per second per footman, then fire helps.
+        // Barracks (synthetic): 1,250 HP and no defence (WAR-001): 9 per hit, a hit per second per footman, then fire helps.
         using var d = new SimDriver(
             TestMap(32, 16, [Structure("euro.barrack", 1, 18, 6), .. Enumerable.Range(0, 10).Select(i => Unit("euro.footman", 0, 6 + (i % 2), 3 + i))]),
             ruleset: Classic);
@@ -427,8 +452,8 @@ public class CombatTests
         d.Order(0, CommandKind.Attack, [.. OfType(d.World, "euro.footman")], target: barracks);
         int ticks = d.RunUntil(() => !d.World.Entities.IsAlive(barracks), 2400);
         Assert.False(d.World.Entities.IsAlive(barracks));
-        Assert.Equal([6], d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).Select(e => e.Event.Arg).Distinct());
-        Assert.InRange(ticks, 300, 900); // ~21 s of hitting plus the walk; under 45 s
+        Assert.Equal([9], d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged).Select(e => e.Event.Arg).Distinct());
+        Assert.InRange(ticks, 200, 600); // ~14 s of hitting plus the walk; under 30 s
     }
 
     [Fact]

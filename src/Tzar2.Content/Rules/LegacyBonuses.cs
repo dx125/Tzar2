@@ -9,8 +9,8 @@ namespace Tzar2.Content.Rules;
 /// Compiles <c>BONUS.INI</c> (TDD Appendix E.2.2) into per-type-pair attack bonuses. <c>[groups]</c> defines named
 /// groups of class specs (<see cref="LegacyGroups"/>); every other section is an attacker spec (a group, or a class with
 /// an optional civilization prefix: <c>e knight</c>, <c>a maceman</c>, <c>archer</c>) whose entries map target specs to
-/// <c>+N%</c>/<c>-N%</c>. How several matching bonuses combine is not known (UNK-08): they are summed, a placeholder
-/// (ADR 0038).
+/// <c>+N%</c>/<c>-N%</c>. Of several entries for one pair, the last in the file holds (ReTzar's reading of the original,
+/// 0x499ff1: one matrix entry, overwritten; WAR-002): the castle, named twice in a group, gets its bonus once.
 /// </summary>
 internal static class LegacyBonuses
 {
@@ -18,7 +18,7 @@ internal static class LegacyBonuses
 
     public static List<DamageBonus> Compile(LegacyIni ini, LegacyGroups groups, List<EntityTypeDefinition> types, List<string> diagnostics)
     {
-        // (attacker, target) -> summed basis points; a sorted key keeps the output order deterministic.
+        // (attacker, target) -> basis points, the last entry holding; a sorted key keeps the output order deterministic.
         var sums = new SortedDictionary<(ushort, ushort), int>();
         var attackers = new List<ushort>();
         var targets = new List<ushort>();
@@ -45,7 +45,7 @@ internal static class LegacyBonuses
                 {
                     foreach (ushort t in targets)
                     {
-                        sums[(a, t)] = (sums.TryGetValue((a, t), out int s) ? s : 0) + bp;
+                        sums[(a, t)] = bp;
                     }
                 }
             }

@@ -68,7 +68,7 @@ internal sealed partial class EntityCompiler
         ["StartingWorker"] = [],
         ["WalkableFootprint"] = [],
         ["ReadyAtOnce"] = [],
-        ["Decay"] = ["afterMs", "healthPerMinute"],
+        ["Decay"] = ["afterMs", "everyMs", "health", "growMs"],
         ["SpawnOnDeath"] = ["type", "start", "perSecond", "max", "piece"],
         ["Lifetime"] = ["ms"],
         ["Trader"] = ["capacity", "access", "technology"],
@@ -638,7 +638,7 @@ internal sealed partial class EntityCompiler
 
         if (entry.Find("Decay") is not null)
         {
-            d.Decay = new DecayDefinition(NonNegative("Decay", "afterMs", 0), NonNegative("Decay", "healthPerMinute", 0));
+            d.Decay = new DecayDefinition(NonNegative("Decay", "afterMs", 0), Math.Max(1, NonNegative("Decay", "everyMs", 5000)), NonNegative("Decay", "health", 10), Math.Max(1, NonNegative("Decay", "growMs", 1196)));
         }
 
         if (entry.Find("SpawnOnDeath")?.Get("type") is { } spawnType)
