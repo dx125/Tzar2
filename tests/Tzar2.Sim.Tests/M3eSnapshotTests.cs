@@ -78,8 +78,8 @@ public class M3eSnapshotTests
         d.Order(0, CommandKind.Board, [footmen[2]], target: OfType(w, "comm.galleon").Single());
         d.Order(0, CommandKind.PickItem, [footmen[1]], target: OfType(w, "comm.item").Single());
         d.Order(0, CommandKind.PickItem, [archer], target: OfType(w, "comm.item_magic").Single());
-        d.Order(0, CommandKind.CastSpell, [mage], target: enemies[0], arg0: Spell(Classic, "spell_freeze"));
-        d.Order(0, CommandKind.CastSpell, [priest], target: catapult, arg0: Spell(Classic, "spell_bless"));
+        d.Order(0, CommandKind.CastSpell, [mage], d.PositionOf(enemies[0]).X, d.PositionOf(enemies[0]).Y, arg0: Spell(Classic, "spell_freeze")); // at a point (MAG-032)
+        d.Order(0, CommandKind.CastSpell, [priest], d.PositionOf(catapult).X, d.PositionOf(catapult).Y, arg0: Spell(Classic, "spell_bless"));
         d.Order(0, CommandKind.AttackGround, [catapult], 20 * Tile, 4 * Tile);
         d.Order(0, CommandKind.ConvertUnit, [.. OfType(w, "arab.peon")], arg0: Id("arab.jihad_warrior"));
         d.Order(0, CommandKind.CraftItem, [.. OfType(w, "arab.magicworkshop")], arg0: Id("comm.item_armor"), arg1: 400);

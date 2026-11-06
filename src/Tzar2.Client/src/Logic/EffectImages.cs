@@ -34,6 +34,7 @@ public static class EffectImages
         "arrow", "arrow_big", "arrow_ballista", "arrow_ballista_shadow", "cb_stone", "cb_metal", "cb_fire", "cb_metal_shadow",
         "arrow_rocket", "magic_star", "flame_bolt", "exorcism", "freeze_ball_trail", "flame_ball_trail", "explosion_small",
         "flame_bolt_expl", "freeze_bolt_expl", Hole, Splash, Blast, FireBig, FireSmall, OrderCross, Waypoint,
+        ManaPump, .. SpellPictures.All,
     ];
 
     /// <summary>
@@ -63,8 +64,8 @@ public static class EffectImages
         ("cannon", _) => new("cb_metal", "cb_metal_shadow", 64, 24, Turns: false, Impact: Hole, Shell: true, Muzzle: shooterClass is "galleon" or "hulk"),
         ("rocket_arrow", _) => new("arrow_rocket", null, 0, 0, Turns: true, Impact: Hole, Shell: true),
         ("bolt", _) => new("arrow_ballista", "arrow_ballista_shadow", 64, 16, Turns: true, Impact: Hole),
-        ("freeze_bolt", _) => new("freeze_ball_trail", null, 0, 0, Turns: false, Glows: true, Impact: "freeze_bolt_expl"),
-        ("flame_ball" or "flame_bolt", _) => new("flame_ball_trail", null, 0, 0, Turns: false, Glows: true, Impact: "flame_bolt_expl"),
+        ("freeze_bolt", _) => new("freeze_ball_trail", null, 0, 0, Turns: false, Glows: true, Impact: "freeze_bolt_expl", Trail: true),
+        ("flame_ball" or "flame_bolt", _) => new("flame_ball_trail", null, 0, 0, Turns: false, Glows: true, Impact: "flame_bolt_expl", Trail: true),
         ("magic", _) => new("magic_star", null, 0, 0, Turns: false, Glows: true),
         _ => null,
     };
@@ -130,8 +131,14 @@ public static class EffectImages
 /// <param name="Impact">What it leaves where it lands (a hole: <see cref="EffectImages.Hole"/>), or null.</param>
 /// <param name="Shell">A shell or rocket: a blast on a building instead of a hole.</param>
 /// <param name="Muzzle">A flash (<c>explosion_small</c>) 24 px above where it leaves: the galleon's and the hulk's guns (0x4e8dd3).</param>
-public sealed record ShotLook(string Body, string? Shadow, int Peak, int Start, bool Turns, bool Glows = false, string? Impact = null, bool Shell = false, bool Muzzle = false)
+public sealed record ShotLook(string Body, string? Shadow, int Peak, int Start, bool Turns, bool Glows = false, string? Impact = null, bool Shell = false, bool Muzzle = false, bool Trail = false)
 {
+    /// <summary>
+    /// How often a ball that shows only its trail leaves a puff (ReTzar's reading, 0x432350, 0x4325e0: every 45 ms, its
+    /// column turning through the trail picture's three, each puff playing its rows once where it was left).
+    /// </summary>
+    public const int TrailEveryMs = 45;
+
     /// <summary>What it leaves on a tile: a splash on water instead of a hole, a blast when a shell hits a building.</summary>
     public string? ImpactOn(bool water, bool building)
         => Impact != EffectImages.Hole ? Impact : Shell && building ? EffectImages.Blast : water ? EffectImages.Splash : EffectImages.Hole;

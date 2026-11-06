@@ -151,3 +151,26 @@ rules:
     status: tested
     adr: [0184]
     note: Measured in batch J (manual.yaml spy-disguise). Tzar2 lets the copied kingdom's spy unmask within 4 tiles for an empty meter down to 1 for a full one, in proportion (gameplay.unmaskReachFreshPercent, unmaskReachFullPercent). The owner's description adds "or trains", which is not modelled.
+  MAG-030:
+    rule: A caster ordered to cast a spell it has not the mana for keeps the order - it walks into range, stands, and casts by itself once its mana is there, looking again every 2 seconds; a spell above its most mana raises its most mana to the cost, with the pump picture over it.
+    source: ['community ReTzar src/gameplay.rs (cast intent 0x4e1c30: short of mana the caster stands idle, its maximum raised to the cost, the pump picture 0x4e1d0a, and looks again in 2000 ms; 0x4dff44: the spell op waits 2000 ms and tries again, the order stays)', owner 2026-11-06 (tenth play-test)]
+    status: tested
+    adr: [0278]
+    note: The tenth play-test - a mage ordered to summon a stone golem (600 mana) was refused and its pool stood at 600, while in the original it gathers its mana and the golem comes by itself. Tzar2 refused the order (NotEnoughMana) and never loaded the pump picture. The pool raised to the cost is the original's (MAG-027).
+  MAG-031:
+    rule: A summoning spends the caster's mana in multiples of the creature's cost and calls one creature per multiple - a mage with 100 mana calls four bats of 25.
+    source: ['community ReTzar src/gameplay.rs (cast 0x472409: count = mana / cost, the cost paid that many times)', owner 2026-11-06 (tenth play-test)]
+    status: tested
+    adr: [0278]
+    note: Tzar2 calls only as many as the kingdom can house and pay for (each creature's cost and population); before the tenth play-test it called one at a time.
+  MAG-032:
+    rule: The lightning, the flame ball, the heal, invisibility, turning to stone, hypnosis and teaching are cast on any unit or object of any kingdom (the heal and teaching on their kinds only); the freeze, confusion and the blessing are cast at a point - the freeze's ball flies there and freezes every unit within 3 tiles, the caster's own and the caster too, confusion takes everyone but the caster within 2, the blessing those not hostile within 4.
+    source: ['community ReTzar src/gameplay.rs (cast 0x472e83 lightning, 0x472ff1 heal, 0x473250 confusion, bless, 0x4734a1 invisibility, 0x473913 stone, 0x473887 hypnosis, 0x473bf0 teaching, 0x473b44 flame ball; freeze_impact 0x432590)', owner 2026-11-06 (tenth play-test)]
+    status: tested
+    adr: [0278]
+    note: Tzar2 let the attack spells take enemies only and the others own units only, and cast the freeze, confusion and the blessing on a unit; the tenth play-test's freeze on the ground and lightning on a wall were refused.
+  MAG-033:
+    rule: A heal goes on, a cast after each, while its unit is still wounded and the caster has the mana.
+    source: ['community ReTzar src/gameplay.rs (cast intent 0x4e00a0: a spell that returns 2 after image_spell is cast again a whole anim_time later; the heal returns 2 while its unit is wounded)']
+    status: tested
+    adr: [0278]

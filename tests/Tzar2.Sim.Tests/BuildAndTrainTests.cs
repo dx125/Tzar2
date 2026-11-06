@@ -166,7 +166,6 @@ public class BuildAndTrainTests
         d.Order(0, CommandKind.Train, [barracks], arg0: Id("euro.knight"), arg1: 1);     // te_platearmor
         d.Order(0, CommandKind.Train, [barracks], arg0: Id("euro.peon"), arg1: 1);       // the castle trains peasants
         d.Order(0, CommandKind.Harvest, [footman], target: peon);                        // not a resource
-        d.Order(0, CommandKind.Attack, [footman], target: peon);                         // own unit
         d.Order(1, CommandKind.Cancel, [barracks]);                                      // not owned
         d.Step();
         Assert.Equal(
@@ -174,7 +173,7 @@ public class BuildAndTrainTests
                 CommandRejection.IllegalPlacement, CommandRejection.IllegalPlacement, CommandRejection.IllegalPlacement,
                 CommandRejection.NotAffordable, CommandRejection.NoValidEntities, CommandRejection.NoValidEntities,
                 CommandRejection.InvalidArgument, CommandRejection.RequirementNotMet, CommandRejection.NoValidEntities,
-                CommandRejection.InvalidArgument, CommandRejection.InvalidArgument, CommandRejection.NoValidEntities,
+                CommandRejection.InvalidArgument, CommandRejection.NoValidEntities,
             ],
             d.Rejections());
         Assert.Equal(220, d.World.Players[0].Resources[Wood]);

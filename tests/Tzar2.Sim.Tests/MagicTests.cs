@@ -23,11 +23,16 @@ public class MagicTests
 
     private static int Mana(SimDriver d, EntityId e) => d.World.Manas.Get(e).MilliMana / 1000;
 
+    // A spell cast at a point: where the unit stands (the freeze, confusion and the blessing; MAG-032).
+    private static void CastAt(SimDriver d, EntityId caster, string spell, EntityId at)
+        => Cast(d, caster, spell, default, d.PositionOf(at).X, d.PositionOf(at).Y);
+
     [Fact]
     [Trait("Rule", "MAG-001")]
     [Trait("Rule", "MAG-002")]
     [Trait("Rule", "MAG-025")]
-    public void Lightning_costs_mana_and_needs_enough_mana_but_no_wait()
+    [Trait("Rule", "MAG-030")]
+    public void Lightning_costs_mana_and_waits_for_enough_mana_but_for_nothing_else()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 4, 4), Unit("euro.footman", 1, 10, 4), Unit("euro.footman", 1, 10, 7)), ruleset: NoRegen);
         EntityId mage = OfType(d.World, "euro.mage").Single();
@@ -40,12 +45,12 @@ public class MagicTests
         Assert.Equal(400 - 150, Hp(d, enemies[0])); // 150 damage (ReTzar, 0x472e83)
         Assert.Equal(90 - 50, Mana(d, mage)); // 50 mana (ReTzar, 0x4723e0)
         Cast(d, mage, "spell_lightning", enemies[1]);
-        d.Step();
-        Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections()); // 40 left
-        Assert.DoesNotContain(CommandRejection.SpellNotReady, d.Rejections()); // no wait between spells but the mana (MAG-025)
+        d.RunUntil(() => false, 60);
+        Assert.Empty(d.Rejections()); // 40 left: the order is kept, the mage waits for its mana (MAG-030)
+        Assert.Equal(1, d.Count(SimEventKind.SpellCast));
         d.World.Manas.Get(mage).MilliMana = 90_000;
-        Cast(d, mage, "spell_lightning", enemies[1]); // at once
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 60); // it looks again within 2 s and casts
+        Assert.Equal(2, d.Count(SimEventKind.SpellCast));
         Assert.False(d.World.Entities.IsAlive(enemies[1]));
     }
 
@@ -71,6 +76,7 @@ public class MagicTests
 
     [Fact]
     [Trait("Rule", "MAG-027")]
+    [Trait("Rule", "MAG-030")]
     public void A_summon_above_the_casters_pool_raises_the_pool_to_its_cost_and_casts_once_it_fills()
     {
         // ReTzar 0x4e1c30: the order finds too little mana; the caster's most mana grows to the cost, here the golem's whole
@@ -86,14 +92,16 @@ public class MagicTests
         }
 
         Cast(d, mage, "spell_spawnstonegolem", default, 6 * Tile, 4 * Tile);
-        d.Step();
-        Assert.Contains(CommandRejection.NotEnoughMana, d.Rejections());
+        d.RunUntil(() => d.Count(SimEventKind.ManaRaised) > 0, 100);
+        Assert.Empty(d.Rejections()); // the order is kept (MAG-030)
         Assert.Equal(cost, d.World.MaxMana(mage)); // the pool now holds the cost
         Assert.Equal(cost, Of(d, SimEventKind.ManaRaised).Single().Arg); // the pump picture plays over it (ReTzar 0x4e1d0a)
+        d.RunUntil(() => false, 100);
+        Assert.Equal(0, d.Count(SimEventKind.SpellCast)); // still filling
         d.World.Manas.Get(mage).MilliMana = cost * 1000;
-        Cast(d, mage, "spell_spawnstonegolem", default, 6 * Tile, 4 * Tile);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 400);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 100); // the golem comes by itself once the mana is there
         Assert.Equal(1, d.Count(SimEventKind.SpellCast));
+        Assert.Single(OfType(d.World, d.World.Ruleset.EntityTypes[d.World.Ruleset.Spells[spell].Summon].Key, 0));
         Assert.True(Mana(d, mage) < 50); // the whole cost was paid
     }
 
@@ -247,11 +255,11 @@ public class MagicTests
         EntityId footman = OfType(d.World, "euro.footman").Single();
         d.Order(0, CommandKind.SetStance, [mage], arg0: (int)CombatStance.HoldFire);
         d.Order(1, CommandKind.SetStance, [footman], arg0: (int)CombatStance.HoldFire);
-        Cast(d, mage, "spell_freeze", footman);
+        CastAt(d, mage, "spell_freeze", footman);
         d.Step();
         Assert.Contains(CommandRejection.SpellUnknown, d.Rejections()); // TECHTREE [orders] spell_freeze = te_freeze
         Grant(d.World, 0, "te_freeze");
-        Cast(d, mage, "spell_freeze", footman);
+        CastAt(d, mage, "spell_freeze", footman); // at a point (MAG-032)
         d.RunUntil(() => d.World.Statuses.Has(footman), 200); // the freeze bolt flies first
         Assert.False(d.World.CanAct(footman));
         Position at = d.PositionOf(footman);
@@ -266,6 +274,7 @@ public class MagicTests
 
     [Fact]
     [Trait("Rule", "MAG-009")]
+    [Trait("Rule", "MAG-033")]
     public void Priests_heal_and_bless()
     {
         using var d = new SimDriver(TestMap(32, 12, Unit("euro.priest", 0, 4, 4), Unit("euro.footman", 0, 6, 4), Unit("euro.footman", 1, 8, 4)), ruleset: Classic);
@@ -280,10 +289,13 @@ public class MagicTests
         Cast(d, priest, "spell_heal", footman);
         d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
         Assert.Equal(26, Hp(d, footman)); // +6 a cast (ReTzar, 0x472ff1)
-
+        d.RunUntil(() => Hp(d, footman) == d.World.Healths.Get(footman).Max, 400); // MAG-033: it goes on until healed
+        Assert.True(d.Count(SimEventKind.SpellCast) > 1);
+        int casts = d.Count(SimEventKind.SpellCast);
         d.RunUntil(() => false, 60);
-        Cast(d, priest, "spell_bless", footman);
-        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 2, 200);
+        Assert.Equal(casts, d.Count(SimEventKind.SpellCast)); // and stops there
+        CastAt(d, priest, "spell_bless", footman); // at a point: those not hostile within 4 (MAG-032)
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == casts + 1, 200);
         d.Order(0, CommandKind.Attack, [footman], target: enemy);
         d.RunUntil(() => d.Count(SimEventKind.Damaged) > 0, 200);
         Assert.Equal(9 + 5 - 2, Of(d, SimEventKind.Damaged).First().Arg); // +5 attack (ReTzar, 0x4e5809)
@@ -292,15 +304,55 @@ public class MagicTests
     [Fact]
     [Trait("Rule", "MAG-002")]
     [Trait("Rule", "PROD-010")]
-    public void Summons_cost_the_casters_mana_and_population()
+    [Trait("Rule", "MAG-031")]
+    public void A_summoning_spends_the_mana_in_multiples_of_the_creatures_cost_one_creature_each()
     {
+        // ReTzar 0x472409: 90 mana against the bat's "30m" (synthetic) calls three bats and spends all of it.
         using var d = new SimDriver(TestMap(32, 12, Structure("euro.castle", 0, 20, 4), Unit("euro.mage", 0, 4, 4)), ruleset: NoRegen);
         EntityId mage = OfType(d.World, "euro.mage").Single();
         Cast(d, mage, "spell_spawnbat");
-        d.RunUntil(() => d.Count(SimEventKind.Summoned) == 1, 200);
-        EntityId bat = OfType(d.World, "comm.bat").Single();
-        Assert.Equal(0, d.World.Identities.Get(bat).Owner);
-        Assert.Equal(90 - 30, Mana(d, mage)); // the bat's "30m" (synthetic)
+        d.RunUntil(() => d.Count(SimEventKind.Summoned) == 3, 200);
+        EntityId[] bats = [.. OfType(d.World, "comm.bat")];
+        Assert.Equal(3, bats.Length);
+        Assert.All(bats, bat => Assert.Equal(0, d.World.Identities.Get(bat).Owner));
+        Assert.Equal(0, Mana(d, mage));
+        Assert.Equal(1, d.Count(SimEventKind.SpellCast));
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-032")]
+    public void A_freeze_flies_to_a_point_and_freezes_every_unit_within_three_tiles_whoever_it_belongs_to()
+    {
+        // ReTzar 0x432590: the ball lands; every unit within 3 tiles, own ones too, is frozen and hurt short of death.
+        using var d = new SimDriver(TestMap(32, 16, Unit("euro.mage", 0, 4, 4), Unit("euro.footman", 1, 12, 4), Unit("euro.footman", 0, 14, 5), Unit("euro.footman", 1, 20, 4)), ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId enemy = OfType(d.World, "euro.footman", 1).First(f => d.PositionOf(f).X / Tile == 12);
+        EntityId far = OfType(d.World, "euro.footman", 1).First(f => d.PositionOf(f).X / Tile == 20);
+        EntityId own = OfType(d.World, "euro.footman", 0).Single();
+        d.Order(0, CommandKind.SetStance, [mage, own], arg0: (int)CombatStance.HoldFire);
+        d.Order(1, CommandKind.SetStance, [enemy, far], arg0: (int)CombatStance.HoldFire);
+        Grant(d.World, 0, "te_freeze");
+        Cast(d, mage, "spell_freeze", default, (13 * Tile) + (Tile / 2), (4 * Tile) + (Tile / 2)); // open ground between them
+        d.RunUntil(() => d.World.Statuses.Has(enemy), 200);
+        Assert.Empty(d.Rejections());
+        Assert.False(d.World.CanAct(enemy));
+        Assert.False(d.World.CanAct(own)); // the caster's own unit too
+        Assert.True(d.World.CanAct(far));
+        Assert.True(Hp(d, enemy) < d.World.Healths.Get(enemy).Max);
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-032")]
+    public void A_lightning_strikes_any_object_the_kingdoms_own_buildings_too()
+    {
+        using var d = new SimDriver(TestMap(32, 12, Unit("euro.mage", 0, 4, 4), Structure("euro.house", 0, 8, 4)), ruleset: Classic);
+        EntityId mage = OfType(d.World, "euro.mage").Single();
+        EntityId house = OfType(d.World, "euro.house").Single();
+        int before = Hp(d, house);
+        Cast(d, mage, "spell_lightning", house);
+        d.RunUntil(() => d.Count(SimEventKind.SpellCast) == 1, 200);
+        Assert.Empty(d.Rejections());
+        Assert.Equal(before - 150, Hp(d, house));
     }
 
     [Fact]
@@ -446,7 +498,7 @@ public class MagicTests
         d.Order(0, CommandKind.DebugKill, [attacker]); // only the confused unit's own friend is left in its sight
         d.RunUntil(() => !d.World.IsStone(enemies[0]), 6200); // 120 to 300 s (ReTzar, 0x473913)
         d.World.Manas.Get(mage).MilliMana = 90_000; // berserk costs 70 (ReTzar)
-        Cast(d, mage, "spell_berserk", enemies[0]);
+        CastAt(d, mage, "spell_berserk", enemies[0]);
         d.RunUntil(() => d.World.IsConfused(enemies[0]), 200);
         d.RunUntil(() => Of(d, SimEventKind.Damaged).Any(e => e.Entity == enemies[1] && e.X == enemies[0].Index), 300);
         Assert.Contains(Of(d, SimEventKind.Damaged), e => e.Entity == enemies[1] && e.X == enemies[0].Index); // it attacks its own kingdom

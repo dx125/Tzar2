@@ -276,6 +276,25 @@ public sealed class TerrainAndSpriteRuleTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-019")]
+    public void Spells_show_the_originals_pictures_over_what_they_take_and_summons_come_out_in_theirs()
+    {
+        Assert.Equal("healing", SpellPictures.Overlay(SpellEffect.Heal));
+        Assert.Equal("bless", SpellPictures.Overlay(SpellEffect.Bless));
+        Assert.Equal("curse", SpellPictures.Overlay(SpellEffect.Confuse));
+        Assert.Equal("hypnotise", SpellPictures.Overlay(SpellEffect.Hypnotize));
+        Assert.Equal("convert_exp", SpellPictures.Overlay(SpellEffect.Experience));
+        Assert.Equal("turn_to_stone", SpellPictures.Overlay(SpellEffect.Stone));
+        Assert.Null(SpellPictures.Overlay(SpellEffect.Damage));
+        Assert.Equal("spawn", SpellPictures.Appearance("troll"));
+        Assert.Equal("skeleton_rise", SpellPictures.Appearance("skeleton"));
+        Assert.Null(SpellPictures.Appearance("bat"));
+        Assert.Contains(EffectImages.ManaPump, EffectImages.All); // MAG-027: the pump picture is loaded for the match
+        Assert.All(SpellPictures.All, p => Assert.Contains(p, EffectImages.All));
+        Assert.True(EffectImages.Look("freeze_bolt", "mage")!.Trail); // the freeze ball shows its trail of puffs
+    }
+
+    [Fact]
     [Trait("Rule", "PRES-018")]
     public void A_gate_flies_two_flags_of_its_kingdom_from_the_column_of_its_facing_and_material()
     {

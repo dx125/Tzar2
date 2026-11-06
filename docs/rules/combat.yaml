@@ -95,3 +95,9 @@ rules:
     status: tested
     adr: [0276]
     note: Tzar2 timed them by 6000 / RATE (UNK-07), so ships fired every 1.5 seconds and cannon towers every 2, about twice the original's; with the summed bonuses, cannon ships tore down buildings and cannon towers sank ships too fast.
+  WAR-020:
+    rule: The Attack order strikes what it is given - an enemy, an ally, a neutral or the kingdom's own unit or building; only the right click asks whom the kingdom fights.
+    source: ['community ReTzar src/gameplay.rs (only the right click checks the relations, 0x435500; the Attack order takes any object)', owner 2026-11-06 (tenth play-test)]
+    status: tested
+    adr: [0278]
+    note: Tzar2 refused an attack on an ally or an own unit (NotAllied, InvalidArgument); the tenth play-test's mage could not attack allied troops and buildings. The prisoners of the rescue kingdom stay out of any fight (NAT-008), and ambient life, resources and the magic gateway are no targets. An ally struck this way still does not strike back by itself.

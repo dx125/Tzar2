@@ -177,8 +177,7 @@ public sealed partial class CombatSystem : ISimSystem
         EntityId target = EntityId.FromValue(c.Target);
         bool lost = false;
         if (c.Target != 0 && !IsHostileTarget(world, attacker, self.Owner, target)
-            && !(c.Mode == CombatMode.Explicit && (IsButcherTarget(world, self.Owner, target) || IsTrainingTarget(world, self.Owner, target)))
-            && !(c.Mode == CombatMode.Scripted && target != attacker && IsTargetable(world, target)))
+            && !(c.Mode is CombatMode.Explicit or CombatMode.Scripted && target != attacker && IsTargetable(world, target)))
         {
             c.Target = 0;
             c.HitInMs = -1;
@@ -524,6 +523,11 @@ public sealed partial class CombatSystem : ISimSystem
             {
                 _hits.Add(new HitRecord(attacker, target, p.Owner, p.AttackerType, 0, 0, 100, p.DamageClass, false) { Spell = p.Spell });
             }
+            else if (p.Target == 0)
+            {
+                // A ball sent at a point acts where it lands (the freeze: MAG-032, ReTzar 0x432590).
+                _hits.Add(new HitRecord(attacker, EntityId.None, p.Owner, p.AttackerType, 0, 0, 100, p.DamageClass, false) { Spell = p.Spell, X = p.TargetX, Y = p.TargetY });
+            }
 
             return;
         }
@@ -710,6 +714,12 @@ public sealed partial class CombatSystem : ISimSystem
     /// </summary>
     internal static void Apply(World world, in HitRecord hit, List<Death> deaths, List<(EntityId Victim, EntityId Attacker)>? alarms = null)
     {
+        if (hit.Spell != Projectile.NoSpell && hit.Target.IsNone)
+        {
+            MagicSystem.ApplyEffect(world, hit.Spell, hit.Attacker, hit.Owner, EntityId.None, hit.X, hit.Y, deaths);
+            return;
+        }
+
         if (!world.Entities.IsAlive(hit.Target) || world.Healths.IndexOf(hit.Target) is not (>= 0 and var hp))
         {
             return;
@@ -1080,16 +1090,6 @@ public sealed partial class CombatSystem : ISimSystem
     private static int Sight(World world, Identity self, EntityTypeDefinition type)
         => world.Stats.Apply(self.Owner, ModifierStat.Sight, type.Id, type.Traits.SightUnits);
 
-    // An own animal that leaves meat (a cow) may be attacked on an explicit order: butchering (GAME-02, ADR 0042).
-    private static bool IsButcherTarget(World world, byte owner, EntityId target)
-        => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var i && world.Identities.At(i).Owner == owner
-            && world.Ruleset.EntityTypes[world.Identities.At(i).TypeId].Traits.SpawnOnDeath >= 0 && world.Healths.Get(target).Current > 0;
-
-    // An own training dummy may be attacked on an explicit order (Tactics; GAME-08).
-    internal static bool IsTrainingTarget(World world, byte owner, EntityId target)
-        => world.Entities.IsAlive(target) && world.Identities.IndexOf(target) is >= 0 and var i && world.Identities.At(i).Owner == owner
-            && (world.Ruleset.EntityTypes[world.Identities.At(i).TypeId].Traits.Abilities & AbilityFlags.TrainingDummy) != 0 && !world.Constructions.Has(target);
-
     private static bool HasTask(World world, EntityId entity)
     {
         int w = world.Workers.IndexOf(entity);
@@ -1316,6 +1316,12 @@ internal readonly record struct HitRecord(EntityId Attacker, EntityId Target, by
 {
     /// <summary>A spell to apply instead of damage (spell projectiles), or <see cref="Projectile.NoSpell"/>.</summary>
     public ushort Spell { get; init; } = Projectile.NoSpell;
+
+    /// <summary>Where a spell's ball sent at a point landed (world units), for a spell without a target (the freeze).</summary>
+    public int X { get; init; }
+
+    /// <summary>Where it landed.</summary>
+    public int Y { get; init; }
 }
 
 /// <summary>A unit or building brought to 0 hit points, killed after the hits of the tick.</summary>

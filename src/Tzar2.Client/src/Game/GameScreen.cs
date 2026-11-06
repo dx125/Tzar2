@@ -76,6 +76,7 @@ public partial class GameScreen : Node
     private readonly string _terrainSetId;
     private SpriteBank? _bank;
     private WorldRenderer? _world;
+    private const int OverHead = 12 * 64; // a spell's picture over a unit: its top, 26 px above its feet (ReTzar's overlay)
     private Hud? _hud;
     private SoundMixer? _mixer;
     private MidiPlayer? _music;
@@ -1974,7 +1975,25 @@ public partial class GameScreen : Node
                     Message(RejectionText((CommandRejection)e.Arg));
                     break;
                 case SimEventKind.ManaRaised when _seen.TryGet(e.Entity.Index, out var pumped):
-                    _world?.Burst(EffectImages.ManaPump, pumped.X, pumped.Y); // MAG-027: the pump picture over the caster
+                    _world?.Burst(EffectImages.ManaPump, pumped.X, pumped.Y - OverHead); // MAG-027: the pump picture over the caster
+                    break;
+                case SimEventKind.SpellEffect when (uint)e.Arg < (uint)_rules.Spells.Count && SpellPictures.Overlay(_rules.Spells[e.Arg].Effect) is { } picture
+                    && _seen.TryGet(e.Entity.Index, out var taken):
+                    // PRES-019: what plays over a unit a spell takes; the stone's strikes on its middle.
+                    _world?.Burst(picture, taken.X, picture == "turn_to_stone" ? taken.Y : taken.Y - OverHead);
+                    break;
+                case SimEventKind.SpellCast when (uint)e.Arg < (uint)_rules.Spells.Count && _rules.Spells[e.Arg].Key == SpellPictures.LightningKey
+                    && _seen.TryGet(e.Entity.Index, out var caster):
+                    {
+                        // PRES-019: the lightning's bolts from the caster to its target (or the point it was cast at).
+                        (int lx, int ly) = e.X >= 0 && _seen.TryGet(e.X, out var struck) ? (struck.X, struck.Y) : ((e.Y & 0xFFFF) * 64, (e.Y >> 16) * 64);
+                        _world?.Lightning(caster.X, caster.Y, lx, ly);
+                    }
+
+                    break;
+                case SimEventKind.Summoned when (uint)e.Arg < (uint)_rules.EntityTypes.Count && SpellPictures.Appearance(_rules.EntityTypes[e.Arg].Traits.LegacyClass) is { } appear
+                    && _seen.TryGet(e.Entity.Index, out var called):
+                    _world?.Burst(appear, called.X, called.Y); // PRES-019: how a summoned creature comes out
                     break;
                 case SimEventKind.ProductionStalled when e.Player == me && e.Arg == 1:
                     if (_now - _lastAlert > 5)

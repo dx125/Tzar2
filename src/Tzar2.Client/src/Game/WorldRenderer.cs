@@ -91,7 +91,9 @@ public sealed class WorldRenderer : IDisposable
     private readonly Dictionary<uint, (int X, int Y, ShotLook? Look)> _shotCurrent = [];
     private readonly HashSet<uint> _shotSeen = [];
     private readonly List<uint> _shotGone = [];
-    private readonly List<(SheetRef Sheet, int X, int Y, long StartMs)> _bursts = [];
+    private readonly List<(SheetRef Sheet, int X, int Y, long StartMs, int Direction)> _bursts = [];
+    private readonly Dictionary<uint, long> _trailLast = []; // when each ball left its last trail puff
+    private readonly List<(int FromX, int FromY, int ToX, int ToY, long StartMs)> _bolts = []; // lightning (PRES-019)
     private readonly AnimationStarts _starts = new(); // when each unit's picture was set (PRES-008)
     private long _timeMs;
     private GameFrame? _current; // the frame being drawn
@@ -188,7 +190,20 @@ public sealed class WorldRenderer : IDisposable
     {
         if (_bank.Get(name) is { } burst)
         {
-            _bursts.Add((burst, x, y, _timeMs));
+            _bursts.Add((burst, x, y, _timeMs, 0));
+        }
+    }
+
+    /// <summary>
+    /// A lightning from (<paramref name="fromX"/>, <paramref name="fromY"/>) to (<paramref name="toX"/>,
+    /// <paramref name="toY"/>), world units (PRES-019; ReTzar's reading of 0x472e83: three bolts for 700 ms, white in the
+    /// middle and blue at the edges, wandering).
+    /// </summary>
+    public void Lightning(int fromX, int fromY, int toX, int toY)
+    {
+        if (_bolts.Count < 16)
+        {
+            _bolts.Add((fromX, fromY, toX, toY, _timeMs));
         }
     }
 
@@ -693,8 +708,10 @@ public sealed class WorldRenderer : IDisposable
                 _shotGone.Add(id);
                 if (look is not null && look.ImpactOn(WaterAt(x, y), look.Shell && BuildingAt(frame, x, y)) is { } name && _bank.Get(name) is { } burst)
                 {
-                    _bursts.Add((burst, x, y, _timeMs));
+                    _bursts.Add((burst, x, y, _timeMs, 0));
                 }
+
+                _trailLast.Remove(id);
             }
 
             foreach (uint id in _shotGone)
@@ -715,7 +732,7 @@ public sealed class WorldRenderer : IDisposable
                 _shotCurrent[s.Id] = (s.X, s.Y, look);
                 if (_shotStart.TryAdd(s.Id, (s.X, s.Y)) && look is { Muzzle: true } && _bank.Get("explosion_small") is { } flash)
                 {
-                    _bursts.Add((flash, s.X, s.Y - ((24 - ShotLift) * UnitsPerPixel), _timeMs)); // the muzzle flash, 24 px up
+                    _bursts.Add((flash, s.X, s.Y - ((24 - ShotLift) * UnitsPerPixel), _timeMs, 0)); // the muzzle flash, 24 px up
                 }
             }
         }
@@ -740,6 +757,19 @@ public sealed class WorldRenderer : IDisposable
             int px = x / UnitsPerPixel, py = y / UnitsPerPixel;
             if (!cull.HasPoint(new Vector2I(px, py)))
             {
+                continue;
+            }
+
+            if (look.Trail)
+            {
+                // A freeze or flame ball shows only its trail: a puff every 45 ms where it is, playing once (PRES-019).
+                long last = _trailLast.TryGetValue(s.Id, out long t) ? t : _timeMs - ShotLook.TrailEveryMs;
+                if (_timeMs - last >= ShotLook.TrailEveryMs && _bursts.Count < 512)
+                {
+                    _trailLast[s.Id] = _timeMs;
+                    _bursts.Add((sheet, x, y, _timeMs, (int)(_timeMs / ShotLook.TrailEveryMs % Math.Max(1, sheet.Sheet.Directions))));
+                }
+
                 continue;
             }
 
@@ -773,7 +803,7 @@ public sealed class WorldRenderer : IDisposable
         // Explosions where explosive shots landed.
         for (int i = _bursts.Count - 1; i >= 0; i--)
         {
-            (SheetRef burst, int bx, int by, long startMs) = _bursts[i];
+            (SheetRef burst, int bx, int by, long startMs, int direction) = _bursts[i];
             long age = _timeMs - startMs;
             // A hole stays on the ground for 10 s on its last frame (0x43392a); the rest play once.
             bool hole = burst.Name == EffectImages.Hole;
@@ -785,8 +815,58 @@ public sealed class WorldRenderer : IDisposable
 
             int f = age >= burst.Animation.CycleMs ? burst.Sheet.FramesPerDirection - 1 : burst.Animation.FrameAt(age);
             bool ground = hole || burst.Name == EffectImages.Splash;
-            Add(ground ? _ground : _glow, burst, new Vector2I(bx / UnitsPerPixel, (by / UnitsPerPixel) - (ground ? 0 : ShotLift)) - burst.Anchor, 0, f, -1, top | 2, shadowOnly: false);
+            Add(ground ? _ground : _glow, burst, new Vector2I(bx / UnitsPerPixel, (by / UnitsPerPixel) - (ground ? 0 : ShotLift)) - burst.Anchor, direction, f, -1, top | 2, shadowOnly: false);
         }
+
+        DrawBolts();
+    }
+
+    // The lightnings (PRES-019): three jagged lines each, from the caster's middle to the target's, drawn again every 50 ms
+    // in a new shape, a wide blue line under a thin white one, for 700 ms.
+    private void DrawBolts()
+    {
+        for (int i = _bolts.Count - 1; i >= 0; i--)
+        {
+            (int fx, int fy, int tx, int ty, long start) = _bolts[i];
+            long age = _timeMs - start;
+            if (age < 0 || age >= SpellPictures.LightningMs)
+            {
+                _bolts.RemoveAt(i);
+                continue;
+            }
+
+            var from = new Vector2(fx / (float)UnitsPerPixel, (fy / (float)UnitsPerPixel) - ShotLift);
+            var to = new Vector2(tx / (float)UnitsPerPixel, (ty / (float)UnitsPerPixel) - ShotLift);
+            for (int k = 0; k < 3; k++)
+            {
+                Vector2[] line = BoltLine(from, to, (uint)((start * 31) + (k * 977) + (age / 50 * 7919)), k == 0 ? 9f : 5f);
+                RS.CanvasItemAddPolyline(_marksOver, line, [new Color(0.2f, 0.35f, 1f, 0.7f)], 3f);
+                RS.CanvasItemAddPolyline(_marksOver, line, [Colors.White], 1f);
+            }
+        }
+    }
+
+    // A bolt's points: steps of 4 pixels along the way, each pushed aside by up to `away` pixels, wandering from the last.
+    private static Vector2[] BoltLine(Vector2 from, Vector2 to, uint seed, float away)
+    {
+        Vector2 way = to - from;
+        float length = way.Length();
+        int steps = Math.Clamp((int)(length / 4f), 2, 256);
+        Vector2 side = length > 0 ? new Vector2(-way.Y, way.X) / length : Vector2.Zero;
+        var points = new Vector2[steps + 1];
+        float offset = 0;
+        uint r = seed | 1;
+        for (int n = 0; n <= steps; n++)
+        {
+            r ^= r << 13;
+            r ^= r >> 17;
+            r ^= r << 5;
+            float shift = ((r % 1000) / 1000f * 2f) - 1f;
+            offset = n == 0 || n == steps ? 0 : Math.Clamp(offset + (shift * 3f), -away, away);
+            points[n] = from + (way * (n / (float)steps)) + (side * offset);
+        }
+
+        return points;
     }
 
     // How a shot looks: by its kind and its shooter's original class (PRES-002).

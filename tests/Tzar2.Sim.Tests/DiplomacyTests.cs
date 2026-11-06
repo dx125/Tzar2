@@ -45,7 +45,8 @@ public class DiplomacyTests
 
     [Fact]
     [Trait("Rule", "DIP-002")]
-    public void Stances_are_asymmetric_an_ally_does_not_strike_back_and_allies_cannot_be_attacked_on_order()
+    [Trait("Rule", "WAR-020")]
+    public void Stances_are_asymmetric_an_ally_does_not_strike_back_but_the_attack_order_strikes_it()
     {
         using var d = new SimDriver(TestMap(48, 16, Unit("euro.footman", 0, 20, 8), Unit("euro.footman", 1, 21, 8)), ruleset: Classic);
         EntityId mine = OfType(d.World, "euro.footman", 0).Single();
@@ -58,9 +59,18 @@ public class DiplomacyTests
             d.Step();
         }
 
-        Assert.Contains(CommandRejection.NotAllied, d.Rejections());
+        Assert.Empty(d.Rejections()); // the Attack order strikes an ally (WAR-020; only the right click asks the relations)
         Assert.True(Damage(d, mine) > 0); // player 1 still treats player 0 as an enemy
-        Assert.Equal(0, Damage(d, theirs)); // and player 0's footman does not answer (manual ch. 5 §8)
+        Assert.True(Damage(d, theirs) > 0); // and player 0's footman strikes on its order
+
+        // Without the order, an ally's blows are not answered (manual ch. 5 section 8).
+        using var e = new SimDriver(TestMap(48, 16, Unit("euro.footman", 0, 20, 8), Unit("euro.footman", 1, 21, 8)), ruleset: Classic);
+        EntityId mine2 = OfType(e.World, "euro.footman", 0).Single();
+        EntityId theirs2 = OfType(e.World, "euro.footman", 1).Single();
+        Stance(e, 0, 1, Kingdoms.Stance.Ally);
+        e.RunUntil(() => false, 100);
+        Assert.True(Damage(e, mine2) > 0);
+        Assert.Equal(0, Damage(e, theirs2));
     }
 
     [Fact]

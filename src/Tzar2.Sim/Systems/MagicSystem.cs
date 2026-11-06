@@ -24,6 +24,9 @@ public sealed class MagicSystem : ISimSystem
     /// <summary>Least ticks between two approach move requests of a caster.</summary>
     public const int MoveIntervalTicks = 10;
 
+    /// <summary>How long a caster short of mana waits before it looks again (MAG-030; ReTzar 0x4e1c30: 2000 ms).</summary>
+    public const int ManaWaitMs = 2000;
+
     private readonly List<Death> _deaths = [];
     private readonly List<EntityId> _done = [];
     private readonly List<EntityId> _casting = [];
@@ -246,6 +249,22 @@ public sealed class MagicSystem : ISimSystem
             }
 
             Interaction.Halt(world, caster);
+            // MAG-030 (ReTzar's reading of the original, 0x4e1c30, 0x4dff44): short of mana the caster stands with the
+            // order kept, its most mana raised to the cost (the pump picture), and looks again every ManaWaitMs; it casts
+            // once its mana is there (a stone golem at 600 mana).
+            if (c.CastLeftMs > 0)
+            {
+                c.CastLeftMs -= tickMs;
+                return;
+            }
+
+            if (NeedsMana(world, c) && ManaOf(world, caster) < ManaCost(world, s, caster))
+            {
+                RaiseMaxToCost(world, caster, c.Spell);
+                c.CastLeftMs = ManaWaitMs;
+                return;
+            }
+
             c.Phase = CastPhase.Casting;
             c.CastLeftMs = s.CastMs;
         }
@@ -253,6 +272,7 @@ public sealed class MagicSystem : ISimSystem
         if (distance > range + MapState.UnitsPerTile)
         {
             c.Phase = CastPhase.Approach; // the target walked away during the cast
+            c.CastLeftMs = 0;
             return;
         }
 
@@ -263,17 +283,36 @@ public sealed class MagicSystem : ISimSystem
         }
 
         // The cast takes effect: pay (mana, a book's charge, a summon's resources), then apply.
-        bool needsMana = c.Book == 0 || world.TypeOf(book).Traits.Item!.NeedsMana;
+        bool needsMana = NeedsMana(world, c);
         int mana = needsMana ? ManaCost(world, s, caster) : 0;
-        if (ManaOf(world, caster) < mana || (s.Effect == SpellEffect.Summon && !CanSummon(world, owner, s)))
+        if (ManaOf(world, caster) < mana)
         {
-            world.StopCasting(caster);
+            c.Phase = CastPhase.Approach; // MAG-030: the mana went meanwhile; it waits again, the order kept
+            c.CastLeftMs = ManaWaitMs;
             return;
+        }
+
+        // MAG-031 (ReTzar's reading of the original, 0x472409): a summoning spends its mana in multiples of the creature's
+        // cost and calls one creature per multiple (a mage's 100 mana: four bats), as many as the kingdom can keep.
+        int times = 1;
+        if (s.Effect == SpellEffect.Summon)
+        {
+            times = mana > 0 ? Math.Max(1, ManaOf(world, caster) / mana) : 1;
+            while (times > 1 && !CanSummon(world, owner, s, times))
+            {
+                times--;
+            }
+
+            if (!CanSummon(world, owner, s, times))
+            {
+                world.StopCasting(caster);
+                return;
+            }
         }
 
         if (mana > 0)
         {
-            world.Manas.Get(caster).MilliMana = (int)Math.Max(0, world.Manas.Get(caster).MilliMana - ((long)mana * 1000));
+            world.Manas.Get(caster).MilliMana = (int)Math.Max(0, world.Manas.Get(caster).MilliMana - ((long)mana * times * 1000));
         }
 
         if (c.Book != 0)
@@ -289,7 +328,7 @@ public sealed class MagicSystem : ISimSystem
 
         if (s.Effect == SpellEffect.Summon)
         {
-            PaySummon(world, owner, s);
+            PaySummon(world, owner, s, times);
         }
 
         int ready = tick + ((s.CooldownMs + tickMs - 1) / tickMs);
@@ -307,8 +346,9 @@ public sealed class MagicSystem : ISimSystem
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.SpellCast, owner, caster, s.Target == SpellTarget.Unit ? target.Index : -1, (tx / 64) | ((ty / 64) << 16), s.Id));
-        if (s.Projectile >= 0 && s.Target == SpellTarget.Unit && world.Entities.RemainingCapacity >= 1)
+        if (s.Projectile >= 0 && s.Target is SpellTarget.Unit or SpellTarget.Ground && world.Entities.RemainingCapacity >= 1)
         {
+            // A spell's ball flies to its target, or to the point (the freeze: MAG-032, ReTzar 0x432590), and acts there.
             EntityId p = world.Entities.Create();
             world.Projectiles.Set(p, new Projectile
             {
@@ -316,7 +356,7 @@ public sealed class MagicSystem : ISimSystem
                 Y = at.Y,
                 TargetX = tx,
                 TargetY = ty,
-                Target = target.Value,
+                Target = s.Target == SpellTarget.Unit ? target.Value : 0,
                 Attacker = caster.Value,
                 AttackerType = world.Identities.Get(caster).TypeId,
                 Spell = s.Id,
@@ -332,7 +372,20 @@ public sealed class MagicSystem : ISimSystem
         }
         else
         {
-            ApplyEffect(world, s.Id, caster, owner, effectTarget, tx, ty, _deaths);
+            ApplyEffect(world, s.Id, caster, owner, effectTarget, tx, ty, _deaths, times);
+        }
+
+        // MAG-033 (ReTzar's reading of the original, 0x4e00a0): the heal goes on, a cast every castMs, while its unit is
+        // still wounded and the caster's mana lasts (waiting for it when short, MAG-030).
+        if (s.Effect == SpellEffect.Heal && !usedBook && world.Entities.IsAlive(caster) && world.Entities.IsAlive(target)
+            && world.Healths.IndexOf(target) is >= 0 and var wounded && world.Healths.At(wounded).Current < world.Healths.At(wounded).Max
+            && Affects(world, s, owner, target))
+        {
+            ref Caster again = ref world.Casters.Get(caster);
+            again.Spell = s.Id;
+            again.Target = target.Value;
+            again.Phase = CastPhase.Casting;
+            again.CastLeftMs = s.CastMs;
         }
 
         if (usedBook && world.Items.IndexOf(bookEntity) is >= 0 and var used && world.TypeOf(bookEntity).Traits.Item is { } usedType && world.Items.At(used).LimitedCharges(usedType) && world.Items.At(used).Charges <= 0)
@@ -340,6 +393,10 @@ public sealed class MagicSystem : ISimSystem
             world.Destroy(bookEntity); // a spent book is gone
         }
     }
+
+    // Whether the cast in hand costs mana: always without a book, a book only when its kind does.
+    private static bool NeedsMana(World world, in Caster c)
+        => c.Book == 0 || (world.Entities.IsAlive(EntityId.FromValue(c.Book)) && world.TypeOf(EntityId.FromValue(c.Book)).Traits.Item is { NeedsMana: true });
 
     private static void UncloakCaster(World world, EntityId caster)
     {
@@ -353,7 +410,7 @@ public sealed class MagicSystem : ISimSystem
     /// Applies the effect of <paramref name="spell"/> (direct casts, spell projectiles, soul items): damage, healing,
     /// lasting effects, summons, raising the dead, revealers, experience, area spells, kills.
     /// </summary>
-    internal static void ApplyEffect(World world, ushort spell, EntityId caster, byte owner, EntityId target, int x, int y, List<Death> deaths)
+    internal static void ApplyEffect(World world, ushort spell, EntityId caster, byte owner, EntityId target, int x, int y, List<Death> deaths, int times = 1)
     {
         SpellDefinition s = world.Ruleset.Spells[spell];
         int tick = world.Tick.Value;
@@ -372,7 +429,7 @@ public sealed class MagicSystem : ISimSystem
                 StatusAround(world, s, caster, owner, x, y, until, deaths);
                 return;
             case SpellEffect.Summon:
-                Summon(world, caster, owner, s, x, y);
+                Summon(world, caster, owner, s, x, y, times);
                 return;
             case SpellEffect.RaiseDead:
                 RaiseDead(world, caster, owner, s, x, y);
@@ -625,7 +682,7 @@ public sealed class MagicSystem : ISimSystem
         {
             EntityId e = ids[i];
             Identity identity = world.Identities.Get(e);
-            if (e == caster || !world.Entities.IsAlive(e) || world.Ruleset.EntityTypes[identity.TypeId].Traits.Category != EntityCategory.Unit
+            if ((e == caster && s.Effect != SpellEffect.Freeze) || !world.Entities.IsAlive(e) || world.Ruleset.EntityTypes[identity.TypeId].Traits.Category != EntityCategory.Unit
                 || !s.AffectsType(identity.TypeId) || world.IsHeld(e) || world.Healths.IndexOf(e) is not (>= 0 and var h) || world.Healths.At(h).Current <= 0)
             {
                 continue;
@@ -736,23 +793,24 @@ public sealed class MagicSystem : ISimSystem
         return ref world.Statuses.At(s);
     }
 
-    private static bool CanSummon(World world, byte owner, SpellDefinition s)
+    private static bool CanSummon(World world, byte owner, SpellDefinition s, int times)
     {
-        if (!world.HasPlayer(owner) || world.Entities.RemainingCapacity < s.Count)
+        long count = (long)s.Count * times;
+        if (!world.HasPlayer(owner) || world.Entities.RemainingCapacity < count)
         {
             return false;
         }
 
         EntityTypeDefinition type = world.Ruleset.EntityTypes[s.Summon];
         ref PlayerState player = ref world.Players[owner];
-        if (player.Population + ((long)type.Traits.PopulationCost * s.Count) > player.PopulationCap)
+        if (player.Population + ((long)type.Traits.PopulationCost * count) > player.PopulationCap)
         {
             return false;
         }
 
         for (int r = 0; r < type.Traits.Cost.Length; r++)
         {
-            if (player.Resources[r] < (long)type.Traits.Cost[r] * s.Count)
+            if (player.Resources[r] < (long)type.Traits.Cost[r] * count)
             {
                 return false;
             }
@@ -761,22 +819,23 @@ public sealed class MagicSystem : ISimSystem
         return true;
     }
 
-    private static void PaySummon(World world, byte owner, SpellDefinition s)
+    private static void PaySummon(World world, byte owner, SpellDefinition s, int times)
     {
         EntityTypeDefinition type = world.Ruleset.EntityTypes[s.Summon];
         ref PlayerState player = ref world.Players[owner];
+        int count = s.Count * times;
         for (int r = 0; r < type.Traits.Cost.Length; r++)
         {
-            player.Resources[r] -= type.Traits.Cost[r] * s.Count;
+            player.Resources[r] -= type.Traits.Cost[r] * count;
         }
 
-        player.Population += type.Traits.PopulationCost * s.Count;
+        player.Population += type.Traits.PopulationCost * count;
     }
 
-    private static void Summon(World world, EntityId caster, byte owner, SpellDefinition s, int x, int y)
+    private static void Summon(World world, EntityId caster, byte owner, SpellDefinition s, int x, int y, int times)
     {
         EntityTypeDefinition type = world.Ruleset.EntityTypes[s.Summon];
-        for (int n = 0; n < s.Count && world.Entities.RemainingCapacity >= 1; n++)
+        for (int n = 0; n < s.Count * times && world.Entities.RemainingCapacity >= 1; n++)
         {
             (int px, int py) = FreeSpot(world, type.Locomotor, x, y);
             EntityId unit = world.Spawn(type.Id, owner, px, py);
