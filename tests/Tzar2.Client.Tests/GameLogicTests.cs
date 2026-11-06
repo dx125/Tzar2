@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tzar2.Client.Logic;
+using Tzar2.Game.Input;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Rules;
 using Tzar2.Content.Terrain;
@@ -244,6 +245,59 @@ public sealed class TerrainAndSpriteRuleTests
         Assert.Equal("gs3_build", SpriteRules.GateImage(stone, 3, site: true));
         Assert.Null(SpriteRules.GateImage(rules.EntityTypes[rules.EntityTypeId("euro.house")], 0, site: false));
         Assert.Equal((0, 6), (SpriteRules.GateFrame(open: false), SpriteRules.GateFrame(open: true)));
+    }
+
+    [Fact]
+    [Trait("Rule", "CTRL-024")]
+    [Trait("Rule", "BLD-019")]
+    public void Alt_and_ctrl_held_while_placing_turn_a_gate_and_alt_a_bridge()
+    {
+        // The original's help: "by holding down the Alt or Ctrl key" (a gate), "the Alt key" (a bridge).
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset("classic");
+        EntityTypeDefinition gate = rules.EntityTypes[rules.EntityTypeId("comm.gate_wood")];
+        EntityTypeDefinition bridge = rules.EntityTypes.First(t => t.Traits.IsBridge && t.CanTurn);
+        EntityTypeDefinition house = rules.EntityTypes[rules.EntityTypeId("euro.house")];
+        Assert.Equal([0, 1, 2, 3], new[] { (false, false), (false, true), (true, false), (true, true) }.Select(k => Placement.FacingOf(gate, k.Item1, k.Item2)));
+        Assert.Equal([0, 0, 2, 2], new[] { (false, false), (false, true), (true, false), (true, true) }.Select(k => Placement.FacingOf(bridge, k.Item1, k.Item2)));
+        Assert.Equal(0, Placement.FacingOf(house, alt: true, ctrl: true));
+
+        // The ghost shows the tiles before the door: below an unturned gate, above one facing the other way, beside a turned
+        // one, on the other side when it faces the other way.
+        var below = Placement.ApproachTiles(gate, turned: false, mirrored: false);
+        var above = Placement.ApproachTiles(gate, turned: false, mirrored: true);
+        var left = Placement.ApproachTiles(gate, turned: true, mirrored: false);
+        var right = Placement.ApproachTiles(gate, turned: true, mirrored: true);
+        Assert.NotEmpty(below);
+        Assert.All(below, t => Assert.True(t.Dy > 0));
+        Assert.All(above, t => Assert.True(t.Dy < 0));
+        Assert.All(left, t => Assert.True(t.Dx < 0));
+        Assert.All(right, t => Assert.True(t.Dx > 0));
+        Assert.Empty(Placement.ApproachTiles(house, turned: false, mirrored: false));
+    }
+
+    [Fact]
+    [Trait("Rule", "PRES-018")]
+    public void A_gate_flies_two_flags_of_its_kingdom_from_the_column_of_its_facing_and_material()
+    {
+        // ReTzar's reading of Tzar.exe 0x589770: facings 1, 0, 3, 2 take columns 0, 2, 4, 6 of gates c, stone one more; the
+        // left flag on the drawbridge's row, the right one eight rows down.
+        Assert.Equal([(2, 0, 61, 34), (2, 8, 211, 35)], SpriteRules.GateFlags(facing: 0, stone: false, bridgeFrame: 0));
+        Assert.Equal([(1, 6, 91, 41), (1, 14, 175, 41)], SpriteRules.GateFlags(facing: 1, stone: true, bridgeFrame: 6));
+        Assert.Equal([(4, 1, 68, 23), (4, 9, 66, 150)], SpriteRules.GateFlags(facing: 3, stone: false, bridgeFrame: 1));
+        Assert.Equal("gates c", SpriteRules.GateFlagsImage);
+    }
+
+    [Fact]
+    [Trait("Rule", "HUD-007")]
+    public void The_selection_is_six_pixel_corner_brackets_one_pixel_thick_round_the_selection_box()
+    {
+        var bars = SelectionMarks.Brackets(10, 20, 30, 40).ToList();
+        Assert.Equal(8, bars.Count);
+        Assert.Contains((10f, 20f, 6f, 1f), bars); // top left, across
+        Assert.Contains((10f, 20f, 1f, 6f), bars); // top left, down
+        Assert.Contains((34f, 59f, 6f, 1f), bars); // bottom right, across
+        Assert.Contains((39f, 54f, 1f, 6f), bars); // bottom right, up
+        Assert.All(SelectionMarks.Brackets(0, 0, 4, 4), b => Assert.True(b.Width <= 4 && b.Height <= 4)); // a small box: shorter arms
     }
 
     [Fact]

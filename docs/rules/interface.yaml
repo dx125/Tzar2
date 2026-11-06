@@ -29,9 +29,11 @@ rules:
     source: [owner 2026-10-20 (first play-test)]
     status: implemented
   HUD-007:
-    rule: A selected unit is marked by the corners of its selection box, like a structure.
-    source: [data IMAGES.INI selection, owner 2026-10-20 (before the second play-test)]
-    status: implemented
+    rule: A selected unit or building is marked by corner brackets round its selection box, six pixels long and one pixel thick, in the terrain's selection colour - white, orange on snow.
+    source: [data IMAGES.INI selection, 'data TERRAIN.INI [colors] selection', 'community ReTzar src/frontend/mission.rs (bracket_pieces: the original selection mark)', owner 2026-10-20 (before the second play-test), owner 2026-11-06 (tenth play-test)]
+    status: tested
+    adr: [0277]
+    note: Until the tenth play-test Tzar2 drew ten-pixel corners coloured by the kingdom's stance (green, red, yellow) and round a building's footprint, not its selection box.
   HUD-008:
     rule: Researched technologies and owned upgrades leave the card; orders that a technology unlocks appear once it is researched.
     source: ['data TECHTREE [orders]', owner 2026-10-20 (first play-test)]

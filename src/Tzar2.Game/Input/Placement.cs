@@ -121,7 +121,7 @@ public static class Placement
 
         if (gate)
         {
-            Approach(terrain, width, height, type, tileX, tileY, turned, mirrored, w, h, blocked);
+            Approach(terrain, width, height, type, tileX, tileY, turned, mirrored, blocked);
         }
 
         return blocked;
@@ -140,6 +140,22 @@ public static class Placement
     {
         ArgumentNullException.ThrowIfNull(type);
         return type.FootprintSize(Turned(type, rotated));
+    }
+
+    /// <summary>
+    /// The facing of a gate or bridge being placed while Alt and Ctrl are held (CTRL-024, BLD-019; the original's help: "by
+    /// holding down the Alt or Ctrl key", a bridge by Alt): Alt turns it by 90°, as a bridge; Ctrl, on a gate, has it face
+    /// the other way. 0 to 3, the bits of the Build command's argument (2 turned, 1 the other way).
+    /// </summary>
+    public static int FacingOf(EntityTypeDefinition type, bool alt, bool ctrl)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        if (!CanTurn(type))
+        {
+            return 0;
+        }
+
+        return (alt ? 2 : 0) + (ctrl && type.Traits.Gate is not null ? 1 : 0);
     }
 
     /// <summary>Whether a placement of <paramref name="type"/> can be turned (gates and bridges, CTRL-024, BLD-019).</summary>
@@ -164,12 +180,23 @@ public static class Placement
 
     private static bool Turned(EntityTypeDefinition type, bool rotated) => rotated && type.CanTurn;
 
-    // The tiles before a gate's door where its drawbridge comes down, as the sim's site test (BLD-018): blocked when off
-    // the map or not clear.
-    private static void Approach(ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool turned, bool mirrored, int w, int h, List<(int Dx, int Dy)> blocked)
+    /// <summary>
+    /// The tiles before a gate's door where its drawbridge comes down (BLD-018), as offsets from its footprint's top-left
+    /// tile; none for anything else. The placement ghost shows them, so which way the gate opens can be seen (CTRL-024).
+    /// </summary>
+    public static List<(int Dx, int Dy)> ApproachTiles(EntityTypeDefinition type, bool turned, bool mirrored)
     {
-        ReadOnlySpan<byte> door = type.Traits.Gate!.PassageOf(turned);
-        int reach = type.Traits.Gate.ApproachOf((turned ? 2 : 0) + (mirrored ? 1 : 0));
+        ArgumentNullException.ThrowIfNull(type);
+        var tiles = new List<(int Dx, int Dy)>();
+        if (type.Traits.Gate is not { } gate)
+        {
+            return tiles;
+        }
+
+        turned = Turned(type, turned);
+        (int w, int h) = Size(type, turned);
+        ReadOnlySpan<byte> door = gate.PassageOf(turned);
+        int reach = gate.ApproachOf((turned ? 2 : 0) + (mirrored ? 1 : 0));
         (int sx, int sy) = w >= h ? (0, mirrored ? -1 : 1) : (mirrored ? 1 : -1, 0);
         for (int dy = 0; dy < h && door.Length == w * h; dy++)
         {
@@ -177,13 +204,23 @@ public static class Placement
             {
                 for (int n = 1; door[(dy * w) + dx] != 0 && n <= reach; n++)
                 {
-                    int ax = dx + (sx * n), ay = dy + (sy * n);
-                    int x = tileX + ax, y = tileY + ay;
-                    if (x < 0 || y < 0 || x >= width || y >= height || (terrain[(y * width) + x] & Clear) == 0)
-                    {
-                        blocked.Add((ax, ay));
-                    }
+                    tiles.Add((dx + (sx * n), dy + (sy * n)));
                 }
+            }
+        }
+
+        return tiles;
+    }
+
+    // The tiles before a gate's door, as the sim's site test (BLD-018): blocked when off the map or not clear.
+    private static void Approach(ReadOnlySpan<byte> terrain, int width, int height, EntityTypeDefinition type, int tileX, int tileY, bool turned, bool mirrored, List<(int Dx, int Dy)> blocked)
+    {
+        foreach ((int ax, int ay) in ApproachTiles(type, turned, mirrored))
+        {
+            int x = tileX + ax, y = tileY + ay;
+            if (x < 0 || y < 0 || x >= width || y >= height || (terrain[(y * width) + x] & Clear) == 0)
+            {
+                blocked.Add((ax, ay));
             }
         }
     }

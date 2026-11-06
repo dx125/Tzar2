@@ -83,4 +83,10 @@ rules:
     rule: A finished gate is drawn as its two towers with its drawbridge between them, raised when it is closed and lowered when it is open.
     source: [data IMAGES.INI gw0_anim ... gs3_anim (nine rows), 'community ReTzar src/world.rs (the gate''s picture: row 8 the towers, rows 0 to 6 the drawbridge, a gate drawn down two columns back to front)', owner 2026-11-04 (ninth play-test)]
     status: tested
-    note: 'The ninth play-test - a gate looked unfinished, as if its sides were missing. Tzar2 drew only the drawbridge''s row; row 8 of the same picture holds the two towers, drawn first. The flags of gates c on the towers are not drawn, as no building''s flag is yet.'
+    note: 'The ninth play-test - a gate looked unfinished, as if its sides were missing. Tzar2 drew only the drawbridge''s row; row 8 of the same picture holds the two towers, drawn first. The flags of gates c are drawn since the tenth play-test (PRES-018).'
+  PRES-018:
+    rule: A finished gate flies two flags in its kingdom's colours on its towers.
+    source: ['data IMAGES.INI gates c (8 columns, 16 rows)', 'data OBJECTS GATE_WOOD.INI, GATE_STONE.INI image_c', 'community ReTzar src/world.rs (gate: the flag column by facing 1, 0, 3, 2 to 0, 2, 4, 6, one more for stone; GATE_FLAGS, Tzar.exe 0x589770)', owner 2026-11-06 (tenth play-test)]
+    status: tested
+    adr: [0277]
+    note: The left flag is the column's row of the drawbridge's frame, the right one eight rows down, each at its offset from the top-left of the gate's picture. Until the tenth play-test the flags were not drawn, and a blue kingdom's gate showed a red flag.

@@ -97,6 +97,56 @@ public static class SpriteRules
     /// <summary>The drawbridge's frame: raised (closed) on row 0, lowered (open) on row 6 (ReTzar's reading, 0x456080).</summary>
     public static int GateFrame(bool open) => open ? 6 : 0;
 
+    /// <summary>The picture of a gate's two flags in its kingdom's colours (IMAGES.INI <c>[gates c]</c>, 8 columns of 16 rows).</summary>
+    public const string GateFlagsImage = "gates c";
+
+    // Where a gate's two flags go from the top-left of its picture, by column of `gates c` and row (Tzar.exe's table at
+    // 0x589770, as ReTzar reads it): rows 0-6 the left flag over the drawbridge's frames, 8-14 the right one; 7 and 15 the
+    // ruin's. A column holds one material and facing.
+    private static readonly (int X, int Y)[][] GateFlagOffsets =
+    [
+        Column([(58, 67)], (62, 51), (212, 67), (212, 67)),
+        Column([(91, 41)], (0, 0), (175, 41), (136, 126)),
+        Column([(61, 34)], (65, 27), (211, 35), (210, 38)),
+        Column([(90, 8)], (130, 107), (178, 8), (0, 0)),
+        Column([(68, 24), (68, 23), (68, 23), (68, 23), (68, 23), (68, 23), (68, 23)], (76, 19), (66, 150), (64, 143)),
+        Column([(70, 61)], (68, 121), (70, 150), (66, 151)),
+        Column([(170, 22)], (180, 29), (170, 147), (160, 135)),
+        Column([(168, 60)], (172, 118), (168, 151), (417, 150)),
+    ];
+
+    private static (int X, int Y)[] Column((int X, int Y)[] left, (int X, int Y) ruin, (int X, int Y) right, (int X, int Y) last)
+    {
+        var column = new (int X, int Y)[16];
+        for (int i = 0; i < 7; i++)
+        {
+            column[i] = left[Math.Min(i, left.Length - 1)];
+            column[8 + i] = right;
+        }
+
+        column[7] = ruin;
+        column[15] = last;
+        return column;
+    }
+
+    /// <summary>
+    /// The two flags a finished gate flies (PRES-018; ReTzar's reading of the original): the column of <c>gates c</c> for its
+    /// facing (1, 0, 3, 2 → 0, 2, 4, 6, one more for stone), the left flag on the drawbridge's row, the right one eight rows
+    /// down, each at its offset from the top-left of the gate's picture.
+    /// </summary>
+    public static IEnumerable<(int Column, int Row, int Dx, int Dy)> GateFlags(int facing, bool stone, int bridgeFrame)
+    {
+        int column = new[] { 2, 0, 6, 4 }[facing & 3] + (stone ? 1 : 0);
+        foreach (int row in new[] { bridgeFrame, bridgeFrame + 8 })
+        {
+            if ((uint)row < 16u)
+            {
+                (int dx, int dy) = GateFlagOffsets[column][row];
+                yield return (column, row, dx, dy);
+            }
+        }
+    }
+
     /// <summary>The frame of a gate's picture that holds its two towers (row 8 of <c>g{w|s}{0-3}_anim</c>).</summary>
     public const int GateTowersFrame = 8;
 

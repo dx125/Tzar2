@@ -511,18 +511,21 @@ owner's order of 2026-10-26.
     log read locally only).** In three batches: B (items 2, 4, 7, 8), then A (1, 3, 6), then C (5).
     1. The gate's green shadow has the wrong picture, which way it will open is hard to tell when Alt turns it, the
        turning keys may differ from the original's, the green shadows do not look as the original's (compare ReTzar),
-       and a built gate of the blue kingdom flies a red flag: open (batch A).
+       and a built gate of the blue kingdom flies a red flag: **fixed** (CTRL-023, CTRL-024, BLD-019, PRES-018; ADR 0277;
+       log below).
     2. The Merchants' Guild and the market cannot be built ("not available to this kingdom"); check every building's
        rules and requirements against ReTzar: **fixed** (BLD-029; ADR 0276; log below).
     3. Gold and the other resources on the ground show pieces of selection frames instead of their pictures, and the
-       selection frames of units and buildings do not look as the original's: open (batch A).
+       selection frames of units and buildings do not look as the original's: **fixed** (ECO-026, HUD-007; ADR 0277; log
+       below).
     4. Peasants still dig off the middle of their fields now and then: **fixed** (ECO-008; ADR 0276; log below).
     5. Mages: no attack on allied units or buildings by a direct order; lightning hit a bird without its animation; the
        freeze's animation and effect are wrong; bats come one at a time instead of taking all the mana; no gathering of
        mana for the golem, which is not summoned by itself at 600 mana, and the mage's mana cap goes from 100 to 600.
        Review every skill of every mage and priest of every civilization (animations, effects, cursors) and attacking
        allies: open (batch C).
-    6. A move order into unexplored land shows no confirmation (the red cross), as the original does: open (batch A).
+    6. A move order into unexplored land shows no confirmation (the red cross), as the original does: **fixed** (CTRL-016;
+       ADR 0277; log below).
     7. Gun towers hurt ships too much, like catapults, and ships' cannons hurt buildings too much: **fixed** (WAR-001,
        WAR-002, WAR-019; ADR 0276; log below).
     8. Fields do not wither without peasants: **fixed** (ECO-012; ADR 0276; log below).
@@ -532,6 +535,17 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-06 — The tenth play-test, batch A: the placement ghost, the selection, the gates' flags and the move cross as
+  the original's (CTRL-016, CTRL-023, CTRL-024, BLD-019, HUD-007, PRES-018, ECO-026; ADR 0277; item 23, items 1, 3, 6).**
+  * **The ghost.** As ReTzar's preview: the building's picture tinted green (red where it cannot stand) and a square on
+    each tile. A gate shows its towers with the drawbridge lowered, and its tiles before the door.
+  * **Turning.** The help says "by holding down the Alt or Ctrl key", so the keys turn the gate while held: Alt by 90°
+    (as a bridge), Ctrl the other way.
+  * **Gate flags.** A gate flies the two flags of `gates c` in its kingdom's colours (Tzar.exe 0x589770's offsets).
+  * **Bags on the ground.** They drew their type's picture, the empty item slot (four corners), not their own look.
+  * **The selection.** Six-pixel brackets, one pixel thick, in the terrain's `[colors] selection` (white), round the
+    selection box. The stance colours and the building's footprint are gone.
+  * **The move cross** is drawn above the fog, so it shows on unexplored land.
 * **2026-11-06 — The tenth play-test, batch B: buildings' requirements, blows, firing periods and fields as the
   original's (BLD-029, WAR-001, WAR-002, WAR-019, ECO-008, ECO-012; ADR 0276; item 23, items 2, 4, 7, 8).**
   * **The Merchants' Guild.** ORDERS.INI builds it as `TCGuild`, and Tzar2 looked classes up case by case. Neither the
