@@ -134,17 +134,17 @@ public sealed record WorldSettings
     /// <summary>Precipitation per terrain set (unlisted sets: clear).</summary>
     public ImmutableArray<TerrainWeather> Weather { get; init; } = [];
 
-    /// <summary>Score per this many units of resources gathered (UNK-29).</summary>
-    public int ScoreGatherDivisor { get; init; } = 10;
+    /// <summary>DIP-011 (ReTzar's reading of the original, 0x504cbe): the raw score a kingdom makes for each building it destroys.</summary>
+    public int ScoreForBuilding { get; init; } = 500;
 
-    /// <summary>Score per this many resources of value of killed enemy units and destroyed buildings (UNK-29).</summary>
-    public int ScoreKillDivisor { get; init; } = 10;
+    /// <summary>DIP-011: the raw score for anything else it kills.</summary>
+    public int ScoreForKill { get; init; } = 200;
 
-    /// <summary>Score per this many resources of value of completed buildings and trained units (UNK-29).</summary>
-    public int ScoreBuildDivisor { get; init; } = 10;
-
-    /// <summary>Score per researched technology (UNK-29).</summary>
-    public int ScorePerTechnology { get; init; } = 100;
+    /// <summary>
+    /// DIP-011 (0x443430 type 4, 0x4b0076): the resources (keys) whose mines score what each load gives as it is taken - gold
+    /// and stone.
+    /// </summary>
+    public ImmutableArray<string> ScoreMinedResources { get; init; } = [];
 
     /// <summary>Ticks between two victory evaluations.</summary>
     public int VictoryIntervalTicks { get; init; } = 20;
@@ -286,12 +286,12 @@ public sealed record WorldSettings
             }
         }
 
-        foreach (int divisor in new[] { ScoreGatherDivisor, ScoreKillDivisor, ScoreBuildDivisor })
+        ArgumentOutOfRangeException.ThrowIfNegative(ScoreForBuilding);
+        ArgumentOutOfRangeException.ThrowIfNegative(ScoreForKill);
+        if (ScoreMinedResources.IsDefault)
         {
-            ArgumentOutOfRangeException.ThrowIfLessThan(divisor, 1);
+            throw new ArgumentException("world: the mined resources must not be default.", nameof(ScoreMinedResources));
         }
-
-        ArgumentOutOfRangeException.ThrowIfNegative(ScorePerTechnology);
         ArgumentOutOfRangeException.ThrowIfLessThan(VictoryIntervalTicks, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(VictoryIntervalTicks, 1_200);
         ArgumentNullException.ThrowIfNull(DeathmatchStartingResources);

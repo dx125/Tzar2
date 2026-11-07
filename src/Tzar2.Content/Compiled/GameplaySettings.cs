@@ -130,12 +130,6 @@ public sealed record GameplaySettings
     /// <summary>A full repair by one peasant takes this share of the build time (basis points; UNK-18).</summary>
     public int RepairTimeBasisPoints { get; init; } = 10_000;
 
-    /// <summary>A burnable building below this share of its hit points burns (basis points; UNK-42).</summary>
-    public int BurnThresholdBasisPoints { get; init; } = 5_000;
-
-    /// <summary>Hit points a burning building loses per minute (UNK-42).</summary>
-    public int BurnDamagePerMinute { get; init; } = 60;
-
     /// <summary>Radius in tiles in which a builder looks for the next unfinished segment of the wall it built.</summary>
     public int WallContinueRadiusTiles { get; init; } = 6;
 
@@ -213,10 +207,6 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfGreaterThan(InfluenceRadiusTiles, 128);
         ArgumentOutOfRangeException.ThrowIfLessThan(RepairTimeBasisPoints, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairTimeBasisPoints, 1_000_000);
-        ArgumentOutOfRangeException.ThrowIfNegative(BurnThresholdBasisPoints);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(BurnThresholdBasisPoints, 10_000);
-        ArgumentOutOfRangeException.ThrowIfNegative(BurnDamagePerMinute);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(BurnDamagePerMinute, 1_000_000);
         ArgumentOutOfRangeException.ThrowIfNegative(IdleWorkAfterMs);
         ArgumentOutOfRangeException.ThrowIfNegative(IdleWorkRadiusTiles);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(IdleWorkRadiusTiles, 64);

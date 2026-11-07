@@ -177,7 +177,8 @@ public sealed partial class Ruleset
             .Add(c.MarketTechnology).Add(c.MarketFirstMs).Add(c.MarketEveryMs).Add(c.MarketSize).Add(c.MarketBuyPercent)
             .AddSpan<ushort>(c.MarketBookSpells.AsSpan()).Add(c.MarketOffers.Length).AddSpan<ushort>(c.LevelCapBuildings.AsSpan()).Add(c.LevelCapPerBuilding).Add(c.HeroNames.Length)
             .AddSpan<int>(c.TargetPriority.AsSpan()).AddSpan<int>(c.SiegeTargetPriority.AsSpan()).AddSpan<ushort>(c.SiegeScanners.AsSpan()).AddSpan<ushort>(c.BowLevelClasses.AsSpan()).AddSpan<ushort>(c.TargetMages.AsSpan())
-            .AddSpan<ushort>(c.TargetTrainers.AsSpan()).AddSpan<ushort>(c.TargetSeats.AsSpan()).Add(c.HelpRadiusTiles).Add(c.GuardRadiusTiles);
+            .AddSpan<ushort>(c.TargetTrainers.AsSpan()).AddSpan<ushort>(c.TargetSeats.AsSpan()).Add(c.HelpRadiusTiles).Add(c.GuardRadiusTiles)
+            .AddSpan<ushort>(c.CounterBlowClasses.AsSpan()).Add(c.CounterBlowPercent).AddSpan<ushort>(c.FleeClasses.AsSpan()).Add(c.FleeTiles).Add(c.FleeRestMs);
         foreach (ImmutableArray<MarketVariant> kind in c.MarketOffers)
         {
             hasher.Add(kind.Length);

@@ -1170,7 +1170,7 @@ public sealed partial class World
         {
             Combat c = combats[i];
             ArmamentDefinition? arm = TypeOf(ids[i]).Traits.Armament;
-            if (arm is null || c.Mode > CombatMode.Sneak || c.HitInMs < -1 || c.HitInMs > arm.HitDelayMs
+            if (arm is null || c.Mode > CombatMode.Flee || c.HitInMs < -1 || c.HitInMs > arm.HitDelayMs
                 || c.CooldownMs < -Config.TickLengthMilliseconds || c.CooldownMs > arm.CooldownMs
                 || c.ChaseTick < -1 || c.ChaseTick > Tick.Value || c.Resume > 1 || c.Striking > 1 || c.Futile > Systems.CombatSystem.FutileChases)
             {
@@ -1374,7 +1374,7 @@ public sealed partial class World
         ids = Burnings.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
-            if (!TypeOf(ids[i]).Traits.Burnable || Burnings.Components[i].AccumMs < 0 || Burnings.Components[i].AccumMs >= 60_000)
+            if (!TypeOf(ids[i]).Traits.Burnable || Burnings.Components[i].Level is < 1 or > 3)
             {
                 throw Invalid("invalid fire state");
             }

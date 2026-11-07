@@ -749,6 +749,27 @@ public sealed record CombatSettings
     /// <summary>ORD-001 (ReTzar, 0x4e4f1f): guards stand within this many tiles of what they guard, and walk back beyond it.</summary>
     public int GuardRadiusTiles { get; init; } = 3;
 
+    /// <summary>
+    /// WAR-021 (ReTzar's reading of the original, 0x4ea0b0): the units that strike back at once when a hand-to-hand blow of
+    /// another kind leaves them standing (pikemen), ascending.
+    /// </summary>
+    public ImmutableArray<ushort> CounterBlowClasses { get; init; } = [];
+
+    /// <summary>WAR-021: the share of its attack such a unit strikes back with (at least 1).</summary>
+    public int CounterBlowPercent { get; init; } = 20;
+
+    /// <summary>
+    /// WAR-022 (ReTzar's reading of the original, 0x4ae640): the units that, hit while idle or gathering, fight back when at
+    /// least as strong as the attacker and otherwise run away (peasants), ascending.
+    /// </summary>
+    public ImmutableArray<ushort> FleeClasses { get; init; } = [];
+
+    /// <summary>WAR-022 (0x430be0): how many tiles straight away from the attacker such a unit runs.</summary>
+    public int FleeTiles { get; init; } = 5;
+
+    /// <summary>WAR-022 (0x4ae6fa): how long it rests where it ran to before it goes back to its work.</summary>
+    public int FleeRestMs { get; init; } = 3000;
+
 
     /// <summary>Hero names per civilization (<c>HEROES.INI</c>).</summary>
     public ImmutableArray<HeroNames> HeroNames { get; init; } = [];
@@ -905,7 +926,7 @@ public sealed record CombatSettings
             Check(p, 0, 1_000_000);
         }
 
-        foreach (ImmutableArray<ushort> list in (ReadOnlySpan<ImmutableArray<ushort>>)[SiegeScanners, TargetMages, TargetTrainers, TargetSeats, BowLevelClasses])
+        foreach (ImmutableArray<ushort> list in (ReadOnlySpan<ImmutableArray<ushort>>)[SiegeScanners, TargetMages, TargetTrainers, TargetSeats, BowLevelClasses, CounterBlowClasses, FleeClasses])
         {
             if (list.IsDefault)
             {
@@ -920,6 +941,9 @@ public sealed record CombatSettings
 
         Check(HelpRadiusTiles, 0, 64);
         Check(GuardRadiusTiles, 0, 64);
+        Check(CounterBlowPercent, 0, 1000);
+        Check(FleeTiles, 1, 64);
+        Check(FleeRestMs, 0, 600_000);
 
         if (HeroNames.IsDefault)
         {

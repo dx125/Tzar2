@@ -536,7 +536,7 @@ public sealed class WorldRenderer : IDisposable
             {
                 AddSheet(ground ? _ground : _objects, sheet, origin, variant, frameIndex, player, order, shadows: true);
             }
-            if (e.Burning)
+            if (e.FireLevel > 0)
             {
                 DrawFire(in e, def, left, top, foot);
             }
@@ -961,24 +961,24 @@ public sealed class WorldRenderer : IDisposable
         return false;
     }
 
-    // Flames on a burning building (GAME-03): the original's fire strips at a few spots of the footprint, more on larger
-    // buildings (⚠ the original's flame positions are not measured).
+    // Flames on a burning building (BLD-006; the original's 0x4200c0): a small fire at one level, two at the next and a big
+    // one besides at the last, each at a pixel of the footprint drawn once, 15 pixels inside a side of one tile and 31
+    // inside a longer one (the original draws it from its stream of pictures; here from the building's id).
     private void DrawFire(in FrameEntity e, EntityTypeDefinition def, int left, int top, int foot)
     {
-        int area = Math.Max(1, def.FootprintWidth * def.FootprintHeight);
-        if (_bank.Get(area >= 9 ? EffectImages.FireBig : EffectImages.FireSmall) is not { } fire)
-        {
-            return;
-        }
-
-        int flames = Math.Clamp(area / 6, 1, 4);
-        int w = def.FootprintWidth * TilePixels, h = def.FootprintHeight * TilePixels;
+        int w = (def.FootprintWidth * TilePixels) + 1, h = (def.FootprintHeight * TilePixels) + 1;
+        int mx = def.FootprintWidth <= 1 ? 15 : 31, my = def.FootprintHeight <= 1 ? 15 : 31;
         uint seed = (uint)e.Id.Index * 2654435761u;
-        for (int k = 0; k < flames; k++)
+        for (int k = 0; k < 3; k++)
         {
-            uint r = seed ^ ((uint)k * 40503u);
-            int fx = left + (int)((w / 5) + (r % (uint)Math.Max(1, w * 3 / 5)));
-            int fy = top + (int)((h / 8) + ((r >> 8) % (uint)Math.Max(1, h / 3))); // the upper part: roofs burn
+            if (e.FireLevel <= k || _bank.Get(k == 2 ? EffectImages.FireBig : EffectImages.FireSmall) is not { } fire)
+            {
+                continue;
+            }
+
+            uint r = seed ^ ((uint)(k + 1) * 40503u);
+            int fx = left + mx + (int)(r % (uint)Math.Max(1, w - (2 * mx)));
+            int fy = top + my + (int)((r >> 12) % (uint)Math.Max(1, h - (2 * my)));
             int f = fire.Animation.FrameAt(_timeMs + (r % 1000u));
             Add(_glow, fire, new Vector2I(fx, fy) - fire.Anchor, 0, f, -1, ((uint)(foot + 4096) << 6) | 3, shadowOnly: false);
         }

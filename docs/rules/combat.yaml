@@ -101,3 +101,15 @@ rules:
     status: tested
     adr: [0278]
     note: Tzar2 refused an attack on an ally or an own unit (NotAllied, InvalidArgument); the tenth play-test's mage could not attack allied troops and buildings. The prisoners of the rescue kingdom stay out of any fight (NAT-008), and ambient life, resources and the magic gateway are no targets. An ally struck this way still does not strike back by itself.
+  WAR-021:
+    rule: A pikeman left standing by a hand-to-hand blow strikes back at once with a fifth of its attack, at least 1, its bonus against the attacker counting; not at another pikeman, and not at arrows, shots or spells.
+    source: ['community ReTzar src/gameplay.rs (apply_damage, 0x4ea0b0)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07. It comes on top of any fight back, even on hold fire; with the pikeman's bonus against mounted units a knight that strikes one pays for it.
+  WAR-022:
+    rule: A peasant hit while idle or gathering fights back when it is at least as strong as the attacker - attack, defence, range in tiles over 5 and hit points over 20, twice for a tower - and otherwise runs 5 tiles straight away from it, rests 3 seconds and goes back to its work; what it had half gathered is lost.
+    source: ['community ReTzar src/gameplay.rs (react 0x4ae640, strength 0x401fa0, run_away 0x413ae0, flight_point 0x430be0, the rest 0x4ae6fa)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07; Tzar2's peasants stood and took the blows. A peasant on an order, building, repairing or capturing does neither; one on its own tile as the attacker runs a random way of the original's table.

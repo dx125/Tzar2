@@ -24,9 +24,11 @@ rules:
     source: [manual Constructing A Building]
     status: tested
   BLD-006:
-    rule: Damaged buildings catch fire and burn down unless peasants repair them.
-    source: [manual Repairing A Building]
+    rule: Damaged buildings catch fire by their health - at half their hit points and below one small fire, below 36 % two, below 16 % two and a big one - and the fire is only pictures and a sound; it never burns a building down. Repaired above half, the fire goes out.
+    source: [manual Repairing A Building, 'community ReTzar src/gameplay.rs (burn, 0x4200c0)']
     status: tested
+    adr: [0280]
+    note: The manual says burning buildings burn down unless repaired; the original's code takes no hit points for the fire - read in the GOG Tzar.exe, the fire routine 0x4200c0 only sets the fires, their timer 0x41efe9 only plays the fire sound every 500 ms, and the buildings' 2 s pulse 0x41f271 only moves the resistance - and the owner made the original the final source when the two disagree (the global audit, 2026-11-07). Tzar2 burnt them down at 60 hit points a minute below half (UNK-42).
   BLD-007:
     rule: Peasants repair buildings, siege weapons and ships.
     source: [manual Repairing A Building, manual Siege Weapons, manual Ships]

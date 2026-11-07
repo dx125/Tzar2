@@ -18,7 +18,7 @@ public sealed partial class Ruleset
             .Add(w.LoanStepAmount).Add(w.LoanGrowDelayMs).Add(w.LoanInterestBasisPoints).Add(w.ClaimReachUnits).Add(w.ClaimIntervalMs)
             .Add(w.GuardRadiusTiles).Add(w.WanderRadiusTiles).Add(w.WanderIntervalMs).Add(w.DayLengthMs).Add(w.DayStartMinute)
             .Add(w.NightStartMinute).Add(w.NightEndMinute).Add(w.WeatherPeriodMs).Add(w.WeatherChanceBasisPoints)
-            .Add(w.ScoreGatherDivisor).Add(w.ScoreKillDivisor).Add(w.ScoreBuildDivisor).Add(w.ScorePerTechnology)
+            .Add(w.ScoreForBuilding).Add(w.ScoreForKill).Add(Encoding.UTF8.GetBytes(string.Join(",", w.ScoreMinedResources)))
             .Add(w.VictoryIntervalTicks).Add(Encoding.UTF8.GetBytes(w.DeathmatchStartingResources)).Add(w.CheatSmallResources)
             .Add(w.CheatLargeResources).Add(w.TavernRefreshMs).Add(w.MercenaryOffers).Add(w.HeroOffers).Add(w.MercenaryGroupMin)
             .Add(w.MercenaryGroupMax).Add(w.MercenaryCostPercent).Add(w.HeroCostPercent).Add(w.MercenaryLevel).Add(w.FameGroupBonus)

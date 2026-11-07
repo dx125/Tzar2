@@ -38,7 +38,7 @@ rules:
     rule: F4 shows the scores.
     source: [manual Hot Keys, help HK.TXT, 'community ReTzar src/hud.rs (clock), src/gameplay.rs (scores)']
     status: tested
-    note: As ReTzar reads the original, F4 steps from nothing to the scoreboard and the clock, the clock alone, and back. The clock (h:mm:ss) sits at the view's top right; above its bottom right corner one line per kingdom, "name  own/team" (the team's is its members' mean), the best first, a defeated kingdom struck through, its colour in a square. The score itself is still Tzar2's placeholder formula (UNK-29); ReTzar shows the original's raw score divided by 100.
+    note: As ReTzar reads the original, F4 steps from nothing to the scoreboard and the clock, the clock alone, and back. The clock (h:mm:ss) sits at the view's top right; above its bottom right corner one line per kingdom, "name  own/team" (the team's is its members' mean), the best first, a defeated kingdom struck through, its colour in a square. The score is the original's (DIP-011).
     adr: [0106]
   DIP-009:
     rule: Computer kingdoms resign on their own when their AI flag allows it.
@@ -50,3 +50,9 @@ rules:
     source: ['community ReTzar src/gameplay/scripting.rs (0x442d10 the defeat test; 0x442bd0 the classes that keep a kingdom alive)', owner 2026-10-29 (eighth play-test)]
     status: tested
     note: 'The eighth play-test: no victory came when every enemy was beaten; two kingdoms had only cows left, at the edges of the map, where passing peasants had pushed them before NAT-007. The original keeps such a kingdom in the game too. Tzar2 counted caravans, fishing boats and the dummy as well. The original does not test a kingdom that has spies, hidden ones included (0x442d6c); a Tzar2 spy stays its kingdom''s unit in its disguise, so it keeps the kingdom in anyway.'
+  DIP-011:
+    rule: A kingdom scores 500 for each building it destroys and 200 for anything else it kills, its own and its allies' too, and what each load of gold or stone gives as it is taken from its mine; the score shown is (raw + 50) / 100. Under a score limit every kingdom is defeated once another one's score passes the limit; at a time limit the kingdom with the highest raw score, the first on ties, alone stays.
+    source: ['community ReTzar src/gameplay.rs (wound 0x504cbe, the mine 0x443430 type 4 and 0x4b0076, scores 0x4f2903) and src/gameplay/scripting.rs (0x442d10, 0x442e30, shown_score 0x4435c0)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced Tzar2's placeholder formula (UNK-29). The original also scores the ruinpoints of a ruin a kingdom holds, every second, and 100 for a flag of capture the flag brought within six tiles of its castle; Tzar2 has neither object. A score limit can end the game for the leader's allies too, as the original's end test reads.

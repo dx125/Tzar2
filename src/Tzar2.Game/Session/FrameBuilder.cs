@@ -86,7 +86,7 @@ internal static class FrameBuilder
                 e.MaxHealth = health.Max;
             }
 
-            e.Burning = world.Burnings.Has(id);
+            e.FireLevel = world.Burnings.IndexOf(id) is >= 0 and var fire ? (byte)world.Burnings.At(fire).Level : (byte)0;
             e.Cloaked = world.IsCloaked(id);
             e.SpyType = -1;
             e.SeemsOwner = -1;
@@ -466,7 +466,7 @@ internal static class FrameBuilder
             fp.AiAssist = (byte)(((state.Flags & PlayerFlags.AssistEconomy) != 0 ? 1 : 0) | ((state.Flags & PlayerFlags.AssistWar) != 0 ? 2 : 0));
             fp.Civilization = world.PlayerCivilization(p);
             fp.Statistics = KingdomStatistics.From(world.Kingdoms[p]);
-            fp.Score = VictorySystem.Score(world.Ruleset.World, world.Kingdoms[p]);
+            fp.Score = VictorySystem.Score(world.Kingdoms[p]);
             Sim.Kingdoms.KingdomState k = world.Kingdoms[p];
             fp.LoanLimit = k.LoanRaiseTick >= 0 && world.Tick.Value >= k.LoanRaiseTick ? (int)Math.Min((long)k.LoanLimit + world.Ruleset.World.LoanStepAmount, 100_000_000) : k.LoanLimit;
             fp.LoanDue = k.LoanDue;

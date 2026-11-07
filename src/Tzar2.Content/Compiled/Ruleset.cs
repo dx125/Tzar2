@@ -830,7 +830,7 @@ public sealed partial class Ruleset
             .Add(g.InteractionReachUnits).Add(g.StructureReachUnits).Add(g.InteractionTouchUnits).Add(g.MeleeReachUnits).Add(g.AcquireIntervalMs).Add(g.AutoChaseLeashPercent).Add(g.NodeSearchRadiusTiles)
             .Add(g.ConstructionRefundBasisPoints).Add(g.DismantleRefundBasisPoints).Add(g.DismantleBaseMs).Add(g.DismantleMaxMs).Add(g.DismantleMsPerHealth).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints).Add(g.CapturePointsPerSecond)
             .Add(g.MinimumCaptureResistance).Add(g.CaptureResetMs).Add(g.InfluenceRadiusTiles).Add(g.RepairTimeBasisPoints)
-            .Add(g.BurnThresholdBasisPoints).Add(g.BurnDamagePerMinute).Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
+            .Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
             .Add(g.GateWatchTiles).Add(g.GateOrderHoldMs).Add(g.GateChangeIntervalMs).Add(g.MaxGateChangesPerTick)
             .Add(g.RepairCostBasisPoints).Add(g.RepairerFalloffBasisPoints).Add(g.IdleWorkAfterMs).Add(g.IdleWorkRadiusTiles)
             .Add(g.DisguiseMasteryMs).Add(g.RepairBlowMs).Add(g.UnmaskReachFreshTilePercent).Add(g.UnmaskReachFullTilePercent)

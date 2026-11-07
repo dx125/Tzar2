@@ -36,6 +36,12 @@ public enum CombatMode : byte
     /// until the next order.
     /// </summary>
     Sneak = 6,
+
+    /// <summary>
+    /// A peasant running from what hit it (WAR-022): it walks to <see cref="Combat.ChaseX"/>, <see cref="Combat.ChaseY"/>,
+    /// rests there from <see cref="Combat.ChaseTick"/> (set on arrival) and then goes back to its work.
+    /// </summary>
+    Flee = 7,
 }
 
 /// <summary>
@@ -502,12 +508,12 @@ public struct PaidModifier
     public int BasisPoints;
 }
 
-/// <summary>A building on fire (GAME-03): fire damage accumulates per tick (UNK-42).</summary>
+/// <summary>A building on fire (BLD-006): pictures and a sound by its health; the fire takes nothing.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Burning : IComponent
 {
-    /// <summary>Fire time accumulated toward the next lost hit point.</summary>
-    public int AccumMs;
+    /// <summary>Its fires (BLD-006): 1 one small, 2 two, 3 two and a big one.</summary>
+    public int Level;
 }
 
 /// <summary>A building being taken down (BLD-027): it goes, and gives back its share, when <see cref="LeftMs"/> runs out.</summary>

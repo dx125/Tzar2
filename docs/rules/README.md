@@ -98,10 +98,10 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 |---|---|---|---|---|---|---|---|
 | [Computer opponents](ai.yaml) (AI) | 5 | 4 | 0 | 0 | 0 | 1 | 0 |
 | [Capture](capture.yaml) (CAP) | 4 | 3 | 1 | 0 | 0 | 0 | 0 |
-| [Combat](combat.yaml) (WAR) | 20 | 16 | 4 | 0 | 0 | 0 | 0 |
+| [Combat](combat.yaml) (WAR) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 27 | 23 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 30 | 21 | 9 | 0 | 0 | 0 | 0 |
-| [Diplomacy and victory](diplomacy.yaml) (DIP) | 10 | 9 | 1 | 0 | 0 | 0 | 0 |
+| [Diplomacy and victory](diplomacy.yaml) (DIP) | 11 | 10 | 1 | 0 | 0 | 0 | 0 |
 | [Resources and gathering](economy.yaml) (ECO) | 26 | 21 | 5 | 0 | 0 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 7 | 6 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 11 | 11 | 0 | 0 | 0 | 0 | 0 |
@@ -118,7 +118,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 11 | 10 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 22 | 15 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 401 | 314 | 71 | 2 | 0 | 10 | 4 |
+| **All** | 404 | 317 | 71 | 2 | 0 | 10 | 4 |
 
 ## Not done yet
 

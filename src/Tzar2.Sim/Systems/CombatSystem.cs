@@ -166,6 +166,12 @@ public sealed partial class CombatSystem : ISimSystem
             return;
         }
 
+        if (c.Mode == CombatMode.Flee)
+        {
+            FleeStep(world, attacker, ref c, tick, tickMs);
+            return;
+        }
+
         CombatStance stance = StanceOf(world, attacker);
         if (c.Mode == CombatMode.Ground)
         {
@@ -401,7 +407,7 @@ public sealed partial class CombatSystem : ISimSystem
 
         if (!target.IsNone)
         {
-            _hits.Add(new HitRecord(attacker, target, self.Owner, type.Id, attack, MaxRoll(arm), 100, arm.DamageClass, hero));
+            _hits.Add(new HitRecord(attacker, target, self.Owner, type.Id, attack, MaxRoll(arm), 100, arm.DamageClass, hero) { Melee = true });
         }
     }
 
@@ -813,6 +819,8 @@ public sealed partial class CombatSystem : ISimSystem
             return;
         }
 
+        CounterBlow(world, hit, targetType, victim.Owner, attackerAlive, deaths, alarms);
+        React(world, hit, targetType, victim.Owner, attackerAlive);
         if (alarms is not null)
         {
             return; // its retaliation comes with the call for help
@@ -842,6 +850,112 @@ public sealed partial class CombatSystem : ISimSystem
                 }
             }
         }
+    }
+
+    // WAR-021 (ReTzar's reading of the original, 0x4ea0b0): a pikeman left standing by a hand-to-hand blow of another kind
+    // strikes back at once with a fifth of its attack, at least 1, its bonus against the attacker included.
+    private static void CounterBlow(World world, in HitRecord hit, EntityTypeDefinition type, byte owner, bool attackerAlive, List<Death> deaths, List<(EntityId Victim, EntityId Attacker)>? alarms)
+    {
+        CombatSettings settings = world.Ruleset.Combat;
+        if (!hit.Melee || !attackerAlive || type.Traits.Armament is not { } arm || settings.CounterBlowClasses.AsSpan().BinarySearch(type.Id) < 0
+            || settings.CounterBlowClasses.AsSpan().BinarySearch(hit.AttackerType) >= 0)
+        {
+            return;
+        }
+
+        int back = Math.Max(1, (int)((long)CombatStats.Attack(world, hit.Target, type, arm) * settings.CounterBlowPercent / 100));
+        Apply(world, new HitRecord(hit.Target, hit.Attacker, owner, type.Id, back, 0, 100, DamageClass.Sword, world.IsHero(hit.Target)) { Melee = true }, deaths, alarms);
+    }
+
+    // WAR-022 (ReTzar's reading of the original, 0x4ae640): a peasant hit while idle or gathering fights back when hostile to
+    // the attacker and at least as strong (0x401fa0), otherwise runs straight away from it (0x413ae0, 0x430be0); either way
+    // it goes back to its work afterwards.
+    private static void React(World world, in HitRecord hit, EntityTypeDefinition type, byte owner, bool attackerAlive)
+    {
+        CombatSettings settings = world.Ruleset.Combat;
+        if (!attackerAlive || settings.FleeClasses.AsSpan().BinarySearch(type.Id) < 0 || world.IsHeld(hit.Target) || !world.CanAct(hit.Target)
+            || world.Combats.IndexOf(hit.Target) is not (>= 0 and var ci) || !world.Positions.Has(hit.Attacker))
+        {
+            return;
+        }
+
+        ref Combat c = ref world.Combats.At(ci);
+        int w = world.Workers.IndexOf(hit.Target);
+        WorkerTask task = w >= 0 ? world.Workers.At(w).Task : WorkerTask.None;
+        if (c.Target != 0 || c.Mode != CombatMode.None || task is not (WorkerTask.None or WorkerTask.Harvest)
+            || (task == WorkerTask.None && Interaction.IsMoving(world, hit.Target)))
+        {
+            return; // already fighting or running, on an order, or at other work
+        }
+
+        if (w >= 0)
+        {
+            WorkerSystem.Interrupt(ref world.Workers.At(w));
+        }
+
+        if (IsHostileTarget(world, hit.Target, owner, hit.Attacker) && Strength(world, hit.Target) >= Strength(world, hit.Attacker))
+        {
+            c.Target = hit.Attacker.Value;
+            c.Mode = CombatMode.Auto;
+            c.ChaseTick = -1;
+            return;
+        }
+
+        // Five tiles straight away from the attacker, a random way when on its tile, inside the map (0x430be0).
+        Position at = world.Positions.Get(hit.Target), from = world.Positions.Get(hit.Attacker);
+        int tile = MapState.UnitsPerTile, px = at.X / tile, py = at.Y / tile;
+        int s = (from.X / tile) - px, t = (from.Y / tile) - py, n = Math.Max(Math.Abs(s), Math.Abs(t));
+        if (n == 0)
+        {
+            (s, t) = FleeWays[world.Rng.Combat.NextInt(FleeWays.Length)];
+            n = 1;
+        }
+
+        int fx = Math.Clamp(px - (s * settings.FleeTiles / n), 0, world.Map.Width - 1);
+        int fy = Math.Clamp(py - (t * settings.FleeTiles / n), 0, world.Map.Height - 1);
+        c.Mode = CombatMode.Flee;
+        c.ChaseX = (fx * tile) + (tile / 2);
+        c.ChaseY = (fy * tile) + (tile / 2);
+        c.ChaseTick = -1;
+        c.HitInMs = -1;
+        Interaction.Halt(world, hit.Target);
+        Interaction.MoveTo(world, hit.Target, c.ChaseX, c.ChaseY);
+    }
+
+    // The ways of a flight from an attacker on the runner's own tile (the original's table 0x430d7c; its sixth and eighth
+    // are the same).
+    private static readonly (int X, int Y)[] FleeWays = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (-1, 1)];
+
+    // A flight (WAR-022): the walk, then the rest where it ended, then back to work.
+    private static void FleeStep(World world, EntityId unit, ref Combat c, int tick, int tickMs)
+    {
+        if (Interaction.IsMoving(world, unit))
+        {
+            return;
+        }
+
+        if (c.ChaseTick < 0)
+        {
+            c.ChaseTick = tick;
+        }
+        else if ((long)(tick - c.ChaseTick) * tickMs >= world.Ruleset.Combat.FleeRestMs)
+        {
+            c.Mode = CombatMode.None;
+            c.ChaseTick = -1;
+        }
+    }
+
+    /// <summary>
+    /// How strong a unit or tower is for a peasant deciding whether to fight it (WAR-022; the original's 0x401fa0): attack +
+    /// defence + range in tiles / 5 + hit points / 20, twice for a tower.
+    /// </summary>
+    internal static long Strength(World world, EntityId entity)
+    {
+        EntityTypeDefinition type = world.TypeOf(entity);
+        ArmamentDefinition? arm = type.Traits.Armament;
+        long value = (arm is null ? 0 : CombatStats.Attack(world, entity, type, arm)) + Math.Max(0, CombatStats.Defence(world, entity, type))
+            + ((arm?.RangeUnits ?? 0) / MapState.UnitsPerTile / 5) + (world.Healths.Has(entity) ? world.Healths.Get(entity).Max / 20 : 0);
+        return type.Traits.Category == EntityCategory.Building ? value * 2 : value;
     }
 
     // WAR-009 (ReTzar's reading of the original, 0x4ee780): after its blow a ghost, in 71 draws of 1001, lets out a banshee
@@ -1330,6 +1444,9 @@ internal readonly record struct HitRecord(EntityId Attacker, EntityId Target, by
 
     /// <summary>Where it landed.</summary>
     public int Y { get; init; }
+
+    /// <summary>A hand-to-hand blow (the original's damage category 0): what a pikeman strikes back at (WAR-021).</summary>
+    public bool Melee { get; init; }
 }
 
 /// <summary>A unit or building brought to 0 hit points, killed after the hits of the tick.</summary>

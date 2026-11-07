@@ -360,7 +360,7 @@ public sealed partial class World
         foreach (KingdomState k in _kingdoms)
         {
             bool loan = k.LoanResource != KingdomState.NoLoan;
-            if (k.GatheredTotal < 0 || k.KillValue < 0 || k.BuildValue < 0 || k.TradeIncome < 0 || k.TributeSent < 0 || k.TributeReceived < 0
+            if (k.GatheredTotal < 0 || k.Score < 0 || k.BuildValue < 0 || k.TradeIncome < 0 || k.TributeSent < 0 || k.TributeReceived < 0
                 || k.UnitsTrained < 0 || k.UnitsLost < 0 || k.UnitsKilled < 0 || k.BuildingsBuilt < 0 || k.BuildingsLost < 0
                 || k.BuildingsDestroyed < 0 || k.BuildingsCaptured < 0 || k.TechnologiesResearched < 0 || k.LastTributeTick > Tick.Value
                 || (loan && (k.LoanResource < 0 || k.LoanResource >= resources || k.LoanDue <= 0)) || (!loan && k.LoanDue != 0)
