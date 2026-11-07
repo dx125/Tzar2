@@ -1354,8 +1354,8 @@ public sealed partial class World
         for (int i = 0; i < ids.Length; i++)
         {
             CaptureState c = CaptureStates.Components[i];
-            if (TypeOf(ids[i]).Traits.Capturable is null || !HasPlayer(c.Player) || c.Player == Identities.Get(ids[i]).Owner || c.MilliPoints < 0
-                || c.IdleMs < 0 || c.Reserved0 != 0 || c.Reserved1 != 0 || c.Reserved2 != 0 || Constructions.Has(ids[i]))
+            if (TypeOf(ids[i]).Traits.Capturable is null || c.Player != 0 || c.Resistance < 0
+                || c.Reserved != 0 || c.Reserved0 != 0 || c.Reserved1 != 0 || c.Reserved2 != 0 || Constructions.Has(ids[i]))
             {
                 throw Invalid("invalid capture state");
             }

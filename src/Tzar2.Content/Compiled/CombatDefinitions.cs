@@ -357,6 +357,13 @@ public sealed record SpellDefinition(
     /// </summary>
     public int RevealTiles { get; init; }
 
+    /// <summary>
+    /// MAG-040 (ReTzar's reading of the original, 0x4eb840, 0x4ebba9): a cloak its caster keeps on its own mana - 1 every
+    /// time the effect would end, for another <see cref="DurationMs"/>, while it has it; meanwhile no mana comes back
+    /// (<c>drain</c>; the ninja's).
+    /// </summary>
+    public bool DrainsMana { get; init; }
+
     /// <summary>Whether <paramref name="typeId"/> may be affected (by its type).</summary>
     public bool AffectsType(ushort typeId) => TargetTypes.IsDefaultOrEmpty || TargetTypes.BinarySearch(typeId) >= 0;
 }
@@ -547,8 +554,11 @@ public sealed record CombatSettings
     /// <summary>Technology id that lets heroes share experience (Leadership), or -1.</summary>
     public int LeadershipTechnology { get; init; } = -1;
 
-    /// <summary>Radius of Leadership (world units).</summary>
-    public int LeadershipRadiusUnits { get; init; } = 4 * 2048;
+    /// <summary>
+    /// EXP-008 (ReTzar's reading of the original, 0x4de900): the units Leadership reaches are below this level, of the
+    /// hero's kingdom, and closer than the hero's sight in tiles.
+    /// </summary>
+    public int LeadershipBelowLevel { get; init; } = 11;
 
     /// <summary>Share of a hero's experience gain the units around it get (percent).</summary>
     public int LeadershipSharePercent { get; init; } = 50;
@@ -593,8 +603,17 @@ public sealed record CombatSettings
     public int CraftMs(bool book, int power)
         => (int)Math.Min((long)power * CraftMsPerPower * (book ? CraftBookTimePercent : 100) / 100, int.MaxValue);
 
-    /// <summary>Bribe cost as a share of the unit's cost, in gold (percent; UNK-26).</summary>
-    public int BribeCostPercent { get; init; } = 200;
+    /// <summary>MAG-038 (ReTzar's reading of the original, 0x4ac62f): a bribe costs (level + this) × <see cref="BribeGoldPerLevelPercent"/> / 100 gold.</summary>
+    public int BribeLevelOffset { get; init; } = 20;
+
+    /// <summary>MAG-038: the gold a bribe costs per level of the unit, in hundredths (250: (level + 20) × 10 / 4).</summary>
+    public int BribeGoldPerLevelPercent { get; init; } = 250;
+
+    /// <summary>
+    /// CAP-004 (ReTzar's reading of the original, 0x4682e0): the towers a peasant captures from any kingdom that is not its
+    /// ally, not only from an enemy (the watch, guard, stone and cannon towers), ascending.
+    /// </summary>
+    public ImmutableArray<ushort> CaptureTowers { get; init; } = [];
 
     /// <summary>Crusade: the anchor type spawned (<c>CRUSADE_ANCHOR.INI</c>), or -1.</summary>
     public int CrusadeAnchor { get; init; } = -1;
@@ -805,7 +824,7 @@ public sealed record CombatSettings
         Check(HeroLevel, 1, 10_000);
         Check(LeadershipTechnology, -1, technologies - 1);
         Check(HonorTechnology, -1, technologies - 1);
-        Check(LeadershipRadiusUnits, 0, 64 * 2048);
+        Check(LeadershipBelowLevel, 0, 100_000);
         Check(LeadershipSharePercent, 0, 1000);
         Check(HonorAttackPercent, 0, 10_000);
         Check(DummyMaxLevel, 0, 10_000);
@@ -818,7 +837,8 @@ public sealed record CombatSettings
         Check(CraftMaxPower, 1, 10_000);
         Check(CraftBookCostPercent, 1, 10_000);
         Check(CraftBookTimePercent, 1, 10_000);
-        Check(BribeCostPercent, 0, 100_000);
+        Check(BribeLevelOffset, 0, 10_000);
+        Check(BribeGoldPerLevelPercent, 0, 1_000_000);
         Check(CrusadeAnchor, -1, typeCount - 1);
         Check(Crusader, -1, typeCount - 1);
         Check(CrusadeStart, 0, 1000);
@@ -926,7 +946,7 @@ public sealed record CombatSettings
             Check(p, 0, 1_000_000);
         }
 
-        foreach (ImmutableArray<ushort> list in (ReadOnlySpan<ImmutableArray<ushort>>)[SiegeScanners, TargetMages, TargetTrainers, TargetSeats, BowLevelClasses, CounterBlowClasses, FleeClasses])
+        foreach (ImmutableArray<ushort> list in (ReadOnlySpan<ImmutableArray<ushort>>)[SiegeScanners, TargetMages, TargetTrainers, TargetSeats, BowLevelClasses, CounterBlowClasses, FleeClasses, CaptureTowers])
         {
             if (list.IsDefault)
             {

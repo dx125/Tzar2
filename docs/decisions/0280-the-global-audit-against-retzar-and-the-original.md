@@ -3,7 +3,8 @@
 * **Status:** Accepted
 * **Date:** 2026-11-07
 * **Deciders:** maintainer (Claude), at the owner's request before the eleventh play-test
-* **Related:** BLD-006, PRES-001, WAR-021, WAR-022, DIP-011; UNK-29, UNK-42; ADR 0181, ADR 0191; ReTzar
+* **Related:** BLD-006, PRES-001, WAR-021, WAR-022, DIP-011, CAP-002, CAP-004, CAP-005, CAP-006, MAG-038, MAG-039,
+  MAG-040, EXP-008; UNK-19, UNK-23, UNK-26, UNK-29, UNK-42; ADR 0181, ADR 0191; ReTzar
   `src/gameplay.rs`, `src/gameplay/scripting.rs`
 
 ## Context
@@ -33,7 +34,10 @@ in `classic.yaml`. It found these differences:
 | Magic workshop | Strength from the gold paid; 250 ms a gold (books 500) (0x4a5220, 0x4743b0). | Placeholders (UNK-25). | C |
 | Gathering | Idle peasants copy a working one after 30 s; fields give a load after 12–18 digs; boats take up to 4 fish every 1.4 s to 50; galleon, hulk and xebec carry 1000, 500, 300; cows regrow milk as mana. | Placeholders (UNK-17, UNK-28). | D |
 | Bears | Wander from where they stand and look for a target in 30 % of their scans (0x42fea0, 0x4eeea0). | Guard a home and walk back (TDD). | D |
-| Smaller | Leadership within the hero's sight; no mana regained while frozen, stone, healing or hidden; shared resources one way. | Placeholders, or both ways. | E |
+| Leadership | Units below level 11 closer than the hero's sight (0x4de900). | Every unit within 4 tiles (UNK-23). | B |
+| Mana | None regained while frozen, stone, healing or teaching, or hidden on its own mana (0x504e30). | Always regained. | B |
+| The ninja's cloak | 50 mana, then 1 every 2 s while hidden (0x4eb840, 0x4ebba9). | Free, for 60 s. | B |
+| Smaller | Shared resources one way; the easy campaign's damage; the idle scan's period. | Both ways; none; 200 ms. | E |
 
 These already matched and were left alone:
 
@@ -66,6 +70,25 @@ Batch A (this ADR's first change):
   destroyed, 200 for anything else killed, and each load of gold or stone as it leaves its mine. It is shown as
   (raw + 50) / 100. The score and time limits follow the original's end test.
 
+Batch B:
+
+* **Capture.** A building has a resistance target: its RESISTANCE (raised by Fanaticism or Buddhism) plus the EMIT of the
+  finished buildings whose footprint, grown by their sight, meets it. The EMIT's own value counts from an ally, its
+  other value from the rest.
+  * Each 1196 ms cycle a hostile peasant takes 5, and the building is taken at the cycle that finds no more than 5.
+  * A friendly peasant gives 5 back until the building is whole, and the capturer goes on doing so after the capture.
+  * Every 2 s the resistance moves 10 toward the target, so one peasant alone never takes a building at full
+    resistance.
+  * A peasant may capture an enemy's buildings, the watch, guard, stone and cannon towers of any non-ally, and its own or
+    an ally's lowered buildings.
+  * `CaptureState` now holds the current resistance while it is away from the target. The points, the reset, the
+    16-tile fade and the minimum are gone.
+* **Bribery.** A bribe costs (level + 20) × 10 / 4 gold.
+* **Leadership.** It reaches units below level 11 closer than the hero's sight (`leadershipBelowLevel`).
+* **Mana.** None comes back while frozen, stone, healing or teaching with the mana for it, or hiding on its own mana.
+* **The ninja's cloak.** It costs 50 and lasts 2 s, renewed for 1 mana every 2 s while the ninja has it (the new spell
+  field `drain`, `StatusEffects.CloakDrain`).
+
 ## Consequences
 
 * Buildings no longer burn down by themselves. An attacked town keeps its damaged buildings until they are struck again.
@@ -74,3 +97,5 @@ Batch A (this ADR's first change):
 * The original also scores a held ruin's `ruinpoints` and capture-the-flag flags. Tzar2 has neither object (DIP-011's
   note).
 * The gameplay golden's ruleset hash changes, and so does its stream wherever peasants are hit or buildings burn.
+* Capturing takes several peasants, as in the original, and a raided building's resistance comes back by itself.
+* Ninjas spend their mana to stay hidden, and run out of it.

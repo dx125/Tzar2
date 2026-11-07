@@ -354,11 +354,12 @@ public sealed class WorkerSystem : ISimSystem
         EntityId target = EntityId.FromValue(w.Target);
         byte owner = world.Identities.Get(worker).Owner;
         if (!world.Entities.IsAlive(target) || world.Identities.IndexOf(target) is not (>= 0 and var t)
-            || world.Identities.At(t).Owner == owner || !world.HasPlayer(world.Identities.At(t).Owner)
             || world.TypeOf(target).Traits.Capturable is not { } capturable || world.Constructions.Has(target)
+            || (capturable.Instant && (world.Identities.At(t).Owner == owner || !world.HasPlayer(world.Identities.At(t).Owner)))
+            || (!capturable.Instant && !CaptureSystem.MayCapture(world, owner, target))
             || (capturable.RequiredTechnology >= 0 && !world.Players[owner].HasTechnology(capturable.RequiredTechnology)))
         {
-            Idle(ref w); // taken (by anyone), destroyed, or no longer allowed
+            Idle(ref w); // taken by someone else, whole again, destroyed, or no longer allowed (CAP-004)
             return;
         }
 
@@ -381,6 +382,7 @@ public sealed class WorkerSystem : ISimSystem
             {
                 w.Phase = WorkerPhase.Capturing;
                 w.Retries = 0;
+                w.TimerMs = 0; // the first cycle a whole capture picture later (CAP-005)
             }
 
             return;

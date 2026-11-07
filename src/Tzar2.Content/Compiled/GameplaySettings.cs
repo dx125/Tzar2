@@ -115,17 +115,20 @@ public sealed record GameplaySettings
     /// <summary>Share of the cost refunded when a queued research or upgrade is cancelled (basis points).</summary>
     public int ResearchRefundBasisPoints { get; init; } = 10_000;
 
-    /// <summary>Capture points one capturing peasant adds per second (GAME-04, UNK-19).</summary>
-    public int CapturePointsPerSecond { get; init; } = 10;
+    /// <summary>
+    /// CAP-005 (ReTzar's reading of the original, 0x4dfebf): a capturing peasant's cycle, its capture picture's time (the
+    /// three peasants' <c>*_peon_capture</c> and <c>e_peon_dig</c>: 1196 ms).
+    /// </summary>
+    public int CaptureCycleMs { get; init; } = 1_196;
 
-    /// <summary>Least capture resistance of a building, whatever the influence around it (UNK-19).</summary>
-    public int MinimumCaptureResistance { get; init; } = 1;
+    /// <summary>CAP-005 (0x4dfe52): what a cycle takes from a building's resistance, or gives back to a friendly one.</summary>
+    public int CaptureStep { get; init; } = 5;
 
-    /// <summary>Capture progress is lost after this long without a capturer at work (UNK-19).</summary>
-    public int CaptureResetMs { get; init; } = 5_000;
+    /// <summary>CAP-006 (0x41f271): how often a building's resistance moves toward its target.</summary>
+    public int ResistancePulseMs { get; init; } = 2_000;
 
-    /// <summary>Radius in tiles of the EMIT influence; it fades linearly to 0 there (⚠ HYPOTHESIS UNK-19).</summary>
-    public int InfluenceRadiusTiles { get; init; } = 16;
+    /// <summary>CAP-006: how far it moves at each pulse.</summary>
+    public int ResistancePulseStep { get; init; } = 10;
 
     /// <summary>A full repair by one peasant takes this share of the build time (basis points; UNK-18).</summary>
     public int RepairTimeBasisPoints { get; init; } = 10_000;
@@ -199,12 +202,10 @@ public sealed record GameplaySettings
     {
         ArgumentOutOfRangeException.ThrowIfNegative(ResearchRefundBasisPoints);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ResearchRefundBasisPoints, 10_000);
-        ArgumentOutOfRangeException.ThrowIfLessThan(CapturePointsPerSecond, 0);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(CapturePointsPerSecond, 1_000_000);
-        ArgumentOutOfRangeException.ThrowIfLessThan(MinimumCaptureResistance, 1);
-        ArgumentOutOfRangeException.ThrowIfLessThan(CaptureResetMs, 0);
-        ArgumentOutOfRangeException.ThrowIfNegative(InfluenceRadiusTiles);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(InfluenceRadiusTiles, 128);
+        ArgumentOutOfRangeException.ThrowIfLessThan(CaptureCycleMs, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(CaptureStep, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(ResistancePulseMs, 1);
+        ArgumentOutOfRangeException.ThrowIfNegative(ResistancePulseStep);
         ArgumentOutOfRangeException.ThrowIfLessThan(RepairTimeBasisPoints, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairTimeBasisPoints, 1_000_000);
         ArgumentOutOfRangeException.ThrowIfNegative(IdleWorkAfterMs);

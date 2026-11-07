@@ -71,10 +71,10 @@ Shift + Delete; what each technology does (not how much).
 | Harbor water | within 2 tiles of the footprint | code (`GameplayCommands.CoastReachTiles`) | UNK-02 | editor placement |
 | Shore reach | +1 tile for boats at buildings and peasants at ships | code (`Interaction.WorkerReaches`) | UNK-11 | captures (and the terrain-set conversion) |
 | Building damage scale | damage × 1000 / (1000 + RESISTANCE) (was 100 in M2: castles were practically immune to melee; owner decision on PR #21) | YAML `gameplay.resistanceScale` | UNK-08 | damage grid on buildings |
-| Capture rate | 10 points per digging peasant per second | YAML `gameplay.capturePointsPerSecond` | UNK-19 | capture captures |
-| Capture reset | progress lost after 5 s without diggers | YAML `gameplay.captureResetMs` | UNK-19 | same |
-| EMIT influence | own buildings' EMIT adds, others' subtracts, linearly to 0 at 16 tiles (⚠ HYPOTHESIS) | YAML `gameplay.influenceRadiusTiles` + code (`CaptureSystem`) | UNK-19 | capture times near and far from towns |
-| Minimum capture resistance | 1 | YAML `gameplay.minimumCaptureResistance` | UNK-19 | — |
+| Capture rate | ~~10 points per digging peasant per second~~ **the original's: 5 off the resistance each 1196 ms cycle, taken at 5** (ReTzar 0x4dfe52; CAP-005, ADR 0280) | YAML `gameplay.captureCycleMs`, `captureStep` | UNK-19 | done (community source) |
+| Capture reset | ~~progress lost after 5 s without diggers~~ **the resistance comes back 10 every 2 s** (0x41f271; CAP-006) | YAML `gameplay.resistancePulseMs`, `resistancePulseStep` | UNK-19 | done |
+| EMIT influence | ~~own buildings' EMIT adds, others' subtracts, linearly to 0 at 16 tiles~~ **the original's: each finished building's EMIT reaches the buildings its footprint grown by its sight meets, own value from allies, other value from the rest** (ReTzar 0x41f7b0, 0x41f920; CAP-002, ADR 0280) | code (`CaptureSystem`) | UNK-19 | done (community source) |
+| Minimum capture resistance | ~~1~~ **none: a target below 0 holds the resistance at 0** (0x41f271) | code | UNK-19 | done |
 | Armored chariot, caravan speed | SPEED 4 (the tables have none), i.e. 40 px/s; strides 85 and 75 suggest faster (ADR 0172) | YAML `^class.chariot`, `^class.trader` | UNK-12 | speed captures: neither spawned in batch C (chariots are Asian; the caravan did not appear) |
 | Ship / siege collision radius | 16 / 12 px | YAML `^Ship`, `^Siege` | UNK-11 | captures |
 | Siege locomotor | large | YAML `^Siege` | UNK-11 | — |
@@ -92,7 +92,7 @@ Shift + Delete; what each technology does (not how much).
 | Conversion keeps damage | the new type's maximum minus the damage taken | `World.ConvertType` | — |
 | One conversion at a time | per entity | `GameplayCommands.Upgrade` | — |
 | Butchering | an explicit attack on an own cow | `CombatSystem`, `GameplayCommands.Attack` | — |
-| Contested capture | the first digging player keeps the progress while digging | `CaptureSystem` | UNK-19 |
+| Contested capture | ~~the first digging player keeps the progress while digging~~ **one resistance per building: every hostile peasant takes from it, every friendly one gives back** (CAP-005, ADR 0280) | `CaptureSystem` | UNK-19 |
 | Captured building | loses its queue and rally point | `World.ChangeOwner` | — |
 | Rally default action | harvest the target node / help build the site / attack the enemy, else move | `ProductionSystem` | — |
 | Gates for enemies | ~~anyone passes an open gate~~ — stream F: only the owner and the kingdoms it treats as allies (a movement bar, ADR 0102; planning still treats an open gate as open) | `World.GateBars`, `MovementSystem` | — |
@@ -201,7 +201,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Level cap | 0 without Learning; Learning +4, Heroism +1,000 (stream A values) | YAML `combat.baseLevelCap`, `te_*` | UNK-23 | same |
 | Defence per level | ½, truncated (1 per 2 levels) | YAML `combat.defenceHalvesPerLevel` | UNK-08 | same |
 | Hero level | 12 (TDD) | YAML `combat.heroLevel` | — | — |
-| Leadership | 50% of a hero's gain to own units within 4 tiles | YAML `combat.leadership*` | UNK-23 | captures |
+| Leadership | ~~50% of a hero's gain to own units within 4 tiles~~ **all of it to own units below level 11 closer than the hero's sight** (ReTzar 0x4de900; EXP-008, ADR 0280) | YAML `combat.leadership*` | UNK-23 | done (community source) |
 | Honor | +25% attack of heroes against heroes | YAML `combat.honorAttackPercent` | UNK-23 | captures |
 | Dummies | teach up to level 3; take no damage | YAML `combat.dummyMaxLevel` | UNK-23 | captures |
 | Hero names when the list is used up | "<first name> 2", "… 3" | code (`ExperienceSystem`) | — | observation |
@@ -218,7 +218,7 @@ when the building is hit; catapult stones can be stepped away from.
 | Inquisition | +50% attack of priests (exorcism) | YAML `te_inquisition` | UNK-26 | captures |
 | Crusade | **ReTzar's reading of the original (ADR 0190):** 16 gathered at the start, one per cathedral every 12/8/4/1 s by the time played, ceiling 16 + 4 per full crusade (36), one arriving every 500 ms, 4 again after the crusaders died | YAML `combat.crusade*`; `MagicSystem` | UNK-26 | a crusade capture would confirm it |
 | Curse, hypnosis, banshee, Messiah | **ReTzar's reading of the original (ADR 0250):** the curse halves attack and zeroes defence of enemy non-machines within the caster's sight for 30 s; hypnosis hands the unit over for 30 s; a ghost's blow curses in 71 of 1001; the Messiah refuses lasting spells. Mana, range, cooldown and cast time stay UNVERIFIED | YAML `spell_curse`, `spell_hypnotize`, `combat.banshee*`; `MagicSystem` | UNK-26 | a capture would confirm it |
-| Bribe price | 200% of the unit's cost, in gold | YAML `combat.bribeCostPercent` | UNK-26 | bribe captures |
+| Bribe price | ~~200% of the unit's cost, in gold~~ **(level + 20) × 10 / 4 gold** (ReTzar 0x4ac62f; MAG-038, ADR 0280) | YAML `combat.bribeLevelOffset`, `bribeGoldPerLevelPercent` | UNK-26 | done (community source) |
 | Magic vision | **ReTzar's reading of the original (ADR 0279):** the unit it is cast on shows what it sees for 60 s; a point far away is seen 8 tiles round for 4 s | YAML `spell_magicvision`; `MagicSystem` | — | captures |
 
 ## Rules in code

@@ -805,8 +805,9 @@ internal static class GameplayCommands
     }
 
     /// <summary>
-    /// Capture (GAME-04; ADR 0044): another kingdom's completed capturable building (peasants dig at it), or an instant
-    /// capture (cows under Cow Poaching: the capturing player needs the technology).
+    /// Capture (GAME-04; ADR 0044, ADR 0280): a completed capturable building peasants dig at - an enemy's, a tower of any
+    /// kingdom that is not an ally, or an own or allied one whose resistance was lowered (CAP-004) - or an instant capture
+    /// (cows under Cow Poaching: the capturing player needs the technology).
     /// </summary>
     public static CommandRejection? Capture(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
@@ -818,14 +819,14 @@ internal static class GameplayCommands
 
         byte owner = world.Identities.At(t).Owner;
         CapturableDefinition? capturable = world.TypeOf(target).Traits.Capturable;
-        if (capturable is null || owner == command.Player || !world.HasPlayer(owner) || world.Constructions.Has(target))
+        if (capturable is null || !world.HasPlayer(owner) || world.Constructions.Has(target) || (capturable.Instant && owner == command.Player))
         {
             return CommandRejection.InvalidArgument;
         }
 
-        if (world.Diplomacy.StanceOf(command.Player, owner) != Kingdoms.Stance.Enemy)
+        if (capturable.Instant ? world.Diplomacy.StanceOf(command.Player, owner) != Kingdoms.Stance.Enemy : !CaptureSystem.MayCapture(world, command.Player, target))
         {
-            return CommandRejection.NotAllied; // only enemies' buildings are captured (GAME-13)
+            return CommandRejection.NotAllied; // CAP-004: an enemy's, a tower of a non-ally, or a friendly one to mend
         }
 
         if (capturable.RequiredTechnology >= 0 && !world.Players[command.Player].HasTechnology(capturable.RequiredTechnology))

@@ -33,7 +33,7 @@ public class ExperienceTests
 
     // Credits <paramref name="n"/> kills of enemy peasants to <paramref name="killer"/> through the death step, then lets the
     // experience step run (a kill is one point: ReTzar's reading of the original, 0x504f20).
-    private static void Kills(SimDriver d, EntityId killer, int n, int victimOwner = 1)
+    internal static void Kills(SimDriver d, EntityId killer, int n, int victimOwner = 1)
     {
         Position at = d.PositionOf(killer);
         var deaths = new System.Collections.Generic.List<Death>();

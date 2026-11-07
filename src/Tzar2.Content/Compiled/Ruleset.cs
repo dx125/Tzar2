@@ -828,8 +828,8 @@ public sealed partial class Ruleset
         GameplaySettings g = Gameplay;
         hasher.Add((byte)g.GroupMoveSpeed).Add((byte)g.Movement).Add(g.PopulationLimit).Add(g.DefaultStartingResources).Add(g.MinimumDamage)
             .Add(g.InteractionReachUnits).Add(g.StructureReachUnits).Add(g.InteractionTouchUnits).Add(g.MeleeReachUnits).Add(g.AcquireIntervalMs).Add(g.AutoChaseLeashPercent).Add(g.NodeSearchRadiusTiles)
-            .Add(g.ConstructionRefundBasisPoints).Add(g.DismantleRefundBasisPoints).Add(g.DismantleBaseMs).Add(g.DismantleMaxMs).Add(g.DismantleMsPerHealth).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints).Add(g.CapturePointsPerSecond)
-            .Add(g.MinimumCaptureResistance).Add(g.CaptureResetMs).Add(g.InfluenceRadiusTiles).Add(g.RepairTimeBasisPoints)
+            .Add(g.ConstructionRefundBasisPoints).Add(g.DismantleRefundBasisPoints).Add(g.DismantleBaseMs).Add(g.DismantleMaxMs).Add(g.DismantleMsPerHealth).Add(g.ProductionRefundBasisPoints).Add(g.ResearchRefundBasisPoints)
+            .Add(g.CaptureCycleMs).Add(g.CaptureStep).Add(g.ResistancePulseMs).Add(g.ResistancePulseStep).Add(g.RepairTimeBasisPoints)
             .Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
             .Add(g.GateWatchTiles).Add(g.GateOrderHoldMs).Add(g.GateChangeIntervalMs).Add(g.MaxGateChangesPerTick)
             .Add(g.RepairCostBasisPoints).Add(g.RepairerFalloffBasisPoints).Add(g.IdleWorkAfterMs).Add(g.IdleWorkRadiusTiles)
