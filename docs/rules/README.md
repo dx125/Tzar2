@@ -106,7 +106,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Experience and heroes](experience.yaml) (EXP) | 8 | 7 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 11 | 11 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 37 | 18 | 14 | 1 | 0 | 3 | 1 |
-| [Items](items.yaml) (ITEM) | 19 | 14 | 3 | 0 | 0 | 1 | 1 |
+| [Items](items.yaml) (ITEM) | 21 | 16 | 3 | 0 | 0 | 1 | 1 |
 | [Magic, religion and spies](magic.yaml) (MAG) | 40 | 40 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 14 | 4 | 0 | 0 | 0 | 0 |
@@ -115,10 +115,10 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Scenario scripts](scenario.yaml) (SCN) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 16 | 9 | 1 | 0 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
-| [Trade, tavern and loans](trade.yaml) (TRADE) | 11 | 10 | 1 | 0 | 0 | 0 | 0 |
+| [Trade, tavern and loans](trade.yaml) (TRADE) | 12 | 11 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 22 | 15 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 410 | 323 | 71 | 2 | 0 | 10 | 4 |
+| **All** | 413 | 326 | 71 | 2 | 0 | 10 | 4 |
 
 ## Not done yet
 

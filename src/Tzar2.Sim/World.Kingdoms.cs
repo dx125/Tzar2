@@ -20,7 +20,7 @@ namespace Tzar2.Sim;
 public sealed partial class World
 {
     private KingdomState[] _kingdoms = [];
-    private ushort[][]? _mercenaryPools;
+    private System.Collections.Generic.Dictionary<string, ushort[]>? _barracksPools;
     private byte[] _gateBars = [];
 
     /// <summary>Stances and sharing between the kingdoms (GAME-13).</summary>
@@ -215,46 +215,33 @@ public sealed partial class World
     }
 
     /// <summary>
-    /// The unit types a kingdom's tavern hires from (GAME-14, ADR 0108): military land units of its civilization that some
-    /// building trains, ascending by type id (derived from the ruleset, not state).
+    /// The unit types a civilization's barracks train (TRADE-009; the original draws a tavern offer from the buttons of a
+    /// random civilization's barracks, 0x4d2030), ascending by type id; derived from the ruleset, not state.
     /// </summary>
-    internal ReadOnlySpan<ushort> MercenaryPool(int player)
+    internal ReadOnlySpan<ushort> BarracksPool(string civilization)
     {
-        if (_mercenaryPools is null)
+        _barracksPools ??= [];
+        if (!_barracksPools.TryGetValue(civilization, out ushort[]? pool))
         {
-            var pools = new ushort[Ruleset.Civilizations.Count][];
-            var trained = new bool[Ruleset.EntityTypes.Count];
-            foreach (EntityTypeDefinition t in Ruleset.EntityTypes)
+            var list = new System.Collections.Generic.List<ushort>();
+            if (Ruleset.EntityTypeId(civilization + ".barrack") is >= 0 and var b && Ruleset.EntityTypes[b].Traits.Producer is { } producer)
             {
-                if (t.Traits.Producer is { } producer)
+                foreach (ushort id in producer.Produces)
                 {
-                    foreach (ushort id in producer.Produces)
+                    EntityTypeDefinition t = Ruleset.EntityTypes[id];
+                    if (t.Traits.Category == EntityCategory.Unit && t.Locomotor is Locomotor.Foot or Locomotor.Mounted or Locomotor.Climber)
                     {
-                        trained[id] = true;
+                        list.Add(id);
                     }
                 }
             }
 
-            for (int c = 0; c < pools.Length; c++)
-            {
-                var list = new System.Collections.Generic.List<ushort>();
-                foreach (EntityTypeDefinition t in Ruleset.EntityTypes)
-                {
-                    if (trained[t.Id] && t.Traits.World.IsMilitary && t.Traits.Civilization == Ruleset.Civilizations[c]
-                        && t.Locomotor is Locomotor.Foot or Locomotor.Mounted or Locomotor.Climber)
-                    {
-                        list.Add(t.Id);
-                    }
-                }
-
-                pools[c] = [.. list];
-            }
-
-            _mercenaryPools = pools;
+            list.Sort();
+            pool = [.. list];
+            _barracksPools[civilization] = pool;
         }
 
-        int civ = HasPlayer(player) ? _players[player].Civilization : -1;
-        return (uint)civ < (uint)_mercenaryPools.Length ? _mercenaryPools[civ] : [];
+        return pool;
     }
 
     /// <summary>Adds to a stockpile up to <see cref="WorldSettings.StockpileCap"/> (incomes of the world systems: overflow guard).</summary>
@@ -368,8 +355,7 @@ public sealed partial class World
                 || (k.Cheats & ~(CheatFlags.NoFog | CheatFlags.NoTech | CheatFlags.God | CheatFlags.Buildozer)) != 0
                 || (k.Cheats != CheatFlags.None && !Config.CheatsAllowed)
                 || k.ExchangeLeft < 0 || k.ExchangeLeft > k.ExchangeTotal || (k.ExchangeLeft > 0 && (k.ExchangeGive >= resources || k.ExchangeReceive >= resources))
-                || k.TavernPeriod < 0 || k.TavernPeriod > Systems.TavernOffers.PeriodAt(this, Tick.Value)
-                || (k.TavernTaken >> (Ruleset.World.MercenaryOffers + Ruleset.World.HeroOffers)) != 0)
+                || k.TavernPeriod != 0 || k.TavernTaken != 0)
             {
                 throw new InvalidDataException("Snapshot violates a world invariant: invalid kingdom state.");
             }

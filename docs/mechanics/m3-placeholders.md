@@ -128,8 +128,8 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Trade profit | **ReTzar's reading of the original (ADR 0257):** load x tiles x 40 / (map side x 100), tiles on the larger axis, none under 12 | YAML `world.trade*` | — | a caravan capture would confirm it |
 | Trade dock time | 2 s | YAML `world.tradeDockMs` | UNK-28 | captures |
 | Unaffordable load | the trader leaves empty | code (`TradeSystem`) | — | observation |
-| Gambling | odds 2, 3, 5, 10; win chance (1 − 10%) / odds; stake ≤ 10,000 | YAML `world.gamble*` | UNK-28 | gamble dialog captures |
-| Loans | no interest; the raise to the next limit comes 120 s after a repayment; only whole multiples convert | YAML `world.loan*` | UNK-28 | loan captures |
+| Gambling | ~~odds 2, 3, 5, 10; win chance (1 − 10%) / odds~~ **the original's: 1:1, 2:1, 5:1, 10:1 at 50, 33, 20, 10 %, the stake kept on a win; stakes by 50** (ReTzar 0x4a3fee; TRADE-012, ADR 0280); stake ≤ 10,000 | YAML `world.gamble*` | UNK-28 | done (community source) |
+| Loans | ~~no interest; the raise 120 s after a repayment~~ **repaid with 200 more; the next 200 larger a minute after** (ReTzar 0x4d2d6a, 0x4d24e9; TRADE-007); only whole multiples convert | YAML `world.loan*` | UNK-28 | done (community source) |
 | Claim reach | 16 px edge to edge, checked every 0.5 s | YAML `world.claimReachPx`, `claimIntervalMs` | — | gateway captures |
 | Claiming from another kingdom | not possible: only Nature-owned gateways and cows are claimed | code (`NatureSystem`) | — | observation |
 | Wild cows | claimed by any kingdom's unit touching them; they wander | YAML `^class.cow` | UNK-17 | observation |
@@ -143,13 +143,13 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Deathmatch | every kingdom starts on the High resources | YAML `world.deathmatchStartingResources` | — | lobby captures |
 | Cheat resources | hmdvaleva 10,000, hmpetleva 50,000 of each (ReTzar's reading of the original, HUD-036) | YAML `world.cheat*` | UNK-30 | — |
 | Cheat semantics | hmgod: no damage to own units and buildings; hmbuildozer: instant; hmnotech: no requirements; hmnext: win | code (`KingdomCommands.Cheat`) | UNK-30 | testing the codes |
-| Tavern offers refresh | every 2 minutes, one set per kingdom (seeded) | YAML `world.tavernRefreshMs` | UNK-28 | tavern menu captures over time |
-| Tavern offers | 3 mercenary groups and 1 hero at a time | YAML `world.mercenaryOffers`, `heroOffers` | UNK-28 | tavern menu captures |
-| Mercenary group size | 3-5 soldiers ("small groups", manual ch. 6) | YAML `world.mercenaryGroupMin/Max` | UNK-28 | tavern menu captures |
-| Mercenary and hero types | military land units of the kingdom's civilization that a building trains | code (`World.MercenaryPool`) | UNK-28 | tavern menu captures (all civilizations) |
-| Mercenary price | 150% of the soldiers' training cost; heroes 600% of their type's | YAML `world.mercenaryCostPercent`, `heroCostPercent` | UNK-28 | price captures |
-| Mercenary level | 1; heroes at the hero level (12) | YAML `world.mercenaryLevel`, `combat.heroLevel` | UNK-23 | level of hired units |
-| Fame | +1 soldier, +2 levels, 75% of the price | YAML `world.fame*` | UNK-23/28 | captures with and without Fame |
+| Tavern offers refresh | ~~every 2 minutes, one set per kingdom~~ **each tavern's two lists gain an offer a second after it stands, then every minute (6 in a Deathmatch); 8 at most, the oldest dropped** (ReTzar 0x4d24c0; TRADE-009, ADR 0280) | YAML `world.tavern*` | UNK-28 | done (community source) |
+| Tavern offers | ~~3 mercenary groups and 1 hero at a time~~ **a mercenary offer with Mercenaries and a hero offer with Heroes' Quest at each refill** | code (`TavernOffers`) | UNK-28 | done |
+| Mercenary group size | ~~3-5 soldiers~~ **8-12** (0x4d2030) | YAML `world.mercenaryGroupMin/Max` | UNK-28 | done |
+| Mercenary and hero types | ~~the kingdom's civilization~~ **a unit of a random civilization's barracks** (0x4d2030; the original may draw a button that trains nothing) | code (`World.BarracksPool`) | UNK-28 | done |
+| Mercenary price | ~~150% / 600%~~ **cost for the kingdom × count × 1.6, plus 30 gold a level and 15 a level of each other resource** (0x4d23b0) | YAML `world.hire*` | UNK-28 | done |
+| Mercenary level | ~~1; heroes at 12~~ **0; heroes 10-30** (0x4d2030) | YAML `world.mercenaryLevel`, `heroLevelMin/Max` | UNK-23 | done |
+| Fame | ~~+1 soldier, +2 levels, 75% of the price~~ **+4 levels to every offer** (0x4d22b6) | YAML `world.fameLevelBonus` | UNK-23/28 | done |
 | Hired units' level cap | the tavern level stands even above the kingdom's cap | code (`TavernOffers.Train`) | UNK-23 | observation |
 | Hire refused | a hire needs population room for the whole group | code (`TavernOffers.Hire`) | UNK-20 | observation |
 
@@ -208,8 +208,8 @@ when the building is hit; catapult stones can be stepped away from.
 | Holder healing | castle, outpost 120 HP per minute per unit | YAML `^class.castle/outpost.Holder.healPerMinute` | UNK-24 | garrison captures |
 | Exit radius | 3 tiles | YAML `combat.exitRadiusTiles` | — | observation |
 | Item defaults | weapon +3, armor +2, potion 100 HP, power item (plusplus) +3 attack (ADR 0186: the maps' power items carry their own attack or defence), fire-rain book 3 charges / 10 s, soul (murder, once), gold item 100 | YAML `comm.item*` | UNK-25 | editor defaults, captures |
-| Crafting | 50 gold per power point, 2 s per point, at most 20; a potion 10 HP or 5 mana per point, a level per 5 points; a book's uses = its points (ADR 0186) | YAML `combat.craft*` | UNK-25 | workshop captures |
-| Workshop items | books of 20 spells, potions of health (red), levels (green), mana (blue), attack (yellow), defence (grey), sword, bow, shield | YAML `Item.crafts` | ITEM-016 | an owner session in the workshop |
+| Crafting | ~~50 gold per power point, 2 s per point~~ **the original's: from the gold paid (10 or more, by 10), 250 ms a gold (books 500), one item a kingdom at a time; experience gold / 5, mana the gold, attack and defence potions gold / 2, equipment gold / 4 (≤ 250), books (gold / 4) / the spell's rate** (ReTzar 0x4a5220, 0x4743b0; ITEM-020, ADR 0280) | YAML `combat.craft*`, spell `bookValue`, `bookMinimum` | UNK-25 | done (community source) |
+| Workshop items | ~~books of 20 spells, potions of health, levels, mana, attack, defence~~ **books of 19 spells (no soul binding or hypnosis), potions of experience, mana, attack, defence (no health), a sword, a bow, a shield** (0x4743b0) | YAML `Item.crafts` | ITEM-016, ITEM-020 | done |
 | A map book's spell | magic type = index in STRINGS.INI `[spell_names]` (⚠ HYPOTHESIS) | `ScenarioSetup.LegacySpellOrder` | ITEM-016 | the editor shows a book's spell |
 | Spell magnitudes | cast times; **no cooldowns (ADR 0266);** **range, mana, amounts, durations and areas of the other spells, fire rain and the whirlpool from ReTzar (ADRs 0260, 0261, 0263)** | YAML `spell_*`, `raisedead`, `cloak`, `murder` | UNK-26 | spell captures |
 | Spell damage | no defence, no bonus | code (`MagicSystem`) | UNK-26 | captures |

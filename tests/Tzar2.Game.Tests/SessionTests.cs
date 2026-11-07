@@ -347,33 +347,37 @@ public sealed class SessionTests
     }
 
     [Fact]
-    public void The_frame_carries_the_tavern_offers_of_the_period_with_their_prices()
+    public void The_frame_carries_each_taverns_offers_with_their_prices()
     {
-        using var session = new GameSession(Setup() with { ComputerAi = false }, Rules.Value, fog: false);
-        session.Step(1);
-        GameFrame frame = session.AcquireFrame(out _)!;
+        var b = new Tzar2.Tests.Scenario.ScenarioBuilder();
+        b.Structure("euro.castle", 0, 4, 4);
+        b.Structure("euro.tavern", 0, 16, 10);
+        b.Structure("euro.castle", 1, 38, 4);
+        var mission = new Campaigns.MissionContent(b.Map(), b.Scenario());
+        using var session = new GameSession(Campaigns.ScenarioMatch.Setup(mission, Rules.Value, computerAi: false), Rules.Value, fog: false);
         World world = session.Simulation.World;
-        int expected = 0;
+        session.Step(1);
+        EntityId tavern = world.Identities.Entities.ToArray().Single(e => world.TypeOf(e).Key == "euro.tavern");
+        world.Players[0].AddTechnology(world.Ruleset.TechnologyId(world.Ruleset.World.MercenariesTechnology));
+        world.Players[0].AddTechnology(world.Ruleset.TechnologyId(world.Ruleset.World.HeroesTechnology));
+        session.Step(60); // the first offers a second after the tavern stands (TRADE-009)
+        GameFrame frame = session.AcquireFrame(out _)!;
+        var list = new (int Slot, TavernOffer Offer)[TavernStock.Capacity];
+        int n = TavernOffers.Offers(world, tavern, list);
+        Assert.Equal(2, n);
+        Assert.Equal(n, frame.TavernOfferCount);
         Span<int> cost = stackalloc int[Ruleset.MaxResourceTypes];
-        for (int slot = 0; slot < TavernOffers.SlotCount(world); slot++)
+        for (int i = 0; i < n; i++)
         {
-            if (TavernOffers.Offer(world, session.LocalPlayer, slot) is not { } offer)
-            {
-                continue;
-            }
-
-            FrameTavernOffer shown = frame.TavernOffers[expected];
-            Assert.Equal((slot, offer.TypeId, offer.Count, offer.IsHero, false), (shown.Slot, shown.TypeId, shown.Count, shown.IsHero, shown.Taken));
-            TavernOffers.CostOf(world, session.LocalPlayer, offer, cost);
+            FrameTavernOffer shown = frame.TavernOffers[i];
+            (int slot, TavernOffer offer) = list[i];
+            Assert.Equal((slot, offer.TypeId, offer.Count, offer.Level, offer.IsHero, tavern), (shown.Slot, shown.TypeId, shown.Count, shown.Level, shown.IsHero, shown.Tavern));
+            TavernOffers.CostOf(world, 0, offer, cost);
             for (int r = 0; r < frame.TavernCostStride; r++)
             {
-                Assert.Equal(cost[r], frame.TavernCosts[(expected * frame.TavernCostStride) + r]);
+                Assert.Equal(cost[r], frame.TavernCosts[(i * frame.TavernCostStride) + r]);
             }
-
-            expected++;
         }
-
-        Assert.Equal(expected, frame.TavernOfferCount);
     }
 
     [Fact]

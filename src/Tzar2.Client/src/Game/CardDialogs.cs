@@ -160,7 +160,7 @@ public abstract partial class CardDialog : Control
 /// </summary>
 public partial class GambleDialog : CardDialog
 {
-    private const int Step = 100;
+    private const int Step = 50; // TRADE-012: stakes go by 50 (D_GAMBLE)
     private const int DiceFrames = 15;
     private const int DiceMs = 900;
 
@@ -439,34 +439,38 @@ public partial class TradeDialog : CardDialog
 /// <c>bu_amount</c>);</item>
 /// <item>CANCEL and BUILD.</item>
 /// </list>
-/// Where the toggles sit on the horizontal panel and the power shown on the right are ours (⚠ UNVERIFIED).
+/// Where the toggles sit on the horizontal panel and the strength shown on the right are ours (⚠ UNVERIFIED). The gold goes
+/// by 10 (50 with Shift) from 100, as the original's D_build does (ITEM-020; ReTzar's reading, 0x4a4460).
 /// </summary>
 public partial class CraftDialog : CardDialog
 {
     private static readonly string[] Kinds = ["books", "potions", "power"];
     private readonly IReadOnlyList<CraftChoice> _items;
-    private readonly Func<ushort, int> _pricePerPower;
-    private readonly int _maxPower;
+    private readonly Func<ushort, int, int> _minimum;
+    private readonly Func<ushort, int, int, int> _strength;
+    private readonly int _step;
     private readonly TextureRect _item;
-    private readonly TextureRect _gold;
+    private readonly TextureRect _goldLabel;
     private readonly TextureRect _power;
     private readonly TextureButton[] _toggles = new TextureButton[3];
     private int _kind;
     private int _index;
-    private int _strength = 1;
+    private int _gold = 100;
 
     /// <summary>Creates the dialog.</summary>
     /// <param name="ui">The UI assets.</param>
     /// <param name="items">The items the workshop makes, with their kind (0 books, 1 potions, 2 weapons and shields), picture and name.</param>
-    /// <param name="pricePerPower">The gold one point of power costs for an item type.</param>
-    /// <param name="maxPower">The most power an item may have.</param>
-    public CraftDialog(UiAssets ui, IReadOnlyList<CraftChoice> items, Func<ushort, int> pricePerPower, int maxPower)
+    /// <param name="minimum">The least gold for an item type and variant.</param>
+    /// <param name="strength">What an amount of gold makes of an item type and variant.</param>
+    /// <param name="step">The step the gold goes by.</param>
+    public CraftDialog(UiAssets ui, IReadOnlyList<CraftChoice> items, Func<ushort, int, int> minimum, Func<ushort, int, int, int> strength, int step)
         : base(ui, "d_build")
     {
         ArgumentNullException.ThrowIfNull(items);
         _items = items;
-        _pricePerPower = pricePerPower;
-        _maxPower = Math.Max(1, maxPower);
+        _minimum = minimum;
+        _strength = strength;
+        _step = Math.Max(1, step);
         for (int k = 0; k < Kinds.Length; k++)
         {
             int kind = k;
@@ -489,11 +493,12 @@ public partial class CraftDialog : CardDialog
         });
         var coins = Cell(new Rect2I(127, 11, 42, 42), s =>
         {
-            _strength = Math.Clamp(_strength + s, 1, _maxPower);
+            int by = Input.IsKeyPressed(Key.Shift) ? 5 * _step : _step;
+            _gold = Math.Clamp(_gold + (s * by), _step, 100_000);
             Refresh();
         });
         coins.Texture = Ui.Texture("art/screens/d_build/amount.t2img");
-        _gold = Label(new Rect2I(127, 11, 42, 42));
+        _goldLabel = Label(new Rect2I(127, 11, 42, 42));
         Button(new Vector2I(73, 67), "cancel", Close);
         Button(new Vector2I(127, 67), "build", () =>
         {
@@ -512,7 +517,7 @@ public partial class CraftDialog : CardDialog
 
     private CraftChoice? Current => OfKind() is { Count: > 0 } kind ? kind[Math.Min(_index, kind.Count - 1)] : null;
 
-    private int Gold => Current is { } item ? _strength * _pricePerPower(item.Type) : 0;
+    private int Gold => _gold;
 
     private List<CraftChoice> OfKind() => [.. _items.Where(i => i.Kind == _kind)];
 
@@ -528,15 +533,16 @@ public partial class CraftDialog : CardDialog
         if (Current is not { } item)
         {
             _item.Texture = null;
-            SetText(_gold, string.Empty);
+            SetText(_goldLabel, string.Empty);
             SetText(_power, string.Empty);
             return;
         }
 
         _item.Texture = item.Picture;
         _item.TooltipText = item.Name;
-        SetText(_gold, Gold.ToString(CultureInfo.InvariantCulture), UiAssets.TitleFont);
-        SetText(_power, "power " + _strength.ToString(CultureInfo.InvariantCulture));
+        int least = _minimum(item.Type, item.Variant);
+        SetText(_goldLabel, Gold.ToString(CultureInfo.InvariantCulture), UiAssets.TitleFont);
+        SetText(_power, Gold < least ? "at least " + least.ToString(CultureInfo.InvariantCulture) : "power " + _strength(item.Type, item.Variant, Gold).ToString(CultureInfo.InvariantCulture));
     }
 }
 

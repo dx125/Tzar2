@@ -51,7 +51,7 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // movement): the hashes only.
     // (ADR 0273, 2026-11-04) the decals carry their look and the rubble that stays (hashed state): the hashes only.
     // (ADR 0274, 2026-11-04) a store for the flame balls' way (hashed layout 21; no shots here): the hashes only.
-    private const ulong GoldenFinalFullHash = 0x60B8D95170D92561UL;
+    private const ulong GoldenFinalFullHash = 0x83014207BC0538A4UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look, craft jobs their variant (layout 11): the hashes only.
     // (ADR 0189, 2026-10-22) queued orders gain a kind and a target, explorers an area (hashed layout 12): the hashes only.
@@ -63,7 +63,7 @@ public class SimGoldenHashTests(ITestOutputHelper output)
     // (ADR 0270, 2026-10-27) the hashed layout 20 (the steps' store): the hashes only.
     // (ADR 0273, 2026-11-04) the decals' looks and the rubble that stays: the hashes only.
     // (ADR 0274, 2026-11-04) the flame balls' store: the hashes only.
-    private const ulong GoldenHashStream = 0x08A5EA46B4EA1BA8UL;
+    private const ulong GoldenHashStream = 0xEAC64E51460D7A48UL;
 
     private const int Ticks = 300;
 

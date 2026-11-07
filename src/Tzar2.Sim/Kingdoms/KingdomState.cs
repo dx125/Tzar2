@@ -101,7 +101,7 @@ public struct KingdomState
     /// <summary>Cheat switches.</summary>
     public CheatFlags Cheats;
 
-    /// <summary>Tavern offers of <see cref="TavernPeriod"/> already hired (bit = offer slot; GAME-14).</summary>
+    /// <summary>Unused since the taverns keep their own offers (TRADE-009, ADR 0280); always 0.</summary>
     public byte TavernTaken;
 
     /// <summary>The resource the tavern exchange under way takes (TRADE-011).</summary>
@@ -110,7 +110,7 @@ public struct KingdomState
     /// <summary>The resource the tavern exchange under way gives, a unit at a time (TRADE-011).</summary>
     public byte ExchangeReceive;
 
-    /// <summary>The tavern period <see cref="TavernTaken"/> belongs to (offers change every <c>world.tavernRefreshMs</c>).</summary>
+    /// <summary>Unused since the taverns keep their own offers (TRADE-009, ADR 0280); always 0.</summary>
     public int TavernPeriod;
 
     /// <summary>Units of the tavern exchange under way still to come; 0 when none is under way (TRADE-011).</summary>

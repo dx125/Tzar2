@@ -31,22 +31,24 @@ rules:
     rule: With Gambling (after Usury) the tavern gambles a chosen stake of a chosen resource with chosen odds.
     source: [manual Gambling, help ITEMS.TXT HT_GAMBLE]
     status: tested
-    note: The odds (1:1 to 1:10 in the pictures) and the chances are placeholders (UNK-28).
+    note: The odds and chances are the original's (TRADE-012).
   TRADE-007:
-    rule: With Usury the tavern lends a resource; the first loan is 1,000, and after one is repaid the next grows to 1,200 after some time; a loan must be repaid before a new one.
-    source: [manual Getting A Loan]
+    rule: With Usury the tavern lends a resource; the first loan is 1,000, repaid with 200 more, and a minute after a repayment the next loan is 200 larger; a loan must be repaid before a new one.
+    source: [manual Getting A Loan, 'community ReTzar src/gameplay.rs (loan 0x4d2cec, loan_return 0x4d2d6a, the raise 0x4d24e9)']
     status: tested
-    note: The time before the loan grows and any interest are placeholders (UNK-28).
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced Tzar2's placeholders (no interest, the raise after 2 minutes; UNK-28).
   TRADE-008:
     rule: The amount the tavern will lend shows in the bottom left corner of the view.
     source: [manual Getting A Loan, 'strings STRINGS3.INI [misc] getloan3, retloan3']
     status: tested
     note: The loan orders' hints say it in the original's words, "Obtain loan 1000 of Gold" and "Return your loan - 1000 of Gold", with the limit a due raise included. Tzar2 shows hints in the order's tooltip box instead of the original's line at the bottom left of the view (HUD-001, the owner's choice).
   TRADE-009:
-    rule: With Mercenaries the tavern hires small groups of soldiers, and with Heroes' Quest heroes; Fame brings more and better mercenaries, cheaper and more experienced; they gather in the tavern over time, of all races.
-    source: [manual Researching Technologies, help ITEMS.TXT HT_REQRUIT]
+    rule: With Mercenaries the tavern hires groups of soldiers, and with Heroes' Quest heroes, of all races; each tavern keeps a list of each, and a second after it stands and then every minute (six in a Deathmatch) each list gains an offer - 8 to 12 soldiers of a random civilization's barracks at level 0, or one hero of level 10 to 30 - Fame adding 4 levels to either; a full list of 8 loses its oldest, and a hired offer leaves its list. An offer costs its type's cost for the kingdom times its count times 1.6, plus 30 gold a level and 15 a level of each other resource the type costs.
+    source: [manual Researching Technologies, help ITEMS.TXT HT_REQRUIT, 'community ReTzar src/gameplay.rs (tavern_offers 0x4d24c0, add_hire 0x4d2030, hire_price 0x4d23b0)']
     status: tested
-    note: The offers, sizes and prices are placeholders (UNK-28).
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced Tzar2's placeholders (3 groups of 3 to 5 and a hero per kingdom every 2 minutes at 150 % and 600 %; UNK-28). The original draws a button of the barracks menu and may draw one that trains nothing; Tzar2 draws among the units the barracks train.
   TRADE-010:
     rule: Markets need the merchants' guild and make traders or caravans.
     source: [manual Civilizations (Market)]
@@ -56,3 +58,9 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x4d3104: delivered one unit every 300 ms; K+0x126: one exchange per kingdom)', owner 2026-10-25 (sixth play-test)]
     status: tested
     note: The dialog offers 100, 200, 500, then steps of 500 up to 10,000 (the owner's wish; the original offers 500 to 20,000 by 500), opens with the last exchange asked for, shows what has come so far in the result's cell and greys TRADE until it is over; a message tells when it is done. exchangeUnitMs in the classic ruleset.
+  TRADE-012:
+    rule: At the tavern's dice a stake of 50 or more, by 50, wins with a roll of 1 to 100 at most 50, 33, 20 or 10 for the odds 1:1, 2:1, 5:1 or 10:1, keeping the stake and gaining it that many times; any other roll loses the stake.
+    source: [manual Gambling, help ITEMS.TXT HT_GAMBLE, 'community ReTzar src/gameplay.rs (gamble, D_GAMBLE 0x4a3fee) and src/dialogs.rs (D_GAMBLE starts at 50)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced odds 2 to 10 with a 10 % house edge (UNK-28). The original rolls on its stream of sounds and pictures; Tzar2 on its match stream.

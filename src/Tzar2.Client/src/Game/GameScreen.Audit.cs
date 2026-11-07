@@ -86,7 +86,7 @@ public partial class GameScreen
                 return true;
             case "craft":
                 List<CraftChoice> items = _card.CraftOptions(CardNow()).Select(CraftChoiceOf).ToList();
-                OpenDialog(new CraftDialog(_ui, items, _card.CraftPricePerPower, _card.CraftMaxPower));
+                OpenDialog(new CraftDialog(_ui, items, _card.CraftMinimum, _card.CraftStrength, _card.CraftGoldStep));
                 return true;
             case "message":
                 ShowModal(new ScenarioNotice(ScenarioNoticeKind.Message, SampleTitle, SampleText, null, null, null, 0, false, 0, 0, true));

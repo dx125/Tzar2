@@ -72,6 +72,7 @@ public sealed class MagicSystem : ISimSystem
         Crusades(world, tick);
         Crafting(world, tickMs);
         MarketItems.Step(world, tick);
+        TavernOffers.Step(world, tick);
         CombatSystem.ProcessDeaths(world, _deaths);
     }
 
@@ -1425,24 +1426,17 @@ public sealed class MagicSystem : ISimSystem
             EntityId item = world.Spawn((ushort)job.ItemType, MapObject.Nature, x, y);
             ItemDefinition def = world.Ruleset.EntityTypes[job.ItemType].Traits.Item!;
             CraftVariant v = def.CraftVariantAt(job.Variant);
-            CombatSettings settings = world.Ruleset.Combat;
             ref ItemState state = ref world.Items.Get(item);
             state.Effect = v.Effect;
             state.Spell = (ushort)(v.Spell + 1);
             state.Look = (byte)v.Look;
 
-            // The gold buys power: points of attack or defence, or a potion's hit points, mana or levels, or a book's
-            // uses (ITEM-016; the scales are UNVERIFIED, UNK-25).
-            state.Power = v.Effect switch
-            {
-                ItemEffect.Health => job.Power * settings.CraftHealthPerPower,
-                ItemEffect.Mana => job.Power * settings.CraftManaPerPower,
-                ItemEffect.Levels => Math.Max(1, job.Power / settings.CraftPowerPerLevel),
-                _ => job.Power,
-            };
+            // ITEM-020 (0x4743b0): the gold paid (CraftJob.Power) makes the item's strength or a book's charges.
+            int strength = CraftRules.Strength(world.Ruleset, (ushort)job.ItemType, job.Variant, job.Power);
+            state.Power = def.Kind == ItemKind.SpellBook ? state.Power : strength;
             if (def.Kind == ItemKind.SpellBook && def.Charges > 0)
             {
-                state.Charges = job.Power;
+                state.Charges = Math.Max(1, strength);
             }
 
             world.Events.Emit(new SimEvent(SimEventKind.ItemCrafted, world.Identities.Get(workshop).Owner, item, workshop.Index, 0, job.ItemType));

@@ -1648,7 +1648,7 @@ public partial class GameScreen : Node
                 break;
             case CardDialogKind.Craft:
                 var items = _card.CraftOptions(CardNow()).Select(CraftChoiceOf).ToList();
-                var craft = new CraftDialog(_ui, items, _card.CraftPricePerPower, _card.CraftMaxPower);
+                var craft = new CraftDialog(_ui, items, _card.CraftMinimum, _card.CraftStrength, _card.CraftGoldStep);
                 craft.Craft += (type, variant, gold) =>
                 {
                     Submit(_card.Craft(CardNow(), type, gold, variant));

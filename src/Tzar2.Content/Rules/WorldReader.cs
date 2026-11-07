@@ -12,13 +12,13 @@ internal static class WorldReader
     [
         "defaultSightTiles", "nightSightPercent", "memoryRefreshTicks", "diplomacyChangeIntervalMs", "tributeIntervalMs",
         "maxTributeAmount", "stockpileCap", "tradeProfitPercent", "tradeMinDistanceTiles",
-        "tradeDockMs", "convertRatio", "exchangeUnitMs", "gambleOdds", "gambleHouseEdgePercent", "maxGambleStake", "loanStartAmount", "loanStepAmount",
-        "loanGrowDelayMs", "loanInterestPercent", "claimReachPx", "claimIntervalMs", "guardRadiusTiles", "wanderRadiusTiles",
+        "tradeDockMs", "convertRatio", "exchangeUnitMs", "gambleOdds", "gambleChances", "gambleStakeStep", "maxGambleStake", "loanStartAmount", "loanStepAmount",
+        "loanGrowDelayMs", "loanInterestAmount", "claimReachPx", "claimIntervalMs", "guardRadiusTiles", "wanderRadiusTiles",
         "wanderIntervalMs", "dayLengthMs", "dayStartMinute", "nightStartMinute", "nightEndMinute", "weatherPeriodMs",
         "weatherChancePercent", "weather", "scoreForBuilding", "scoreForKill", "scoreMinedResources",
-        "victoryIntervalTicks", "deathmatchStartingResources", "cheatSmallResources", "cheatLargeResources", "tavernRefreshMs",
-        "mercenaryOffers", "heroOffers", "mercenaryGroupMin", "mercenaryGroupMax", "mercenaryCostPercent", "heroCostPercent",
-        "mercenaryLevel", "fameGroupBonus", "fameLevelBonus", "fameCostPercent", "mercenariesTechnology", "heroesTechnology",
+        "victoryIntervalTicks", "deathmatchStartingResources", "cheatSmallResources", "cheatLargeResources", "tavernFirstMs", "tavernEveryMs", "tavernDeathmatchEveryMs",
+        "heroLevelMin", "heroLevelMax", "mercenaryGroupMin", "mercenaryGroupMax", "hirePricePercent", "hireGoldPerLevel", "hireOtherPerLevel",
+        "mercenaryLevel", "fameLevelBonus", "mercenariesTechnology", "heroesTechnology",
         "fameTechnology", "gamblingTechnology", "loanTechnology",
     ];
 
@@ -56,13 +56,14 @@ internal static class WorldReader
             TradeDockMs = Range(settings, "tradeDockMs", d.TradeDockMs, 0, 600_000),
             ConvertRatio = Range(settings, "convertRatio", d.ConvertRatio, 1, 1000),
             ExchangeUnitMs = Range(settings, "exchangeUnitMs", d.ExchangeUnitMs, 0, 60_000),
-            GambleOdds = Odds(settings) ?? d.GambleOdds,
-            GambleHouseEdgeBasisPoints = Range(settings, "gambleHouseEdgePercent", d.GambleHouseEdgeBasisPoints / 100, 0, 100) * 100,
+            GambleOdds = Ints(settings, "gambleOdds", 1, 100) ?? d.GambleOdds,
+            GambleChances = Ints(settings, "gambleChances", 0, 100) ?? d.GambleChances,
+            GambleStakeStep = Range(settings, "gambleStakeStep", d.GambleStakeStep, 1, 1_000_000),
             MaxGambleStake = Range(settings, "maxGambleStake", d.MaxGambleStake, 1, 10_000_000),
             LoanStartAmount = Range(settings, "loanStartAmount", d.LoanStartAmount, 0, 10_000_000),
             LoanStepAmount = Range(settings, "loanStepAmount", d.LoanStepAmount, 0, 10_000_000),
             LoanGrowDelayMs = Range(settings, "loanGrowDelayMs", d.LoanGrowDelayMs, 0, int.MaxValue),
-            LoanInterestBasisPoints = Range(settings, "loanInterestPercent", d.LoanInterestBasisPoints / 100, 0, 1000) * 100,
+            LoanInterestAmount = Range(settings, "loanInterestAmount", d.LoanInterestAmount, 0, 10_000_000),
             ClaimReachUnits = Range(settings, "claimReachPx", d.ClaimReachUnits / 64, 0, 256) * 64,
             ClaimIntervalMs = Range(settings, "claimIntervalMs", d.ClaimIntervalMs, 1, 60_000),
             GuardRadiusTiles = Range(settings, "guardRadiusTiles", d.GuardRadiusTiles, 0, 128),
@@ -82,17 +83,18 @@ internal static class WorldReader
             DeathmatchStartingResources = deathmatch,
             CheatSmallResources = Range(settings, "cheatSmallResources", d.CheatSmallResources, 0, 10_000_000),
             CheatLargeResources = Range(settings, "cheatLargeResources", d.CheatLargeResources, 0, 10_000_000),
-            TavernRefreshMs = Range(settings, "tavernRefreshMs", d.TavernRefreshMs, 1_000, int.MaxValue),
-            MercenaryOffers = Range(settings, "mercenaryOffers", d.MercenaryOffers, 0, WorldSettings.MaxTavernOffers),
-            HeroOffers = Range(settings, "heroOffers", d.HeroOffers, 0, WorldSettings.MaxTavernOffers),
-            MercenaryGroupMin = Range(settings, "mercenaryGroupMin", d.MercenaryGroupMin, 1, 31),
-            MercenaryGroupMax = Range(settings, "mercenaryGroupMax", d.MercenaryGroupMax, 1, 31),
-            MercenaryCostPercent = Range(settings, "mercenaryCostPercent", d.MercenaryCostPercent, 0, 100_000),
-            HeroCostPercent = Range(settings, "heroCostPercent", d.HeroCostPercent, 0, 100_000),
-            MercenaryLevel = Range(settings, "mercenaryLevel", d.MercenaryLevel, 0, 1_000),
-            FameGroupBonus = Range(settings, "fameGroupBonus", d.FameGroupBonus, 0, 16),
-            FameLevelBonus = Range(settings, "fameLevelBonus", d.FameLevelBonus, 0, 1_000),
-            FameCostPercent = Range(settings, "fameCostPercent", d.FameCostPercent, 0, 1_000),
+            TavernFirstMs = Range(settings, "tavernFirstMs", d.TavernFirstMs, 1, int.MaxValue),
+            TavernEveryMs = Range(settings, "tavernEveryMs", d.TavernEveryMs, 1_000, int.MaxValue),
+            TavernDeathmatchEveryMs = Range(settings, "tavernDeathmatchEveryMs", d.TavernDeathmatchEveryMs, 1_000, int.MaxValue),
+            MercenaryGroupMin = Range(settings, "mercenaryGroupMin", d.MercenaryGroupMin, 1, 255),
+            MercenaryGroupMax = Range(settings, "mercenaryGroupMax", d.MercenaryGroupMax, 1, 255),
+            MercenaryLevel = Range(settings, "mercenaryLevel", d.MercenaryLevel, 0, 200),
+            HeroLevelMin = Range(settings, "heroLevelMin", d.HeroLevelMin, 0, 200),
+            HeroLevelMax = Range(settings, "heroLevelMax", d.HeroLevelMax, 0, 200),
+            FameLevelBonus = Range(settings, "fameLevelBonus", d.FameLevelBonus, 0, 50),
+            HirePricePercent = Range(settings, "hirePricePercent", d.HirePricePercent, 0, 100_000),
+            HireGoldPerLevel = Range(settings, "hireGoldPerLevel", d.HireGoldPerLevel, 0, 1_000_000),
+            HireOtherPerLevel = Range(settings, "hireOtherPerLevel", d.HireOtherPerLevel, 0, 1_000_000),
             MercenariesTechnology = settings.Scalar("world", "mercenariesTechnology") ?? d.MercenariesTechnology,
             HeroesTechnology = settings.Scalar("world", "heroesTechnology") ?? d.HeroesTechnology,
             FameTechnology = settings.Scalar("world", "fameTechnology") ?? d.FameTechnology,
@@ -114,22 +116,22 @@ internal static class WorldReader
         return false;
     }
 
-    private static ImmutableArray<int>? Odds(RulesetCompiler.SectionSet settings)
+    private static ImmutableArray<int>? Ints(RulesetCompiler.SectionSet settings, string field, int min, int max)
     {
-        if (settings.Field("world", "gambleOdds") is not { } node)
+        if (settings.Field("world", field) is not { } node)
         {
             return null;
         }
 
-        string source = settings.FieldSource("world", "gambleOdds");
-        var odds = ImmutableArray.CreateBuilder<int>();
-        foreach (YamlNode item in RulesetCompiler.Seq(node, source, "world.gambleOdds").Items)
+        string source = settings.FieldSource("world", field);
+        var values = ImmutableArray.CreateBuilder<int>();
+        foreach (YamlNode item in RulesetCompiler.Seq(node, source, "world." + field).Items)
         {
-            int value = RulesetCompiler.Int(item, source, "world.gambleOdds");
-            odds.Add(value is >= 2 and <= 100 ? value : throw new RulesException(source, item.Line, "world.gambleOdds: each odds must be 2..100"));
+            int value = RulesetCompiler.Int(item, source, "world." + field);
+            values.Add(value >= min && value <= max ? value : throw new RulesException(source, item.Line, $"world.{field}: each value must be {min}..{max}"));
         }
 
-        return odds.ToImmutable();
+        return values.ToImmutable();
     }
 
     // scoreMinedResources: [gold, stone]

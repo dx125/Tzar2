@@ -168,8 +168,8 @@ public sealed partial class Ruleset
         CombatSettings c = Combat;
         hasher.Add(c.ExperiencePerDamagePercent).Add(c.ExperiencePerKill).Add(c.LevelBaseXp).Add(c.LevelStepXp).Add(c.NatureManaRegenPercent).Add(c.MurderBlowMana).Add(c.BaseLevelCap).Add(c.AttackPerLevel)
             .Add(c.DefenceHalvesPerLevel).Add(c.HeroLevel).Add(c.LeadershipTechnology).Add(c.LeadershipBelowLevel).Add(c.LeadershipSharePercent)
-            .Add(c.HonorTechnology).Add(c.HonorAttackPercent).Add(c.DummyMaxLevel).Add(c.ExitRadiusTiles).Add(c.CraftGoldPerPower)
-            .Add(c.CraftMsPerPower).Add(c.CraftMaxPower).Add(c.CraftHealthPerPower).Add(c.CraftManaPerPower).Add(c.CraftPowerPerLevel).Add(c.CraftBookCostPercent).Add(c.CraftBookTimePercent).Add(c.BribeLevelOffset).Add(c.BribeGoldPerLevelPercent).Add(c.CrusadeAnchor).Add(c.Crusader).Add(c.CrusadeStart).Add(c.CrusadeRestart).Add(c.CrusadeCeilingStep).Add(c.CrusadeCeilingMax)
+            .Add(c.HonorTechnology).Add(c.HonorAttackPercent).Add(c.DummyMaxLevel).Add(c.ExitRadiusTiles).Add(c.CraftMsPerGold)
+            .Add(c.CraftBookMsPerGold).Add(c.CraftGoldStep).Add(c.CraftExperienceDivisor).Add(c.CraftPotionStatDivisor).Add(c.CraftEquipmentDivisor).Add(c.CraftEquipmentMax).Add(c.BribeLevelOffset).Add(c.BribeGoldPerLevelPercent).Add(c.CrusadeAnchor).Add(c.Crusader).Add(c.CrusadeStart).Add(c.CrusadeRestart).Add(c.CrusadeCeilingStep).Add(c.CrusadeCeilingMax)
             .Add(c.CrusadeAnchorRadiusUnits).Add(c.BansheeSpell).Add(c.BansheeChance).Add(c.BansheeOutOf)
             .Add(c.TournamentTechnology).Add(c.TournamentEvery).Add(c.TournamentGrant).AddSpan<ushort>(c.TournamentPupils.AsSpan())
             .AddSpan<ushort>(c.MagicAttackers.AsSpan()).Add(c.SoulBerserkSpell)
@@ -222,7 +222,7 @@ public sealed partial class Ruleset
             hasher.Add(Encoding.UTF8.GetBytes(s.Key)).Add((byte)s.Effect).Add((byte)s.Target).Add((byte)s.Affects).Add(s.ManaCost).Add(s.RangeUnits)
                 .Add(s.CooldownMs).Add(s.CastMs).Add(s.Amount).Add(s.DurationMs).Add(s.RadiusUnits).Add(s.Summon).Add(s.Projectile)
                 .Add(s.PulseMs).Add(s.Count).AddSpan<ushort>(s.TargetTypes.AsSpan()).Add(s.BookValue).Add(s.DurationMaxMs)
-                .Add(s.Square).Add(s.ScatterUnits).Add(s.DelayMs).Add(s.MoveMs).Add(s.RevealTiles).Add(s.DrainsMana);
+                .Add(s.Square).Add(s.ScatterUnits).Add(s.DelayMs).Add(s.MoveMs).Add(s.RevealTiles).Add(s.DrainsMana).Add(s.BookMinimum);
         }
     }
 

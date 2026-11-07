@@ -162,6 +162,7 @@ public class TradeTests
     [Trait("Rule", "TRADE-006")]
     [Trait("Rule", "TRADE-007")]
     [Trait("Rule", "TRADE-011")]
+    [Trait("Rule", "TRADE-012")]
     public void The_tavern_converts_ten_to_one_gambles_deterministically_and_lends_more_after_a_repayment()
     {
         using SimDriver d = Markets(20);
@@ -188,12 +189,17 @@ public class TradeTests
         Assert.Equal(10, w.Players[0].Resources[gold]);
         Assert.Equal(0, w.Kingdoms[0].ExchangeLeft);
 
-        // Loans: 1,000, outstanding blocks another, repaid, then 1,200 after the delay (manual ch. 5 §10).
+        // Loans: 1,000, outstanding blocks another, repaid with 200 more, then 1,200 a minute later (manual ch. 5 §10;
+        // ReTzar's reading of the original, 0x4d2d6a, 0x4d24e9).
         d.Order(0, CommandKind.Loan, [tavern], arg0: gold, arg1: 0);
         d.Order(0, CommandKind.Loan, [tavern], arg0: gold, arg1: 0);
         d.Step();
         Assert.Equal(1010, w.Players[0].Resources[gold]);
         Assert.Contains(CommandRejection.LoanOutstanding, d.Rejections());
+        d.Order(0, CommandKind.Loan, [tavern], arg1: 1);
+        d.Step();
+        Assert.Equal(CommandRejection.NotAffordable, d.Rejections().Last()); // 1,200 to pay back
+        w.Players[0].Resources[gold] += 200;
         d.Order(0, CommandKind.Loan, [tavern], arg1: 1);
         d.Step();
         Assert.Equal(10, w.Players[0].Resources[gold]);
@@ -226,7 +232,37 @@ public class TradeTests
 
         long first = Bets();
         Assert.Equal(first, Bets());
-        Assert.NotEqual(10_000 - 2000, first); // at odds 2 with a 10% edge some bets win
+        Assert.NotEqual(10_000 - 2000, first); // at 1:1 half the bets win (0x4a3fee)
         Assert.Equal(0, (10_000 - first) % 100);
+    }
+
+    [Fact]
+    [Trait("Rule", "TRADE-012")]
+    public void A_win_at_the_dice_keeps_the_stake_and_pays_it_the_odds_times_a_loss_takes_it_and_stakes_go_by_50()
+    {
+        using SimDriver d = Markets(20);
+        World w = d.World;
+        EntityId tavern = OfType(w, "euro.tavern").Single();
+        int gold = Resource("gold");
+        d.Order(0, CommandKind.Gamble, [tavern], arg0: gold | (3 << 8), arg1: 75);
+        d.Order(0, CommandKind.Gamble, [tavern], arg0: gold | (3 << 8), arg1: 40);
+        d.Step();
+        Assert.Equal(2, d.Rejections().Count(r => r == CommandRejection.InvalidArgument)); // 50 or more, by 50 (D_GAMBLE)
+
+        // 10:1 wins one roll in ten (0x4a3fee): every result is +500 or -50 on a stake of 50.
+        int wins = 0, losses = 0;
+        for (int i = 0; i < 60; i++)
+        {
+            w.Players[0].Resources[gold] = 1_000;
+            d.Order(0, CommandKind.Gamble, [tavern], arg0: gold | (3 << 8), arg1: 50);
+            d.Step();
+            int after = w.Players[0].Resources[gold];
+            Assert.True(after is 1_500 or 950, $"{after}");
+            wins += after == 1_500 ? 1 : 0;
+            losses += after == 950 ? 1 : 0;
+        }
+
+        Assert.InRange(wins, 1, 20);
+        Assert.Equal(60, wins + losses);
     }
 }

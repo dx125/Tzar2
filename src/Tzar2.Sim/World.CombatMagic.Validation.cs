@@ -165,6 +165,28 @@ public sealed partial class World
             }
         }
 
+        ids = TavernStocks.Entities;
+        int tavernEvery = Math.Max(Math.Max(Ruleset.World.TavernEveryMs, Ruleset.World.TavernDeathmatchEveryMs), Ruleset.World.TavernFirstMs) / Config.TickLengthMilliseconds;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            TavernStock t = TavernStocks.Components[i];
+            if (!Footprints.Has(ids[i]) || !TypeOf(ids[i]).Traits.World.IsTavern || t.Mercenaries > TavernStock.ListSize || t.Heroes > TavernStock.ListSize
+                || t.Reserved != 0 || t.NextTick < 0 || t.NextTick > tick + tavernEvery + 1)
+            {
+                throw Invalid("invalid tavern stock");
+            }
+
+            for (int k = 0; k < TavernStock.Capacity; k++)
+            {
+                bool used = k < TavernStock.ListSize ? k < t.Mercenaries : k - TavernStock.ListSize < t.Heroes;
+                uint offer = t.Offers[k];
+                if (used ? (offer & 0xFFFF) >= Ruleset.EntityTypes.Count || ((offer >> 16) & 0xFF) == 0 : offer != 0)
+                {
+                    throw Invalid("invalid tavern offer");
+                }
+            }
+        }
+
         ids = MarketStocks.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
@@ -308,8 +330,8 @@ public sealed partial class World
         {
             CraftJob j = CraftJobs.Components[i];
             if (TypeOf(ids[i]).Traits.Crafter is not { } crafter || Constructions.Has(ids[i]) || (uint)j.ItemType >= (uint)types
-                || crafter.Items.BinarySearch((ushort)j.ItemType) < 0 || (uint)j.Variant >= (uint)Ruleset.EntityTypes[j.ItemType].Traits.Item!.CraftVariantCount || j.Power < 1 || j.Power > settings.CraftMaxPower || j.LeftMs < 0
-                || j.LeftMs > (long)j.Power * settings.CraftMsPerPower || !HasPlayer(Identities.Get(ids[i]).Owner))
+                || crafter.Items.BinarySearch((ushort)j.ItemType) < 0 || (uint)j.Variant >= (uint)Ruleset.EntityTypes[j.ItemType].Traits.Item!.CraftVariantCount || j.Power < 1 || j.Power > 10_000_000 || j.LeftMs < 0
+                || j.LeftMs > settings.CraftMs(Ruleset.EntityTypes[j.ItemType].Traits.Item is { Kind: ItemKind.SpellBook }, j.Power) || !HasPlayer(Identities.Get(ids[i]).Owner))
             {
                 throw Invalid("invalid craft job");
             }

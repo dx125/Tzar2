@@ -23,8 +23,8 @@ internal sealed class CombatCompiler
     [
         "experiencePerDamagePercent", "experiencePerKill", "levelBaseXp", "levelStepXp", "natureManaRegenPercent", "murderBlowMana", "baseLevelCap", "attackPerLevel", "defenceHalvesPerLevel",
         "heroLevel", "leadershipTechnology", "leadershipBelowLevel", "leadershipSharePercent", "honorTechnology", "honorAttackPercent",
-        "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
-        "craftBookTimePercent", "bribeLevelOffset", "bribeGoldPerLevelPercent", "captureTowers", "crusadeAnchor",
+        "dummyMaxLevel", "exitRadiusTiles", "craftMsPerGold", "craftBookMsPerGold", "craftGoldStep", "craftExperienceDivisor", "craftPotionStatDivisor",
+        "craftEquipmentDivisor", "craftEquipmentMax", "bribeLevelOffset", "bribeGoldPerLevelPercent", "captureTowers", "crusadeAnchor",
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeGather", "crusaderArrivalMs", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
         "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell", "dummyDamagePerPoint", "experienceSpeeds", "levelCapBuildings", "levelCapPerBuilding",
         "marketTechnology", "marketFirstMs", "marketEveryMs", "marketSize", "marketBuyPercent", "marketOffers", "marketBookSpells",
@@ -37,7 +37,7 @@ internal sealed class CombatCompiler
     private static readonly string[] SpellFields =
     [
         "effect", "target", "affects", "mana", "range", "cooldownMs", "castMs", "amount", "durationMs", "radius", "summon", "projectile",
-        "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs", "reveal", "drain",
+        "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs", "reveal", "drain", "bookMinimum",
     ];
 
     private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire", "onTile", "splashTiles", "burns", "dropPx"];
@@ -306,14 +306,13 @@ internal sealed class CombatCompiler
             HonorAttackPercent = Range("honorAttackPercent", d.HonorAttackPercent, 0, 10_000),
             DummyMaxLevel = Range("dummyMaxLevel", d.DummyMaxLevel, 0, 10_000),
             ExitRadiusTiles = Range("exitRadiusTiles", d.ExitRadiusTiles, 1, 16),
-            CraftHealthPerPower = Range("craftHealthPerPower", d.CraftHealthPerPower, 0, 100_000),
-            CraftManaPerPower = Range("craftManaPerPower", d.CraftManaPerPower, 0, 100_000),
-            CraftPowerPerLevel = Range("craftPowerPerLevel", d.CraftPowerPerLevel, 1, 10_000),
-            CraftGoldPerPower = Range("craftGoldPerPower", d.CraftGoldPerPower, 1, 1_000_000),
-            CraftMsPerPower = Range("craftMsPerPower", d.CraftMsPerPower, 0, 600_000),
-            CraftMaxPower = Range("craftMaxPower", d.CraftMaxPower, 1, 10_000),
-            CraftBookCostPercent = Range("craftBookCostPercent", d.CraftBookCostPercent, 1, 10_000),
-            CraftBookTimePercent = Range("craftBookTimePercent", d.CraftBookTimePercent, 1, 10_000),
+            CraftMsPerGold = Range("craftMsPerGold", d.CraftMsPerGold, 0, 600_000),
+            CraftBookMsPerGold = Range("craftBookMsPerGold", d.CraftBookMsPerGold, 0, 600_000),
+            CraftGoldStep = Range("craftGoldStep", d.CraftGoldStep, 1, 1_000_000),
+            CraftExperienceDivisor = Range("craftExperienceDivisor", d.CraftExperienceDivisor, 1, 1_000_000),
+            CraftPotionStatDivisor = Range("craftPotionStatDivisor", d.CraftPotionStatDivisor, 1, 1_000_000),
+            CraftEquipmentDivisor = Range("craftEquipmentDivisor", d.CraftEquipmentDivisor, 1, 1_000_000),
+            CraftEquipmentMax = Range("craftEquipmentMax", d.CraftEquipmentMax, 0, 1_000_000),
             BribeLevelOffset = Range("bribeLevelOffset", d.BribeLevelOffset, 0, 10_000),
             BribeGoldPerLevelPercent = Range("bribeGoldPerLevelPercent", d.BribeGoldPerLevelPercent, 0, 1_000_000),
             CrusadeAnchor = Type("crusadeAnchor", types),
@@ -551,6 +550,7 @@ internal sealed class CombatCompiler
             MoveMs = Int("moveMs", 0, 60_000),
             RevealTiles = Int("reveal", 0, 64),
             DrainsMana = Int("drain", 0, 1) == 1,
+            BookMinimum = Int("bookMinimum", 0, 1_000_000),
         };
     }
 

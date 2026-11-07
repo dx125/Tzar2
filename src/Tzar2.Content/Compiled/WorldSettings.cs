@@ -30,7 +30,7 @@ public readonly record struct TerrainWeather(string TerrainSet, WeatherKind Kind
 public sealed record WorldSettings
 {
     /// <summary>Most tavern offers per kingdom and period (a bit each in the kingdom state).</summary>
-    public const int MaxTavernOffers = 8;
+    public const int MaxTavernOffers = 8; // each of a tavern's two lists (TRADE-009: 0x4d2030)
 
     /// <summary>Defaults (the classic YAML states every value explicitly).</summary>
     public static WorldSettings Default { get; } = new();
@@ -77,11 +77,17 @@ public sealed record WorldSettings
     /// </summary>
     public int ExchangeUnitMs { get; init; }
 
-    /// <summary>Gambling odds a player may choose (pay N, win N × odds; UNK-28).</summary>
-    public ImmutableArray<int> GambleOdds { get; init; } = [2, 3, 5, 10];
+    /// <summary>
+    /// TRADE-012 (ReTzar's reading of the original, D_GAMBLE 0x4a3fee): what a win pays, in stakes, for each choice of the
+    /// dialog (1:1, 2:1, 5:1, 10:1); the stake is kept on a win and lost otherwise.
+    /// </summary>
+    public ImmutableArray<int> GambleOdds { get; init; } = [1, 2, 5, 10];
 
-    /// <summary>House edge of gambling in basis points: the win chance is (1 − edge) / odds (UNK-28).</summary>
-    public int GambleHouseEdgeBasisPoints { get; init; } = 1_000;
+    /// <summary>TRADE-012: the chance of a win for each choice, in percent (a roll of 1 to 100 at most this).</summary>
+    public ImmutableArray<int> GambleChances { get; init; } = [50, 33, 20, 10];
+
+    /// <summary>TRADE-012: the least stake, and the step stakes go by.</summary>
+    public int GambleStakeStep { get; init; } = 50;
 
     /// <summary>Most one bet may stake.</summary>
     public int MaxGambleStake { get; init; } = 10_000;
@@ -92,11 +98,11 @@ public sealed record WorldSettings
     /// <summary>How much the loan limit grows after a repayment (manual: 1,000 → 1,200).</summary>
     public int LoanStepAmount { get; init; } = 200;
 
-    /// <summary>Time after a repayment until the higher limit is offered (manual: "after some time"; UNK-28).</summary>
-    public int LoanGrowDelayMs { get; init; } = 120_000;
+    /// <summary>TRADE-007 (ReTzar's reading of the original, 0x4d24e9): time after a repayment until the higher limit is offered.</summary>
+    public int LoanGrowDelayMs { get; init; } = 60_000;
 
-    /// <summary>Extra to pay back on top of the loan, in basis points (UNK-28).</summary>
-    public int LoanInterestBasisPoints { get; init; } = 0;
+    /// <summary>TRADE-007 (0x4d2d6a): what is paid back on top of the loan.</summary>
+    public int LoanInterestAmount { get; init; } = 200;
 
     /// <summary>Reach of a touch that claims a gateway or a wild animal, edge to edge.</summary>
     public int ClaimReachUnits { get; init; } = 1024;
@@ -158,38 +164,41 @@ public sealed record WorldSettings
     /// <summary>Resources the <c>hmpetleva</c> cheat gives (each resource; the original sends hmdvaleva five times).</summary>
     public int CheatLargeResources { get; init; } = 50_000;
 
-    /// <summary>The tavern's offers change every this long (one set per kingdom and period; UNK-28).</summary>
-    public int TavernRefreshMs { get; init; } = 120_000;
+    /// <summary>TRADE-009 (ReTzar's reading of the original, 0x4d1e5f): a tavern's first offers come this long after it stands.</summary>
+    public int TavernFirstMs { get; init; } = 1_000;
 
-    /// <summary>Mercenary groups a tavern offers per period (Mercenaries).</summary>
-    public int MercenaryOffers { get; init; } = 3;
+    /// <summary>TRADE-009 (0x4d24c0): then each list gains an offer every this long.</summary>
+    public int TavernEveryMs { get; init; } = 60_000;
 
-    /// <summary>Heroes a tavern offers per period (Heroes' Quest).</summary>
-    public int HeroOffers { get; init; } = 1;
+    /// <summary>TRADE-009 (0x4d2567): the same in a Deathmatch.</summary>
+    public int TavernDeathmatchEveryMs { get; init; } = 360_000;
 
-    /// <summary>Fewest soldiers in a mercenary group ("small groups of soldiers", manual ch. 6).</summary>
-    public int MercenaryGroupMin { get; init; } = 3;
+    /// <summary>TRADE-009 (0x4d2030): fewest soldiers in a mercenary offer.</summary>
+    public int MercenaryGroupMin { get; init; } = 8;
 
-    /// <summary>Most soldiers in a mercenary group.</summary>
-    public int MercenaryGroupMax { get; init; } = 5;
+    /// <summary>TRADE-009: most soldiers in a mercenary offer.</summary>
+    public int MercenaryGroupMax { get; init; } = 12;
 
-    /// <summary>A mercenary group costs its soldiers' training cost times this, in percent.</summary>
-    public int MercenaryCostPercent { get; init; } = 150;
+    /// <summary>TRADE-009: the experience level of mercenaries, before Fame.</summary>
+    public int MercenaryLevel { get; init; } = 0;
 
-    /// <summary>A hero costs its type's training cost times this, in percent.</summary>
-    public int HeroCostPercent { get; init; } = 600;
+    /// <summary>TRADE-009: the lowest level of a hero on offer, before Fame.</summary>
+    public int HeroLevelMin { get; init; } = 10;
 
-    /// <summary>The experience level hired mercenaries start with.</summary>
-    public int MercenaryLevel { get; init; } = 1;
+    /// <summary>TRADE-009: the highest.</summary>
+    public int HeroLevelMax { get; init; } = 30;
 
-    /// <summary>Fame: more soldiers per group.</summary>
-    public int FameGroupBonus { get; init; } = 1;
+    /// <summary>TRADE-009 (0x4d22b6): what Fame adds to the level of every offer.</summary>
+    public int FameLevelBonus { get; init; } = 4;
 
-    /// <summary>Fame: more experienced mercenaries (levels).</summary>
-    public int FameLevelBonus { get; init; } = 2;
+    /// <summary>TRADE-009 (0x4d23b0): an offer costs its type's cost for the kingdom times its count times this, in percent.</summary>
+    public int HirePricePercent { get; init; } = 160;
 
-    /// <summary>Fame: cheaper mercenaries (percent of the price kept).</summary>
-    public int FameCostPercent { get; init; } = 75;
+    /// <summary>TRADE-009: and this much gold more a level.</summary>
+    public int HireGoldPerLevel { get; init; } = 30;
+
+    /// <summary>TRADE-009: and this much more a level of each other resource the type costs.</summary>
+    public int HireOtherPerLevel { get; init; } = 15;
 
     /// <summary>The technology that opens the tavern's mercenaries (empty: none needed).</summary>
     public string MercenariesTechnology { get; init; } = "te_mercenaries";
@@ -235,12 +244,22 @@ public sealed record WorldSettings
 
         foreach (int odds in GambleOdds)
         {
-            ArgumentOutOfRangeException.ThrowIfLessThan(odds, 2);
+            ArgumentOutOfRangeException.ThrowIfLessThan(odds, 1);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(odds, 100);
         }
 
-        ArgumentOutOfRangeException.ThrowIfNegative(GambleHouseEdgeBasisPoints);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(GambleHouseEdgeBasisPoints, 10_000);
+        if (GambleChances.IsDefault || GambleChances.Length != GambleOdds.Length)
+        {
+            throw new ArgumentException("Every gamble odds needs its chance.", nameof(GambleChances));
+        }
+
+        foreach (int chance in GambleChances)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(chance, 0);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(chance, 100);
+        }
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(GambleStakeStep, 1);
         ArgumentOutOfRangeException.ThrowIfNegative(ExchangeUnitMs);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ExchangeUnitMs, 60_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(MaxGambleStake, 1);
@@ -250,8 +269,8 @@ public sealed record WorldSettings
         ArgumentOutOfRangeException.ThrowIfNegative(LoanStepAmount);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(LoanStepAmount, 10_000_000);
         ArgumentOutOfRangeException.ThrowIfNegative(LoanGrowDelayMs);
-        ArgumentOutOfRangeException.ThrowIfNegative(LoanInterestBasisPoints);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(LoanInterestBasisPoints, 100_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(LoanInterestAmount);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(LoanInterestAmount, 10_000_000);
         ArgumentOutOfRangeException.ThrowIfNegative(ClaimReachUnits);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ClaimReachUnits, 8 * 2048);
         ArgumentOutOfRangeException.ThrowIfLessThan(ClaimIntervalMs, 1);
@@ -297,24 +316,21 @@ public sealed record WorldSettings
         ArgumentNullException.ThrowIfNull(DeathmatchStartingResources);
         ArgumentOutOfRangeException.ThrowIfNegative(CheatSmallResources);
         ArgumentOutOfRangeException.ThrowIfNegative(CheatLargeResources);
-        ArgumentOutOfRangeException.ThrowIfLessThan(TavernRefreshMs, 1_000);
-        ArgumentOutOfRangeException.ThrowIfNegative(MercenaryOffers);
-        ArgumentOutOfRangeException.ThrowIfNegative(HeroOffers);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(MercenaryOffers + HeroOffers, MaxTavernOffers);
+        ArgumentOutOfRangeException.ThrowIfLessThan(TavernFirstMs, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(TavernEveryMs, 1_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(TavernDeathmatchEveryMs, 1_000);
         ArgumentOutOfRangeException.ThrowIfLessThan(MercenaryGroupMin, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(MercenaryGroupMax, MercenaryGroupMin);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(MercenaryGroupMax + FameGroupBonus, 32);
-        ArgumentOutOfRangeException.ThrowIfNegative(FameGroupBonus);
-        ArgumentOutOfRangeException.ThrowIfNegative(MercenaryCostPercent);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(MercenaryCostPercent, 100_000);
-        ArgumentOutOfRangeException.ThrowIfNegative(HeroCostPercent);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(HeroCostPercent, 100_000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(MercenaryGroupMax, 255);
         ArgumentOutOfRangeException.ThrowIfNegative(MercenaryLevel);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(MercenaryLevel, 1_000);
+        ArgumentOutOfRangeException.ThrowIfLessThan(HeroLevelMin, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(HeroLevelMax, HeroLevelMin);
         ArgumentOutOfRangeException.ThrowIfNegative(FameLevelBonus);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(FameLevelBonus, 1_000);
-        ArgumentOutOfRangeException.ThrowIfNegative(FameCostPercent);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(FameCostPercent, 1_000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(Math.Max(HeroLevelMax, MercenaryLevel) + FameLevelBonus, 255);
+        ArgumentOutOfRangeException.ThrowIfNegative(HirePricePercent);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(HirePricePercent, 100_000);
+        ArgumentOutOfRangeException.ThrowIfNegative(HireGoldPerLevel);
+        ArgumentOutOfRangeException.ThrowIfNegative(HireOtherPerLevel);
     }
 
     /// <summary>The precipitation of a terrain set (clear when unlisted or null).</summary>

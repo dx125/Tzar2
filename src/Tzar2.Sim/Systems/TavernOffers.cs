@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using Tzar2.Content.Compiled;
 using Tzar2.Core.Ids;
-using Tzar2.Core.Rng;
 using Tzar2.Sim.Commands;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
@@ -10,97 +10,132 @@ using Tzar2.Sim.Map;
 
 namespace Tzar2.Sim.Systems;
 
-/// <summary>One tavern offer (GAME-14 hiring, ADR 0108).</summary>
+/// <summary>One tavern offer (TRADE-009; ADR 0108, ADR 0280).</summary>
 /// <param name="TypeId">The unit type.</param>
-/// <param name="Count">Units in the offer (a mercenary group; heroes: 1).</param>
+/// <param name="Count">Units in the offer (mercenaries: 8 to 12; a hero: 1).</param>
 /// <param name="Level">Their experience level.</param>
 /// <param name="IsHero">A hero (named, hero flag).</param>
 public readonly record struct TavernOffer(ushort TypeId, int Count, int Level, bool IsHero);
 
 /// <summary>
-/// The tavern's mercenaries and heroes (GAME-14, ADR 0108; manual ch. 6: Mercenaries "makes the recruitment of small
-/// groups of soldiers in the taverns possible", Heroes' Quest "makes the recruitment of heroes possible", Fame "more, and
-/// better, mercenaries who will be cheaper and more experienced").
+/// The tavern's mercenaries and heroes (TRADE-009, ADR 0280; ReTzar's reading of the original, 0x4d24c0, 0x4d2030,
+/// 0x4d23b0).
 /// </summary>
 /// <remarks>
-/// Offers are a pure function of the match seed, the kingdom, the tavern period (<c>world.tavernRefreshMs</c>) and the
-/// slot: slots 0 … <c>mercenaryOffers</c>−1 are mercenary groups, the next <c>heroOffers</c> slots heroes. Each is a
-/// military land unit of the kingdom's civilization that some building can train. The only state is which slots of the
-/// current period were hired (<see cref="KingdomState.TavernTaken"/>, <see cref="KingdomState.TavernPeriod"/>).
+/// Every tavern of a kingdom keeps two lists (<see cref="TavernStock"/>). A second after it stands, and then every
+/// <c>world.tavernEveryMs</c> (<c>tavernDeathmatchEveryMs</c> in a Deathmatch), the mercenary list gains an offer when the
+/// kingdom knows Mercenaries and the hero list one when it knows Heroes' Quest: a unit of a random civilization's barracks,
+/// 8 to 12 of it at level 0 or one hero of level 10 to 30, Fame adding 4 levels to either; a full list of
+/// <see cref="TavernStock.ListSize"/> loses its oldest. Hiring an offer takes it off its list.
 /// </remarks>
 public static class TavernOffers
 {
-    /// <summary>The tavern period of <paramref name="tick"/>.</summary>
-    public static int PeriodAt(World world, int tick)
+    /// <summary>Called by the magic step every tick: the taverns' lists grow at their time.</summary>
+    internal static void Step(World world, int tick)
     {
-        ArgumentNullException.ThrowIfNull(world);
-        return (int)((long)tick * world.Config.TickLengthMilliseconds / world.Ruleset.World.TavernRefreshMs);
-    }
-
-    /// <summary>Offer slots per period.</summary>
-    public static int SlotCount(World world)
-    {
-        ArgumentNullException.ThrowIfNull(world);
-        return world.Ruleset.World.MercenaryOffers + world.Ruleset.World.HeroOffers;
-    }
-
-    /// <summary>Offer <paramref name="slot"/> of <paramref name="player"/> now, or null when the civilization has no candidates.</summary>
-    public static TavernOffer? Offer(World world, int player, int slot)
-    {
-        ArgumentNullException.ThrowIfNull(world);
         WorldSettings w = world.Ruleset.World;
-        if (!world.HasPlayer(player) || (uint)slot >= (uint)SlotCount(world))
+        int tickMs = world.Config.TickLengthMilliseconds;
+        if (tick % Math.Max(1, 1000 / tickMs) != 0)
         {
-            return null;
+            return; // once a second
         }
 
-        ReadOnlySpan<ushort> pool = world.MercenaryPool(player);
-        if (pool.IsEmpty)
+        // In the structures' stored order (deterministic, and kept by snapshots); no allocation in a steady tick.
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        for (int i = 0; i < structures.Length; i++)
         {
-            return null;
-        }
+            EntityId tavern = structures[i];
+            if (!world.TypeOf(tavern).Traits.World.IsTavern || world.Constructions.Has(tavern) || !world.HasPlayer(world.Identities.Get(tavern).Owner))
+            {
+                continue;
+            }
 
-        int period = PeriodAt(world, world.Tick.Value);
-        ulong roll = SplitMix64.Mix(world.Config.MatchSeed ^ 0x7A7E_0000_0000_0000UL ^ ((ulong)player << 40) ^ ((ulong)period << 8) ^ (ulong)slot);
-        ushort type = pool[(int)(roll % (ulong)pool.Length)];
-        bool hero = slot >= w.MercenaryOffers;
-        bool fame = HasTechnology(world, player, world.Ruleset.World.FameTechnology);
-        if (hero)
-        {
-            return new TavernOffer(type, 1, world.Ruleset.Combat.HeroLevel, true);
-        }
+            if (world.TavernStocks.IndexOf(tavern) is not (>= 0 and var s))
+            {
+                world.TavernStocks.Set(tavern, new TavernStock { NextTick = tick + Math.Max(1, w.TavernFirstMs / tickMs) });
+                continue;
+            }
 
-        int spread = w.MercenaryGroupMax - w.MercenaryGroupMin + 1;
-        int count = w.MercenaryGroupMin + (int)((roll >> 32) % (ulong)spread) + (fame ? w.FameGroupBonus : 0);
-        return new TavernOffer(type, count, w.MercenaryLevel + (fame ? w.FameLevelBonus : 0), false);
+            ref TavernStock stock = ref world.TavernStocks.At(s);
+            if (tick < stock.NextTick)
+            {
+                continue;
+            }
+
+            int every = world.Config.GameType == GameType.Deathmatch ? w.TavernDeathmatchEveryMs : w.TavernEveryMs;
+            stock.NextTick = tick + Math.Max(1, every / tickMs);
+            byte owner = world.Identities.Get(tavern).Owner;
+            if (HasTechnology(world, owner, w.MercenariesTechnology))
+            {
+                Add(world, ref stock, owner, hero: false);
+            }
+
+            if (HasTechnology(world, owner, w.HeroesTechnology))
+            {
+                Add(world, ref stock, owner, hero: true);
+            }
+        }
     }
 
-    /// <summary>The price of an offer per resource type id (training cost × count × the hire percent; Fame for mercenaries).</summary>
+    /// <summary>The offers of <paramref name="tavern"/>: the mercenaries' slots, then the heroes' (from <see cref="TavernStock.ListSize"/>).</summary>
+    public static int Offers(World world, EntityId tavern, Span<(int Slot, TavernOffer Offer)> into)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        if (world.TavernStocks.IndexOf(tavern) is not (>= 0 and var s))
+        {
+            return 0;
+        }
+
+        TavernStock stock = world.TavernStocks.At(s);
+        int n = 0;
+        for (int i = 0; i < stock.Mercenaries && n < into.Length; i++)
+        {
+            into[n++] = (i, Unpack(stock.Offers[i], hero: false));
+        }
+
+        for (int i = 0; i < stock.Heroes && n < into.Length; i++)
+        {
+            into[n++] = (TavernStock.ListSize + i, Unpack(stock.Offers[TavernStock.ListSize + i], hero: true));
+        }
+
+        return n;
+    }
+
+    /// <summary>
+    /// The price of an offer per resource type id (TRADE-009; 0x4d23b0): the type's cost for the kingdom × the count × 1.6,
+    /// truncated, plus 30 gold a level and 15 a level of each other resource the type costs.
+    /// </summary>
     public static void CostOf(World world, int player, TavernOffer offer, Span<int> into)
     {
         ArgumentNullException.ThrowIfNull(world);
         WorldSettings w = world.Ruleset.World;
         EntityTypeDefinition type = world.Ruleset.EntityTypes[offer.TypeId];
-        long percent = offer.IsHero ? w.HeroCostPercent
-            : (long)w.MercenaryCostPercent * (HasTechnology(world, player, w.FameTechnology) ? w.FameCostPercent : 100) / 100;
+        int gold = world.Ruleset.ResourceId("gold");
         into.Clear();
         for (int r = 0; r < type.Traits.Cost.Length && r < into.Length; r++)
         {
-            into[r] = (int)Math.Min((long)type.Traits.Cost[r] * offer.Count * percent / 100, int.MaxValue);
+            long cost = world.HasPlayer(player) ? ResearchRules.CostOf(world, (byte)player, type, r) : type.Traits.Cost[r];
+            long price = cost * offer.Count * w.HirePricePercent / 100;
+            if (r == gold || price != 0)
+            {
+                price += (long)(r == gold ? w.HireGoldPerLevel : w.HireOtherPerLevel) * offer.Level;
+            }
+
+            into[r] = (int)Math.Min(price, int.MaxValue);
         }
     }
 
     /// <summary>
-    /// <see cref="CommandKind.Hire"/>: offer Arg0 in a listed own completed tavern, if the kingdom has the technology (Mercenaries,
-    /// heroes: Heroes' Quest), the offer was not hired this period, there is population room and an entity slot per
-    /// unit, and the price is paid (shared resources apply). The units appear next to the tavern at their level; a hero
-    /// gets the hero flag and a name.
+    /// <see cref="CommandKind.Hire"/>: offer Arg0 (its slot) of a listed own finished tavern, if the kingdom knows the
+    /// list's technology (Mercenaries, Heroes' Quest), there is population room and an entity slot per unit, and the price is
+    /// paid (shared resources apply). The units appear next to the tavern at their level; a hero gets the hero flag and a
+    /// name; the offer leaves its list.
     /// </summary>
     internal static CommandRejection? Hire(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         byte player = command.Player;
         int slot = command.Arg0;
-        if ((uint)slot >= (uint)SlotCount(world))
+        if ((uint)slot >= TavernStock.Capacity)
         {
             return CommandRejection.InvalidArgument;
         }
@@ -111,25 +146,25 @@ public static class TavernOffers
             return CommandRejection.NoValidEntities;
         }
 
-        bool heroSlot = slot >= world.Ruleset.World.MercenaryOffers;
+        bool heroSlot = slot >= TavernStock.ListSize;
         if (!HasTechnology(world, player, heroSlot ? world.Ruleset.World.HeroesTechnology : world.Ruleset.World.MercenariesTechnology))
         {
             return CommandRejection.RequirementNotMet;
         }
 
-        if (Offer(world, player, slot) is not { } offer)
+        if (world.TavernStocks.IndexOf(tavern) is not (>= 0 and var s))
         {
             return CommandRejection.InvalidArgument;
         }
 
-        ref KingdomState k = ref world.Kingdoms[player];
-        int period = PeriodAt(world, world.Tick.Value);
-        int taken = k.TavernPeriod == period ? k.TavernTaken : 0; // a new period offers everything again
-        if ((taken & (1 << slot)) != 0)
+        ref TavernStock stock = ref world.TavernStocks.At(s);
+        int index = heroSlot ? slot - TavernStock.ListSize : slot;
+        if (index >= (heroSlot ? stock.Heroes : stock.Mercenaries))
         {
-            return CommandRejection.OfferTaken;
+            return CommandRejection.OfferTaken; // hired already, or never offered
         }
 
+        TavernOffer offer = Unpack(stock.Offers[slot], heroSlot);
         EntityTypeDefinition type = world.Ruleset.EntityTypes[offer.TypeId];
         ref PlayerState state = ref world.Players[player];
         (int x0, _, int x1, int y1) = Interaction.Rect(world, tavern);
@@ -147,8 +182,7 @@ public static class TavernOffers
             return CommandRejection.NotAffordable;
         }
 
-        k.TavernPeriod = period;
-        k.TavernTaken = (byte)(taken | (1 << slot));
+        Take(ref stock, slot);
         EntityId first = EntityId.None;
         for (int n = 0; n < offer.Count; n++)
         {
@@ -162,17 +196,93 @@ public static class TavernOffers
         return null;
     }
 
+    // A new offer at the end of its list (0x4d2030): a civilization drawn from the three, a unit its barracks train, then
+    // the count and level; a full list loses its oldest first.
+    private static void Add(World world, ref TavernStock stock, byte owner, bool hero)
+    {
+        WorldSettings w = world.Ruleset.World;
+        IReadOnlyList<string> all = world.Ruleset.Civilizations;
+        int kingdoms = 0;
+        for (int c = 0; c < all.Count; c++)
+        {
+            kingdoms += world.Ruleset.CanFoundKingdom(all[c]) ? 1 : 0;
+        }
+
+        if (kingdoms == 0)
+        {
+            return;
+        }
+
+        int pick = world.Rng.Misc.NextInt(kingdoms);
+        string civilization = string.Empty;
+        for (int c = 0; c < all.Count; c++)
+        {
+            if (world.Ruleset.CanFoundKingdom(all[c]) && pick-- == 0)
+            {
+                civilization = all[c];
+                break;
+            }
+        }
+        ReadOnlySpan<ushort> pool = world.BarracksPool(civilization);
+        if (pool.IsEmpty)
+        {
+            return;
+        }
+
+        ushort type = pool[world.Rng.Misc.NextInt(pool.Length)];
+        int count = hero ? 1 : w.MercenaryGroupMin + world.Rng.Misc.NextInt(w.MercenaryGroupMax - w.MercenaryGroupMin + 1);
+        int level = hero ? w.HeroLevelMin + world.Rng.Misc.NextInt(w.HeroLevelMax - w.HeroLevelMin + 1) : w.MercenaryLevel;
+        if (HasTechnology(world, owner, w.FameTechnology))
+        {
+            level += w.FameLevelBonus;
+        }
+
+        int start = hero ? TavernStock.ListSize : 0;
+        ref byte length = ref hero ? ref stock.Heroes : ref stock.Mercenaries;
+        if (length >= TavernStock.ListSize)
+        {
+            for (int i = 0; i < TavernStock.ListSize - 1; i++)
+            {
+                stock.Offers[start + i] = stock.Offers[start + i + 1];
+            }
+
+            length = TavernStock.ListSize - 1;
+        }
+
+        stock.Offers[start + length] = Pack(type, count, level);
+        length++;
+    }
+
+    // Takes an offer off its list, the later ones moving up.
+    private static void Take(ref TavernStock stock, int slot)
+    {
+        bool hero = slot >= TavernStock.ListSize;
+        int start = hero ? TavernStock.ListSize : 0;
+        ref byte length = ref hero ? ref stock.Heroes : ref stock.Mercenaries;
+        for (int i = slot; i < start + length - 1; i++)
+        {
+            stock.Offers[i] = stock.Offers[i + 1];
+        }
+
+        stock.Offers[start + length - 1] = 0;
+        length--;
+    }
+
+    private static uint Pack(ushort type, int count, int level) => type | ((uint)Math.Min(count, 255) << 16) | ((uint)Math.Min(level, 255) << 24);
+
+    private static TavernOffer Unpack(uint packed, bool hero) => new((ushort)(packed & 0xFFFF), (int)((packed >> 16) & 0xFF), (int)(packed >> 24), hero);
+
     // Starting level (and, for heroes, the hero flag and a name), whatever the kingdom's level cap: the tavern sells
     // trained soldiers.
     private static void Train(World world, EntityId unit, TavernOffer offer)
     {
-        if (world.Experiences.IndexOf(unit) is not (>= 0 and var x) || offer.Level <= 0)
+        if (world.Experiences.IndexOf(unit) is not (>= 0 and var x))
         {
             return;
         }
 
         ref Experience xp = ref world.Experiences.At(x);
-        if (xp.Level < offer.Level)
+        if (offer.Level > 0 && xp.Level < offer.Level)
         {
             xp.Level = (ushort)Math.Min(offer.Level, ushort.MaxValue);
             xp.Xp = Math.Max(xp.Xp, CombatStats.XpForLevel(world, unit, offer.Level));
