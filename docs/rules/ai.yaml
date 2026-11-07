@@ -19,7 +19,7 @@ rules:
     source: [guide Campaign Discussion (Mission 17), community ReTzar src/gameplay/ai/idle.rs (0x4153a0)]
     status: tested
     adr: [0251]
-    note: The original's computer repairs with a peasant idle for two of its think periods, within 15 tiles; Tzar2's idle peasants (of every kingdom) repair within idleWorkRadiusTiles (12) after idleWorkAfterMs (10 s), both UNVERIFIED. Tzar2.AI gives no repair order.
+    note: The original's computer repairs with a peasant idle for two of its think periods, within 15 tiles; Tzar2's computer kingdoms' idle peasants repair within idleWorkRadiusTiles (12) after idleWorkAfterMs (10 s), both UNVERIFIED; a person's peasants follow ECO-005. Tzar2.AI gives no repair order.
   AI-004:
     rule: A player can put his kingdom under the computer's assistance, none, economy, war or full, from the card with nothing selected. The war adviser commands the troops, builds the military buildings and trains troops; the economy adviser builds the economic buildings, researches and gathers.
     source: ['data MENU.INI [aiassist]', 'data ORDERS.INI view_ai set_ai_full', 'strings STRINGS2.INI set_ai_none set_ai_eco set_ai_war set_ai_full', 'strings STRINGS.INI [mp_setupmap] ai_assist', owner 2026-10-21 (answers)]

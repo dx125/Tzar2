@@ -142,6 +142,12 @@ public sealed record GameplaySettings
     /// <summary>How long a peasant stands idle before it finds work by itself (0 = never; ADR 0180).</summary>
     public int IdleWorkAfterMs { get; init; } = 10_000;
 
+    /// <summary>
+    /// ECO-005 (ReTzar's reading of the original, 0x4ae440): idle this long, a peasant of a kingdom a person plays takes up
+    /// the work of the nearest of its kingdom's peasants within twice its sight.
+    /// </summary>
+    public int IdleCopyAfterMs { get; init; } = 30_000;
+
     /// <summary>Radius in tiles in which an idle peasant looks for work.</summary>
     public int IdleWorkRadiusTiles { get; init; } = 12;
 
@@ -209,6 +215,7 @@ public sealed record GameplaySettings
         ArgumentOutOfRangeException.ThrowIfLessThan(RepairTimeBasisPoints, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(RepairTimeBasisPoints, 1_000_000);
         ArgumentOutOfRangeException.ThrowIfNegative(IdleWorkAfterMs);
+        ArgumentOutOfRangeException.ThrowIfNegative(IdleCopyAfterMs);
         ArgumentOutOfRangeException.ThrowIfNegative(IdleWorkRadiusTiles);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(IdleWorkRadiusTiles, 64);
         ArgumentOutOfRangeException.ThrowIfNegative(WallContinueRadiusTiles);

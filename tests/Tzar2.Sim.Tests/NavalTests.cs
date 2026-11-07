@@ -114,7 +114,7 @@ public class NavalTests
         d.RunUntil(() => d.Count(SimEventKind.ResourceDelivered) >= 3, 6000);
         Assert.Equal(3, d.Count(SimEventKind.ResourceDelivered));
         Assert.False(d.World.Entities.IsAlive(fish[0]) && d.World.ResourceStocks.Get(fish[0]).Amount > 0);
-        Assert.True(d.World.ResourceStocks.Get(fish[1]).Amount < 333); // it went on to the next patch, not to the cow
+        Assert.True(d.World.ResourceStocks.Get(fish[1]).Amount < 333); // it went on to the next patch, not to the cow (fished, it did not grow)
         Assert.Equal(fish[1].Value, d.World.Workers.Get(boat).Target);
     }
 

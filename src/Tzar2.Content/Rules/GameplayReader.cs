@@ -16,7 +16,7 @@ internal sealed class GameplayReader
         "researchRefundPercent", "captureCycleMs", "captureStep", "resistancePulseMs", "resistancePulseStep",
         "repairTimePercent", "wallContinueRadiusTiles", "maxWallSegments",
         "gateWatchTiles", "manaRegenPerMinute", "gateOrderHoldMs", "gateChangeIntervalMs", "maxGateChangesPerTick",
-        "repairCostPercent", "repairerFalloffPercent", "idleWorkAfterMs", "idleWorkRadiusTiles", "disguiseMasteryMs",
+        "repairCostPercent", "repairerFalloffPercent", "idleWorkAfterMs", "idleCopyAfterMs", "idleWorkRadiusTiles", "disguiseMasteryMs",
         "repairBlowMs", "unmaskReachFreshPercent", "unmaskReachFullPercent",
     ];
 
@@ -102,6 +102,7 @@ internal sealed class GameplayReader
             WallContinueRadiusTiles = Range("wallContinueRadiusTiles", d.WallContinueRadiusTiles, 0, 64),
             MaxWallSegments = Range("maxWallSegments", d.MaxWallSegments, 1, 256),
             IdleWorkAfterMs = Range("idleWorkAfterMs", d.IdleWorkAfterMs, 0, 3_600_000),
+            IdleCopyAfterMs = Range("idleCopyAfterMs", d.IdleCopyAfterMs, 0, 3_600_000),
             IdleWorkRadiusTiles = Range("idleWorkRadiusTiles", d.IdleWorkRadiusTiles, 0, 64),
             GateWatchTiles = Range("gateWatchTiles", d.GateWatchTiles, 0, 16),
             GateOrderHoldMs = Range("gateOrderHoldMs", d.GateOrderHoldMs, 0, 12_000),

@@ -1213,7 +1213,7 @@ public sealed partial class World
                     _ => (WorkerPhase)0xFF,
                 } || w.Phase > WorkerPhase.Capturing || w.CarryAmount < 0
                 || w.CarryAmount > Math.Max(capacity, Stats.Apply(Identities.Get(ids[i]).Owner, ModifierStat.CarryCapacity, Identities.Get(ids[i]).TypeId, capacity))
-                || w.TimerMs < 0 || w.Retries < 0 || w.IdleMs < 0 || w.IdleMs > Ruleset.Gameplay.IdleWorkAfterMs || (w.CarryAmount > 0 && w.CarryResource == Worker.NoResource)
+                || w.TimerMs < 0 || w.Retries < 0 || w.IdleMs < 0 || w.IdleMs > Math.Max(Ruleset.Gameplay.IdleWorkAfterMs, Ruleset.Gameplay.IdleCopyAfterMs) || (w.CarryAmount > 0 && w.CarryResource == Worker.NoResource)
                 || (w.CarryResource != Worker.NoResource && w.CarryResource >= resources)
                 || (w.NodeResource != Worker.NoResource && w.NodeResource >= resources))
             {
@@ -1228,7 +1228,7 @@ public sealed partial class World
             // A map may give a node more than its type's amount (ADR 0152: a fish patch of 1,000 on Conquer the World), so the
             // amount has no upper bound here (the ninth play-test: such a match was saved and could not be loaded).
             if (TypeOf(ids[i]).Traits.ResourceNode is not { } node || stocks[i].Amount < -1 || (stocks[i].Amount == -1) != (node.Amount == -1)
-                || stocks[i].RegenMs < 0 || stocks[i].RegenMs > Math.Max(node.RegenMs, 0))
+                || stocks[i].RegenMs < 0 || stocks[i].RegenMs > Math.Max(Math.Max(node.RegenMs, 0) * 100, node.GrowEveryMs))
             {
                 throw Invalid("invalid resource stock");
             }

@@ -127,6 +127,7 @@ public class EconomyM3Tests
 
     [Fact]
     [Trait("Rule", "ECO-010")]
+    [Trait("Rule", "ECO-029")]
     public void Fishing_boats_fish_and_deliver_at_the_harbor_not_on_land()
     {
         using var d = new SimDriver(
@@ -140,9 +141,9 @@ public class EconomyM3Tests
         d.RunUntil(() => d.Count(SimEventKind.ResourceDelivered) >= 2, 3000);
         SimEvent delivery = d.Events.First(e => e.Event.Kind == SimEventKind.ResourceDelivered).Event;
         Assert.Equal(Food, delivery.X);
-        Assert.Equal(20, delivery.Arg); // a boat carries 20 (UNVERIFIED)
+        Assert.Equal(50, delivery.Arg); // a boat carries 50 (ECO-029; ReTzar 0x4e92be)
         Assert.Equal(OfType(d.World, "euro.harbor").Single().Index, delivery.Y);
-        Assert.Equal(333 - d.World.Workers.Get(boat).CarryAmount - 40, d.World.ResourceStocks.Get(fish).Amount);
+        Assert.Equal(333 - d.World.Workers.Get(boat).CarryAmount - 100, d.World.ResourceStocks.Get(fish).Amount); // fished: no growth
     }
 
     [Fact]
@@ -174,6 +175,7 @@ public class EconomyM3Tests
 
     [Fact]
     [Trait("Rule", "ECO-017")]
+    [Trait("Rule", "ECO-027")]
     public void Peasants_milk_cows_which_regrow_and_butchered_cows_leave_rotting_meat()
     {
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Unit("comm.cow", 0, 12, 4), Unit("euro.peon", 0, 10, 4)), ruleset: Classic);
@@ -189,12 +191,12 @@ public class EconomyM3Tests
         d.RunUntil(() => d.Count(SimEventKind.ResourceDelivered) >= 2, 4000);
         Assert.Equal(50, d.Events.Where(e => e.Event.Kind == SimEventKind.ResourceDelivered).ElementAt(1).Event.Arg);
 
-        // Milk regrows (4 s per unit, UNVERIFIED) up to the full 40.
+        // Milk regrows at the kingdom's mana rate, 2 a second (ECO-027), up to the full 40.
         d.Order(0, CommandKind.Stop, [peon]);
         d.Step();
         int left = d.World.ResourceStocks.Get(cow).Amount;
-        d.RunUntil(() => false, 160);
-        Assert.Equal(Math.Min(40, left + 2), d.World.ResourceStocks.Get(cow).Amount);
+        d.RunUntil(() => false, 100);
+        Assert.Equal(Math.Min(40, left + 10), d.World.ResourceStocks.Get(cow).Amount);
 
         // Butchering an own cow: its meat falls as Nature's food items without footprint, which rot (NAT-004).
         d.Order(0, CommandKind.Attack, [peon], target: cow);

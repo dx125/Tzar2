@@ -19,10 +19,11 @@ rules:
     status: tested
     adr: [0252]
   TRADE-004:
-    rule: Asian peasants trade between markets as caravans do (the Asian market makes no caravans), 100 a trip; European caravans carry 500 and Arabian ones 300.
-    source: [help ITEMS.TXT HT_TRADE_CARAVANS, 'data MENU.INI [a_peon] trade', 'data TECHTREE ASIA.INI trade', community ReTzar src/gameplay.rs (0x4e8060)]
+    rule: Asian peasants trade between markets as caravans do (the Asian market makes no caravans), 100 a trip; European caravans carry 500 and Arabian ones 300; a galleon 1000, a hulk 500 and a xebec 300.
+    source: [help ITEMS.TXT HT_TRADE_CARAVANS, 'data MENU.INI [a_peon] trade', 'data TECHTREE ASIA.INI trade', community ReTzar src/gameplay.rs (0x4e8060), 'community ReTzar src/gameplay.rs (cargo_room 0x4ea980, 0x4eabe0, 0x4eaa50)']
     status: tested
-    adr: [0252]
+    adr: [0252, 0280]
+    note: The ships' loads came with the global audit of 2026-11-07 (200, 150 and 100 before, UNK-28).
   TRADE-005:
     rule: The tavern converts resources, ten given for one received, choosing what to give, how much and what to get.
     source: [manual Converting Resources]

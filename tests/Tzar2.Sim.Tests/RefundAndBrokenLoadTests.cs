@@ -50,6 +50,7 @@ public class RefundAndBrokenLoadTests
     {
         // The computer has no repair plan (ReTzar, 0x4153a0): a long-idle peasant repairs the damaged building nearest it.
         using var d = new SimDriver(TestMap(40, 16, Structure("euro.castle", 1, 30, 10), Structure("comm.tower_wood", 1, 2, 2), Unit("euro.peon", 1, tileX, 4)), ruleset: Classic);
+        d.World.Players[1].Flags |= PlayerFlags.AiControlled; // a computer kingdom: a person's peasant copies another's work (ECO-005)
         EntityId tower = OfType(d.World, "comm.tower_wood").Single();
         ref Health health = ref d.World.Healths.Get(tower);
         health.Current = health.Max / 2;

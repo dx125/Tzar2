@@ -81,8 +81,12 @@ gameplay:
   repairBlowMs: 1250                  # VERIFIED (BLD-022, batch J): one blow per repairer every 1.25 s (the time unit)
   wallContinueRadiusTiles: 6          # UNVERIFIED: builders move on to the next segment of a dragged wall within this
   maxWallSegments: 64                 # UNVERIFIED: most segments one dragged wall places
-  idleWorkAfterMs: 10000              # UNVERIFIED: an idle peasant finds work by itself after this (owner: the original's did)
-  idleWorkRadiusTiles: 12             # UNVERIFIED: where an idle peasant looks for a site, a repair or a resource
+  # ECO-005 (ReTzar's reading of the original, 0x4ae440, checked in Tzar.exe: 30000 ms): idle 30 s, a peasant of a kingdom a
+  # person plays takes up the work of the nearest of its peasants within twice its sight that chops, mines, tends cows,
+  # builds, repairs or captures. A computer kingdom's peasant asks its player instead: here it finds work by itself.
+  idleCopyAfterMs: 30000
+  idleWorkAfterMs: 10000              # UNVERIFIED: a computer kingdom's idle peasant finds work by itself after this
+  idleWorkRadiusTiles: 12             # UNVERIFIED: where it looks for a site, a repair or a resource
   repairCostPercent: 0                # VERIFIED (BLD-022, batch J): repairs cost nothing (the stockpiles did not move)
   repairerFalloffPercent: 0           # VERIFIED (BLD-022, batch J): every repairer strikes full blows (seven helpers
                                       # restored ~31 HP/s on the mill, 6 HP per blow each)
@@ -316,16 +320,20 @@ legacy:
   inherits: [^Ship]
   Minor: {}
   Armament: { projectile: arrow }     # UNVERIFIED (UNK-22)
+  # ECO-029 (ReTzar's reading of the original, 0x4e911e, 0x4e92be): a boat takes up to 4 fish every 1.4 s until it holds
+  # 50 (350 ms a fish).
   Harvester:
-    capacity: 20                      # UNVERIFIED (UNK-17)
-    gatherMs: { food: 1000 }          # UNVERIFIED (UNK-17)
+    capacity: 50
+    gatherMs: { food: 350 }
 # WAR-019 (ReTzar's reading of the original, 0x4dba30, 0x4e8f00): towers and warships fire on a fixed period, with no
 # attack animation, not by the tables' RATE: the arrow towers every 1000 ms, the cannon and rocket towers every 3000 ms,
 # the galleon and the hulk every 3000 ms (their cannon levels shorten it), the xebec every 1300 ms. The tenth play-test:
 # by RATE (6000 / RATE) ships fired twice as often as the original's.
-^class.galleon: { inherits: [^Ship], Trader: { capacity: 200, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon, cooldownMs: 3000, hitDelayMs: 0 } }   # UNVERIFIED capacity (UNK-28)
-^class.hulk: { inherits: [^Ship], Trader: { capacity: 150, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon, cooldownMs: 3000, hitDelayMs: 0 } }      # UNVERIFIED capacity (UNK-28)
-^class.xebec: { inherits: [^Ship], Trader: { capacity: 100, access: water, technology: te_traderoutes }, Armament: { projectile: arrow, cooldownMs: 1300, hitDelayMs: 0 } }     # UNVERIFIED capacity (UNK-28); BONUS.INI arrow_attack lists xebecs
+# TRADE-004 (ReTzar's reading of the original, 0x4ea980, 0x4eabe0, 0x4eaa50): a galleon carries 1000 a trip, a hulk 500, a
+# xebec 300.
+^class.galleon: { inherits: [^Ship], Trader: { capacity: 1000, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon, cooldownMs: 3000, hitDelayMs: 0 } }
+^class.hulk: { inherits: [^Ship], Trader: { capacity: 500, access: water, technology: te_traderoutes }, Armament: { damage: cannon, projectile: cannon, cooldownMs: 3000, hitDelayMs: 0 } }
+^class.xebec: { inherits: [^Ship], Trader: { capacity: 300, access: water, technology: te_traderoutes }, Armament: { projectile: arrow, cooldownMs: 1300, hitDelayMs: 0 } }     # BONUS.INI arrow_attack lists xebecs
 ^class.catapult: { inherits: [^Siege], Armament: { damage: cannon, projectile: stone } }    # UNVERIFIED (UNK-22): stones land where the target stood
 ^class.hcatapult: { inherits: [^Siege], Armament: { damage: cannon, projectile: stone } }   # UNVERIFIED (UNK-22)
 ^class.ballista: { inherits: [^Siege], Armament: { projectile: bolt } }                     # UNVERIFIED (UNK-22)
@@ -348,10 +356,15 @@ legacy:
 
 # Cows (GAME-02): peasants milk them (the food they hold regrows) and butcher them for meat; Arab peasants steal enemy
 # cows after Cow Poaching (manual ch. 6).
+# ECO-029 (ReTzar's reading of the original, timer 0x4216): a fish patch nobody fishes grows by 5 % every 10 s, up to 2000.
+^class.fishpatch: { ResourceNode: { growPercent: 5, growEveryMs: 10000, growMax: 2000 } }
+
 ^class.cow:
   Mobile: { pixelsPerSecond: 26 }    # VERIFIED (ADR 0172)
   ResourceNode:
-    regenMs: 4000                     # UNVERIFIED (UNK-17): milk regrows one unit per 4 s
+    # ECO-027 (ReTzar's reading of the original, 0x502ea2, 0x504e30): the milk is the cow's mana: 2 a second back for a
+    # kingdom's cow (more with its Concentration), 1 for Nature's, none while it is milked.
+    regenMs: 500
     gatherMs: 200                     # UNVERIFIED (UNK-17): milking time per unit; batch B bounds it (a 50-unit trip, walk included, took 10.6 s; ADR 0170)
     carry: 50                         # VERIFIED (batch B, capture-20261018-222649): a peasant brings 50 food per trip from a cow (ADR 0170)
     keepWhenEmpty: true
@@ -416,7 +429,10 @@ legacy:
 
 # Fields produce unlimited food (manual §5.5) and need constant care: neglected, they decay and disappear.
 ^class.field:
-  ResourceNode: { resource: food, amount: unlimited, workers: 1 }   # help HT_TEND_FIELDS: only one peasant tends each field (ECO-021)
+  # ECO-021 (help HT_TEND_FIELDS): one peasant tends each field. ECO-028 (ReTzar's reading of the original, 0x4ad088): the
+  # original gives a field's load after 12 to 18 digs of 1196 ms (ResourceNode loadCyclesMin 12, loadCyclesMax 18, cycleMs
+  # 1196); not turned on yet - it halves the farms' food, and Tzar2's computer then never attacks within 10 minutes.
+  ResourceNode: { resource: food, amount: unlimited, workers: 1 }
   WalkableFootprint: {}               # UNVERIFIED: units walk over fields and the farmer works on the field (play-test 2026-10-20)
   ReadyAtOnce: {}                     # ECO-025 (ReTzar 0x44c7a0): a field is born complete and ripe; its peasants farm at once
   DropOff: { autoGather: true }       # UNVERIFIED: the builder starts farming the new field

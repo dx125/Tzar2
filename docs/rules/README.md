@@ -102,7 +102,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Construction and repair](construction.yaml) (BLD) | 27 | 23 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 30 | 21 | 9 | 0 | 0 | 0 | 0 |
 | [Diplomacy and victory](diplomacy.yaml) (DIP) | 11 | 10 | 1 | 0 | 0 | 0 | 0 |
-| [Resources and gathering](economy.yaml) (ECO) | 26 | 21 | 5 | 0 | 0 | 0 | 0 |
+| [Resources and gathering](economy.yaml) (ECO) | 29 | 23 | 5 | 0 | 1 | 0 | 0 |
 | [Experience and heroes](experience.yaml) (EXP) | 8 | 7 | 0 | 0 | 0 | 0 | 1 |
 | [Holders and transport](holders.yaml) (HOLD) | 11 | 11 | 0 | 0 | 0 | 0 | 0 |
 | [The screen](interface.yaml) (HUD) | 37 | 18 | 14 | 1 | 0 | 3 | 1 |
@@ -118,11 +118,15 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 12 | 11 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 22 | 15 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 413 | 326 | 71 | 2 | 0 | 10 | 4 |
+| **All** | 416 | 328 | 71 | 2 | 1 | 10 | 4 |
 
 ## Not done yet
 
 Missing and partial rules.
+
+### Resources and gathering
+
+* **ECO-028**: A field's load comes after a countdown of 12 to 18 digs of the peasant (1.2 s each), drawn as the dig starts; a field short of its health is grown back first. *Found by the global audit of 2026-11-07; Tzar2 gives a field's load after the peasant's 0.9 s a unit (UNK-17), about twice as fast. The countdown is built (ResourceNode loadCyclesMin, loadCyclesMax, cycleMs) but not turned on - with it the farms' food halves and Tzar2's computer, whose pacing was set on the faster fields, sends no wave within 10 minutes in any AI test; the owner decides, and the AI's farming follows first.* (ADR 0280)
 
 ### The screen
 

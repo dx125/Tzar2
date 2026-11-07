@@ -175,21 +175,24 @@ public class PlayTestRulesTests
 
     [Fact]
     [Trait("Rule", "ECO-005")]
-    public void An_idle_peasant_finds_work_by_itself_after_a_while()
+    public void An_idle_peasant_takes_up_the_work_of_the_nearest_of_its_peasants_after_30_s()
     {
-        using var d = new SimDriver(TestMap(40, 24, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 14, 10), Unit("euro.peon", 0, 30, 12), Tree(32, 12)), ruleset: Classic);
-        EntityId[] peons = [.. OfType(d.World, "euro.peon")];
-        EntityId builder = peons.First(p => d.World.Positions.Get(p).X < 20 * Tile), chopper = peons.First(p => p != builder);
-        EntityId site = d.World.PlaceStructure(Id("euro.house"), 0, 16, 9, underConstruction: true);
-        int after = Classic.Gameplay.IdleWorkAfterMs / d.World.Config.TickLengthMilliseconds;
-        d.RunUntil(() => false, after - 2);
-        Assert.Equal(WorkerTask.None, d.World.Workers.Get(builder).Task);
-        d.RunUntil(() => false, 4);
-        Assert.Equal((WorkerTask.Build, site.Value), (d.World.Workers.Get(builder).Task, d.World.Workers.Get(builder).Target));
-
-        // The other one has no site near it, but a tree and the castle that takes the wood (within the radius of 12 tiles
-        // from the tree's side only for the search; the castle is far: it still chops and carries the wood home).
-        Assert.Equal(WorkerTask.Harvest, d.World.Workers.Get(chopper).Task);
+        // ReTzar's reading of the original (0x4ae440; 30000 ms in Tzar.exe): idle 30 s, a person's peasant copies the work of
+        // the nearest of its kingdom's peasants within twice its sight; alone with a site and nobody at work, it stays idle.
+        using var d = new SimDriver(
+            TestMap(48, 24, Structure("euro.castle", 0, 2, 2), Unit("euro.peon", 0, 14, 10), Unit("euro.peon", 0, 18, 10), Unit("euro.peon", 0, 40, 20), Tree(20, 12)),
+            ruleset: Classic);
+        EntityId[] peons = [.. OfType(d.World, "euro.peon").OrderBy(p => d.World.Positions.Get(p).X)];
+        EntityId idle = peons[0], chopper = peons[1], alone = peons[2];
+        EntityId site = d.World.PlaceStructure(Id("euro.house"), 0, 38, 17, underConstruction: true);
+        d.Order(0, CommandKind.Harvest, [chopper], target: OfType(d.World, "comm.tree").Single());
+        int after = Classic.Gameplay.IdleCopyAfterMs / d.World.Config.TickLengthMilliseconds;
+        d.RunUntil(() => false, after - 4);
+        Assert.Equal(WorkerTask.None, d.World.Workers.Get(idle).Task);
+        d.RunUntil(() => false, 8);
+        Assert.Equal((WorkerTask.Harvest, d.World.Workers.Get(chopper).Target), (d.World.Workers.Get(idle).Task, d.World.Workers.Get(idle).Target));
+        Assert.Equal(WorkerTask.None, d.World.Workers.Get(alone).Task); // a site by it, but nobody at work within reach
+        Assert.True(d.World.Constructions.Has(site));
     }
 
     [Fact]
