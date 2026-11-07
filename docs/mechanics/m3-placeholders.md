@@ -59,8 +59,8 @@ Shift + Delete; what each technology does (not how much).
 | Repair speed | ~~a full repair by one peasant takes the build time~~ **VERIFIED: a blow of max / (4 × TIME) every 1.25 s, rounded down** (capture-20261021-220250: mill 6, barracks 5, castle 16; ADR 0185) | YAML `gameplay.repairTimePercent` 400, `repairBlowMs` 1250 | UNK-18 | done |
 | Repair crews | ~~each further repairer adds 25 points less~~ **VERIFIED: every repairer strikes full blows** (seven helpers ~31 HP/s on the mill; ADR 0185) | YAML `gameplay.repairerFalloffPercent` 0 | UNK-18 | done |
 | Repair cost | ~~50% of the construction cost, pro rata~~ **VERIFIED: free** (the stockpiles did not move; ADR 0185) | YAML `gameplay.repairCostPercent` 0 | UNK-18 | done |
-| Fire threshold | below 50% of the hit points | YAML `gameplay.burnThresholdPercent` | UNK-42 | damage a building step by step |
-| Fire damage | 60 HP per minute | YAML `gameplay.burnDamagePerMinute` | UNK-42 | time a burning building |
+| Fire threshold | ~~below 50% of the hit points~~ **the original's code: one small fire at 50 % and below, two below 36 %, two and a big one below 16 %** (0x4200c0; BLD-006, ADR 0280) | code (`StructureSystem.FireLevel`) | UNK-42 | done |
+| Fire damage | ~~60 HP per minute~~ **none: the fire is pictures and a sound** (the fire timer 0x41efe9; BLD-006, ADR 0280) | — | UNK-42 | done |
 | Burning types | every building but fields, walls, gates and bridges | YAML (`Burnable`) | UNK-42 | observation |
 | Ruin lifetime | the corpse decal lifetime (120 s) | code (`World.Kill`) | — | observation |
 | Wall drag | at most 64 segments; builders move on within 6 tiles | YAML `gameplay.maxWallSegments`, `wallContinueRadiusTiles` | — | editor/game captures |
@@ -137,7 +137,7 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Birds and eagles | air, SPEED 5/6, 10 HP, never targets | YAML `comm.bird`, `comm.eagle` | — | observation |
 | Day length | ~~12 min~~ — **37.5 min VERIFIED** (24 globe hours of 93.75 s; the night's hours assumed as long) and **the match starts at 10:00 VERIFIED** (capture-20261019-195053, `day-clock`; ADR 0173); night 22:00-06:00 after half an hour of dusk (ReTzar's reading, PRES-015) | YAML `world.day*`, `night*` | UNK-32 | night share: a 35-min capture of a night that the AI does not end |
 | Weather | 3-minute periods, 25% with weather | YAML `world.weather*` | UNK-09 | captures |
-| Score | gathered/10 + killed value/10 + built value/10 + 100 per technology | YAML `world.score*` | UNK-29 | F4 captures |
+| Score | ~~gathered/10 + killed value/10 + built value/10 + 100 per technology~~ **the original's: 500 a building destroyed, 200 anything else killed, the gold and stone taken from mines; shown (raw + 50) / 100** (ReTzar 0x504cbe, 0x443430, 0x4435c0; DIP-011, ADR 0280) | YAML `world.scoreForBuilding`, `scoreForKill`, `scoreMinedResources` | UNK-29 | done (community source) |
 | Defeat | Standard: no unit and no building (walls, gates, bridges, fields excluded); Destroy Castles: no castle | code (`VictorySystem`) | — | end-of-game captures |
 | Time limit tie | the team with the lower slot | code (`VictorySystem`) | — | — |
 | Deathmatch | every kingdom starts on the High resources | YAML `world.deathmatchStartingResources` | — | lobby captures |

@@ -154,6 +154,7 @@ public sealed class EconomySystem : ISimSystem
                 w.TimerMs = 0;
                 w.CarryAmount += load;
                 w.CarryResource = (byte)resource;
+                VictorySystem.Mined(world, owner, resource, load); // DIP-011: a mine scores what it gives
                 if (stock.Amount > 0 && (stock.Amount -= lost) == 0 && !definition.KeepWhenEmpty)
                 {
                     _depleted.Add(node);

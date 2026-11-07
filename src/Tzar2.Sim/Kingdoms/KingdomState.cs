@@ -38,8 +38,11 @@ public struct KingdomState
     /// <summary>Total resources gathered (all types).</summary>
     public long GatheredTotal;
 
-    /// <summary>Resource value (cost) of enemy units killed and buildings destroyed.</summary>
-    public long KillValue;
+    /// <summary>
+    /// The raw score (DIP-011): 500 for each building destroyed, 200 for anything else killed, and what each load of gold
+    /// or stone gave as it was taken from its mine; shown as (raw + 50) / 100.
+    /// </summary>
+    public long Score;
 
     /// <summary>Resource value (cost) of own buildings completed and units trained.</summary>
     public long BuildValue;

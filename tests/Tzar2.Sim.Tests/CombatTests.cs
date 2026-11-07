@@ -56,21 +56,27 @@ public class CombatTests
     [Trait("Rule", "WAR-003")]
     public void Hits_follow_the_swing_cycle()
     {
-        // A footman next to an idle peasant: one hit per 1,000 ms (RATE 6), the first after the 500 ms hit delay.
-        using var d = new SimDriver(TestMap(16, 8, Unit("euro.footman", 0, 4, 4), Unit("euro.house", 1, 0, 0) with { TypeKey = "euro.peon", X = (4 * Tile) + 1700, Y = (4 * Tile) + 1024 }), ruleset: Classic);
-        EntityId footman = OfType(d.World, "euro.footman").Single();
-        EntityId peon = OfType(d.World, "euro.peon").Single();
-        d.Order(0, CommandKind.Attack, [footman], target: peon);
-        d.RunUntil(() => !d.World.Entities.IsAlive(peon), 400);
-        int[] hitTicks = [.. d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged && e.Event.X == footman.Index).Select(e => e.Tick)];
+        // A footman next to an enemy footman on hold fire (a peasant would run, WAR-022): one hit per 1,000 ms (RATE 6), the
+        // first after the 500 ms hit delay, each as hard as the first, until it falls.
+        using var d = new SimDriver(TestMap(16, 8, Unit("euro.footman", 0, 4, 4), Unit("euro.footman", 1, 5, 4)), ruleset: Classic);
+        EntityId footman = OfType(d.World, "euro.footman", 0).Single();
+        EntityId target = OfType(d.World, "euro.footman", 1).Single();
+        d.Order(1, CommandKind.SetStance, [target], arg0: (int)CombatStance.HoldFire);
+        int hp = d.World.Healths.Get(target).Current;
+        d.Order(0, CommandKind.Attack, [footman], target: target);
+        d.RunUntil(() => !d.World.Entities.IsAlive(target), 800);
+        var hits = d.Events.Where(e => e.Event.Kind == SimEventKind.Damaged && e.Event.X == footman.Index).ToArray();
+        int[] hitTicks = [.. hits.Select(e => e.Tick)];
         Assert.True(hitTicks.Length >= 5);
         for (int i = 1; i < hitTicks.Length; i++)
         {
             Assert.Equal(20, hitTicks[i] - hitTicks[i - 1]);
         }
 
-        // 44 HP, defence 1, 9 - 1 = 8 per hit: 6 hits; a corpse decal that never blocks (ORIG-01).
-        Assert.Equal(6, hitTicks.Length);
+        // Every blow deals the same A² / (A + D); a corpse decal that never blocks (ORIG-01).
+        int blow = hits[0].Event.Arg;
+        Assert.All(hits, h => Assert.Equal(blow, h.Event.Arg));
+        Assert.Equal((hp + blow - 1) / blow, hitTicks.Length);
         Assert.Equal(1, d.Count(SimEventKind.Killed));
         Assert.Equal(1, d.World.Decals.Count);
         Assert.Equal(0, d.World.Map.ObstacleVersion);

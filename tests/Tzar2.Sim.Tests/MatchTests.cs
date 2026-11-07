@@ -90,7 +90,7 @@ public class MatchTests
         Assert.True((w.Players[2].Flags & (PlayerFlags.Defeated | PlayerFlags.Resigned)) == (PlayerFlags.Defeated | PlayerFlags.Resigned));
         Assert.Equal(1, w.Kingdoms[0].UnitsKilled);
         Assert.Equal(1, w.Kingdoms[1].UnitsLost);
-        Assert.True(w.Kingdoms[0].KillValue > 0);
+        Assert.Equal(200, w.Kingdoms[0].Score); // DIP-011: 200 for a kill
         Assert.Equal(1, d.Count(SimEventKind.PlayerVictorious));
 
         // The winner's commands are refused from now on (the match is over).
@@ -142,26 +142,33 @@ public class MatchTests
     [Fact]
     [Trait("Rule", "DIP-004")]
     [Trait("Rule", "DIP-006")]
+    [Trait("Rule", "DIP-011")]
     public void Score_and_time_limits_and_allied_victory()
     {
         MapData map = TestMap(48, 16, Unit("euro.peon", 0, 5, 5), Unit("euro.peon", 1, 20, 5), Unit("euro.peon", 2, 40, 5));
         using (var score = new SimDriver(map, players: 3, ruleset: Classic, configure: c => c with { Victory = VictoryCondition.ScoreLimit, ScoreLimit = 50 }))
         {
             score.Step();
-            score.World.Kingdoms[2].GatheredTotal = 600; // 60 points (1 per 10 gathered, UNVERIFIED UNK-29)
+            score.World.Kingdoms[2].Score = 5_049; // shown (5049 + 50) / 100 = 50: not past the limit yet
+            score.RunUntil(() => false, 40);
+            Assert.False(VictorySystem.IsOver(score.World));
+            Assert.Equal(50, VictorySystem.Score(score.World.Kingdoms[2]));
+            score.World.Kingdoms[2].Score = 5_050; // 51: everyone else is defeated
             score.RunUntil(() => VictorySystem.IsOver(score.World), 40);
             Assert.True((score.World.Players[2].Flags & PlayerFlags.Victorious) != 0);
-            Assert.Equal(60, VictorySystem.Score(score.World.Ruleset.World, score.World.Kingdoms[2]));
+            Assert.True((score.World.Players[0].Flags & PlayerFlags.Defeated) != 0);
         }
 
         using (var time = new SimDriver(map, players: 3, ruleset: Classic, configure: c => c with { Victory = VictoryCondition.TimeLimit, TimeLimitMinutes = 1 }))
         {
             time.Step();
-            time.World.Kingdoms[1].KillValue = 100;
+            time.World.Kingdoms[1].Score = 100;
+            time.World.Kingdoms[2].Score = 100; // a tie goes to the first (0x442e30)
             time.RunUntil(() => VictorySystem.IsOver(time.World), 1300);
-            Assert.InRange(time.World.Tick.Value, 1180, 1221);
+            Assert.InRange(time.World.Tick.Value, 1200, 1221);
             Assert.True((time.World.Players[1].Flags & PlayerFlags.Victorious) != 0);
             Assert.True((time.World.Players[0].Flags & PlayerFlags.Defeated) != 0);
+            Assert.True((time.World.Players[2].Flags & PlayerFlags.Defeated) != 0);
         }
 
         // Kingdoms 0 and 1 share victory (lobby team): when 2 resigns, both win.

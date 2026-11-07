@@ -150,8 +150,8 @@ public struct FrameEntity
     /// <summary>The caster's mana pool, or 0 for entities that cast nothing.</summary>
     public int MaxMana;
 
-    /// <summary>A building on fire (GAME-03).</summary>
-    public bool Burning;
+    /// <summary>A building's fires (BLD-006): 0 none, 1 one small, 2 two small, 3 two small and a big one.</summary>
+    public byte FireLevel;
 
     /// <summary>Animation choice.</summary>
     public UnitActivity Activity;

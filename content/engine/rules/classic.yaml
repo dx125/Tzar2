@@ -79,8 +79,6 @@ gameplay:
                                       # (build time x 4), rounded down: 6 for the mill (800 / TIME 30), 5 for the barracks
                                       # (1400 / 60), 16 for the castle (8000 / 120); one repairer takes ~4x the build time
   repairBlowMs: 1250                  # VERIFIED (BLD-022, batch J): one blow per repairer every 1.25 s (the time unit)
-  burnThresholdPercent: 50            # UNVERIFIED (UNK-42): buildings below this share of their hit points burn
-  burnDamagePerMinute: 60             # UNVERIFIED (UNK-42): hit points a burning building loses per minute
   wallContinueRadiusTiles: 6          # UNVERIFIED: builders move on to the next segment of a dragged wall within this
   maxWallSegments: 64                 # UNVERIFIED: most segments one dragged wall places
   idleWorkAfterMs: 10000              # UNVERIFIED: an idle peasant finds work by itself after this (owner: the original's did)
@@ -150,10 +148,12 @@ world:
   weatherChancePercent: 25            # UNVERIFIED: share of periods with weather
   weather: { grass: rain, summer: rain, snow: snow, desert: clear }   # the rain/snow flags of <SET>.TERRAIN.INI (structural facts)
   # GAME-17 victory and scoring (ADR 0106; UNK-29).
-  scoreGatherDivisor: 10              # UNVERIFIED (UNK-29): 1 point per 10 resources gathered
-  scoreKillDivisor: 10                # UNVERIFIED (UNK-29): 1 point per 10 resources of value killed or destroyed
-  scoreBuildDivisor: 10               # UNVERIFIED (UNK-29): 1 point per 10 resources of value built or trained
-  scorePerTechnology: 100             # UNVERIFIED (UNK-29)
+  # DIP-011 (ReTzar's reading of the original, 0x504cbe, 0x443430, 0x4435c0): a kingdom scores 500 for each building it
+  # destroys and 200 for anything else it kills, and what each load of gold or stone gives as it is taken from its mine;
+  # shown as (raw + 50) / 100.
+  scoreForBuilding: 500
+  scoreForKill: 200
+  scoreMinedResources: [gold, stone]
   victoryIntervalTicks: 20            # engine: victory is evaluated once per second
   deathmatchStartingResources: high   # UNVERIFIED: a Deathmatch starts every kingdom on the High level
   # GAME-19 cheats (HUD-036, ReTzar's reading of the original): hmdvaleva gives 10,000 of each resource (0x424298) and
@@ -633,6 +633,16 @@ combat:
   targetSeats: { classes: [castle, cathedral, academy, magetower, tcguild, shaolinn, mosque] }
   helpRadiusTiles: 3                  # WAR-017 (ReTzar 0x413950): the square a call for help reaches (6 for a computer)
   guardRadiusTiles: 3                 # ORD-001 (ReTzar 0x4e4f1f): guards stand within 3 tiles of what they guard
+  # WAR-021 (ReTzar 0x4ea0b0): a pikeman left standing by a hand-to-hand blow of another kind strikes back at once with a
+  # fifth of its attack, at least 1.
+  counterBlowClasses: { classes: [pikeman] }
+  counterBlowPercent: 20
+  # WAR-022 (ReTzar 0x4ae640, 0x430be0, 0x4ae6fa): a peasant hit while idle or gathering fights back when at least as
+  # strong as the attacker (attack + defence + range / 5 + hit points / 20, twice for towers), else runs 5 tiles straight
+  # away, rests 3 s and goes back to its work.
+  fleeClasses: { classes: [peon] }
+  fleeTiles: 5
+  fleeRestMs: 3000
   baseLevelCap: 0                     # strategy guide: Learning allows experience; te_learning / te_heroism raise the cap
   attackPerLevel: 1                   # manual
   defenceHalvesPerLevel: 1            # manual: half a point per level (truncated: UNVERIFIED rounding, UNK-08)

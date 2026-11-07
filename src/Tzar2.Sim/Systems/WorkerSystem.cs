@@ -43,6 +43,11 @@ public sealed class WorkerSystem : ISimSystem
             // Index-based: the passes below never add or remove workers (an instant capture changes an owner only).
             EntityId worker = world.Workers.Entities[i];
             ref Worker w = ref world.Workers.At(i);
+            if (world.Combats.IndexOf(worker) is >= 0 and var ci && Reacting(world.Combats.At(ci)))
+            {
+                continue; // fighting back or running (WAR-022): the work waits
+            }
+
             if (w.Task != WorkerTask.None)
             {
                 w.IdleMs = 0;
@@ -67,6 +72,26 @@ public sealed class WorkerSystem : ISimSystem
                     break;
             }
         }
+    }
+
+    // A peasant that fights back or runs from what hit it (WAR-022) leaves its work until that is over.
+    private static bool Reacting(in Combat c) => c.Mode == CombatMode.Flee || (c.Mode == CombatMode.Auto && c.Target != 0);
+
+    /// <summary>
+    /// Breaks off the work at hand to fight back or run (WAR-022): a load half gathered is lost (ECO-002), and the worker
+    /// walks back to its node, site or target afterwards.
+    /// </summary>
+    internal static void Interrupt(ref Worker w)
+    {
+        w.Phase = w.Phase switch
+        {
+            WorkerPhase.Gathering => WorkerPhase.ToNode,
+            WorkerPhase.Building => WorkerPhase.ToSite,
+            WorkerPhase.Repairing or WorkerPhase.Capturing => WorkerPhase.ToTarget,
+            _ => w.Phase,
+        };
+        w.TimerMs = 0;
+        w.Retries = 0;
     }
 
     private static void Harvest(World world, EntityId worker, ref Worker w, int tick)

@@ -93,7 +93,7 @@ public class LaterBatchAnalysisTests
             """);
         Facts("counters", "counter-rate", $$"""
             measurements:
-              - {subject: lumber, phases: [{sample: hp-attack, start: 800, end: 300, rate_per_min: -1500, steps: 40}, {sample: hp-burn, start: 300, end: 260, rate_per_min: -{{I(Engine.Rule("gameplay", "burnDamagePerMinute")!.Value)}}, steps: 40}, {sample: hp-repair, start: 260, end: 800, rate_per_min: 480, steps: 40, step_values: ["{{Engine.Ruleset.Gameplay.RepairBlowHp(800, 37_500)}}x30", "{{2 * Engine.Ruleset.Gameplay.RepairBlowHp(800, 37_500)}}x10"]}]}
+              - {subject: lumber, phases: [{sample: hp-attack, start: 800, end: 300, rate_per_min: -1500, steps: 40}, {sample: hp-burn, start: 300, end: 300, rate_per_min: 0, steps: 0}, {sample: hp-repair, start: 300, end: 800, rate_per_min: 480, steps: 40, step_values: ["{{Engine.Ruleset.Gameplay.RepairBlowHp(800, 37_500)}}x30", "{{2 * Engine.Ruleset.Gameplay.RepairBlowHp(800, 37_500)}}x10"]}]}
               - {subject: lumber, phases: [{sample: hp-attack, start: 800, end: 600, rate_per_min: -1500, steps: 20}, {sample: hp-burn, start: 600, end: 600, rate_per_min: 0, steps: 0}]}
               - {subject: peon, phases: [{sample: hp-held, start: 20, end: 50, rate_per_min: {{I(Engine.Rule("^class.castle", "Holder", "healPerMinute")!.Value)}}, steps: 30}]}
               - {subject: field, phases: [{sample: field-stable-series, start: 100, end: 0, duration_s: 300, first_step_s: {{I(Engine.Rule("^class.field", "Decay", "afterMs")!.Value / 1000)}}, rate_per_min: -{{I(Engine.Rule("^class.field", "Decay", "health")!.Value * 60_000 / Engine.Rule("^class.field", "Decay", "everyMs")!.Value * (300 - (Engine.Rule("^class.field", "Decay", "afterMs")!.Value / 1000)) / 300)}}, steps: 100}]}
@@ -122,16 +122,14 @@ public class LaterBatchAnalysisTests
               score:
                 status: ok
                 facts:
-                  gathered: 0
-                  killed_value: 0
-                  built_value: 150
-                  technologies: 0
-                  total: 15
+                  buildings_destroyed: 1
+                  units_killed: 2
+                  mined: 260
+                  total: 12
                   sources:
-                    gathered: {Src("window/end-1.bmp")}
-                    killed_value: {Src("window/end-1.bmp")}
-                    built_value: {Src("window/end-1.bmp")}
-                    technologies: {Src("window/end-1.bmp")}
+                    buildings_destroyed: {Src("window/end-1.bmp")}
+                    units_killed: {Src("window/end-1.bmp")}
+                    mined: {Src("window/end-1.bmp")}
                     total: {Src("window/end-1.bmp")}
             """);
 

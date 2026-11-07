@@ -3,9 +3,11 @@ prefix: PRES
 title: Animations, effects and sounds
 rules:
   PRES-001:
-    rule: Burning buildings show the original's big and small flames.
-    source: [data IMAGES.INI fire_big fire_small, owner 2026-10-20 (before the second play-test)]
+    rule: Burning buildings show the original's big and small flames - one small fire, then two, then two and a big one as the building's health falls (BLD-006) - each at a pixel of its footprint 15 pixels inside a side of one tile and 31 inside a longer one.
+    source: [data IMAGES.INI fire_big fire_small, owner 2026-10-20 (before the second play-test), 'community ReTzar src/gameplay.rs (burn, 0x4200c0)']
     status: implemented
+    adr: [0280]
+    note: The original draws each fire's pixel from its stream of pictures; Tzar2 from the building's id. The fire's sound every 500 ms is not played yet.
   PRES-002:
     rule: Arrows, bolts, stones, cannon balls, rockets and spells fly as the original's pictures, and stones, shells, rockets and bolts leave its explosions.
     source: [data IMAGES.INI, owner 2026-10-20 (before the second play-test), 'community ReTzar src/frontend/effects.rs and src/gameplay.rs (0x431340, 0x4335e7, 0x43392a, 0x4e8dd3)']

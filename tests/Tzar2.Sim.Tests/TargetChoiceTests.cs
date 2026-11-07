@@ -49,12 +49,15 @@ public class TargetChoiceTests
     [Trait("Rule", "WAR-016")]
     public void A_unit_whose_target_falls_takes_on_the_next_one_at_once()
     {
+        // Footmen on hold fire as the targets: peasants would run from it (WAR-022).
         using var d = new SimDriver(
-            TestMap(32, 20, Unit("euro.footman", 0, 10, 10), Unit("euro.peon", 1, 11, 10), Unit("euro.peon", 1, 11, 12)),
+            TestMap(32, 20, Unit("euro.footman", 0, 10, 10), Unit("euro.footman", 1, 11, 10), Unit("euro.footman", 1, 11, 12)),
             ruleset: Classic);
-        EntityId footman = OfType(d.World, "euro.footman").Single();
-        EntityId first = OfType(d.World, "euro.peon").Single(p => d.PositionOf(p).Y < 11 * Tile);
-        EntityId second = OfType(d.World, "euro.peon").Single(p => d.PositionOf(p).Y > 11 * Tile);
+        EntityId footman = OfType(d.World, "euro.footman", 0).Single();
+        EntityId first = OfType(d.World, "euro.footman", 1).Single(p => d.PositionOf(p).Y < 11 * Tile);
+        EntityId second = OfType(d.World, "euro.footman", 1).Single(p => d.PositionOf(p).Y > 11 * Tile);
+        d.Order(1, CommandKind.SetStance, [first, second], arg0: (int)CombatStance.HoldFire);
+        d.World.Healths.Get(first).Current = 10;
         d.Order(0, CommandKind.Attack, [footman], target: first);
         d.RunUntil(() => !d.World.Entities.IsAlive(first), 400);
         Assert.False(d.World.Entities.IsAlive(first));

@@ -327,7 +327,7 @@ public sealed class SessionTests
         World world = session.Simulation.World;
         EntityId house = world.Identities.Entities.ToArray().Single(e => world.TypeOf(e).Key == "euro.house");
         ref Sim.Components.Health health = ref world.Healths.Get(house);
-        health.Current = health.Max / 5; // below the burn threshold
+        health.Current = health.Max / 5; // 20 %: two fires (BLD-006)
         bool shot = false;
         for (int t = 0; t < 200 && !shot; t++)
         {
@@ -341,8 +341,9 @@ public sealed class SessionTests
 
         Assert.True(shot, "the tower's arrows never showed in a frame");
         FrameEntity burning = session.AcquireFrame(out _)!.Entities.ToArray().Single(e => e.Id == house);
-        Assert.True(burning.Burning);
-        Assert.DoesNotContain(session.AcquireFrame(out _)!.Entities.ToArray(), e => e.Burning && e.Id != house);
+        Assert.Equal(2, burning.FireLevel);
+        Assert.Equal(health.Max / 5, burning.Health); // the fire takes nothing
+        Assert.DoesNotContain(session.AcquireFrame(out _)!.Entities.ToArray(), e => e.FireLevel > 0 && e.Id != house);
     }
 
     [Fact]

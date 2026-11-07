@@ -15,7 +15,7 @@ internal static class WorldReader
         "tradeDockMs", "convertRatio", "exchangeUnitMs", "gambleOdds", "gambleHouseEdgePercent", "maxGambleStake", "loanStartAmount", "loanStepAmount",
         "loanGrowDelayMs", "loanInterestPercent", "claimReachPx", "claimIntervalMs", "guardRadiusTiles", "wanderRadiusTiles",
         "wanderIntervalMs", "dayLengthMs", "dayStartMinute", "nightStartMinute", "nightEndMinute", "weatherPeriodMs",
-        "weatherChancePercent", "weather", "scoreGatherDivisor", "scoreKillDivisor", "scoreBuildDivisor", "scorePerTechnology",
+        "weatherChancePercent", "weather", "scoreForBuilding", "scoreForKill", "scoreMinedResources",
         "victoryIntervalTicks", "deathmatchStartingResources", "cheatSmallResources", "cheatLargeResources", "tavernRefreshMs",
         "mercenaryOffers", "heroOffers", "mercenaryGroupMin", "mercenaryGroupMax", "mercenaryCostPercent", "heroCostPercent",
         "mercenaryLevel", "fameGroupBonus", "fameLevelBonus", "fameCostPercent", "mercenariesTechnology", "heroesTechnology",
@@ -75,10 +75,9 @@ internal static class WorldReader
             WeatherPeriodMs = Range(settings, "weatherPeriodMs", d.WeatherPeriodMs, 1000, int.MaxValue),
             WeatherChanceBasisPoints = Range(settings, "weatherChancePercent", d.WeatherChanceBasisPoints / 100, 0, 100) * 100,
             Weather = Weather(settings) ?? d.Weather,
-            ScoreGatherDivisor = Range(settings, "scoreGatherDivisor", d.ScoreGatherDivisor, 1, 1_000_000),
-            ScoreKillDivisor = Range(settings, "scoreKillDivisor", d.ScoreKillDivisor, 1, 1_000_000),
-            ScoreBuildDivisor = Range(settings, "scoreBuildDivisor", d.ScoreBuildDivisor, 1, 1_000_000),
-            ScorePerTechnology = Range(settings, "scorePerTechnology", d.ScorePerTechnology, 0, 1_000_000),
+            ScoreForBuilding = Range(settings, "scoreForBuilding", d.ScoreForBuilding, 0, 1_000_000),
+            ScoreForKill = Range(settings, "scoreForKill", d.ScoreForKill, 0, 1_000_000),
+            ScoreMinedResources = Mined(settings) ?? d.ScoreMinedResources,
             VictoryIntervalTicks = Range(settings, "victoryIntervalTicks", d.VictoryIntervalTicks, 1, 1200),
             DeathmatchStartingResources = deathmatch,
             CheatSmallResources = Range(settings, "cheatSmallResources", d.CheatSmallResources, 0, 10_000_000),
@@ -131,6 +130,24 @@ internal static class WorldReader
         }
 
         return odds.ToImmutable();
+    }
+
+    // scoreMinedResources: [gold, stone]
+    private static ImmutableArray<string>? Mined(RulesetCompiler.SectionSet settings)
+    {
+        if (settings.Field("world", "scoreMinedResources") is not { } node)
+        {
+            return null;
+        }
+
+        string source = settings.FieldSource("world", "scoreMinedResources");
+        var keys = ImmutableArray.CreateBuilder<string>();
+        foreach (YamlNode item in RulesetCompiler.Seq(node, source, "world.scoreMinedResources").Items)
+        {
+            keys.Add(RulesetCompiler.Str(item, source, "world.scoreMinedResources"));
+        }
+
+        return keys.ToImmutable();
     }
 
     // weather: { grass: rain, snow: snow, desert: clear }

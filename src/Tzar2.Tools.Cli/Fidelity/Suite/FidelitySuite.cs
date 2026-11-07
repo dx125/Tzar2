@@ -245,7 +245,7 @@ internal static class FidelitySuite
         new("m3.mana-regeneration", "22.3", "m3-gameplay", "UNK-26", "Mana regained per minute = gameplay.manaRegenPerMinute", ManaRegeneration),
         new("m3.technology-effects", "22.3", "m3-gameplay", "UNK-21", "Feudalism: peasant cost change = te_feudalism percent", TechnologyEffects),
         new("m3.field-decay", "22.3", "m3-gameplay", "UNK-17", "Field decay: start after Decay.afterMs, Decay.health every Decay.everyMs", FieldDecay),
-        new("m3.fire", "22.3", "m3-gameplay", "UNK-42", "Burning below burnThresholdPercent at burnDamagePerMinute", Fire),
+        new("m3.fire", "22.3", "m3-gameplay", "UNK-42", "A burning building loses no hit points (BLD-006)", Fire),
         new("m3.score", "22.3", "m3-gameplay", "UNK-29", "Score = gathered/10 + killed/10 + built/10 + 100 per technology (end screen)", Score),
         new("mapgen.statistics", "22.3", "mapgen", "RE-10", "Random maps per type: castle spacing and gold per kingdom like the original's", MapgenStatistics),
         NotYet("ai.script-semantics", "ai", "UNK-35", "Legacy AI script semantics and executor behaviour (RE-07)",
@@ -985,26 +985,18 @@ internal static class FidelitySuite
             return Pending($"{trials.Count} attacked-then-left mills (needs 2 or more; fire-repair, batch F)");
         }
 
-        double threshold = (e.Rule("gameplay", "burnThresholdPercent") ?? 50) / 100, engineRate = e.Rule("gameplay", "burnDamagePerMinute") ?? 60;
+        // BLD-006 (the original's code, 0x41efe9): the fire is pictures and a sound; a mill left alone keeps its hit points.
         var off = new List<string>();
-        var burning = new List<double>();
         foreach ((YamlMapping? attack, YamlMapping? burn) in trials)
         {
             double share = Num(attack!, "end") / 800, rate = -Num(burn!, "rate_per_min");
-            bool burns = rate > 1;
-            if (burns)
+            if (rate > 1)
             {
-                burning.Add(rate);
-            }
-
-            if (burns != share < threshold && Math.Abs(share - threshold) > 0.05)
-            {
-                off.Add(string.Create(CultureInfo.InvariantCulture, $"left at {share:P0}: {(burns ? "burns" : "does not burn")}"));
+                off.Add(string.Create(CultureInfo.InvariantCulture, $"left at {share:P0}: loses {rate:0} HP/min"));
             }
         }
 
-        bool rateOk = burning.Count == 0 || Within(AttackTiming.Median([.. burning]), engineRate, 0.15);
-        return Verdict(off.Count == 0 && rateOk, string.Create(CultureInfo.InvariantCulture, $"{string.Join(", ", off.DefaultIfEmpty("threshold consistent"))}; burn {(burning.Count == 0 ? "-" : AttackTiming.Median([.. burning]).ToString("0", CultureInfo.InvariantCulture))} HP/min, engine below {threshold:P0} at {engineRate} HP/min"));
+        return Verdict(off.Count == 0, string.Join(", ", off.DefaultIfEmpty("no burning mill lost hit points; engine: the fire takes nothing")));
     }
 
     private static CheckResult Score(FactsIndex f, EngineModel e)
@@ -1015,8 +1007,9 @@ internal static class FidelitySuite
         }
 
         double Get(string k) => FactsIndex.Number(m.Get(k)) ?? 0;
-        double engine = Math.Floor(Get("gathered") / (e.Rule("world", "scoreGatherDivisor") ?? 10)) + Math.Floor(Get("killed_value") / (e.Rule("world", "scoreKillDivisor") ?? 10)) +
-                        Math.Floor(Get("built_value") / (e.Rule("world", "scoreBuildDivisor") ?? 10)) + (Get("technologies") * (e.Rule("world", "scorePerTechnology") ?? 100));
+        // DIP-011: 500 a building destroyed, 200 anything else killed, the gold and stone taken from mines; shown / 100.
+        double raw = (Get("buildings_destroyed") * (e.Rule("world", "scoreForBuilding") ?? 500)) + (Get("units_killed") * (e.Rule("world", "scoreForKill") ?? 200)) + Get("mined");
+        double engine = Math.Floor((raw + 50) / 100);
         return Verdict(Math.Abs(total - engine) < 0.5, string.Create(CultureInfo.InvariantCulture, $"end screen {total:0}, engine formula on its parts {engine:0}"));
     }
 

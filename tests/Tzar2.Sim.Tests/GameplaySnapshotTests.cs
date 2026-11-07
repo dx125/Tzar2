@@ -53,7 +53,7 @@ public class GameplaySnapshotTests
         switch (corruption)
         {
             case "worker task": world.Workers.Get(peon).Task = (WorkerTask)9; break;
-            case "combat mode": world.Combats.Get(footman).Mode = (CombatMode)7; break;
+            case "combat mode": world.Combats.Get(footman).Mode = (CombatMode)8; break;
             case "queue overflow": world.Productions.Get(castle).Count = ProducerDefinition.MaxQueueCapacity + 1; break;
             case "queue item":
                 world.Productions.Get(castle).Count = 1;

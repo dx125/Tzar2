@@ -36,7 +36,7 @@ public sealed class WorldFrameTests
         Assert.DoesNotContain(frame.Entities.ToArray(), e => e.Owner == 1 && Rules.Value.EntityTypes[e.TypeId].IsMobile);
         Assert.All(frame.Entities.ToArray(), e => Assert.True(e.Owner == 0 || e.Remembered || world.Visibility.CanSee(world, 0, e.Id)));
         Assert.Equal(world.DayMinute, frame.DayMinute);
-        Assert.Equal(VictorySystem.Score(world.Ruleset.World, world.Kingdoms[0]), frame.Players[0].Score);
+        Assert.Equal(VictorySystem.Score(world.Kingdoms[0]), frame.Players[0].Score);
 
         // hmreveal through the chat line: the whole map is explored and the enemy castle is remembered.
         Assert.True(session.SubmitChat("hmreveal"));

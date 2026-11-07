@@ -16,7 +16,6 @@ namespace Tzar2.Sim.Systems;
 /// </summary>
 public sealed class StructureSystem : ISimSystem
 {
-    private readonly List<EntityId> _burnedDown = [];
     private readonly List<(EntityId Gate, bool Open)> _gateChanges = [];
 
     /// <inheritdoc />
@@ -33,7 +32,7 @@ public sealed class StructureSystem : ISimSystem
         int tickMs = world.Config.TickLengthMilliseconds;
         UpdateGates(world);
         TakeDown(world, tickMs);
-        Burn(world, tickMs);
+        Burn(world);
         RegainMana(world, tickMs);
     }
 
@@ -244,18 +243,11 @@ public sealed class StructureSystem : ISimSystem
     private int _gridW;
     private int _gridH;
 
-    // GAME-03 fire (UNK-42): a completed burnable building below burnThresholdPercent of its hit points burns and loses
-    // burnDamagePerMinute; repaired above the threshold, the fire goes out; at 0 it burns down (a ruin stays).
-    private void Burn(World world, int tickMs)
+    // BLD-006 (the original's code, 0x4200c0 and the fire timer 0x41efe9): a finished burnable building burns by its health,
+    // and the fire takes nothing - it is pictures and a sound. Above half its hit points (as a whole percent) it does not
+    // burn; down to 36 % one small fire, down to 16 % two, below that two and a big one. Repaired, the fire goes back down.
+    private static void Burn(World world)
     {
-        GameplaySettings g = world.Ruleset.Gameplay;
-        if (g.BurnDamagePerMinute <= 0)
-        {
-            return;
-        }
-
-        int msPerPoint = Math.Max(1, 60_000 / g.BurnDamagePerMinute);
-        _burnedDown.Clear();
         ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
         for (int i = 0; i < structures.Length; i++)
         {
@@ -266,10 +258,9 @@ public sealed class StructureSystem : ISimSystem
                 continue;
             }
 
-            ref Health health = ref world.Healths.Get(building);
-            bool burning = (long)health.Current * 10_000 < (long)health.Max * g.BurnThresholdBasisPoints;
+            int level = FireLevel(world.Healths.Get(building));
             int b = world.Burnings.IndexOf(building);
-            if (!burning)
+            if (level == 0)
             {
                 if (b >= 0)
                 {
@@ -282,32 +273,27 @@ public sealed class StructureSystem : ISimSystem
 
             if (b < 0)
             {
-                world.Burnings.Set(building, default);
+                world.Burnings.Set(building, new Burning { Level = level });
                 world.Events.Emit(new SimEvent(SimEventKind.FireStarted, world.Identities.Get(building).Owner, building, 0, 0, type.Id));
-                b = world.Burnings.IndexOf(building);
             }
-
-            ref Burning fire = ref world.Burnings.At(b);
-            fire.AccumMs += tickMs;
-            while (fire.AccumMs >= msPerPoint && health.Current > 0)
+            else
             {
-                fire.AccumMs -= msPerPoint;
-                health.Current--;
-            }
-
-            fire.AccumMs = Math.Min(fire.AccumMs, 59_999);
-            if (health.Current <= 0)
-            {
-                _burnedDown.Add(building);
+                world.Burnings.At(b).Level = level;
             }
         }
+    }
 
-        foreach (EntityId building in _burnedDown)
+    /// <summary>The fires of a building at <paramref name="health"/> (BLD-006): 0 above half, then 1, 2 and 3.</summary>
+    public static int FireLevel(in Health health)
+    {
+        int percent = health.Max <= 0 ? 100 : (int)((long)health.Current * 100 / health.Max);
+        return percent switch
         {
-            Identity identity = world.Identities.Get(building);
-            world.Events.Emit(new SimEvent(SimEventKind.BurnedDown, identity.Owner, building, 0, 0, identity.TypeId));
-            world.Kill(building);
-        }
+            >= 51 => 0,
+            >= 36 => 1,
+            >= 16 => 2,
+            _ => 3,
+        };
     }
 
     // Mana regenerates per minute of game time (ManaPool.regenPerMinute and the owner's technologies, e.g. Concentration),

@@ -6,7 +6,8 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-11-04 (item 22, the owner's list after the ninth play-test: batch A, a gate's site as the
+* **Last updated:** 2026-11-07 (item 25, the global audit against ReTzar and the original's code: batch A, the fire
+  takes nothing, pikemen strike back, peasants fight or run, the original's score; ADR 0280). Before: 2026-11-04 (item 22, the owner's list after the ninth play-test: batch A, a gate's site as the
   original's, over any walls and with the way before its door clear, in all four facings; walls and gates leave rubble
   that stays, every ruin is drawn (ADR 0273); a galleon's card follows its cannon level. Batch B, shells and bolts land
   on a tile and hurt the square round it, any kingdom's; flame bolts burn their way (ADR 0274). Batch C, the neutral
@@ -537,12 +538,30 @@ owner's order of 2026-10-26.
        the blessing and teaching already matched.
     2. The pictures and sounds of these spells: **fixed** (PRES-020; ADR 0279; log below). No spell had a sound, and the
        whirlpool and the fire rain were not drawn.
+25. **The global audit (2026-11-07, the owner): every mechanic against ReTzar, the original's code settling any
+    disagreement** (ADR 0280; its table lists every difference found and what already matched). In five batches:
+    1. A - fire, pikemen, peasants hit, score: **fixed** (BLD-006, PRES-001, WAR-021, WAR-022, DIP-011; log below).
+    2. B - capture by the original's resistance and auras (UNK-19), the bribe's price (UNK-26).
+    3. C - the tavern's offers (UNK-28), dice and loans, the magic workshop's items (UNK-25).
+    4. D - gathering (idle peasants, fields, fishing, ships' loads, cows' milk; UNK-17, UNK-28) and bears.
+    5. E - Leadership's reach, mana not regained while frozen, stone, healing or hidden, one-way sharing.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-07 — The global audit, batch A: fire, pikemen, peasants hit and the score (BLD-006, PRES-001, WAR-021,
+  WAR-022, DIP-011; ADR 0280; item 25).** The owner asked for every mechanic to be checked against ReTzar, with the
+  original as the final source. ReTzar's addresses match the GOG `Tzar.exe`, so disagreements are now read in the
+  original's code on the owner's PC; nothing of it is committed.
+  * **The fire** takes nothing: the manual says buildings burn down, the code only shows fires and plays their sound. The
+    three steps of fire follow the original.
+  * **A pikeman** left standing by a blow strikes back with a fifth of its attack.
+  * **A peasant hit** at work or idle fights back if at least as strong, else runs 5 tiles, rests 3 s and returns to work.
+  * **The score** is the original's: 500 a building, 200 anything else, the gold and stone mined; shown / 100, with the
+    original's score and time limits.
+  * The gameplay golden and the benches are re-pinned (the ruleset hash; the stream where peasants are hit).
 * **2026-11-06 — The Arabian and Asian casters, batch E: their sounds and pictures (PRES-020; ADR 0279; item 24).** Every
   spell now sounds as the original's (`SOUND\SPELLS`, the `summon_spell` set, a meteor three times in ten), from its
   caster. The frame carries the spells' areas (`FrameArea`), so a whirlpool whirls on the water. The fire rain's meteors

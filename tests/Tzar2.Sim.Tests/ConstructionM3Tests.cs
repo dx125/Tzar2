@@ -55,23 +55,31 @@ public class ConstructionM3Tests
 
     [Fact]
     [Trait("Rule", "BLD-006")]
-    public void Badly_damaged_buildings_burn_down_unless_repaired_and_leave_a_ruin()
+    public void Badly_damaged_buildings_burn_by_their_health_and_the_fire_takes_nothing()
     {
+        // The original's code (0x4200c0, the fire's timer 0x41efe9): one small fire at 50 % and below, two below 36 %, two and
+        // a big one below 16 %; the fire is pictures and a sound, it never burns a building down.
         using var d = new SimDriver(TestMap(32, 16, Structure("euro.castle", 0, 2, 2), Structure("euro.house", 0, 12, 4), Structure("euro.house", 0, 20, 4), Unit("euro.peon", 0, 11, 7)), ruleset: Classic);
         EntityId[] houses = [.. OfType(d.World, "euro.house")];
-        d.World.Healths.Get(houses[0]).Current = 100; // below 50% (UNVERIFIED): burns at 60 HP per minute (UNVERIFIED)
-        d.World.Healths.Get(houses[1]).Current = 30;
+        int max = d.World.Healths.Get(houses[0]).Max;
+        d.World.Healths.Get(houses[0]).Current = max / 2;
+        d.World.Healths.Get(houses[1]).Current = max / 10;
         d.Step();
-        Assert.True(d.World.Burnings.Has(houses[0]));
+        Assert.Equal(1, d.World.Burnings.Get(houses[0]).Level);
+        Assert.Equal(3, d.World.Burnings.Get(houses[1]).Level);
         Assert.Equal(2, d.Count(SimEventKind.FireStarted));
+        d.RunUntil(() => false, 1200); // a minute
+        Assert.Equal(max / 10, d.World.Healths.Get(houses[1]).Current);
+        Assert.Equal(0, d.Count(SimEventKind.BurnedDown));
         d.Order(0, CommandKind.Repair, [OfType(d.World, "euro.peon").Single()], target: houses[0]);
-        d.RunUntil(() => !d.World.Entities.IsAlive(houses[1]), 1000);
-        Assert.InRange(d.World.Tick.Value, 590, 610); // 30 HP at 1 HP per second
-        Assert.Contains(d.World.Decals[0].Kind, new[] { DecalKind.Ruin });
-        Assert.True(d.World.Map.IsPassable(Locomotor.Foot, 20, 4)); // a ruin never blocks (ORIG-01)
-        d.RunUntil(() => d.World.Healths.Get(houses[0]).Current > 210, 2000);
+        d.RunUntil(() => (long)d.World.Healths.Get(houses[0]).Current * 100 / max >= 51, 2000);
         d.Step();
-        Assert.False(d.World.Burnings.Has(houses[0])); // repaired above the threshold: the fire is out
+        Assert.False(d.World.Burnings.Has(houses[0])); // repaired above half: the fire is out
+        Assert.Equal(1, d.Count(SimEventKind.FireExtinguished));
+        Assert.Equal(0, Systems.StructureSystem.FireLevel(new Health { Current = 51, Max = 100 }));
+        Assert.Equal(1, Systems.StructureSystem.FireLevel(new Health { Current = 36, Max = 100 }));
+        Assert.Equal(2, Systems.StructureSystem.FireLevel(new Health { Current = 16, Max = 100 }));
+        Assert.Equal(3, Systems.StructureSystem.FireLevel(new Health { Current = 15, Max = 100 }));
     }
 
     [Fact]

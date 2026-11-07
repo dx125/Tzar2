@@ -18,15 +18,15 @@ namespace Tzar2.Sim.Systems;
 /// bridges and fields; its cows count); Destroy Castles — a kingdom without a castle. Resigning defeats at once. A
 /// defeated kingdom's commands are refused; what it has left stays on the map.</para>
 /// <para><b>Victory</b>: kingdoms win together when they are mutual allies sharing victory (allied victory, manual ch. 5
-/// §8). Standard and Destroy Castles: when the kingdoms still in the game form one such team. Score Limit: the first team
-/// whose summed score reaches the limit. Time Limit: at the limit, the team with the highest score (ties: the team with
-/// the lowest slot). Not Specified: never automatically (scenario triggers decide). A one-kingdom match never ends by
-/// itself.</para>
+/// §8), once the kingdoms still in the game form one such team. Score Limit (DIP-011, ReTzar's reading of the original,
+/// 0x442d10): every kingdom is defeated once another one's shown score passes the limit. Time Limit (0x442e30): past the
+/// limit, the kingdom with the highest raw score (the first on ties) gains 1,000,000 and the rules become a score limit of
+/// its raw score less one, so it alone stays. Not Specified: never automatically (scenario triggers decide). A one-kingdom
+/// match never ends by itself.</para>
 /// </remarks>
 public sealed class VictorySystem : ISimSystem
 {
     private int[] _team = [];
-    private long[] _teamScore = [];
 
     /// <inheritdoc />
     public SimPhase Phase => SimPhase.Victory;
@@ -34,12 +34,22 @@ public sealed class VictorySystem : ISimSystem
     /// <inheritdoc />
     public string Name => "victory";
 
-    /// <summary>The score of a kingdom (UNK-29 placeholder formula: gathered, killed and built value, technologies).</summary>
-    public static long Score(WorldSettings settings, in KingdomState k)
+    /// <summary>The score of a kingdom as shown (DIP-011; ReTzar's reading of the original, 0x4435c0): (raw + 50) / 100.</summary>
+    public static long Score(in KingdomState k) => Shown(k.Score);
+
+    private static long Shown(long raw) => (raw + 50) / 100;
+
+    /// <summary>
+    /// The raw score a kingdom makes as a load of <paramref name="resource"/> is taken from its node (DIP-011: what a mine of
+    /// gold or stone gives).
+    /// </summary>
+    internal static void Mined(World world, byte owner, int resource, int load)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        return (k.GatheredTotal / settings.ScoreGatherDivisor) + (k.KillValue / settings.ScoreKillDivisor)
-            + (k.BuildValue / settings.ScoreBuildDivisor) + ((long)k.TechnologiesResearched * settings.ScorePerTechnology);
+        if (owner < world.Kingdoms.Length && load > 0 && (uint)resource < (uint)world.Ruleset.ResourceTypes.Count
+            && world.Ruleset.World.ScoreMinedResources.Contains(world.Ruleset.ResourceTypes[resource]))
+        {
+            world.Kingdoms[owner].Score += load;
+        }
     }
 
     /// <summary>Whether the match is over (some kingdom won).</summary>
@@ -199,6 +209,12 @@ public sealed class VictorySystem : ISimSystem
         }
 
         int killer = e.Kind == SimEventKind.Killed ? e.Y : -1;
+        if ((uint)killer < (uint)k.Length)
+        {
+            // DIP-011 (0x504cbe): the killer's kingdom scores for whatever it kills, its own and its allies' too.
+            k[killer].Score += building ? world.Ruleset.World.ScoreForBuilding : world.Ruleset.World.ScoreForKill;
+        }
+
         if ((uint)killer < (uint)k.Length && killer != e.Player)
         {
             if (building)
@@ -209,8 +225,6 @@ public sealed class VictorySystem : ISimSystem
             {
                 k[killer].UnitsKilled++;
             }
-
-            k[killer].KillValue += CostOf(world, e.Arg);
         }
     }
 
@@ -256,10 +270,8 @@ public sealed class VictorySystem : ISimSystem
         if (_team.Length != players)
         {
             _team = new int[players];
-            _teamScore = new long[players];
         }
 
-        Array.Clear(_teamScore);
         for (int p = 0; p < players; p++)
         {
             _team[p] = p;
@@ -279,14 +291,43 @@ public sealed class VictorySystem : ISimSystem
                     break;
                 }
             }
+        }
 
-            _teamScore[_team[p]] += Score(world.Ruleset.World, world.Kingdoms[p]);
+        // DIP-011 (ReTzar's reading of the original's end test, 0x442d10, 0x442e30): under a score limit every kingdom is
+        // defeated once another one's score passes the limit; at a time limit the kingdom with the highest raw score (the
+        // first on ties) gains 1,000,000 and the limit becomes its raw score less one, so it alone stays. The last standing
+        // then win as in a standard game.
+        if (condition == VictoryCondition.ScoreLimit)
+        {
+            DefeatByScore(world, world.Config.ScoreLimit, -1, 0);
+        }
+        else if (condition == VictoryCondition.TimeLimit)
+        {
+            long elapsedMs = (long)world.Tick.Value * world.Config.TickLengthMilliseconds;
+            if (elapsedMs <= (long)world.Config.TimeLimitMinutes * 60_000)
+            {
+                return;
+            }
+
+            int best = -1;
+            long top = -1;
+            for (int p = 0; p < players; p++)
+            {
+                if (world.Kingdoms[p].Score > top)
+                {
+                    (best, top) = (p, world.Kingdoms[p].Score);
+                }
+            }
+
+            DefeatByScore(world, top - 1, best, TimeLimitBonus);
         }
 
         switch (condition)
         {
             case VictoryCondition.Standard:
             case VictoryCondition.DestroyCastles:
+            case VictoryCondition.ScoreLimit:
+            case VictoryCondition.TimeLimit:
             {
                 int team = -1;
                 for (int p = 0; p < players; p++)
@@ -312,26 +353,38 @@ public sealed class VictorySystem : ISimSystem
                 return;
             }
 
-            case VictoryCondition.ScoreLimit:
-            {
-                int best = BestTeam(world);
-                if (best >= 0 && _teamScore[best] >= world.Config.ScoreLimit && MayWin(world, best))
-                {
-                    Win(world, best);
-                }
+        }
+    }
 
-                return;
+    // What the time limit adds to the best raw score before the end test (0x442e30).
+    private const long TimeLimitBonus = 1_000_000;
+
+    // Every kingdom still playing is defeated when another one's shown score (raw, plus the bonus for kingdom bonusTo) is
+    // above the limit (0x442d10); a scenario's "cannot lose" spares it.
+    private static void DefeatByScore(World world, long limit, int bonusTo, long bonus)
+    {
+        int players = world.Players.Length;
+        Span<bool> above = stackalloc bool[players];
+        for (int q = 0; q < players; q++)
+        {
+            long raw = world.Kingdoms[q].Score + (q == bonusTo ? bonus : 0);
+            above[q] = (world.Players[q].Flags & PlayerFlags.Active) != 0 && Shown(raw) > limit;
+        }
+
+        for (int p = 0; p < players; p++)
+        {
+            if ((world.Players[p].Flags & (PlayerFlags.Active | PlayerFlags.Defeated)) != PlayerFlags.Active || world.Scenario?.CannotLose(p) == true)
+            {
+                continue;
             }
 
-            case VictoryCondition.TimeLimit:
+            for (int q = 0; q < players; q++)
             {
-                long elapsedMs = (long)(world.Tick.Value + 1) * world.Config.TickLengthMilliseconds;
-                if (elapsedMs >= (long)world.Config.TimeLimitMinutes * 60_000 && BestTeam(world) is >= 0 and var best && MayWin(world, best))
+                if (q != p && above[q])
                 {
-                    Win(world, best);
+                    Defeat(world, p);
+                    break;
                 }
-
-                return;
             }
         }
     }
@@ -353,38 +406,5 @@ public sealed class VictorySystem : ISimSystem
         }
 
         return true;
-    }
-
-    // The team (lowest slot) with the highest summed score among teams with a kingdom still in the game.
-    private int BestTeam(World world)
-    {
-        int best = -1;
-        for (int p = 0; p < _team.Length; p++)
-        {
-            if (_team[p] != p || !TeamPlays(world, p))
-            {
-                continue;
-            }
-
-            if (best < 0 || _teamScore[p] > _teamScore[best])
-            {
-                best = p;
-            }
-        }
-
-        return best;
-    }
-
-    private bool TeamPlays(World world, int team)
-    {
-        for (int p = 0; p < _team.Length; p++)
-        {
-            if (_team[p] == team && (world.Players[p].Flags & PlayerFlags.Defeated) == 0 && (world.Players[p].Flags & PlayerFlags.Active) != 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
