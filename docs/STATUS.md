@@ -548,13 +548,18 @@ owner's order of 2026-10-26.
        TRADE-012, ITEM-020, ITEM-021; log below).
     4. D - idle peasants, fishing, ships' loads, cows' milk: **fixed** (ECO-005, ECO-027, ECO-029, TRADE-004; log
        below). The fields' countdown (ECO-028) is built but off: it halves the computer's food; the owner decides.
-    5. E - bears, one-way sharing, the easy campaign's damage, the idle scan's period.
+    5. E - bears: **fixed** (NAT-003; log below). Left for the owner (ADR 0280): one-way sharing (the manual says both),
+       the easy campaign's damage (the sim does not know a campaign's difficulty), the 1.5 s idle scan (slower reactions),
+       the fields' countdown (ECO-028, off).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-07 — The global audit, batch E: bears (NAT-003; ADR 0280; item 25).** A bear prowls round where it was put -
+  one idle tick of 1.5 s in five it sets off within 6 tiles - looks for a target in 30 % of its looks, and is not called
+  home. The audit's last differences are left for the owner (item 25.5).
 * **2026-11-07 — The global audit, batch D: idle peasants, fishing, ships' loads and cows' milk (ECO-005, ECO-027,
   ECO-029, TRADE-004; ADR 0280; item 25).**
   * **An idle peasant** of a person's kingdom joins the work of its nearest peasant after 30 s (read in `Tzar.exe`).

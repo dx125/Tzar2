@@ -219,7 +219,9 @@ public sealed partial class CombatSystem : ISimSystem
             bool scan = c.Mode == CombatMode.AttackMove || (c.Mode == CombatMode.None && arm.AutoAcquire && (idle || guarding || lost) && stance != CombatStance.HoldFire);
             if (scan && (lost || (attacker.Index + tick) % acquireEvery == 0))
             {
-                target = Search(world, attacker, self, type, arm, position, EntityId.None);
+                // NAT-003 (ReTzar's reading of the original, 0x4eeea0): a bear looks only when R(0, 100) < 30.
+                target = type.Traits.World.Prowls && world.Rng.Combat.NextInt(101) >= BearLookChance ? EntityId.None
+                    : Search(world, attacker, self, type, arm, position, EntityId.None);
                 if (!target.IsNone)
                 {
                     Engage(world, ref c, target); // a move-advance continues to its destination after this fight
@@ -1208,6 +1210,9 @@ public sealed partial class CombatSystem : ISimSystem
         EntityTypeDefinition type = world.TypeOf(target);
         return type.Traits.Armament is { } arm ? Range(world, target, world.Identities.Get(target), type, arm) : 0;
     }
+
+    // NAT-003: in how many of 100 looks a bear looks at all (0x4eeea0).
+    private const int BearLookChance = 30;
 
     private static int Sight(World world, Identity self, EntityTypeDefinition type)
         => world.Stats.Apply(self.Owner, ModifierStat.Sight, type.Id, type.Traits.SightUnits);

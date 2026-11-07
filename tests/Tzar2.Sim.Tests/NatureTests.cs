@@ -55,30 +55,40 @@ public class NatureTests
 
     [Fact]
     [Trait("Rule", "NAT-003")]
-    public void A_bear_fights_near_home_and_walks_back_when_lured_away()
+    public void A_bear_fights_what_comes_near_prowls_round_its_place_and_is_not_called_back()
     {
-        using var d = new SimDriver(TestMap(64, 16, Unit("comm.bear", Nature, 20, 8), Unit("euro.footman", 0, 24, 8)), ruleset: Classic);
+        // ReTzar's reading of the original (Bear Idle 0x42fea0, 0x4eeed0, 0x4eeea0).
+        using var d = new SimDriver(TestMap(64, 24, Unit("comm.bear", Nature, 20, 12), Unit("euro.footman", 0, 24, 12)), ruleset: Classic);
         World w = d.World;
         EntityId bear = OfType(w, "comm.bear").Single();
         EntityId footman = OfType(w, "euro.footman").Single();
         Assert.True(w.NatureHomes.Has(bear));
         Position home = new(w.NatureHomes.Get(bear).X, w.NatureHomes.Get(bear).Y);
-        d.RunUntil(() => d.Events.Any(e => e.Event.Kind == SimEventKind.Damaged && e.Event.Entity == footman), 300);
+        d.RunUntil(() => d.Events.Any(e => e.Event.Kind == SimEventKind.Damaged && e.Event.Entity == footman), 600);
         Assert.Contains(d.Events, e => e.Event.Kind == SimEventKind.Damaged && e.Event.Entity == footman);
 
-        // Run far away: the bear gives up beyond 10 tiles (UNVERIFIED) and goes home.
-        d.MoveToTile(0, [footman], 60, 8);
-        bool returned = false;
-        for (int t = 0; t < 1200 && !returned; t++)
+        // Nothing calls it home when it is lured away.
+        d.MoveToTile(0, [footman], 60, 12);
+        for (int t = 0; t < 600; t++)
         {
             d.Step();
-            returned |= w.NatureHomes.Get(bear).Returning != 0;
+            Assert.Equal(0, w.NatureHomes.Get(bear).Returning);
         }
 
-        Assert.True(returned);
-        d.RunUntil(() => w.NatureHomes.Get(bear).Returning == 0, 800);
-        Position at = d.PositionOf(bear);
-        Assert.True(IntMath.DistanceSquared(at.X, at.Y, home.X, home.Y) <= (long)(3 * SimDriver.Tile) * (3 * SimDriver.Tile));
+        // Alone, it sets off now and then (one idle tick of 1.5 s in five) to a cell within 6 of its place.
+        d.Order(0, CommandKind.DebugKill, [footman]);
+        int far = 0;
+        int tile = SimDriver.Tile;
+        for (int t = 0; t < 4000; t++)
+        {
+            d.Step();
+            Position at = d.PositionOf(bear);
+            far = Math.Max(far, Math.Max(Math.Abs((at.X - home.X) / tile), Math.Abs((at.Y - home.Y) / tile)));
+        }
+
+        Position end = d.PositionOf(bear);
+        Assert.InRange(Math.Max(Math.Abs((end.X - home.X) / tile), Math.Abs((end.Y - home.Y) / tile)), 0, 7);
+        Assert.True(far >= 1);
     }
 
     [Fact]

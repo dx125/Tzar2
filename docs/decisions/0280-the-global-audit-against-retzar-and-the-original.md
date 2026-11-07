@@ -4,7 +4,7 @@
 * **Date:** 2026-11-07
 * **Deciders:** maintainer (Claude), at the owner's request before the eleventh play-test
 * **Related:** BLD-006, PRES-001, WAR-021, WAR-022, DIP-011, CAP-002, CAP-004, CAP-005, CAP-006, MAG-038, MAG-039,
-  MAG-040, EXP-008, TRADE-004, TRADE-007, TRADE-009, TRADE-012, ITEM-020, ITEM-021, ECO-005, ECO-027, ECO-028, ECO-029;
+  MAG-040, EXP-008, TRADE-004, TRADE-007, TRADE-009, TRADE-012, ITEM-020, ITEM-021, ECO-005, ECO-027, ECO-028, ECO-029, NAT-003;
   UNK-17, UNK-19, UNK-23, UNK-25, UNK-26, UNK-28, UNK-29,
   UNK-42; ADR 0181, ADR 0191; ReTzar
   `src/gameplay.rs`, `src/gameplay/scripting.rs`
@@ -40,7 +40,7 @@ in `classic.yaml`. It found these differences:
 | Leadership | Units below level 11 closer than the hero's sight (0x4de900). | Every unit within 4 tiles (UNK-23). | B |
 | Mana | None regained while frozen, stone, healing or teaching, or hidden on its own mana (0x504e30). | Always regained. | B |
 | The ninja's cloak | 50 mana, then 1 every 2 s while hidden (0x4eb840, 0x4ebba9). | Free, for 60 s. | B |
-| Smaller | Shared resources one way; the easy campaign's damage; the idle scan's period. | Both ways; none; 200 ms. | E |
+| Smaller | Shared resources one way; the easy campaign's damage; the idle scan's period. | Both ways; none; 200 ms. | Open |
 
 These already matched and were left alone:
 
@@ -133,6 +133,25 @@ Batch D:
 * **A fix found on the way.** A ship's approach point beyond the first ring round a building could be a diagonal corner
   out of reach. A boat stood there for ever, unable to deliver. Corners of far rings are now taken only when nothing
   else is free.
+
+Batch E:
+
+* **Bears.** At each idle tick of 1.5 s a bear sets off, one time in five, to a cell within 6 of where it was put. It
+  looks for a target in 30 % of its looks, and nothing calls it back (the new `Animal.prowls`). Other guards keep their
+  walk home.
+
+Left open for the owner, with the reason:
+
+* **Shared resources and units.** ReTzar reads the original's relation bits one way, the giver's. The manual says each
+  works when both kingdoms turn it on, and the diplomacy screen shows whether the other agreed. That reads like a handshake
+  that sets the bits, so Tzar2 keeps "both".
+* **The easy campaign's damage.** On easy, the original spares the player's side a fifth of each blow from a stranger and
+  adds a fifth to the player's own (0x504990). The simulation does not know a campaign's difficulty yet; that needs it
+  first.
+* **The idle scan.** The original's idle unit looks round every 1.5 s, attacking at once a target already in reach.
+  Tzar2's looks every 200 ms. Whether slower reactions are wanted is the owner's call (controls and AI tactics may improve
+  on the original).
+* **The fields' countdown (ECO-028).** It is built but off (batch D).
 
 ## Consequences
 
