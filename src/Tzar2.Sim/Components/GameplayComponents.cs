@@ -424,17 +424,20 @@ public struct UpgradeLevels : IComponent
     public uint Mask;
 }
 
-/// <summary>Capture progress on a building peasants are digging at (GAME-04; ADR 0044).</summary>
+/// <summary>
+/// A building's resistance away from its target (CAP-005, CAP-006; ADR 0280): lowered by capturers, raised by friendly
+/// peasants, moving back toward the target at each pulse; without it the resistance is the target.
+/// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct CaptureState : IComponent
 {
-    /// <summary>Capture points dug so far (milli-points: 1,000 per point).</summary>
-    public int MilliPoints;
+    /// <summary>The current resistance (0 or more).</summary>
+    public int Resistance;
 
-    /// <summary>Time since the last tick with a capturer at work.</summary>
-    public int IdleMs;
+    /// <summary>Padding, always 0.</summary>
+    public int Reserved;
 
-    /// <summary>The capturing player.</summary>
+    /// <summary>Padding, always 0.</summary>
     public byte Player;
 
     /// <summary>Padding, always 0.</summary>

@@ -19,7 +19,8 @@ public class CaptureAndRallyTests
 {
     [Fact]
     [Trait("Rule", "CAP-001")]
-    public void Peasants_dig_to_capture_an_enemy_house_and_take_it_over()
+    [Trait("Rule", "CAP-005")]
+    public void Peasants_dig_to_capture_an_enemy_house_take_it_over_and_mend_it_whole()
     {
         using var d = new SimDriver(
             TestMap(48, 16, Structure("euro.castle", 1, 40, 2), Structure("euro.house", 1, 14, 4), Structure("euro.barrack", 1, 24, 10), Unit("euro.peon", 0, 12, 4), Unit("euro.peon", 0, 12, 5)),
@@ -27,35 +28,42 @@ public class CaptureAndRallyTests
         EntityId house = OfType(d.World, "euro.house").Single();
         EntityId[] peons = [.. OfType(d.World, "euro.peon")];
 
-        // RESISTANCE 40; the castle is 28 tiles away (beyond the influence radius of 16, UNVERIFIED).
+        // RESISTANCE 40, no EMIT round it. Each 1196 ms cycle of a peasant takes 5, the house gets 10 back every 2 s, and it
+        // goes at the cycle that finds no more than 5 (ReTzar's reading of the original, 0x4dfe52, 0x505040, 0x41f271):
+        // two peasants take 16.7 every 2 s against the 10, so it falls in about 12 s.
         Assert.Equal(40, CaptureSystem.CaptureResistance(d.World, house));
         d.Order(0, CommandKind.Capture, peons, target: house);
-        int ticks = d.RunUntil(() => d.Count(SimEventKind.Captured) == 1, 2000);
+        d.RunUntil(() => peons.All(p => d.World.Workers.Get(p).Phase == WorkerPhase.Capturing), 200);
+        int start = d.World.Tick.Value;
+        d.RunUntil(() => d.Count(SimEventKind.Captured) == 1, 600);
         Assert.Equal(0, d.World.Identities.Get(house).Owner);
-        // Two peasants at 10 points per second each (UNVERIFIED): 2 s of digging after the walk.
-        Assert.InRange(ticks, 40, 80);
+        Assert.InRange(d.World.Tick.Value - start, 8 * 1196 / 50, 16 * 1196 / 50);
+        Assert.Equal(0, CaptureSystem.CaptureResistance(d.World, house));
+
+        // They go on, giving 5 a cycle back until it is whole, then stop (0x41fab0).
+        d.RunUntil(() => peons.All(p => d.World.Workers.Get(p).Task == WorkerTask.None), 400);
         Assert.False(d.World.CaptureStates.Has(house));
-        d.Step();
-        Assert.All(peons, p => Assert.Equal(WorkerTask.None, d.World.Workers.Get(p).Task));
+        Assert.Equal(40, CaptureSystem.CaptureResistance(d.World, house));
         Assert.Equal(12, d.World.Players[0].PopulationCap); // the house now houses player 0
     }
 
     [Fact]
     [Trait("Rule", "CAP-002")]
-    public void Influence_makes_buildings_near_their_town_harder_to_capture_and_near_the_enemy_easier()
+    public void The_emit_of_buildings_round_a_building_makes_it_harder_to_capture_for_its_allies_and_easier_for_others()
     {
         using var d = new SimDriver(
             TestMap(64, 16, Structure("euro.castle", 1, 2, 2), Structure("euro.house", 1, 9, 4), Structure("euro.house", 1, 30, 4), Structure("euro.castle", 0, 50, 2), Structure("euro.house", 1, 46, 4)),
             ruleset: Classic);
         EntityId[] houses = [.. OfType(d.World, "euro.house").OrderBy(h => d.World.Positions.Get(h).X)];
-        int nearOwn = CaptureSystem.CaptureResistance(d.World, houses[0]);
-        int alone = CaptureSystem.CaptureResistance(d.World, houses[1]);
-        int nearEnemy = CaptureSystem.CaptureResistance(d.World, houses[2]);
+        int nearOwn = CaptureSystem.ResistanceTarget(d.World, houses[0]);
+        int alone = CaptureSystem.ResistanceTarget(d.World, houses[1]);
+        int nearEnemy = CaptureSystem.ResistanceTarget(d.World, houses[2]);
         Assert.Equal(40, alone);
-        Assert.True(nearOwn > alone, $"{nearOwn}"); // castle EMIT +300 (synthetic) fading with distance
-        Assert.True(nearEnemy < alone, $"{nearEnemy}"); // enemy castle EMIT -150
+        Assert.True(nearOwn > alone, $"{nearOwn}"); // its own castle's EMIT (own) within the castle's sight
+        Assert.True(nearEnemy < alone, $"{nearEnemy}"); // the enemy castle's EMIT (other)
+        Assert.Equal(Math.Max(0, nearEnemy), CaptureSystem.CaptureResistance(d.World, houses[2]));
 
-        // Fanaticism raises its owner's resistance (+20%, UNVERIFIED).
+        // Fanaticism raises its owner's resistance.
         Ruleset fanatic = ClassicWith("te_fanaticism: { Technology: { effects: [{ stat: resistance, percent: 100, category: building }] } }");
         using var f = new SimDriver(TestMap(64, 16, Structure("euro.house", 1, 30, 4)), ruleset: fanatic);
         ResearchTests.Grant(f, 1, fanatic, "te_fanaticism");
@@ -63,26 +71,74 @@ public class CaptureAndRallyTests
     }
 
     [Fact]
+    [Trait("Rule", "CAP-006")]
     [Trait("Rule", "CAP-001")]
-    public void Capture_progress_is_lost_when_the_diggers_stop_and_sites_and_fields_cannot_be_captured()
+    public void A_lowered_resistance_comes_back_10_every_2_s_so_one_peasant_alone_never_takes_a_house()
     {
         using var d = new SimDriver(
-            TestMap(48, 16, Structure("euro.castle", 1, 2, 2), Structure("euro.house", 1, 20, 4), Structure("comm.field", 1, 30, 4), Unit("euro.peon", 0, 18, 4)),
+            TestMap(48, 16, Structure("euro.castle", 1, 2, 2), Structure("euro.house", 1, 20, 4), Structure("euro.house", 1, 30, 10), Structure("comm.field", 1, 30, 4), Unit("euro.peon", 0, 18, 4)),
             ruleset: Classic);
-        EntityId house = OfType(d.World, "euro.house").Single();
+        EntityId house = OfType(d.World, "euro.house").Single(h => d.PositionOf(h).Y < 8 * Tile);
+        EntityId lowered = OfType(d.World, "euro.house").Single(h => d.PositionOf(h).Y > 8 * Tile);
         EntityId peon = OfType(d.World, "euro.peon").Single();
+
+        // 10 back every 2 s (0x41f271): from 10 to 40 in three pulses.
+        d.World.CaptureStates.Set(lowered, new CaptureState { Resistance = 10 });
+        int start = d.World.Tick.Value;
+        d.RunUntil(() => !d.World.CaptureStates.Has(lowered), 400);
+        Assert.InRange(d.World.Tick.Value - start, 81, 120);
+        Assert.Equal(40, CaptureSystem.CaptureResistance(d.World, lowered));
+
+        // One peasant takes 8.4 every 2 s against those 10: the house stands (as ReTzar's own test says).
         d.Order(0, CommandKind.Capture, [peon], target: house);
-        d.RunUntil(() => d.World.CaptureStates.Has(house), 400);
-        d.Order(0, CommandKind.Stop, [peon]);
-        d.Step();
-        Assert.True(d.World.CaptureStates.Get(house).MilliPoints > 0);
-        d.RunUntil(() => !d.World.CaptureStates.Has(house), 200);
-        Assert.False(d.World.CaptureStates.Has(house)); // reset after 5 s (UNVERIFIED)
+        d.RunUntil(() => false, 1200);
         Assert.Equal(1, d.World.Identities.Get(house).Owner);
+        Assert.True(CaptureSystem.CaptureResistance(d.World, house) > 25);
 
         d.Order(0, CommandKind.Capture, [peon], target: OfType(d.World, "comm.field").Single());
         d.Step();
         Assert.Equal(CommandRejection.InvalidArgument, d.Rejections().Last());
+    }
+
+    [Fact]
+    [Trait("Rule", "CAP-004")]
+    public void Towers_are_taken_from_any_kingdom_not_an_ally_and_a_friendly_building_is_only_mended()
+    {
+        using var d = new SimDriver(
+            TestMap(48, 16, Structure("euro.castle", 1, 2, 2), Structure("comm.tower_wood", 1, 20, 4), Structure("euro.house", 1, 30, 4), Structure("euro.house", 0, 36, 4), Unit("euro.peon", 0, 18, 4), Unit("euro.peon", 0, 34, 8)),
+            players: 2,
+            ruleset: Classic,
+            configure: c => c);
+        d.Order(0, CommandKind.SetDiplomacy, [], x: 1, arg0: (int)Kingdoms.Stance.Neutral);
+        d.Order(1, CommandKind.SetDiplomacy, [], x: 0, arg0: (int)Kingdoms.Stance.Neutral);
+        d.Step();
+        EntityId tower = OfType(d.World, "comm.tower_wood").Single();
+        EntityId theirs = OfType(d.World, "euro.house", 1).Single();
+        EntityId mine = OfType(d.World, "euro.house", 0).Single();
+        EntityId[] peons = [.. OfType(d.World, "euro.peon").OrderBy(p => d.PositionOf(p).X)];
+        Assert.True(CaptureSystem.MayCapture(d.World, 0, tower)); // a tower of a kingdom that is not an ally
+        Assert.False(CaptureSystem.MayCapture(d.World, 0, theirs)); // a neutral's house is not
+        Assert.False(CaptureSystem.MayCapture(d.World, 0, mine)); // its own, whole
+        d.World.CaptureStates.Set(mine, new CaptureState { Resistance = 10 });
+        Assert.True(CaptureSystem.MayCapture(d.World, 0, mine)); // lowered: to mend
+        d.Order(0, CommandKind.Capture, [peons[1]], target: mine);
+        d.Order(0, CommandKind.Capture, [peons[0]], target: tower);
+        d.RunUntil(() => !d.World.CaptureStates.Has(mine) && d.World.Workers.Get(peons[1]).Task == WorkerTask.None, 600);
+        Assert.Equal(0, d.World.Identities.Get(mine).Owner);
+        d.RunUntil(() => d.World.Identities.Get(tower).Owner == 0, 1200);
+    }
+
+    [Fact]
+    [Trait("Rule", "MAG-038")]
+    public void A_bribe_costs_the_level_plus_20_times_ten_quarters_in_gold_whatever_the_unit()
+    {
+        using var d = new SimDriver(TestMap(32, 12, Unit("euro.footman", 1, 10, 6), Unit("euro.knight", 1, 14, 6)), players: 2, ruleset: Classic);
+        EntityId footman = OfType(d.World, "euro.footman").Single();
+        EntityId knight = OfType(d.World, "euro.knight").Single();
+        Assert.Equal(50, CombatMagicCommands.BribeCost(d.World, footman)); // (0 + 20) x 10 / 4 (0x4ac62f)
+        Assert.Equal(50, CombatMagicCommands.BribeCost(d.World, knight));
+        d.World.Experiences.Get(knight).Level = 7;
+        Assert.Equal(67, CombatMagicCommands.BribeCost(d.World, knight)); // 27 x 10 / 4
     }
 
     [Fact]

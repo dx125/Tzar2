@@ -91,7 +91,7 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (ECO-025, 2026-10-27) the field's trait ReadyAtOnce: the ruleset hash only (this scenario places no field).
     // (DIP-010, PRES-015, NAT-004; 2026-10-29) the Minor trait, the night's hours, the meat's picture: the ruleset hash.
     // (ORD-013, 2026-11-04) gateWatchTiles and gateOrderHoldMs replace the gate's reaches: the ruleset hash.
-    private const ulong GoldenRulesetHash = 0x5EABF3E6304B07AAUL;
+    private const ulong GoldenRulesetHash = 0xEE68B8C7FAFB70B7UL;
     // (ORD-005, 2026-10-22) the waypoint store joins the hashed layout (version 10): the hashes only.
     // (WAR-014, 2026-10-22) the footman's and the archer's blows land at the action row of their attack animations (60 %
     // and 78.5 % of the swing, not 50 %): the ruleset, the stream and the final hash change.
@@ -135,8 +135,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (MAG-030 to MAG-033, WAR-020, ADR 0278, 2026-11-06) casters wait for their mana, the freeze, confusion and the blessing
     // are cast at a point, spells take any kingdom's units, the heal goes on while its unit is wounded (the scenario's
     // priest keeps healing): the ruleset, the stream and the final hash.
-    private const ulong GoldenHashStream = 0x1AF7760F1D496667UL;
-    private const ulong GoldenFinalFullHash = 0x3D9AEF4248384673UL;
+    private const ulong GoldenHashStream = 0x0BD65D227FA7F2D7UL;
+    private const ulong GoldenFinalFullHash = 0x605BDABA6FC1C6F4UL;
 
     private const int Ticks = 1600;
 

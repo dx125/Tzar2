@@ -96,11 +96,14 @@ gameplay:
   gateOrderHoldMs: 10000              # ORD-013 (ReTzar 0x456fd0): an order to open or close keeps the automatism away 20 x 500 ms
   gateChangeIntervalMs: 1000          # UNVERIFIED: least time between two changes of one gate (owner decision)
   maxGateChangesPerTick: 4            # engine bound: gate changes applied per tick (the rest wait); 16 cost 15 ms p99 (review)
-  # GAME-04: capture (ADR 0044; ⚠ HYPOTHESIS UNK-19 for the EMIT influence).
-  capturePointsPerSecond: 10          # UNVERIFIED (UNK-19): capture points per capturing peasant per second
-  minimumCaptureResistance: 1         # UNVERIFIED (UNK-19)
-  captureResetMs: 5000                # UNVERIFIED (UNK-19): progress is lost after this long without a capturer
-  influenceRadiusTiles: 16            # UNVERIFIED (UNK-19): EMIT fades linearly to 0 at this distance
+  # CAP-005, CAP-006 (ReTzar's reading of the original, 0x4dfebf, 0x4dfe52, 0x505040, 0x41f271): each cycle of its
+  # capture picture (1196 ms for the three peasants) a capturer takes 5 from a building's resistance and takes the
+  # building once no more than 5 is left; a friendly peasant gives 5 back until the building is whole. Every 2 s a
+  # building's resistance moves 10 toward its target: its RESISTANCE plus the EMIT of the buildings round it.
+  captureCycleMs: 1196
+  captureStep: 5
+  resistancePulseMs: 2000
+  resistancePulseStep: 10
 
 # World systems (M3 stream F, ADRs 0100-0106; docs/mechanics/m3-placeholders.md, stream F). Nothing here is in an original
 # table except where noted; every value is UNVERIFIED until captured.
@@ -648,7 +651,7 @@ combat:
   defenceHalvesPerLevel: 1            # manual: half a point per level (truncated: UNVERIFIED rounding, UNK-08)
   heroLevel: 12                       # TDD GAME-08: level 12 = named hero
   leadershipTechnology: te_nobility   # manual: Leadership "makes the units around a hero gain experience along with him"
-  leadershipRadiusTiles: 4            # UNVERIFIED (UNK-23)
+  leadershipBelowLevel: 11            # EXP-008 (ReTzar 0x4de900): units below level 11 closer than the hero's sight share
   leadershipSharePercent: 100         # ReTzar: the whole of it (ADR 0191)
   honorTechnology: te_honor           # manual: Honor "increases the attack damage of heroes, when fighting other heroes"
   honorAttackPercent: 50              # ReTzar: +50 % hero against hero (ADR 0191)
@@ -671,7 +674,11 @@ combat:
   craftBookCostPercent: 400           # patch 1.05: magic books in the magic workshop are four times more expensive
   craftBookTimePercent: 200           # patch 1.05: and take twice as long
   # GAME-11.
-  bribeCostPercent: 200               # UNVERIFIED (UNK-26): gold = 200% of the unit's cost
+  # MAG-038 (ReTzar's reading of the original, 0x4ac62f): a bribe costs (level + 20) x 10 / 4 gold, whatever the unit.
+  bribeLevelOffset: 20
+  bribeGoldPerLevelPercent: 250
+  # CAP-004 (ReTzar 0x4682e0): the watch, guard, stone and cannon towers are taken from any kingdom that is not an ally.
+  captureTowers: { classes: [tower_wood, tower_wood2, tower_stone, tower_stone2] }
   crusadeAnchor: euro.crusadeanchor   # OBJECTS CRUSADE_ANCHOR.INI (cost from the data)
   crusader: euro.crusader
   # MAG-016, MAG-017 (ReTzar's reading of the original, 0x439640, 0x422ca0, 0x43a010): a kingdom starts with 16 crusaders
@@ -800,7 +807,9 @@ spell_curse:
     targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] }
 spell_hypnotize: { new: true, Spell: { affects: all, reveal: 3, bookValue: 30, effect: hypnotize, durationMs: 30000, mana: 50, range: 8, castMs: 500, targets: { category: unit } } }   # books only
 raisedead: { new: true, Spell: { target: self, bookValue: 10, effect: raiseDead, summon: comm.skeleton, count: 64, radius: 8, mana: 70, range: 8, castMs: 1000, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat, bat, mage, dwarf, ork, jinn, dragon] } } }   # targets: the corpses that rise
-cloak: { new: true, Spell: { effect: cloak, target: self, durationMs: 60000 } }                       # ninjas (ADR 0095)
+# MAG-040 (ReTzar's reading of the original, 0x4eb840, 0x4ebba9, the cloak order): a ninja hides for the invisibility's
+# mana, 2 s at a time, and stays hidden paying 1 mana every 2 s while it can; it regains no mana meanwhile.
+cloak: { new: true, Spell: { effect: cloak, target: self, durationMs: 2000, mana: 50, drain: 1 } }
 murder: { new: true, Spell: { effect: murder, amount: 15, affects: all, mana: 50, range: 0, castMs: 500, targets: { category: unit } } }   # ninjas: one blow of 15 times the attack, all the mana spent, any unit (ReTzar 0x4e076a, 0x437250; ADR 0268); the mana it needs is UNVERIFIED
 
 # ---- items (GAME-10, ADR 0094): defaults of each kind; a map can give single items other values (M4 converter) ------

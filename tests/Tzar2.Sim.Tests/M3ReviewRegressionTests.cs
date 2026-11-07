@@ -228,7 +228,7 @@ public class M3ReviewRegressionTests
         using var d = new SimDriver(TestMap(256, 256, [.. objects]), ruleset: Classic);
         foreach (EntityId house in OfType(d.World, "euro.house", 1))
         {
-            d.World.CaptureStates.Set(house, new CaptureState { Player = 0, MilliPoints = 1 });
+            d.World.CaptureStates.Set(house, new CaptureState { Resistance = 1 });
         }
 
         d.Step();

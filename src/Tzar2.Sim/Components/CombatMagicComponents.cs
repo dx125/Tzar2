@@ -400,8 +400,8 @@ public struct StatusEffects : IComponent
     /// <summary>The kingdom a hypnotized unit goes back to.</summary>
     public byte HypnoOwner;
 
-    /// <summary>Padding, always 0.</summary>
-    public byte Reserved0;
+    /// <summary>1 while the unit keeps its cloak on its own mana (MAG-040: the ninja's), else 0.</summary>
+    public byte CloakDrain;
 
     /// <summary>Padding, always 0.</summary>
     public short Reserved1;

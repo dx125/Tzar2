@@ -853,16 +853,16 @@ internal static class CombatMagicCommands
         world.Events.Emit(new SimEvent(SimEventKind.Bribed, player, target, old, 0, world.Identities.Get(target).TypeId));
     }
 
-    // The gold a bribe costs: the unit's cost (every resource, counted as gold) times combat.bribeCostPercent.
-    private static int BribeCost(World world, EntityId target)
+    /// <summary>
+    /// The gold a bribe of <paramref name="target"/> costs (MAG-038; ReTzar's reading of the original, 0x4ac62f): (its level +
+    /// 20) × 10 / 4, whatever the unit.
+    /// </summary>
+    public static int BribeCost(World world, EntityId target)
     {
-        long sum = 0;
-        foreach (int c in world.TypeOf(target).Traits.Cost)
-        {
-            sum += c;
-        }
-
-        return (int)Math.Min(sum * world.Ruleset.Combat.BribeCostPercent / 100, int.MaxValue);
+        ArgumentNullException.ThrowIfNull(world);
+        int level = world.Experiences.IndexOf(target) is >= 0 and var x ? world.Experiences.At(x).Level : 0;
+        CombatSettings c = world.Ruleset.Combat;
+        return (int)Math.Min((long)(level + c.BribeLevelOffset) * c.BribeGoldPerLevelPercent / 100, int.MaxValue);
     }
 
     private static int GoldId(World world) => world.Ruleset.ResourceId("gold");

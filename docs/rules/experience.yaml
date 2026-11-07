@@ -36,3 +36,9 @@ rules:
     rule: Ctrl+] and Ctrl+[ select the units with more or less experience than the average of the selection (without a selection, those above 7 or below 8 on the screen).
     source: [patch 1.09 (TZAR110.TXT)]
     status: tested
+  EXP-008:
+    rule: Leadership reaches the hero's kingdom's units below level 11 that stand closer than the hero's sight, the larger axis in tiles; each learns what the hero learned.
+    source: ['community ReTzar src/gameplay.rs (add_experience, 0x4de900)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced a radius of 4 tiles for every unit (UNK-23).

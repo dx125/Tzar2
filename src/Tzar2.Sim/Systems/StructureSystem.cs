@@ -298,7 +298,8 @@ public sealed class StructureSystem : ISimSystem
 
     // Mana regenerates per minute of game time (ManaPool.regenPerMinute and the owner's technologies, e.g. Concentration),
     // up to the pool's maximum. The share of each tick comes from the tick number, so no remainder is stored and the
-    // long-run rate is exact.
+    // long-run rate is exact. MAG-039 (ReTzar's reading of the original, 0x504e30, 0x4ebb91): none while frozen or stone,
+    // while healing or teaching with the mana for it, or while a ninja keeps itself hidden on its own mana.
     private static void RegainMana(World world, int tickMs)
     {
         long now = (long)world.Tick.Value * tickMs;
@@ -307,6 +308,11 @@ public sealed class StructureSystem : ISimSystem
         for (int i = 0; i < casters.Length; i++)
         {
             Identity identity = world.Identities.Get(casters[i]);
+            if (!world.CanAct(casters[i]) || MagicSystem.HoldsMana(world, casters[i]))
+            {
+                continue;
+            }
+
             ManaPoolDefinition pool = world.Ruleset.EntityTypes[identity.TypeId].Traits.ManaPool!;
             long max = (long)Math.Max(world.Stats.Apply(identity.Owner, ModifierStat.ManaMax, identity.TypeId, pool.Max), pools[i].RaisedMax) * 1000;
             long regen = world.Stats.Apply(identity.Owner, ModifierStat.ManaRegen, identity.TypeId, pool.RegenPerMinute);

@@ -22,9 +22,9 @@ internal sealed class CombatCompiler
     private static readonly string[] KnownFields =
     [
         "experiencePerDamagePercent", "experiencePerKill", "levelBaseXp", "levelStepXp", "natureManaRegenPercent", "murderBlowMana", "baseLevelCap", "attackPerLevel", "defenceHalvesPerLevel",
-        "heroLevel", "leadershipTechnology", "leadershipRadiusTiles", "leadershipSharePercent", "honorTechnology", "honorAttackPercent",
+        "heroLevel", "leadershipTechnology", "leadershipBelowLevel", "leadershipSharePercent", "honorTechnology", "honorAttackPercent",
         "dummyMaxLevel", "exitRadiusTiles", "craftHealthPerPower", "craftManaPerPower", "craftPowerPerLevel", "craftGoldPerPower", "craftMsPerPower", "craftMaxPower", "craftBookCostPercent",
-        "craftBookTimePercent", "bribeCostPercent", "crusadeAnchor",
+        "craftBookTimePercent", "bribeLevelOffset", "bribeGoldPerLevelPercent", "captureTowers", "crusadeAnchor",
         "crusader", "crusadeStart", "crusadeRestart", "crusadeCeilingStep", "crusadeCeilingMax", "crusadeGather", "crusaderArrivalMs", "crusadeAnchorRadiusTiles", "heroNames", "projectiles", "unitKeywords",
         "bansheeSpell", "bansheeChance", "bansheeOutOf", "tournamentTechnology", "tournamentEvery", "tournamentGrant", "tournamentPupils", "magicAttackers", "soulBerserkSpell", "dummyDamagePerPoint", "experienceSpeeds", "levelCapBuildings", "levelCapPerBuilding",
         "marketTechnology", "marketFirstMs", "marketEveryMs", "marketSize", "marketBuyPercent", "marketOffers", "marketBookSpells",
@@ -37,7 +37,7 @@ internal sealed class CombatCompiler
     private static readonly string[] SpellFields =
     [
         "effect", "target", "affects", "mana", "range", "cooldownMs", "castMs", "amount", "durationMs", "radius", "summon", "projectile",
-        "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs", "reveal",
+        "pulseMs", "count", "targets", "bookValue", "durationMaxMs", "square", "scatter", "delayMs", "moveMs", "reveal", "drain",
     ];
 
     private static readonly string[] ProjectileFields = ["pixelsPerSecond", "homing", "hitRadiusPx", "splashRadiusPx", "splashPercent", "friendlyFire", "onTile", "splashTiles", "burns", "dropPx"];
@@ -148,7 +148,7 @@ internal sealed class CombatCompiler
             spells.Add(CompileSpell((ushort)i, _spellEntries[i], types, research));
         }
 
-        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), LevelCapBuildings = Filter(research, "levelCapBuildings"), SiegeScanners = Filter(research, "siegeScanners"), BowLevelClasses = Filter(research, "bowLevelClasses"), CounterBlowClasses = Filter(research, "counterBlowClasses"), FleeClasses = Filter(research, "fleeClasses"), TargetMages = Filter(research, "targetMages"), TargetTrainers = Filter(research, "targetTrainers"), TargetSeats = Filter(research, "targetSeats"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells), MarketOffers = Offers(types), MarketBookSpells = BookSpells(spells) }, spells, _projectiles);
+        return new CombatRules(Settings(types, researchIds, legacy, spells) with { TournamentPupils = Filter(research, "tournamentPupils"), MagicAttackers = Filter(research, "magicAttackers"), LevelCapBuildings = Filter(research, "levelCapBuildings"), SiegeScanners = Filter(research, "siegeScanners"), BowLevelClasses = Filter(research, "bowLevelClasses"), CounterBlowClasses = Filter(research, "counterBlowClasses"), FleeClasses = Filter(research, "fleeClasses"), CaptureTowers = Filter(research, "captureTowers"), TargetMages = Filter(research, "targetMages"), TargetTrainers = Filter(research, "targetTrainers"), TargetSeats = Filter(research, "targetSeats"), SoulBerserkSpell = SpellOf("soulBerserkSpell", spells), MarketOffers = Offers(types), MarketBookSpells = BookSpells(spells) }, spells, _projectiles);
     }
 
     private static EntityTypeDefinition WithTraits(EntityTypeDefinition t, EntityTraits traits)
@@ -300,7 +300,7 @@ internal sealed class CombatCompiler
             DefenceHalvesPerLevel = Range("defenceHalvesPerLevel", d.DefenceHalvesPerLevel, 0, 10_000),
             HeroLevel = Range("heroLevel", d.HeroLevel, 1, 10_000),
             LeadershipTechnology = Technology("leadershipTechnology", research),
-            LeadershipRadiusUnits = Range("leadershipRadiusTiles", d.LeadershipRadiusUnits / UnitsPerTile, 0, 64) * UnitsPerTile,
+            LeadershipBelowLevel = Range("leadershipBelowLevel", d.LeadershipBelowLevel, 0, 100_000),
             LeadershipSharePercent = Range("leadershipSharePercent", d.LeadershipSharePercent, 0, 1000),
             HonorTechnology = Technology("honorTechnology", research),
             HonorAttackPercent = Range("honorAttackPercent", d.HonorAttackPercent, 0, 10_000),
@@ -314,7 +314,8 @@ internal sealed class CombatCompiler
             CraftMaxPower = Range("craftMaxPower", d.CraftMaxPower, 1, 10_000),
             CraftBookCostPercent = Range("craftBookCostPercent", d.CraftBookCostPercent, 1, 10_000),
             CraftBookTimePercent = Range("craftBookTimePercent", d.CraftBookTimePercent, 1, 10_000),
-            BribeCostPercent = Range("bribeCostPercent", d.BribeCostPercent, 0, 100_000),
+            BribeLevelOffset = Range("bribeLevelOffset", d.BribeLevelOffset, 0, 10_000),
+            BribeGoldPerLevelPercent = Range("bribeGoldPerLevelPercent", d.BribeGoldPerLevelPercent, 0, 1_000_000),
             CrusadeAnchor = Type("crusadeAnchor", types),
             Crusader = Type("crusader", types),
             CrusadeStart = Range("crusadeStart", d.CrusadeStart, 0, 1000),
@@ -549,6 +550,7 @@ internal sealed class CombatCompiler
             DelayMs = Int("delayMs", 0, 60_000),
             MoveMs = Int("moveMs", 0, 60_000),
             RevealTiles = Int("reveal", 0, 64),
+            DrainsMana = Int("drain", 0, 1) == 1,
         };
     }
 

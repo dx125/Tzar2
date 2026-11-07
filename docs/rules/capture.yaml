@@ -7,15 +7,31 @@ rules:
     source: [manual Buildings, data OBJECTS type capture]
     status: tested
   CAP-002:
-    rule: A building's resistance says how hard it is to capture; buildings far from their kingdom's towns resist less.
-    source: [manual Buildings, manual The Selection View (Resistance)]
+    rule: A building's resistance says how hard it is to capture; buildings far from their kingdom's towns resist less. Its resistance target is its RESISTANCE, raised by its kingdom's Fanaticism or Buddhism, plus the EMIT of every other finished building whose footprint grown by that building's sight meets it - the EMIT's own value from an allied kingdom or its own, its other value from anyone else.
+    source: [manual Buildings, manual The Selection View (Resistance), 'community ReTzar src/gameplay.rs (auras 0x41f7b0 and 0x41f920, own_resistance 0x4d4064)']
     status: tested
-    note: How resistance turns into capture time is a placeholder (UNK-19).
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced Tzar2's placeholder (EMIT fading over 16 tiles round the centre, UNK-19). The original bakes the religious bonus into a building when it is made; Tzar2 applies its owner's.
   CAP-003:
     rule: The castle can be captured too, and then deleted.
     source: [guide Campaign Discussion (Mission 18)]
     status: implemented
   CAP-004:
-    rule: Buildings of kingdoms that are not enemies cannot be captured.
-    source: [manual Diplomacy]
+    rule: A peasant captures an enemy's buildings and the watch, guard, stone and cannon towers of any kingdom that is not its ally; at its own or an ally's building whose resistance was lowered it digs to give the resistance back. Other buildings of kingdoms that are not enemies cannot be captured.
+    source: [manual Diplomacy, 'community ReTzar src/gameplay.rs (capturable 0x4682e0, the towers 39 to 42)']
     status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07; the rocket tower is not among the towers taken from a neutral kingdom.
+  CAP-005:
+    rule: Each cycle of its capture picture (1.2 s for every peasant) a capturing peasant takes 5 from the building's resistance, and the building is taken at the cycle that finds no more than 5; the peasant then goes on giving 5 a cycle back until the building is whole again.
+    source: ['community ReTzar src/gameplay.rs (work, Intent::Capture: 0x4dfebf, 0x4dfe52, 0x505040, 0x41fab0)', 'data IMAGES.INI e_peon_dig a_peon_capture r_peon_capture (anim_time 1196)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced Tzar2's 10 points a peasant a second (UNK-19).
+  CAP-006:
+    rule: Every 2 seconds a building's resistance moves 10 toward its target, so one peasant alone never takes a building that is at its full resistance; it takes two or more.
+    source: ['community ReTzar src/gameplay.rs (restore_resistance 0x41f271; its own test captures_go_on_until_the_building_is_whole)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07; Tzar2 used to drop capture progress after 5 s without a digger (UNK-19).
+

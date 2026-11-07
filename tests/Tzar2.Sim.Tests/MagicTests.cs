@@ -755,6 +755,7 @@ public class MagicTests
 
     [Fact]
     [Trait("Rule", "MAG-015")]
+    [Trait("Rule", "MAG-038")]
     public void Peasants_bribe_enemy_soldiers_but_not_peasants()
     {
         using var d = new SimDriver(TestMap(24, 12, Unit("euro.peon", 0, 4, 4), Unit("euro.footman", 1, 8, 4), Unit("euro.peon", 1, 8, 7)), ruleset: Classic);
@@ -768,7 +769,7 @@ public class MagicTests
         d.Order(0, CommandKind.Bribe, [briber], target: soldier);
         d.RunUntil(() => d.World.Identities.Get(soldier).Owner == 0, 400);
         Assert.Equal(0, d.World.Identities.Get(soldier).Owner);
-        Assert.Equal(gold - (66 * 2), d.World.Players[0].Resources[Resource("gold")]); // 200% of 66 food (UNVERIFIED)
+        Assert.Equal(gold - 50, d.World.Players[0].Resources[Resource("gold")]); // (level 0 + 20) x 10 / 4 (0x4ac62f)
     }
 
     [Fact]

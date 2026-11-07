@@ -73,7 +73,7 @@ rules:
     rule: European and Arabian peasants, with Bribery, bribe enemy units over to their kingdom; peasants and crusaders cannot be bribed.
     source: [manual Researching Technologies (Bribery), help ITEMS.TXT HT_BRIBE, patch 1.05 (TZAR110.TXT)]
     status: tested
-    note: The price is a placeholder (UNK-26).
+    note: The price is the original's (MAG-038).
   MAG-016:
     rule: With Fanaticism and Crusade the cathedral preaches a crusade; the crusaders appear at an anchor placed no farther than 4 tiles from the cathedral.
     source: [manual Researching Technologies (Crusade), patch 1.09 (TZAR110.TXT), community ReTzar src/gameplay.rs (0x439760)]
@@ -196,3 +196,21 @@ rules:
     source: ['community ReTzar src/gameplay.rs (the Heal program, op 0x51 at 0x4e2dcb: the target while alive and damaged, otherwise the nearest damaged friend - relation 0x40 - within the healer''s sight; 0x504d00 does not heal stone)']
     status: tested
     adr: [0279]
+  MAG-038:
+    rule: A bribe costs (the unit's level + 20) x 10 / 4 gold, rounded down, whatever the unit - 50 gold for a new one.
+    source: ['community ReTzar src/gameplay.rs (Intent::Bribe, 0x4ac62f)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced 200 % of the unit's cost (UNK-26).
+  MAG-039:
+    rule: A caster regains no mana while frozen or turned to stone, while healing or teaching with the mana for its spell, or while a ninja keeps itself hidden on its own mana.
+    source: ['community ReTzar src/gameplay.rs (the mana timer 0x502ea2 and its gate 0x504e30, channelling, 0x4ebb91)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07. The original also stops a cow's milk while it is milked (NAT-007's cows keep their own milk).
+  MAG-040:
+    rule: A ninja hides for the invisibility's 50 mana, 2 seconds at a time, and stays hidden paying 1 mana every 2 seconds while it has it; a ninja already hidden pays nothing more.
+    source: ['community ReTzar src/gameplay.rs (cloak 0x4eb840, the drain 0x4ebba9, the cloak order)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07; Tzar2's ninja hid for nothing, for 60 s.

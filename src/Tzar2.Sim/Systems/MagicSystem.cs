@@ -515,6 +515,30 @@ public sealed class MagicSystem : ISimSystem
         return true;
     }
 
+    // MAG-040: how long a ninja's cloak lasts for each mana it pays (0x4ebba9: the effect's 2000 ms timer).
+    private const int DrainStepMs = 2000;
+
+    /// <summary>
+    /// Whether <paramref name="caster"/> regains no mana now (MAG-039; ReTzar's reading of the original, 0x504e30,
+    /// 0x4ebb91): a healer or teacher casting with the mana for its spell, or a ninja keeping its cloak on its own mana.
+    /// </summary>
+    internal static bool HoldsMana(World world, EntityId caster)
+    {
+        if (world.Statuses.IndexOf(caster) is >= 0 and var st && world.Statuses.At(st).CloakDrain != 0)
+        {
+            return true;
+        }
+
+        if (world.Casters.IndexOf(caster) is not (>= 0 and var c) || world.Casters.At(c).Phase == CastPhase.None)
+        {
+            return false;
+        }
+
+        SpellDefinition s = world.Ruleset.Spells[world.Casters.At(c).Spell];
+        return s.Effect is SpellEffect.Heal or SpellEffect.Experience && world.Manas.IndexOf(caster) is >= 0 and var m
+            && world.Manas.At(m).MilliMana >= (long)s.ManaCost * 1000;
+    }
+
     private static void UncloakCaster(World world, EntityId caster)
     {
         if (world.Statuses.IndexOf(caster) is >= 0 and var s)
@@ -640,6 +664,18 @@ public sealed class MagicSystem : ISimSystem
             case SpellEffect.Cloak:
             {
                 ref StatusEffects st = ref StatusOf(world, target);
+                if (s.DrainsMana)
+                {
+                    // MAG-040 (0x4eb840): a ninja already hidden takes nothing; one seen hides on its own mana.
+                    if (st.CloakDrain == 0 || st.CloakUntil <= tick)
+                    {
+                        st.CloakUntil = until;
+                        st.CloakDrain = 1;
+                    }
+
+                    break;
+                }
+
                 st.CloakUntil = s.DurationMs > 0 ? until : tick + (3_600_000 / tickMs); // "until it attacks": an hour at most (fits the restore bound)
                 break;
             }
@@ -1185,6 +1221,29 @@ public sealed class MagicSystem : ISimSystem
                 Interaction.Halt(world, ids[i]); // a frozen or stone unit stays put
             }
 
+            if (s.CloakDrain != 0)
+            {
+                // MAG-040 (0x4ebba9): seen again (an attack, a cast, an order to show itself) the cloak ends; at its time it
+                // takes 1 mana for 2 s more while the ninja has it.
+                if (s.CloakUntil == 0)
+                {
+                    s.CloakDrain = 0;
+                }
+                else if (s.CloakUntil <= tick + 1)
+                {
+                    // Paid the tick before it would end, so a ninja that can pay never shows for a tick.
+                    if (world.Manas.IndexOf(ids[i]) is >= 0 and var m && world.Manas.At(m).MilliMana >= 1000)
+                    {
+                        world.Manas.At(m).MilliMana -= 1000;
+                        s.CloakUntil += Math.Max(1, DrainStepMs / world.Config.TickLengthMilliseconds);
+                    }
+                    else
+                    {
+                        s.CloakDrain = 0;
+                    }
+                }
+            }
+
             if (s.HypnoUntil > 0 && s.HypnoUntil <= tick)
             {
                 _woken.Add((ids[i], s.HypnoOwner));
@@ -1193,7 +1252,7 @@ public sealed class MagicSystem : ISimSystem
             }
 
             if (s.FrozenUntil <= tick && s.StoneUntil <= tick && s.CloakUntil <= tick && s.ConfuseUntil <= tick && s.BlessUntil <= tick && s.CurseUntil <= tick
-                && s.HypnoUntil <= tick)
+                && s.HypnoUntil <= tick && s.CloakDrain == 0)
             {
                 _done.Add(ids[i]);
             }

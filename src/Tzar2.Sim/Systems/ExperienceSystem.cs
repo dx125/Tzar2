@@ -6,6 +6,7 @@ using Tzar2.Core.Ids;
 using Tzar2.Core.Numerics;
 using Tzar2.Sim.Components;
 using Tzar2.Sim.Events;
+using Tzar2.Sim.Map;
 
 namespace Tzar2.Sim.Systems;
 
@@ -114,7 +115,8 @@ public sealed class ExperienceSystem : ISimSystem
         }
     }
 
-    // Leadership: the hero's own kingdom's units within the radius learn a share of what it learned.
+    // Leadership (EXP-008; ReTzar's reading of the original, 0x4de900): the hero's own kingdom's units below level 11 and
+    // closer than the hero's sight in tiles (the larger axis) learn a share of what it learned.
     private static void Share(World world, EntityId hero, int gain, CombatSettings settings)
     {
         int share = (int)((long)gain * settings.LeadershipSharePercent / 100);
@@ -124,18 +126,20 @@ public sealed class ExperienceSystem : ISimSystem
         }
 
         Position at = world.Positions.Get(hero);
-        byte owner = world.Identities.Get(hero).Owner;
-        long r2 = (long)settings.LeadershipRadiusUnits * settings.LeadershipRadiusUnits;
+        Identity self = world.Identities.Get(hero);
+        EntityTypeDefinition type = world.Ruleset.EntityTypes[self.TypeId];
+        int sight = world.Stats.Apply(self.Owner, ModifierStat.Sight, type.Id, type.Traits.SightUnits) / MapState.UnitsPerTile;
+        int hx = at.X / MapState.UnitsPerTile, hy = at.Y / MapState.UnitsPerTile;
         ReadOnlySpan<EntityId> ids = world.Experiences.Entities;
         for (int i = 0; i < ids.Length; i++)
         {
-            if (ids[i] == hero || world.Identities.Get(ids[i]).Owner != owner || world.IsHeld(ids[i]))
+            if (ids[i] == hero || world.Identities.Get(ids[i]).Owner != self.Owner || world.IsHeld(ids[i]) || world.Experiences.At(i).Level >= settings.LeadershipBelowLevel)
             {
                 continue;
             }
 
             Position p = world.Positions.Get(ids[i]);
-            if (IntMath.DistanceSquared(at.X, at.Y, p.X, p.Y) <= r2)
+            if (Math.Max(Math.Abs((p.X / MapState.UnitsPerTile) - hx), Math.Abs((p.Y / MapState.UnitsPerTile) - hy)) < sight)
             {
                 world.Experiences.At(i).PendingXp += share;
             }

@@ -83,7 +83,7 @@ rules:
     rule: Leadership makes the units around a hero gain experience along with him.
     source: [manual Researching Technologies, community ReTzar src/simulation.rs (0x4d33d0)]
     status: tested
-    note: The original shares the whole of it with the units below level 11 within the hero's sight; here within 4 tiles (UNK-23).
+    note: The original shares the whole of it with the units below level 11 closer than the hero's sight (EXP-008).
     adr: [0191]
   TECH-016:
     rule: Honor raises the attack of heroes fighting other heroes.

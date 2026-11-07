@@ -851,11 +851,12 @@ internal static class FidelitySuite
             return Pending("no owner change timed yet (capture-time-1/-3, batch E)");
         }
 
-        double rate = e.Ruleset.Gameplay.CapturePointsPerSecond;
+        // CAP-005: a cycle of captureCycleMs takes captureStep; the building goes at the cycle that finds no more than a step.
+        double cycle = e.Ruleset.Gameplay.CaptureCycleMs / 1000.0, step = e.Ruleset.Gameplay.CaptureStep;
         var off = new List<string>();
         foreach (YamlMapping m in times)
         {
-            double expected = Num(m, "resistance") / (rate * Num(m, "n"));
+            double expected = Math.Ceiling(Math.Ceiling(Num(m, "resistance") / step) / Math.Max(1, Num(m, "n"))) * cycle;
             double measured = FactsIndex.Number(m.Get("events_s") is YamlSequence s && s.Items.Count > 0 ? s.Items[0] : null) ?? Num(m, "last_event_s");
             if (!Within(measured, expected, 0.30))
             {
@@ -863,7 +864,7 @@ internal static class FidelitySuite
             }
         }
 
-        return Verdict(off.Count == 0, off.Count == 0 ? string.Create(CultureInfo.InvariantCulture, $"{times.Count} captures within 30 % of RESISTANCE / ({rate} x peasants)") : string.Join("; ", off));
+        return Verdict(off.Count == 0, off.Count == 0 ? string.Create(CultureInfo.InvariantCulture, $"{times.Count} captures within 30 % of RESISTANCE / {step} cycles of {cycle:0.###} s shared by the peasants") : string.Join("; ", off));
     }
 
     private static CheckResult TradeProfit(FactsIndex f, EngineModel e)

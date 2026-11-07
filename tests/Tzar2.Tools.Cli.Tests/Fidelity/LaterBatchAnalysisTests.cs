@@ -89,7 +89,7 @@ public class LaterBatchAnalysisTests
             """);
         Facts("capture-time-1", "region-timing", """
             measurements:
-              - {measure: capture, subject: house, n: "1", resistance: "50", last_event_s: 5.3, events_s: [5.3]}
+              - {measure: capture, subject: house, n: "1", resistance: "50", last_event_s: 12.0, events_s: [12.0]}
             """);
         Facts("counters", "counter-rate", $$"""
             measurements:

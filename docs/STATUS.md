@@ -541,16 +541,27 @@ owner's order of 2026-10-26.
 25. **The global audit (2026-11-07, the owner): every mechanic against ReTzar, the original's code settling any
     disagreement** (ADR 0280; its table lists every difference found and what already matched). In five batches:
     1. A - fire, pikemen, peasants hit, score: **fixed** (BLD-006, PRES-001, WAR-021, WAR-022, DIP-011; log below).
-    2. B - capture by the original's resistance and auras (UNK-19), the bribe's price (UNK-26).
+    2. B - capture by the original's resistance and auras, the bribe's price, Leadership's reach, mana that does not
+       come back, the ninja's cloak on its own mana: **fixed** (CAP-002, CAP-004 to CAP-006, MAG-038 to MAG-040,
+       EXP-008; log below).
     3. C - the tavern's offers (UNK-28), dice and loans, the magic workshop's items (UNK-25).
     4. D - gathering (idle peasants, fields, fishing, ships' loads, cows' milk; UNK-17, UNK-28) and bears.
-    5. E - Leadership's reach, mana not regained while frozen, stone, healing or hidden, one-way sharing.
+    5. E - one-way sharing, the easy campaign's damage, the idle scan's period.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-07 — The global audit, batch B: capture, bribery, Leadership, mana and the ninja's cloak (CAP-002,
+  CAP-004, CAP-005, CAP-006, MAG-038, MAG-039, MAG-040, EXP-008; ADR 0280; item 25).**
+  * **Capture** is the original's: a resistance that hostile peasants lower by 5 every 1.2 s and that comes back 10
+    every 2 s, so a lone peasant takes nothing whole. The target includes the EMIT of the buildings round it.
+  * **Towers** of any non-ally can be taken, and a friendly building is mended back to full.
+  * **A bribe** costs (level + 20) × 10 / 4 gold.
+  * **Leadership** reaches units below level 11 within the hero's sight.
+  * **Mana** stays put while frozen, stone, healing or hiding.
+  * **A ninja** pays 50 to hide, then 1 every 2 s.
 * **2026-11-07 — The global audit, batch A: fire, pikemen, peasants hit and the score (BLD-006, PRES-001, WAR-021,
   WAR-022, DIP-011; ADR 0280; item 25).** The owner asked for every mechanic to be checked against ReTzar, with the
   original as the final source. ReTzar's addresses match the GOG `Tzar.exe`, so disagreements are now read in the
