@@ -133,7 +133,7 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Claim reach | 16 px edge to edge, checked every 0.5 s | YAML `world.claimReachPx`, `claimIntervalMs` | — | gateway captures |
 | Claiming from another kingdom | not possible: only Nature-owned gateways and cows are claimed | code (`NatureSystem`) | — | observation |
 | Wild cows | claimed by any kingdom's unit touching them; they wander | YAML `^class.cow` | UNK-17 | observation |
-| Bears | wander 6 tiles, guard 10 tiles from home | YAML `world.wanderRadiusTiles`, `guardRadiusTiles` | — | observation |
+| Bears | ~~wander 6 tiles, guard 10 tiles from home~~ **the original's: one idle tick of 1.5 s in five sets off to a cell within 6 of its place; looks for a target in 30 % of its looks; never called back** (ReTzar 0x42fea0, 0x4eeea0; NAT-003, ADR 0280) | YAML `^class.bear.Animal.prowls`, `world.wanderRadiusTiles` | — | done (community source) |
 | Birds and eagles | air, SPEED 5/6, 10 HP, never targets | YAML `comm.bird`, `comm.eagle` | — | observation |
 | Day length | ~~12 min~~ — **37.5 min VERIFIED** (24 globe hours of 93.75 s; the night's hours assumed as long) and **the match starts at 10:00 VERIFIED** (capture-20261019-195053, `day-clock`; ADR 0173); night 22:00-06:00 after half an hour of dusk (ReTzar's reading, PRES-015) | YAML `world.day*`, `night*` | UNK-32 | night share: a 35-min capture of a night that the AI does not end |
 | Weather | 3-minute periods, 25% with weather | YAML `world.weather*` | UNK-09 | captures |

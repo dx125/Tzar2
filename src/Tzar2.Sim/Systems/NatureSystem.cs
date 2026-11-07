@@ -374,6 +374,23 @@ public sealed class NatureSystem : ISimSystem
             }
 
             bool fighting = world.Combats.IndexOf(e) is >= 0 and var c && world.Combats.At(c).Target != 0;
+            if (traits.Prowls)
+            {
+                // NAT-003 (0x4eeed0, Wander 0x4e0a23): at each idle tick of 1.5 s, one time in five (R(0, 100) <= 20), a cell
+                // drawn within the radius of where the bear was placed, x then y.
+                int every = Math.Max(1, ProwlTickMs / world.Config.TickLengthMilliseconds);
+                if (moving || fighting || !world.Motions.Has(e) || (tick + e.Index) % every != 0 || world.Rng.Misc.NextInt(101) > ProwlChance)
+                {
+                    continue;
+                }
+
+                int span = w.WanderRadiusTiles * MapState.UnitsPerTile;
+                int px = Math.Clamp(home.X - span + world.Rng.Misc.NextInt((2 * span) + 1), 0, world.Map.WorldWidth - 1);
+                int py = Math.Clamp(home.Y - span + world.Rng.Misc.NextInt((2 * span) + 1), 0, world.Map.WorldHeight - 1);
+                Interaction.MoveTo(world, e, px, py);
+                continue;
+            }
+
             if (!traits.Wanders || moving || fighting || tick < home.NextMoveTick || !world.Motions.Has(e))
             {
                 continue;
@@ -388,6 +405,10 @@ public sealed class NatureSystem : ISimSystem
             home.NextMoveTick = tick + (intervalTicks / 2) + (int)((roll >> 48) % (ulong)intervalTicks);
         }
     }
+
+    // NAT-003: a bear's idle tick and its chance to set off in 100 (0x4eeed0).
+    private const int ProwlTickMs = 1500;
+    private const int ProwlChance = 20;
 
     // NAT-007 (ReTzar's reading of the original: Cow Idle 0x42f450, its grazing 0x4ed120 and 0x4ecb13, Wander 0x4e0a23).
     // The cow stands and grazes 30 cycles: each draws R(0, 2), and on 0 a standing cow lowers its head and eats, an

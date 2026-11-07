@@ -377,7 +377,9 @@ legacy:
   Animal: { grazes: true }
 ^class.bear:
   Mobile: { pixelsPerSecond: 26 }    # VERIFIED (ADR 0172)
-  Animal: { wanders: true, guards: true }   # UNVERIFIED: bears roam their area and return when lured away
+  # NAT-003 (ReTzar's reading of the original, 0x42fea0, 0x4eeed0, 0x4eeea0): every 1.5 s idle, one time in five, a bear
+  # sets off to a cell within 6 of where it was placed; it looks for a target in 30 % of its looks; nothing calls it back.
+  Animal: { wanders: true, prowls: true }
 # Magic gateways (manual ch. 5 §4.4.2): neutral until a military unit touches them; they summon dwarves, orcs, ghosts and
 # skeletons (producer column "Gate"; ghosts and skeletons by the gateway's command card, MENU.INI [magic_gateway]).
 ^class.magicgateway:

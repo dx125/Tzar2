@@ -15,9 +15,11 @@ rules:
     adr: [0104, 0275]
     note: How a cow wanders, wild or a kingdom's - NAT-007. The thief is the last poacher beside it, and it loses its invisibility. Tzar2 keeps its own Capture order on a cow under Cow Poaching (a peasant walks to it and takes it). Before 2026-11-04 any unit took a wild cow by touching it, nobody fought one, and random maps gave each kingdom four Nature cows near its castle and scattered more.
   NAT-003:
-    rule: Bears and other guarding creatures fight near their home and go back when lured away.
-    source: [community TDD GAME-15]
+    rule: A bear stays round the place it was put - at each idle tick of 1.5 seconds it sets off, one time in five, to a cell within 6 of that place - and fights what comes near, looking for a target in only 30 % of its looks; lured away, nothing calls it back.
+    source: [community TDD GAME-15, 'community ReTzar src/gameplay.rs (Bear Idle 0x42fea0, 0x4eeed0; find_target 0x4eeea0; Wander 0x4e0a23)']
     status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced Tzar2's guard (it walked home beyond 10 tiles, and set off every 8 s or so; UNVERIFIED). The original's bear walk also looks round as it goes; Tzar2's does not. Other guarding units (a scenario's guards) keep their walk home.
   NAT-004:
     rule: Cows can be slaughtered, and their meat collected by peasants or other units. A cow grows meat from 300 by 2 a second up to 600; when it dies the meat falls as food items of at most 100, which a peasant carries home as its load and any other unit picks up.
     source: [help ITEMS.TXT HT_TEND_COWS, 'community ReTzar src/gameplay.rs (cow_meat, 0x464f60)']

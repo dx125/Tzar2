@@ -397,6 +397,13 @@ public sealed record WorldTraits
     /// <summary>Whether a Nature-owned unit of this type guards its home (returns when lured away).</summary>
     public bool Guards { get; init; }
 
+    /// <summary>
+    /// NAT-003 (ReTzar's reading of the original, Bear Idle 0x42fea0, 0x4eeed0, 0x4eeea0): a bear - at each idle tick of
+    /// 1.5 s it sets off, one time in five, to a cell within 6 of where it was placed, and it looks for a target in only
+    /// 30 % of its looks; lured away, it is not called back.
+    /// </summary>
+    public bool Prowls { get; init; }
+
     /// <summary>Whether the type is ambient life (birds): never a combat target, never counted for victory.</summary>
     public bool IsAmbient { get; init; }
 
