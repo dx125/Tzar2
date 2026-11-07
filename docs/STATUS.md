@@ -544,7 +544,8 @@ owner's order of 2026-10-26.
     2. B - capture by the original's resistance and auras, the bribe's price, Leadership's reach, mana that does not
        come back, the ninja's cloak on its own mana: **fixed** (CAP-002, CAP-004 to CAP-006, MAG-038 to MAG-040,
        EXP-008; log below).
-    3. C - the tavern's offers (UNK-28), dice and loans, the magic workshop's items (UNK-25).
+    3. C - the tavern's offers, dice and loans, the magic workshop's items, potions: **fixed** (TRADE-007, TRADE-009,
+       TRADE-012, ITEM-020, ITEM-021; log below).
     4. D - gathering (idle peasants, fields, fishing, ships' loads, cows' milk; UNK-17, UNK-28) and bears.
     5. E - one-way sharing, the easy campaign's damage, the idle scan's period.
 
@@ -553,6 +554,15 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-07 — The global audit, batch C: the tavern, the dice, loans, the magic workshop and potions (TRADE-007,
+  TRADE-009, TRADE-012, ITEM-020, ITEM-021; ADR 0280; item 25).**
+  * **Each tavern** grows its own lists a minute apart: 8-12 mercenaries at level 0 or a hero of level 10-30, of any
+    civilization, at cost × count × 1.6 plus 30 gold a level.
+  * **The dice** win at 50, 33, 20 or 10 % and keep the stake; stakes go by 50.
+  * **A loan** is repaid with 200 more.
+  * **The magic workshop** makes items from the gold paid, 250 ms a gold, one at a time for a kingdom.
+  * **Potions** raise the maximum health and mana for good, and give experience points.
+  * The snapshot format is 28.
 * **2026-11-07 — The global audit, batch B: capture, bribery, Leadership, mana and the ninja's cloak (CAP-002,
   CAP-004, CAP-005, CAP-006, MAG-038, MAG-039, MAG-040, EXP-008; ADR 0280; item 25).**
   * **Capture** is the original's: a resistance that hostile peasants lower by 5 every 1.2 s and that comes back 10

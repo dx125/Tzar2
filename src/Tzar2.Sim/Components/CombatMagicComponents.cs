@@ -189,6 +189,54 @@ public struct MarketStock : IComponent
     public int NextTick;
 }
 
+/// <summary>What a unit gained for good from potions beyond its type and level (ITEM-021): the hit points.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct Gains : IComponent
+{
+    /// <summary>Hit points added to the maximum.</summary>
+    public int Health;
+
+    /// <summary>Padding, always 0.</summary>
+    public int Reserved;
+}
+
+/// <summary>A tavern's offers (TRADE-009): the mercenary list, then the hero list.</summary>
+[InlineArray(TavernStock.Capacity)]
+public struct TavernOfferSlots
+{
+    private uint _offer;
+}
+
+/// <summary>
+/// A tavern's offers (TRADE-009, ADR 0280; ReTzar's reading of the original, 0x4d24c0, 0x4d2030): up to
+/// <see cref="ListSize"/> mercenary offers in slots 0.., up to as many hero offers from slot <see cref="ListSize"/>, each
+/// packed as type id | count &lt;&lt; 16 | level &lt;&lt; 24, oldest first.
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct TavernStock : IComponent
+{
+    /// <summary>The offers of one list at most.</summary>
+    public const int ListSize = 8;
+
+    /// <summary>Both lists.</summary>
+    public const int Capacity = 2 * ListSize;
+
+    /// <summary>The offers.</summary>
+    public TavernOfferSlots Offers;
+
+    /// <summary>Mercenary offers.</summary>
+    public byte Mercenaries;
+
+    /// <summary>Hero offers.</summary>
+    public byte Heroes;
+
+    /// <summary>Padding, always 0.</summary>
+    public short Reserved;
+
+    /// <summary>The tick the lists next gain an offer.</summary>
+    public int NextTick;
+}
+
 /// <summary>The items a unit carries (GAME-10; ADR 0094): slots 0..Count-1 hold item entities.</summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct Inventory : IComponent

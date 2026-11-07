@@ -546,7 +546,7 @@ public sealed partial class GameplayScenario : IBenchScenario
                 _selection.Clear();
                 _selection.Add(tavern);
                 _batch.Add(CommandKind.Hire, Span(_selection), arg0: 0);
-                _batch.Add(CommandKind.Hire, Span(_selection), arg0: world.Ruleset.World.MercenaryOffers); // the hero
+                _batch.Add(CommandKind.Hire, Span(_selection), arg0: TavernStock.ListSize); // the first hero (TRADE-009)
             }
         }
 

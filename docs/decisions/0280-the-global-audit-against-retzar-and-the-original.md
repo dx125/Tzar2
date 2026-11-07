@@ -4,7 +4,8 @@
 * **Date:** 2026-11-07
 * **Deciders:** maintainer (Claude), at the owner's request before the eleventh play-test
 * **Related:** BLD-006, PRES-001, WAR-021, WAR-022, DIP-011, CAP-002, CAP-004, CAP-005, CAP-006, MAG-038, MAG-039,
-  MAG-040, EXP-008; UNK-19, UNK-23, UNK-26, UNK-29, UNK-42; ADR 0181, ADR 0191; ReTzar
+  MAG-040, EXP-008, TRADE-007, TRADE-009, TRADE-012, ITEM-020, ITEM-021; UNK-19, UNK-23, UNK-25, UNK-26, UNK-28, UNK-29,
+  UNK-42; ADR 0181, ADR 0191; ReTzar
   `src/gameplay.rs`, `src/gameplay/scripting.rs`
 
 ## Context
@@ -32,6 +33,7 @@ in `classic.yaml`. It found these differences:
 | Tavern | An offer a minute per list: 8–12 mercenaries at level 0 or a hero of level 10–30, any civilization; price × 1.6 + per level (0x4d24c0, 0x4d2030, 0x4d23b0). | Period model (UNK-28). | C |
 | Dice and loans | 50/33/20/10 % paying 1/2/5/10 times; a loan repaid with 200 more, the next 200 larger a minute later (0x4a3fee, 0x4d2d6a). | Odds with a house edge; no interest. | C |
 | Magic workshop | Strength from the gold paid; 250 ms a gold (books 500) (0x4a5220, 0x4743b0). | Placeholders (UNK-25). | C |
+| Potions | Maximum health and mana raised for good; experience in points (0x464ac0). | Healed to the maximum; levels. | C |
 | Gathering | Idle peasants copy a working one after 30 s; fields give a load after 12–18 digs; boats take up to 4 fish every 1.4 s to 50; galleon, hulk and xebec carry 1000, 500, 300; cows regrow milk as mana. | Placeholders (UNK-17, UNK-28). | D |
 | Bears | Wander from where they stand and look for a target in 30 % of their scans (0x42fea0, 0x4eeea0). | Guard a home and walk back (TDD). | D |
 | Leadership | Units below level 11 closer than the hero's sight (0x4de900). | Every unit within 4 tiles (UNK-23). | B |
@@ -88,6 +90,28 @@ Batch B:
 * **Mana.** None comes back while frozen, stone, healing or teaching with the mana for it, or hiding on its own mana.
 * **The ninja's cloak.** It costs 50 and lasts 2 s, renewed for 1 mana every 2 s while the ninja has it (the new spell
   field `drain`, `StatusEffects.CloakDrain`).
+
+Batch C:
+
+* **The tavern.** Each tavern keeps two lists (`TavernStock`). A second after it stands, and then every minute (six in a
+  Deathmatch), the mercenary list gains an offer with Mercenaries and the hero list one with Heroes' Quest.
+  * An offer is a unit of a random civilization's barracks: 8 to 12 at level 0, or a hero of level 10 to 30. Fame adds 4
+    levels to either.
+  * A full list of 8 loses its oldest offer, and a hired offer leaves its list.
+  * The price is cost × count × 1.6, plus 30 gold a level and 15 a level of each other resource the type costs.
+  * The frame carries each tavern's offers. The card shows those of the first tavern selected and sends the hire to it.
+* **The dice.** The odds 1:1, 2:1, 5:1 and 10:1 win at 50, 33, 20 and 10 %. A win keeps the stake and adds it the odds
+  times. Stakes go by 50.
+* **Loans.** A loan is repaid with 200 more, and the next one, 200 larger, is offered a minute after.
+* **The magic workshop.** It makes an item from the gold paid, 10 or more by 10, in 250 ms a gold (a book in 500). A
+  kingdom makes one item at a time.
+  * Experience potions give gold / 5, mana potions the gold, and attack or defence potions gold / 2.
+  * A sword, bow or shield gives gold / 4, at most 250.
+  * A book has (gold / 4) / the spell's rate charges, and needs at least four rates of gold.
+  * It makes no health potion and no book of soul binding or hypnosis.
+  * The original then takes the gold again when it can (0x466a87); Tzar2 does not, taking that for a bug.
+* **Potions.** Health and mana raise the maximum for good (`Gains`, `ManaState.RaisedMax`), and experience is points.
+* The snapshot format goes to 28, for the taverns' offers and the potions' gains.
 
 ## Consequences
 

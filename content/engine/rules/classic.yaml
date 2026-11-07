@@ -125,13 +125,18 @@ world:
   tradeDockMs: 2000                   # UNVERIFIED: time to unload and load at a dock
   convertRatio: 10                    # manual ch. 5 §7: "you give ten times more than you receive"
   exchangeUnitMs: 300                 # TRADE-011 (ReTzar 0x4d3104): paid at once, received a unit every 300 ms
-  gambleOdds: [2, 3, 5, 10]           # UNVERIFIED (UNK-28): the proportions a player may choose
-  gambleHouseEdgePercent: 10          # UNVERIFIED (UNK-28): win chance = (1 - edge) / odds
+  # TRADE-012 (ReTzar's reading of the original, D_GAMBLE 0x4a3fee): a roll of 1 to 100 wins at 50, 33, 20 or 10 and pays
+  # the stake 1, 2, 5 or 10 times, keeping it; a loss takes the stake. Stakes go by 50.
+  gambleOdds: [1, 2, 5, 10]
+  gambleChances: [50, 33, 20, 10]
+  gambleStakeStep: 50
   maxGambleStake: 10000               # engine bound
   loanStartAmount: 1000               # manual ch. 5 §10: the first loan is 1,000
   loanStepAmount: 200                 # manual ch. 5 §10: then 1,200
-  loanGrowDelayMs: 120000             # UNVERIFIED (UNK-28): "after some time"
-  loanInterestPercent: 0              # UNVERIFIED (UNK-28): the manual names no interest
+  # TRADE-007 (ReTzar's reading of the original, 0x4d2d6a, 0x4d24e9): a loan is paid back with 200 more, and the next
+  # one, 200 larger, is offered a minute after.
+  loanGrowDelayMs: 60000
+  loanInterestAmount: 200
   # GAME-15 gateways and nature (ADR 0104).
   claimReachPx: 16                    # UNVERIFIED: a ClaimOnTouch { by: any } takes from this close (no classic type has one since NAT-002)
   claimIntervalMs: 1000               # NAT-001 (ReTzar 0x420fad): a gateway looks round every second
@@ -163,20 +168,24 @@ world:
   # hmpetleva sends it five times (0x424dc4).
   cheatSmallResources: 10000          # hmdvaleva
   cheatLargeResources: 50000          # hmpetleva
-  # GAME-14 tavern hiring (ADR 0108; manual ch. 6: Mercenaries "small groups of soldiers", Heroes' Quest, Fame "more,
-  # and better, mercenaries who will be cheaper and more experienced"; MENU.INI [tavern_merc]/[tavern_hero] are filled
-  # by the game at run time, so the offers below are ours).
-  tavernRefreshMs: 120000             # UNVERIFIED (UNK-28): the offers change every 2 minutes
-  mercenaryOffers: 3                  # UNVERIFIED (UNK-28): mercenary groups offered at a time
-  heroOffers: 1                       # UNVERIFIED (UNK-28): heroes offered at a time
-  mercenaryGroupMin: 3                # UNVERIFIED (UNK-28): "small groups"
-  mercenaryGroupMax: 5                # UNVERIFIED (UNK-28)
-  mercenaryCostPercent: 150           # UNVERIFIED (UNK-28): of the soldiers' training cost
-  heroCostPercent: 600                # UNVERIFIED (UNK-28): of the hero's type's training cost
-  mercenaryLevel: 1                   # UNVERIFIED (UNK-23): mercenaries' starting level
-  fameGroupBonus: 1                   # UNVERIFIED (UNK-28): Fame "more"
-  fameLevelBonus: 2                   # UNVERIFIED (UNK-23): Fame "more experienced"
-  fameCostPercent: 75                 # UNVERIFIED (UNK-28): Fame "cheaper"
+  # GAME-14 tavern hiring (ADR 0108, ADR 0280; MENU.INI [tavern_merc]/[tavern_hero] are filled by the game at run time).
+  # TRADE-009 (ReTzar's reading of the original, 0x4d24c0, 0x4d2030, 0x4d23b0): a second after a tavern stands, then
+  # every 60 s (6 minutes in a Deathmatch), each of its lists gains an offer - with Mercenaries 8 to 12 soldiers of a
+  # random civilization's barracks at level 0, with Heroes' Quest a hero of level 10 to 30, Fame adding 4 levels to
+  # both; a full list of 8 loses its oldest. An offer costs its type's cost for the kingdom x count x 1.6, plus 30 gold
+  # a level and 15 a level of each other resource the type costs.
+  tavernFirstMs: 1000
+  tavernEveryMs: 60000
+  tavernDeathmatchEveryMs: 360000
+  mercenaryGroupMin: 8
+  mercenaryGroupMax: 12
+  mercenaryLevel: 0
+  heroLevelMin: 10
+  heroLevelMax: 30
+  fameLevelBonus: 4
+  hirePricePercent: 160
+  hireGoldPerLevel: 30
+  hireOtherPerLevel: 15
   # The technologies these features need (the original's research names; a fork names its own or none).
   mercenariesTechnology: te_mercenaries
   heroesTechnology: te_heroesquest
@@ -664,15 +673,17 @@ combat:
     earthunits: [foot, mounted, large]
     infantryunits: [foot]
     mountedunits: [mounted]
-  # GAME-10 crafting (Arabian Magic Workshop: "better items cost more and take more time", manual ch. 5 §6).
-  craftGoldPerPower: 50               # UNVERIFIED (UNK-25)
-  craftHealthPerPower: 10             # UNVERIFIED (UNK-25): a crafted potion's hit points per point of power
-  craftManaPerPower: 5                # UNVERIFIED (UNK-25): its mana per point
-  craftPowerPerLevel: 5               # UNVERIFIED (UNK-25): points per level of a potion of levels
-  craftMsPerPower: 2000               # UNVERIFIED (UNK-25)
-  craftMaxPower: 20                   # UNVERIFIED (UNK-25)
-  craftBookCostPercent: 400           # patch 1.05: magic books in the magic workshop are four times more expensive
-  craftBookTimePercent: 200           # patch 1.05: and take twice as long
+  # ITEM-020 (ReTzar's reading of the original, D_build 0x4a5220, 0x4743b0, 0x465ca0): the Arabian Magic Workshop makes an
+  # item from the gold paid - 10 or more, by 10 - in 250 ms a gold (a book 500, patch 1.05's "twice as long"), one at a
+  # time for a kingdom: a potion of experience gives gold / 5, of mana the gold, of attack or defence gold / 2; a sword,
+  # bow or shield gold / 4, at most 250; a book (gold / 4) / its spell's rate charges, at least four rates of gold.
+  craftMsPerGold: 250
+  craftBookMsPerGold: 500
+  craftGoldStep: 10
+  craftExperienceDivisor: 5
+  craftPotionStatDivisor: 2
+  craftEquipmentDivisor: 4
+  craftEquipmentMax: 250
   # GAME-11.
   # MAG-038 (ReTzar's reading of the original, 0x4ac62f): a bribe costs (level + 20) x 10 / 4 gold, whatever the unit.
   bribeLevelOffset: 20
@@ -772,7 +783,7 @@ spell_bless: { new: true, Spell: { target: ground, radius: 4, reveal: 3, bookVal
 spell_lightning: { new: true, Spell: { affects: all, reveal: 3, bookValue: 20, effect: damage, amount: 150, mana: 50, range: 12, castMs: 500 } }
 spell_freeze: { new: true, Spell: { affects: all, target: ground, reveal: 3, radius: 3, amount: 40, bookValue: 50, effect: freeze, durationMs: 20000, mana: 60, range: 12, castMs: 500, projectile: freeze_bolt, targets: { category: unit, except: [troll, catapult, hcatapult, ballista, carpet, galleon, hulk, xebec, ghost, skeleton, fishing_boat] } } }
 spell_cloak: { new: true, Spell: { affects: all, reveal: 3, bookValue: 10, effect: cloak, durationMs: 45000, mana: 50, range: 8, castMs: 500, targets: { category: unit } } }
-spell_spawnbat: { new: true, Spell: { effect: summon, summon: comm.bat, range: 16, castMs: 500 } }
+spell_spawnbat: { new: true, Spell: { effect: summon, summon: comm.bat, range: 16, castMs: 500, bookValue: 1, bookMinimum: 40 } }   # ITEM-020: the bats' book rate 1, its least gold 40 (0x465ca0, 0x4a5220)
 spell_spawnstonegolem: { new: true, Spell: { effect: summon, summon: comm.troll, range: 4, castMs: 1000 } }
 spell_spawndragon: { new: true, Spell: { effect: summon, summon: comm.dragon, range: 4, castMs: 1000 } }
 spell_spawncarpet: { new: true, Spell: { effect: summon, summon: comm.carpet, range: 4, castMs: 1000 } }
@@ -826,7 +837,8 @@ comm.item_health:
   Item:
     health: 100                                                             # potion: UNVERIFIED (UNK-25)
     looks: [item_potion1, item_potion2, item_potion3, item_potion4, item_potion5, item_potion6, item_potion7, item_potion8]
-    crafts: [health item_potion2, levels item_potion3, mana item_potion4, attack item_potion6, defence item_potion5]
+    # ITEM-020 (0x4743b0): the workshop's potions of experience, mana, attack and defence; it makes no health potion.
+    crafts: [levels item_potion3, mana item_potion1, attack item_potion7, defence item_potion6]
 # Books (ADR 0186): a map's book names its own spell; the workshop writes a book of any spell (which ones it offers is
 # UNVERIFIED; STRINGS3 goldreq: "This Magic Book requires at least %d amount of gold" is not modelled).
 comm.item_magic:
@@ -855,13 +867,12 @@ comm.item_magic:
       - spell_raiseexp
       - spell_spawnjin
       - spell_curse
-      - spell_hypnotize
 # Power items (ADR 0186): swords and bows add attack while carried, shields defence (the maps: attack 7-24, defence 5-50).
 comm.item_plusplus:
   Item:
     power: 3                                                                # UNVERIFIED (UNK-25)
     looks: [item_sword, item_sword1, item_sword2, item_sword3, item_bow1, item_bow2, item_bow3, item_shield1, item_shield2, item_shield3]
-    crafts: [attack item_sword, attack item_bow1, defence item_shield1]
+    crafts: [attack item_sword1, attack item_bow1, defence item_shield1]   # ITEM-020 (0x4743b0)
 # A soul item (ITEM-010; ReTzar's reading of the original, 0x473403, 0x465340): made by Soul Bind, bound to its target;
 # item_kill and item_berserk act on the bound unit and the item stays; it goes when the bound unit dies.
 comm.item_soul: { Item: {} }

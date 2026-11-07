@@ -499,33 +499,38 @@ internal static class CombatMagicCommands
         return null;
     }
 
-    // A potion (or "plusplus"): levels, attack, defence, health, mana for good; the potion is used up. A potion with its
-    // own effect (ITEM-016) adds its power to that one only.
+    // ITEM-021 (ReTzar's reading of the original, 0x464ac0): a potion's gains are for good - its health raises the maximum
+    // and fills by as much (not on stone), its mana the same, its attack and defence add, and its experience is points
+    // (the payload is experience, not levels: 0x464b8e). A potion with its own effect (ITEM-016) adds its power to that one.
     private static void Drink(World world, EntityId unit, EntityId item, ItemDefinition def)
     {
         ItemState state = world.Items.Get(item);
         int Of(ItemEffect effect, int typeValue) => state.Effect == ItemEffect.Default ? typeValue : state.Effect == effect ? state.Power : 0;
-        int levels = Of(ItemEffect.Levels, def.PotionLevel), attack = Of(ItemEffect.Attack, def.PotionAttack), defence = Of(ItemEffect.Defence, def.PotionDefence);
+        int experience = Of(ItemEffect.Levels, def.PotionLevel), attack = Of(ItemEffect.Attack, def.PotionAttack), defence = Of(ItemEffect.Defence, def.PotionDefence);
         int health = Of(ItemEffect.Health, def.PotionHealth), mana = Of(ItemEffect.Mana, def.PotionMana);
         if (world.Experiences.IndexOf(unit) is >= 0 and var x)
         {
             ref Experience e = ref world.Experiences.At(x);
-            if (levels > 0)
-            {
-                int wanted = CombatStats.XpForLevel(world, unit, e.Level + Math.Min(levels, 1000));
-                e.PendingXp += Math.Max(0, wanted - e.Xp);
-            }
-
+            e.PendingXp = (int)Math.Min((long)e.PendingXp + Math.Max(0, experience), 1_000_000);
             e.BonusAttack = Math.Min(e.BonusAttack + attack, 100_000);
             e.BonusDefence = Math.Min(e.BonusDefence + defence, 100_000);
         }
 
-        ref Health h = ref world.Healths.Get(unit);
-        h.Current = (int)Math.Min((long)h.Current + health, h.Max);
+        if (health > 0)
+        {
+            int had = world.Gains.IndexOf(unit) is >= 0 and var g ? world.Gains.At(g).Health : 0;
+            world.Gains.Set(unit, new Gains { Health = (int)Math.Min((long)had + health, 1_000_000) });
+            ref Health h = ref world.Healths.Get(unit);
+            int current = h.Current;
+            world.RefreshMaxHealth(unit);
+            h.Current = world.IsStone(unit) ? current : (int)Math.Min((long)current + health, h.Max);
+        }
+
         if (mana > 0 && world.Manas.IndexOf(unit) is >= 0 and var m && world.TypeOf(unit).Traits.ManaPool is not null)
         {
-            long max = (long)world.MaxMana(unit) * 1000;
-            world.Manas.At(m).MilliMana = (int)Math.Min(world.Manas.At(m).MilliMana + ((long)mana * 1000), max);
+            ref ManaState pool = ref world.Manas.At(m);
+            pool.RaisedMax = (int)Math.Min((long)world.MaxMana(unit) + mana, 1_000_000);
+            pool.MilliMana = (int)Math.Min(pool.MilliMana + ((long)mana * 1000), (long)pool.RaisedMax * 1000);
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.ItemUsed, world.Identities.Get(unit).Owner, item, unit.Index, 0, world.Identities.Get(item).TypeId));
@@ -944,41 +949,52 @@ internal static class CombatMagicCommands
         return CommandRejection.NoValidEntities;
     }
 
+    /// <summary>
+    /// The magic workshop's item (ITEM-020; ReTzar's reading of the original, D_build 0x4a5220): Arg0 the item type, X its
+    /// variant, Arg1 the gold - at least <c>craftGoldStep</c> (a book at least its spell's least gold), paid at once; the
+    /// item takes 250 ms a gold (a book 500) and a kingdom makes one at a time.
+    /// </summary>
     public static CommandRejection? CraftItem(World world, in Command command, ReadOnlySpan<EntityId> entities)
     {
         CombatSettings settings = world.Ruleset.Combat;
         int gold = GoldId(world);
-        if ((uint)command.Arg0 >= (uint)world.Ruleset.EntityTypes.Count || gold < 0 || command.Arg1 < settings.CraftGoldPerPower
+        int paid = command.Arg1;
+        if ((uint)command.Arg0 >= (uint)world.Ruleset.EntityTypes.Count || gold < 0
             || world.Ruleset.EntityTypes[command.Arg0].Traits.Item is not { } made || (uint)command.X >= (uint)made.CraftVariantCount)
         {
             return CommandRejection.InvalidArgument;
         }
 
-        // 1.05: magic books cost four times more and take twice as long (craftBook*Percent).
-        bool book = world.Ruleset.EntityTypes[command.Arg0].Traits.Item is { Kind: ItemKind.SpellBook };
-        int unitPrice = book ? settings.CraftGoldPerPower * settings.CraftBookCostPercent / 100 : settings.CraftGoldPerPower;
-        if (command.Arg1 < unitPrice)
+        bool book = made.Kind == ItemKind.SpellBook;
+        if (paid < CraftRules.Minimum(world.Ruleset, (ushort)command.Arg0, command.X))
         {
-            return CommandRejection.InvalidArgument;
+            return CommandRejection.InvalidArgument; // STRINGS3 goldreq: "This Magic Book requires at least %d amount of gold"
         }
 
-        int power = Math.Min(command.Arg1 / unitPrice, settings.CraftMaxPower);
-        int price = power * unitPrice;
+        ReadOnlySpan<EntityId> jobs = world.CraftJobs.Entities;
+        for (int i = 0; i < jobs.Length; i++)
+        {
+            if (world.Identities.Get(jobs[i]).Owner == command.Player)
+            {
+                return CommandRejection.QueueFull; // one magic item per kingdom at a time (K+0x12a)
+            }
+        }
+
         foreach (EntityId workshop in entities)
         {
             if (!world.Entities.IsAlive(workshop) || world.Identities.Get(workshop).Owner != command.Player || world.TypeOf(workshop).Traits.Crafter is not { } crafter
-                || world.Constructions.Has(workshop) || world.CraftJobs.Has(workshop) || crafter.Items.BinarySearch((ushort)command.Arg0) < 0)
+                || world.Constructions.Has(workshop) || crafter.Items.BinarySearch((ushort)command.Arg0) < 0)
             {
                 continue;
             }
 
-            if (world.Players[command.Player].Resources[gold] < price)
+            if (world.Players[command.Player].Resources[gold] < paid)
             {
                 return CommandRejection.NotAffordable;
             }
 
-            world.Players[command.Player].Resources[gold] -= price;
-            world.CraftJobs.Set(workshop, new CraftJob { ItemType = command.Arg0, Power = power, LeftMs = Math.Max(1, settings.CraftMs(book, power)), Variant = command.X });
+            world.Players[command.Player].Resources[gold] -= paid;
+            world.CraftJobs.Set(workshop, new CraftJob { ItemType = command.Arg0, Power = paid, LeftMs = Math.Max(1, settings.CraftMs(book, paid)), Variant = command.X });
             return null;
         }
 

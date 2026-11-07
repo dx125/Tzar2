@@ -770,39 +770,48 @@ internal static class FrameBuilder
         }
     }
 
-    // The tavern's offers of the card's kingdom (GAME-14): what the hire buttons show.
+    // The offers of the card's kingdom's taverns (TRADE-009): what the hire buttons of each tavern show.
     private static void FillTavern(GameFrame frame, World world, byte? player)
     {
         frame.TavernOfferCount = 0;
-        if (player is not { } who || !world.HasPlayer(who))
+        if (player is not { } who || !world.HasPlayer(who) || world.TavernStocks.Count == 0)
         {
             return;
         }
 
-        int slots = TavernOffers.SlotCount(world);
         int resources = world.Ruleset.ResourceTypes.Count;
-        FrameTavernOffer[] offers = frame.OfferBuffer(slots);
-        if (frame.TavernCosts.Length < slots * resources)
+        ReadOnlySpan<EntityId> taverns = world.TavernStocks.Entities;
+        int capacity = 0;
+        for (int t = 0; t < taverns.Length; t++)
         {
-            frame.TavernCosts = new int[slots * resources];
+            capacity += world.Identities.Get(taverns[t]).Owner == who ? TavernStock.Capacity : 0;
+        }
+
+        FrameTavernOffer[] offers = frame.OfferBuffer(capacity);
+        if (frame.TavernCosts.Length < capacity * resources)
+        {
+            frame.TavernCosts = new int[capacity * resources];
         }
 
         frame.TavernCostStride = resources;
-        KingdomState k = world.Kingdoms[who];
-        int period = TavernOffers.PeriodAt(world, world.Tick.Value);
-        int taken = k.TavernPeriod == period ? k.TavernTaken : 0;
+        Span<(int Slot, TavernOffer Offer)> list = stackalloc (int, TavernOffer)[TavernStock.Capacity];
         Span<int> cost = stackalloc int[Ruleset.MaxResourceTypes];
         int n = 0;
-        for (int slot = 0; slot < slots; slot++)
+        for (int t = 0; t < taverns.Length; t++)
         {
-            if (TavernOffers.Offer(world, who, slot) is not { } offer)
+            if (world.Identities.Get(taverns[t]).Owner != who)
             {
                 continue;
             }
 
-            TavernOffers.CostOf(world, who, offer, cost);
-            cost[..resources].CopyTo(frame.TavernCosts.AsSpan(n * resources, resources));
-            offers[n++] = new FrameTavernOffer(slot, offer.TypeId, offer.Count, offer.Level, offer.IsHero, (taken & (1 << slot)) != 0);
+            int count = TavernOffers.Offers(world, taverns[t], list);
+            for (int i = 0; i < count; i++)
+            {
+                (int slot, TavernOffer offer) = list[i];
+                TavernOffers.CostOf(world, who, offer, cost);
+                cost[..resources].CopyTo(frame.TavernCosts.AsSpan(n * resources, resources));
+                offers[n++] = new FrameTavernOffer(slot, offer.TypeId, offer.Count, offer.Level, offer.IsHero, false, taverns[t]);
+            }
         }
 
         frame.TavernOfferCount = n;

@@ -41,6 +41,12 @@ public sealed partial class World
     /// <summary>The kingdom's market holding its items on offer (Jewelry, TECH-030).</summary>
     public ComponentStore<MarketStock> MarketStocks { get; private set; } = null!;
 
+    /// <summary>The taverns' offers (TRADE-009).</summary>
+    public ComponentStore<TavernStock> TavernStocks { get; private set; } = null!;
+
+    /// <summary>What units gained for good from potions (ITEM-021).</summary>
+    public ComponentStore<Gains> Gains { get; private set; } = null!;
+
     /// <summary>The spells units have learned from books (ITEM-019, ADR 0266); only units that learned one have an entry.</summary>
     public ComponentStore<LearnedSpells> Learned { get; private set; } = null!;
 
@@ -118,6 +124,8 @@ public sealed partial class World
         Disguises = Components.RegisterHot<Disguise>("game.disguise");
         WaypointQueues = Components.RegisterHot<WaypointQueue>("game.waypoints");
         MarketStocks = Components.RegisterHot<MarketStock>("game.market");
+        TavernStocks = Components.RegisterHot<TavernStock>("game.tavern");
+        Gains = Components.RegisterHot<Gains>("game.gains");
         Learned = Components.RegisterHot<LearnedSpells>("game.learned");
     }
 
@@ -240,7 +248,8 @@ public sealed partial class World
         }
 
         int perLevel = Stats.Apply(owner, ModifierStat.HealthPerLevel, type.Id, 0);
-        return (int)Math.Clamp((long)perLevel * Experiences.At(x).Level, 0, 1_000_000);
+        int potions = Gains.Count != 0 && Gains.IndexOf(entity) is >= 0 and var g ? Gains.At(g).Health : 0; // ITEM-021
+        return (int)Math.Clamp(((long)perLevel * Experiences.At(x).Level) + potions, 0, 1_000_000);
     }
 
     /// <summary>

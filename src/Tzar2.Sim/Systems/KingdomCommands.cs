@@ -307,7 +307,8 @@ internal static class KingdomCommands
         int stake = command.Arg1;
         WorldSettings w = world.Ruleset.World;
         int resources = world.Ruleset.ResourceTypes.Count;
-        if (resource >= resources || oddsIndex >= w.GambleOdds.Length || (command.Arg0 & ~0xFFFF) != 0 || stake < 1 || stake > w.MaxGambleStake)
+        if (resource >= resources || oddsIndex >= w.GambleOdds.Length || (command.Arg0 & ~0xFFFF) != 0 || stake < w.GambleStakeStep || stake % w.GambleStakeStep != 0
+            || stake > w.MaxGambleStake)
         {
             return CommandRejection.InvalidArgument;
         }
@@ -328,14 +329,17 @@ internal static class KingdomCommands
             return CommandRejection.NotAffordable;
         }
 
-        stock -= stake;
-        int odds = w.GambleOdds[oddsIndex];
-        int chance = (10_000 - w.GambleHouseEdgeBasisPoints) / odds;
-        bool won = world.Rng.Misc.NextInt(10_000) < chance;
-        int payout = won ? stake * odds : 0;
+        // TRADE-012 (ReTzar's reading of the original, 0x4a3fee): a roll of 1 to 100 at most the choice's chance wins the
+        // stake times its odds, the stake kept; any other roll loses the stake.
+        bool won = 1 + world.Rng.Misc.NextInt(100) <= w.GambleChances[oddsIndex];
+        int payout = won ? stake * w.GambleOdds[oddsIndex] : 0;
         if (won)
         {
             world.Credit(command.Player, resource, payout);
+        }
+        else
+        {
+            stock -= stake;
         }
 
         world.Events.Emit(new SimEvent(SimEventKind.Gambled, command.Player, EntityId.None, resource, won ? 1 : 0, payout));
@@ -375,7 +379,7 @@ internal static class KingdomCommands
             }
 
             k.LoanResource = command.Arg0;
-            k.LoanDue = (int)Math.Min((long)k.LoanLimit * (10_000 + w.LoanInterestBasisPoints) / 10_000, int.MaxValue);
+            k.LoanDue = (int)Math.Min((long)k.LoanLimit + w.LoanInterestAmount, int.MaxValue); // TRADE-007: 200 more (0x4d2d6a)
             world.Credit(command.Player, command.Arg0, k.LoanLimit);
             world.Events.Emit(new SimEvent(SimEventKind.LoanTaken, command.Player, EntityId.None, command.Arg0, 0, k.LoanLimit));
             return null;

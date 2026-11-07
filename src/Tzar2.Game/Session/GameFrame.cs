@@ -293,14 +293,18 @@ public struct FrameEntity
 #pragma warning restore CA1051
 }
 
-/// <summary>A tavern offer of the card's kingdom (GAME-14, ADR 0108): what <c>Hire</c> with its slot would bring now.</summary>
-/// <param name="Slot">The offer slot (the <c>Hire</c> argument).</param>
+/// <summary>
+/// A tavern offer of the card's kingdom (TRADE-009; ADR 0108, ADR 0280): what <c>Hire</c> with its slot, sent to its tavern,
+/// would bring now.
+/// </summary>
+/// <param name="Slot">The offer slot in its tavern (the <c>Hire</c> argument).</param>
 /// <param name="TypeId">The unit type.</param>
 /// <param name="Count">Units in it.</param>
 /// <param name="Level">Their experience level.</param>
 /// <param name="IsHero">A hero.</param>
 /// <param name="Taken">Already hired this period.</param>
-public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Count, int Level, bool IsHero, bool Taken);
+/// <param name="Tavern">The tavern holding it.</param>
+public readonly record struct FrameTavernOffer(int Slot, ushort TypeId, int Count, int Level, bool IsHero, bool Taken, EntityId Tavern = default);
 
 /// <summary>A worker's job (STRINGS.INI <c>[peons]</c>; HUD-032).</summary>
 public enum FrameJob : byte

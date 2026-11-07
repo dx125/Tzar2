@@ -83,8 +83,8 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (BLD-028, 2026-11-04) the decals carry their look and the rubble that stays (hashed state): the hashes.
     // (WAR-018, MAG-029, 2026-11-04) shells and bolts land on a tile and hurt the square round it; a new store: the hashes.
     // (WAR-001, WAR-019, ECO-008, ECO-012, ADR 0276, 2026-11-06) the original's blows, firing periods and fields: the hashes.
-    private const ulong GoldenHashStream = 0xDCAE810B07DFF84EUL;
-    private const ulong GoldenFinalFullHash = 0xC36401AD2487BEF5UL;
+    private const ulong GoldenHashStream = 0x4093AE5CC6E019B5UL;
+    private const ulong GoldenFinalFullHash = 0x077F4DD6044FF21FUL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

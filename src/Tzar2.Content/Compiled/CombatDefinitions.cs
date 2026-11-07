@@ -364,6 +364,12 @@ public sealed record SpellDefinition(
     /// </summary>
     public bool DrainsMana { get; init; }
 
+    /// <summary>
+    /// ITEM-020 (ReTzar's reading of the original, 0x4a5220): the least gold the magic workshop takes for a book of this
+    /// spell (<c>bookMinimum</c>; 0: four times its rate).
+    /// </summary>
+    public int BookMinimum { get; init; }
+
     /// <summary>Whether <paramref name="typeId"/> may be affected (by its type).</summary>
     public bool AffectsType(ushort typeId) => TargetTypes.IsDefaultOrEmpty || TargetTypes.BinarySearch(typeId) >= 0;
 }
@@ -575,33 +581,30 @@ public sealed record CombatSettings
     /// <summary>Tiles around a holder searched for room when units leave it.</summary>
     public int ExitRadiusTiles { get; init; } = 3;
 
-    /// <summary>Hit points a crafted potion of health restores per point of power (UNK-25).</summary>
-    public int CraftHealthPerPower { get; init; } = 10;
+    /// <summary>ITEM-020 (ReTzar's reading of the original, 0x4a5220): crafting time per gold paid.</summary>
+    public int CraftMsPerGold { get; init; } = 250;
 
-    /// <summary>Mana a crafted potion of mana restores per point of power (UNK-25).</summary>
-    public int CraftManaPerPower { get; init; } = 5;
+    /// <summary>ITEM-020: the same for a book (patch 1.05: twice as long).</summary>
+    public int CraftBookMsPerGold { get; init; } = 500;
 
-    /// <summary>Points of power a crafted potion needs per experience level (UNK-25).</summary>
-    public int CraftPowerPerLevel { get; init; } = 5;
+    /// <summary>ITEM-020 (D_build): the least gold, and the step the gold goes by.</summary>
+    public int CraftGoldStep { get; init; } = 10;
 
-    /// <summary>Gold per point of power of a crafted item (UNK-25).</summary>
-    public int CraftGoldPerPower { get; init; } = 50;
+    /// <summary>ITEM-020 (0x4743b0): a potion of experience gives the gold over this.</summary>
+    public int CraftExperienceDivisor { get; init; } = 5;
 
-    /// <summary>Crafting time per point of power (UNK-25).</summary>
-    public int CraftMsPerPower { get; init; } = 2000;
+    /// <summary>ITEM-020: a potion of attack or defence gives the gold over this.</summary>
+    public int CraftPotionStatDivisor { get; init; } = 2;
 
-    /// <summary>Most power a crafted item may have.</summary>
-    public int CraftMaxPower { get; init; } = 50;
+    /// <summary>ITEM-020: a sword, bow or shield gives the gold over this.</summary>
+    public int CraftEquipmentDivisor { get; init; } = 4;
 
-    /// <summary>A crafted spell book's price, in percent of another item's of its power (1.05: four times).</summary>
-    public int CraftBookCostPercent { get; init; } = 100;
+    /// <summary>ITEM-020: and at most this.</summary>
+    public int CraftEquipmentMax { get; init; } = 250;
 
-    /// <summary>A crafted spell book's time, in percent of another item's of its power (1.05: twice).</summary>
-    public int CraftBookTimePercent { get; init; } = 100;
-
-    /// <summary>How long crafting an item of <paramref name="power"/> takes (a spell book: <see cref="CraftBookTimePercent"/> of it).</summary>
-    public int CraftMs(bool book, int power)
-        => (int)Math.Min((long)power * CraftMsPerPower * (book ? CraftBookTimePercent : 100) / 100, int.MaxValue);
+    /// <summary>How long crafting with <paramref name="gold"/> takes (ITEM-020).</summary>
+    public int CraftMs(bool book, int gold)
+        => (int)Math.Min((long)gold * (book ? CraftBookMsPerGold : CraftMsPerGold), int.MaxValue);
 
     /// <summary>MAG-038 (ReTzar's reading of the original, 0x4ac62f): a bribe costs (level + this) × <see cref="BribeGoldPerLevelPercent"/> / 100 gold.</summary>
     public int BribeLevelOffset { get; init; } = 20;
@@ -829,14 +832,13 @@ public sealed record CombatSettings
         Check(HonorAttackPercent, 0, 10_000);
         Check(DummyMaxLevel, 0, 10_000);
         Check(ExitRadiusTiles, 1, 16);
-        Check(CraftGoldPerPower, 1, 1_000_000);
-        Check(CraftHealthPerPower, 0, 100_000);
-        Check(CraftManaPerPower, 0, 100_000);
-        Check(CraftPowerPerLevel, 1, 10_000);
-        Check(CraftMsPerPower, 0, 600_000);
-        Check(CraftMaxPower, 1, 10_000);
-        Check(CraftBookCostPercent, 1, 10_000);
-        Check(CraftBookTimePercent, 1, 10_000);
+        Check(CraftMsPerGold, 0, 600_000);
+        Check(CraftBookMsPerGold, 0, 600_000);
+        Check(CraftGoldStep, 1, 1_000_000);
+        Check(CraftExperienceDivisor, 1, 1_000_000);
+        Check(CraftPotionStatDivisor, 1, 1_000_000);
+        Check(CraftEquipmentDivisor, 1, 1_000_000);
+        Check(CraftEquipmentMax, 0, 1_000_000);
         Check(BribeLevelOffset, 0, 10_000);
         Check(BribeGoldPerLevelPercent, 0, 1_000_000);
         Check(CrusadeAnchor, -1, typeCount - 1);

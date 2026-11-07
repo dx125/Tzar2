@@ -23,6 +23,7 @@ rules:
     rule: A potion heals its carrier.
     source: [manual Items]
     status: tested
+    note: How much and for how long are ITEM-021.
   ITEM-006:
     rule: A resource item gives its resources to the kingdom.
     source: [manual Items]
@@ -94,3 +95,15 @@ rules:
     status: tested
     adr: [0266]
     note: In Tzar2, Ctrl + click on the book in the inventory. The spell still needs its research and costs the unit's own mana. Not done - the computer's units learning or using the books they pick up (0x464280); learned spells are not carried by persistent heroes.
+  ITEM-020:
+    rule: The magic workshop makes an item from the gold paid, 10 or more by 10, in 250 ms a gold (a book in 500), one at a time for a kingdom - a potion of experience gives the gold over 5, of mana the gold, of attack or defence the gold over 2; a sword, bow or shield the gold over 4, at most 250; a book of a spell a quarter of the gold over the spell's rate in charges, for at least four rates of gold (the bats' book 40). It makes no health potion and no book of soul binding or hypnosis.
+    source: ['community ReTzar src/gameplay.rs (build_item 0x4a5220, create_item 0x4743b0, book_divisor 0x465ca0, book_minimum) and src/dialogs.rs (D_build, the gold by 10)', patch 1.05 (TZAR110.TXT)]
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced Tzar2's points of power (UNK-25). The original then takes the same gold again when the kingdom has it (0x466a87); that looks like a bug and Tzar2 takes the gold once.
+  ITEM-021:
+    rule: A potion's gains are for good - its hit points raise its drinker's maximum and fill by as much (not on stone), its mana the same, its attack and defence add - and its experience is points, not levels.
+    source: ['community ReTzar src/gameplay.rs (drink 0x464ac0, the payload 0x464b8e)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07; Tzar2's potions healed up to the maximum and gave levels.

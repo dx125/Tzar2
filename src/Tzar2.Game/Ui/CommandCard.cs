@@ -8,6 +8,7 @@ using Tzar2.Core.Ids;
 using Tzar2.Game.Input;
 using Tzar2.Game.Session;
 using Tzar2.Sim.Commands;
+using Tzar2.Sim.Systems;
 
 namespace Tzar2.Game.Ui;
 
@@ -591,8 +592,8 @@ public sealed class CommandCard
                 return use.Count > 0 ? new CardPress(Commands: use) : CardPress.Nothing;
             case CardAction.DropItem:
                 return Commands(CommandKind.DropItem, OwnIds(selected, e => e.IsMobile), arg0: 0);
-            case CardAction.Hire when int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int offer):
-                return Commands(CommandKind.Hire, Taverns(context), arg0: offer);
+            case CardAction.Hire when int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int offer) && !LeadTavern(context).IsNone:
+                return Commands(CommandKind.Hire, [LeadTavern(context)], arg0: offer);
             case CardAction.MarketBuy or CardAction.MarketSell when uint.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out uint item)
                 && Markets(context) is { Length: > 0 } markets:
                 var market = new CommandList();
@@ -680,15 +681,14 @@ public sealed class CommandCard
         return options;
     }
 
-    /// <summary>The gold one point of an item's power costs (books cost more, 1.05).</summary>
-    public int CraftPricePerPower(ushort itemType)
-    {
-        CombatSettings c = _rules.Combat;
-        return _rules.EntityTypes[itemType].Traits.Item is { Kind: ItemKind.SpellBook } ? c.CraftGoldPerPower * c.CraftBookCostPercent / 100 : c.CraftGoldPerPower;
-    }
+    /// <summary>The least gold the workshop takes for an item (ITEM-020: a book at least its spell's least gold).</summary>
+    public int CraftMinimum(ushort itemType, int variant) => CraftRules.Minimum(_rules, itemType, variant);
 
-    /// <summary>The most power an item may be made with.</summary>
-    public int CraftMaxPower => _rules.Combat.CraftMaxPower;
+    /// <summary>What an amount of gold makes of an item (ITEM-020): a book's charges, a potion's or an equipment's strength.</summary>
+    public int CraftStrength(ushort itemType, int variant, int gold) => CraftRules.Strength(_rules, itemType, variant, gold);
+
+    /// <summary>The step the workshop's gold goes by (ITEM-020: 10).</summary>
+    public int CraftGoldStep => _rules.Combat.CraftGoldStep;
 
     /// <summary>The item the dialog asked for (its type and variant), made by the first idle selected workshop; null without one.</summary>
     public CommandList? Craft(CardContext context, ushort itemType, int gold, int variant = 0)
@@ -1114,6 +1114,9 @@ public sealed class CommandCard
     private EntityId[] Taverns(CardContext context)
         => OwnIds(Selected(context), e => !e.IsMobile && !e.UnderConstruction && _rules.EntityTypes[e.TypeId].Traits.World.IsTavern);
 
+    // TRADE-009: each tavern keeps its own offers; the card shows and hires those of the first tavern selected.
+    private EntityId LeadTavern(CardContext context) => Taverns(context) is { Length: > 0 } taverns ? taverns[0] : EntityId.None;
+
     private EntityId[] Traders(CardContext context)
         => OwnIds(Selected(context), e => e.IsMobile && _rules.EntityTypes[e.TypeId].Traits.World.Trader is not null);
 
@@ -1257,9 +1260,10 @@ public sealed class CommandCard
                 return up < 0 ? ([], 0) : (_rules.Upgrades[up].Cost, _rules.Upgrades[up].TimeMs);
             case CardAction.Hire when int.TryParse(b.Argument, NumberStyles.Integer, CultureInfo.InvariantCulture, out int slot):
                 GameFrame f = context.Frame;
+                EntityId hiring = LeadTavern(context);
                 for (int i = 0; i < f.TavernOfferCount; i++)
                 {
-                    if (f.TavernOffers[i].Slot == slot)
+                    if (f.TavernOffers[i].Slot == slot && f.TavernOffers[i].Tavern == hiring)
                     {
                         return (ImmutableArray.Create(f.TavernCosts, i * f.TavernCostStride, f.TavernCostStride), 0);
                     }
@@ -1327,9 +1331,10 @@ public sealed class CommandCard
     private List<CardButton> HireButtons(CardContext context, bool heroes)
     {
         var buttons = new List<CardButton>();
+        EntityId tavern = LeadTavern(context);
         foreach (FrameTavernOffer o in context.Frame.TavernOffers)
         {
-            if (o.IsHero != heroes)
+            if (o.IsHero != heroes || o.Tavern != tavern)
             {
                 continue;
             }
@@ -1589,17 +1594,13 @@ public sealed class CommandCard
             return (false, string.Empty);
         }
 
+        EntityId tavern = LeadTavern(context);
         for (int i = 0; i < f.TavernOfferCount; i++)
         {
             FrameTavernOffer o = f.TavernOffers[i];
-            if (o.Slot != slot)
+            if (o.Slot != slot || o.Tavern != tavern)
             {
                 continue;
-            }
-
-            if (o.Taken)
-            {
-                return (false, "hired this period");
             }
 
             string hireTech = o.IsHero ? _rules.World.HeroesTechnology : _rules.World.MercenariesTechnology;

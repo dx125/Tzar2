@@ -372,6 +372,7 @@ public sealed class CommandCardTests : IDisposable
     [Fact]
     [Trait("Rule", "ITEM-008")]
     [Trait("Rule", "ITEM-016")]
+    [Trait("Rule", "ITEM-020")]
     public void The_magic_workshop_makes_an_item_of_the_kind_and_gold_its_dialog_asks_for()
     {
         World world = _session.Simulation.World;
@@ -386,13 +387,16 @@ public sealed class CommandCardTests : IDisposable
         Assert.Equal(CardDialogKind.Craft, card.Press(Context([workshop]), build).Dialog);
         ushort book = (ushort)Rules.Value.EntityTypeId("comm.item_magic");
         Assert.Contains(book, card.CraftableItems(Context([workshop])));
-        Assert.Equal(4 * card.CraftPricePerPower((ushort)Rules.Value.EntityTypeId("comm.item")), card.CraftPricePerPower(book));
+        Assert.Equal(10, card.CraftGoldStep); // ITEM-020: the gold goes by 10
 
-        // ITEM-016: each of the panel's kinds has several items: books of 20 spells, 5 potions, a sword, a bow and a shield.
+        // ITEM-016, ITEM-020: books of 19 spells (no soul binding or hypnosis), 4 potions (no health), a sword, a bow and a
+        // shield (ReTzar's reading of the original, 0x4743b0).
         IReadOnlyList<CraftOption> options = card.CraftOptions(Context([workshop]));
-        Assert.Equal((20, 5, 3), (options.Count(o => o.Kind == CraftKind.Book), options.Count(o => o.Kind == CraftKind.Potion), options.Count(o => o.Kind == CraftKind.Power)));
-        Assert.Contains(options, o => o.Kind == CraftKind.Book && o.Spell == Rules.Value.SpellId("spell_lightning"));
-        Assert.Equal([ItemEffect.Health, ItemEffect.Levels, ItemEffect.Mana, ItemEffect.Attack, ItemEffect.Defence], options.Where(o => o.Kind == CraftKind.Potion).Select(o => o.Effect));
+        Assert.Equal((19, 4, 3), (options.Count(o => o.Kind == CraftKind.Book), options.Count(o => o.Kind == CraftKind.Potion), options.Count(o => o.Kind == CraftKind.Power)));
+        CraftOption lightning = options.First(o => o.Kind == CraftKind.Book && o.Spell == Rules.Value.SpellId("spell_lightning"));
+        Assert.Equal(80, card.CraftMinimum(lightning.Item, lightning.Variant)); // four times the lightning's rate of 20
+        Assert.Equal(5, card.CraftStrength(lightning.Item, lightning.Variant, 400)); // (400 / 4) / 20 charges
+        Assert.Equal([ItemEffect.Levels, ItemEffect.Mana, ItemEffect.Attack, ItemEffect.Defence], options.Where(o => o.Kind == CraftKind.Potion).Select(o => o.Effect));
         CraftOption shield = options.Single(o => o.Kind == CraftKind.Power && o.Effect == ItemEffect.Defence);
         Assert.Equal("item_shield1", shield.Look);
         CommandList shieldCraft = card.Craft(Context([workshop]), shield.Item, 100, shield.Variant)!;
