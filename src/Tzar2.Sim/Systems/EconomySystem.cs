@@ -17,6 +17,8 @@ namespace Tzar2.Sim.Systems;
 public sealed class EconomySystem : ISimSystem
 {
     private readonly List<EntityId> _depleted = [];
+    private readonly HashSet<uint> _worked = [];
+    private readonly HashSet<uint> _milked = [];
 
     /// <inheritdoc />
     public SimPhase Phase => SimPhase.Economy;
@@ -149,9 +151,23 @@ public sealed class EconomySystem : ISimSystem
                 load = percent >= 100 ? lost : Math.Min(load, lost * 100 / percent);
             }
 
-            if (load > 0 && w.TimerMs >= (long)gatherMs * load)
+            // ECO-028 (ReTzar's reading of the original, 0x4ad088): a field's load comes after a countdown of 12 to 18 digs,
+            // drawn as the dig starts (kept in Retries while the worker gathers).
+            long needed = (long)gatherMs * load;
+            if (definition.LoadCyclesMin > 0)
+            {
+                if (w.Retries <= 0)
+                {
+                    w.Retries = definition.LoadCyclesMin + world.Rng.Misc.NextInt(definition.LoadCyclesMax - definition.LoadCyclesMin + 1);
+                }
+
+                needed = (long)w.Retries * definition.CycleMs;
+            }
+
+            if (load > 0 && w.TimerMs >= needed)
             {
                 w.TimerMs = 0;
+                w.Retries = 0;
                 w.CarryAmount += load;
                 w.CarryResource = (byte)resource;
                 VictorySystem.Mined(world, owner, resource, load); // DIP-011: a mine scores what it gives
@@ -251,24 +267,68 @@ public sealed class EconomySystem : ISimSystem
     }
 
     // Cows regrow their milk (ResourceNode.regenMs) up to what they hold full.
-    private static void Regrow(World world, int tickMs)
+    // ECO-027 (ReTzar's reading of the original, 0x502ea2, 0x504e30): a cow's milk is its mana, back at its kingdom's mana
+    // rate (Concentration too), half of it for Nature's cow, and none while it is milked. ECO-029 (timer 0x4216): a fish
+    // patch nobody fishes grows by its share every while.
+    private void Regrow(World world, int tickMs)
     {
+        _worked.Clear();
+        _milked.Clear();
+        ReadOnlySpan<Worker> workers = world.Workers.Components;
+        for (int i = 0; i < workers.Length; i++)
+        {
+            if (workers[i].Task == WorkerTask.Harvest)
+            {
+                _worked.Add(workers[i].Target); // fished: a boat at work on the patch, whatever its step (0x4e93d5)
+                if (workers[i].Phase == WorkerPhase.Gathering)
+                {
+                    _milked.Add(workers[i].Target); // milked: a peasant at the cow (0x4ed2c0)
+                }
+            }
+        }
+
         ReadOnlySpan<EntityId> nodes = world.ResourceStocks.Entities;
         Span<ResourceStock> stocks = world.ResourceStocks.Components;
         for (int i = 0; i < nodes.Length; i++)
         {
             ref ResourceStock stock = ref stocks[i];
-            ResourceNodeDefinition definition = world.TypeOf(nodes[i]).Traits.ResourceNode!;
-            if (definition.RegenMs <= 0 || stock.Amount < 0 || stock.Amount >= definition.Amount)
+            EntityTypeDefinition nodeType = world.TypeOf(nodes[i]);
+            ResourceNodeDefinition definition = nodeType.Traits.ResourceNode!;
+            if (definition.GrowEveryMs > 0)
+            {
+                if (stock.Amount <= 0 || _worked.Contains(nodes[i].Value))
+                {
+                    stock.RegenMs = 0;
+                    continue;
+                }
+
+                stock.RegenMs += tickMs;
+                if (stock.RegenMs >= definition.GrowEveryMs)
+                {
+                    stock.RegenMs = 0;
+                    if (stock.Amount < definition.GrowMax)
+                    {
+                        stock.Amount = (int)Math.Min(definition.GrowMax, (long)stock.Amount + ((long)stock.Amount * definition.GrowPercent / 100));
+                    }
+                }
+
+                continue;
+            }
+
+            // Milked while it has milk: a milker waiting by an empty cow does not stop it coming back.
+            if (definition.RegenMs <= 0 || stock.Amount < 0 || stock.Amount >= definition.Amount || (stock.Amount > 0 && _milked.Contains(nodes[i].Value)))
             {
                 stock.RegenMs = 0;
                 continue;
             }
 
+            byte owner = world.Identities.Get(nodes[i]).Owner;
+            int percent = owner == MapObject.Nature ? world.Ruleset.Combat.NatureManaRegenPercent : world.Stats.Apply(owner, ModifierStat.ManaRegen, nodeType.Id, 100);
+            int unitMs = (int)Math.Max(1, (long)definition.RegenMs * 100 / Math.Max(1, percent));
             stock.RegenMs += tickMs;
-            while (stock.RegenMs >= definition.RegenMs && stock.Amount < definition.Amount)
+            while (stock.RegenMs >= unitMs && stock.Amount < definition.Amount)
             {
-                stock.RegenMs -= definition.RegenMs;
+                stock.RegenMs -= unitMs;
                 stock.Amount++;
             }
 

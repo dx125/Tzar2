@@ -435,6 +435,22 @@ public sealed class WorkerSystem : ISimSystem
             return;
         }
 
+        byte owner = world.Identities.Get(worker).Owner;
+        if (g.IdleCopyAfterMs > 0 && world.HasPlayer(owner) && (world.Players[owner].Flags & PlayerFlags.AiControlled) == 0)
+        {
+            // ECO-005 (ReTzar's reading of the original, 0x4ae440): idle 30 s, a person's peasant takes up the work of the
+            // nearest of its kingdom's peasants; it looks again at each idle tick of 1.5 s until it finds one.
+            w.IdleMs = Math.Min(w.IdleMs + tickMs, g.IdleCopyAfterMs);
+            if (w.IdleMs < g.IdleCopyAfterMs)
+            {
+                return;
+            }
+
+            w.IdleMs = Math.Max(0, g.IdleCopyAfterMs - IdleTickMs);
+            CopyWork(world, worker, owner, type);
+            return;
+        }
+
         w.IdleMs = Math.Min(w.IdleMs + tickMs, g.IdleWorkAfterMs);
         if (w.IdleMs < g.IdleWorkAfterMs)
         {
@@ -442,7 +458,6 @@ public sealed class WorkerSystem : ISimSystem
         }
 
         w.IdleMs = 0; // nothing found: look again after another wait
-        byte owner = world.Identities.Get(worker).Owner;
         Position at = world.Positions.Get(worker);
         long limit = (long)g.IdleWorkRadiusTiles * Map.MapState.UnitsPerTile;
         long best = (limit * limit) + 1;
@@ -512,6 +527,71 @@ public sealed class WorkerSystem : ISimSystem
         else if (!job.IsNone)
         {
             GameplayCommands.StartWork(world, worker, job, task);
+        }
+    }
+
+    // The original's idle tick of a unit (0x4dfd10).
+    private const int IdleTickMs = 1500;
+
+    // ECO-005 (0x4ae440, filter 0x44fa30, copy 0x42db10): the nearest peasant of the kingdom within twice the idle one's
+    // sight (the larger axis, in tiles) that chops, mines, tends cows, builds, repairs or captures - not one digging a field -
+    // and the idle one takes up the same work.
+    private static void CopyWork(World world, EntityId worker, byte owner, EntityTypeDefinition type)
+    {
+        int reach = 2 * world.Stats.Apply(owner, ModifierStat.Sight, type.Id, type.Traits.SightUnits) / Map.MapState.UnitsPerTile;
+        Position at = world.Positions.Get(worker);
+        int tx = at.X / Map.MapState.UnitsPerTile, ty = at.Y / Map.MapState.UnitsPerTile;
+        long best = long.MaxValue;
+        int from = -1;
+        ReadOnlySpan<EntityId> ids = world.Workers.Entities;
+        ReadOnlySpan<Worker> states = world.Workers.Components;
+        for (int i = 0; i < ids.Length; i++)
+        {
+            Worker o = states[i];
+            if (ids[i] == worker || o.Task == WorkerTask.None || world.Identities.Get(ids[i]).Owner != owner || world.IsHeld(ids[i])
+                || !world.Entities.IsAlive(EntityId.FromValue(o.Target)) || world.Positions.IndexOf(ids[i]) is not (>= 0 and var pi))
+            {
+                continue;
+            }
+
+            if (o.Task == WorkerTask.Harvest && world.TypeOf(EntityId.FromValue(o.Target)).Traits.ResourceNode is { LoadCyclesMin: > 0 })
+            {
+                continue; // digging a field
+            }
+
+            if (o.Task == WorkerTask.Harvest && !(type.Traits.Harvester?.CanGather(o.NodeResource) ?? false))
+            {
+                continue;
+            }
+
+            Position p = world.Positions.At(pi);
+            if (Math.Max(Math.Abs((p.X / Map.MapState.UnitsPerTile) - tx), Math.Abs((p.Y / Map.MapState.UnitsPerTile) - ty)) > reach)
+            {
+                continue;
+            }
+
+            long d = Core.Numerics.IntMath.DistanceSquared(at.X, at.Y, p.X, p.Y);
+            if (d < best)
+            {
+                best = d;
+                from = i;
+            }
+        }
+
+        if (from < 0)
+        {
+            return;
+        }
+
+        Worker copied = states[from];
+        EntityId target = EntityId.FromValue(copied.Target);
+        if (copied.Task == WorkerTask.Harvest)
+        {
+            GameplayCommands.StartHarvest(world, owner, worker, target);
+        }
+        else if (type.Traits.IsBuilder || copied.Task == WorkerTask.Capture)
+        {
+            GameplayCommands.StartWork(world, worker, target, copied.Task);
         }
     }
 

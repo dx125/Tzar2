@@ -4,7 +4,8 @@
 * **Date:** 2026-11-07
 * **Deciders:** maintainer (Claude), at the owner's request before the eleventh play-test
 * **Related:** BLD-006, PRES-001, WAR-021, WAR-022, DIP-011, CAP-002, CAP-004, CAP-005, CAP-006, MAG-038, MAG-039,
-  MAG-040, EXP-008, TRADE-007, TRADE-009, TRADE-012, ITEM-020, ITEM-021; UNK-19, UNK-23, UNK-25, UNK-26, UNK-28, UNK-29,
+  MAG-040, EXP-008, TRADE-004, TRADE-007, TRADE-009, TRADE-012, ITEM-020, ITEM-021, ECO-005, ECO-027, ECO-028, ECO-029;
+  UNK-17, UNK-19, UNK-23, UNK-25, UNK-26, UNK-28, UNK-29,
   UNK-42; ADR 0181, ADR 0191; ReTzar
   `src/gameplay.rs`, `src/gameplay/scripting.rs`
 
@@ -112,6 +113,26 @@ Batch C:
   * The original then takes the gold again when it can (0x466a87); Tzar2 does not, taking that for a bug.
 * **Potions.** Health and mana raise the maximum for good (`Gains`, `ManaState.RaisedMax`), and experience is points.
 * The snapshot format goes to 28, for the taverns' offers and the potions' gains.
+
+Batch D:
+
+* **Idle peasants.** Idle 30 s, a person's peasant takes up the work of the nearest of its kingdom's peasants within twice
+  its sight. That work may be chopping, mining, tending cows, building, repairing or capturing, but not digging a field
+  (`idleCopyAfterMs`). The 30 s was read in `Tzar.exe` too. A computer kingdom's peasant still finds work by itself, since
+  the original asks its player.
+* **Fields: found, not turned on.** The original gives a load after 12 to 18 digs of 1196 ms, about half Tzar2's rate.
+  The countdown is built (`ResourceNode.loadCyclesMin`, `loadCyclesMax`, `cycleMs`) but `classic.yaml` does not use it
+  yet. With it, Tzar2's computer, whose pacing was set on the faster fields, sent no wave within 10 minutes in any AI test,
+  and a campaign mission failed. ECO-028 stays missing until the owner decides and the AI's farming follows.
+* **Fishing.** A boat carries 50, at 350 ms a fish. A patch nobody fishes grows by 5 % every 10 s up to 2000
+  (`growPercent`, `growEveryMs`, `growMax`). The original's patches also drift; Tzar2's do not.
+* **Ships' loads.** A galleon carries 1000 a trip, a hulk 500, a xebec 300.
+* **Cows' milk.** It comes back at the kingdom's mana rate (2 a second, Concentration too), half for Nature's cows, and not
+  while milked. How fast the pail fills stays as the owner's capture measured it (ADR 0170); ReTzar's 3 a 900 ms cycle
+  is slower.
+* **A fix found on the way.** A ship's approach point beyond the first ring round a building could be a diagonal corner
+  out of reach. A boat stood there for ever, unable to deliver. Corners of far rings are now taken only when nothing
+  else is free.
 
 ## Consequences
 

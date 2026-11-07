@@ -145,6 +145,27 @@ public sealed record ResourceNodeDefinition(int Resource, int Amount)
 
     /// <summary>How many workers may work the node at once; 0 = any number. Fields: 1 (ECO-021).</summary>
     public int MaxWorkers { get; init; }
+
+    /// <summary>
+    /// ECO-028 (ReTzar's reading of the original, 0x4ad088): a load comes after a countdown of this many work cycles at
+    /// least (fields: 12), drawn up to <see cref="LoadCyclesMax"/>, each <see cref="CycleMs"/> long; 0 = by the gather time.
+    /// </summary>
+    public int LoadCyclesMin { get; init; }
+
+    /// <summary>ECO-028: at most this many cycles (fields: 18).</summary>
+    public int LoadCyclesMax { get; init; }
+
+    /// <summary>ECO-028: a work cycle (a field: the dig picture, 1196 ms).</summary>
+    public int CycleMs { get; init; }
+
+    /// <summary>ECO-029 (0x4216): a node nobody works grows by this share of what it holds (fish patches: 5 %).</summary>
+    public int GrowPercent { get; init; }
+
+    /// <summary>ECO-029: every this long (fish patches: 10 s); 0 = never.</summary>
+    public int GrowEveryMs { get; init; }
+
+    /// <summary>ECO-029: up to this (fish patches: 2000).</summary>
+    public int GrowMax { get; init; }
 }
 
 /// <summary>Which workers may deliver to a drop-off (trait <c>DropOff.access</c>; harbors take fish from boats).</summary>

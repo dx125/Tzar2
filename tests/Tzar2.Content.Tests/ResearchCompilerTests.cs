@@ -155,7 +155,7 @@ public class ResearchCompilerTests
         // GAME-02: cows hold milk, regrow it and leave meat; fishing boats sail; fish patches have no footprint.
         EntityTypeDefinition cow = Type("comm.cow");
         Assert.Equal(EntityCategory.Unit, cow.Traits.Category);
-        Assert.Equal((40, 4000, true), (cow.Traits.ResourceNode!.Amount, cow.Traits.ResourceNode.RegenMs, cow.Traits.ResourceNode.KeepWhenEmpty));
+        Assert.Equal((40, 500, true), (cow.Traits.ResourceNode!.Amount, cow.Traits.ResourceNode.RegenMs, cow.Traits.ResourceNode.KeepWhenEmpty));
         Assert.Equal(Type("comm.meat").Id, cow.Traits.SpawnOnDeath);
         Assert.Equal(Tech("te_cowpoaching"), cow.Traits.Capturable!.RequiredTechnology);
         Assert.True(cow.Traits.Capturable.Instant);

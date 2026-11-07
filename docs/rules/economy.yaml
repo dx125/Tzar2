@@ -25,10 +25,10 @@ rules:
     note: How the original scores the next node is not known; Tzar2 adds the way from the node to the nearest drop-off.
     adr: [0180]
   ECO-005:
-    rule: A peasant left without work finds the nearest work by itself after a while (a site, a damaged building, a resource).
-    source: [owner 2026-10-20 (third play-test)]
+    rule: A peasant left without work takes up work by itself after a while - idle 30 seconds, it takes up the work of the nearest of its kingdom's peasants within twice its sight that chops, mines, tends cows, builds, repairs or captures (not one digging a field).
+    source: [owner 2026-10-20 (third play-test), 'community ReTzar src/gameplay.rs (take_up_work 0x4ae440, filter 0x44fa30)']
     status: tested
-    note: The delay (10 s) and the search radius (12 tiles) are placeholders.
+    note: The global audit of 2026-11-07 read the 30 s in the original's code (cmp 0x7530 at 0x4ae449 in Tzar.exe). The third play-test's observation stands - an idle peasant does go to work - but the original only joins another peasant's work; Tzar2 had it seek a site, a damaged building or a resource within 12 tiles after 10 s. A computer kingdom's peasant asks its player instead (0x4ae4a5); Tzar2's computer peasants still find work by themselves (idleWorkAfterMs, idleWorkRadiusTiles, AI-003).
     adr: [0180]
   ECO-006:
     rule: Workers walk up to what they work on (the node, the drop-off, the site) before they work or unload.
@@ -127,3 +127,21 @@ rules:
     source: ['community ReTzar src/gameplay.rs (0x4aea70 the load dropped as a resource item; 0x4ae2a0 as the new work begins; 0x4ff350 before taking a bag of another kind; 0x4acc44 at death)', owner 2026-10-25 (sixth play-test)]
     status: tested
     note: 'The bag is OBJECTS RESITEM in the picture of its resource (item_food, item_wood, item_stone, item_gold); it keeps what it holds in the item (ItemState.Resource, which was padding, so saves stay). A bag the map placed holds what its picture shows. Before, the peasant took the load home first (the sixth play-test). Tzar2 tells loads apart by resource only: milk and a field''s food are both food, while the original drops one for the other. The bags were not drawn until the eighth play-test: their pictures were not loaded for the match. Until the tenth they drew their type's picture, the original's empty item (item_none, a slot's corners), not their own look.'
+  ECO-027:
+    rule: A cow's milk is its mana and comes back as mana does - 2 a second for a kingdom's cow (more with Concentration), 1 for Nature's - but not while it is milked.
+    source: ['community ReTzar src/gameplay.rs (the mana timer 0x502ea2 and its gate 0x504e30, milked 0x4ed2c0)']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced one unit every 4 s (UNK-17). A milker waiting by an empty cow does not stop it. How fast the pail fills stays as measured (ADR 0170); ReTzar reads 3 a milk cycle of 900 ms, slower than the owner's capture.
+  ECO-028:
+    rule: A field's load comes after a countdown of 12 to 18 digs of the peasant (1.2 s each), drawn as the dig starts; a field short of its health is grown back first.
+    source: ['community ReTzar src/gameplay.rs (the dig 0x4acff7, 0x4ad088, 0x4ac180)', 'data IMAGES.INI e_peon_dig (anim_time 1196)']
+    status: missing
+    adr: [0280]
+    note: Found by the global audit of 2026-11-07; Tzar2 gives a field's load after the peasant's 0.9 s a unit (UNK-17), about twice as fast. The countdown is built (ResourceNode loadCyclesMin, loadCyclesMax, cycleMs) but not turned on - with it the farms' food halves and Tzar2's computer, whose pacing was set on the faster fields, sends no wave within 10 minutes in any AI test; the owner decides, and the AI's farming follows first.
+  ECO-029:
+    rule: A fishing boat takes up to 4 fish every 1.4 seconds until it holds 50; a fish patch starts with 500 and goes when emptied, and one nobody fishes grows by 5 % every 10 seconds, up to 2000.
+    source: ['community ReTzar src/gameplay.rs (fishing 0x4e911e, 0x4e92be, 0x451050; fish_patches, timer 0x4216)', 'data RES.INI fish patch']
+    status: tested
+    adr: [0280]
+    note: The global audit of 2026-11-07 replaced 20 a trip at 1 a second (UNK-17). The original's patch also drifts a cell now and then; Tzar2's stays.

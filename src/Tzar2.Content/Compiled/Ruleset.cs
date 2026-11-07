@@ -559,7 +559,9 @@ public sealed partial class Ruleset
 
         if (t.ResourceNode is { } node
             && ((uint)node.Resource >= (uint)resources || (node.Amount < 1 && node.Amount != ResourceNodeDefinition.Unlimited)
-                || node.RegenMs < 0 || node.GatherMs < 0 || node.CarryLoad < 0 || (node.RegenMs > 0 && node.Amount < 1)))
+                || node.RegenMs < 0 || node.GatherMs < 0 || node.CarryLoad < 0 || (node.RegenMs > 0 && node.Amount < 1)
+                || node.LoadCyclesMax < node.LoadCyclesMin || node.LoadCyclesMax > 1000 || (node.LoadCyclesMin > 0 && node.CycleMs < 1)
+                || node.GrowPercent > 1000 || (node.GrowEveryMs > 0 && node.GrowMax < 1)))
         {
             throw new ArgumentException($"{where}: invalid resource node.");
         }
@@ -832,7 +834,7 @@ public sealed partial class Ruleset
             .Add(g.CaptureCycleMs).Add(g.CaptureStep).Add(g.ResistancePulseMs).Add(g.ResistancePulseStep).Add(g.RepairTimeBasisPoints)
             .Add(g.WallContinueRadiusTiles).Add(g.MaxWallSegments)
             .Add(g.GateWatchTiles).Add(g.GateOrderHoldMs).Add(g.GateChangeIntervalMs).Add(g.MaxGateChangesPerTick)
-            .Add(g.RepairCostBasisPoints).Add(g.RepairerFalloffBasisPoints).Add(g.IdleWorkAfterMs).Add(g.IdleWorkRadiusTiles)
+            .Add(g.RepairCostBasisPoints).Add(g.RepairerFalloffBasisPoints).Add(g.IdleWorkAfterMs).Add(g.IdleCopyAfterMs).Add(g.IdleWorkRadiusTiles)
             .Add(g.DisguiseMasteryMs).Add(g.RepairBlowMs).Add(g.UnmaskReachFreshTilePercent).Add(g.UnmaskReachFullTilePercent)
             .Add(g.StartingResources.Length);
         foreach (StartingResources level in g.StartingResources)
@@ -964,7 +966,8 @@ public sealed partial class Ruleset
         hasher.Add(t.ResourceNode is not null);
         if (t.ResourceNode is { } n)
         {
-            hasher.Add(n.Resource).Add(n.Amount).Add(n.RegenMs).Add(n.GatherMs).Add(n.KeepWhenEmpty).Add(n.CarryLoad).Add(n.MaxWorkers);
+            hasher.Add(n.Resource).Add(n.Amount).Add(n.RegenMs).Add(n.GatherMs).Add(n.KeepWhenEmpty).Add(n.CarryLoad).Add(n.MaxWorkers)
+                .Add(n.LoadCyclesMin).Add(n.LoadCyclesMax).Add(n.CycleMs).Add(n.GrowPercent).Add(n.GrowEveryMs).Add(n.GrowMax);
         }
 
         AddWorldTraits(hasher, t.World);

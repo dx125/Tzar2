@@ -50,7 +50,7 @@ Shift + Delete; what each technology does (not how much).
 | Load from a cow | **50 — VERIFIED** (capture-20261018-222649, `gather-cow`: four deliveries of 50, one of 10) | YAML `^class.cow.ResourceNode.carry` | UNK-17 | done |
 | Milking time | ~~1.5 s~~ 200 ms per unit, bounded by batch B (a 50-unit trip, walk included, took 10.6 s; ADR 0170) | YAML `^class.cow.ResourceNode.gatherMs` | UNK-17 | the cow trip minus the walk (unit speeds, batch E) |
 | Meat | 100 food, rots after 120 s, a Nature node | YAML `comm.meat` | UNK-17 | butcher captures |
-| Fishing boat | carries 20, 1 s per unit | YAML `^class.fishing_boat.Harvester` | UNK-17 | fishing captures |
+| Fishing boat | ~~carries 20, 1 s per unit~~ **50, up to 4 fish every 1.4 s (350 ms a fish); a patch nobody fishes grows 5 % every 10 s to 2000** (ReTzar 0x4e911e, 0x4216; ECO-029, ADR 0280) | YAML `^class.fishing_boat.Harvester`, `^class.fishpatch.ResourceNode.grow*` | UNK-17 | done (community source) |
 | Harbor drop-off | food from boats only | YAML `^class.harbor.DropOff.access` | — | observe peasants with food near a harbor |
 | Field decay | 60 s untended, then 30 HP per minute | YAML `^class.field.Decay` | UNK-17 | neglect captures |
 | Fields are walkable | units cross a field and its farmers work on it, each on a tile of its own; nothing is built on it (play-test 2026-10-20: farmers digging beside the field looked wrong) | YAML `^class.field.WalkableFootprint` | — | order a unit across a field; watch where a farmer stands |
@@ -124,7 +124,7 @@ then 1,200 (manual ch. 5 §7, §10); victory conditions, game types, No Fog, Exp
 | Teams | start as mutual allies sharing vision and victory | code (`Diplomacy.ApplyTeams`) | — | lobby captures |
 | Shared resources | the payer's stockpile first, then allies in slot order | code (`SharedStockpile`) | — | observation |
 | Shared unit control | movement, attack and trade orders only | code (`CommandSystem`, `GameplayCommands.Attack`) | — | observation |
-| Trade load | **caravans 500 (European) / 300 (Arabian), Asian peasants 100 (ReTzar, ADR 0252)**; galleon 200, hulk 150, xebec 100 | YAML `^*.trader`, `^class.*.Trader.capacity` | UNK-28 | trade captures |
+| Trade load | **caravans 500 (European) / 300 (Arabian), Asian peasants 100 (ReTzar, ADR 0252)**; ~~galleon 200, hulk 150, xebec 100~~ **galleon 1000, hulk 500, xebec 300 (ReTzar 0x4ea980; TRADE-004, ADR 0280)** | YAML `^*.trader`, `^class.*.Trader.capacity` | UNK-28 | trade captures |
 | Trade profit | **ReTzar's reading of the original (ADR 0257):** load x tiles x 40 / (map side x 100), tiles on the larger axis, none under 12 | YAML `world.trade*` | — | a caravan capture would confirm it |
 | Trade dock time | 2 s | YAML `world.tradeDockMs` | UNK-28 | captures |
 | Unaffordable load | the trader leaves empty | code (`TradeSystem`) | — | observation |

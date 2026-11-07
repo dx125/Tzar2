@@ -214,8 +214,12 @@ internal static class Interaction
     {
         (int fx, int fy, int fw, int fh) = world.FootprintRect(structure);
         MapState map = world.Map;
-        for (int ring = 1; ring <= 3; ring++)
+        for (int pass = 0; pass < 6; pass++)
         {
+            // Beyond the first ring a corner lies diagonally out of reach of the footprint (a boat stood at one forever,
+            // unable to deliver): the corners of a ring are taken only when nothing else of it is free.
+            int ring = 1 + (pass / 2);
+            bool corners = ring == 1 || pass % 2 == 1;
             long best = long.MaxValue;
             int bx = 0;
             int by = 0;
@@ -228,7 +232,7 @@ internal static class Interaction
                 bool edgeRow = ty == y0 || ty == y1;
                 for (int tx = x0; tx <= x1; tx += edgeRow || tx == x1 ? 1 : x1 - x0)
                 {
-                    if (!map.IsPassable(locomotor, tx, ty))
+                    if (!map.IsPassable(locomotor, tx, ty) || (!corners && edgeRow && (tx == x0 || tx == x1)))
                     {
                         continue;
                     }

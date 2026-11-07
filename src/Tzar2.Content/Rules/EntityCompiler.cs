@@ -47,7 +47,7 @@ internal sealed partial class EntityCompiler
         ["Producer"] = ["queue"],
         ["Producible"] = ["by"],
         ["Researcher"] = ["technologies", "upgrades"],
-        ["ResourceNode"] = ["resource", "amount", "regenMs", "gatherMs", "carry", "keepWhenEmpty", "workers"],
+        ["ResourceNode"] = ["resource", "amount", "regenMs", "gatherMs", "carry", "keepWhenEmpty", "workers", "loadCyclesMin", "loadCyclesMax", "cycleMs", "growPercent", "growEveryMs", "growMax"],
         ["DropOff"] = ["resources", "access", "autoGather"],
         ["Requires"] = ["buildings", "technology", "technologies"],
         ["TechTree"] = [],
@@ -471,6 +471,12 @@ internal sealed partial class EntityCompiler
                 CarryLoad = NonNegative("ResourceNode", "carry", 0),
                 KeepWhenEmpty = node.Get("keepWhenEmpty") is { } keep && RulesetCompiler.Bool(keep.Node, keep.Source, Where("ResourceNode", "keepWhenEmpty")),
                 MaxWorkers = NonNegative("ResourceNode", "workers", 0),
+                LoadCyclesMin = NonNegative("ResourceNode", "loadCyclesMin", 0),
+                LoadCyclesMax = NonNegative("ResourceNode", "loadCyclesMax", 0),
+                CycleMs = NonNegative("ResourceNode", "cycleMs", 0),
+                GrowPercent = NonNegative("ResourceNode", "growPercent", 0),
+                GrowEveryMs = NonNegative("ResourceNode", "growEveryMs", 0),
+                GrowMax = NonNegative("ResourceNode", "growMax", 0),
             };
         }
 

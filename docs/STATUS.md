@@ -546,14 +546,23 @@ owner's order of 2026-10-26.
        EXP-008; log below).
     3. C - the tavern's offers, dice and loans, the magic workshop's items, potions: **fixed** (TRADE-007, TRADE-009,
        TRADE-012, ITEM-020, ITEM-021; log below).
-    4. D - gathering (idle peasants, fields, fishing, ships' loads, cows' milk; UNK-17, UNK-28) and bears.
-    5. E - one-way sharing, the easy campaign's damage, the idle scan's period.
+    4. D - idle peasants, fishing, ships' loads, cows' milk: **fixed** (ECO-005, ECO-027, ECO-029, TRADE-004; log
+       below). The fields' countdown (ECO-028) is built but off: it halves the computer's food; the owner decides.
+    5. E - bears, one-way sharing, the easy campaign's damage, the idle scan's period.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-07 — The global audit, batch D: idle peasants, fishing, ships' loads and cows' milk (ECO-005, ECO-027,
+  ECO-029, TRADE-004; ADR 0280; item 25).**
+  * **An idle peasant** of a person's kingdom joins the work of its nearest peasant after 30 s (read in `Tzar.exe`).
+  * **A field's** original countdown (12 to 18 digs, half Tzar2's rate) is built but off, pending the owner (ECO-028).
+  * **A boat** carries 50, and an unfished patch grows to 2000.
+  * **Ships trade** 1000, 500 and 300 a trip.
+  * **A cow's milk** comes back at 2 a second, not while milked.
+  * A ship could stand for ever at a corner out of reach of its harbour; it no longer picks one.
 * **2026-11-07 — The global audit, batch C: the tavern, the dice, loans, the magic workshop and potions (TRADE-007,
   TRADE-009, TRADE-012, ITEM-020, ITEM-021; ADR 0280; item 25).**
   * **Each tavern** grows its own lists a minute apart: 8-12 mercenaries at level 0 or a hero of level 10-30, of any
