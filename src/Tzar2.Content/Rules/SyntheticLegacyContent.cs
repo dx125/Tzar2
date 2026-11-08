@@ -56,11 +56,13 @@ public static class SyntheticLegacyContent
     ];
 
     /// <summary>A VFS with the engine defaults and the synthetic tables mounted.</summary>
-    public static VirtualFileSystem CreateFileSystem()
+    /// <param name="scenery">Whether the tables hold the terrain sets' decoration pictures (ADR 0281, 0283): without them
+    /// the ruleset has the tables of the versions before, which older saves were written with.</param>
+    public static VirtualFileSystem CreateFileSystem(bool scenery = true)
     {
         var vfs = new VirtualFileSystem();
         vfs.Mount(new EngineDefaultsSource());
-        vfs.Mount(CreateTables());
+        vfs.Mount(CreateTables(scenery));
         return vfs;
     }
 
@@ -68,8 +70,13 @@ public static class SyntheticLegacyContent
     public static Ruleset CompileRuleset(string name = "classic", RulesetCompileOptions? options = null)
         => RulesetCompiler.Compile(CreateFileSystem(), name, options).Ruleset;
 
+    /// <summary>Compiles <c>classic</c> from the synthetic tables without the decoration pictures (no ruin types): the
+    /// tables older saves were written with.</summary>
+    public static Ruleset CompileRulesetWithoutScenery()
+        => RulesetCompiler.Compile(CreateFileSystem(scenery: false), "classic").Ruleset;
+
     /// <summary>The synthetic tables as a package-shaped source.</summary>
-    public static MemorySource CreateTables()
+    public static MemorySource CreateTables(bool scenery = true)
     {
         var source = new MemorySource("synthetic legacy tables");
         string[] unitHeader = ["UNIT", "CLASS", "COST", "TIME", "SIGHT", "RANGE", "HEALTH", "ATTACK", "DEFENCE", "SPEED", "RATE", "SPECIAL", "DEPEND ON"];
@@ -188,7 +195,7 @@ public static class SyntheticLegacyContent
         ]));
         AddTechnologyTables(source);
         AddObjects(source);
-        source.Add("manifests/sprite-index.json", SpriteIndex(
+        source.Add("manifests/sprite-index.json", SpriteIndex(scenery,
         [
             // Units: their IMAGES.INI object boxes give their bodies (WORLD-015).
             ("e_peon", @"unit\e_peon.bmp", "object", "0,0,32,32"),
@@ -554,7 +561,7 @@ public static class SyntheticLegacyContent
         ("e_archer1_attack", @"unit\euro archer1 attack.bmp", 14, 11, "86,86,85,86,86,85,86,86,85,86,86,85,86,86"),
     ];
 
-    private static byte[] SpriteIndex((string Name, string Image, string BoxKey, string Box)[] entries) => Json(w =>
+    private static byte[] SpriteIndex(bool scenery, (string Name, string Image, string BoxKey, string Box)[] entries) => Json(w =>
     {
         w.WriteStartArray();
         foreach ((string name, string image, int rows, int action, string delay) in AttackSprites)
@@ -594,7 +601,7 @@ public static class SyntheticLegacyContent
             w.WriteEndObject();
         }
 
-        foreach ((string name, string ini, string image, string box, string terrains, string shown) in SceneryEntries)
+        foreach ((string name, string ini, string image, string box, string terrains, string shown) in scenery ? SceneryEntries : [])
         {
             w.WriteStartObject();
             w.WriteString("name", name);

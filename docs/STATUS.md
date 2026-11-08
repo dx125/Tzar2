@@ -561,7 +561,8 @@ owner's order of 2026-10-26.
        rocks and ruins can close their cells, but the switch stays off (ADR 0281; log below).
     2. Corners: **done** - land units step diagonally between obstacles touching at a corner, as the original's, and
        `world.decorationsObstruct` is on (WORLD-023, WORLD-003; ADR 0282; log below).
-    3. The ruins' capture and their `ruinpoints` (CAP-007).
+    3. The ruins' capture and their `ruinpoints`: **done** - a type per ruin picture, taken by fighters as the magic
+       gateway, scoring its holder every second (CAP-007; ADR 0283; log below).
     4. B - a map's own resources in the game: its pictures (story screens, conversations), the sounds of scrolls and
        phrases, its sound sources and music playlist, its units' icons and titles.
     5. C - custom maps and campaigns: played from the menus (single player, and multiplayer where every player has the
@@ -575,6 +576,14 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-08 — Ruins are taken and score (CAP-007; ADR 0283; item 26.3).**
+  * **Types of their own.** The original's statues, altars and wells (the editor's special locations) become one type
+    per picture, `comm.gr_*`, compiled from the terrain sets' data. They are taken as the magic gateway is, by the
+    fighters of one kingdom beside them, and nothing hurts them.
+  * **Scoring.** Every second a held ruin scores its picture's `ruinpoints` (1 to 7 raw) to its holder.
+  * **The converter** places a ruin as its type with its owner. The editor places ruins from the object palette.
+  * **Saves of earlier versions on the original's data cannot be continued:** the new types shift the entity type ids
+    (ADR 0271 refuses other tables). The synthetic save fixture keeps its test on the tables without ruins.
 * **2026-11-08 — Land units step past corners; rocks and ruins close their cells (WORLD-023, WORLD-003; ADR 0282; item
   26.2).**
   * **Corners.** ADR 0021's navigation cut no corner: a diagonal step needed both of its sides free. The original's path
