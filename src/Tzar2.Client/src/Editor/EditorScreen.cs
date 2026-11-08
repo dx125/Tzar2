@@ -96,7 +96,7 @@ public partial class EditorScreen : Control
         layout.AddChild(split);
         var leftBox = new VBoxContainer { CustomMinimumSize = new Vector2(270, 0) };
         _left = leftBox;
-        _tools = new ToolPanel(_controller, Content.Editing.DecorationCatalog.Build(_store.Index, Document.TerrainSet));
+        _tools = new ToolPanel(_controller, Content.Editing.DecorationCatalog.Build(_store.Index, Document.TerrainSet, IsRuinType));
         leftBox.AddChild(_tools);
         _view = new MapView(_store, _catalog, _controller);
         _minimap = new Minimap(_controller, _view);
@@ -171,7 +171,7 @@ public partial class EditorScreen : Control
         document.Changed += _ => RefreshNamedAreas();
         RefreshNamedAreas();
         _tools.RefreshTerrain();
-        _tools.RefreshDecorations(Content.Editing.DecorationCatalog.Build(_store.Index, document.TerrainSet));
+        _tools.RefreshDecorations(Content.Editing.DecorationCatalog.Build(_store.Index, document.TerrainSet, IsRuinType));
         _view.Rebuild();
         _minimap.Refresh();
         _locator.Refresh();
@@ -429,6 +429,9 @@ public partial class EditorScreen : Control
 
     /// <summary>Lets later parts of the editor add menus (Triggers, Play, Campaign).</summary>
     public event Action<MenuBar>? ExtraMenus;
+
+    // A ruin picture the ruleset places as an entity of its own (CAP-007, ADR 0283).
+    private bool IsRuinType(string image) => _rules.EntityTypeId(MapDecoration.RuinType(image)) >= 0;
 
     /// <summary>Adds a menu to the bar.</summary>
     public static PopupMenu Menu(MenuBar bar, string title)

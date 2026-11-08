@@ -410,6 +410,18 @@ public sealed record WorldTraits
     /// </summary>
     public bool Prowls { get; init; }
 
+    /// <summary>
+    /// A ruin's picture (CAP-007, ADR 0283): a statue, an altar - one of the original's special locations, drawn by this
+    /// IMAGES.INI entry instead of its class's; empty for other types.
+    /// </summary>
+    public string RuinImage { get; init; } = string.Empty;
+
+    /// <summary>
+    /// What a ruin scores its holder every second (its picture's <c>ruinpoints</c>; CAP-007, ReTzar's reading of the
+    /// original, 0x4b6760, 0x443430 type 6), in the score's raw units; 0 for other types.
+    /// </summary>
+    public int RuinPoints { get; init; }
+
     /// <summary>Whether the type is ambient life (birds): never a combat target, never counted for victory.</summary>
     public bool IsAmbient { get; init; }
 

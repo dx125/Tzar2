@@ -602,7 +602,7 @@ public static class SyntheticLegacyContent
             w.WriteString("image", image);
             w.WriteNull("asset");
             w.WriteStartObject("properties");
-            foreach ((string k, string v) in new[] { ("image", image), ("object", box), ("terrains", terrains), ("displayname", shown) })
+            foreach ((string k, string v) in new[] { ("image", image), ("object", box), ("terrains", terrains), ("displayname", shown), ("ruinpoints", name.StartsWith("gr_", StringComparison.Ordinal) ? "5" : "0") })
             {
                 w.WriteStartArray(k);
                 w.WriteStringValue(v);

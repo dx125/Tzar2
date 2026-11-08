@@ -322,6 +322,22 @@ public class LegacyConverterTests
     }
 
     [Fact]
+    [Trait("Rule", "CAP-007")]
+    public void A_ruin_becomes_its_pictures_type_with_its_owner_and_stays_a_decoration_without_one()
+    {
+        // ADR 0283: the ruleset has a type per ruin picture; a picture it lacks keeps the decoration of ADR 0281.
+        Ruleset rules = SyntheticLegacyContent.CompileRuleset();
+        SyntheticMap m = FullMap();
+        m.Objects.Add(new SyntheticObject { ClassName = "ruin", X = 5, Y = 2, Owner = 2, Race = 0, Id = 41, Image = "gr_statue_1" });
+        m.Objects.Add(new SyntheticObject { ClassName = "ruin", X = 2, Y = 5, Owner = 0, Race = 0, Id = 42, Image = "gr_unknown" });
+        MapConversion c = LegacyMapConverter.Convert(m.Build(), "full.wmp", new LegacyConversionOptions { Ruleset = rules });
+        MapObject statue = c.Map!.Objects.Single(o => o.TypeKey == "comm.gr_statue_1");
+        Assert.Equal(((byte)1, 5, 2), (statue.Owner, statue.X / MapData.UnitsPerTile, statue.Y / MapData.UnitsPerTile));
+        Assert.Contains(c.Map.Decorations, d => d.Class == "ruin" && d.Image == "gr_unknown");
+        c.Map.Validate(rules);
+    }
+
+    [Fact]
     public void Malformed_input_is_reported_not_thrown()
     {
         MapConversion c = LegacyMapConverter.Convert([1, 2, 3], "junk.wmp");

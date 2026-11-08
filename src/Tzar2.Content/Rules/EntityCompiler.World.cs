@@ -45,6 +45,21 @@ internal sealed partial class EntityCompiler
             };
         }
 
+        if (entry.Find("Ruin") is { } ruin)
+        {
+            int points = ruin.Get("points") is { } p ? RulesetCompiler.Int(p.Node, p.Source, $"{key}.Ruin.points") : 0;
+            if (points < 0)
+            {
+                throw Error(ruin.Get("points")!.Value, $"{key}.Ruin.points must not be negative");
+            }
+
+            w = w with
+            {
+                RuinImage = ruin.Get("image") is { } i ? RulesetCompiler.Str(i.Node, i.Source, $"{key}.Ruin.image") : string.Empty,
+                RuinPoints = points,
+            };
+        }
+
         if (entry.Find("Indestructible") is not null)
         {
             w = w with { Indestructible = true };

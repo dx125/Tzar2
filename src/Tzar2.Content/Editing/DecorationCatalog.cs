@@ -39,8 +39,12 @@ public static class DecorationCatalog
     /// <summary>The sections in palette order.</summary>
     public static IReadOnlyList<string> Sections { get; } = [Patches, Objects, WaterObjects, Special];
 
-    /// <summary>The groups of terrain set <paramref name="terrainSet"/>, by section, then name.</summary>
-    public static ImmutableArray<DecorationGroup> Build(SpriteIndex index, string? terrainSet)
+    /// <summary>
+    /// The groups of terrain set <paramref name="terrainSet"/>, by section, then name. Pictures for which
+    /// <paramref name="placedAsEntity"/> holds (the ruins a ruleset has as types, ADR 0283) are left out: the object palette
+    /// places them.
+    /// </summary>
+    public static ImmutableArray<DecorationGroup> Build(SpriteIndex index, string? terrainSet, Func<string, bool>? placedAsEntity = null)
     {
         ArgumentNullException.ThrowIfNull(index);
         string common = SpriteIndex.TerrainIni(SceneryTable.CommonSet);
@@ -70,7 +74,7 @@ public static class DecorationCatalog
                     "gr_" => (Special, MapDecoration.Ruin),
                     _ => null,
                 };
-                if (kind is not { } k)
+                if (kind is not { } k || placedAsEntity?.Invoke(e.Name) == true)
                 {
                     continue;
                 }

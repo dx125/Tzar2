@@ -72,6 +72,7 @@ internal sealed partial class EntityCompiler
         ["SpawnOnDeath"] = ["type", "start", "perSecond", "max", "piece"],
         ["Lifetime"] = ["ms"],
         ["Trader"] = ["capacity", "access", "technology"],
+        ["Ruin"] = ["image", "points"],
         ["TradeDock"] = ["access"],
         ["Tavern"] = [],
         ["ClaimOnTouch"] = ["by"],

@@ -21,6 +21,17 @@ public class RulesetCompilerTests
     private static int Resource(string key) => Classic.ResourceId(key);
 
     [Fact]
+    [Trait("Rule", "CAP-007")]
+    public void Each_ruin_picture_compiles_to_a_type_taken_by_fighters_that_scores_its_ruinpoints()
+    {
+        // ADR 0283: one type per gr_ picture; claimed as the magic gateway, nothing hurts it, its cells from the picture.
+        EntityTypeDefinition statue = Type(Classic, "comm.gr_statue_1");
+        Assert.Equal(("gr_statue_1", 5, ClaimBy.Military, true), (statue.Traits.World.RuinImage, statue.Traits.World.RuinPoints, statue.Traits.World.Claim, statue.Traits.World.Indestructible));
+        Assert.Equal((2, 2, "ruin"), (statue.FootprintWidth, statue.FootprintHeight, statue.Traits.LegacyClass));
+        Assert.Equal("comm.gr_water_pit_1", MapDecoration.RuinType("gr_water pit_1"));
+    }
+
+    [Fact]
     [Trait("Rule", "WORLD-003")]
     public void The_terrain_sets_decoration_pictures_compile_to_the_cells_they_close()
     {
