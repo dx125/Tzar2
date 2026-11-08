@@ -160,7 +160,8 @@ public class LegacyConverterTests
         Assert.Equal(MapObjectFlags.Rotated | MapObjectFlags.Mirrored | MapObjectFlags.Open, o[2].Flags);
         Assert.Equal(MapObjectFlags.None, o[3].Flags);
         Assert.Equal((byte)6, o[4].Facing);   // legacy 4 = north → ours 6
-        Assert.Equal(map.ContentHash, MapBinary.Read(MapBinary.Write(map)).ContentHash);
+        // map.bin holds no decorations (decorations.json does; ADR 0281): with them the hash comes back.
+        Assert.Equal(map.ContentHash, MapBinary.Read(MapBinary.Write(map)).WithDecorations(map.Decorations).ContentHash);
     }
 
     [Fact]
@@ -259,7 +260,7 @@ public class LegacyConverterTests
         using var reader = PackageReader.Open(new MemoryStream(pa), "full.t2map");
         PackageManifest manifest = PackageManifest.Parse(Encoding.UTF8.GetString(reader.ReadAllBytes("package.yaml")));
         Assert.Equal(PackageKind.Map, manifest.Kind);
-        MapData map = MapBinary.Read(reader.ReadAllBytes("map.bin"));
+        MapData map = MapBinary.Read(reader.ReadAllBytes("map.bin")).WithDecorations(a.Map.Decorations); // decorations.json (ADR 0281)
         Assert.Equal(a.Map.ContentHash, map.ContentHash);
         ScenarioData scenario = ScenarioJson.Read(reader.ReadAllBytes("scenario.json"));
         Assert.Equal(a.Scenario.ContentHash, scenario.ContentHash);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using Tzar2.Content.Assets;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Editing;
@@ -439,11 +440,46 @@ public class ToolTests
         DocumentState s = doc.State.AddDecoration(doc, new MapDecoration("ground_patch", "daisies", 2, 2, -1, -1), out bool a)
             .AddDecoration(doc, new MapDecoration("ground_patch", "ferns", 2, 2, -1, -1), out bool b)
             .AddDecoration(doc, new MapDecoration("ground_object", "sign", 15, 15, -1, -1), out bool c)
-            .AddDecoration(doc, new MapDecoration("water_object", "reeds", 15, 15, -1, -1), out bool d);
+            .AddDecoration(doc, new MapDecoration("ground_object", "go_lake rock", 15, 15, -1, -1), out bool d, onWater: true);
         Assert.Equal((true, true, false, true), (a, b, c, d));
         Assert.Equal(2, s.RemoveDecorationsAt(2, 2).Decorations.Count + 1);
+
+        // A converted map's patch lies at tile (0, 0) with its own pixel: erasing finds it on the tile of that pixel.
+        DocumentState converted = doc.State with { Decorations = [new MapDecoration("ground_patch", "gp_spot", 0, 0, (3 * 32) + 5, (4 * 32) + 9)] };
+        Assert.Single(converted.RemoveDecorationsAt(0, 0).Decorations);
+        Assert.Empty(converted.RemoveDecorationsAt(3, 4).Decorations);
         Assert.Equal("c", DecorationEdits.NextShape(["a", "b", "c"], "b"));
         Assert.Equal("c", DecorationEdits.NextShape(["a", "b", "c"], "a", backwards: true));
+    }
+
+    [Fact]
+    public void The_decoration_palette_comes_from_the_terrain_sets_pictures_in_their_display_groups()
+    {
+        // ADR 0281: gp_ pictures are patches, go_ ground objects (on water when their terrains say so), gr_ the special
+        // locations; groups are the display names; the map's set comes before the common one, companions are left out.
+        static SpriteIndexEntry E(string name, string set, string shown, string terrains = "land")
+            => new(name, SpriteIndex.TerrainIni(set), "art/" + name + ".t2spr", [new("displayname", [shown]), new("terrains", [terrains])]);
+        var index = new SpriteIndex(
+        [
+            E("gp_spot_1", "grass", "Spot"), E("gp_spot_2", "grass", "Spot"), E("go_small_mont_1", "grass", "Small Mountain"),
+            E("go_small_mont_1_s", "grass", "Small Mountain"), E("go_lake_1", "grass", "Lake", "water"), E("gp_spot_9", "snow", "Spot"),
+            E("go_small_mont_1", "common", "Rock"), E("gr_statue_1", "common", "Special Locations"), E("e_knight", "grass", "Knight"),
+        ]);
+        ImmutableArray<DecorationGroup> groups = DecorationCatalog.Build(index, "grass");
+        Assert.Equal(
+            [
+                (DecorationCatalog.Patches, "Spot", "ground_patch", false, "gp_spot_1,gp_spot_2"),
+                (DecorationCatalog.Objects, "Small Mountain", "ground_object", false, "go_small_mont_1"),
+                (DecorationCatalog.WaterObjects, "Lake", "ground_object", true, "go_lake_1"),
+                (DecorationCatalog.Special, "Special Locations", "ruin", false, "gr_statue_1"),
+            ],
+            groups.Select(g => (g.Section, g.Name, g.Class, g.OnWater, string.Join(",", g.Images))));
+
+        // Placing a group's picture at random: deterministic, and always one of the group's.
+        var c = new EditorController(Map(), Fixtures.Classic) { Tool = EditorTool.Decoration, DecorationClass = "ground_patch", DecorationShapes = ["gp_spot_1", "gp_spot_2"], DecorationRandom = true };
+        c.PointerDown(new MapPoint(3, 3, 3, 3), EditorModifiers.None);
+        c.PointerUp(new MapPoint(3, 3, 3, 3), EditorModifiers.None);
+        Assert.Contains(c.Document.State.Decorations.Single().Image, c.DecorationShapes);
     }
 
     [Fact]

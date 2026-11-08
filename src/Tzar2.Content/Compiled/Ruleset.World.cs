@@ -24,7 +24,7 @@ public sealed partial class Ruleset
             .Add(w.MercenaryGroupMax).Add(w.MercenaryLevel).Add(w.HeroLevelMin).Add(w.HeroLevelMax).Add(w.FameLevelBonus).Add(w.HirePricePercent)
             .Add(w.HireGoldPerLevel).Add(w.HireOtherPerLevel).Add(Encoding.UTF8.GetBytes(w.MercenariesTechnology))
             .Add(Encoding.UTF8.GetBytes(w.HeroesTechnology)).Add(Encoding.UTF8.GetBytes(w.FameTechnology))
-            .Add(Encoding.UTF8.GetBytes(w.GamblingTechnology)).Add(Encoding.UTF8.GetBytes(w.LoanTechnology)).Add(w.Weather.Length);
+            .Add(Encoding.UTF8.GetBytes(w.GamblingTechnology)).Add(Encoding.UTF8.GetBytes(w.LoanTechnology)).Add(w.DecorationsObstruct).Add(w.Weather.Length);
         foreach (TerrainWeather t in w.Weather)
         {
             hasher.Add(Encoding.UTF8.GetBytes(t.TerrainSet)).Add((byte)t.Kind);

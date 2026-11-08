@@ -194,7 +194,7 @@ public sealed class MapDocument
             objects.ToImmutable(),
             next,
             model,
-            ImmutableList<MapDecoration>.Empty,
+            [.. map.Decorations],
             ImmutableSortedDictionary.Create<string, ImmutableArray<byte>>(StringComparer.Ordinal),
             EditorExtras.Default);
         byte[] painted = rules.HasSet ? map.SetTerrainCorners.ToArray() : map.TerrainCorners.ToArray();
@@ -281,7 +281,17 @@ public sealed class MapDocument
             objects.Add(o.Placement);
         }
 
-        return new MapData(State.Name, Width, Height, _terrain, _heights, _cliffs, objects, Rules.SetId, Rules.HasSet ? _painted : default);
+        // The decorations go with the map (ADR 0281); any off the map are left out.
+        var decorations = new List<MapDecoration>(State.Decorations.Count);
+        foreach (MapDecoration d in State.Decorations)
+        {
+            if ((uint)d.TileX < (uint)Width && (uint)d.TileY < (uint)Height)
+            {
+                decorations.Add(d);
+            }
+        }
+
+        return new MapData(State.Name, Width, Height, _terrain, _heights, _cliffs, objects, Rules.SetId, Rules.HasSet ? _painted : default, decorations);
     }
 
     /// <summary>

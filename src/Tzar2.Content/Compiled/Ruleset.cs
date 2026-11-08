@@ -78,6 +78,7 @@ public sealed partial class Ruleset
     /// <param name="hudResourceMask">Resource types the HUD shows (bit = id; -1 = all; GAME-01: iron is hidden).</param>
     /// <param name="combat">Combat, experience, holder, item and magic content (GAME-07…11; null = none).</param>
     /// <param name="commonCivilization">The key of the types every civilization shares (towers, walls, ships, nature: <c>comm</c>).</param>
+    /// <param name="scenery">The cells decoration pictures cover (ADR 0281; null = none).</param>
     /// <exception cref="ArgumentException">The lists are empty, ids do not match positions, keys repeat, or a trait refers to an unknown id.</exception>
     public Ruleset(
         string name,
@@ -97,7 +98,8 @@ public sealed partial class Ruleset
         int hudResourceMask = -1,
         WorldSettings? world = null,
         CombatRules? combat = null,
-        string commonCivilization = DefaultCommonCivilization)
+        string commonCivilization = DefaultCommonCivilization,
+        SceneryTable? scenery = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentNullException.ThrowIfNull(terrainTypes);
@@ -231,8 +233,15 @@ public sealed partial class Ruleset
         MaxPlayers = maxPlayers;
         CorpseTtlMilliseconds = corpseTtlMilliseconds;
         DecalCap = decalCap;
+        Scenery = scenery ?? SceneryTable.Empty;
         ContentHash = ComputeHash();
     }
+
+    /// <summary>
+    /// The cells the original's decoration pictures cover (ADR 0281): ground objects and ruins close them
+    /// (<see cref="MapDecoration.Obstructs"/>). Empty for rulesets without the original's data.
+    /// </summary>
+    public SceneryTable Scenery { get; }
 
     /// <summary>Ruleset name, e.g. <c>classic</c>.</summary>
     public string Name { get; }
@@ -884,6 +893,22 @@ public sealed partial class Ruleset
 
         AddWorld(hasher);
         AddCombat(hasher);
+
+        // Added after HashVersion without bumping it (ADR 0281): rulesets without scenery hash as before.
+        if (Scenery.Shapes.Length > 0)
+        {
+            hasher.Add(Scenery.Shapes.Length);
+            foreach (SceneryShape shape in Scenery.Shapes)
+            {
+                hasher.Add(shape.Set.Length).Add(Encoding.UTF8.GetBytes(shape.Set)).Add(shape.Image.Length).Add(Encoding.UTF8.GetBytes(shape.Image))
+                    .Add(shape.Width).Add(shape.Height);
+                foreach (bool free in shape.Free)
+                {
+                    hasher.Add(free);
+                }
+            }
+        }
+
         return hasher.GetCurrentHash();
     }
 

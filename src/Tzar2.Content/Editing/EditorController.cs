@@ -169,6 +169,12 @@ public sealed class EditorController
     /// <summary>The shapes TAB cycles through for the current decoration group.</summary>
     public IReadOnlyList<string> DecorationShapes { get; set; } = [];
 
+    /// <summary>Whether the current decoration group lies on water (<c>terrains = water</c>), else on land.</summary>
+    public bool DecorationOnWater { get; set; }
+
+    /// <summary>Whether each decoration placed is a picture of the group at random (§18.2 "random within a group").</summary>
+    public bool DecorationRandom { get; set; }
+
     /// <summary>Kingdom (1–8) the start tool sets.</summary>
     public int StartKingdom { get; set; } = 1;
 
@@ -546,7 +552,12 @@ public sealed class EditorController
     private void Decorate(MapPoint p)
     {
         bool added = false;
-        Document.Apply("Place decoration", s => s.AddDecoration(Document, new MapDecoration(DecorationClass, DecorationImage, p.TileX, p.TileY, -1, -1), out added));
+        // Random within the group: a picture picked by the tile and how many decorations there are (deterministic, so a
+        // stroke repeated on another map gives the same pictures).
+        string image = DecorationRandom && DecorationShapes.Count > 0
+            ? DecorationShapes[(int)((uint)((p.TileX * 7) + (p.TileY * 13) + Document.State.Decorations.Count) % (uint)DecorationShapes.Count)]
+            : DecorationImage;
+        Document.Apply("Place decoration", s => s.AddDecoration(Document, new MapDecoration(DecorationClass, image, p.TileX, p.TileY, -1, -1), out added, DecorationOnWater));
         if (!added)
         {
             Status?.Invoke($"A {DecorationClass} cannot lie here.");

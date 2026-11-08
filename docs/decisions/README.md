@@ -184,3 +184,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0278](0278-mages-and-priests-as-the-original-has-them.md) | Give mages and priests the original's casting, targets and pictures, and let the Attack order strike anyone | Accepted | 2026-11-06 |
 | [0279](0279-arabian-and-asian-casters-as-the-original-has-them.md) | Give the Arabian and Asian casters' spells the original's falls, sight and healing round | Accepted | 2026-11-06 |
 | [0280](0280-the-global-audit-against-retzar-and-the-original.md) | Audit the remake against ReTzar and settle disagreements in the original's code | Accepted | 2026-11-07 |
+| [0281](0281-draw-the-maps-decorations-and-let-rocks-and-ruins-close-their-cells.md) | Draw the map's decorations and let rocks and ruins close their cells | Accepted | 2026-11-08 |

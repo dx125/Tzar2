@@ -1,16 +1,8 @@
 using System.Collections.Immutable;
+using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
 
 namespace Tzar2.Content.Editing;
-
-/// <summary>A drawn, not simulated decoration (ground patch, ground object, animation; <c>decorations.json</c>, ADR 0121).</summary>
-/// <param name="Class">Legacy class (<c>ground_patch</c>, <c>ground_object</c>, <c>animation</c>…).</param>
-/// <param name="Image">Image or draw-definition name.</param>
-/// <param name="TileX">Tile column.</param>
-/// <param name="TileY">Tile row.</param>
-/// <param name="PixelX">Pixel x inside the map, or −1.</param>
-/// <param name="PixelY">Pixel y inside the map, or −1.</param>
-public sealed record MapDecoration(string Class, string Image, int TileX, int TileY, int PixelX, int PixelY);
 
 /// <summary>A named rectangle reusable across triggers (TDD §18.3).</summary>
 /// <param name="Name">Name.</param>

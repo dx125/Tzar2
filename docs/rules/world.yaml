@@ -12,12 +12,16 @@ rules:
     status: implemented
   WORLD-003:
     rule: Rocks, mountains and cliffs cannot be walked through.
-    source: [manual Terrain]
-    status: tested
+    source: [manual Terrain, 'community ReTzar src/gameplay/movement.rs (ground objects 0x434d10, ruins 0x41ddc0)', 'community ReTzar src/world.rs (masks: the picture''s .dat, 0x497ed0)']
+    status: partial
+    adr: [0281]
+    note: 'Built but off (world.decorationsObstruct: false) until units step diagonally past corners as the original''s do: with the rocks closed and Tzar2''s step cutting no corner, the heroes of the first campaign mission (v_00) cannot reach its end; the other 25 missions complete. A map''s rocks, mountains, holes and the like are its ground objects, and its statues and altars its ruins: they close the cells their picture''s object box covers, but those the picture''s .dat grid leaves free (bit 2); a picture without a grid closes them all; fliers pass over. The original''s loader takes the .dat of any picture by its file name (0x497c90, read in Tzar.exe); ReTzar reads it only for pictures under building\ or scenery\. Until ADR 0281 the converter kept them as decorations nobody drew, and units walked through them.'
   WORLD-004:
     rule: Units walk and build over scenery such as tufts, bones, pebbles and branches.
     source: [manual Terrain]
-    status: implemented
+    status: tested
+    adr: [0281]
+    note: These are the map's ground patches (and its tree stumps); they lie under everything and close no cell.
   WORLD-005:
     rule: There are four terrain sets, Grassland, Summer, Winter and Desert.
     source: [manual Terrain]

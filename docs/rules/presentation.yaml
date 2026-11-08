@@ -104,3 +104,9 @@ rules:
     status: tested
     adr: [0279]
     note: Until then the client played no spell's sound, drew no whirlpool and no fire rain. The bolts' (lightning, stone, flame ball, freeze) sounds take the explosion priority, the others the far attack's, as ReTzar maps the original's categories 19 and 13.
+  PRES-021:
+    rule: A map's decorations are drawn - its ground patches flat under everything, its ground objects and ruins standing among the units by their foot with their shadows, animated at their pictures' pace, and its tree stumps - hidden on land not yet explored.
+    source: ['data IMAGES\TERRAIN\*.IMAGES.INI (gp_, go_, gr_ entries: object, fps, rows, startrow)', 'community ReTzar src/world.rs (MapObject::location: a patch at cell (0, 0) lies at its own pixel; anchor, place)', 'community ReTzar src/frontend/scene.rs (scenery runs in step from its start row, 0x4312b0, 0x434640; ground patches lowest)']
+    status: implemented
+    adr: [0281]
+    note: Until ADR 0281 neither the game nor the editor drew them (the editor showed a dot); the original campaigns hold about 10,800 patches, 3,400 ground objects, 18 ruins and 8,200 stumps. A picture of the map's terrain set comes before another set's of the same name. The original's per-object pace (payload 0x58) is not converted; the picture's own fps is used.

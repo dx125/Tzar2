@@ -247,7 +247,8 @@ public sealed class OriginRulesetTests(ITestOutputHelper output) : IDisposable
         Assert.Equal(DropOffAccess.Land, Get(classic, "asia.market").Traits.World.TradeDock);
         Assert.Equal(DropOffAccess.Water, Get(classic, "arab.harbor").Traits.World.TradeDock);
         Assert.True(Get(classic, "euro.tavern").Traits.World.IsTavern);
-        Assert.True(Get(classic, "comm.bear").Traits.World.Guards);
+        Assert.True(Get(classic, "comm.bear").Traits.World.Prowls); // NAT-003 (#283): it prowls round its place, not guards it
+        Assert.False(Get(classic, "comm.bear").Traits.World.Guards);
         Assert.True(Get(classic, "comm.bird").Traits.World.IsAmbient);
         Assert.True(Get(classic, "euro.knight").Traits.World.IsMilitary);
         Assert.False(Get(classic, "euro.peon").Traits.World.IsMilitary);

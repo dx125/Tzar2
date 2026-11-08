@@ -295,7 +295,17 @@ public static class LegacyMapConverter
 
             try
             {
-                return new MapData(title, side, side, terrain, [], cliffs, _objects, set.Length > 0 ? set : null, set.Length > 0 ? setCorners : default);
+                // The decorations go with the map (ADR 0281): drawn, and ground objects and ruins close their cells.
+                var decorations = new List<MapDecoration>(_decorations.Count);
+                foreach (Decoration d in _decorations)
+                {
+                    if ((uint)d.TileX < (uint)side && (uint)d.TileY < (uint)side)
+                    {
+                        decorations.Add(new MapDecoration(d.ClassName, d.Image, d.TileX, d.TileY, d.PixelX, d.PixelY));
+                    }
+                }
+
+                return new MapData(title, side, side, terrain, [], cliffs, _objects, set.Length > 0 ? set : null, set.Length > 0 ? setCorners : default, decorations);
             }
             catch (ArgumentException e)
             {

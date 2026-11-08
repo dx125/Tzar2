@@ -283,40 +283,39 @@ public static class AssetEdits
     }
 }
 
-/// <summary>Decorations (TDD §18.2 "Decorations"): ground patches stack anywhere on land, ground objects on land, water objects on water.</summary>
+/// <summary>
+/// Decorations (TDD §18.2 "Decorations"; ADR 0281): ground patches stack anywhere on land, ground objects lie on land or,
+/// for the pictures made for it, on water.
+/// </summary>
 public static class DecorationEdits
 {
-    /// <summary>Whether a decoration of <paramref name="class"/> may lie on tile (<paramref name="x"/>, <paramref name="y"/>).</summary>
-    public static bool Allowed(MapDocument doc, string @class, int x, int y)
+    /// <summary>
+    /// Whether a decoration may lie on tile (<paramref name="x"/>, <paramref name="y"/>): on water when
+    /// <paramref name="onWater"/> (the picture's <c>terrains = water</c>), else on land.
+    /// </summary>
+    public static bool Allowed(MapDocument doc, int x, int y, bool onWater)
     {
         ArgumentNullException.ThrowIfNull(doc);
-        ArgumentNullException.ThrowIfNull(@class);
-        if (!doc.ContainsTile(x, y))
-        {
-            return false;
-        }
-
-        return @class switch
-        {
-            "water_object" => doc.IsWaterTile(x, y),
-            _ => doc.IsLandTile(x, y),
-        };
+        return doc.ContainsTile(x, y) && (onWater ? doc.IsWaterTile(x, y) : doc.IsLandTile(x, y));
     }
 
     /// <summary>Adds a decoration where it is allowed (patches stack; there is no occupancy check).</summary>
-    public static DocumentState AddDecoration(this DocumentState state, MapDocument doc, MapDecoration d, out bool added)
+    public static DocumentState AddDecoration(this DocumentState state, MapDocument doc, MapDecoration d, out bool added, bool onWater = false)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(d);
-        added = Allowed(doc, d.Class, d.TileX, d.TileY);
+        added = Allowed(doc, d.TileX, d.TileY, onWater);
         return added ? state with { Decorations = state.Decorations.Add(d) } : state;
     }
 
-    /// <summary>Removes the decorations on a tile.</summary>
+    /// <summary>
+    /// Removes the decorations on a tile: those standing on it, and the patches whose own pixel lies on it (a converted
+    /// map's patches are stored at tile (0, 0) with their pixel).
+    /// </summary>
     public static DocumentState RemoveDecorationsAt(this DocumentState state, int x, int y)
     {
         ArgumentNullException.ThrowIfNull(state);
-        return state with { Decorations = state.Decorations.RemoveAll(d => d.TileX == x && d.TileY == y) };
+        return state with { Decorations = state.Decorations.RemoveAll(d => d.Tile == (x, y)) };
     }
 
     /// <summary>The next shape of a decoration group (TAB cycles shapes): the image after <paramref name="image"/> in <paramref name="shapes"/>.</summary>

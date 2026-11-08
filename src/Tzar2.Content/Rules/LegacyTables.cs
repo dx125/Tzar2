@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
+using Tzar2.Content.Compiled;
 using Tzar2.Content.Vfs;
 
 namespace Tzar2.Content.Rules;
@@ -65,6 +67,7 @@ internal sealed class LegacyTables
     private readonly Dictionary<string, LegacyIni> _objectsByClass = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _sprites = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, LegacyFootprint> _footprints = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<(string Set, string Name, string Image, string Box)> _scenery = [];
 
     private LegacyTables(VirtualFileSystem vfs)
     {
@@ -119,6 +122,11 @@ internal sealed class LegacyTables
             foreach (JsonElement entry in doc.RootElement.EnumerateArray())
             {
                 string? name = entry.GetProperty("name").GetString();
+                if (name is not null && SceneryOf(entry, name) is { } scenery)
+                {
+                    tables._scenery.Add(scenery);
+                }
+
                 if (name is null || tables._sprites.ContainsKey(name))
                 {
                     continue;
@@ -165,6 +173,59 @@ internal sealed class LegacyTables
                 }
             }
         }
+    }
+
+    // A decoration picture of a terrain set's IMAGES.INI that may close cells: a ground object (go_) or a ruin (gr_), not
+    // a shadow or colour companion, with an object box (ADR 0281).
+    private static (string Set, string Name, string Image, string Box)? SceneryOf(JsonElement entry, string name)
+    {
+        const string Prefix = "images/terrain/", Suffix = ".images.ini";
+        if (!entry.TryGetProperty("ini", out JsonElement iniElement) || iniElement.GetString() is not { } ini
+            || !ini.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) || !ini.EndsWith(Suffix, StringComparison.OrdinalIgnoreCase)
+            || !(name.StartsWith("go_", StringComparison.OrdinalIgnoreCase) || name.StartsWith("gr_", StringComparison.OrdinalIgnoreCase))
+            || name.EndsWith("_s", StringComparison.OrdinalIgnoreCase) || name.EndsWith("_shadow", StringComparison.OrdinalIgnoreCase)
+            || name.EndsWith("_c", StringComparison.OrdinalIgnoreCase)
+            || !entry.TryGetProperty("image", out JsonElement image) || image.GetString() is not { Length: > 0 } imagePath
+            || !entry.TryGetProperty("properties", out JsonElement props) || !props.TryGetProperty("object", out JsonElement box)
+            || box.ValueKind != JsonValueKind.Array || box.GetArrayLength() == 0 || box[0].GetString() is not { } boxText)
+        {
+            return null;
+        }
+
+        return (ini[Prefix.Length..^Suffix.Length].ToLowerInvariant(), name, imagePath, boxText);
+    }
+
+    /// <summary>
+    /// The cells the decoration pictures of the terrain sets cover (ADR 0281): the <c>object</c> box in whole tiles (at
+    /// least one, rounded down as the original's cells), and per cell whether it stays free: the picture's <c>.dat</c> grid
+    /// (bit 2) read row by row at the box's width, as the original reads it (0x497c90 loads <c>&lt;picture&gt;.dat</c> for
+    /// any picture, 0x41de41 tests the bit); a picture without a grid closes every cell.
+    /// </summary>
+    public IReadOnlyList<SceneryShape> SceneryShapes()
+    {
+        var shapes = new List<SceneryShape>(_scenery.Count);
+        foreach ((string set, string name, string image, string boxText) in _scenery)
+        {
+            string[] parts = boxText.Split(',', StringSplitOptions.TrimEntries);
+            if (parts.Length != 4 || !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int bw)
+                || !int.TryParse(parts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out int bh))
+            {
+                continue;
+            }
+
+            int w = Math.Clamp(bw / 32, 1, 64), h = Math.Clamp(bh / 32, 1, 64);
+            LegacyFootprint? grid = Footprint("images/" + ContentPath.ChangeExtension(ContentPath.Normalize(image), ".dat"));
+            var free = new bool[w * h];
+            for (int i = 0; i < free.Length; i++)
+            {
+                // Cells past the grid's bytes are taken as closed (⚠ the original reads past the grid there).
+                free[i] = grid is not null && i < grid.Grid.Count && (grid.Grid[i] & 2) != 0;
+            }
+
+            shapes.Add(new SceneryShape(set, name, w, h, [.. free]));
+        }
+
+        return shapes;
     }
 
     /// <summary>The object INI whose <c>[general] class</c> is <paramref name="cls"/>, or null.</summary>

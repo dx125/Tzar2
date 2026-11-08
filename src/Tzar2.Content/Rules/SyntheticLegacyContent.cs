@@ -277,6 +277,25 @@ public static class SyntheticLegacyContent
             w.WriteEndArray();
             w.WriteNumber("frameBoxes", -1);
             w.WriteEndObject();
+
+            // The grass rock's grid: its left cell closed, its right one free (ADR 0281).
+            w.WriteStartObject();
+            w.WriteString("source", "images/terrain/grass/scenery/go_small_mont 1.dat");
+            w.WriteStartArray("footprint");
+            foreach (int v in new[] { 0, 0, 63, 31 })
+            {
+                w.WriteNumberValue(v);
+            }
+
+            w.WriteEndArray();
+            w.WriteNumber("gridWidth", 2);
+            w.WriteNumber("gridHeight", 1);
+            w.WriteStartArray("grid");
+            w.WriteNumberValue(0);
+            w.WriteNumberValue(2);
+            w.WriteEndArray();
+            w.WriteNumber("frameBoxes", -1);
+            w.WriteEndObject();
             w.WriteEndArray();
         }));
         return source;
@@ -575,8 +594,36 @@ public static class SyntheticLegacyContent
             w.WriteEndObject();
         }
 
+        foreach ((string name, string ini, string image, string box, string terrains, string shown) in SceneryEntries)
+        {
+            w.WriteStartObject();
+            w.WriteString("name", name);
+            w.WriteString("ini", ini);
+            w.WriteString("image", image);
+            w.WriteNull("asset");
+            w.WriteStartObject("properties");
+            foreach ((string k, string v) in new[] { ("image", image), ("object", box), ("terrains", terrains), ("displayname", shown) })
+            {
+                w.WriteStartArray(k);
+                w.WriteStringValue(v);
+                w.WriteEndArray();
+            }
+
+            w.WriteEndObject();
+            w.WriteEndObject();
+        }
+
         w.WriteEndArray();
     });
+
+    // Decoration pictures of the terrain sets (ADR 0281): one rock named alike in two sets (grass's with a DAT grid that
+    // leaves its right cell free, summer's without one), and a common statue of 2 x 2 cells.
+    private static readonly (string Name, string Ini, string Image, string Box, string Terrains, string Shown)[] SceneryEntries =
+    [
+        ("go_small_mont_1", "images/terrain/grass.images.ini", @"terrain\grass\scenery\go_small_mont 1.bmp", "5,2,64,32", "land", "Small Mountain"),
+        ("go_small_mont_1", "images/terrain/summer.images.ini", @"terrain\summer\scenery\go_small_mont 1.bmp", "5,2,32,32", "land", "Small Mountain"),
+        ("gr_statue_1", "images/terrain/common.images.ini", @"terrain\common\gr_statue 1.bmp", "0,0,64,64", "land", "Special Locations"),
+    ];
 
     private static byte[] Json(Action<Utf8JsonWriter> write)
     {

@@ -34,4 +34,9 @@ rules:
     status: tested
     adr: [0280]
     note: The global audit of 2026-11-07; Tzar2 used to drop capture progress after 5 s without a digger (UNK-19).
-
+  CAP-007:
+    rule: A ruin on the map (a statue, an altar - a special location) is taken by the fighters of one kingdom standing round it, and the kingdom holding it scores its ruinpoints every second.
+    source: ['community ReTzar src/gameplay.rs (capture_points: 0x4b65bd, 0x420fad, 0x443430 type 6; fighters in the footprint grown by one, of one kingdom that may rescue)', 'data IMAGES\TERRAIN\*.IMAGES.INI ruinpoints']
+    status: missing
+    adr: [0281]
+    note: Found with ADR 0281. Tzar2 draws ruins (and they close their cells once world.decorationsObstruct is on), but nobody takes them and they score nothing; the owner asked for it in the editor series of 2026-11-08 (DIP-011's note).

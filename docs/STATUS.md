@@ -79,7 +79,7 @@ and it has not been re-run since the handover.
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
 | M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). Three play-tests by the owner are done and their findings fixed (2026-10-20/21). Open before M3 closes: the ledger of the original's rules ([rules/](rules/README.md)) and its missing rules (work queue 1), and a fourth play-test. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **19 of 19 measured** (2026-10-22, `t2 campaign run --survey` on the clean GOG install, ADRs 0134, 0220; every map with cheat assistance, none by pure play), tutorial **7 of 7 measured** (2026-10-22). Earlier counts were inflated by AI resignations (ADR 0220). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
-| M5 Editor | **Code complete**, acceptance open | Parity checklist 100 of 104 done, 4 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` verified locally 2026-10-18 (reported), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
+| M5 Editor | **Code complete**, acceptance open; the review's fixes in progress (work queue 26) | Parity checklist 101 of 104 done, 3 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` done (26 of 26 missions, run on the owner's PC with every simulation change), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **Done** (exit criteria met 2026-10-22) | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI (ADRs 0160–0168, 0230, 0231). **500-match soak: 500 of 500 ok, 0 desyncs, 0 failures** (2026-10-22, macOS, `t2 soak --matches 500 --parallel 10 --seed 62`: 2 bots + 2 Hard AIs, 6,000 ticks at 4x, RTT 200 ms, jitter 10 ms, 5 % loss; 251 disconnects and 251 rejoins, 138 after an AI takeover; 749 replays re-simulated; 3.0 M ticks; 65.6 min). Replays recorded on Linux verify on Windows, Linux and macOS (CI `replay-verify`, same final hashes); the nightly 20-match slice passes on Linux and Windows. Matches are 5 minutes, not two hours (ADR 0167). Since the exit: the multiplayer setup (colours, AI scripts, every map and game option; ADR 0232), custom maps in multiplayer with time and score limits (ADRs 0233, 0234; SHELL-018), and the multiplayer menu, lobby and replays on the original's art and font (UI review). |
 | M7 Windows beta | **In progress** | Plan: ADR 0240 (D1–D7). Done: the Windows package (Godot headless export, portable zip, Inno Setup installer, version stamp, uninstall keeps the player's data; ADR 0241), first-run import in the client, the signing step (skipped without secrets; ADR 0242), opt-in crash reports over the Sentry protocol (ADR 0243), the S2 render bench `--bench-render` (D6, ADR 0244; first run on an M5 MacBook at 1080p: 120 FPS, sim p99 14.8 ms above the 12 ms budget, VRAM 3.1 GB). The code review cut the client's memory (terrain tile atlas, ADR 0210; caches and atlas pages freed after a match; a match loaded on a worker thread). The owner's PC (2026-10-23, [min-spec-tuning.md § Results](release/min-spec-tuning.md#results)): S2 passes at 2560 × 1440 (about 1,680 FPS, sim p99 6.8 ms, VRAM 0.33 GB, RAM 2.3 GB, match load 2 s); the headless sim p99 is at most 4.8 ms with 1 to 8 workers; the first-run import takes 10.4 s. Open: the 10-minute skirmish of request 2 (owner), the crash server and the signing certificate (owner), the closed beta (D7). Exit: crash-free ≥ 99.5 %, S2, no P0/P1. |
 | M8 Modding, polish, release | Not started | Also the **fidelity suite ≥ 80 %** (moved from M3, ADR 0174): **10 of 30 (33.3 %)** today, see below. |
@@ -551,12 +551,45 @@ owner's order of 2026-10-26.
     5. E - bears: **fixed** (NAT-003; log below). Left for the owner (ADR 0280): one-way sharing (the manual says both),
        the easy campaign's damage (the sim does not know a campaign's difficulty), the 1.5 s idle scan (slower reactions),
        the fields' countdown (ECO-028, off).
+26. **The editor review (2026-11-08, the owner): finish what the editor makes but the game does not use.** The review
+    found little left as stubs, but several things the editor stores that the game ignores. The owner's order: fix
+    the review's sections 1 (stubs) and 2 (the gaps) first, asking where a decision is theirs; the proposals (section 3)
+    come after. The owner's answers: keep the Lua tab with a warning until M8; custom maps in multiplayer only where
+    every player has the file (matched by hash; sending the map is later); give the step the original's corners in a
+    batch of its own; build the ruins' capture (CAP-007) in this series.
+    1. A - the map's decorations: **drawn** in the game and the editor; the palette comes from the terrain sets' data;
+       rocks and ruins can close their cells, but the switch stays off (ADR 0281; log below).
+    2. Corners: the original's diagonal step between closed cells touching at a corner, then
+       `world.decorationsObstruct` on and every campaign checked (WORLD-003).
+    3. The ruins' capture and their `ruinpoints` (CAP-007).
+    4. B - a map's own resources in the game: its pictures (story screens, conversations), the sounds of scrolls and
+       phrases, its sound sources and music playlist, its units' icons and titles.
+    5. C - custom maps and campaigns: played from the menus (single player, and multiplayer where every player has the
+       file), a warning before unsaved work is lost, autosave, the Lua tab's warning, the map's difficulty.
+    6. D - the triggers: `$difficulty` and the other reserved variables that read 0, the 26 UNVERIFIED readings against
+       ReTzar and the original's code.
+    7. E - the palette's details: tree pictures, the gate's side, units stacking, the authentic import's shadow.
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-08 — The editor review, batch A: the map's decorations (WORLD-003, WORLD-004, PRES-021, CAP-007; ADR 0281;
+  item 26).**
+  * **Drawn at last.** Ground patches, ground objects, ruins and stumps reach the game and are drawn there and in the
+    editor; before, the converter kept them and nothing showed them. They are drawn by the map's terrain set, which
+    several sets name alike, and stay hidden on land not yet explored.
+  * **The palette comes from the data.** The editor's decoration palette is read from the terrain sets'
+    `IMAGES.INI`, grouped by display name, with water objects and special locations. Erasing finds a converted
+    patch by its pixel.
+  * **Rocks and ruins can close their cells** (the original's `.dat` grids; its loader reads them for every picture,
+    checked in `Tzar.exe`). It stays off (`world.decorationsObstruct: false`): Tzar2's step cuts no corner, and the
+    first campaign mission then cannot be finished. Item 26.2 gives the step the original's corners.
+  * Ruins as capture points are recorded as missing (CAP-007).
+  * Two misses of the global audit are fixed here, found by the local-only tests:
+    * `legacy.referenceDataHash` (re-pinned to F3EDD578D5D8B5F9);
+    * the bear's world trait in `OriginRulesetTests`.
 * **2026-11-07 — The global audit, batch E: bears (NAT-003; ADR 0280; item 25).** A bear prowls round where it was put -
   one idle tick of 1.5 s in five it sets off within 6 tiles - looks for a target in 30 % of its looks, and is not called
   home. The audit's last differences are left for the owner (item 25.5).

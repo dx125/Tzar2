@@ -215,6 +215,12 @@ public sealed record WorldSettings
     /// <summary>The technology loans need (empty: none needed).</summary>
     public string LoanTechnology { get; init; } = "te_usury";
 
+    /// <summary>
+    /// Whether a map's ground objects and ruins close the cells under their picture (WORLD-003, ADR 0281). The original's
+    /// do; it waits for the original's diagonal step past corners, without which a campaign mission cannot be finished.
+    /// </summary>
+    public bool DecorationsObstruct { get; init; }
+
     internal void Validate()
     {
         ArgumentOutOfRangeException.ThrowIfNegative(DefaultSightTiles);

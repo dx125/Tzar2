@@ -84,6 +84,29 @@ public sealed class MapState
                 _basePassability[(y * Width) + x] = (byte)mask;
             }
         }
+
+        // ADR 0281: ground objects and ruins close the cells their picture covers, as the original's 0x434d10 and 0x41ddc0
+        // (ReTzar's reading) mark them static and occupied: no ground unit or ship enters them; fliers pass over. Only when
+        // the ruleset says so (world.decorationsObstruct), until units step past corners as the original's do.
+        foreach (MapDecoration d in ruleset.World.DecorationsObstruct ? map.Decorations : [])
+        {
+            if (!d.Obstructs || ruleset.Scenery.Find(map.TerrainSet, d.Image) is not { } shape)
+            {
+                continue;
+            }
+
+            for (int dy = 0; dy < shape.Height; dy++)
+            {
+                for (int dx = 0; dx < shape.Width; dx++)
+                {
+                    int tx = d.TileX + dx, ty = d.TileY + dy;
+                    if (shape.Closes(dx, dy) && ContainsTile(tx, ty))
+                    {
+                        _basePassability[(ty * Width) + tx] &= (byte)LocomotorMask.Air;
+                    }
+                }
+            }
+        }
     }
 
     // Whether a cliff tile lies in a band a climber crosses: along a row, a column or a diagonal, the run of cliff tiles
