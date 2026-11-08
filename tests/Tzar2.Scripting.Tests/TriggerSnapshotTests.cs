@@ -132,7 +132,7 @@ public class TriggerSnapshotTests(ITestOutputHelper output)
             // then: (WORLD-022, 2026-11-04) each step from a short search round the units standing in the way.
             // then: (ADR 0274, 2026-11-04) a store for the flame balls' way (hashed layout 21).
             // then: (ADR 0276, 2026-11-06) the original's blows (A² / (A + D)) and firing periods.
-            Assert.Equal("0DAA6DA4E5F96211", d.Hashes[^1].ToString("X16"));
+            Assert.Equal("7CECFC629A978847", d.Hashes[^1].ToString("X16"));
         }
     }
 

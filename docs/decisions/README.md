@@ -28,7 +28,7 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0018](0018-sim-map-model-and-compiled-contract.md) | Keep the compiled Ruleset/MapData contract small in Content/Compiled; derive map layers in Sim | Accepted | 2026-10-17 |
 | [0019](0019-sim-hardening.md) | Treat snapshots and replays as untrusted input; ticks never fail half-way | Accepted | 2026-10-17 |
 | [0020](0020-m1-asset-viewer.md) | Build the M1 asset viewer as a client mode on the production sprite path; play MIDI with MeltySynth and a user-supplied SoundFont | Accepted | 2026-10-17 |
-| [0021](0021-navigation-layers-and-hpa-clusters.md) | Keep navigation as derived per-movement-class layers with HPA* clusters, portal trees and components | Accepted | 2026-10-17 |
+| [0021](0021-navigation-layers-and-hpa-clusters.md) | Keep navigation as derived per-movement-class layers with HPA* clusters, portal trees and components | Accepted (with notes) | 2026-10-17 |
 | [0022](0022-path-requests-routes-and-budget.md) | Plan paths as pure, budgeted, parallel requests; follow long paths as abstract routes | Accepted | 2026-10-17 |
 | [0023](0023-flow-fields-for-group-moves.md) | Share hierarchical flow fields among groups of six or more, at most 48 at a time | Accepted | 2026-10-17 |
 | [0024](0024-arrival-slots-and-group-speed.md) | Give every group member its own arrival slot, keep compact formations, and move groups at their slowest speed | Accepted | 2026-10-17 |
@@ -185,3 +185,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0279](0279-arabian-and-asian-casters-as-the-original-has-them.md) | Give the Arabian and Asian casters' spells the original's falls, sight and healing round | Accepted | 2026-11-06 |
 | [0280](0280-the-global-audit-against-retzar-and-the-original.md) | Audit the remake against ReTzar and settle disagreements in the original's code | Accepted | 2026-11-07 |
 | [0281](0281-draw-the-maps-decorations-and-let-rocks-and-ruins-close-their-cells.md) | Draw the map's decorations and let rocks and ruins close their cells | Accepted | 2026-11-08 |
+| [0282](0282-land-units-step-past-corners-as-the-originals.md) | Land units step past corners as the original's | Accepted | 2026-11-08 |

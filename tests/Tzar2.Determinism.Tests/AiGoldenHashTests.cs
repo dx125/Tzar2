@@ -53,7 +53,7 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (WORLD-022, 2026-11-04) each step from a short search round the units standing in the way: the commands.
     // (WAR-001, WAR-019, ECO-008, ADR 0276, 2026-11-06) the original's blows and firing periods, farmers on their fields'
     // middle tile: the fights and the economy, so the commands.
-    private const ulong GoldenCommandStream = 0x763064896F40DB71UL;
+    private const ulong GoldenCommandStream = 0x56602FAA0F4FA907UL;
     // (ITEM-016, 2026-10-22) items keep their own spell, effect and look (layout 11): the hashes only, the commands are the same.
     // (WORLD-015, 2026-10-22) units get the original's body: crowds space out, the economy and the waves change; the run is
     // now 10 minutes.
@@ -83,8 +83,8 @@ public class AiGoldenHashTests(ITestOutputHelper output)
     // (BLD-028, 2026-11-04) the decals carry their look and the rubble that stays (hashed state): the hashes.
     // (WAR-018, MAG-029, 2026-11-04) shells and bolts land on a tile and hurt the square round it; a new store: the hashes.
     // (WAR-001, WAR-019, ECO-008, ECO-012, ADR 0276, 2026-11-06) the original's blows, firing periods and fields: the hashes.
-    private const ulong GoldenHashStream = 0x4093AE5CC6E019B5UL;
-    private const ulong GoldenFinalFullHash = 0x077F4DD6044FF21FUL;
+    private const ulong GoldenHashStream = 0x1F011D89BEA91D80UL;
+    private const ulong GoldenFinalFullHash = 0x8A952138B76A7BBBUL;
 
     // 10 minutes (8 before the original's body size, WORLD-015, whose crowds slow the economy: the first wave sails later).
     private const int Ticks = 12000;

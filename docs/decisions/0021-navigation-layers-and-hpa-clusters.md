@@ -1,6 +1,6 @@
 # 0021. Keep navigation as derived per-movement-class layers with HPA* clusters, portal trees and components
 
-* **Status:** Accepted
+* **Status:** Accepted; the corner rule amended by [0282](0282-land-units-step-past-corners-as-the-originals.md) (land layers cut corners)
 * **Date:** 2026-10-17
 * **Deciders:** implementation agent (M2 part B)
 * **Related:** TDD §9.1, §9.2 REQ-PATH-00/01/02/08, ORIG-03, §8.9, §22 item 1; ADR 0018 (map model), ADR 0017

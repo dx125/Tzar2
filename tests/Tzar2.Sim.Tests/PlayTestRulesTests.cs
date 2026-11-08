@@ -79,6 +79,7 @@ public class PlayTestRulesTests
     public void Units_appear_around_the_building_on_free_tiles_with_a_way_out()
     {
         // The castle's south side (tiles 2..6 of row 7) is a pocket shut in by cliffs: the original could put units there.
+        // The castle's cut corners are free, so the cliffs reach row 5 too: a step past a corner (WORLD-023) would lead out.
         string[] rows =
         [
             "....................",
@@ -86,7 +87,7 @@ public class PlayTestRulesTests
             "....................",
             "....................",
             "....................",
-            "....................",
+            ".#.....#............",
             ".#.....#............",
             ".#.....#............",
             ".#######............",

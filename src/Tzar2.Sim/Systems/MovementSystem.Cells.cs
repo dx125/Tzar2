@@ -1047,9 +1047,10 @@ public sealed partial class MovementSystem
         return -1;
     }
 
-    // Whether a step from (x0, y0) to its neighbour (x1, y1) is on walkable ground, a diagonal one cutting no corner.
+    // Whether a step from (x0, y0) to its neighbour (x1, y1) is on walkable ground; a diagonal one passes a corner where the
+    // layer allows it (WORLD-023: the original's step tests only the tile it enters).
     private static bool Walkable(NavLayer layer, int x0, int y0, int x1, int y1)
-        => layer.IsWalkable(x1, y1) && (x0 == x1 || y0 == y1 || (layer.IsWalkable(x1, y0) && layer.IsWalkable(x0, y1)));
+        => layer.IsWalkable(x1, y1) && (x0 == x1 || y0 == y1 || layer.CutsCorners || (layer.IsWalkable(x1, y0) && layer.IsWalkable(x0, y1)));
 
     // An open gate lets only its owner and the kingdoms it treats as allies through (ADR 0102).
     private static bool Barred(World world, NavLayer layer, byte owner, int from, int to)

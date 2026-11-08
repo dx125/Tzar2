@@ -22,6 +22,7 @@ public sealed class NavigationGrid
     public const byte NoLayer = 0xFF;
 
     private readonly MapState _map;
+    private readonly bool _cells; // land units step cell by cell (MovementModel.Cells)
     private readonly byte[] _typeLayer;
     private readonly List<(LocomotorMask Mask, Locomotor Representative, int Clearance)> _layerKeys = [];
     private NavLayer[] _layers = [];
@@ -30,6 +31,7 @@ public sealed class NavigationGrid
     {
         _map = map;
         _typeLayer = new byte[ruleset.EntityTypes.Count];
+        _cells = ruleset.Gameplay.Movement == MovementModel.Cells;
 
         // Locomotor equivalence classes on this map: equal base passability bits on every tile. The climber keeps its own:
         // walls built later open to it alone (WORLD-018).
@@ -118,7 +120,9 @@ public sealed class NavigationGrid
             for (int i = 0; i < _layers.Length; i++)
             {
                 (LocomotorMask mask, Locomotor rep, int clearance) = _layerKeys[i];
-                _layers[i] = new NavLayer(i, _map, mask, rep, clearance);
+                // Units that step cell by cell step past corners as the original's (WORLD-023, ADR 0282); ships and flyers
+                // move continuously and keep clear of them.
+                _layers[i] = new NavLayer(i, _map, mask, rep, clearance, cutsCorners: _cells && rep is not (Locomotor.Ship or Locomotor.Air));
             }
 
             IsBuilt = true;

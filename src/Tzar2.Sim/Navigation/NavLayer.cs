@@ -13,8 +13,9 @@ namespace Tzar2.Sim.Navigation;
 /// <para><b>Walkable</b>: tile (x, y) is walkable for clearance c if all tiles of the c×c square whose top-left is
 /// (x, y) are passable for the layer's locomotor and free of blockers. A unit's center stands at the square's center,
 /// so <see cref="PointOffset"/> = (c − 1) × 1,024 units converts centers to anchor tiles.</para>
-/// <para><b>Moves</b> are 8-connected without corner cutting: a diagonal step needs both orthogonal neighbours
-/// walkable. Costs are integer octile: <see cref="StraightCost"/> = 1,024, <see cref="DiagonalCost"/> = 1,448.</para>
+/// <para><b>Moves</b> are 8-connected. A layer that <see cref="CutsCorners"/> (land units stepping cell by cell, as the
+/// original's: WORLD-023, ADR 0282) takes a diagonal step whenever the tile it enters is walkable; the others (ships)
+/// need both orthogonal neighbours walkable as well (ADR 0021). Costs are integer octile: <see cref="StraightCost"/> = 1,024, <see cref="DiagonalCost"/> = 1,448.</para>
 /// <para><b>Clusters</b> are 16×16 tiles. A cluster's walkable tiles split into <b>regions</b> (connected within the
 /// cluster). Every maximal run of walkable tile pairs across a cluster border is an <b>entrance</b> with one
 /// transition (runs shorter than 6 tiles) or two (at the run's ends), as in HPA*; each transition is a pair of
@@ -72,9 +73,10 @@ public sealed class NavLayer
     private readonly LocalSearch _search = new();
     private int _dirtyCount;
 
-    internal NavLayer(int index, MapState map, LocomotorMask locomotors, Locomotor representative, int clearance)
+    internal NavLayer(int index, MapState map, LocomotorMask locomotors, Locomotor representative, int clearance, bool cutsCorners = false)
     {
         Index = index;
+        CutsCorners = cutsCorners;
         _map = map;
         Locomotors = locomotors;
         Representative = representative;
@@ -502,7 +504,16 @@ public sealed class NavLayer
         return true;
     }
 
-    /// <summary>Whether a step from tile (x, y) in direction <paramref name="dir"/> is allowed (no corner cutting).</summary>
+    /// <summary>
+    /// Whether a diagonal step may pass between two tiles that touch at a corner (WORLD-023): the original's path search
+    /// tests only the tile a step enters (ReTzar's reading, <c>pathing.rs</c> <c>cost</c>, <c>large_cost</c>).
+    /// </summary>
+    public bool CutsCorners { get; }
+
+    /// <summary>
+    /// Whether a step from tile (x, y) in direction <paramref name="dir"/> is allowed: onto a walkable tile, and on a layer
+    /// that does not <see cref="CutsCorners"/>, a diagonal one only with both orthogonal neighbours walkable.
+    /// </summary>
     internal bool CanStep(int x, int y, int dir)
     {
         int nx = x + DirX[dir];
@@ -512,7 +523,7 @@ public sealed class NavLayer
             return false;
         }
 
-        return (dir & 1) == 0 || (IsWalkable(nx, y) && IsWalkable(x, ny));
+        return (dir & 1) == 0 || CutsCorners || (IsWalkable(nx, y) && IsWalkable(x, ny));
     }
 
     private void BuildRegions(int c)

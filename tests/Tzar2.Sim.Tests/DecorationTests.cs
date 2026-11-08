@@ -47,11 +47,11 @@ public class DecorationTests
 
     [Fact]
     [Trait("Rule", "WORLD-003")]
-    public void Classic_leaves_the_cells_open_until_units_step_past_corners()
+    public void Classic_closes_them_now_that_units_step_past_corners()
     {
-        // ADR 0281: world.decorationsObstruct is off in classic.yaml for now.
-        MapState open = new(Map("grass", [new(MapDecoration.GroundObject, "go_small_mont_1", 1, 1, -1, -1)]), Classic);
-        Assert.True(open.IsPassable(Locomotor.Foot, 1, 1));
+        // ADR 0281, ADR 0282: world.decorationsObstruct is on in classic.yaml since the step cuts corners.
+        MapState closed = new(Map("grass", [new(MapDecoration.GroundObject, "go_small_mont_1", 1, 1, -1, -1)]), Classic);
+        Assert.False(closed.IsPassable(Locomotor.Foot, 1, 1));
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class DecorationTests
         Assert.Throws<System.ArgumentException>(() => plain.WithDecorations([new MapDecoration(MapDecoration.GroundPatch, "gp", 8, 0, -1, -1)]));
     }
 
-    private static readonly Ruleset Obstructing = ClassicWith("world: { decorationsObstruct: true }");
+    private static readonly Ruleset Obstructing = ClassicWith("world: { decorationsObstruct: true }"); // as classic, explicitly
 
     private static MapData Map(string set, MapDecoration[] decorations)
     {

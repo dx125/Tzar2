@@ -614,9 +614,12 @@ public sealed partial class GameplayScenario : IBenchScenario
             _idleSoldiers.RemoveRange(0, 10);
         }
 
-        if (tick % 900 < window && _idleWorkers.Count >= used + 2 && NearestEnemy(world, player, _house, world.Positions.Get(castle)) is { IsNone: false } house)
+        // Three diggers (CAP-002: two outpace a whole house's resistance only just; with the step past corners, ADR 0282,
+        // two no longer took one in the golden run).
+        if (tick % 900 < window && _idleWorkers.Count >= used + 3 && NearestEnemy(world, player, _house, world.Positions.Get(castle)) is { IsNone: false } house)
         {
             _selection.Clear();
+            _selection.Add(Take());
             _selection.Add(Take());
             _selection.Add(Take());
             _batch.Add(CommandKind.Capture, Span(_selection), target: house);
