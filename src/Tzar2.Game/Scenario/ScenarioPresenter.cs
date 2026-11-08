@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Tzar2.Content.Compiled.Scenario;
+using Tzar2.Core.Ids;
 using Tzar2.Scripting.Legacy;
 using Tzar2.Sim;
 using Tzar2.Sim.Events;
@@ -177,7 +178,7 @@ public sealed class ScenarioPresenter
             case SimEventKind.ViewScrolled:
                 return new ScenarioNotice(ScenarioNoticeKind.ScrollView, string.Empty, string.Empty, null, null, null, 0, false, e.X, e.Y, true);
             case SimEventKind.PhraseSaid when Phrase(e.X, e.Y) is { } p:
-                return new ScenarioNotice(ScenarioNoticeKind.PhraseSaid, Speaker(p), p.Text, p.Icon?.Path, p.Sound?.Path, null, 0, false, 0, 0, true);
+                return new ScenarioNotice(ScenarioNoticeKind.PhraseSaid, Speaker(p), p.Text, PhraseIcon(p), p.Sound?.Path, null, 0, false, 0, 0, true);
             case SimEventKind.ConversationEnded:
                 return new ScenarioNotice(ScenarioNoticeKind.ConversationEnded, string.Empty, string.Empty, null, null, null, 0, false, 0, 0, true);
             case SimEventKind.MapRequested:
@@ -202,6 +203,45 @@ public sealed class ScenarioPresenter
         => (uint)conversation < (uint)_scenario.Conversations.Length && (uint)phrase < (uint)_scenario.Conversations[conversation].Phrases.Length
             ? _scenario.Conversations[conversation].Phrases[phrase]
             : null;
+
+    // A phrase's picture: its own, else its speaker's large portrait (ADR 0284; ReTzar: the bubble shows the speaking
+    // object's portrait_large).
+    private string? PhraseIcon(PhraseDef phrase)
+        => phrase.Icon?.Path ?? (phrase.SourceObject is { } source && (uint)source < (uint)_scenario.ObjectCount ? _scenario.ObjectAt(source).BigIcon?.Path : null);
+
+    /// <summary>
+    /// The scenario's properties of a placed object the entity is (its name, title and icons; ADR 0284), or null for an
+    /// entity the map did not place.
+    /// </summary>
+    public ObjectInfo? InfoOf(EntityId entity)
+    {
+        uint[] entities = _triggers.State.MapEntities;
+        if (_byEntity is null || _byEntityCount != entities.Length)
+        {
+            _byEntity = new Dictionary<uint, int>();
+            for (int i = 0; i < entities.Length; i++)
+            {
+                if (entities[i] != 0)
+                {
+                    _byEntity[entities[i]] = i;
+                }
+            }
+
+            _byEntityCount = entities.Length;
+        }
+
+        return _byEntity.TryGetValue(entity.Value, out int index) && index < _scenario.ObjectCount ? _scenario.ObjectAt(index) : null;
+    }
+
+    /// <summary>The entity placed object <paramref name="objectIndex"/> is now, or <see cref="EntityId.None"/> (not appeared, or never placed).</summary>
+    public EntityId EntityOf(int objectIndex)
+    {
+        uint[] entities = _triggers.State.MapEntities;
+        return (uint)objectIndex < (uint)entities.Length && entities[objectIndex] != 0 ? EntityId.FromValue(entities[objectIndex]) : EntityId.None;
+    }
+
+    private Dictionary<uint, int>? _byEntity; // lookup only
+    private int _byEntityCount = -1;
 
     private string Speaker(PhraseDef phrase)
     {
@@ -276,7 +316,7 @@ public sealed class ScenarioPresenter
                 for (int i = 0; i < s.Candidates.Count; i++)
                 {
                     PhraseDef p = c.Phrases[s.Candidates[i]];
-                    choices.Add(new PhraseChoice(i, Speaker(p), p.Text, p.Icon?.Path, p.Sound?.Path));
+                    choices.Add(new PhraseChoice(i, Speaker(p), p.Text, PhraseIcon(p), p.Sound?.Path));
                 }
 
                 _conversation = new ConversationView(s.ConversationSerial, c.Name, choices.ToImmutable());

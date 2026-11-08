@@ -178,7 +178,7 @@ public partial class GameApp
             return maps;
         }
 
-        var options = new Tzar2.Import.Maps.LegacyConversionOptions { Ruleset = _rules, ConvertImages = false };
+        var options = new Tzar2.Import.Maps.LegacyConversionOptions { Ruleset = _rules, ConvertImages = true };
         var problems = new List<string>();
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var files = new List<string>(_store.Vfs.Enumerate(OriginalMapFolder));
@@ -192,10 +192,10 @@ public partial class GameApp
 
             if (Tzar2.Import.Maps.LegacyPlayables.Convert(_store.Read(file), Path.GetFileName(file), options, problems) is { } playable)
             {
-                foreach (var (_, (map, scenario)) in playable.Maps)
+                foreach (var (id, (map, scenario)) in playable.Maps)
                 {
                     string title = scenario.Properties.Title.Length > 0 ? scenario.Properties.Title : Path.GetFileNameWithoutExtension(file);
-                    maps.Add(new CustomMap(Path.GetFileNameWithoutExtension(file), title, scenario.Properties.Description, new MissionContent(map, scenario)));
+                    maps.Add(new CustomMap(Path.GetFileNameWithoutExtension(file), title, scenario.Properties.Description, new MissionContent(map, scenario) { Assets = new MapAssets(playable.ResourcesOf(id)) }));
                 }
             }
         }

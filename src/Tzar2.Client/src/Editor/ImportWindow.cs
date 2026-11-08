@@ -305,7 +305,7 @@ public partial class ImportWindow : Window
         {
             if (item.Campaign.Maps[i] is { Map: { } map, Scenario: { } scenario })
             {
-                maps[campaign.Maps[i].Id] = new MissionContent(map, scenario);
+                maps[campaign.Maps[i].Id] = new MissionContent(map, scenario) { Assets = new MapAssets(Tzar2.Import.Maps.PlayableLegacy.Files(item.Campaign.Maps[i]!)) };
             }
         }
 

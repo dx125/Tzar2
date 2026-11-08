@@ -322,6 +322,17 @@ public class LegacyConverterTests
     }
 
     [Fact]
+    public void A_playable_map_keeps_its_own_resources_for_the_game()
+    {
+        // ADR 0284: the client plays the original's maps from the install; their embedded USER files go with them.
+        var problems = new List<string>();
+        PlayableLegacy playable = LegacyPlayables.Convert(FullMap().Build(), "full.wmp", new LegacyConversionOptions(), problems)!;
+        IReadOnlyDictionary<string, byte[]> files = playable.ResourcesOf(playable.Campaign.Maps[0].Id);
+        Assert.Contains(files.Keys, k => k.Equals("user/knight.png", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(playable.ResourcesOf("none"));
+    }
+
+    [Fact]
     public void Malformed_input_is_reported_not_thrown()
     {
         MapConversion c = LegacyMapConverter.Convert([1, 2, 3], "junk.wmp");

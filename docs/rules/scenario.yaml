@@ -12,3 +12,15 @@ rules:
     source: ['community ReTzar src/gameplay/scripting.rs (PERIOD 1000 ms, 0x4b6a70, 0x4bd770)']
     status: tested
     note: TriggerOptions.IntervalMs, 1000 ms.
+  SCN-003:
+    rule: A map's sound sources each keep their own timer - every so many seconds, looped, at random times between two, or once after a delay - heard from their object or their point; one still sounding waits a second, one whose object left the game falls silent, and one not yet appeared is not heard.
+    source: ['community ReTzar src/gameplay.rs (map_sounds: message 0x2009, 0x502953, the timer started at loading 0x505580)', 'editor-manual Custom sounds']
+    status: tested
+    adr: [0284]
+    note: Until ADR 0284 the editor stored the sources and the game never played them. Tzar2 counts game time, paused with the game; the original counts real seconds scaled by the game speed when a timer is set. A looped sound is started again as soon as it ends (looked at every 2 s), not played as a looping stream.
+  SCN-004:
+    rule: A map's own pictures, sounds and music are those its scenario shows and plays - the pictures and sounds of its scrolls and story screens, the voices of its phrases, its music list - and a placed object shows its own portrait and title.
+    source: ['editor-manual User resources', 'community ReTzar src/frontend/gameplay.rs (a phrase bubble shows its speaker''s large portrait)', 'community ReTzar src/world.rs (label: a named object with its subtitle)']
+    status: implemented
+    adr: [0284]
+    note: Until ADR 0284 the client looked for them in the base package only and found none. A phrase without a picture of its own shows its speaker's large portrait. The map's music list plays shuffled, song after song; only MIDI songs play (the client has no OGG music yet).

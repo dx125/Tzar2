@@ -137,6 +137,9 @@ public sealed record MatchSetup
     /// </summary>
     public Content.Compiled.Scenario.ScenarioData? Scenario { get; init; }
 
+    /// <summary>The map's own pictures, sounds and music (ADR 0284); presentation only, never hashed.</summary>
+    public Campaigns.MapAssets MapAssets { get; init; } = Campaigns.MapAssets.None;
+
     /// <summary>
     /// Match-start changes beyond the lobby settings (scenario kingdoms' stockpiles and diplomacy, campaign carry-over;
     /// ADR 0133), run once for a new match after the AI and the triggers attached and before the first tick; never on

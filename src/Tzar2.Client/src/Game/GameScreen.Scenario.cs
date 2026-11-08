@@ -1,5 +1,10 @@
+using System;
 using System.Collections.Generic;
 using Godot;
+using Tzar2.Client.Audio;
+using Tzar2.Client.Logic;
+using Tzar2.Content.Compiled.Scenario;
+using Tzar2.Core.Ids;
 using Tzar2.Game.Campaigns;
 using Tzar2.Game.Scenario;
 using Tzar2.Game.Session;
@@ -117,6 +122,7 @@ public partial class GameScreen
             return;
         }
 
+        UpdateMapSounds(frame);
         _session.DrainNotices(_notices);
         foreach (ScenarioNotice n in _notices)
         {
@@ -161,9 +167,11 @@ public partial class GameScreen
                 break;
             case ScenarioNoticeKind.PhraseSaid when n.Title.Length > 0:
                 Message($"{n.Title}: {n.Text}");
+                PlayVoice(n.Sound);
                 break;
             case ScenarioNoticeKind.PhraseSaid:
                 Message(n.Text);
+                PlayVoice(n.Sound);
                 break;
             case ScenarioNoticeKind.Message or ScenarioNoticeKind.StoryScreen:
                 _modal.Enqueue(n);
@@ -187,7 +195,102 @@ public partial class GameScreen
     // Lock View holds the camera (scrolling is ignored until it runs out or Unlock View).
     private bool ViewLocked => _viewLockedUntil > _now;
 
-    private Texture2D? UserImage(string? path) => path is null ? null : _ui.Texture("maps/user/" + path);
+    // A picture the scenario names: the map's own (ADR 0284), else one of the package's.
+    private Texture2D? UserImage(string? path)
+    {
+        if (path is null)
+        {
+            return null;
+        }
+
+        if (_userImages.TryGetValue(path, out Texture2D? known))
+        {
+            return known;
+        }
+
+        Texture2D? texture = null;
+        if (_session.Setup.MapAssets.Find(path) is { } bytes)
+        {
+            var image = new Image();
+            Error loaded = bytes.Length > 1 && bytes[0] == (byte)'B' && bytes[1] == (byte)'M' ? image.LoadBmpFromBuffer(bytes)
+                : bytes.Length > 3 && bytes[1] == (byte)'P' && bytes[2] == (byte)'N' ? image.LoadPngFromBuffer(bytes)
+                : image.LoadJpgFromBuffer(bytes);
+            texture = loaded == Error.Ok ? ImageTexture.CreateFromImage(image) : null;
+        }
+
+        texture ??= _ui.Texture("maps/user/" + path);
+        _userImages[path] = texture;
+        return texture;
+    }
+
+    private readonly Dictionary<string, Texture2D?> _userImages = new(StringComparer.OrdinalIgnoreCase);
+
+    // A scroll's sound or a phrase's voice (ADR 0284): the map's own, heard wherever the view is.
+    private void PlayVoice(string? path) => _mixer?.PlayMapSound(path, SoundCategory.Interface, "map_voice");
+
+    // The map's sound sources (ADR 0284): each on its timer, heard from its object or its point.
+    private void UpdateMapSounds(GameFrame frame)
+    {
+        if (_mixer is null || _session.Setup.Scenario is not { Sounds.Length: > 0 } data || _session.Scenario is not { } presenter)
+        {
+            return;
+        }
+
+        _mapSounds ??= new MapSoundScheduler([.. data.Sounds], (min, max) => min + (int)(GD.Randi() % (uint)(max - min + 1)));
+        _mapSoundSeen ??= new bool[data.Sounds.Length];
+        int tickMs = Tick.DefaultLengthMilliseconds; // every match runs at the default tick
+
+        // Where the frames show a source object now (absent: not appeared yet, or gone); never the sim's own state.
+        bool Shown(int index, out SeenPlaces.Place at)
+        {
+            at = default;
+            return presenter.EntityOf(index) is { IsNone: false } e && _seen.TryGet(e.Index, out at);
+        }
+
+        MapSoundSource Source(int i)
+        {
+            if (data.Sounds[i].SourceObject is not { } index)
+            {
+                return MapSoundSource.Present;
+            }
+
+            if (Shown(index, out _))
+            {
+                _mapSoundSeen[i] = true;
+                return MapSoundSource.Present;
+            }
+
+            return _mapSoundSeen[i] ? MapSoundSource.Gone : MapSoundSource.Hidden;
+        }
+
+        _soundCues.Clear();
+        _soundSilence.Clear();
+        long now = (long)frame.Tick.Value * tickMs;
+        _mapSounds.Update(now, Source, i => _mixer.Sounding(MapSoundOwner + i), _soundCues, _soundSilence);
+        foreach (int i in _soundSilence)
+        {
+            _mixer.StopOwner(MapSoundOwner + i);
+        }
+
+        foreach (MapSoundCue cue in _soundCues)
+        {
+            CustomSoundDef s = data.Sounds[cue.Index];
+            SoundPlace place = new(s.X, s.Y);
+            if (s.SourceObject is { } index && Shown(index, out SeenPlaces.Place at))
+            {
+                place = PlaceOf(at.X, at.Y);
+            }
+
+            _mixer.PlayMapSound(s.Sound.Path, SoundCategory.Effects, "map_sound", place, MapSoundOwner + cue.Index);
+        }
+    }
+
+    // Owners of the map's sounds in the mixer: above every entity's (1 + its index).
+    private const int MapSoundOwner = 1 << 24;
+    private MapSoundScheduler? _mapSounds;
+    private bool[]? _mapSoundSeen;
+    private readonly List<MapSoundCue> _soundCues = [];
+    private readonly List<int> _soundSilence = [];
 
     private void ShowModal(ScenarioNotice n)
     {
@@ -196,6 +299,8 @@ public partial class GameScreen
             return;
         }
 
+        PlayVoice(n.Sound);
+        StoryMusic(n.Music);
         ScenarioDialog dialog = n.Kind == ScenarioNoticeKind.StoryScreen
             ? new StoryScreen(_ui, _hud.Layout.Size, n, UserImage(n.Image), _catalog.Text)
             : new ScenarioMessageDialog(_ui, _hud.Layout.Size, n, UserImage(n.Image), _catalog.Text);
@@ -215,6 +320,7 @@ public partial class GameScreen
         {
             layer.QueueFree();
             _open = null;
+            StoryMusic(null);
             if (_storyPause)
             {
                 _storyPause = false;

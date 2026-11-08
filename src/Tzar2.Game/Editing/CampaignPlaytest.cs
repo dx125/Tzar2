@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Editing;
 using Tzar2.Game.Campaigns;
@@ -29,13 +30,18 @@ public sealed class CampaignPlaytest : ICampaignSource
     /// <inheritdoc/>
     public CampaignData Campaign { get; }
 
+    // The campaign's resources its maps share (stored once in the package; ADR 0284).
+    private MapAssets Shared => _shared ??= new MapAssets(_campaign.SharedAssets.ToDictionary(a => a.Key, a => a.Value.ToArray(), StringComparer.OrdinalIgnoreCase));
+
+    private MapAssets? _shared;
+
     /// <inheritdoc/>
     public MissionContent Load(string mapId)
     {
         if (!_built.TryGetValue(mapId, out MissionContent? mission))
         {
             CampaignEntry entry = _campaign.Find(mapId) ?? throw new KeyNotFoundException($"The campaign has no map '{mapId}'.");
-            mission = Playtest.Mission(entry.Document);
+            mission = Playtest.Mission(entry.Document, Shared);
             _built[mapId] = mission;
         }
 

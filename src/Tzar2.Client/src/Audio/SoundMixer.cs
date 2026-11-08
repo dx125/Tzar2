@@ -235,6 +235,57 @@ public partial class SoundMixer : Node
         return pick >= 0 && Play(files[pick].Path, channel, priorityKey, distance, volume, channel == SoundChannel.Interface ? null : place, owner);
     }
 
+    // Paths of the map's own sounds (ADR 0284), read through MapFiles.
+    private const string MapPrefix = "map:";
+
+    /// <summary>The map's own sound files by the path its scenario names (ADR 0284), or null.</summary>
+    public Func<string, byte[]?>? MapFiles { get; set; }
+
+    /// <summary>
+    /// Plays one of the map's own sounds (a scroll's, a phrase's voice, a sound source's; ADR 0284) in
+    /// <paramref name="category"/>'s channel, heard from <paramref name="place"/> (null: the view's centre). False when
+    /// nothing plays: muted, too far, no free voice, or no such file.
+    /// </summary>
+    public bool PlayMapSound(string? path, SoundCategory category, string priorityKey, SoundPlace? place = null, int owner = 0)
+    {
+        ArgumentNullException.ThrowIfNull(priorityKey);
+        if (string.IsNullOrEmpty(path) || _catalog is null || !_enabled[(int)category])
+        {
+            return false;
+        }
+
+        SoundChannel channel = ChannelOf(category);
+        int volume = 0, distance = 0;
+        if (place is { } at && channel != SoundChannel.Interface)
+        {
+            int dx = at.TileX - _centreX;
+            int dy = at.TileY - _centreY;
+            if (SoundRules.Placement(dx, dy, _viewWidth, channel == SoundChannel.Effect) is not { } placed)
+            {
+                return false;
+            }
+
+            volume = placed.Volume;
+            distance = Math.Abs(dx) + Math.Abs(dy);
+        }
+
+        return Play(MapPrefix + path, channel, priorityKey, distance, volume, channel == SoundChannel.Interface ? null : place, owner);
+    }
+
+    /// <summary>Whether a sound of <paramref name="owner"/> plays now.</summary>
+    public bool Sounding(int owner)
+    {
+        for (int i = 0; i < _voices.Length; i++)
+        {
+            if (_states[i].Owner == owner && owner != 0 && (_voices[i].Playing || _voices[i].StreamPaused))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Silences the sounds of an entity (1 + its index): at its new order or its death, as the original (PRES-012,
     /// 0x4d05b0); a horseman's voice no longer runs on once it is sent elsewhere.
@@ -311,11 +362,12 @@ public partial class SoundMixer : Node
         }
 
         AudioStreamWav? stream = null;
-        if (_store is not null && _store.Vfs.Exists(path))
+        byte[]? own = path.StartsWith(MapPrefix, StringComparison.Ordinal) ? MapFiles?.Invoke(path[MapPrefix.Length..]) : null;
+        if (own is not null || (_store is not null && _store.Vfs.Exists(path)))
         {
             try
             {
-                byte[] file = _store.Read(path);
+                byte[] file = own ?? _store!.Read(path);
                 WaveData wave = WaveData.Parse(file);
                 byte[] data = file.AsSpan(wave.DataOffset, wave.DataLength).ToArray();
                 if (wave.BitsPerSample == 8)

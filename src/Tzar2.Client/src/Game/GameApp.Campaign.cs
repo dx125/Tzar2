@@ -72,7 +72,7 @@ public partial class GameApp
             return sources;
         }
 
-        var options = new Tzar2.Import.Maps.LegacyConversionOptions { Ruleset = _rules, ConvertImages = false };
+        var options = new Tzar2.Import.Maps.LegacyConversionOptions { Ruleset = _rules, ConvertImages = true };
         var problems = new List<string>();
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var files = new List<string>(_store.Vfs.Enumerate(OriginalCampaignFolder));
@@ -94,7 +94,7 @@ public partial class GameApp
                 var maps = new Dictionary<string, MissionContent>(StringComparer.Ordinal);
                 foreach (var (id, map) in playable.Maps)
                 {
-                    maps[id] = new MissionContent(map.Map, map.Scenario);
+                    maps[id] = new MissionContent(map.Map, map.Scenario) { Assets = new MapAssets(playable.ResourcesOf(id)) };
                 }
 
                 sources.Add(new InMemoryCampaignSource(playable.Campaign, maps));

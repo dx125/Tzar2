@@ -28,10 +28,16 @@ public static class Playtest
 {
     /// <summary>The map and scenario of a document.</summary>
     /// <exception cref="ArgumentException">The document does not build (the validator's blocking findings).</exception>
-    public static MissionContent Mission(MapDocument document)
+    public static MissionContent Mission(MapDocument document, MapAssets? shared = null)
     {
         ArgumentNullException.ThrowIfNull(document);
-        return new MissionContent(document.BuildMap(), document.BuildScenario());
+        var assets = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, System.Collections.Immutable.ImmutableArray<byte>> a in document.State.Assets)
+        {
+            assets[a.Key] = [.. a.Value];
+        }
+
+        return new MissionContent(document.BuildMap(), document.BuildScenario()) { Assets = new MapAssets(assets, shared) };
     }
 
     /// <summary>Whether the document may be played: no blocking finding under <paramref name="ruleset"/>.</summary>

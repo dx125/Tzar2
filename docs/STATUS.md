@@ -561,9 +561,10 @@ owner's order of 2026-10-26.
        rocks and ruins can close their cells, but the switch stays off (ADR 0281; log below).
     2. Corners: **done** - land units step diagonally between obstacles touching at a corner, as the original's, and
        `world.decorationsObstruct` is on (WORLD-023, WORLD-003; ADR 0282; log below).
-    3. The ruins' capture and their `ruinpoints` (CAP-007).
-    4. B - a map's own resources in the game: its pictures (story screens, conversations), the sounds of scrolls and
-       phrases, its sound sources and music playlist, its units' icons and titles.
+    3. The ruins' capture and their `ruinpoints` (CAP-007): **parked** in draft PR #286 (the owner, 2026-11-08). The
+       code is done, but the campaign acceptance fails on `bigisland`: the new types change the course of play, and the
+       solver's sea transport cannot get the last hero aboard. The solver is to be made robust at ferrying first.
+    4. B - a map's own resources in the game: **done** (SCN-003, SCN-004; ADR 0284; log below).
     5. C - custom maps and campaigns: played from the menus (single player, and multiplayer where every player has the
        file), a warning before unsaved work is lost, autosave, the Lua tab's warning, the map's difficulty.
     6. D - the triggers: `$difficulty` and the other reserved variables that read 0, the 26 UNVERIFIED readings against
@@ -575,6 +576,18 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-08 — The map's own pictures, sounds and music reach the game (SCN-003, SCN-004; ADR 0284; item 26.4).**
+  * **What the game now uses.** The resources the editor and the converter keep under `user/` were never used. The
+    client now:
+    * shows the pictures of story screens and conversations;
+    * plays scroll sounds, phrase voices, scroll music and the map's MIDI playlist;
+    * runs the sound sources on their timers, as ReTzar reads the original;
+    * shows a placed object's own icon and "name title".
+  * **How they travel.** `MapAssets` goes with each mission into the match setup and is never hashed. The original
+    campaigns from the install now keep their pictures.
+* **2026-11-08 — The ruins' capture parked (CAP-007; draft PR #286; item 26.3).** The ruin types, their capture and
+  their scores are built. The campaign acceptance fails on `bigisland`, and the owner chose to go on with the other
+  batches first.
 * **2026-11-08 — Land units step past corners; rocks and ruins close their cells (WORLD-023, WORLD-003; ADR 0282; item
   26.2).**
   * **Corners.** ADR 0021's navigation cut no corner: a diagonal step needed both of its sides free. The original's path
