@@ -559,8 +559,8 @@ owner's order of 2026-10-26.
     batch of its own; build the ruins' capture (CAP-007) in this series.
     1. A - the map's decorations: **drawn** in the game and the editor; the palette comes from the terrain sets' data;
        rocks and ruins can close their cells, but the switch stays off (ADR 0281; log below).
-    2. Corners: the original's diagonal step between closed cells touching at a corner, then
-       `world.decorationsObstruct` on and every campaign checked (WORLD-003).
+    2. Corners: **done** - land units step diagonally between obstacles touching at a corner, as the original's, and
+       `world.decorationsObstruct` is on (WORLD-023, WORLD-003; ADR 0282; log below).
     3. The ruins' capture and their `ruinpoints` (CAP-007).
     4. B - a map's own resources in the game: its pictures (story screens, conversations), the sounds of scrolls and
        phrases, its sound sources and music playlist, its units' icons and titles.
@@ -575,6 +575,15 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-08 — Land units step past corners; rocks and ruins close their cells (WORLD-023, WORLD-003; ADR 0282; item
+  26.2).**
+  * **Corners.** ADR 0021's navigation cut no corner: a diagonal step needed both of its sides free. The original's path
+    search tests only the tile a step enters (ReTzar's reading), so two trees, rocks or a rock and a cliff touching at a
+    corner do not stop it. The land layers (units that step cell by cell) now do the same. Ships and flyers move
+    continuously and keep the old rule.
+  * **Rocks on.** `world.decorationsObstruct` is on. The first campaign mission, `v_00`, needed exactly this: its
+    heroes pass between a small mountain and a cliff. It now completes by pure play.
+  * **The golden scenario's bot** sends three peasants to capture a house instead of two; two no longer took one.
 * **2026-11-08 — The editor review, batch A: the map's decorations (WORLD-003, WORLD-004, PRES-021, CAP-007; ADR 0281;
   item 26).**
   * **Drawn at last.** Ground patches, ground objects, ruins and stumps reach the game and are drawn there and in the

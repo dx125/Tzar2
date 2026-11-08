@@ -54,7 +54,7 @@ Several terrain sets name their own pictures alike: 80 names, for example `go_sm
   2026-11-08). Tzar2's step cuts no corner (ADR 0021); the original's path search steps diagonally between two closed
   cells that touch at a corner (ReTzar `pathing.rs`: the cost tests only the cell entered). With the rocks closed, the
   heroes of `v_00` stand at a rock touching a cliff at its corner and never reach the mission's end; the other 25
-  missions of both campaigns complete. The next batch gives the step the original's corners, then turns the switch on.
+  missions of both campaigns complete. The next batch gives the step the original's corners, then turns the switch on: done in ADR 0282.
 * The client draws the decorations with the game's own `WorldRenderer`, both in matches and in the editor:
   * ground patches flat under everything;
   * ground objects and ruins sorted by their foot, with their `_s` shadows;
