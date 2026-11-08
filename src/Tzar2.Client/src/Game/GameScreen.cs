@@ -295,6 +295,14 @@ public partial class GameScreen : Node
         }
 
         _bank.AddTrees(set);
+        foreach (MapDecoration d in _session.Map.Decorations)
+        {
+            if (d.Class != MapDecoration.Tree)
+            {
+                _bank.AddScenery(d.Image, set.Id); // ground patches, ground objects and ruins (ADR 0281)
+            }
+        }
+
         long decoded = watch.ElapsedMilliseconds;
         _bank.Pack();
         long packed = watch.ElapsedMilliseconds;
@@ -328,6 +336,7 @@ public partial class GameScreen : Node
                 _mixer?.PlaySet(SpellPictures.MeteorSound, SoundCategory.Effects, "explosion", PlaceOf(x, y)); // PRES-020 (0x4507b0)
             }
         };
+        _world.SetDecorations(_session.Map.Decorations);
         _composed = null;
         MinimapFromData(set, _grid!);
         if (set.Table is { } treeTable && _store.Vfs.Exists(treeTable))

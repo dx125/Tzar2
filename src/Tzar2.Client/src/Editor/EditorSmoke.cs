@@ -158,6 +158,14 @@ public static class EditorSmoke
                 screen.Open(item.OpenDocument(screen.RulesFor), null);
                 await Frame(host);
                 Require(screen.Document.State.Objects.Count > 0, "the converted map opens in the editor");
+
+                // Its decorations as the game draws them (ADR 0281): the view on the first ground object, else decoration.
+                if ((screen.Document.State.Decorations.FirstOrDefault(d => d.Obstructs) ?? screen.Document.State.Decorations.FirstOrDefault()) is { } shown)
+                {
+                    (int tx, int ty) = shown.Tile;
+                    screen.View.CenterOnTile(tx, ty);
+                    await Shot(host, "4-converted");
+                }
             }
 
             import.QueueFree();

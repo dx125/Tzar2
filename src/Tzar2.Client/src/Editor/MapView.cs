@@ -4,6 +4,7 @@ using Godot;
 using Tzar2.Client.Game;
 using Tzar2.Client.Logic;
 using Tzar2.Client.Viewer;
+using Tzar2.Content.Assets;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Editing;
@@ -36,6 +37,7 @@ public partial class MapView : Control
     private readonly FrameInterpolator _interpolator = new();
     private WorldRenderer? _world;
     private SpriteBank? _bank;
+    private string? _bankSet; // the terrain set the bank's decoration pictures are of
     private TerrainSet? _set;
     private Vector2I _pan;
     private bool _buttonDown;
@@ -101,9 +103,13 @@ public partial class MapView : Control
         _set ??= _store.TerrainSets.Count > 0 ? _store.TerrainSets[0] : null;
         if (_set is not null && _catalog is not null)
         {
-            if (_bank is null)
+            if (_bank is null || !string.Equals(_bankSet, _set.Id, StringComparison.OrdinalIgnoreCase))
             {
+                // One bank per terrain set: its trees, and its and the common decoration pictures (ADR 0281), which
+                // several sets name alike.
+                _bank?.Dispose();
                 _bank = new SpriteBank(_store);
+                _bankSet = _set.Id;
                 foreach (EntityTypeDefinition type in _controller.Ruleset.EntityTypes)
                 {
                     foreach (string image in _catalog.Type(type.Id).Images.Values)
@@ -113,10 +119,23 @@ public partial class MapView : Control
                 }
 
                 _bank.AddTrees(_set);
+                string own = SpriteIndex.TerrainIni(_set.Id), common = SpriteIndex.TerrainIni(SceneryTable.CommonSet);
+                foreach (SpriteIndexEntry e in _store.Index.Entries)
+                {
+                    if ((string.Equals(e.Ini, own, StringComparison.OrdinalIgnoreCase) || string.Equals(e.Ini, common, StringComparison.OrdinalIgnoreCase))
+                        && (e.Name.StartsWith("gp_", StringComparison.OrdinalIgnoreCase) || e.Name.StartsWith("go_", StringComparison.OrdinalIgnoreCase)
+                            || e.Name.StartsWith("gr_", StringComparison.OrdinalIgnoreCase))
+                        && !_store.Index.IsCompanion(e))
+                    {
+                        _bank.AddScenery(e.Name, _set.Id);
+                    }
+                }
+
                 _bank.Upload();
             }
 
             _world = new WorldRenderer(this, _viewport.World2D.Canvas, _controller.Ruleset, _catalog, _bank, _set, Grid(doc), _store.LoadImage);
+            ShowDecorations();
         }
 
         _pan = Vector2I.Zero;
@@ -135,14 +154,20 @@ public partial class MapView : Control
         if (change.StateChanged)
         {
             _frameDirty = true;
+            ShowDecorations();
         }
 
         _overlay.QueueRedraw();
     }
 
+    // The decorations the renderer draws: the document's, unless their layer is hidden.
+    private void ShowDecorations()
+        => _world?.SetDecorations(_controller.Layers.IsHidden(EditorLayer.Decorations) ? [] : _controller.Document.State.Decorations);
+
     /// <summary>Marks the objects for a redraw (selection, layers).</summary>
     public void Invalidate()
     {
+        ShowDecorations();
         _frameDirty = true;
         _overlay.QueueRedraw();
     }
@@ -405,7 +430,7 @@ public partial class MapView : Control
                 }
             }
 
-            foreach (MapDecoration d in doc.State.Decorations)
+            foreach (MapDecoration d in view._world is null ? doc.State.Decorations : [])
             {
                 if (!c.Layers.IsHidden(EditorLayer.Decorations))
                 {

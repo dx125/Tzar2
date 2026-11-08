@@ -96,7 +96,7 @@ public partial class EditorScreen : Control
         layout.AddChild(split);
         var leftBox = new VBoxContainer { CustomMinimumSize = new Vector2(270, 0) };
         _left = leftBox;
-        _tools = new ToolPanel(_controller, DecorationCatalog());
+        _tools = new ToolPanel(_controller, Content.Editing.DecorationCatalog.Build(_store.Index, Document.TerrainSet));
         leftBox.AddChild(_tools);
         _view = new MapView(_store, _catalog, _controller);
         _minimap = new Minimap(_controller, _view);
@@ -171,6 +171,7 @@ public partial class EditorScreen : Control
         document.Changed += _ => RefreshNamedAreas();
         RefreshNamedAreas();
         _tools.RefreshTerrain();
+        _tools.RefreshDecorations(Content.Editing.DecorationCatalog.Build(_store.Index, document.TerrainSet));
         _view.Rebuild();
         _minimap.Refresh();
         _locator.Refresh();
@@ -450,38 +451,6 @@ public partial class EditorScreen : Control
             {
                 action();
             }
-        };
-    }
-
-    // Decoration shapes by class: sprite-index names of the package that look like ground patches/objects (the IMAGES.INI
-    // groups are not decoded; ⚠ name heuristics).
-    private Dictionary<string, IReadOnlyList<string>> DecorationCatalog()
-    {
-        var patches = new List<string>();
-        var objects = new List<string>();
-        var water = new List<string>();
-        foreach (Content.Assets.SpriteIndexEntry e in _store.Index.Entries)
-        {
-            string n = e.Name.ToLowerInvariant();
-            if (n.Contains("patch", StringComparison.Ordinal) || n.Contains("flower", StringComparison.Ordinal) || n.Contains("grass", StringComparison.Ordinal))
-            {
-                patches.Add(e.Name);
-            }
-            else if (n.Contains("reed", StringComparison.Ordinal) || n.Contains("water", StringComparison.Ordinal))
-            {
-                water.Add(e.Name);
-            }
-            else if (n.Contains("stone", StringComparison.Ordinal) || n.Contains("sign", StringComparison.Ordinal) || n.Contains("ruin", StringComparison.Ordinal))
-            {
-                objects.Add(e.Name);
-            }
-        }
-
-        return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
-        {
-            ["ground_patch"] = patches,
-            ["ground_object"] = objects,
-            ["water_object"] = water,
         };
     }
 }

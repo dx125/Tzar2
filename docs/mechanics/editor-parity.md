@@ -25,9 +25,9 @@ Status:
 <!-- summary:start -->
 | | Items | Done | Blocked | Planned |
 |---|---|---|---|---|
-| All | 104 | 100 | 4 | 0 |
+| All | 104 | 101 | 3 | 0 |
 
-Parity: **96 %** done.
+Parity: **97 %** done.
 <!-- summary:end -->
 
 ## §18.2 New map
@@ -65,7 +65,7 @@ Parity: **96 %** done.
 
 | Id | Feature | Status | Evidence | Notes |
 |---|---|---|---|---|
-| deco-patches | Ground patches: anywhere on green, stackable, random within a group, TAB cycles shapes | done | ToolTests.Decorations_stack_on_land_water_objects_need_water_and_tab_cycles, ControllerTests.Trees_cliffs_decorations_erase_and_areas | stored in decorations.json (ADR 0121); the editor marks them; the game renderer does not draw decorations yet (renderer follow-up) |
+| deco-patches | Ground patches: anywhere on green, stackable, random within a group, TAB cycles shapes | done | ToolTests.Decorations_stack_on_land_water_objects_need_water_and_tab_cycles, ToolTests.The_decoration_palette_comes_from_the_terrain_sets_pictures_in_their_display_groups, ControllerTests.Trees_cliffs_decorations_erase_and_areas | stored in decorations.json (ADR 0121); drawn by the game's renderer in matches and in the editor (ADR 0281); the palette comes from the terrain sets' IMAGES.INI, grouped by display name |
 | deco-ground | Ground objects (land only) | done | ToolTests.Decorations_stack_on_land_water_objects_need_water_and_tab_cycles |  |
 | deco-water | Water objects (water only) | done | ToolTests.Decorations_stack_on_land_water_objects_need_water_and_tab_cycles |  |
 | deco-special | Special locations | done | ToolTests.Palette_sections_are_mod_aware_and_items_have_groups | special locations are entity types of the palette (magic gateway, fog revealer) |
@@ -201,5 +201,5 @@ Parity: **96 %** done.
 | Id | Feature | Status | Evidence | Notes |
 |---|---|---|---|---|
 | acc-authored | A 3-map campaign with conversations, persistent hero, timers, quests, story screens, custom sounds and music, authored with the editor only and played end to end | done | AcceptanceTests.A_three_map_campaign_authored_with_the_editor_only_plays_end_to_end, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | authored through the editor's interaction model and property pages, saved, reopened byte-identically and played to the end headless (story screen, quests, conversation, timers, persistent hero, carried variable, custom sound and music); the manual Windows play-through and tablets are QA/PX |
-| acc-original | The original campaigns convert and every mission completes | blocked | AcceptanceTests.The_original_campaigns_convert_through_the_editor_and_every_mission_completes | needs the user's original install (TZAR2_ORIGIN); not in CI (REQ-LEGAL-01). **Locally verified 2026-10-18** against the user's install (TZAR2_ORIGIN plus a TZAR2_PACKAGE imported outside the repo): both campaign files convert with 0 errors (the Tzar campaign has 6 warnings, code page 1252, en). 21 of 26 missions complete: the tutorial 7/7, the Tzar campaign 14/19 (only v_00 and saa8 complete in plain play; the rest need autoplay assistance: clearing or god mode). alex1, bigisland, v_02, vsaa and rajba are lost or time out at 90000 ticks with every assistance level, so the test fails and the item stays blocked until the autoplay or the simulation finishes those missions |
+| acc-original | The original campaigns convert and every mission completes | done | AcceptanceTests.The_original_campaigns_convert_through_the_editor_and_every_mission_completes | needs the user's original install (TZAR2_ORIGIN); not in CI (REQ-LEGAL-01). Run on the owner's PC with every change to the simulation since the global audit: both campaigns convert with 0 errors and all 26 missions complete (the tutorial 7 of 7, the Tzar campaign 19 of 19; last run 2026-11-08, 4 min 55 s). Some missions need the solver's assistance (clearing, god mode), as recorded in its log |
 | acc-fx | The FX Gold Edition campaigns and a community campaign convert through the converter UI | blocked | AcceptanceTests.The_FX_Gold_Edition_campaigns_convert_through_the_editor_with_zero_errors, AcceptanceTests.A_community_campaign_from_an_arbitrary_folder_converts_through_the_editor | needs the locally kept FX Gold Edition campaigns (TZAR2_FX_CAMPAIGNS) and a community campaign (TZAR2_CORPUS); not on this machine or in CI. The tests are written and run where the files are |

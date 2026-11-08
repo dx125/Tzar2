@@ -112,6 +112,57 @@ public sealed class SpriteIndex
     public SpriteIndexEntry? Find(string name)
         => _byName.TryGetValue(name, out int i) ? _entries[i] : null;
 
+    /// <summary>
+    /// The entry named <paramref name="name"/> as a map of terrain set <paramref name="terrainSet"/> sees it (ADR 0281):
+    /// the set's own <c>IMAGES.INI</c> first, then the common one, then any (several sets name their own pictures alike,
+    /// e.g. <c>go_small_mont_1</c> of grass and of summer). Case-insensitive, as the original.
+    /// </summary>
+    public SpriteIndexEntry? Find(string name, string? terrainSet)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        SpriteIndexEntry? common = null, any = null;
+        string? own = terrainSet is null ? null : TerrainIni(terrainSet);
+        foreach (SpriteIndexEntry e in _entries)
+        {
+            if (!string.Equals(e.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (own is not null && string.Equals(e.Ini, own, StringComparison.OrdinalIgnoreCase))
+            {
+                return e;
+            }
+
+            if (common is null && string.Equals(e.Ini, TerrainIni("common"), StringComparison.OrdinalIgnoreCase))
+            {
+                common = e;
+            }
+
+            any ??= e;
+        }
+
+        return common ?? any;
+    }
+
+    /// <summary>The shadow of a terrain set's picture: its <c>_s</c> / <c>_shadow</c> entry of the same <c>IMAGES.INI</c> first.</summary>
+    public SpriteIndexEntry? ShadowOf(SpriteIndexEntry entry, string? terrainSet)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        foreach (string suffix in ShadowSuffixes)
+        {
+            if (Find(entry.Name + suffix, terrainSet) is { Asset: not null } shadow)
+            {
+                return shadow;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The package path of terrain set <paramref name="set"/>'s <c>IMAGES.INI</c> (<c>images/terrain/&lt;set&gt;.images.ini</c>).</summary>
+    public static string TerrainIni(string set) => "images/terrain/" + set.ToLowerInvariant() + ".images.ini";
+
     /// <summary>The shadow sprite of <paramref name="entry"/> (<c>_s</c> or <c>_shadow</c> suffix), or null.</summary>
     public SpriteIndexEntry? ShadowOf(SpriteIndexEntry entry)
     {

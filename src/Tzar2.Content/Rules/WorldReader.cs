@@ -19,7 +19,7 @@ internal static class WorldReader
         "victoryIntervalTicks", "deathmatchStartingResources", "cheatSmallResources", "cheatLargeResources", "tavernFirstMs", "tavernEveryMs", "tavernDeathmatchEveryMs",
         "heroLevelMin", "heroLevelMax", "mercenaryGroupMin", "mercenaryGroupMax", "hirePricePercent", "hireGoldPerLevel", "hireOtherPerLevel",
         "mercenaryLevel", "fameLevelBonus", "mercenariesTechnology", "heroesTechnology",
-        "fameTechnology", "gamblingTechnology", "loanTechnology",
+        "fameTechnology", "gamblingTechnology", "loanTechnology", "decorationsObstruct",
     ];
 
     public static WorldSettings Build(RulesetCompiler.SectionSet settings, GameplaySettings gameplay)
@@ -100,6 +100,9 @@ internal static class WorldReader
             FameTechnology = settings.Scalar("world", "fameTechnology") ?? d.FameTechnology,
             GamblingTechnology = settings.Scalar("world", "gamblingTechnology") ?? d.GamblingTechnology,
             LoanTechnology = settings.Scalar("world", "loanTechnology") ?? d.LoanTechnology,
+            DecorationsObstruct = settings.Field("world", "decorationsObstruct") is { } obstruct
+                ? RulesetCompiler.Bool(obstruct, settings.FieldSource("world", "decorationsObstruct"), "world.decorationsObstruct")
+                : d.DecorationsObstruct,
         };
     }
 

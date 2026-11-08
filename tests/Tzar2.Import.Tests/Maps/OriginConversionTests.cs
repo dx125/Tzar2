@@ -44,7 +44,8 @@ public class OriginConversionTests
         foreach (MapConversion map in a.Maps)
         {
             Assert.Empty(map.Placeholders);
-            Assert.Equal(map.Map!.ContentHash, MapBinary.Read(MapBinary.Write(map.Map)).ContentHash);
+            // map.bin holds no decorations (decorations.json does; ADR 0281).
+            Assert.Equal(map.Map!.ContentHash, MapBinary.Read(MapBinary.Write(map.Map)).WithDecorations(map.Map.Decorations).ContentHash);
             Assert.Equal(map.Scenario!.ContentHash, ScenarioJson.Read(ScenarioJson.Write(map.Scenario)).ContentHash);
             Assert.DoesNotContain(map.Scenario.Actions, x => x is UnknownAction);
             Assert.DoesNotContain(map.Scenario.Events, x => x is UnknownEvent);

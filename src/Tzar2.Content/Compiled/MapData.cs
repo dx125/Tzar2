@@ -40,6 +40,7 @@ public sealed class MapData
     private readonly byte[] _cliffTiles;
     private readonly ImmutableArray<MapObject> _objects;
     private readonly byte[] _setTerrainCorners;
+    private readonly ImmutableArray<MapDecoration> _decorations;
 
     /// <summary>Creates a map.</summary>
     /// <param name="name">Display name.</param>
@@ -51,8 +52,9 @@ public sealed class MapData
     /// <param name="objects">Placed objects, in placement order (null = none).</param>
     /// <param name="terrainSet">Terrain set id (<c>grass</c>, <c>summer</c>, <c>desert</c>, <c>snow</c>…), or null.</param>
     /// <param name="setTerrainCorners">(W+1)×(H+1) terrain-set indices; required with <paramref name="terrainSet"/>, empty without.</param>
-    /// <exception cref="ArgumentException">A size or layer length is invalid, or an object is off the map.</exception>
-    public MapData(string name, int width, int height, ReadOnlySpan<byte> terrainCorners, ReadOnlySpan<byte> heightCorners, ReadOnlySpan<byte> cliffTiles, IReadOnlyList<MapObject>? objects = null, string? terrainSet = null, ReadOnlySpan<byte> setTerrainCorners = default)
+    /// <param name="decorations">Decorations (ADR 0281), or null for none.</param>
+    /// <exception cref="ArgumentException">A size or layer length is invalid, or an object or decoration is off the map.</exception>
+    public MapData(string name, int width, int height, ReadOnlySpan<byte> terrainCorners, ReadOnlySpan<byte> heightCorners, ReadOnlySpan<byte> cliffTiles, IReadOnlyList<MapObject>? objects = null, string? terrainSet = null, ReadOnlySpan<byte> setTerrainCorners = default, IReadOnlyList<MapDecoration>? decorations = null)
     {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentOutOfRangeException.ThrowIfLessThan(width, MinSize);
@@ -111,7 +113,49 @@ public sealed class MapData
         _objects = builder.MoveToImmutable();
         TerrainSet = terrainSet;
         _setTerrainCorners = setTerrainCorners.ToArray();
+        decorations ??= [];
+        foreach (MapDecoration d in decorations)
+        {
+            if (d is null || d.Class is null || d.Image is null || (uint)d.TileX >= (uint)width || (uint)d.TileY >= (uint)height)
+            {
+                throw new ArgumentException($"Decoration '{d?.Image}' at ({d?.TileX}, {d?.TileY}) is invalid or off the map.", nameof(decorations));
+            }
+        }
+
+        _decorations = [.. decorations];
         ContentHash = ComputeHash();
+    }
+
+    // A copy with other decorations; the layers are shared, not copied (they never change).
+    private MapData(MapData map, ImmutableArray<MapDecoration> decorations)
+    {
+        Name = map.Name;
+        Width = map.Width;
+        Height = map.Height;
+        _terrainCorners = map._terrainCorners;
+        _heightCorners = map._heightCorners;
+        _cliffTiles = map._cliffTiles;
+        _objects = map._objects;
+        TerrainSet = map.TerrainSet;
+        _setTerrainCorners = map._setTerrainCorners;
+        _decorations = decorations;
+        ContentHash = ComputeHash();
+    }
+
+    /// <summary>This map with <paramref name="decorations"/> instead of its own (ADR 0281).</summary>
+    /// <exception cref="ArgumentException">A decoration is invalid or off the map.</exception>
+    public MapData WithDecorations(IReadOnlyList<MapDecoration> decorations)
+    {
+        ArgumentNullException.ThrowIfNull(decorations);
+        foreach (MapDecoration d in decorations)
+        {
+            if (d is null || d.Class is null || d.Image is null || (uint)d.TileX >= (uint)Width || (uint)d.TileY >= (uint)Height)
+            {
+                throw new ArgumentException($"Decoration '{d?.Image}' at ({d?.TileX}, {d?.TileY}) is invalid or off the map.", nameof(decorations));
+            }
+        }
+
+        return new MapData(this, [.. decorations]);
     }
 
     /// <summary>World units per tile (TDD §8.2).</summary>
@@ -143,6 +187,12 @@ public sealed class MapData
 
     /// <summary>Terrain-set index per corner, (W+1)×(H+1), row-major; empty when <see cref="TerrainSet"/> is null.</summary>
     public ReadOnlySpan<byte> SetTerrainCorners => _setTerrainCorners;
+
+    /// <summary>
+    /// The map's decorations (ADR 0281): drawn by the client; ground objects and ruins also close the cells under their
+    /// picture (<see cref="Ruleset.Scenery"/>). They are not in <c>map.bin</c> but in the package's <c>decorations.json</c>.
+    /// </summary>
+    public ImmutableArray<MapDecoration> Decorations => _decorations;
 
     /// <summary>xxHash64 of the map (lobby hash check, replay header; REQ-NET-05, §19.4).</summary>
     public ulong ContentHash { get; }
@@ -224,6 +274,16 @@ public sealed class MapData
         if (TerrainSet is not null)
         {
             hasher.Add(Encoding.UTF8.GetBytes(TerrainSet)).Add(_setTerrainCorners);
+        }
+
+        // Added the same way (ADR 0281): maps without decorations hash as before.
+        if (_decorations.Length > 0)
+        {
+            hasher.Add(_decorations.Length);
+            foreach (MapDecoration d in _decorations)
+            {
+                hasher.Add(d.Class.Length).Add(Encoding.UTF8.GetBytes(d.Class)).Add(d.Image.Length).Add(Encoding.UTF8.GetBytes(d.Image)).Add(d.TileX).Add(d.TileY).Add(d.PixelX).Add(d.PixelY);
+            }
         }
 
         return hasher.GetCurrentHash();

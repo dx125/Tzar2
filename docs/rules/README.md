@@ -97,7 +97,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | Chapter | Rules | Tested | Implemented | Partial | Missing | Deviation | Unclear |
 |---|---|---|---|---|---|---|---|
 | [Computer opponents](ai.yaml) (AI) | 5 | 4 | 0 | 0 | 0 | 1 | 0 |
-| [Capture](capture.yaml) (CAP) | 6 | 5 | 1 | 0 | 0 | 0 | 0 |
+| [Capture](capture.yaml) (CAP) | 7 | 5 | 1 | 0 | 1 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 27 | 23 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 30 | 21 | 9 | 0 | 0 | 0 | 0 |
@@ -110,19 +110,23 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Magic, religion and spies](magic.yaml) (MAG) | 40 | 40 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 14 | 4 | 0 | 0 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 20 | 17 | 3 | 0 | 0 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 21 | 17 | 4 | 0 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 16 | 11 | 4 | 0 | 0 | 1 | 0 |
 | [Scenario scripts](scenario.yaml) (SCN) | 2 | 2 | 0 | 0 | 0 | 0 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 16 | 9 | 1 | 0 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 12 | 11 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 22 | 15 | 5 | 0 | 0 | 2 | 0 |
-| **All** | 416 | 328 | 71 | 2 | 1 | 10 | 4 |
+| [Terrain and movement](world.yaml) (WORLD) | 22 | 15 | 4 | 1 | 0 | 2 | 0 |
+| **All** | 418 | 328 | 71 | 3 | 2 | 10 | 4 |
 
 ## Not done yet
 
 Missing and partial rules.
+
+### Capture
+
+* **CAP-007**: A ruin on the map (a statue, an altar - a special location) is taken by the fighters of one kingdom standing round it, and the kingdom holding it scores its ruinpoints every second. *Found with ADR 0281. Tzar2 draws ruins (and they close their cells once world.decorationsObstruct is on), but nobody takes them and they score nothing; the owner asked for it in the editor series of 2026-11-08 (DIP-011's note).* (ADR 0281)
 
 ### Resources and gathering
 
@@ -135,6 +139,10 @@ Missing and partial rules.
 ### Menus, setup and pause
 
 * **SHELL-019** (partial): The preferences set the sound volume (off when unchecked) with unit speech, building sounds and nature sounds kept or not, the music volume or CD audio, the game speed, the scroll speed and the path depth, day and night and weather effects, and when the menu bar appears. *The checks by the sound and music volumes turn them off, as in the options' art; CD audio is shown and stays off (Tzar2 plays MIDI); the hardware cursor is the system's pointer. When the menu bar appears is missing, the path depth is dropped on purpose (TDD ORIG-03), and where weather and day/night sit waits for the owner's screenshot (UI review question 3).*
+
+### Terrain and movement
+
+* **WORLD-003** (partial): Rocks, mountains and cliffs cannot be walked through. *Built but off (world.decorationsObstruct: false) until units step diagonally past corners as the original's do: with the rocks closed and Tzar2's step cutting no corner, the heroes of the first campaign mission (v_00) cannot reach its end; the other 25 missions complete. A map's rocks, mountains, holes and the like are its ground objects, and its statues and altars its ruins: they close the cells their picture's object box covers, but those the picture's .dat grid leaves free (bit 2); a picture without a grid closes them all; fliers pass over. The original's loader takes the .dat of any picture by its file name (0x497c90, read in Tzar.exe); ReTzar reads it only for pictures under building\ or scenery\. Until ADR 0281 the converter kept them as decorations nobody drew, and units walked through them.* (ADR 0281)
 
 ## Unclear
 

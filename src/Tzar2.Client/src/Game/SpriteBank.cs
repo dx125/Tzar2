@@ -122,6 +122,43 @@ public sealed class SpriteBank : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Registers a decoration picture of terrain set <paramref name="terrainSet"/> (ADR 0281: the set's own entry before
+    /// another set's of the same name) with its shadow, under its name; null when missing. A bank serves one terrain set.
+    /// </summary>
+    public SheetRef? AddScenery(string? name, string? terrainSet)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return null;
+        }
+
+        if (_byName.TryGetValue(name, out SheetRef? known))
+        {
+            return known;
+        }
+
+        SheetRef? result = null;
+        if (_store.Index.Find(name, terrainSet) is { Asset: { } asset } entry)
+        {
+            try
+            {
+                result = Make(entry, asset);
+                if (result is not null && _store.Index.ShadowOf(entry, terrainSet) is { Asset: { } shadowAsset } shadowEntry)
+                {
+                    result.Shadow = Make(shadowEntry, shadowAsset);
+                }
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException)
+            {
+                GD.PrintErr($"Sprite {name}: {e.Message}");
+            }
+        }
+
+        _byName[name] = result;
+        return result;
+    }
+
     /// <summary>The entry registered as <paramref name="name"/>, or null.</summary>
     public SheetRef? Get(string? name) => name is not null && _byName.TryGetValue(name, out SheetRef? s) ? s : null;
 

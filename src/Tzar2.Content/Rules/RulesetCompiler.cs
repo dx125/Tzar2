@@ -252,7 +252,8 @@ public static class RulesetCompiler
                 hudResourceMask: hudMask,
                 world: WorldReader.Build(settings, gameplaySettings),
                 combat: combatRules,
-                commonCivilization: common);
+                commonCivilization: common,
+                scenery: legacy is null ? null : new SceneryTable(legacy.SceneryShapes()));
             return new CompiledRuleset(ruleset, diagnostics, warnings, legacyHash);
         }
         catch (ArgumentException ex)

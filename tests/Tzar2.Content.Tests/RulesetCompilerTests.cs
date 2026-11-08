@@ -21,6 +21,24 @@ public class RulesetCompilerTests
     private static int Resource(string key) => Classic.ResourceId(key);
 
     [Fact]
+    [Trait("Rule", "WORLD-003")]
+    public void The_terrain_sets_decoration_pictures_compile_to_the_cells_they_close()
+    {
+        // ADR 0281: the object box in whole tiles; the picture's .dat grid (bit 2 = free) read at the box's width; no grid
+        // closes every cell. A set's own picture comes before another set's of the same name, then the common one.
+        SceneryShape grass = Classic.Scenery.Find("grass", "GO_SMALL_MONT_1")!;
+        Assert.Equal((2, 1, false, true), (grass.Width, grass.Height, grass.Free[0], grass.Free[1]));
+        SceneryShape summer = Classic.Scenery.Find("summer", "go_small_mont_1")!;
+        Assert.Equal((1, 1, false), (summer.Width, summer.Height, summer.Free[0]));
+        Assert.Same(grass, Classic.Scenery.Find("desert", "go_small_mont_1")); // no desert picture: the first set's
+        SceneryShape statue = Classic.Scenery.Find("snow", "gr_statue_1")!;
+        Assert.Equal(("common", 2, 2), (statue.Set, statue.Width, statue.Height));
+        Assert.All(statue.Free, Assert.False);
+        Assert.Null(Classic.Scenery.Find("grass", "gp_spot"));
+        Assert.Equal(3, Classic.Scenery.Shapes.Length);
+    }
+
+    [Fact]
     public void Classic_compiles_the_listed_classes_with_dense_ids_in_key_order()
     {
         string[] keys = Classic.EntityTypes.Select(t => t.Key).ToArray();

@@ -26,8 +26,8 @@ public partial class ToolPanel : TabContainer
 
     /// <summary>Creates the dock.</summary>
     /// <param name="controller">The controller.</param>
-    /// <param name="decorations">Decoration images by class (from the package's sprite index), for the decoration tab.</param>
-    public ToolPanel(EditorController controller, IReadOnlyDictionary<string, IReadOnlyList<string>> decorations)
+    /// <param name="decorations">The decoration palette of the map's terrain set (<see cref="DecorationCatalog"/>).</param>
+    public ToolPanel(EditorController controller, IReadOnlyList<DecorationGroup> decorations)
     {
         _c = controller;
         CustomMinimumSize = new Vector2(260, 0);
@@ -47,6 +47,14 @@ public partial class ToolPanel : TabContainer
         Control page = GetTabControl(0);
         Forms.Clear(page);
         FillTerrain(page);
+    }
+
+    /// <summary>Shows the decoration palette of another terrain set.</summary>
+    public void RefreshDecorations(IReadOnlyList<DecorationGroup> decorations)
+    {
+        Control page = GetTabControl(3);
+        Forms.Clear(page);
+        FillDecorations((VBoxContainer)page, decorations);
     }
 
     private void Activate(int tab)
@@ -176,35 +184,69 @@ public partial class ToolPanel : TabContainer
         }
     }
 
-    private void Decorations(IReadOnlyDictionary<string, IReadOnlyList<string>> catalog)
+    private void Decorations(IReadOnlyList<DecorationGroup> catalog) => FillDecorations(Page("Decorations"), catalog);
+
+    // The original editor's decoration pages (ADR 0281): a section, a group of it (the pictures' display name), its
+    // pictures; random within the group or the picture chosen, TAB cycling the group's pictures.
+    private void FillDecorations(VBoxContainer page, IReadOnlyList<DecorationGroup> catalog)
     {
-        VBoxContainer page = Page("Decorations");
         GridContainer grid = Forms.Grid(page);
-        string[] classes = ["ground_patch", "ground_object", "water_object", "animation"];
         var images = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 200) };
-        void Fill(string cls)
+        var groupChoice = new OptionButton { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        var shown = new List<DecorationGroup>();
+        void Group(DecorationGroup g)
         {
             images.Clear();
-            IReadOnlyList<string> shapes = catalog.TryGetValue(cls, out IReadOnlyList<string>? list) && list.Count > 0 ? list : [cls == "ground_patch" ? "patch" : cls];
-            foreach (string s in shapes)
+            foreach (string image in g.Images)
             {
-                images.AddItem(s);
+                images.AddItem(image);
             }
 
-            _c.DecorationClass = cls;
-            _c.DecorationShapes = shapes;
-            _c.DecorationImage = shapes[0];
+            _c.DecorationClass = g.Class;
+            _c.DecorationOnWater = g.OnWater;
+            _c.DecorationShapes = g.Images;
+            _c.DecorationImage = g.Images.Length > 0 ? g.Images[0] : string.Empty;
         }
 
-        Forms.Choice(grid, "Kind", classes, 0, i => Fill(classes[i]));
+        void Section(string section)
+        {
+            groupChoice.Clear();
+            shown.Clear();
+            foreach (DecorationGroup g in catalog)
+            {
+                if (g.Section == section)
+                {
+                    shown.Add(g);
+                    groupChoice.AddItem($"{g.Name} ({g.Images.Length})");
+                }
+            }
+
+            if (shown.Count > 0)
+            {
+                groupChoice.Select(0);
+                Group(shown[0]);
+            }
+            else
+            {
+                images.Clear();
+            }
+        }
+
+        Forms.Choice(grid, "Kind", DecorationCatalog.Sections, 0, i => Section(DecorationCatalog.Sections[i]));
+        grid.AddChild(new Label { Text = "Group" });
+        grid.AddChild(groupChoice);
+        groupChoice.ItemSelected += i => Group(shown[(int)i]);
+        Forms.Check(grid, "Random of the group", _c.DecorationRandom, on => _c.DecorationRandom = on);
         images.ItemSelected += i =>
         {
             _c.DecorationImage = images.GetItemText((int)i);
             _c.Tool = EditorTool.Decoration;
         };
         page.AddChild(images);
-        Forms.Label(page, "Patches stack anywhere on land; ground objects need land, water objects water. TAB cycles shapes.").AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        Fill(classes[0]);
+        Forms.Label(page, catalog.Count == 0
+            ? "The package has no decoration pictures for this terrain set."
+            : "Patches stack anywhere on land. Ground objects and special locations close the cells under them; water objects lie on water. TAB cycles the group's pictures.").AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        Section(DecorationCatalog.Sections[0]);
     }
 
     private void Starts()

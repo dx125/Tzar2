@@ -106,6 +106,9 @@ public sealed class WorldRenderer : IDisposable
     // The blows each unit has struck, counted when its swing starts again (PRES-005's alternate swings).
     private readonly Dictionary<uint, (int LastSwingMs, uint Blows)> _swings = [];
     private readonly TerrainGrid _grid;
+    private MapDecoration[] _decorations = [];
+    private int[][] _decorationChunks = [];
+    private int _decorationChunkColumns;
 
     /// <summary>Where trees and their shadows are drawn and which pictures grow where (PRES-009; set by the game screen from the terrain set's data).</summary>
     public TreeLayout Trees { get; set; } = TreeLayout.Default;
@@ -229,6 +232,110 @@ public sealed class WorldRenderer : IDisposable
         }
     }
 
+    /// <summary>Tiles along a side of the squares decorations are culled by.</summary>
+    private const int DecorationChunkTiles = 16;
+
+    /// <summary>
+    /// The map's decorations to draw (ADR 0281): ground patches flat under everything, ground objects and ruins standing
+    /// among the units by their foot, tree stumps as the strip's first pictures. Their pictures must be in the bank
+    /// (<see cref="SpriteBank.AddScenery"/>) before it was uploaded.
+    /// </summary>
+    public void SetDecorations(IReadOnlyList<MapDecoration> decorations)
+    {
+        ArgumentNullException.ThrowIfNull(decorations);
+        _decorations = [.. decorations];
+        _decorationChunkColumns = (MapWidth + DecorationChunkTiles - 1) / DecorationChunkTiles;
+        int rows = (MapHeight + DecorationChunkTiles - 1) / DecorationChunkTiles;
+        var chunks = new List<int>[_decorationChunkColumns * rows];
+        for (int i = 0; i < _decorations.Length; i++)
+        {
+            MapDecoration d = _decorations[i];
+            (int px, int py) = d.PatchPoint;
+            int cx = Math.Clamp(px / TilePixels / DecorationChunkTiles, 0, _decorationChunkColumns - 1);
+            int cy = Math.Clamp(py / TilePixels / DecorationChunkTiles, 0, rows - 1);
+            (chunks[(cy * _decorationChunkColumns) + cx] ??= []).Add(i);
+        }
+
+        _decorationChunks = new int[chunks.Length][];
+        for (int c = 0; c < chunks.Length; c++)
+        {
+            _decorationChunks[c] = chunks[c] is { } list ? [.. list] : [];
+        }
+    }
+
+    // The decorations of the squares round the view (one square more each way: a picture reaches up to ten tiles from
+    // its corner), hidden where the land is still unexplored.
+    private void DrawDecorations(Rect2I cull, byte[]? fog)
+    {
+        if (_decorations.Length == 0)
+        {
+            return;
+        }
+
+        const int Side = DecorationChunkTiles * TilePixels;
+        int rows = _decorationChunks.Length / _decorationChunkColumns;
+        int x0 = Math.Max(0, (cull.Position.X / Side) - 1), x1 = Math.Min(_decorationChunkColumns - 1, (cull.End.X / Side) + 1);
+        int y0 = Math.Max(0, (cull.Position.Y / Side) - 1), y1 = Math.Min(rows - 1, (cull.End.Y / Side) + 1);
+        for (int cy = y0; cy <= y1; cy++)
+        {
+            for (int cx = x0; cx <= x1; cx++)
+            {
+                foreach (int i in _decorationChunks[(cy * _decorationChunkColumns) + cx])
+                {
+                    DrawDecoration(_decorations[i], fog);
+                }
+            }
+        }
+    }
+
+    private void DrawDecoration(MapDecoration d, byte[]? fog)
+    {
+        const int Unit = TilePixels * UnitsPerPixel;
+        if (fog is not null && Fog(fog, (d.TileX * Unit) + (Unit / 2), (d.TileY * Unit) + (Unit / 2)) == 0)
+        {
+            return;
+        }
+
+        if (d.Class == MapDecoration.Tree)
+        {
+            // A stump of the map: picture N of the strip's first kind (the original's tree value N; [treename] Stump).
+            if (_bank.Trees is { } trees && d.Image.StartsWith("stump ", StringComparison.Ordinal)
+                && int.TryParse(d.Image.AsSpan(6), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int n) && n >= 1)
+            {
+                uint stumpKey = (uint)((d.TileY * TilePixels) + TilePixels + 4096) << 6;
+                (int tx, int ty) = Trees.TreeOrigin(d.TileX, d.TileY);
+                Add(_ground, trees, new Vector2I(tx, ty), n - 1, 0, -1, stumpKey, shadowOnly: false);
+                if (trees.Shadow is { } treeShadow)
+                {
+                    (int sx, int sy) = Trees.ShadowOrigin(d.TileX, d.TileY);
+                    Add(_ground, treeShadow, new Vector2I(sx, sy), n - 1, 0, -1, stumpKey, shadowOnly: true);
+                }
+            }
+
+            return;
+        }
+
+        if (_bank.Get(d.Image) is not { } sheet)
+        {
+            return;
+        }
+
+        // Scenery animates only when its entry gives a pace, all in step from its start row (ReTzar 0x4312b0, 0x434640).
+        bool animated = sheet.Sheet.FramesPerDirection > 1 && sheet.Animation.Source != "default";
+        int frame = sheet.StartRow + (animated ? sheet.Animation.FrameAt(_timeMs) : 0);
+        if (d.Class == MapDecoration.GroundPatch)
+        {
+            (int px, int py) = d.PatchPoint;
+            AddSheet(_ground, sheet, new Vector2I(px - sheet.Object.Position.X, py - sheet.Object.Position.Y), 0, frame, -1, 0, shadows: true);
+            return;
+        }
+
+        // A ground object or ruin stands on its tile as a building on its footprint: the picture's object corner there.
+        int left = d.TileX * TilePixels, top = d.TileY * TilePixels;
+        uint key = (uint)(top + Math.Max(TilePixels, sheet.Object.Size.Y) + 4096) << 6;
+        AddSheet(_objects, sheet, new Vector2I(left - sheet.Object.Position.X, top - sheet.Object.Position.Y), 0, frame, -1, key, shadows: true);
+    }
+
     /// <summary>Draws <paramref name="frame"/>.</summary>
     public void Render(
         GameFrame frame,
@@ -287,6 +394,7 @@ public sealed class WorldRenderer : IDisposable
         bool useFog = options.Fog && fog.Length == MapWidth * MapHeight;
         var cull = new Rect2I(visible.Position - new Vector2I(256, 256), visible.Size + new Vector2I(512, 512));
 
+        DrawDecorations(cull, useFog ? fog : null);
         foreach (FrameRuin ruin in frame.Ruins)
         {
             DrawRuin(ruin, cull, useFog ? fog : null);
