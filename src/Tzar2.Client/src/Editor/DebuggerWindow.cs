@@ -15,7 +15,6 @@ namespace Tzar2.Client.Editor;
 public partial class DebuggerWindow : Window
 {
     private readonly TriggerDebugger _debugger;
-    private readonly GameSession _session;
     private readonly ItemList _rules = new() { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
     private readonly ItemList _actions = new() { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
     private readonly ItemList _watch = new() { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
@@ -24,11 +23,10 @@ public partial class DebuggerWindow : Window
     private int _logShown = -1;
     private int _tickShown = -1;
 
-    /// <summary>Creates the window over a debugged session.</summary>
-    public DebuggerWindow(TriggerDebugger debugger, GameSession session)
+    /// <summary>Creates the window over a debugger (it follows the debugger's session through rewinds, ADR 0285).</summary>
+    public DebuggerWindow(TriggerDebugger debugger)
     {
         _debugger = debugger;
-        _session = session;
         Title = "Trigger debugger";
         Size = new Vector2I(760, 620);
         Position = new Vector2I(40, 40);
@@ -42,8 +40,8 @@ public partial class DebuggerWindow : Window
         Forms.Button(controls, "Pause", _debugger.Pause);
         Forms.Button(controls, "Continue", _debugger.Continue);
         Forms.Button(controls, "Step (1 tick)", _debugger.Step);
-        Forms.Button(controls, "Slower", () => _session.SpeedIndex--);
-        Forms.Button(controls, "Faster", () => _session.SpeedIndex++);
+        Forms.Button(controls, "Slower", () => _debugger.Session.SpeedIndex--);
+        Forms.Button(controls, "Faster", () => _debugger.Session.SpeedIndex++);
         Forms.Check(controls, "Log every evaluation", false, v => _debugger.LogEvaluations = v, inGrid: false);
         box.AddChild(controls);
         box.AddChild(_status);
@@ -82,7 +80,8 @@ public partial class DebuggerWindow : Window
     public override void _Process(double delta)
     {
         DebugWatch w = _debugger.Watch;
-        _status.Text = $"tick {w.Tick} · pass {w.Passes} · {(_session.Paused ? "PAUSED" : "running")} · speed {_session.SpeedPercent} %" + (_debugger.Hit is { } hit ? " · " + hit : string.Empty);
+        GameSession session = _debugger.Session;
+        _status.Text = $"tick {w.Tick} · pass {w.Passes} · {(session.Paused ? "PAUSED" : "running")} · speed {session.SpeedPercent} %" + (_debugger.Hit is { } hit ? " · " + hit : string.Empty);
         if (w.Tick != _tickShown)
         {
             _tickShown = w.Tick;

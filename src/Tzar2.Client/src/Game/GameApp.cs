@@ -412,12 +412,12 @@ public partial class GameApp : Node
         var screen = new GameScreen(_store, _ui!, session, terrain, _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null || _args.ResourceSoak is not null };
         screen.Finished += (outcome, stats) =>
         {
-            SaveReplay(session, "skirmish");
+            SaveReplay(screen.Session, "skirmish");
             ShowResults(outcome, stats);
         };
         screen.QuitRequested += () =>
         {
-            SaveReplay(session, "skirmish");
+            SaveReplay(screen.Session, "skirmish");
             ShowMainMenu();
         };
         screen.RestartRequested += () =>
@@ -432,10 +432,10 @@ public partial class GameApp : Node
             }
         };
         screen.Saves = Saves;
-        screen.CaptureSave = label => SaveGame.CaptureMatch(session, label);
+        screen.CaptureSave = label => SaveGame.CaptureMatch(screen.Session, label);
         screen.LoadRequested += save =>
         {
-            session.Stop();
+            screen.Session.Stop();
             LoadSave(save);
         };
         Replace(screen, music: null);

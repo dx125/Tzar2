@@ -309,6 +309,22 @@ public partial class SoundMixer : Node
         }
     }
 
+    /// <summary>Silences every sound (a rewind: what was playing belongs to a future that no longer happens; ADR 0285).</summary>
+    public void StopAll()
+    {
+        for (int i = 0; i < _voices.Length; i++)
+        {
+            if (_voices[i] is { } voice && (voice.Playing || voice.StreamPaused))
+            {
+                voice.StreamPaused = false;
+                voice.Stop();
+            }
+
+            _states[i] = default;
+            _places[i] = null;
+        }
+    }
+
     private static SoundChannel ChannelOf(SoundCategory category) => category switch
     {
         SoundCategory.Speech => SoundChannel.Unit,

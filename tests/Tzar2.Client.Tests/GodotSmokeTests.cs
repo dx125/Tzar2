@@ -247,6 +247,7 @@ public sealed class GodotSmokeTests : IDisposable
         string line = output.Split('\n').Single(l => l.StartsWith("EDITOR SMOKE OK", StringComparison.Ordinal));
         Assert.Contains("blocking=0", line, StringComparison.Ordinal);
         Assert.Contains("playtest=", line, StringComparison.Ordinal);
+        Assert.Contains(" rewound=", line, StringComparison.Ordinal); // ADR 0285: the playtest went back and went on
         Assert.Contains("import=smoke.t2map", line, StringComparison.Ordinal);
         Assert.Contains("campaign=", line, StringComparison.Ordinal);
         Assert.DoesNotContain("ERROR", output, StringComparison.Ordinal);

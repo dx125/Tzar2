@@ -37,6 +37,12 @@ public sealed class GameSession : IDisposable
     /// <summary>Game speeds in percent of the classic tick rate (the original's <c>+</c>/<c>-</c> keys step through them).</summary>
     public static readonly ImmutableArray<int> SpeedSteps = [25, 50, 75, 100, 150, 200, 300];
 
+    /// <summary>
+    /// Game speeds of a match with the testing tools (playtests and rewind, ADR 0285): the original's, then up to 2000 %
+    /// (beyond what the original offers; the ticks are the same, only the clock runs faster).
+    /// </summary>
+    public static readonly ImmutableArray<int> TestSpeedSteps = [.. SpeedSteps, 500, 1000, 2000];
+
     private readonly object _gate = new();
     private readonly CommandList[] _pending;
     private readonly CommandList _tickSet = new();
@@ -78,6 +84,11 @@ public sealed class GameSession : IDisposable
     }
 
     private volatile int _view = -1; // -1: the local player's fog (when fog is on); 255: everything; else that kingdom's fog
+
+    // What a rewind carries to the restored match (ADR 0285): the fog and the view.
+    internal bool FogOn => _fog;
+
+    internal int ViewIndex => _view;
 
     /// <summary>
     /// Shows the frames from kingdom <paramref name="player"/>'s view (its fog), or everything with null (replay viewer,
@@ -491,7 +502,9 @@ public sealed class GameSession : IDisposable
     /// <summary>The exception that stopped the sim thread, or null.</summary>
     public Exception? Fault => Volatile.Read(ref _fault);
 
-    /// <summary>Index into <see cref="SpeedSteps"/> (fixed by the lobby in multiplayer: changes are ignored).</summary>
+    /// <summary>
+    /// Index into <see cref="Speeds"/> (fixed by the lobby in multiplayer: changes are ignored).
+    /// </summary>
     public int SpeedIndex
     {
         get => _speedIndex;
@@ -499,14 +512,33 @@ public sealed class GameSession : IDisposable
         {
             if (_driver is null)
             {
-                _speedIndex = Math.Clamp(value, 0, SpeedSteps.Length - 1);
-                TraceSession(LogLevel.Info, $"speed {SpeedSteps[_speedIndex]} %");
+                _speedIndex = Math.Clamp(value, 0, Speeds.Length - 1);
+                TraceSession(LogLevel.Info, $"speed {Speeds[_speedIndex]} %");
             }
         }
     }
 
+    /// <summary>
+    /// Whether the faster speeds of <see cref="TestSpeedSteps"/> are offered (playtests and rewind, ADR 0285); turned off,
+    /// a faster speed falls back to the original's fastest. Single player only.
+    /// </summary>
+    public bool FastSpeeds
+    {
+        get => _fastSpeeds;
+        set
+        {
+            _fastSpeeds = value && _driver is null;
+            _speedIndex = Math.Min(_speedIndex, Speeds.Length - 1);
+        }
+    }
+
+    private volatile bool _fastSpeeds;
+
+    /// <summary>The speeds offered: <see cref="SpeedSteps"/>, or <see cref="TestSpeedSteps"/> with <see cref="FastSpeeds"/>.</summary>
+    public ImmutableArray<int> Speeds => _fastSpeeds ? TestSpeedSteps : SpeedSteps;
+
     /// <summary>Game speed in percent.</summary>
-    public int SpeedPercent => _driver?.SpeedPercent ?? SpeedSteps[_speedIndex];
+    public int SpeedPercent => _driver?.SpeedPercent ?? Speeds[Math.Min(_speedIndex, Speeds.Length - 1)];
 
     /// <summary>Whether the match is paused (multiplayer: asks the relay, which pauses every peer; REQ-NET-07 pauses).</summary>
     public bool Paused
