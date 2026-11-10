@@ -122,7 +122,21 @@ public static class EditorSmoke
             Require(session.Fault is null && session.TicksRun >= 40, "playtest runs");
             await Shot(host, "3-playtest");
             Require(app.Debugger?.Watch.Rules[0].LastValue == 1, "debugger sees the rule fire");
-            play = $" playtest={session.TicksRun}";
+
+            // Rewind (ADR 0285): back to the start under the same screen; the debugger follows and the match goes on.
+            Game.GameScreen game = app.Game ?? throw new InvalidOperationException("no game screen in the playtest");
+            int played = session.TicksRun;
+            Require(game.Rewind is not null && game.RewindTo(0), "the playtest rewinds");
+            Tzar2.Game.Session.GameSession rewound = game.Session;
+            Require(!ReferenceEquals(rewound, session) && ReferenceEquals(app.Debugger?.Session, rewound), "the debugger follows the rewind");
+            watch.Restart();
+            while (rewound.TicksRun < 20 && watch.Elapsed.TotalSeconds < 60 && rewound.Fault is null)
+            {
+                await Frame(host);
+            }
+
+            Require(rewound.Fault is null && rewound.TicksRun >= 20 && game.Frame?.Tick.Value is >= 10, "the rewound playtest runs");
+            play = $" playtest={played} rewound={rewound.TicksRun}";
             app.ShowEditor();
             await Frame(host);
             screen = app.EditorScreen ?? throw new InvalidOperationException("no editor after the playtest");

@@ -4,6 +4,7 @@ using System.IO;
 using Godot;
 using Tzar2.Client.Logic;
 using Tzar2.Game.Campaigns;
+using Tzar2.Game.Editing;
 using Tzar2.Game.Scenario;
 using Tzar2.Game.Session;
 
@@ -196,17 +197,23 @@ public partial class GameApp
         _missionEnding = false;
         _profile = Profile.With(progress);
         var screen = new GameScreen(_store, _ui!, session, "grass", _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null };
+        if (source is CampaignPlaytest || ReferenceEquals(source, _converted))
+        {
+            screen.Rewind = new MatchRewind(session); // a campaign played from the editor is a playtest (ADR 0285)
+        }
+
+        screen.SessionReplaced += next => _mission = next;
         screen.MapRequested += notice => EndMission(notice.Text.Length > 0 ? notice.Text : null, transition: true);
         screen.Finished += (_, _) => EndMission(null, transition: false);
         screen.QuitRequested += () =>
         {
-            SaveReplay(session, "campaign");
+            SaveReplay(screen.Session, "campaign");
             Profiles.Save(Profile);
             ShowCampaigns();
         };
         screen.RestartRequested += () => StartMission(source, map);
         screen.Saves = Saves;
-        screen.CaptureSave = label => SaveGame.Capture(session, source.Campaign.Id, map, Profile.Progress(source.Campaign.Id), label);
+        screen.CaptureSave = label => SaveGame.Capture(screen.Session, source.Campaign.Id, map, Profile.Progress(source.Campaign.Id), label);
         screen.LoadRequested += save =>
         {
             _mission?.Stop();

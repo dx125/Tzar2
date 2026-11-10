@@ -71,6 +71,8 @@ public partial class SettingsScreen : ArtScreen
             });
         }
 
+        Row(Controls, 6, "Rewind (testing)", () => OnOff(_settings.TestRewind), _ => _settings.TestRewind = !_settings.TestRewind);
+
         Title(Sound, T("options", "t_sopt", "SOUND"));
         Row(Sound, 0, T("options", "t_svol", "Sound Volume"), () => $"{_settings.SoundVolume} %", step => _settings.SoundVolume += step * 10, hint: "O_SOUND_VOLUME");
         Row(Sound, 1, T("options", "t_mv", "Music Volume"), () => $"{_settings.MusicVolume} %", step => _settings.MusicVolume += step * 10, hint: "O_MUSIC_VOLUME");

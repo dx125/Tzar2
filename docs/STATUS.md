@@ -572,6 +572,9 @@ owner's order of 2026-10-26.
     6. D - the triggers: `$difficulty` and the other reserved variables that read 0, the 26 UNVERIFIED readings against
        ReTzar and the original's code.
     7. E - the palette's details: tree pictures, the gate's side, units stacking, the authentic import's shadow.
+    8. Section 3, taken first (the owner, 2026-11-10: it speeds up testing): **done** - rewind and speeds to 2000 % in
+       the playtest, in a campaign played from the editor, and in any single-player match with the setting "Rewind
+       (testing)" (ADR 0285; log below). The batches C, D and E follow, then the ruins, then the rest of section 3.
 
 ## Decision and event log
 
@@ -590,6 +593,17 @@ the process decisions that have no ADR.
   * **Lua.** The tab and the validator (`script.notrun`) warn that the game does not run Lua before M8.
   * **The map's difficulty** starts the custom-map setup, as the original's does (ReTzar's reading of byte 0x50).
     Tzar2 already did this. The original's maps use only easy, normal and hard.
+* **2026-11-10 — Rewind and fast speeds for testing (ADR 0285; item 26.8).** The owner asked for the playtest's rewind
+  first of section 3, to test faster.
+  * **Points.** A playtest keeps a snapshot every 10 s of game time: all of the latest 3 minutes, one a minute before
+    that, within 256 MB.
+  * **Going back.** It restores a point into a new session under the same screen, with no loading. The match then
+    plays tick for tick as before until the tester's orders differ.
+  * **The bar.** It offers back, back a minute (also Ctrl+Backspace for back), a time line, pause, speeds to 2000 %, and
+    FINISH once the match ends.
+  * **The debugger** follows the rewind.
+  * **Where it is on.** Always in the editor's playtests and the campaigns played from the editor. In any
+    single-player match with the setting "Rewind (testing)", off by default.
 * **2026-11-08 — The map's own pictures, sounds and music reach the game (SCN-003, SCN-004; ADR 0284; item 26.4).**
   * **What the game now uses.** The resources the editor and the converter keep under `user/` were never used. The
     client now:
