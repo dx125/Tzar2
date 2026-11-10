@@ -129,9 +129,9 @@ public sealed class TriggerDebugger : ITriggerTrace, IDisposable
     public const int MaxLog = 2000;
 
     private readonly object _gate = new();
-    private readonly GameSession _session;
-    private readonly LegacyTriggerSystem _triggers;
     private readonly ScenarioData _scenario;
+    private GameSession _session;
+    private LegacyTriggerSystem _triggers;
     private readonly int?[] _last;
     private readonly SortedSet<int> _ruleBreaks = [];
     private readonly SortedSet<int> _actionBreaks = [];
@@ -152,6 +152,45 @@ public sealed class TriggerDebugger : ITriggerTrace, IDisposable
         _triggers.Trace = this;
         session.AfterTick += OnTick;
         _watch = Capture();
+    }
+
+    /// <summary>The session being debugged (replaced by <see cref="MoveTo"/>).</summary>
+    public GameSession Session => _session;
+
+    /// <summary>
+    /// Follows the match to <paramref name="session"/>, restored by a rewind (ADR 0285; call before it starts): the
+    /// breakpoints stay, the log keeps what happened before the session's tick, the rules' last results are unknown again.
+    /// </summary>
+    /// <exception cref="ArgumentException">The session plays no scenario.</exception>
+    public void MoveTo(GameSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        LegacyTriggerSystem triggers = session.Scenario?.Triggers ?? throw new ArgumentException("The session plays no scenario.", nameof(session));
+        _session.AfterTick -= OnTick;
+        if (ReferenceEquals(_triggers.Trace, this))
+        {
+            _triggers.Trace = null;
+        }
+
+        _session = session;
+        _triggers = triggers;
+        triggers.Trace = this;
+        session.AfterTick += OnTick;
+        lock (_gate)
+        {
+            Array.Clear(_last);
+            _breakRequested = false;
+            _hit = null;
+        }
+
+        DebugWatch watch = Capture();
+        lock (_gate)
+        {
+            _watch = watch;
+            _log.RemoveAll(e => e.Tick >= watch.Tick);
+        }
+
+        Add(watch.Tick, string.Create(CultureInfo.InvariantCulture, $"rewound to tick {watch.Tick}"));
     }
 
     /// <summary>The names of the scenario's actions, by index (the breakpoint list).</summary>

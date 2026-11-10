@@ -86,8 +86,8 @@ public partial class GameApp
 
     /// <summary>
     /// Plays the editor's map (TDD §18.3 playtest, ADR 0153): the document is built and started as a scenario match, as
-    /// the chosen kingdom, optionally revealed, optionally with the trigger debugger; leaving the game returns to the
-    /// editor with the same document and undo history.
+    /// the chosen kingdom, optionally revealed, optionally with the trigger debugger, always with rewind (ADR 0285);
+    /// leaving the game returns to the editor with the same document and undo history.
     /// </summary>
     public GameSession? StartPlaytest(EditorScreen editor, PlaytestOptions options, bool debug)
     {
@@ -109,14 +109,18 @@ public partial class GameApp
             return null;
         }
 
-        var game = new GameScreen(_store, _ui!, session, editor.Document.TerrainSet ?? "grass", _args.SoundFont, _settings) { KeepSpeed = true };
+        // ADR 0285: a playtest can always go back (rewind points, speeds to 2000 %).
+        var rewind = new MatchRewind(session);
+        var game = new GameScreen(_store, _ui!, session, editor.Document.TerrainSet ?? "grass", _args.SoundFont, _settings) { KeepSpeed = true, Rewind = rewind };
         if (debug && session.Scenario is not null)
         {
             Debugger = new TriggerDebugger(session);
-            _debuggerWindow = new DebuggerWindow(Debugger, session);
+            _debuggerWindow = new DebuggerWindow(Debugger);
             AddChild(_debuggerWindow);
             _debuggerWindow.Show();
         }
+
+        rewind.Rewound += next => Debugger?.MoveTo(next);
 
         void Back() => ShowEditor();
 

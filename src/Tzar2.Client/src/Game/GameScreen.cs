@@ -56,7 +56,7 @@ public partial class GameScreen : Node
 
     private readonly ContentStore _store;
     private readonly UiAssets _ui;
-    private readonly GameSession _session;
+    private GameSession _session; // replaced by a rewind (GameScreen.Rewind.cs)
     private Tzar2.Game.Diagnostics.MatchTracer? _tracer;
     private double _slowFrameLogged = double.MinValue;
     private readonly Ruleset _rules;
@@ -398,6 +398,7 @@ public partial class GameScreen : Node
         }
 
         ClientLog.TrackSession(_session);
+        AttachRewind();
         if (!_session.IsRunning)
         {
             _session.Start();
@@ -472,6 +473,7 @@ public partial class GameScreen : Node
         _tracer?.Dispose();
         ClientLog.TrackSession(null);
         _session.Dispose();
+        Rewind?.Dispose();
         _world?.Dispose();
         _bank?.Dispose();
         if (_boxItem.IsValid)
@@ -552,7 +554,15 @@ public partial class GameScreen : Node
                 _outcomeShown = true;
                 _session.Paused = true;
                 Stats.Seconds = frame.Tick.Value * frame.TickMs / 1000;
-                Finished?.Invoke(frame.Outcome, Stats);
+                if (Rewind is not null)
+                {
+                    // ADR 0285: the tester may go back instead; FINISH on the rewind bar ends the match.
+                    HeldOutcome = frame.Outcome;
+                }
+                else
+                {
+                    Finished?.Invoke(frame.Outcome, Stats);
+                }
             }
         }
     }
@@ -1127,6 +1137,11 @@ public partial class GameScreen : Node
                 OnButton(slot, false);
                 return;
             }
+        }
+
+        if (RewindKey(k, mods))
+        {
+            return;
         }
 
         if (_hotkeys.Find(k, mods) is { } binding)

@@ -110,12 +110,12 @@ public partial class GameApp
         var screen = new GameScreen(_store, _ui!, session, "grass", _args.SoundFont, _settings) { KeepSpeed = _args.GameSmoke || _args.AutoplayDir is not null };
         screen.Finished += (outcome, stats) =>
         {
-            SaveReplay(session, "custom");
+            SaveReplay(screen.Session, "custom");
             ShowResults(outcome, stats, () => StartCustomMap(map, settings), ShowSinglePlayer);
         };
         screen.QuitRequested += () =>
         {
-            SaveReplay(session, "custom");
+            SaveReplay(screen.Session, "custom");
             ShowSinglePlayer();
         };
         screen.RestartRequested += () =>
@@ -130,10 +130,10 @@ public partial class GameApp
             }
         };
         screen.Saves = Saves;
-        screen.CaptureSave = label => SaveGame.CaptureMatch(session, label, map.Id, settings);
+        screen.CaptureSave = label => SaveGame.CaptureMatch(screen.Session, label, map.Id, settings);
         screen.LoadRequested += save =>
         {
-            session.Stop();
+            screen.Session.Stop();
             LoadSave(save);
         };
         Replace(screen, music: null);

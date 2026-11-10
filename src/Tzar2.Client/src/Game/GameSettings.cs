@@ -86,6 +86,12 @@ public sealed class GameSettings
     /// <summary>Weather effects.</summary>
     public bool Weather { get => Get("weather", 1) != 0; set => Set("weather", value ? 1 : 0); }
 
+    /// <summary>
+    /// Testing tools in every single-player match (ADR 0285): rewind points and speeds up to 2000 %. The editor's
+    /// playtests always have them.
+    /// </summary>
+    public bool TestRewind { get => Get("test_rewind", 0) != 0; set => Set("test_rewind", value ? 1 : 0); }
+
     private int Get(string key, int fallback) => (int)_file.GetValue(Section, key, fallback);
 
     private void Set(string key, int value)
