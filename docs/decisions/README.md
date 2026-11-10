@@ -188,3 +188,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0282](0282-land-units-step-past-corners-as-the-originals.md) | Land units step past corners as the original's | Accepted | 2026-11-08 |
 | [0284](0284-the-maps-own-pictures-sounds-and-music-reach-the-game.md) | The map's own pictures, sounds and music reach the game | Accepted | 2026-11-08 |
 | [0285](0285-rewind-and-fast-speeds-for-testing.md) | Rewind and fast speeds for testing | Accepted | 2026-11-10 |
+| [0286](0286-the-players-own-maps-and-campaigns-in-the-game.md) | The player's own maps and campaigns in the game; no editor work lost | Accepted | 2026-11-10 |

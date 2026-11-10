@@ -94,6 +94,21 @@ public sealed class CampaignDocument
         }
     }
 
+    /// <summary>A value that changes with the edits of the campaign and of its maps (the autosave compares it; ADR 0286).</summary>
+    public long Version
+    {
+        get
+        {
+            long v = _undo.Count + 1;
+            foreach (CampaignEntry m in State.Maps)
+            {
+                v = unchecked((v * 1_000_003) + m.Document.History.Version);
+            }
+
+            return v;
+        }
+    }
+
     /// <summary>A new, empty campaign.</summary>
     public static CampaignDocument New(string name)
     {

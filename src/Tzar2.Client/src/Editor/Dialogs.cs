@@ -344,14 +344,69 @@ public static class Dialogs
     }
 }
 
+/// <summary>The question before unsaved work would be lost (ADR 0286).</summary>
+public static class UnsavedQuestion
+{
+    /// <summary>
+    /// Asks what to do with <paramref name="what"/>'s unsaved changes: SAVE (<paramref name="save"/>, which goes on once
+    /// saved), DON'T SAVE (<paramref name="discard"/>), or CANCEL (nothing).
+    /// </summary>
+    public static void Ask(Node host, string what, Action save, Action discard)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        var dialog = new ConfirmationDialog { Title = "Unsaved changes", DialogText = what + " has unsaved changes. Save them first?", OkButtonText = "Save" };
+        dialog.AddButton("Don't save", true, "discard");
+        dialog.Confirmed += () =>
+        {
+            dialog.QueueFree();
+            save();
+        };
+        dialog.CustomAction += action =>
+        {
+            if (action == "discard")
+            {
+                dialog.QueueFree();
+                discard();
+            }
+        };
+        dialog.Canceled += dialog.QueueFree;
+        host.AddChild(dialog);
+        Forms.ShowCentered(dialog);
+    }
+}
+
 /// <summary>Native file dialogs for the editor (any folder on disk, REQ-EDT-04).</summary>
 public static class Files
 {
-    /// <summary>Asks for one or several existing files.</summary>
-    public static void Open(Node host, string[] filters, Action<string[]> chosen, bool many = true)
+    /// <summary>
+    /// A folder of the user data (created): <c>maps</c> and <c>campaigns</c> are where the game's menus find the player's
+    /// maps and campaigns (ADR 0286), so the editor's dialogs start there.
+    /// </summary>
+    public static string UserFolder(string name)
+    {
+        string path = System.IO.Path.Combine(ProjectSettings.GlobalizePath("user://"), name);
+        try
+        {
+            System.IO.Directory.CreateDirectory(path);
+        }
+        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+        {
+            GD.PrintErr($"Cannot create {path}: {e.Message}");
+        }
+
+        return path;
+    }
+
+    /// <summary>Asks for one or several existing files, starting in <paramref name="folder"/> if given.</summary>
+    public static void Open(Node host, string[] filters, Action<string[]> chosen, bool many = true, string? folder = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         var dialog = new FileDialog { Access = FileDialog.AccessEnum.Filesystem, FileMode = many ? FileDialog.FileModeEnum.OpenFiles : FileDialog.FileModeEnum.OpenFile, Filters = filters, UseNativeDialog = true };
+        if (folder is not null)
+        {
+            dialog.CurrentDir = folder;
+        }
+
         dialog.FilesSelected += paths => chosen(paths);
         dialog.FileSelected += path => chosen([path]);
         host.AddChild(dialog);
@@ -370,11 +425,16 @@ public static class Files
         Forms.ShowCentered(dialog);
     }
 
-    /// <summary>Asks for a file to write.</summary>
-    public static void Save(Node host, string suggested, Action<string> chosen, string[]? filters = null)
+    /// <summary>Asks for a file to write, starting in <paramref name="folder"/> if given.</summary>
+    public static void Save(Node host, string suggested, Action<string> chosen, string[]? filters = null, string? folder = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         var dialog = new FileDialog { Access = FileDialog.AccessEnum.Filesystem, FileMode = FileDialog.FileModeEnum.SaveFile, CurrentFile = suggested, Filters = filters ?? [], UseNativeDialog = true };
+        if (folder is not null)
+        {
+            dialog.CurrentDir = folder;
+        }
+
         dialog.FileSelected += path => chosen(path);
         host.AddChild(dialog);
         dialog.Size = new Vector2I(800, 560);

@@ -565,8 +565,10 @@ owner's order of 2026-10-26.
        code is done, but the campaign acceptance fails on `bigisland`: the new types change the course of play, and the
        solver's sea transport cannot get the last hero aboard. The solver is to be made robust at ferrying first.
     4. B - a map's own resources in the game: **done** (SCN-003, SCN-004; ADR 0284; log below).
-    5. C - custom maps and campaigns: played from the menus (single player, and multiplayer where every player has the
-       file), a warning before unsaved work is lost, autosave, the Lua tab's warning, the map's difficulty.
+    5. C - custom maps and campaigns: **done** - the player's .t2map and .t2camp files (user folders maps/, campaigns/,
+       imported/) play from CUSTOM MAP, the campaign screen and the lobby; the editor asks before unsaved work is lost
+       and autosaves every 3 minutes; the Lua tab and the validator warn that Lua does not run yet; the map's
+       difficulty already works as the original's (ADR 0286; log below).
     6. D - the triggers: `$difficulty` and the other reserved variables that read 0, the 26 UNVERIFIED readings against
        ReTzar and the original's code.
     7. E - the palette's details: tree pictures, the gate's side, units stacking, the authentic import's shadow.
@@ -579,6 +581,18 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-10 — The player's own maps and campaigns in the game; no editor work lost (ADR 0286; item 26.5).**
+  * **The menus.** CUSTOM MAP, the campaign screen and the multiplayer lobby now offer the `.t2map` and `.t2camp`
+    files of the user folders `maps`, `campaigns` and `imported`. They read them again each time they open. A map's id
+    is its path there (`maps/ford`), so it never collides with an original map's. The editor's dialogs start in these
+    folders.
+  * **Multiplayer.** As the owner decided, a custom map plays only where every player has the same file. The lobby
+    already says who lacks it (ADR 0233).
+  * **No work lost.** New, Open, Close editor and the window's close button ask Save, Don't save or Cancel. Unsaved
+    work is also autosaved every 3 minutes to `autosave`, never over the player's file.
+  * **Lua.** The tab and the validator (`script.notrun`) warn that the game does not run Lua before M8.
+  * **The map's difficulty** starts the custom-map setup, as the original's does (ReTzar's reading of byte 0x50).
+    Tzar2 already did this. The original's maps use only easy, normal and hard.
 * **2026-11-10 — Rewind and fast speeds for testing (ADR 0285; item 26.8).** The owner asked for the playtest's rewind
   first of section 3, to test faster.
   * **Points.** A playtest keeps a snapshot every 10 s of game time: all of the latest 3 minutes, one a minute before

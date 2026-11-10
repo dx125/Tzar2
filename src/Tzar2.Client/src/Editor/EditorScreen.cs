@@ -36,6 +36,8 @@ public partial class EditorScreen : Control
     private string? _path;
     private double _validateAt = -1;
     private double _now;
+    private readonly EditorAutosave _mapAutosave = new();
+    private readonly EditorAutosave _campaignAutosave = new();
     private string _clipboard = string.Empty;
 
     /// <summary>Creates the editor over an opened package and its compiled ruleset.</summary>
@@ -70,6 +72,9 @@ public partial class EditorScreen : Control
     /// <summary>The file the document was opened from or saved to, or null.</summary>
     public string? FilePath => _path;
 
+    // Where the map dialogs start: the open file's folder, else the folder the game's CUSTOM MAP reads (ADR 0286).
+    private string MapFolder => _path is not null && Path.GetDirectoryName(_path) is { Length: > 0 } dir ? dir : Files.UserFolder(Tzar2.Game.Editing.UserLibrary.MapsFolder);
+
     /// <summary>Painting rules for a terrain-set id of the package (null = no set).</summary>
     public TerrainRules RulesFor(string? setId)
     {
@@ -87,6 +92,7 @@ public partial class EditorScreen : Control
     {
         Window root = GetTree().Root;
         root.ContentScaleMode = Window.ContentScaleModeEnum.Disabled;
+        GetTree().AutoAcceptQuit = false; // the window's close button asks about unsaved work first (ADR 0286)
         var layout = new VBoxContainer();
         layout.SetAnchorsPreset(LayoutPreset.FullRect);
         AddChild(layout);
@@ -137,6 +143,7 @@ public partial class EditorScreen : Control
     public override void _ExitTree()
     {
         GetTree().Root.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+        GetTree().AutoAcceptQuit = true;
     }
 
     /// <inheritdoc/>
@@ -147,6 +154,102 @@ public partial class EditorScreen : Control
         {
             _validateAt = -1;
             Revalidate();
+        }
+
+        Autosave();
+    }
+
+    /// <inheritdoc/>
+    public override void _Notification(int what)
+    {
+        // The window's close button asks about unsaved work first (ADR 0286).
+        if (what == NotificationWMCloseRequest)
+        {
+            Guard(campaignToo: true, () => GetTree().Quit());
+        }
+    }
+
+    /// <summary>
+    /// Runs <paramref name="proceed"/> once no work would be lost (ADR 0286): a standalone map with unsaved changes, then
+    /// (<paramref name="campaignToo"/>) the open campaign's, are each offered to be saved first.
+    /// </summary>
+    public void Guard(bool campaignToo, Action proceed, bool mapAsked = false)
+    {
+        ArgumentNullException.ThrowIfNull(proceed);
+        if (!mapAsked && CampaignContext is null && Document.IsDirty)
+        {
+            UnsavedQuestion.Ask(this, $"The map \"{Document.State.Name}\"", () => SaveMapThen(() => Guard(campaignToo, proceed, mapAsked: true)), () => Guard(campaignToo, proceed, mapAsked: true));
+            return;
+        }
+
+        if (campaignToo && _campaignWindow is { } window && IsInstanceValid(window) && window.Campaign.IsDirty)
+        {
+            UnsavedQuestion.Ask(this, $"The campaign \"{window.Campaign.State.Name}\"", () => window.SaveThen(proceed), proceed);
+            return;
+        }
+
+        proceed();
+    }
+
+    // Saves the map (to its file, or one asked for), then goes on if it saved.
+    private void SaveMapThen(Action then)
+    {
+        if (_path is not null)
+        {
+            if (SaveTo(_path))
+            {
+                then();
+            }
+
+            return;
+        }
+
+        Files.Save(this, MapPackage.Slug(Document.State.Name) + ".t2map", path =>
+        {
+            if (SaveTo(path.EndsWith(".t2map", StringComparison.OrdinalIgnoreCase) ? path : path + ".t2map"))
+            {
+                then();
+            }
+        }, ["*.t2map ; Tzar2 map"], MapFolder);
+    }
+
+    // Every few minutes, unsaved work also goes to the autosave folder (ADR 0286), never over the player's file.
+    private void Autosave()
+    {
+        if (_mapAutosave.Due((long)(_now * 1000), CampaignContext is null && Document.IsDirty, Document.History.Version))
+        {
+            WriteAutosave(EditorAutosave.MapFile(Document), () => MapPackage.Write(Document));
+        }
+
+        if (_campaignWindow is { } window && IsInstanceValid(window) && _campaignAutosave.Due((long)(_now * 1000), window.Campaign.IsDirty, window.Campaign.Version))
+        {
+            WriteAutosave(EditorAutosave.CampaignFile(window.Campaign), () => CampaignPackage.Write(window.Campaign));
+        }
+    }
+
+    private void WriteAutosave(string name, Func<byte[]> bytes)
+    {
+        string path = Path.Combine(Files.UserFolder(EditorAutosave.Folder), name);
+        try
+        {
+            File.WriteAllBytes(path + ".tmp", bytes());
+            File.Move(path + ".tmp", path, overwrite: true);
+            Status("Autosaved to " + path);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            Status("Autosave failed: " + e.Message);
+        }
+    }
+
+    // An autosave opens as a new map: saving it asks where, so it never stays in the autosave folder.
+    private void OpenAutosave(string path)
+    {
+        if (OpenFile(path))
+        {
+            _path = null;
+            UpdateTitle();
+            Status("Recovered " + path + ". Save it where it belongs.");
         }
     }
 
@@ -370,22 +473,23 @@ public partial class EditorScreen : Control
             return;
         }
 
-        Files.Save(this, MapPackage.Slug(Document.State.Name) + ".t2map", path => SaveTo(path.EndsWith(".t2map", StringComparison.OrdinalIgnoreCase) ? path : path + ".t2map"), ["*.t2map ; Tzar2 map"]);
+        Files.Save(this, MapPackage.Slug(Document.State.Name) + ".t2map", path => SaveTo(path.EndsWith(".t2map", StringComparison.OrdinalIgnoreCase) ? path : path + ".t2map"), ["*.t2map ; Tzar2 map"], MapFolder);
     }
 
     private MenuBar Menus()
     {
         var bar = new MenuBar { PreferGlobalMenu = false };
         PopupMenu file = Menu(bar, "File");
-        Item(file, "New map…", () => Dialogs.NewMap(this, _rules, _store.TerrainSets.Count > 0 ? _store.TerrainSets.Select(s => s.Id).ToArray() : ["grass"], doc => Open(doc, null), RulesFor));
-        Item(file, "Open…", () => Files.Open(this, ["*.t2map ; Tzar2 map"], paths => OpenFile(paths[0]), many: false));
+        Item(file, "New map…", () => Guard(campaignToo: false, () => Dialogs.NewMap(this, _rules, _store.TerrainSets.Count > 0 ? _store.TerrainSets.Select(s => s.Id).ToArray() : ["grass"], doc => Open(doc, null), RulesFor)));
+        Item(file, "Open…", () => Guard(campaignToo: false, () => Files.Open(this, ["*.t2map ; Tzar2 map"], paths => OpenFile(paths[0]), many: false, folder: MapFolder)));
+        Item(file, "Open autosave…", () => Guard(campaignToo: false, () => Files.Open(this, ["*.t2map ; Tzar2 map"], paths => OpenAutosave(paths[0]), many: false, folder: Files.UserFolder(EditorAutosave.Folder))));
         Item(file, "Save (Ctrl+S)", () => Save(saveAs: false));
         Item(file, "Save as… (Ctrl+Shift+S)", () => Save(saveAs: true));
         file.AddSeparator();
         ImportMenu(file);
         FileMenuExtras?.Invoke(file);
         file.AddSeparator();
-        Item(file, "Close editor", () => Closed?.Invoke());
+        Item(file, "Close editor", () => Guard(campaignToo: true, () => Closed?.Invoke()));
 
         PopupMenu edit = Menu(bar, "Edit");
         Item(edit, "Undo (Ctrl+Z)", Undo);
