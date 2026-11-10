@@ -45,7 +45,7 @@ public partial class CampaignWindow : Window
         // The buttons wrap, so the window fits a 1024-wide screen (UI-L3).
         var bar = new HFlowContainer();
         Forms.Button(bar, "New", () => SetCampaign(CampaignDocument.New("New campaign"), null));
-        Forms.Button(bar, "Open…", () => Files.Open(this, ["*.t2camp ; Tzar2 campaign"], paths => OpenFile(paths[0]), many: false));
+        Forms.Button(bar, "Open…", () => Files.Open(this, ["*.t2camp ; Tzar2 campaign"], paths => OpenFile(paths[0]), many: false, folder: Files.UserFolder(Tzar2.Game.Editing.UserLibrary.CampaignsFolder)));
         Forms.Button(bar, "Save", () => Save(saveAs: false));
         Forms.Button(bar, "Save as…", () => Save(saveAs: true));
         Forms.Button(bar, "Undo", () => _campaign.Undo());
@@ -118,7 +118,17 @@ public partial class CampaignWindow : Window
             _dirty = true;
         };
         _graph.EndNodeMove += SavePositions;
-        CloseRequested += QueueFree;
+        CloseRequested += () =>
+        {
+            if (_campaign.IsDirty)
+            {
+                UnsavedQuestion.Ask(this, $"The campaign \"{_campaign.State.Name}\"", () => SaveThen(QueueFree), QueueFree); // ADR 0286
+            }
+            else
+            {
+                QueueFree();
+            }
+        };
         _campaign.Changed += () => _dirty = true;
     }
 
@@ -177,6 +187,29 @@ public partial class CampaignWindow : Window
         _dirty = true;
     }
 
+    /// <summary>Saves (with the last path, or a file asked for), then runs <paramref name="then"/> if it saved.</summary>
+    public void SaveThen(Action then)
+    {
+        ArgumentNullException.ThrowIfNull(then);
+        if (_path is not null)
+        {
+            if (SaveTo(_path))
+            {
+                then();
+            }
+
+            return;
+        }
+
+        Files.Save(this, _campaign.State.Id + ".t2camp", path =>
+        {
+            if (SaveTo(path.EndsWith(".t2camp", StringComparison.OrdinalIgnoreCase) ? path : path + ".t2camp"))
+            {
+                then();
+            }
+        }, ["*.t2camp ; Tzar2 campaign"], Files.UserFolder(Tzar2.Game.Editing.UserLibrary.CampaignsFolder));
+    }
+
     /// <summary>Saves (with the last path) or asks for a file.</summary>
     public void Save(bool saveAs)
     {
@@ -186,7 +219,7 @@ public partial class CampaignWindow : Window
             return;
         }
 
-        Files.Save(this, _campaign.State.Id + ".t2camp", path => SaveTo(path.EndsWith(".t2camp", StringComparison.OrdinalIgnoreCase) ? path : path + ".t2camp"), ["*.t2camp ; Tzar2 campaign"]);
+        Files.Save(this, _campaign.State.Id + ".t2camp", path => SaveTo(path.EndsWith(".t2camp", StringComparison.OrdinalIgnoreCase) ? path : path + ".t2camp"), ["*.t2camp ; Tzar2 campaign"], Files.UserFolder(Tzar2.Game.Editing.UserLibrary.CampaignsFolder));
     }
 
     /// <inheritdoc/>

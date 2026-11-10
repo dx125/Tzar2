@@ -100,9 +100,10 @@ public partial class GameApp
         CustomMaps = MultiplayerMaps(),
     };
 
-    // The original maps a lobby can choose (SHELL-018; ADR 0233), converted once per run like CUSTOM MAP's.
+    // The maps a lobby can choose (SHELL-018; ADR 0233): CUSTOM MAP's, the player's own included (ADR 0286). A peer who
+    // lacks one, or has another version of it, is told so by the lobby (the map's hash).
     private List<Tzar2.Game.Campaigns.CustomMapEntry> MultiplayerMaps() =>
-        [.. (_customMaps ??= OriginalMaps()).Select(m => new Tzar2.Game.Campaigns.CustomMapEntry(m.Id, m.Title, m.Description, m.Mission))];
+        [.. CustomMaps().Select(m => new Tzar2.Game.Campaigns.CustomMapEntry(m.Id, m.Title, m.Description, m.Mission))];
 
     private void OpenLobby(Func<NetworkMatch> connect)
     {

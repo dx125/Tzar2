@@ -11,15 +11,15 @@ using Tzar2.Game.Ui;
 namespace Tzar2.Client.Game;
 
 /// <summary>
-/// Single player (<c>S_SINGLEPLAYER</c>): the campaigns, the original maps of the package (CUSTOM MAP: choice, setup,
-/// match), random maps (the skirmish setup) and LOAD GAME (the last quick save).
+/// Single player (<c>S_SINGLEPLAYER</c>): the campaigns, the original maps of the package and the player's own (CUSTOM
+/// MAP: choice, setup, match; ADR 0286), random maps (the skirmish setup) and LOAD GAME (the last quick save).
 /// </summary>
 public partial class GameApp
 {
     /// <summary>Where the import puts the original maps (<c>Maps/*.wmp</c> of the install).</summary>
     public const string OriginalMapFolder = "legacy/maps/";
 
-    private List<CustomMap>? _customMaps;
+    private List<CustomMap>? _originalMaps; // converted once per run
     private int _customMapIndex;
     private ulong _customStarts; // draws the RANDOM civilizations of a custom map's setup
 
@@ -38,18 +38,19 @@ public partial class GameApp
     /// <summary>Shows the map choice (the original maps are converted the first time, behind the loading screen).</summary>
     public void ShowCustomMaps()
     {
-        if (_customMaps is null)
+        if (_originalMaps is null)
         {
             ShowLoading(LoadingStage.Load);
             _ = AfterFrames(2, () =>
             {
-                _customMaps = OriginalMaps();
+                _originalMaps = OriginalMaps();
                 ShowCustomMaps();
             });
             return;
         }
 
-        var screen = new ChooseMapScreen(_ui!, _catalog, Screen, _customMaps, map => MapPreview(map, 240), _customMapIndex);
+        List<CustomMap> maps = CustomMaps();
+        var screen = new ChooseMapScreen(_ui!, _catalog, Screen, maps, map => MapPreview(map, 240), Math.Min(_customMapIndex, Math.Max(0, maps.Count - 1)));
         screen.Play += map =>
         {
             _customMapIndex = screen.Selected;
@@ -167,6 +168,50 @@ public partial class GameApp
             }
         };
         Replace(dialog, music: null);
+    }
+
+    // The maps offered: the original ones (converted once per run), then the player's .t2map files, read again each time
+    // so that a map just saved in the editor is there (ADR 0286).
+    private List<CustomMap> CustomMaps()
+    {
+        _originalMaps ??= OriginalMaps();
+        var maps = new List<CustomMap>(_originalMaps);
+        if (_rules is not null)
+        {
+            var problems = new List<string>();
+            foreach (CustomMapEntry m in Tzar2.Game.Editing.UserLibrary.Maps(ProjectSettings.GlobalizePath("user://"), TerrainRulesFor, _rules, problems))
+            {
+                maps.Add(new CustomMap(m.Id, m.Title, m.Description, m.Mission));
+            }
+
+            foreach (string problem in problems)
+            {
+                ClientLog.Warn("your maps: " + problem);
+            }
+        }
+
+        return maps;
+    }
+
+    // Painting rules of a terrain set of the package, for reading the player's maps (as the editor's).
+    private Tzar2.Content.Editing.TerrainRules TerrainRulesFor(string? setId)
+    {
+        if (setId is null)
+        {
+            return Tzar2.Content.Editing.TerrainRules.WithoutSet(_rules!);
+        }
+
+        Tzar2.Content.Terrain.TerrainSet? set = null;
+        foreach (Tzar2.Content.Terrain.TerrainSet s in _store.TerrainSets)
+        {
+            if (string.Equals(s.Id, setId, StringComparison.OrdinalIgnoreCase))
+            {
+                set = s;
+                break;
+            }
+        }
+
+        return Tzar2.Content.Editing.TerrainRules.ForSet(setId, set, _rules!);
     }
 
     // The original maps the import put in the package (legacy/maps/*.wmp), converted once per run (ADR 0120), by title.

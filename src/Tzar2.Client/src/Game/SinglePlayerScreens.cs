@@ -50,8 +50,8 @@ public partial class SinglePlayerScreen : ArtScreen
     public event Action? Back;
 }
 
-/// <summary>A map offered under CUSTOM MAP: one of the package's original maps, converted (ADR 0120).</summary>
-/// <param name="Id">The file name without extension.</param>
+/// <summary>A map offered under CUSTOM MAP: one of the package's original maps, converted (ADR 0120), or the player's own (ADR 0286).</summary>
+/// <param name="Id">The file name without extension; for the player's maps, the path under the user folder (<c>maps/ford</c>).</param>
 /// <param name="Title">The map title.</param>
 /// <param name="Description">The map description.</param>
 /// <param name="Mission">The map and its scenario.</param>

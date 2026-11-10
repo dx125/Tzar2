@@ -560,6 +560,11 @@ public partial class TriggerWindow : Window
     {
         var left = new VBoxContainer { CustomMinimumSize = new Vector2(240, 0) };
         page.AddChild(left);
+
+        // ADR 0286: the tab stays until M8, with this warning (the owner, 2026-11-08).
+        var warning = new Label { Text = "The game does not run Lua scripts yet (M8): they are kept in the map only. Use the rules for what must happen in play.", AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(240, 0) };
+        warning.AddThemeColorOverride("font_color", new Color(1f, 0.7f, 0.3f));
+        left.AddChild(warning);
         string[] names = Doc.State.Scripts.Keys.ToArray();
         List(left, "Lua", names);
         string newName = "main";

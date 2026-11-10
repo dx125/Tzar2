@@ -33,7 +33,7 @@ public partial class GameApp
             await Frames(2);
 
             // The shell: menus and dialogs of the main menu, each built fresh at each display.
-            _customMaps ??= OriginalMaps();
+            List<CustomMap> customMaps = CustomMaps();
             (string Name, Func<bool> Show)[] shell =
             [
                 ("main-menu", () => Show(ShowMainMenu)),
@@ -41,7 +41,7 @@ public partial class GameApp
                 ("credits", () => Show(ShowCredits)),
                 ("single-player", () => Show(ShowSinglePlayer)),
                 ("choose-map", () => Show(ShowCustomMaps)),
-                ("map-setup", () => _customMaps.Count > 0 && Show(() => ShowMapSetup(_customMaps[0]))),
+                ("map-setup", () => customMaps.Count > 0 && Show(() => ShowMapSetup(customMaps[0]))),
                 ("random-map", () => Show(ShowSetup)),
                 ("campaigns", () => Show(ShowCampaigns)),
                 ("load-game", () => Show(ShowLoadGame)),

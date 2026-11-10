@@ -48,14 +48,24 @@ public partial class GameApp
         }
     }
 
-    // The campaigns offered: the original's from the package (the tutorial first), the built-in demo, and a campaign
-    // converted or edited in the editor this session (M5).
+    // The campaigns offered: the original's from the package (the tutorial first), the built-in demo, a campaign
+    // converted or edited in the editor this session (M5), and the player's .t2camp files, read again each time (ADR 0286).
     private List<ICampaignSource> Campaigns()
     {
         var all = new List<ICampaignSource>(_original ?? []) { DemoCampaign() };
         if (_converted is not null)
         {
             all.Add(_converted);
+        }
+
+        if (_rules is not null)
+        {
+            var problems = new List<string>();
+            all.AddRange(Tzar2.Game.Editing.UserLibrary.Campaigns(ProjectSettings.GlobalizePath("user://"), TerrainRulesFor, problems));
+            foreach (string problem in problems)
+            {
+                ClientLog.Warn("your campaigns: " + problem);
+            }
         }
 
         return all;
@@ -258,16 +268,16 @@ public partial class GameApp
 
                 ShowFailure("The save cannot be loaded", $"It belongs to the campaign '{save.CampaignId}', which is not available.", ShowLoadGame);
                 return;
-            case SaveKind.CustomMap when _customMaps is null:
+            case SaveKind.CustomMap when _originalMaps is null:
                 ShowLoading(LoadingStage.Load);
                 _ = AfterFrames(2, () =>
                 {
-                    _customMaps = OriginalMaps();
+                    _originalMaps = OriginalMaps();
                     LoadSave(save);
                 });
                 return;
             case SaveKind.CustomMap:
-                if (_customMaps.Find(m => m.Id == save.MapId) is { } map)
+                if (CustomMaps().Find(m => m.Id == save.MapId) is { } map)
                 {
                     ShowLoading(LoadingStage.NewGame, map.Title);
                     _ = AfterFrames(2, () => BuildCustomMap(map, null, save));

@@ -104,6 +104,16 @@ public static class MapValidator
             Triggers();
             Conversations();
             Sounds();
+            Scripts();
+        }
+
+        // The Lua scripts are kept in the map, but the game does not run them before M8 (ADR 0286; the owner, 2026-11-08).
+        private void Scripts()
+        {
+            if (_s.Scripts.Count > 0)
+            {
+                Add(ValidationSeverity.Warning, "script.notrun", string.Create(System.Globalization.CultureInfo.InvariantCulture, $"The map has {_s.Scripts.Count} Lua script(s); the game does not run Lua yet (M8). What must happen in play belongs in the rules."), EditorLocation.Map);
+            }
         }
 
         private void Add(ValidationSeverity severity, string code, string message, EditorLocation at) => Issues.Add(new ValidationIssue(severity, code, message, at));

@@ -38,7 +38,7 @@ public partial class EditorScreen
     {
         PopupMenu menu = Menu(bar, "Campaign");
         Item(menu, "Campaign editor…", () => OpenCampaignEditor());
-        Item(menu, "Open campaign (.t2camp)…", () => Files.Open(this, ["*.t2camp ; Tzar2 campaign"], paths => OpenCampaignEditor().OpenFile(paths[0]), many: false));
+        Item(menu, "Open campaign (.t2camp)…", () => Files.Open(this, ["*.t2camp ; Tzar2 campaign"], paths => OpenCampaignEditor().OpenFile(paths[0]), many: false, folder: Files.UserFolder(Tzar2.Game.Editing.UserLibrary.CampaignsFolder)));
         Item(menu, "Save campaign", () => CampaignContext?.Save(saveAs: false));
         ConvertedCampaignOpened += item => OpenCampaignEditor(item.OpenCampaign(RulesFor));
     }
