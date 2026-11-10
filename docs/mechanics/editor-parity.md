@@ -93,7 +93,7 @@ Parity: **97 %** done.
 |---|---|---|---|---|
 | prop-common | Kingdom, name, title, use-defaults | done | ToolTests.Object_properties_and_multi_edit |  |
 | prop-building | Buildings: health, max health, resistance, Not Appear | done | ToolTests.Object_properties_and_multi_edit |  |
-| prop-unit | Units: health, max health, attack, mana, defence, level, icons 44×44/96×96 | done | ToolTests.Object_properties_and_multi_edit |  |
+| prop-unit | Units: health, max health, attack, mana, defence, level, icons 44×44/96×96 | done | ToolTests.Object_properties_and_multi_edit | the game shows the 44 × 44 icon in the selection view and the 96 × 96 one in a speaker's phrases (ADR 0284) |
 | prop-flags | Flags No AI, Persistent, Not Appear | done | ToolTests.Object_properties_and_multi_edit |  |
 | prop-multi | Multi-edit of several objects | done | ToolTests.Object_properties_and_multi_edit |  |
 
@@ -120,13 +120,13 @@ Parity: **97 %** done.
 | kingdom-ai | AI script, economy AI, war AI | done | ToolTests.Starting_locations_kingdoms_resources_and_diplomacy |  |
 | kingdom-tech | Prohibited buildings/units/researches/upgrades, initial researches | done | ToolTests.Starting_locations_kingdoms_resources_and_diplomacy |  |
 | kingdom-diplomacy | Ally/enemy/neutral, shared vision/resources/unit control, shared victory | done | ToolTests.Starting_locations_kingdoms_resources_and_diplomacy |  |
-| res-images | Import/export/delete images (BMP, PNG) | done | ToolTests.User_resources_custom_minimap_sounds_and_music | BMP imports are converted to PNG with the converter's encoder |
-| res-sounds | Import/export/delete sounds (WAV, OGG) | done | ToolTests.User_resources_custom_minimap_sounds_and_music |  |
-| res-music | Import/export/delete music (MIDI, OGG) | done | ToolTests.User_resources_custom_minimap_sounds_and_music |  |
+| res-images | Import/export/delete images (BMP, PNG) | done | ToolTests.User_resources_custom_minimap_sounds_and_music | BMP imports are converted to PNG with the converter's encoder; the game shows them in story screens, conversations and portraits (ADR 0284) |
+| res-sounds | Import/export/delete sounds (WAV, OGG) | done | ToolTests.User_resources_custom_minimap_sounds_and_music | the game plays them for scrolls, phrases and sound sources (ADR 0284) |
+| res-music | Import/export/delete music (MIDI, OGG) | done | ToolTests.User_resources_custom_minimap_sounds_and_music | the game plays the MIDI songs of the map's playlist and scrolls (ADR 0284) |
 | res-minimap-title | Custom mini-map and title image | done | ToolTests.User_resources_custom_minimap_sounds_and_music | `user/minimap.png`, `user/maptitle.png` |
-| sound-sources | Sound sources: a point or an object | done | ToolTests.Sound_sources_follow_objects_and_fall_back_to_their_point |  |
-| sound-repeat | Repeat modes: Every, Looped, Random from–to, Delayed start | done | ToolTests.User_resources_custom_minimap_sounds_and_music |  |
-| music-playlist | Custom music playlist | done | ToolTests.User_resources_custom_minimap_sounds_and_music |  |
+| sound-sources | Sound sources: a point or an object | done | ToolTests.Sound_sources_follow_objects_and_fall_back_to_their_point | the game plays them on their timers (SCN-003, ADR 0284) |
+| sound-repeat | Repeat modes: Every, Looped, Random from–to, Delayed start | done | ToolTests.User_resources_custom_minimap_sounds_and_music | the game keeps the modes (SCN-003) |
+| music-playlist | Custom music playlist | done | ToolTests.User_resources_custom_minimap_sounds_and_music | the game plays it shuffled, song after song (ADR 0284) |
 
 ## §18.2 Rules and conversations
 

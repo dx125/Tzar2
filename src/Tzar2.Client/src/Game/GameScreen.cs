@@ -512,6 +512,7 @@ public partial class GameScreen : Node
         HandleEvents(frame);
         _events.Clear();
         UpdateScenario(frame);
+        UpdateMusic();
         Scroll(delta);
         _selection.Prune(Selectable);
 
@@ -2290,8 +2291,18 @@ public partial class GameScreen : Node
             : t.LegacyClass == "peon" && FrameJobs.StringKey(e.Job) is { } job ? _catalog.Text("peons", job, v.Name)
             : t.Item is not null ? _catalog.ItemName(e.TypeId, e.ItemLook, e.ItemResource) // HUD-037
             : v.Name;
+
+        // A placed object's own title and portrait (ADR 0284): "Sartor the Old" as the original labels a named object with
+        // its subtitle (ReTzar, label), and its 44 x 44 icon of the map's resources.
+        Content.Compiled.Scenario.ObjectInfo? placed = _session.Scenario?.InfoOf(e.Id);
+        if (placed is { Title.Length: > 0 } titled && e.Name is { Length: > 0 })
+        {
+            name = name + " " + titled.Title;
+        }
+
         return new SelectionInfo
         {
+            Portrait = placed?.Icon is { } icon ? UserImage(icon.Path) : null,
             Name = e.DisguiseMastery >= 0 ? string.Create(CultureInfo.InvariantCulture, $"{(e.SpyType >= 0 ? _catalog.Type((ushort)e.SpyType).Name : v.Name)} ({e.DisguiseMastery})") : name,
             Detail = e.MaxHealth > 0 ? $"{e.Health}/{e.MaxHealth} {owner}" : owner,
             Icon = v.Portrait(e.Hero),
@@ -2509,14 +2520,77 @@ public partial class GameScreen : Node
         {
             _music.LoadSoundFont(sf);
             string track = $"music/{1 + (int)(_session.Setup.Seed % 10)}.mid";
-            if (_store.Vfs.Exists(track))
+            _defaultSong = _store.Vfs.Exists(track) ? _store.Read(track) : null;
+
+            // The map's own playlist (TDD §18.2 "custom music playlist", ADR 0284): its MIDI songs in a shuffled order,
+            // one after another; without one, the package's music as before.
+            var songs = new List<byte[]>();
+            foreach (Content.Compiled.Scenario.ResourceRef r in _session.Setup.Scenario?.Music ?? [])
             {
-                _music.Play(_store.Read(track));
+                if (_session.Setup.MapAssets.Find(r.Path) is { Length: > 4 } midi && midi[0] == (byte)'M' && midi[1] == (byte)'T')
+                {
+                    songs.Insert((int)(GD.Randi() % (uint)(songs.Count + 1)), midi);
+                }
             }
+
+            _playlist = songs.Count > 0 ? songs : null;
+            ResumeMusic();
         }
         catch (Exception e) when (e is System.IO.IOException or System.IO.InvalidDataException or InvalidOperationException)
         {
             GD.PrintErr("Music: " + e.Message);
+        }
+    }
+
+    private byte[]? _defaultSong;
+    private List<byte[]>? _playlist;
+    private int _nextSong;
+    private bool _storySong;
+
+    // The playlist's next song, or the package's song looping.
+    private void ResumeMusic()
+    {
+        if (_music is not { HasSoundFont: true })
+        {
+            return;
+        }
+
+        if (_playlist is { Count: > 0 } list)
+        {
+            _music.Play(list[_nextSong++ % list.Count], loop: false);
+        }
+        else if (_defaultSong is { } song)
+        {
+            _music.Play(song);
+        }
+    }
+
+    // A playlist's song ended: the next one (called every frame).
+    private void UpdateMusic()
+    {
+        if (_playlist is not null && !_storySong && _music is { HasSoundFont: true, Playing: false })
+        {
+            ResumeMusic();
+        }
+    }
+
+    // A scroll's own music (ADR 0284) while its window is open (null: it closed, the music goes on as before).
+    private void StoryMusic(string? path)
+    {
+        if (_music is not { HasSoundFont: true })
+        {
+            return;
+        }
+
+        if (path is not null && _session.Setup.MapAssets.Find(path) is { Length: > 4 } midi && midi[0] == (byte)'M' && midi[1] == (byte)'T')
+        {
+            _storySong = true;
+            _music.Play(midi);
+        }
+        else if (path is null && _storySong)
+        {
+            _storySong = false;
+            ResumeMusic();
         }
     }
 

@@ -186,3 +186,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0280](0280-the-global-audit-against-retzar-and-the-original.md) | Audit the remake against ReTzar and settle disagreements in the original's code | Accepted | 2026-11-07 |
 | [0281](0281-draw-the-maps-decorations-and-let-rocks-and-ruins-close-their-cells.md) | Draw the map's decorations and let rocks and ruins close their cells | Accepted | 2026-11-08 |
 | [0282](0282-land-units-step-past-corners-as-the-originals.md) | Land units step past corners as the original's | Accepted | 2026-11-08 |
+| [0284](0284-the-maps-own-pictures-sounds-and-music-reach-the-game.md) | The map's own pictures, sounds and music reach the game | Accepted | 2026-11-08 |

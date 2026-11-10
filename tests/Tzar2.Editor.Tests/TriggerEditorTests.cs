@@ -19,6 +19,18 @@ public class TriggerEditorTests
     private static IEnumerable<Type> Concrete<TBase>() => typeof(TBase).Assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(TBase)) && !t.IsAbstract);
 
     [Fact]
+    public void A_playtest_takes_the_maps_own_resources_into_its_match()
+    {
+        // ADR 0284: the pictures, sounds and music a scenario names reach the game from the map's package.
+        MapDocument doc = MapDocument.CreateEmpty("Resources", 16, 16, Fixtures.RulesFor("grass"));
+        doc.Apply("Import", s => s.Import(AssetEdits.PathFor("sartor.png"), new byte[] { 1, 2, 3 }));
+        Tzar2.Game.Campaigns.MissionContent mission = Tzar2.Game.Editing.Playtest.Mission(doc);
+        Assert.Equal(new byte[] { 1, 2, 3 }, mission.Assets.Find("user/sartor.png"));
+        Tzar2.Game.Session.MatchSetup setup = Tzar2.Game.Editing.Playtest.Setup(mission, Fixtures.Classic, new Tzar2.Game.Editing.PlaytestOptions());
+        Assert.Same(mission.Assets, setup.MapAssets);
+    }
+
+    [Fact]
     public void Every_event_and_action_of_the_IR_has_a_property_page()
     {
         Assert.Equal(Concrete<EventDef>().OrderBy(t => t.Name), TriggerSchema.Events.Select(k => k.RecordType).OrderBy(t => t.Name));

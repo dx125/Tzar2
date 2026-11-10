@@ -26,6 +26,12 @@ public sealed record MissionContent(MapData Map, ScenarioData Scenario)
 {
     /// <summary>What identifies the map across machines: its terrain and objects and its scenario (SHELL-018; ADR 0233).</summary>
     public ulong ContentHash => new StateHasher().Add(Map.ContentHash).Add(Scenario.ContentHash).GetCurrentHash();
+
+    /// <summary>
+    /// The map's own resources (its package's <c>user/…</c> pictures, sounds and music; ADR 0284), by the paths its
+    /// scenario names them with. Presentation only: not in the hash.
+    /// </summary>
+    public MapAssets Assets { get; init; } = MapAssets.None;
 }
 
 /// <summary>A custom map a lobby can choose (SHELL-018; ADR 0233).</summary>
@@ -284,6 +290,7 @@ public static class ScenarioMatch
             NoFog = custom?.NoFog ?? s.Properties.NoFog,
             Explored = custom?.Explored ?? s.Properties.Explore,
             Scenario = s,
+            MapAssets = mission.Assets,
             Ai = custom?.Ai ?? SkirmishAi.EngineDefault,
             ComputerAi = computerAi,
             CheatsAllowed = cheats,

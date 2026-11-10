@@ -69,10 +69,10 @@ public partial class MidiPlayer : Node
         }
     }
 
-    /// <summary>Starts looping playback of a Standard MIDI File.</summary>
+    /// <summary>Starts playback of a Standard MIDI File, looping unless <paramref name="loop"/> is false.</summary>
     /// <exception cref="InvalidOperationException">No SoundFont is loaded.</exception>
     /// <exception cref="InvalidDataException">The MIDI file cannot be parsed.</exception>
-    public void Play(byte[] midi)
+    public void Play(byte[] midi, bool loop = true)
     {
         if (_synth is null)
         {
@@ -92,7 +92,7 @@ public partial class MidiPlayer : Node
         Stop();
         _synth.Reset();
         _sequencer = new MidiFileSequencer(_synth);
-        _sequencer.Play(file, true);
+        _sequencer.Play(file, loop);
         _output!.Play();
         _playback = (AudioStreamGeneratorPlayback)_output.GetStreamPlayback();
         Fill();

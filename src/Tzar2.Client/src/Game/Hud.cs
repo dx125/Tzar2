@@ -19,6 +19,9 @@ public sealed class SelectionInfo
     /// <summary>Portrait icon index (icons.bmp), or −1.</summary>
     public int Icon { get; init; } = -1;
 
+    /// <summary>The map's own portrait of the object (its 44 × 44 icon; ADR 0284), drawn instead of <see cref="Icon"/>.</summary>
+    public Texture2D? Portrait { get; init; }
+
     /// <summary>Stat rows: icon asset and value.</summary>
     public IReadOnlyList<(string Icon, string Value)> Stats { get; init; } = [];
 
@@ -295,7 +298,7 @@ public partial class Hud : Control
     /// <summary>Fills the selection view (null = nothing selected).</summary>
     public void SetSelection(SelectionInfo? info)
     {
-        _portrait.Texture = info is null ? null : _ui.PlayerCell(Icons, info.Icon, info.Player);
+        _portrait.Texture = info is null ? null : info.Portrait ?? _ui.PlayerCell(Icons, info.Icon, info.Player);
         _portraitBar.Visible = info is { Health: >= 0 };
         if (info is { Health: >= 0 } h)
         {
