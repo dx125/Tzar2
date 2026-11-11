@@ -34,11 +34,14 @@ public class SaveCompatibilityTests
     {
         byte[] old = Fixture("save-format21.t2snap");
 
+        // The fixture's tables: those before the ruin types (ADR 0283), which shift the entity type ids.
+        Ruleset then = SyntheticLegacyContent.CompileRulesetWithoutScenery();
+
         // A replay or a rejoin needs the very state: refused.
-        Assert.Throws<InvalidDataException>(() => Simulation.Restore(old, Classic, FixtureMap()));
+        Assert.Throws<InvalidDataException>(() => Simulation.Restore(old, then, FixtureMap()));
 
         // A save is upgraded: the tavern exchange's bytes are added, the store of the cell steps starts empty.
-        using Simulation sim = Simulation.Restore(old, Classic, FixtureMap(), tolerance: SnapshotTolerance.SaveGame);
+        using Simulation sim = Simulation.Restore(old, then, FixtureMap(), tolerance: SnapshotTolerance.SaveGame);
         Assert.False(sim.RestoredExactly);
         Assert.Equal(120, sim.World.Tick.Value);
         Assert.Equal(2, OfType(sim.World, "euro.house").Count()); // the house and the site the peasant began
@@ -50,20 +53,20 @@ public class SaveCompatibilityTests
         // A save of this version under rules changed since (another setting) goes on; with other tables (an entity type
         // more) it is refused.
         byte[] now = WorldSnapshot.Capture(sim.World);
-        Ruleset tuned = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions { OverrideTexts = [new("tuned.yaml", "gameplay:\n  dismantleRefundPercent: 50\n")] });
-        Assert.NotEqual(Classic.ContentHash, tuned.ContentHash);
-        Assert.Equal(Classic.TablesHash, tuned.TablesHash);
+        Ruleset tuned = RulesetCompiler.Compile(SyntheticLegacyContent.CreateFileSystem(scenery: false), "classic", new RulesetCompileOptions { OverrideTexts = [new("tuned.yaml", "gameplay:\n  dismantleRefundPercent: 50\n")] }).Ruleset;
+        Assert.NotEqual(then.ContentHash, tuned.ContentHash);
+        Assert.Equal(then.TablesHash, tuned.TablesHash);
         using (Simulation again = Simulation.Restore(now, tuned, FixtureMap(), tolerance: SnapshotTolerance.SaveGame))
         {
             Assert.False(again.RestoredExactly);
         }
 
-        Ruleset more = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions { OverrideTexts = [new("more.yaml", "comm.extra_marker:\n  new: true\n  Health: { max: 1 }\n")] });
-        Assert.NotEqual(Classic.TablesHash, more.TablesHash);
+        Ruleset more = RulesetCompiler.Compile(SyntheticLegacyContent.CreateFileSystem(scenery: false), "classic", new RulesetCompileOptions { OverrideTexts = [new("more.yaml", "comm.extra_marker:\n  new: true\n  Health: { max: 1 }\n")] }).Ruleset;
+        Assert.NotEqual(then.TablesHash, more.TablesHash);
         Assert.Throws<InvalidDataException>(() => Simulation.Restore(now, more, FixtureMap(), tolerance: SnapshotTolerance.SaveGame));
 
         // The same version and rules: exactly as saved.
-        using Simulation same = Simulation.Restore(now, Classic, FixtureMap(), tolerance: SnapshotTolerance.SaveGame);
+        using Simulation same = Simulation.Restore(now, then, FixtureMap(), tolerance: SnapshotTolerance.SaveGame);
         Assert.True(same.RestoredExactly);
     }
 

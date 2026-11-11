@@ -1229,15 +1229,36 @@ public static class CampaignAutoplay
             var stranded = new List<EntityId>();
             var undo = new List<EntityId>();
             var ships = new List<EntityId>();
+            bool nudge = _tick - _nudged >= 600;
+            if (nudge)
+            {
+                _nudged = _tick;
+            }
+
             ReadOnlySpan<EntityId> ids = world.Identities.Entities;
             ReadOnlySpan<Identity> identities = world.Identities.Components;
             for (int i = 0; i < ids.Length; i++)
             {
                 EntityId u = ids[i];
-                if (identities[i].Owner >= 32 || (Mask(away.Objects) & (1 << identities[i].Owner)) == 0 || !world.Diplomacy.MayCommand(me, identities[i].Owner) || !(world.Motions.Has(u) || world.IsHeld(u)) || Over(Pos(world, u))
+                if (identities[i].Owner >= 32 || (Mask(away.Objects) & (1 << identities[i].Owner)) == 0 || !world.Diplomacy.MayCommand(me, identities[i].Owner) || !(world.Motions.Has(u) || world.IsHeld(u))
                     || !(away.Objects is CategoryObjects c ? Scripting.Legacy.LegacyTriggerSystem.InCategory(c.Category, world.Ruleset.EntityTypes[identities[i].TypeId])
                         : world.Ruleset.EntityTypeId(((TypedObjects)away.Objects).TypeKey) == identities[i].TypeId))
                 {
+                    continue;
+                }
+
+                if (Over(Pos(world, u)))
+                {
+                    // Over already, but standing by the line where the ferries land the others: they walk on, or the
+                    // landing fills and a ship waits at it for ever (bigisland, the acceptance run: every load landed
+                    // at one tile).
+                    int depth = Math.Abs((vertical ? Pos(world, u).Y / Tile : Pos(world, u).X / Tile) - limit);
+                    if (nudge && depth < 4 && !world.IsHeld(u) && !world.IsShip(u)
+                        && Across(world, u, vertical, below ? limit - 8 : limit + 8, below, Pos(world, u)) is { } deeper)
+                    {
+                        _batch.Add(CommandKind.Move, [u], deeper.X, deeper.Y);
+                    }
+
                     continue;
                 }
 
@@ -1278,11 +1299,39 @@ public static class CampaignAutoplay
             Goal = $"{away.Name}: {walkers.Count} walk, {stranded.Count} to ferry, {undo.Count} reinforcements removed, {ships.Count} ships";
             if (stranded.Count > 0)
             {
-                // One ferry load at a time, the ones aboard first.
+                // One ferry load at a time, the ones aboard first. A unit set ashore once that is still short of the line was
+                // landed where the ship found a dock, on ground cut off from the far side (bigisland, the acceptance run:
+                // two units ferried to and fro for an hour): it stays aboard, and the ship sails over the line with it.
+                foreach (EntityId u in stranded)
+                {
+                    if (world.IsHeld(u))
+                    {
+                        _evacuating.Add(u.Value);
+                    }
+                    else if (_evacuating.Contains(u.Value))
+                    {
+                        _landedShort.Add(u.Value);
+                    }
+                }
+
                 List<EntityId> load = stranded.OrderBy(u => world.IsHeld(u) ? 0 : 1).ThenBy(u => u.Value).Take(20).ToList();
-                Position? beyond = Beyond(world, load[0], vertical, limit, below);
-                bool sail = beyond is null;
-                if ((beyond ?? WaterBeyond(world, me, load[0], vertical, limit, below)) is { } target && Ferry(world, me, away.Name, load, target, sail))
+                // While a load is aboard its landing stays the one chosen when it boarded: chosen again from the moving
+                // ship, it turned the ship round at every new order (bigisland: the army sailed to and fro for an hour).
+                Position? target;
+                bool sail;
+                if (_evacuation is { } kept && load.Any(world.IsHeld))
+                {
+                    (target, sail) = kept;
+                }
+                else
+                {
+                    Position? beyond = load.Any(u => _landedShort.Contains(u.Value)) ? null : Beyond(world, load[0], vertical, limit, below);
+                    sail = beyond is null;
+                    target = beyond ?? WaterBeyond(world, me, load[0], vertical, limit, below);
+                    _evacuation = target is { } t ? (t, sail) : null;
+                }
+
+                if (target is { } to && Ferry(world, me, away.Name, load, to, sail))
                 {
                     return true;
                 }
@@ -1949,6 +1998,14 @@ public static class CampaignAutoplay
             Position walkTo = point;
             foreach (EntityId u in units)
             {
+                // Already in a rectangle (alex1: a hero on the harbour's one tile of ground, while the others sail in):
+                // nothing to do for it, and no ship waits for it to board.
+                if (area is RectArea inside && Pos(world, u) is var at && at.X / Tile >= inside.Left && at.X / Tile <= inside.Right
+                    && at.Y / Tile >= inside.Top && at.Y / Tile <= inside.Bottom)
+                {
+                    continue;
+                }
+
                 if (Reach(world, triggers, u, area, point) is { } to)
                 {
                     Track(world, u);
@@ -1982,6 +2039,15 @@ public static class CampaignAutoplay
                 return true;
             }
 
+            // An area with less ground than units to stand on it, but water a ship sails (alex1's harbour: one tile of
+            // ground for three heroes): they stay aboard and the ship sails in; a unit aboard is where its ship is
+            // (ADR 0220). Unloaded, all but one stood outside the area, and the mission timed out.
+            if (area is RectArea rect && GroundTiles(world, stranded[0], rect) < stranded.Count && WaterIn(world, rect, point) is { } water
+                && Ferry(world, me, name, stranded, water, sail: true))
+            {
+                return true;
+            }
+
             // An area walled in (a small pocket of ground): breach first; otherwise (across water) ferry first.
             bool pocket = Pocket(world, stranded[0], point);
             Position landing = area is RectArea && Ground(world, stranded[0], area, point) is { } ground ? ground : point;
@@ -1990,6 +2056,48 @@ public static class CampaignAutoplay
 
         // Ground of the rectangle the unit could stand on (any land, not only the land it is on), nearest to the point:
         // a ferry lands there, not at the middle of a harbour that is mostly water (ADR 0220).
+        // How many tiles of the area a unit of this kind may stand on (at most a few: a count to compare with a group).
+        private static int GroundTiles(World world, EntityId unit, RectArea r)
+        {
+            if (!world.Navigation.IsBuilt || world.Navigation.ForType(world.Identities.Get(unit).TypeId) is not { } nav)
+            {
+                return int.MaxValue;
+            }
+
+            int count = 0;
+            for (int y = Math.Max(0, r.Top); y <= Math.Min(nav.Height - 1, r.Bottom) && count < 64; y++)
+            {
+                for (int x = Math.Max(0, r.Left); x <= Math.Min(nav.Width - 1, r.Right); x++)
+                {
+                    count += nav.IsWalkable(x, y) ? 1 : 0;
+                }
+            }
+
+            return count;
+        }
+
+        // The water tile of the area a ship may sail to nearest the point, or null.
+        private static Position? WaterIn(World world, RectArea r, Position point)
+        {
+            Position? found = null;
+            long best = long.MaxValue;
+            for (int y = Math.Max(0, r.Top); y <= Math.Min(world.Map.Height - 1, r.Bottom); y++)
+            {
+                for (int x = Math.Max(0, r.Left); x <= Math.Min(world.Map.Width - 1, r.Right); x++)
+                {
+                    var at = new Position((x * Tile) + (Tile / 2), (y * Tile) + (Tile / 2));
+                    long d = Distance(at, point);
+                    if (world.Map.IsPassable(Content.Compiled.Locomotor.Ship, x, y) && d < best)
+                    {
+                        best = d;
+                        found = at;
+                    }
+                }
+            }
+
+            return found;
+        }
+
         private static Position? Ground(World world, EntityId unit, AreaSpec area, Position point)
         {
             if (area is not RectArea r || !world.Navigation.IsBuilt || world.Navigation.ForType(world.Identities.Get(unit).TypeId) is not { } nav)
@@ -2340,6 +2448,10 @@ public static class CampaignAutoplay
         }
 
         private int _reboarded = int.MinValue / 2;
+        private (Position Target, bool Sail)? _evacuation; // where the load aboard is ferried
+        private readonly HashSet<uint> _evacuating = []; // units seen aboard while their kingdom leaves an area (lookup only)
+        private readonly HashSet<uint> _landedShort = []; // of them, those set ashore short of the line (lookup only)
+        private int _nudged = int.MinValue / 2;
 
         // A ship with no room left for another unit (Landing Tactics counted).
         private static bool Full(World world, EntityId ship)

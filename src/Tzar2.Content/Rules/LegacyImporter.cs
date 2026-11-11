@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Tzar2.Content.Compiled;
 
 namespace Tzar2.Content.Rules;
 
@@ -157,6 +158,7 @@ internal sealed partial class LegacyImporter
         }
 
         AddResourceNodes(document);
+        AddRuins(document);
         AddResearch(document);
         AddCombatEntries(document);
     }
@@ -532,6 +534,34 @@ internal sealed partial class LegacyImporter
             }
 
             document.ApplyLayer(body.ToEntry(key), source, declared: false);
+        }
+    }
+
+    // The ruins (CAP-007, ADR 0283): one type per gr_ picture of the terrain sets, taken by fighters as the magic gateway,
+    // scoring its ruinpoints to its holder; its cells as the picture's .dat grid gives them (ADR 0281).
+    private void AddRuins(RulesDocument document)
+    {
+        const string Source = "legacy:images/terrain";
+        foreach ((string name, int points, SceneryShape shape) in _tables.Ruins())
+        {
+            var body = new Body();
+            body.Inherits("^Ruin", "comm", "ruin", _templateExists);
+            body.Trait("Legacy", ("class", "ruin"), ("civ", "comm"));
+            body.Trait("Ruin", ("image", name), ("points", Num(points)));
+            var rows = new List<string>(shape.Height);
+            for (int y = 0; y < shape.Height; y++)
+            {
+                var line = new char[shape.Width];
+                for (int x = 0; x < shape.Width; x++)
+                {
+                    line[x] = shape.Closes(x, y) ? '1' : '0';
+                }
+
+                rows.Add(new string(line));
+            }
+
+            body.Trait("Building", ("width", Num(shape.Width)), ("height", Num(shape.Height)), ("mask", "[" + string.Join(", ", rows) + "]"));
+            document.ApplyLayer(body.ToEntry(MapDecoration.RuinType(name)), Source, declared: false);
         }
     }
 

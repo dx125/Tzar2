@@ -189,10 +189,21 @@ public sealed class PresentationCatalog : ICardSource
             }
         }
 
+        // A ruin's name is its picture's detailed name (CAP-007, ADR 0283; "Statue (Type 1)").
+        Content.Assets.SpriteIndex? index = null;
+        foreach (EntityTypeDefinition t in ruleset.EntityTypes)
+        {
+            if (t.Traits.World.RuinImage.Length > 0)
+            {
+                index = read(Content.Assets.SpriteIndex.PackagePath) is { } json ? Content.Assets.SpriteIndex.Parse(json) : null;
+                break;
+            }
+        }
+
         _types = new TypeVisual[ruleset.EntityTypes.Count];
         for (int i = 0; i < _types.Length; i++)
         {
-            _types[i] = Describe(ruleset.EntityTypes[i], byClass);
+            _types[i] = Describe(ruleset.EntityTypes[i], byClass, index);
         }
     }
 
@@ -529,7 +540,7 @@ public sealed class PresentationCatalog : ICardSource
         return id >= 0 ? id : Ruleset.EntityTypeId("comm." + cls);
     }
 
-    private TypeVisual Describe(EntityTypeDefinition type, Dictionary<string, IniTable> byClass)
+    private TypeVisual Describe(EntityTypeDefinition type, Dictionary<string, IniTable> byClass, Content.Assets.SpriteIndex? index)
     {
         string cls = type.Traits.LegacyClass;
         string civ = type.Traits.Civilization;
@@ -576,6 +587,12 @@ public sealed class PresentationCatalog : ICardSource
 
         string suffix = civ switch { "euro" => " e", "asia" => " a", "arab" => " r", _ => string.Empty };
         string name = _strings.Get("objects", cls + suffix) ?? _strings.Get("objects", cls) ?? cls;
+        if (type.Traits.World.RuinImage is { Length: > 0 } ruin)
+        {
+            // The ruin class draws nothing of its own (OBJECTS\RUIN.INI: anim_none): each ruin is its picture.
+            images[UnitAnim.Base] = ruin;
+            name = index?.Find(ruin)?.Get("detailedname") is { Length: > 0 } detailed ? detailed : name;
+        }
         return new TypeVisual(type.Id, type.Key, cls, civ, name, images, Empty(menu), IconIndex(Empty(icon) ?? (images.TryGetValue(UnitAnim.Base, out string? b) ? b : cls)), Empty(select), Empty(command), Empty(attack), Empty(die), Empty(heroIcon) is { } hero ? IconIndex(hero) : -1, Empty(create));
     }
 

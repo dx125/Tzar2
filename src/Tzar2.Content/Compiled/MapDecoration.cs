@@ -42,6 +42,16 @@ public sealed record MapDecoration(string Class, string Image, int TileX, int Ti
         ? (Math.Max(0, (int)(short)PixelX), Math.Max(0, (int)(short)PixelY))
         : (TileX * 32, TileY * 32);
 
+    /// <summary>
+    /// The entity type key of the ruin drawn by picture <paramref name="image"/> (CAP-007, ADR 0283): <c>comm.</c> and the
+    /// picture's name in lower case, spaces as underscores (<c>gr_water pit_1</c> → <c>comm.gr_water_pit_1</c>).
+    /// </summary>
+    public static string RuinType(string image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        return "comm." + image.Trim().ToLowerInvariant().Replace(' ', '_');
+    }
+
     /// <summary>The tile the decoration lies on: a patch's by its own pixel, else its tile.</summary>
     public (int X, int Y) Tile
     {

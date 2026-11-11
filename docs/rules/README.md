@@ -97,7 +97,7 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | Chapter | Rules | Tested | Implemented | Partial | Missing | Deviation | Unclear |
 |---|---|---|---|---|---|---|---|
 | [Computer opponents](ai.yaml) (AI) | 5 | 4 | 0 | 0 | 0 | 1 | 0 |
-| [Capture](capture.yaml) (CAP) | 7 | 5 | 1 | 0 | 1 | 0 | 0 |
+| [Capture](capture.yaml) (CAP) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Combat](combat.yaml) (WAR) | 22 | 18 | 4 | 0 | 0 | 0 | 0 |
 | [Construction and repair](construction.yaml) (BLD) | 27 | 23 | 4 | 0 | 0 | 0 | 0 |
 | [Selection, mouse and pointers](controls.yaml) (CTRL) | 30 | 21 | 9 | 0 | 0 | 0 | 0 |
@@ -118,15 +118,11 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 12 | 11 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
 | [Terrain and movement](world.yaml) (WORLD) | 24 | 18 | 4 | 0 | 0 | 2 | 0 |
-| **All** | 435 | 345 | 72 | 2 | 2 | 10 | 4 |
+| **All** | 435 | 346 | 72 | 2 | 1 | 10 | 4 |
 
 ## Not done yet
 
 Missing and partial rules.
-
-### Capture
-
-* **CAP-007**: A ruin on the map (a statue, an altar - a special location) is taken by the fighters of one kingdom standing round it, and the kingdom holding it scores its ruinpoints every second. *Found with ADR 0281. Tzar2 draws ruins (and they close their cells once world.decorationsObstruct is on), but nobody takes them and they score nothing; the owner asked for it in the editor series of 2026-11-08 (DIP-011's note).* (ADR 0281)
 
 ### Resources and gathering
 

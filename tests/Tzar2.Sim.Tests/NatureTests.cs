@@ -54,6 +54,30 @@ public class NatureTests
     }
 
     [Fact]
+    [Trait("Rule", "CAP-007")]
+    public void A_ruin_is_taken_by_fighters_beside_it_and_scores_its_holder_every_second()
+    {
+        // ADR 0283 (ReTzar's reading of the original, 0x4b6760, 0x420fd0, 0x443430 type 6).
+        using var d = new SimDriver(
+            TestMap(48, 16, Structure("comm.gr_statue_1", Nature, 20, 6), Unit("euro.footman", 0, 14, 7), Structure("euro.castle", 0, 2, 2), Structure("euro.castle", 1, 40, 9)),
+            ruleset: Classic);
+        World w = d.World;
+        EntityId ruin = OfType(w, "comm.gr_statue_1").Single();
+        d.MoveToTile(0, [OfType(w, "euro.footman").Single()], 19, 7);
+        d.RunUntil(() => d.Count(SimEventKind.Claimed) == 1, 600);
+        Assert.Equal(0, w.Identities.Get(ruin).Owner);
+
+        long before = w.Kingdoms[0].Score;
+        int second = 1000 / w.Config.TickLengthMilliseconds;
+        for (int t = 0; t < 10 * second; t++)
+        {
+            d.Step();
+        }
+
+        Assert.Equal(before + (10 * 5), w.Kingdoms[0].Score);
+    }
+
+    [Fact]
     [Trait("Rule", "NAT-003")]
     public void A_bear_fights_what_comes_near_prowls_round_its_place_and_is_not_called_back()
     {

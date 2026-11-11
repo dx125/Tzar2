@@ -36,7 +36,7 @@ rules:
     note: The global audit of 2026-11-07; Tzar2 used to drop capture progress after 5 s without a digger (UNK-19).
   CAP-007:
     rule: A ruin on the map (a statue, an altar - a special location) is taken by the fighters of one kingdom standing round it, and the kingdom holding it scores its ruinpoints every second.
-    source: ['community ReTzar src/gameplay.rs (capture_points: 0x4b65bd, 0x420fad, 0x443430 type 6; fighters in the footprint grown by one, of one kingdom that may rescue)', 'data IMAGES\TERRAIN\*.IMAGES.INI ruinpoints']
-    status: missing
-    adr: [0281]
-    note: Found with ADR 0281. Tzar2 draws ruins (and they close their cells once world.decorationsObstruct is on), but nobody takes them and they score nothing; the owner asked for it in the editor series of 2026-11-08 (DIP-011's note).
+    source: ['community ReTzar src/gameplay.rs (capture_points: 0x4b6760, 0x4b65bd, 0x420fad, 0x443430 type 6; fighters in the footprint grown by one, of one kingdom that may rescue)', 'data IMAGES\TERRAIN\*.IMAGES.INI ruinpoints', 'data OBJECTS\RUIN.INI (class ruin, image anim_none)']
+    status: tested
+    adr: [0281, 0283]
+    note: The original has one ruin class whose picture each object names. Tzar2 has a type per gr_ picture (comm.gr_statue_1 ...), compiled from the terrain sets' data, taken as the magic gateway is (NAT-001), indestructible, its cells from the picture's .dat grid. The score is the raw score (DIP-011), 1 to 7 a second. The original counts the second from the ruin's coming into play; Tzar2 from its entity index. Before ADR 0283 ruins were decorations nobody could take.
