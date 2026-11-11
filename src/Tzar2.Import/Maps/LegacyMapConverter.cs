@@ -421,7 +421,11 @@ public static class LegacyMapConverter
                     continue;
                 }
 
-                string? key = _types.Resolve(o.ClassName, o.Race);
+                // A ruin is drawn by its own picture: the ruleset's type of that picture (CAP-007, ADR 0283), whatever the
+                // class's resolution; without one it stays a decoration, as before.
+                string? key = o.ClassName == "ruin" && o.ImageName is { Length: > 0 } ruinImage && _types.Ruleset is { } rules
+                    ? (rules.EntityTypeId(MapDecoration.RuinType(ruinImage)) >= 0 ? MapDecoration.RuinType(ruinImage) : null)
+                    : _types.Resolve(o.ClassName, o.Race);
                 if (key is null)
                 {
                     if (o.ImageName is { Length: > 0 })

@@ -67,7 +67,7 @@ internal sealed class LegacyTables
     private readonly Dictionary<string, LegacyIni> _objectsByClass = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _sprites = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, LegacyFootprint> _footprints = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<(string Set, string Name, string Image, string Box)> _scenery = [];
+    private readonly List<(string Set, string Name, string Image, string Box, int Points)> _scenery = [];
 
     private LegacyTables(VirtualFileSystem vfs)
     {
@@ -177,7 +177,7 @@ internal sealed class LegacyTables
 
     // A decoration picture of a terrain set's IMAGES.INI that may close cells: a ground object (go_) or a ruin (gr_), not
     // a shadow or colour companion, with an object box (ADR 0281).
-    private static (string Set, string Name, string Image, string Box)? SceneryOf(JsonElement entry, string name)
+    private static (string Set, string Name, string Image, string Box, int Points)? SceneryOf(JsonElement entry, string name)
     {
         const string Prefix = "images/terrain/", Suffix = ".images.ini";
         if (!entry.TryGetProperty("ini", out JsonElement iniElement) || iniElement.GetString() is not { } ini
@@ -192,7 +192,9 @@ internal sealed class LegacyTables
             return null;
         }
 
-        return (ini[Prefix.Length..^Suffix.Length].ToLowerInvariant(), name, imagePath, boxText);
+        int points = props.TryGetProperty("ruinpoints", out JsonElement rp) && rp.ValueKind == JsonValueKind.Array && rp.GetArrayLength() > 0
+            && int.TryParse(rp[0].GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int p) ? p : 0;
+        return (ini[Prefix.Length..^Suffix.Length].ToLowerInvariant(), name, imagePath, boxText, points);
     }
 
     /// <summary>
@@ -204,7 +206,7 @@ internal sealed class LegacyTables
     public IReadOnlyList<SceneryShape> SceneryShapes()
     {
         var shapes = new List<SceneryShape>(_scenery.Count);
-        foreach ((string set, string name, string image, string boxText) in _scenery)
+        foreach ((string set, string name, string image, string boxText, _) in _scenery)
         {
             string[] parts = boxText.Split(',', StringSplitOptions.TrimEntries);
             if (parts.Length != 4 || !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int bw)
@@ -226,6 +228,35 @@ internal sealed class LegacyTables
         }
 
         return shapes;
+    }
+
+    /// <summary>
+    /// The ruins of the terrain sets (CAP-007, ADR 0283): the <c>gr_</c> pictures with their <c>ruinpoints</c>, each name
+    /// once (the first set's in manifest order), with their cells as <see cref="SceneryShapes"/> gives them.
+    /// </summary>
+    public IReadOnlyList<(string Name, int Points, SceneryShape Shape)> Ruins()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ruins = new List<(string, int, SceneryShape)>();
+        IReadOnlyList<SceneryShape> shapes = SceneryShapes();
+        foreach ((string set, string name, _, _, int points) in _scenery)
+        {
+            if (!name.StartsWith("gr_", StringComparison.OrdinalIgnoreCase) || !seen.Add(name))
+            {
+                continue;
+            }
+
+            foreach (SceneryShape shape in shapes)
+            {
+                if (shape.Set == set && string.Equals(shape.Image, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    ruins.Add((name, points, shape));
+                    break;
+                }
+            }
+        }
+
+        return ruins;
     }
 
     /// <summary>The object INI whose <c>[general] class</c> is <paramref name="cls"/>, or null.</summary>

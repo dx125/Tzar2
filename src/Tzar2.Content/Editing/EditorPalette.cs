@@ -77,6 +77,7 @@ public sealed class EditorPalette
             string civ = tr.Civilization.Length > 0 ? tr.Civilization : CivOf(t.Key);
             PaletteKind kind = tr.Category switch
             {
+                _ when tr.World.RuinImage.Length > 0 => PaletteKind.Other, // the special locations (CAP-007, ADR 0283)
                 EntityCategory.Building => PaletteKind.Building,
                 EntityCategory.Unit => civ == "comm" && !produced.Contains(t.Id) ? PaletteKind.Creature : PaletteKind.Unit,
                 EntityCategory.Resource when tr.ResourceNode is { } n && n.Resource == wood && t.HasFootprint => PaletteKind.Tree,

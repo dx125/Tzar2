@@ -561,9 +561,9 @@ owner's order of 2026-10-26.
        rocks and ruins can close their cells, but the switch stays off (ADR 0281; log below).
     2. Corners: **done** - land units step diagonally between obstacles touching at a corner, as the original's, and
        `world.decorationsObstruct` is on (WORLD-023, WORLD-003; ADR 0282; log below).
-    3. The ruins' capture and their `ruinpoints` (CAP-007): **parked** in draft PR #286 (the owner, 2026-11-08). The
-       code is done, but the campaign acceptance fails on `bigisland`: the new types change the course of play, and the
-       solver's sea transport cannot get the last hero aboard. The solver is to be made robust at ferrying first.
+    3. The ruins' capture and their `ruinpoints` (CAP-007): **done** - a type per ruin picture, taken by fighters of a
+       kingdom that may rescue, as the magic gateway, scoring its holder every second (ADR 0283; log below). On the
+       base of the batches D2 and E the campaign acceptance completes every mission again.
     4. B - a map's own resources in the game: **done** (SCN-003, SCN-004; ADR 0284; log below).
     5. C - custom maps and campaigns: **done** - the player's .t2map and .t2camp files (user folders maps/, campaigns/,
        imported/) play from CUSTOM MAP, the campaign screen and the lobby; the editor asks before unsaved work is lost
@@ -586,6 +586,12 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-11 — Ruins are taken by fighters and score their holder (CAP-007; ADR 0283; item 26.3).** The draft parked
+  on 2026-11-08 (#286) was moved onto `main`; with the campaign's computers running only their map's AI (ADR 0288) the
+  acceptance completes all 19 missions again, `bigisland` on its second attempt as before. The original campaigns' 18
+  ruins are types of their own (`comm.gr_*`): fighters of one kingdom beside one take it, unless `@kingdomcanrescue`
+  bars the kingdom, and its holder scores its `ruinpoints` every second. The new types move the numbers of the types
+  after them, so saves made before do not load (ADR 0271); the owner's play-test saves already did not.
 * **2026-11-11 — The palette's details: tree pictures, the gate's side, units per tile, the imported shadow (PRES-022
   to PRES-024, WORLD-024; ADR 0289; item 26.7).**
   * **Tree pictures.** The original maps give each tree a picture of the terrain set's strip; the converter dropped it,

@@ -21,6 +21,17 @@ public class RulesetCompilerTests
     private static int Resource(string key) => Classic.ResourceId(key);
 
     [Fact]
+    [Trait("Rule", "CAP-007")]
+    public void Each_ruin_picture_compiles_to_a_type_taken_by_fighters_that_scores_its_ruinpoints()
+    {
+        // ADR 0283: one type per gr_ picture; claimed as the magic gateway, nothing hurts it, its cells from the picture.
+        EntityTypeDefinition statue = Type(Classic, "comm.gr_statue_1");
+        Assert.Equal(("gr_statue_1", 5, ClaimBy.Military, true), (statue.Traits.World.RuinImage, statue.Traits.World.RuinPoints, statue.Traits.World.Claim, statue.Traits.World.Indestructible));
+        Assert.Equal((2, 2, "ruin"), (statue.FootprintWidth, statue.FootprintHeight, statue.Traits.LegacyClass));
+        Assert.Equal("comm.gr_water_pit_1", MapDecoration.RuinType("gr_water pit_1"));
+    }
+
+    [Fact]
     [Trait("Rule", "WORLD-003")]
     public void The_terrain_sets_decoration_pictures_compile_to_the_cells_they_close()
     {
@@ -50,7 +61,7 @@ public class RulesetCompilerTests
                 "arab.jihad_warrior", "arab.magicworkshop", "arab.peon", "comm.bat", "comm.bear", "comm.bird",
                 "comm.bridge", "comm.carpet", "comm.catapult", "comm.cow", "comm.dragon", "comm.dummy", "comm.dwarf",
                 "comm.eagle", "comm.field", "comm.fishing_boat", "comm.fishpatch", "comm.fog_revealer", "comm.galleon",
-                "comm.gate_stone", "comm.gate_wood", "comm.ghost", "comm.ground_object", "comm.hulk", "comm.item", "comm.item_armor", "comm.item_flag",
+                "comm.gate_stone", "comm.gate_wood", "comm.ghost", "comm.gr_statue_1", "comm.ground_object", "comm.hulk", "comm.item", "comm.item_armor", "comm.item_flag",
                 "comm.item_health", "comm.item_magic", "comm.item_plusplus", "comm.item_scroll", "comm.item_soul",
                 "comm.jinn", "comm.magicgateway", "comm.meat", "comm.messiah", "comm.ork", "comm.res_gold", "comm.res_stone",
                 "comm.resitem", "comm.skeleton", "comm.tower_stone", "comm.tower_stone2", "comm.tower_wood",

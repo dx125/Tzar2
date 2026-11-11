@@ -112,12 +112,37 @@ public sealed class VictorySystem : ISimSystem
         ArgumentNullException.ThrowIfNull(context);
         World world = context.World;
         CountEvents(world);
+        if (!IsOver(world))
+        {
+            ScoreRuins(world);
+        }
+
         if (IsOver(world) || world.Config.Victory == VictoryCondition.NotSpecified || world.Tick.Value % world.Ruleset.World.VictoryIntervalTicks != 0)
         {
             return;
         }
 
         Evaluate(world);
+    }
+
+    /// <summary>
+    /// CAP-007 (ReTzar's reading of the original, 0x4b6760, 0x443430 type 6): every second a ruin held by a kingdom scores
+    /// its picture's ruinpoints to it, each on its own beat (the original counts from the ruin's coming into play; Tzar2
+    /// from its entity index).
+    /// </summary>
+    private static void ScoreRuins(World world)
+    {
+        int every = Math.Max(1, 1000 / world.Config.TickLengthMilliseconds);
+        ReadOnlySpan<EntityId> structures = world.Footprints.Entities;
+        foreach (EntityId e in structures)
+        {
+            Identity identity = world.Identities.Get(e);
+            int points = world.Ruleset.EntityTypes[identity.TypeId].Traits.World.RuinPoints;
+            if (points > 0 && identity.Owner < world.Kingdoms.Length && (world.Tick.Value + (uint)e.Index) % (uint)every == 0)
+            {
+                world.Kingdoms[identity.Owner].Score += points;
+            }
+        }
     }
 
     private static bool SharesVictory(World world, int a, int b) => world.Diplomacy.Shares(a, b, Sharing.Victory);

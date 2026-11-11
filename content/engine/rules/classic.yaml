@@ -272,6 +272,13 @@ legacy:
 
 ^Resource: {}
 
+# The ruins (CAP-007, ADR 0283; ReTzar's reading of the original, 0x4b6760, 0x420fd0): statues and altars of the terrain
+# sets, one type per picture (the importer's comm.gr_*). Fighters of one kingdom standing beside one take it, as the magic
+# gateway; its holder scores its ruinpoints every second; nothing hurts it.
+^Ruin:
+  ClaimOnTouch: { by: military }
+  Indestructible: {}
+
 ^Cavalry:
   Mobile: { locomotor: mounted }
   Collision: { radius: 10, terrain: 10 }   # UNVERIFIED (UNK-11)
