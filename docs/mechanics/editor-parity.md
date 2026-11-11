@@ -25,7 +25,7 @@ Status:
 <!-- summary:start -->
 | | Items | Done | Blocked | Planned |
 |---|---|---|---|---|
-| All | 106 | 103 | 3 | 0 |
+| All | 110 | 107 | 3 | 0 |
 
 Parity: **97 %** done.
 <!-- summary:end -->
@@ -163,6 +163,10 @@ Parity: **97 %** done.
 | m-play-own | The player's maps and campaigns play from the game's menus and the multiplayer lobby | done | UserLibraryTests.The_players_maps_are_offered_by_title_with_ids_under_their_folder, UserLibraryTests.A_players_map_starts_as_a_custom_map_match, UserLibraryTests.The_players_campaigns_are_offered_and_build_their_maps_when_played | CUSTOM MAP, the campaign screen and the lobby read the .t2map and .t2camp files of the user folders maps/, campaigns/ and imported/; the editor's file dialogs start there (ADR 0286) |
 | m-unsaved | No work lost: a question before New, Open, Close and closing the window, and an autosave | done | UserLibraryTests.The_autosave_comes_every_three_minutes_of_editing_while_there_are_new_changes, UserLibraryTests.A_campaigns_version_changes_with_the_edits_of_its_maps | Save / Don't save / Cancel; every 3 minutes of editing, unsaved work also goes to the user folder autosave/, opened with File > Open autosave (ADR 0286) |
 | m-debugger | Trigger debugger: last results, variable watch, breakpoints, step, event log | done | TriggerEditorTests.The_debugger_watches_variables_tracks_results_and_breaks_on_rules_and_actions, TriggerEditorTests.A_debugged_playtest_plays_exactly_like_an_undebugged_one | breaks after the tick in which the rule fires or the action runs (ADR 0153) |
+| m-playability | Playability check: the acceptance's bot plays the map or the campaign and tells where it stalls | done | PlayabilityCheckTests.A_map_the_player_wins_is_completed_by_play_alone, PlayabilityCheckTests.A_map_that_cannot_be_won_reports_each_attempt_and_where_the_bot_got_to, PlayabilityCheckTests.A_campaign_check_plays_every_map_from_the_entry | Play → Check playability; the campaign window's Check playability; each attempt by play or with help, and where the bot got to (ADR 0290) |
+| m-goal-wizard | Mission goal wizard: common goals as ready rules | done | MissionGoalTests.A_destroy_the_enemies_goal_is_won_by_play, MissionGoalTests.A_reach_the_area_goal_is_won_when_the_hero_walks_there, MissionGoalTests.A_keep_alive_goal_loses_when_the_hero_dies | Triggers → Add a mission goal: destroy the enemies, reach an area, hold out, gather, keep alive; ordinary numbered rules (ADR 0290) |
+| m-trigger-history | Trigger history with a rewind to the moment a rule fired | done | PlaytestRewindTests.The_trigger_history_records_what_fired_and_a_rewind_to_it_plays_it_again | the debugger window's History; a double-click rewinds the playtest (ADR 0285, ADR 0290) |
+| m-where-used | Where a name or an object is used in the triggers | done | TriggerUseTests.A_timer_is_found_where_it_is_read_set_and_stopped, TriggerUseTests.An_object_is_found_where_the_triggers_refer_to_it | the rule editor's Areas & groups page: Where used; a double-click locates the place (ADR 0290) |
 | m-campaign-graph | Visual campaign graph: entries, persistence mapping, carried variables | done | CampaignEditorTests.The_graph_flags_unreachable_maps_dangling_names_and_shows_persistence_and_carried_variables, CampaignEditorTests.An_edited_campaign_plays_through_the_campaign_flow_with_carry_over | GraphEdit view: entries green, unreachable red, dangling names on their node, draggable nodes saved in editor.json |
 | m-areas-groups | Named areas and object groups reusable across triggers | done | TriggerEditorTests.Named_areas_and_object_groups_follow_their_edits, PackageTests.Ids_areas_and_groups_survive_in_editor_json | reused by value: editing one updates every equal trigger area / object set |
 | m-search-replace | Search and replace of object references | done | DocumentTests.Search_and_replace_of_object_references |  |

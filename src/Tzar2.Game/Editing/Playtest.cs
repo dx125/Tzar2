@@ -97,6 +97,12 @@ public static class Playtest
     }
 }
 
+/// <summary>A rule that fired or an action that ran, when (the trigger history, ADR 0290).</summary>
+/// <param name="Tick">The tick.</param>
+/// <param name="IsAction">An action (else a rule).</param>
+/// <param name="Name">Its name.</param>
+public sealed record DebugFiring(int Tick, bool IsAction, string Name);
+
 /// <summary>One line of the trigger debugger's event log.</summary>
 /// <param name="Tick">The tick.</param>
 /// <param name="Text">What happened.</param>
@@ -128,6 +134,9 @@ public sealed class TriggerDebugger : ITriggerTrace, IDisposable
     /// <summary>Most log entries kept.</summary>
     public const int MaxLog = 2000;
 
+    /// <summary>Most history entries kept (the oldest go first).</summary>
+    public const int MaxHistory = 4000;
+
     private readonly object _gate = new();
     private readonly ScenarioData _scenario;
     private GameSession _session;
@@ -136,6 +145,7 @@ public sealed class TriggerDebugger : ITriggerTrace, IDisposable
     private readonly SortedSet<int> _ruleBreaks = [];
     private readonly SortedSet<int> _actionBreaks = [];
     private readonly List<DebugLogEntry> _log = [];
+    private readonly List<DebugFiring> _history = [];
     private bool _breakRequested;
     private string? _hit;
     private DebugWatch? _watch;
@@ -188,6 +198,7 @@ public sealed class TriggerDebugger : ITriggerTrace, IDisposable
         {
             _watch = watch;
             _log.RemoveAll(e => e.Tick >= watch.Tick);
+            _history.RemoveAll(h => h.Tick >= watch.Tick);
         }
 
         Add(watch.Tick, string.Create(CultureInfo.InvariantCulture, $"rewound to tick {watch.Tick}"));
@@ -219,6 +230,21 @@ public sealed class TriggerDebugger : ITriggerTrace, IDisposable
             lock (_gate)
             {
                 return _hit;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The rules that fired and the actions that ran, in order, with their ticks (ADR 0290): the trigger history, from
+    /// which the editor rewinds a playtest to a moment.
+    /// </summary>
+    public ImmutableArray<DebugFiring> History
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _history];
             }
         }
     }
@@ -314,6 +340,11 @@ public sealed class TriggerDebugger : ITriggerTrace, IDisposable
             }
         }
 
+        if (value != 0)
+        {
+            Remember(new DebugFiring(tick, false, _scenario.Rules[rule].Name));
+        }
+
         if (value != 0 || LogEvaluations)
         {
             Add(tick, string.Create(CultureInfo.InvariantCulture, $"rule '{_scenario.Rules[rule].Name}' = {value}{(value != 0 ? " → fires" : string.Empty)}"));
@@ -332,7 +363,21 @@ public sealed class TriggerDebugger : ITriggerTrace, IDisposable
             }
         }
 
+        Remember(new DebugFiring(tick, true, _scenario.Actions[action].Name));
         Add(tick, $"  action '{_scenario.Actions[action].Name}' ({_scenario.Actions[action].GetType().Name.Replace("Action", string.Empty, StringComparison.Ordinal)})");
+    }
+
+    private void Remember(DebugFiring firing)
+    {
+        lock (_gate)
+        {
+            if (_history.Count >= MaxHistory)
+            {
+                _history.RemoveRange(0, MaxHistory / 4);
+            }
+
+            _history.Add(firing);
+        }
     }
 
     /// <inheritdoc/>

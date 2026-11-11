@@ -193,3 +193,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0287](0287-the-scenarios-own-switches-difficulty-deleting-diplomacy-and-selection.md) | A scenario reads the game's difficulty and the player's selection, and can forbid deleting and diplomacy | Accepted | 2026-11-10 |
 | [0288](0288-the-campaigns-ai-modes-and-script-functions-as-the-originals.md) | A campaign's computers run the AI its map gives them, and the script functions act as the original's | Accepted | 2026-11-10 |
 | [0289](0289-the-palettes-details-tree-pictures-gate-side-stacking-and-shadows.md) | The palette's details: tree pictures, the gate's side, units per tile and the imported shadow | Accepted | 2026-11-11 |
+| [0290](0290-the-editors-helpers-playability-goals-history-and-uses.md) | The editor's helpers: playability check, mission goal wizard, trigger history and "where used" | Accepted | 2026-11-11 |

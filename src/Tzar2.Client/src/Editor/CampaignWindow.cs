@@ -52,6 +52,7 @@ public partial class CampaignWindow : Window
         Forms.Button(bar, "Redo", () => _campaign.Redo());
         Forms.Button(bar, "Play from the start", () => Play(null));
         Forms.Button(bar, "Play selected map", () => Play(_selected));
+        Forms.Button(bar, "Check playability…", CheckPlayability);
         outer.AddChild(bar);
         outer.AddChild(_status);
         var split = new HSplitContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
@@ -185,6 +186,19 @@ public partial class CampaignWindow : Window
         _selected = null;
         _campaign.Changed += () => _dirty = true;
         _dirty = true;
+    }
+
+    // ADR 0290: the acceptance's bot plays every map of the campaign and reports where it gets stuck.
+    private void CheckPlayability()
+    {
+        try
+        {
+            AddChild(new PlayabilityWindow(_campaign.State.Name, Tzar2.Game.Editing.PlayabilityCheck.Prepare(_campaign), _screen.Controller.Ruleset));
+        }
+        catch (ArgumentException e)
+        {
+            _screen.Status("The campaign cannot start: " + e.Message);
+        }
     }
 
     /// <summary>Saves (with the last path, or a file asked for), then runs <paramref name="then"/> if it saved.</summary>

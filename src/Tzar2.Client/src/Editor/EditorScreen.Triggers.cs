@@ -88,11 +88,13 @@ public partial class EditorScreen
     {
         PopupMenu triggers = Menu(bar, "Triggers");
         Item(triggers, "Rules, events and actions…", () => OpenTriggers());
+        Item(triggers, "Add a mission goal…", OpenGoalWizard);
         Item(triggers, "Show validation", () => _right.CurrentTab = 2);
 
         PopupMenu play = Menu(bar, "Play");
         Item(play, "Playtest", () => Play(debugger: false));
         Item(play, "Playtest with the trigger debugger", () => Play(debugger: true));
+        Item(play, "Check playability (the bot plays it)…", CheckPlayability);
         play.AddSeparator();
         for (int k = 0; k <= 8; k++)
         {
@@ -110,6 +112,36 @@ public partial class EditorScreen
             _reveal = !_reveal;
             Status(_reveal ? "Playtests reveal the map." : "Playtests keep the fog.");
         });
+    }
+
+    // ADR 0290: a goal from the wizard becomes ordinary rules; the selected object is its object.
+    private void OpenGoalWizard()
+    {
+        int id = _controller.Selection.IsDefaultOrEmpty ? -1 : _controller.Selection[0];
+        string label = id >= 0 && Document.State.Find(id) is { } o ? o.Label : string.Empty;
+        var wizard = new GoalWizard(Document, id, label);
+        wizard.Done += Status;
+        AddChild(wizard);
+    }
+
+    // ADR 0290: the acceptance's bot plays the map headless and reports where it gets stuck.
+    private void CheckPlayability()
+    {
+        if (Revalidate().BlocksPlay)
+        {
+            _right.CurrentTab = 2;
+            Status("Playing is blocked: fix the blocking findings in the validation panel first.");
+            return;
+        }
+
+        try
+        {
+            AddChild(new PlayabilityWindow(Document.State.Name, Tzar2.Game.Editing.PlayabilityCheck.Prepare(Document), _rules));
+        }
+        catch (ArgumentException e)
+        {
+            Status("The map cannot start: " + e.Message);
+        }
     }
 
     private void Play(bool debugger)
