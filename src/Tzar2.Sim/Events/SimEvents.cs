@@ -311,6 +311,9 @@ public enum CommandRejection
 
     /// <summary>No scenario controller, or nothing waits for this player's reply (ADR 0131).</summary>
     NoScenarioPrompt = 60,
+
+    /// <summary>The scenario forbids it now: <c>$candelobjects = 0</c> or <c>$canusediplomacy = 0</c> (SCN-006, SCN-007).</summary>
+    ScenarioForbids = 61,
     // GAME-07…11 (ADR 0096): values 15-29.
 
     /// <summary>The holder has no room left (GAME-09).</summary>

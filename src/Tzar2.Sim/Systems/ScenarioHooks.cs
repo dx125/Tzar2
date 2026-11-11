@@ -31,6 +31,25 @@ public interface IScenarioController
     /// </summary>
     /// <returns>Why it is refused, or null.</returns>
     CommandRejection? Reply(World world, in Command command);
+
+    /// <summary>Whether the scenario forbids <paramref name="what"/> to the kingdom now (SCN-006, SCN-007).</summary>
+    bool Forbids(ScenarioRestriction what, int player);
+
+    /// <summary>
+    /// A <see cref="CommandKind.ScenarioSelect"/> of a player: what it has selected now, for <c>$isselected</c> (SCN-008).
+    /// </summary>
+    /// <returns>Why it is refused, or null.</returns>
+    CommandRejection? Select(World world, in Command command, ReadOnlySpan<EntityId> entities);
+}
+
+/// <summary>What a scenario can forbid the players (the original's script switches).</summary>
+public enum ScenarioRestriction
+{
+    /// <summary>Deleting their objects (<c>$candelobjects = 0</c>, SCN-006).</summary>
+    Delete = 1,
+
+    /// <summary>Diplomacy and tribute (<c>$canusediplomacy = 0</c>, SCN-007).</summary>
+    Diplomacy = 2,
 }
 
 /// <summary>

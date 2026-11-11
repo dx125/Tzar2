@@ -73,6 +73,12 @@ public sealed record TriggerOptions
     /// </summary>
     public uint ResponderMask { get; init; } = 0xFF;
 
+    /// <summary>
+    /// The game's difficulty as <c>$difficulty</c> reads it (SCN-005): 0 easy, 1 normal, 2 hard - the campaign screen's or
+    /// the custom map setup's choice.
+    /// </summary>
+    public int Difficulty { get; init; } = 1;
+
     /// <summary>Checks the ranges.</summary>
     /// <exception cref="ArgumentOutOfRangeException">A value is out of range.</exception>
     public void Validate()
@@ -85,9 +91,19 @@ public sealed record TriggerOptions
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxConversationSteps, 100_000);
         ArgumentOutOfRangeException.ThrowIfNegative(ObjectAreaRadiusTiles);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ObjectAreaRadiusTiles, 64);
+        ArgumentOutOfRangeException.ThrowIfNegative(Difficulty);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(Difficulty, 2);
     }
 
-    /// <summary>A fingerprint of every value.</summary>
+    /// <summary>A fingerprint of every value (the difficulty only when it is not normal, so older snapshots keep theirs).</summary>
     public ulong Fingerprint()
-        => new StateHasher().Add(IntervalMs).Add(StepBudgetPerTick).Add(HardStepCapPerTick).Add(MaxConversationSteps).Add(ObjectAreaRadiusTiles).Add((int)ResponderMask).GetCurrentHash();
+    {
+        StateHasher h = new StateHasher().Add(IntervalMs).Add(StepBudgetPerTick).Add(HardStepCapPerTick).Add(MaxConversationSteps).Add(ObjectAreaRadiusTiles).Add((int)ResponderMask);
+        if (Difficulty != 1)
+        {
+            h = h.Add(Difficulty);
+        }
+
+        return h.GetCurrentHash();
+    }
 }

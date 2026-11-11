@@ -569,7 +569,8 @@ owner's order of 2026-10-26.
        imported/) play from CUSTOM MAP, the campaign screen and the lobby; the editor asks before unsaved work is lost
        and autosaves every 3 minutes; the Lua tab and the validator warn that Lua does not run yet; the map's
        difficulty already works as the original's (ADR 0286; log below).
-    6. D - the triggers: `$difficulty` and the other reserved variables that read 0, the 26 UNVERIFIED readings against
+    6. D - the triggers: `$difficulty`, `$candelobjects`, `$canusediplomacy` and `$isselected` **done** (SCN-005 to
+       SCN-008; ADR 0287; log below); a campaign save keeps its difficulty. Next: the 26 UNVERIFIED readings against
        ReTzar and the original's code.
     7. E - the palette's details: tree pictures, the gate's side, units stacking, the authentic import's shadow.
     8. Section 3, taken first (the owner, 2026-11-10: it speeds up testing): **done** - rewind and speeds to 2000 % in
@@ -581,6 +582,19 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-10 — A scenario reads the game's difficulty and the player's selection, and can forbid deleting and
+  diplomacy (SCN-005 to SCN-008; ADR 0287; item 26.6).** These reserved variables read 0 before. A count on the
+  owner's install found where the original's maps use them:
+  * **`$difficulty`, in the main campaign.** Its enemy waves come after `(6-$difficulty)` minutes, so every difficulty
+    played as easy. It now reads the campaign's or the custom map's difficulty. A campaign save keeps that difficulty
+    (save format 4); it used to resume at normal.
+  * **`$candelobjects = 0`, in five missions.** The simulation now refuses the human kingdoms' deletes while it is
+    set.
+  * **`$isselected`, in the tutorial.** Its first lessons wait for the player to select a unit, and never went on.
+    The client now tells a scenario that reads it what the player selects.
+  * **`$canusediplomacy`** closes diplomacy and tribute. No original map uses it.
+  
+  The trigger state and the save keep their older bytes when none of this is set, so no hash moved.
 * **2026-11-10 — The player's own maps and campaigns in the game; no editor work lost (ADR 0286; item 26.5).**
   * **The menus.** CUSTOM MAP, the campaign screen and the multiplayer lobby now offer the `.t2map` and `.t2camp`
     files of the user folders `maps`, `campaigns` and `imported`. They read them again each time they open. A map's id

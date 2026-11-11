@@ -323,6 +323,7 @@ public sealed partial class LegacyTriggerSystem
             {
                 ReservedVariable.Gold or ReservedVariable.Stone or ReservedVariable.Food or ReservedVariable.Wood => Resource(player, ResourceOf(variable)),
                 ReservedVariable.Kingdom => _world.HasPlayer(player) ? player + 1 : 0,
+                ReservedVariable.Difficulty => _options.Difficulty, // SCN-005
                 _ => 0,
             };
         }
@@ -365,8 +366,17 @@ public sealed partial class LegacyTriggerSystem
                 return _world.HasPlayer(identity.Owner) ? _world.Players[identity.Owner].Civilization + 1 : 0;
             case ReservedVariable.UnderFog:
                 return UnderFog(e) ? 1 : 0;
+            case ReservedVariable.Difficulty:
+                return _options.Difficulty; // SCN-005: the game's, whatever the object
+            case ReservedVariable.IsSelected:
+                return IsSelected(e) ? 1 : 0; // SCN-008
+            case ReservedVariable.Flags:
+                // ReTzar: the object record's flags with bit 0 = selected; only that bit is modelled (UNVERIFIED, UNK-64).
+                return IsSelected(e) ? 1 : 0;
             default:
-                return 0; // Difficulty, Flags, Program, IsSelected, CanUseDiplomacy, CanDelObjects: UNVERIFIED, UNK-64
+                // $program (the object's order in the original's numbering) is not modelled (UNVERIFIED, UNK-64);
+                // $canusediplomacy and $candelobjects are written only and read 0 (ReTzar).
+                return 0;
         }
     }
 
@@ -409,6 +419,18 @@ public sealed partial class LegacyTriggerSystem
     // Set Object Properties / assignments in Object Expression (UNVERIFIED write semantics, UNK-38).
     private void WriteReserved(ReservedVariable variable, int value)
     {
+        switch (variable)
+        {
+            case ReservedVariable.CanDelObjects:
+                _state.NoDelete = value == 0; // SCN-006 (0x5cf6b0 = !value)
+                return;
+            case ReservedVariable.CanUseDiplomacy:
+                _state.NoDiplomacy = value == 0; // SCN-007 (0x5877a0)
+                return;
+            case ReservedVariable.Difficulty:
+                return; // read only: a write is ignored (ReTzar)
+        }
+
         EntityId e = _current;
         if (e == EntityId.None || !_world.Entities.IsAlive(e) || !_world.Identities.Has(e))
         {

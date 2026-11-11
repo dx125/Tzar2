@@ -201,6 +201,12 @@ public enum CommandKind : ushort
     /// </summary>
     ScenarioReply = 60,
 
+    /// <summary>
+    /// Scenario selection (SCN-008, ADR 0287): the listed objects are what the player has selected now (an empty list:
+    /// nothing). Sent only to a scenario that reads <c>$isselected</c>; it changes no unit.
+    /// </summary>
+    ScenarioSelect = 61,
+
     /// <summary>Explore: the units head for unexplored ground they can reach, ships on water (ADR 0143).</summary>
     Explore = 34,
 

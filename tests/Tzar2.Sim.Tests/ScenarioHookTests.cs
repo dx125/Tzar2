@@ -40,6 +40,24 @@ public class ScenarioHookTests
             Replies.Add((command.Player, command.Arg0, command.Arg1));
             return null;
         }
+
+        public HashSet<ScenarioRestriction> Forbidden { get; } = [];
+
+        public List<(byte Player, uint[] Entities)> Selections { get; } = [];
+
+        public bool Forbids(ScenarioRestriction what, int player) => player == 0 && Forbidden.Contains(what);
+
+        public CommandRejection? Select(World world, in Command command, System.ReadOnlySpan<EntityId> entities)
+        {
+            uint[] values = new uint[entities.Length];
+            for (int i = 0; i < entities.Length; i++)
+            {
+                values[i] = entities[i].Value;
+            }
+
+            Selections.Add((command.Player, values));
+            return null;
+        }
     }
 
     private sealed class Probe(System.Action<World> action) : ISimSystem

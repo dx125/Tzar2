@@ -199,4 +199,34 @@ public sealed class CampaignTests(ITestOutputHelper output)
         Assert.Throws<InvalidDataException>(() => SaveGame.FromBytes(Encoding.ASCII.GetBytes("nope")));
         Assert.Throws<InvalidDataException>(() => (save with { CampaignId = "other" }).Resume(source, Rules.Value));
     }
+
+    [Fact]
+    [Trait("Rule", "SCN-005")]
+    public void A_mission_keeps_its_difficulty_for_the_scenario_and_in_its_saves()
+    {
+        InMemoryCampaignSource source = DemoCampaign.Create();
+        CampaignProgress progress = CampaignFlow.Begin(source.Campaign);
+        MatchSetup hard = ScenarioMatch.Setup(source.Load("watch"), Rules.Value, progress, computerAi: true, difficulty: Difficulty.Hard);
+        Assert.Equal(Difficulty.Hard, hard.GameDifficulty);
+        Assert.Equal(2, hard.EffectiveTriggerOptions.Difficulty);
+        Assert.Equal(1, ScenarioMatch.Setup(source.Load("watch"), Rules.Value, progress).EffectiveTriggerOptions.Difficulty);
+
+        using var played = new GameSession(hard, Rules.Value);
+        played.Step(60);
+        byte[] bytes = SaveGame.Capture(played, source.Campaign.Id, "watch", progress, "hard").ToBytes();
+        SaveGame save = SaveGame.FromBytes(bytes);
+        Assert.Equal(Difficulty.Hard, save.Difficulty);
+        using GameSession resumed = save.Resume(source, Rules.Value); // a save of another difficulty would be refused
+        Assert.Equal(Difficulty.Hard, resumed.Setup.GameDifficulty);
+        played.Step(30);
+        resumed.Step(30);
+        Assert.Equal(played.Simulation.ComputeFullHash(), resumed.Simulation.ComputeFullHash());
+
+        // A normal mission's save keeps the older format, byte for byte.
+        using var normal = new GameSession(ScenarioMatch.Setup(source.Load("watch"), Rules.Value, progress, computerAi: true), Rules.Value);
+        byte[] older = SaveGame.Capture(normal, source.Campaign.Id, "watch", progress, "normal").ToBytes();
+        Assert.Equal(2, older[4]); // the version after the magic
+        Assert.Equal(Difficulty.Normal, SaveGame.FromBytes(older).Difficulty);
+        Assert.Equal(SaveGame.Version, bytes[4]);
+    }
 }

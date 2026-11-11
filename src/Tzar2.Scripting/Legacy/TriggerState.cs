@@ -61,6 +61,9 @@ public sealed class TriggerState
     /// <summary>Most locked entities.</summary>
     public const int MaxLocked = 1 << 16;
 
+    /// <summary>Most objects of a kingdom's selection kept for <c>$isselected</c>.</summary>
+    public const int MaxSelected = 1024;
+
     internal TriggerState(TriggerShape shape)
     {
         Shape = shape;
@@ -77,6 +80,11 @@ public sealed class TriggerState
         MapEntities = new uint[shape.Objects];
         Hidden = new bool[shape.Objects];
         PlayerStatus = new byte[shape.Players];
+        Selections = new List<uint>[shape.Players];
+        for (int i = 0; i < shape.Players; i++)
+        {
+            Selections[i] = [];
+        }
     }
 
     /// <summary>The sizes.</summary>
@@ -148,6 +156,15 @@ public sealed class TriggerState
     /// <summary>Whether the trigger engine stopped (a fatal scenario error).</summary>
     public bool Halted { get; set; }
 
+    /// <summary><c>$candelobjects = 0</c>: the human kingdoms may not delete their objects (SCN-006).</summary>
+    public bool NoDelete { get; set; }
+
+    /// <summary><c>$canusediplomacy = 0</c>: the human kingdoms may not use diplomacy or tribute (SCN-007).</summary>
+    public bool NoDiplomacy { get; set; }
+
+    /// <summary>Per kingdom: what it has selected (<c>EntityId.Value</c>, ascending), as it last said (SCN-008).</summary>
+    public List<uint>[] Selections { get; }
+
     /// <summary>Whether <paramref name="value"/> is locked.</summary>
     public bool IsLocked(uint value) => Locked.Count != 0 && Locked.BinarySearch(value) >= 0;
 
@@ -165,13 +182,37 @@ public sealed class TriggerState
         }
     }
 
-    private const byte Version = 2;
+    // 3 adds the script switches and the selections (ADR 0287); a state without them is still written as 2, byte for byte.
+    private const byte Version = 3;
+    private const byte VersionWithoutSwitches = 2;
+
+    private bool HasSwitches
+    {
+        get
+        {
+            if (NoDelete || NoDiplomacy)
+            {
+                return true;
+            }
+
+            foreach (List<uint> s in Selections)
+            {
+                if (s.Count > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
 
     /// <summary>Writes the state canonically.</summary>
     public void WriteTo(BinaryBufferWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
-        writer.WriteByte(Version);
+        bool switches = HasSwitches;
+        writer.WriteByte(switches ? Version : VersionWithoutSwitches);
         writer.WriteVarUInt64((ulong)Variables.Length);
         foreach (int v in Variables)
         {
@@ -239,6 +280,19 @@ public sealed class TriggerState
             writer.WriteVarInt64(d.Next);
             writer.WriteVarInt64(d.RemainingMs);
         }
+
+        if (switches)
+        {
+            writer.WriteByte((byte)((NoDelete ? 1 : 0) | (NoDiplomacy ? 2 : 0)));
+            foreach (List<uint> selection in Selections)
+            {
+                writer.WriteVarUInt64((ulong)selection.Count);
+                foreach (uint e in selection)
+                {
+                    writer.WriteVarUInt64(e);
+                }
+            }
+        }
     }
 
     /// <summary>Reads a state written by <see cref="WriteTo"/> for a scenario of <paramref name="shape"/>.</summary>
@@ -250,7 +304,8 @@ public sealed class TriggerState
         var r = new BinaryBufferReader(data);
         try
         {
-            if (r.ReadByte() != Version)
+            byte version = r.ReadByte();
+            if (version is not (Version or VersionWithoutSwitches))
             {
                 throw new InvalidDataException("Unsupported trigger state version.");
             }
@@ -371,6 +426,37 @@ public sealed class TriggerState
                 }
 
                 s.Delayed.Add(new DelayedActions(rule, next, remaining));
+            }
+
+            if (version == Version)
+            {
+                byte flags = r.ReadByte();
+                if ((flags & ~3) != 0)
+                {
+                    throw new InvalidDataException("Invalid script switches.");
+                }
+
+                s.NoDelete = (flags & 1) != 0;
+                s.NoDiplomacy = (flags & 2) != 0;
+                foreach (List<uint> selection in s.Selections)
+                {
+                    ulong count = r.ReadVarUInt64();
+                    if (count > MaxSelected)
+                    {
+                        throw new InvalidDataException("Too many selected objects.");
+                    }
+
+                    for (ulong i = 0; i < count; i++)
+                    {
+                        uint e = UInt(r.ReadVarUInt64(), 1, "selected entity");
+                        if (selection.Count > 0 && selection[^1] >= e)
+                        {
+                            throw new InvalidDataException("Selected entities must be ascending.");
+                        }
+
+                        selection.Add(e);
+                    }
+                }
             }
             if (s.Conversation < 0 && (s.Candidates.Count != 0 || s.PendingReply >= 0))
             {

@@ -361,6 +361,7 @@ public partial class GameScreen : Node
             _picked = EntityId.None;
             _mode = OrderMode.None;
             RefreshCard();
+            TellScenarioSelection();
         };
 
         _mixer = new SoundMixer();
@@ -1350,6 +1351,12 @@ public partial class GameScreen : Node
 
     private void DeleteSelected(bool important)
     {
+        if (_frame?.Scenario is { CanDelete: false })
+        {
+            Message("Objects cannot be deleted now."); // $candelobjects = 0 (SCN-006); the sim refuses it too
+            return;
+        }
+
         var ids = new List<EntityId>();
         foreach (EntityInfo e in SelectedInfos())
         {
@@ -2691,6 +2698,12 @@ public partial class GameScreen : Node
             return;
         }
 
+        if (_frame.Scenario is { CanUseDiplomacy: false })
+        {
+            Message("Diplomacy is not available now."); // $canusediplomacy = 0 (SCN-007)
+            return;
+        }
+
         var dialog = new DiplomacyDialog(_ui, _hud.Layout.Size, new DiplomacyScreen(_frame, _session.LocalPlayer), _catalog.Text, KingdomName, KingdomColour);
         var layer = new CanvasLayer { Layer = 3, Name = "Diplomacy" };
         layer.AddChild(dialog);
@@ -2714,6 +2727,12 @@ public partial class GameScreen : Node
     {
         if (GetNodeOrNull("Tribute") is not null || _hud is null || _frame is null)
         {
+            return;
+        }
+
+        if (_frame.Scenario is { CanUseDiplomacy: false })
+        {
+            Message("Tribute is not available now."); // $canusediplomacy = 0 (SCN-007)
             return;
         }
 

@@ -189,3 +189,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0284](0284-the-maps-own-pictures-sounds-and-music-reach-the-game.md) | The map's own pictures, sounds and music reach the game | Accepted | 2026-11-08 |
 | [0285](0285-rewind-and-fast-speeds-for-testing.md) | Rewind and fast speeds for testing | Accepted | 2026-11-10 |
 | [0286](0286-the-players-own-maps-and-campaigns-in-the-game.md) | The player's own maps and campaigns in the game; no editor work lost | Accepted | 2026-11-10 |
+| [0287](0287-the-scenarios-own-switches-difficulty-deleting-diplomacy-and-selection.md) | A scenario reads the game's difficulty and the player's selection, and can forbid deleting and diplomacy | Accepted | 2026-11-10 |
