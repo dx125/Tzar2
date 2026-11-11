@@ -111,6 +111,20 @@ public partial class GameScreen
         return true;
     }
 
+    // SCN-008: a scenario that reads $isselected is told what the player selects (no other is).
+    private void TellScenarioSelection()
+    {
+        if (_session.Scenario is not { UsesSelection: true })
+        {
+            return;
+        }
+
+        var batch = new Tzar2.Sim.Commands.CommandList();
+        EntityId[] selected = [.. _selection.Selected];
+        ScenarioPresenter.Select(batch, selected);
+        _session.Submit(batch);
+    }
+
     /// <summary>Raised when the scenario asks for the next campaign map (Load Map, Player Win, Player Lose).</summary>
     public event System.Action<ScenarioNotice>? MapRequested;
 

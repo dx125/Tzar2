@@ -137,6 +137,7 @@ public partial class GameScreen
         }
 
         next.Start();
+        TellScenarioSelection(); // the restored scenario knew an older selection
         int seconds = (Rewind?.Tick ?? 0) * (Rewind?.TickMilliseconds ?? 0) / 1000;
         Message(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Rewound to {seconds / 60}:{seconds % 60:00}"));
         SessionReplaced?.Invoke(next);

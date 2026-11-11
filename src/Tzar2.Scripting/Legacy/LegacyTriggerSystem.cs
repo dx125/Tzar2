@@ -388,6 +388,63 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
         return null;
     }
 
+    /// <inheritdoc />
+    public bool Forbids(ScenarioRestriction what, int player)
+        => IsResponder(player) && what switch
+        {
+            ScenarioRestriction.Delete => _state.NoDelete,
+            ScenarioRestriction.Diplomacy => _state.NoDiplomacy,
+            _ => false,
+        };
+
+    /// <inheritdoc />
+    public CommandRejection? Select(World world, in Command command, ReadOnlySpan<EntityId> entities)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        if (!IsResponder(command.Player) || command.Player >= _state.Selections.Length)
+        {
+            return CommandRejection.NoScenarioPrompt;
+        }
+
+        List<uint> selection = _state.Selections[command.Player];
+        selection.Clear();
+        foreach (EntityId e in entities)
+        {
+            if (selection.Count < TriggerState.MaxSelected && world.Entities.IsAlive(e))
+            {
+                selection.Add(e.Value);
+            }
+        }
+
+        selection.Sort();
+        for (int i = selection.Count - 1; i > 0; i--)
+        {
+            if (selection[i] == selection[i - 1])
+            {
+                selection.RemoveAt(i);
+            }
+        }
+
+        return null;
+    }
+
+    // The human kingdoms: they answer conversations, and the script switches and $isselected are theirs.
+    private bool IsResponder(int player) => (uint)player < 32 && (_options.ResponderMask & (1u << player)) != 0;
+
+    // $isselected (SCN-008): a human kingdom has the object selected.
+    private bool IsSelected(EntityId e)
+    {
+        for (int p = 0; p < _state.Selections.Length; p++)
+        {
+            if (IsResponder(p) && _state.Selections[p].BinarySearch(e.Value) >= 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // ----- IWorldStateExtension ------------------------------------------------------------------------------------
 
     private const byte HeaderVersion = 1;

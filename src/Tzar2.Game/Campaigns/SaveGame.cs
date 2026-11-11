@@ -36,9 +36,13 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
 {
     /// <summary>
     /// Format version (2: the kind, a custom map's setup or a skirmish's description; 3: a custom map's kingdoms and game
-    /// options, SHELL-006 and SHELL-007, written only when the setup chose them; 1 and 2 are still read).
+    /// options, SHELL-006 and SHELL-007, written only when the setup chose them; 4: a campaign's difficulty, written only
+    /// when it is not normal, ADR 0287; 1 to 3 are still read).
     /// </summary>
-    public const int Version = 3;
+    public const int Version = 4;
+
+    /// <summary>A campaign mission's difficulty (the campaign screen's choice; SCN-005).</summary>
+    public Difficulty Difficulty { get; init; } = Difficulty.Normal;
 
     /// <summary>What the save continues.</summary>
     public SaveKind Kind { get; init; }
@@ -77,7 +81,7 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
     {
         ArgumentNullException.ThrowIfNull(session);
         (byte[] snapshot, int tick) = session.CaptureSnapshotNow();
-        return new SaveGame(campaignId, mapId, label, tick, progress, snapshot);
+        return new SaveGame(campaignId, mapId, label, tick, progress, snapshot) { Difficulty = session.Setup.GameDifficulty };
     }
 
     /// <summary>The save as bytes.</summary>
@@ -87,7 +91,8 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
         w.WriteUInt32(Magic);
         CustomMapSettings? chosen = Kind == SaveKind.CustomMap ? Custom ?? new CustomMapSettings() : null;
         bool extras = chosen is not null && HasExtras(chosen);
-        w.WriteVarUInt64(extras ? (ulong)Version : 2);
+        bool difficulty = Kind == SaveKind.Campaign && Difficulty != Difficulty.Normal;
+        w.WriteVarUInt64(difficulty ? (ulong)Version : extras ? 3UL : 2UL);
         w.WriteString(CampaignId);
         w.WriteString(MapId);
         w.WriteString(Label);
@@ -123,6 +128,10 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
         {
             w.WriteVarUInt64((ulong)Descriptor.Length);
             w.WriteBytes(Descriptor);
+        }
+        else if (difficulty)
+        {
+            w.WriteByte((byte)Difficulty);
         }
 
         byte[] progress = Progress is null ? [] : new PlayerProfile(string.Empty, [Progress]).ToJson();
@@ -166,6 +175,7 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
         SaveKind kind = SaveKind.Campaign;
         CustomMapSettings? custom = null;
         byte[] descriptor = [];
+        Difficulty missionDifficulty = Difficulty.Normal;
         if (version >= 2)
         {
             byte k = r.ReadByte();
@@ -207,6 +217,11 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
                 descriptor = r.ReadBytes((int)length).ToArray();
                 _ = MatchDescriptor.Parse(descriptor); // validated now, not when the match is rebuilt
             }
+            else if (version >= 4)
+            {
+                byte d = r.ReadByte();
+                missionDifficulty = d <= (byte)Difficulty.Hard ? (Difficulty)d : throw new InvalidDataException("Invalid campaign difficulty.");
+            }
         }
 
         ulong progressLength = r.ReadVarUInt64();
@@ -240,7 +255,7 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
             throw new InvalidDataException("Trailing bytes after the save.");
         }
 
-        return new SaveGame(campaign, map, label, (int)tick, progress, snapshot) { Kind = kind, Custom = custom, Descriptor = descriptor };
+        return new SaveGame(campaign, map, label, (int)tick, progress, snapshot) { Kind = kind, Custom = custom, Descriptor = descriptor, Difficulty = missionDifficulty };
     }
 
     private static bool HasExtras(CustomMapSettings c) => c.Players > 0 || c.Victory is not null || c.GameType is not null
@@ -323,7 +338,7 @@ public sealed record SaveGame(string CampaignId, string MapId, string Label, int
             throw new InvalidDataException($"The save belongs to campaign '{CampaignId}', not '{source.Campaign.Id}'.");
         }
 
-        MatchSetup setup = ScenarioMatch.Setup(source.Load(MapId), ruleset, Progress, computerAi, cheats);
+        MatchSetup setup = ScenarioMatch.Setup(source.Load(MapId), ruleset, Progress, computerAi, cheats, difficulty: Difficulty);
         return GameSession.Restore(setup, ruleset, Snapshot, saveGame: true);
     }
 }

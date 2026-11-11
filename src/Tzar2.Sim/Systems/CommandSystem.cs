@@ -200,6 +200,11 @@ public sealed partial class CommandSystem : ISimSystem
 
             case CommandKind.Delete:
             {
+                if (world.Scenario?.Forbids(ScenarioRestriction.Delete, command.Player) == true)
+                {
+                    return CommandRejection.ScenarioForbids; // SCN-006
+                }
+
                 int deleted = 0;
                 bool protectedSkipped = false;
                 foreach (EntityId entity in entities)
@@ -294,10 +299,10 @@ public sealed partial class CommandSystem : ISimSystem
                 return GameplayCommands.SetGate(world, command, entities);
 
             case CommandKind.SetDiplomacy:
-                return KingdomCommands.SetDiplomacy(world, command);
+                return world.Scenario?.Forbids(ScenarioRestriction.Diplomacy, command.Player) == true ? CommandRejection.ScenarioForbids : KingdomCommands.SetDiplomacy(world, command); // SCN-007
 
             case CommandKind.Tribute:
-                return KingdomCommands.Tribute(world, command);
+                return world.Scenario?.Forbids(ScenarioRestriction.Diplomacy, command.Player) == true ? CommandRejection.ScenarioForbids : KingdomCommands.Tribute(world, command);
 
             case CommandKind.Resign:
                 return KingdomCommands.Resign(world, command);
@@ -343,6 +348,8 @@ public sealed partial class CommandSystem : ISimSystem
 
             case CommandKind.ScenarioReply:
                 return world.Scenario is { } scenario ? scenario.Reply(world, command) : CommandRejection.NoScenarioPrompt;
+            case CommandKind.ScenarioSelect:
+                return world.Scenario is { } selecting ? selecting.Select(world, command, entities) : CommandRejection.NoScenarioPrompt;
             case CommandKind.Board:
                 return CombatMagicCommands.Board(world, command, entities);
 

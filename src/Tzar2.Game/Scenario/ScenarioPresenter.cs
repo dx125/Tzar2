@@ -86,7 +86,11 @@ public sealed record ConversationView(int Serial, string Name, ImmutableArray<Ph
 /// <summary>The scenario state the HUD shows: the quest log and the conversation waiting for a choice.</summary>
 /// <param name="Quests">Active quests in the order they were added.</param>
 /// <param name="Conversation">The conversation waiting for a choice, or null.</param>
-public sealed record ScenarioView(ImmutableArray<QuestEntry> Quests, ConversationView? Conversation)
+/// <param name="Quests">The quest log.</param>
+/// <param name="Conversation">The phrases offered now, or null.</param>
+/// <param name="CanDelete">Whether the player may delete objects (<c>$candelobjects</c>, SCN-006).</param>
+/// <param name="CanUseDiplomacy">Whether the player may use diplomacy and tribute (<c>$canusediplomacy</c>, SCN-007).</param>
+public sealed record ScenarioView(ImmutableArray<QuestEntry> Quests, ConversationView? Conversation, bool CanDelete = true, bool CanUseDiplomacy = true)
 {
     /// <summary>Nothing to show.</summary>
     public static ScenarioView Empty { get; } = new(ImmutableArray<QuestEntry>.Empty, null);
@@ -118,7 +122,22 @@ public sealed class ScenarioPresenter
         _scenario = triggers.Scenario;
         _world = world;
         _localMask = 1u << localPlayer;
+        string json = System.Text.Encoding.UTF8.GetString(ScenarioJson.Write(_scenario, indented: false)).ToLowerInvariant();
+        UsesSelection = json.Contains("$isselected", StringComparison.Ordinal) || json.Contains("$flags", StringComparison.Ordinal);
         View = Build();
+    }
+
+    /// <summary>
+    /// Whether the scenario reads what the player selects (<c>$isselected</c>, <c>$flags</c>; SCN-008): the client then
+    /// tells it with <see cref="Select"/> whenever the selection changes. Other scenarios are not told.
+    /// </summary>
+    public bool UsesSelection { get; }
+
+    /// <summary>Adds "the player has selected <paramref name="selected"/> now" to a batch (SCN-008).</summary>
+    public static void Select(Sim.Commands.CommandList batch, ReadOnlySpan<EntityId> selected)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+        batch.Add(Sim.Commands.CommandKind.ScenarioSelect, selected.Length > TriggerState.MaxSelected ? selected[..TriggerState.MaxSelected] : selected, 0, 0, default, 0, 0);
     }
 
     /// <summary>The current view (replaced, never mutated).</summary>
@@ -326,6 +345,8 @@ public sealed class ScenarioPresenter
             rebuilt = true;
         }
 
-        return rebuilt || View is null ? new ScenarioView(_quests, _conversation) : View;
+        bool canDelete = !s.NoDelete, canUseDiplomacy = !s.NoDiplomacy;
+        rebuilt |= View is not null && (View.CanDelete != canDelete || View.CanUseDiplomacy != canUseDiplomacy);
+        return rebuilt || View is null ? new ScenarioView(_quests, _conversation, canDelete, canUseDiplomacy) : View;
     }
 }

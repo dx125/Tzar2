@@ -264,6 +264,7 @@ public partial class GameApp
                 });
                 return;
             case SaveKind.Campaign:
+                _campaignDifficulty = save.Difficulty; // the next missions go on at the save's difficulty (SCN-005)
                 foreach (ICampaignSource source in Campaigns())
                 {
                     if (source.Campaign.Id == save.CampaignId)

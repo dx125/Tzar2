@@ -150,8 +150,32 @@ public sealed record MatchSetup
     /// <summary>Trigger engine settings (null: the defaults with the human kingdoms as responders).</summary>
     public Scripting.Legacy.TriggerOptions? TriggerOptions { get; init; }
 
-    /// <summary>The trigger settings the match runs with.</summary>
-    public Scripting.Legacy.TriggerOptions EffectiveTriggerOptions => TriggerOptions ?? Scripting.Legacy.TriggerOptions.Default with { ResponderMask = HumanMask != 0 ? HumanMask : 0xFF };
+    /// <summary>The trigger settings the match runs with: the human kingdoms answer, <c>$difficulty</c> reads <see cref="GameDifficulty"/>.</summary>
+    public Scripting.Legacy.TriggerOptions EffectiveTriggerOptions => TriggerOptions ?? Scripting.Legacy.TriggerOptions.Default with
+    {
+        ResponderMask = HumanMask != 0 ? HumanMask : 0xFF,
+        Difficulty = (int)GameDifficulty,
+    };
+
+    /// <summary>
+    /// The game's difficulty (SCN-005, ADR 0287): the computer kingdoms' (the first one's; a campaign's and a custom map's
+    /// are all the same), else normal.
+    /// </summary>
+    public Difficulty GameDifficulty
+    {
+        get
+        {
+            foreach (PlayerSetup p in Players)
+            {
+                if (p.Controller == ControllerKind.Computer)
+                {
+                    return p.Difficulty;
+                }
+            }
+
+            return Difficulty.Normal;
+        }
+    }
 
     /// <summary>The kingdoms (bit = slot) that answer conversations: the human ones.</summary>
     public uint HumanMask
