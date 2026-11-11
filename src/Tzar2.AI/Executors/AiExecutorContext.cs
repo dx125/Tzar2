@@ -302,7 +302,7 @@ public sealed class AiExecutorContext
         CommandsLeft = options.MaxCommandsPerRun;
         Issued = 0;
         PlayerFlags flags = world.PlayersView[state.Settings.Slot].Flags;
-        bool whole = !state.Settings.Standby || (flags & PlayerFlags.AiControlled) != 0;
+        bool whole = (flags & PlayerFlags.AiHalves) == 0 && (!state.Settings.Standby || (flags & PlayerFlags.AiControlled) != 0); // SCN-009
         EconomyAi = state.Settings.EconomyAi && (whole || (flags & PlayerFlags.AssistEconomy) != 0);
         WarAi = state.Settings.WarAi && (whole || (flags & PlayerFlags.AssistWar) != 0);
         PlacementSearchesLeft = MaxPlacementSearchesPerRun;

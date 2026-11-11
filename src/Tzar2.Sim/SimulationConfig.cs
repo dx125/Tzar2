@@ -190,6 +190,12 @@ public enum PlayerFlags
 
     /// <summary>The kingdom may not free prisoners nor take magic gateways (<c>@kingdomcanrescue</c> off; ReTzar K+0x122).</summary>
     NoRescue = 256,
+
+    /// <summary>
+    /// The computer runs only the halves of the kingdom set in <see cref="AssistEconomy"/> and <see cref="AssistWar"/>,
+    /// none when neither is: a campaign map's AI mode of the kingdom, changed by <c>@setai</c> (SCN-009, ADR 0288).
+    /// </summary>
+    AiHalves = 512,
 }
 
 /// <summary>A stockpile: one amount per resource type id of the ruleset (GAME-01; at most <see cref="Ruleset.MaxResourceTypes"/>).</summary>

@@ -46,7 +46,8 @@ public class ExtendedLanguageTests
         Assert.Equal(777, d.World.Players[0].Resources[gold]);
         Assert.Equal(5, d.World.Players[1].Resources[d.World.Ruleset.ResourceId("wood")]);
         Assert.Equal(42, d.World.Players[0].PopulationLimit);
-        Assert.Equal((1, 1, 1, 0, 1, 0), (d.Variable("ally"), d.Variable("enemy"), d.Variable("vision"), d.Variable("res"), d.Variable("d"), d.Variable("bad")));
+        // @getdiplomacy is the original's relation word: 0x10 enemy (SCN-013).
+        Assert.Equal((1, 1, 1, 0, 0x10, 0), (d.Variable("ally"), d.Variable("enemy"), d.Variable("vision"), d.Variable("res"), d.Variable("d"), d.Variable("bad")));
     }
 
     [Fact]
@@ -54,8 +55,8 @@ public class ExtendedLanguageTests
     {
         var b = new ScenarioBuilder();
         b.Unit("euro.peon", 0, 3, 3);
-        using TriggerDriver d = Once(b, 2, new ExpressionAction("ui", b.Expr("@clearselection(); @playmovie(movies\\end.ddv); $x1 = @str(hello) + 4; @VardalWon = 1")), new ExpressionAction("god", b.Expr("@god(1)")));
-        Assert.Equal(4, d.Variable("x1"));
+        using TriggerDriver d = Once(b, 2, new ExpressionAction("ui", b.Expr("@clearselection(); @playmovie(movies\\end.ddv); $x1 = @str(hello) + 4; @VardalWon = 1")), new ExpressionAction("count", b.Expr("@count(1, 2)")));
+        Assert.Equal(5, d.Variable("x1")); // @str gives 1 (SCN-013)
         Assert.Single(d.Of(SimEventKind.ScenarioFault), e => e.Arg == (int)ScenarioFault.UnsupportedFunction);
     }
 

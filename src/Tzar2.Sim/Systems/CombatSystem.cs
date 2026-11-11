@@ -742,7 +742,7 @@ public sealed partial class CombatSystem : ISimSystem
         }
 
         ref Health health = ref world.Healths.At(hp);
-        if (health.Current <= 0 || world.IsInvulnerable(world.Identities.Get(hit.Target).Owner) || world.TypeOf(hit.Target).Traits.World.Indestructible)
+        if (health.Current <= 0 || world.IsInvulnerable(world.Identities.Get(hit.Target).Owner) || world.TypeOf(hit.Target).Traits.World.Indestructible || world.Scenario?.IsGod(hit.Target) == true)
         {
             return; // already killed by an earlier hit of this tick, hmgod (GAME-19), or the magic gateway (NAT-001)
         }

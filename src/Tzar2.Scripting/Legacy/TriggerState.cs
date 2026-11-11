@@ -165,6 +165,12 @@ public sealed class TriggerState
     /// <summary>Per kingdom: what it has selected (<c>EntityId.Value</c>, ascending), as it last said (SCN-008).</summary>
     public List<uint>[] Selections { get; }
 
+    /// <summary>Objects <c>@god(1)</c> made take no damage (<c>EntityId.Value</c>, ascending; SCN-012).</summary>
+    public List<uint> Gods { get; } = [];
+
+    /// <summary>Minutes <c>@settime</c> moved the day clock by (0-1439; SCN-011).</summary>
+    public int ClockShiftMinutes { get; set; }
+
     /// <summary>Whether <paramref name="value"/> is locked.</summary>
     public bool IsLocked(uint value) => Locked.Count != 0 && Locked.BinarySearch(value) >= 0;
 
@@ -182,9 +188,13 @@ public sealed class TriggerState
         }
     }
 
-    // 3 adds the script switches and the selections (ADR 0287); a state without them is still written as 2, byte for byte.
-    private const byte Version = 3;
+    // 3 adds the script switches and the selections (ADR 0287), 4 the god objects and the clock's shift (ADR 0288); a state
+    // without them is still written as the older version, byte for byte.
+    private const byte Version = 4;
+    private const byte VersionWithSwitches = 3;
     private const byte VersionWithoutSwitches = 2;
+
+    private bool HasGodsOrClock => Gods.Count > 0 || ClockShiftMinutes != 0;
 
     private bool HasSwitches
     {
@@ -211,8 +221,9 @@ public sealed class TriggerState
     public void WriteTo(BinaryBufferWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
-        bool switches = HasSwitches;
-        writer.WriteByte(switches ? Version : VersionWithoutSwitches);
+        bool extended = HasGodsOrClock;
+        bool switches = extended || HasSwitches;
+        writer.WriteByte(extended ? Version : switches ? VersionWithSwitches : VersionWithoutSwitches);
         writer.WriteVarUInt64((ulong)Variables.Length);
         foreach (int v in Variables)
         {
@@ -293,6 +304,17 @@ public sealed class TriggerState
                 }
             }
         }
+
+        if (extended)
+        {
+            writer.WriteVarUInt64((ulong)Gods.Count);
+            foreach (uint e in Gods)
+            {
+                writer.WriteVarUInt64(e);
+            }
+
+            writer.WriteVarInt64(ClockShiftMinutes);
+        }
     }
 
     /// <summary>Reads a state written by <see cref="WriteTo"/> for a scenario of <paramref name="shape"/>.</summary>
@@ -305,7 +327,7 @@ public sealed class TriggerState
         try
         {
             byte version = r.ReadByte();
-            if (version is not (Version or VersionWithoutSwitches))
+            if (version is not (Version or VersionWithSwitches or VersionWithoutSwitches))
             {
                 throw new InvalidDataException("Unsupported trigger state version.");
             }
@@ -428,7 +450,7 @@ public sealed class TriggerState
                 s.Delayed.Add(new DelayedActions(rule, next, remaining));
             }
 
-            if (version == Version)
+            if (version >= VersionWithSwitches)
             {
                 byte flags = r.ReadByte();
                 if ((flags & ~3) != 0)
@@ -457,6 +479,28 @@ public sealed class TriggerState
                         selection.Add(e);
                     }
                 }
+            }
+
+            if (version >= Version)
+            {
+                ulong gods = r.ReadVarUInt64();
+                if (gods > MaxLocked)
+                {
+                    throw new InvalidDataException("Too many god objects.");
+                }
+
+                for (ulong i = 0; i < gods; i++)
+                {
+                    uint e = UInt(r.ReadVarUInt64(), 1, "god entity");
+                    if (s.Gods.Count > 0 && s.Gods[^1] >= e)
+                    {
+                        throw new InvalidDataException("God entities must be ascending.");
+                    }
+
+                    s.Gods.Add(e);
+                }
+
+                s.ClockShiftMinutes = Int(r.ReadVarInt64(), 0, 1439, "clock shift");
             }
             if (s.Conversation < 0 && (s.Candidates.Count != 0 || s.PendingReply >= 0))
             {

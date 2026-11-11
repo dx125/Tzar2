@@ -294,7 +294,7 @@ public static class ScenarioMatch
             Ai = custom?.Ai ?? SkirmishAi.EngineDefault,
             ComputerAi = computerAi,
             CheatsAllowed = cheats,
-            Preparation = new Preparation(s, carry, (byte)human, rescue, idle, mapStockpiles: custom is not { StartingResources: >= 0 }, Absent(left, list), teams),
+            Preparation = new Preparation(s, carry, (byte)human, rescue, idle, mapStockpiles: custom is not { StartingResources: >= 0 }, Absent(left, list), teams, mapAi: custom is null),
         };
         return setup with
         {
@@ -547,11 +547,25 @@ public static class ScenarioMatch
 
     // absent: kingdoms left out on the setup (SHELL-007), whose map objects are not created; teams: the setup's teams
     // (SHELL-006), allied over the map's diplomacy.
-    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, int idle, bool mapStockpiles = true, HashSet<int>? absent = null, ulong teams = 0) : IMatchPreparation
+    private sealed class Preparation(ScenarioData scenario, CampaignProgress? carry, byte human, int rescue, int idle, bool mapStockpiles = true, HashSet<int>? absent = null, ulong teams = 0, bool mapAi = false) : IMatchPreparation
     {
         public void Prepare(Simulation simulation, LegacyTriggerSystem? triggers)
         {
             World world = simulation.World;
+
+            // SCN-009 (ReTzar ai.rs State::start): a map played as it is gives its computer kingdoms the AI its kingdom
+            // table sets - economy, war, both or none - until @setai changes it. A custom map's setup chose computer
+            // opponents, which play whole.
+            foreach (KingdomDef k in scenario.Kingdoms)
+            {
+                int p = k.Number - 1;
+                if (mapAi && p != human && p != rescue && p != idle && world.HasPlayer(p) && !(k.EconomyAi && k.WarAi))
+                {
+                    world.Players[p].Flags = (world.Players[p].Flags & ~(PlayerFlags.AssistEconomy | PlayerFlags.AssistWar)) | PlayerFlags.AiHalves
+                        | (k.EconomyAi ? PlayerFlags.AssistEconomy : PlayerFlags.None) | (k.WarAi ? PlayerFlags.AssistWar : PlayerFlags.None);
+                }
+            }
+
             if (absent is { Count: > 0 })
             {
                 // The objects stay in the map's list (the scenario names them by index), but do not exist: as if never

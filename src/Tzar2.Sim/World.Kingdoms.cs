@@ -60,7 +60,8 @@ public sealed partial class World
         }
 
         long ms = (long)tick * Config.TickLengthMilliseconds % w.DayLengthMs;
-        return (int)((w.DayStartMinute + (ms * 1440 / w.DayLengthMs)) % 1440);
+        int shift = Scenario?.DayClockShiftMinutes ?? 0; // @settime (SCN-011)
+        return (int)((w.DayStartMinute + (ms * 1440 / w.DayLengthMs) + shift) % 1440);
     }
 
     /// <summary>Whether <paramref name="minute"/> of the day clock is night.</summary>

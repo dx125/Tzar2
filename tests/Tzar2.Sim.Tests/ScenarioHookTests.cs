@@ -47,6 +47,12 @@ public class ScenarioHookTests
 
         public bool Forbids(ScenarioRestriction what, int player) => player == 0 && Forbidden.Contains(what);
 
+        public HashSet<uint> Gods { get; } = [];
+
+        public int DayClockShiftMinutes { get; set; }
+
+        public bool IsGod(EntityId entity) => Gods.Contains(entity.Value);
+
         public CommandRejection? Select(World world, in Command command, System.ReadOnlySpan<EntityId> entities)
         {
             uint[] values = new uint[entities.Length];
@@ -135,6 +141,7 @@ public class ScenarioHookTests
     }
 
     [Fact]
+    [Trait("Rule", "SCN-010")]
     public void Forced_outcomes_and_scripted_diplomacy_run_inside_a_tick()
     {
         using var d = new SimDriver(TestMap(48, 16, Unit("euro.peon", 0, 5, 5), Unit("euro.peon", 1, 20, 5), Unit("euro.peon", 2, 40, 5)), players: 3, ruleset: Classic);
@@ -151,14 +158,18 @@ public class ScenarioHookTests
         d.Step();
         Assert.Equal(Stance.Ally, w.Diplomacy.StanceOf(0, 1));
         Assert.Equal(Sharing.Vision, w.Diplomacy.OffersOf(0, 1));
-        Assert.True((w.Players[2].Flags & PlayerFlags.Defeated) != 0);
-        Assert.False(VictorySystem.IsOver(w));
 
-        probe.Action = world => ScenarioOperations.ForceVictory(world, 1u << 1);
-        d.Step();
-        Assert.True((w.Players[1].Flags & PlayerFlags.Victorious) != 0);
-        Assert.True((w.Players[0].Flags & PlayerFlags.Defeated) != 0);
-        Assert.Equal(1, d.Count(SimEventKind.PlayerVictorious));
+        // SCN-010: the listed kingdom loses and every other one still in the match wins.
+        Assert.True((w.Players[2].Flags & PlayerFlags.Defeated) != 0);
+        Assert.True((w.Players[0].Flags & PlayerFlags.Victorious) != 0 && (w.Players[1].Flags & PlayerFlags.Victorious) != 0);
+        Assert.True(VictorySystem.IsOver(w));
+
+        using var v = new SimDriver(TestMap(48, 16, Unit("euro.peon", 0, 5, 5), Unit("euro.peon", 1, 20, 5), Unit("euro.peon", 2, 40, 5)), players: 3, ruleset: Classic);
+        v.Sim.Systems.Add(new Probe(world => ScenarioOperations.ForceVictory(world, 1u << 1)));
+        v.Step();
+        Assert.True((v.World.Players[1].Flags & PlayerFlags.Victorious) != 0);
+        Assert.True((v.World.Players[0].Flags & PlayerFlags.Defeated) != 0);
+        Assert.Equal(1, v.Count(SimEventKind.PlayerVictorious));
     }
 
     [Fact]

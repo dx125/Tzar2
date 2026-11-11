@@ -35,6 +35,42 @@ public class AiAssistTests
         Assert.Empty(Run(assist: 1, thenNone: true));
     }
 
+    [Fact]
+    [Trait("Rule", "SCN-009")]
+    public void A_campaign_computer_runs_only_the_halves_its_map_gives_it()
+    {
+        var model = new AiRulesetModel(AiFixtures.Classic);
+        Assert.NotEmpty(Computer(PlayerFlags.None)); // whole
+        Assert.Empty(Computer(PlayerFlags.AiHalves)); // the map's "no AI"
+        List<(CommandKind Kind, int Arg0)> economy = Computer(PlayerFlags.AiHalves | PlayerFlags.AssistEconomy);
+        Assert.Contains(economy, c => c.Kind == CommandKind.Harvest);
+        Assert.DoesNotContain(economy, c => c.Kind == CommandKind.Attack || (c.Kind == CommandKind.Train && model.IsMilitary(c.Arg0)));
+        List<(CommandKind Kind, int Arg0)> war = Computer(PlayerFlags.AiHalves | PlayerFlags.AssistWar);
+        Assert.DoesNotContain(war, c => c.Kind == CommandKind.Harvest || c.Kind == CommandKind.Research);
+    }
+
+    // The commands a computer (not a standby) issues in 30 s with the given AI flags.
+    private static List<(CommandKind Kind, int Arg0)> Computer(PlayerFlags flags)
+    {
+        Ruleset rules = AiFixtures.Classic;
+        MapData map = AiSkirmishScenario.CreateMap(rules, Options);
+        using var sim = new Simulation(rules, map, new SimulationConfig { MatchSeed = Options.Seed, PlayerCount = 1, StartingResources = Options.StartingResources, PopulationLimit = Options.PopulationLimit });
+        LegacyAiSystem ai = LegacyAiSystem.Attach(sim, [new AiPlayerSettings { Slot = 0, Program = AiFixtures.Skirmish, Civilization = "euro", Difficulty = AiDifficulty.Hard }], Options.Ai);
+        sim.World.Players[0].Flags |= flags;
+        var none = new CommandList();
+        var issued = new List<(CommandKind Kind, int Arg0)>();
+        for (int t = 0; t < 600; t++)
+        {
+            sim.Tick(none);
+            for (int c = 0; c < ai.LastCommands.Count; c++)
+            {
+                issued.Add((ai.LastCommands[c].Kind, ai.LastCommands[c].Arg0));
+            }
+        }
+
+        return issued;
+    }
+
     // The commands (kind and first argument) the human's standby AI issues in 30 s of play after its human asks for assistance (-1: never).
     private static List<(CommandKind Kind, int Arg0)> Run(int assist, bool thenNone = false)
     {

@@ -140,13 +140,10 @@ public sealed partial class LegacyTriggerSystem
             {
                 int lo = Arg(c, 0);
                 int hi = Arg(c, 1);
-                if (lo > hi)
-                {
-                    (lo, hi) = (hi, lo);
-                }
 
-                // Inclusive bounds (UNVERIFIED, UNK-53); the scripts stream only (REQ-SIM-06).
-                long span = (long)hi - lo + 1;
+                // Inclusive bounds; reversed ones give the first (ReTzar: a + random(max(1, b - a + 1)); SCN-013); the
+                // scripts stream only (REQ-SIM-06).
+                long span = Math.Max(1L, (long)hi - lo + 1);
                 return (int)(lo + (long)(_world.Rng.Scripts.NextUInt64() % (ulong)span));
             }
 
@@ -197,7 +194,8 @@ public sealed partial class LegacyTriggerSystem
                 return Pair(c, Sim.Kingdoms.Sharing.None, Sim.Kingdoms.Stance.Neutral);
             case CallKind.GetDiplomacy:
             {
-                // The IR's stance order (Ally 0, Enemy 1, Neutral 2; UNVERIFIED encoding).
+                // The original's relation word of a towards b (SCN-013, ReTzar): 0x40 ally, 0x20 neutral, 0x10 enemy, and
+                // what a offers b: 1 vision, 2 resources, 4 units.
                 int a = Arg(c, 0) - 1;
                 int b = Arg(c, 1) - 1;
                 if (!_world.HasPlayer(a) || !_world.HasPlayer(b) || a == b)
@@ -205,7 +203,8 @@ public sealed partial class LegacyTriggerSystem
                     return 0;
                 }
 
-                return _world.Diplomacy.StanceOf(a, b) switch { Sim.Kingdoms.Stance.Ally => 0, Sim.Kingdoms.Stance.Enemy => 1, _ => 2 };
+                int stance = _world.Diplomacy.StanceOf(a, b) switch { Sim.Kingdoms.Stance.Ally => 0x40, Sim.Kingdoms.Stance.Neutral => 0x20, _ => 0x10 };
+                return stance | (int)(_world.Diplomacy.OffersOf(a, b) & (Sim.Kingdoms.Sharing.Vision | Sim.Kingdoms.Sharing.Resources | Sim.Kingdoms.Sharing.UnitControl));
             }
 
             case CallKind.GetTime:
@@ -218,23 +217,113 @@ public sealed partial class LegacyTriggerSystem
                 if (_world.HasPlayer(k))
                 {
                     _world.Players[k].Flags = on ? _world.Players[k].Flags & ~Sim.PlayerFlags.NoRescue : _world.Players[k].Flags | Sim.PlayerFlags.NoRescue;
+                    return 1; // ReTzar: 1 for a kingdom that exists
                 }
 
                 return 0;
             }
 
+            case CallKind.SetAi:
+                return SetAi(Arg(c, 0) - 1, Arg(c, 1));
+            case CallKind.SetTime:
+                return SetTime(Arg(c, 0));
+            case CallKind.God:
+                return God(Arg(c, 0) != 0);
+            case CallKind.Build:
+                Build();
+                return 0;
+            case CallKind.Str:
+                EvalArguments(c);
+                return 1; // ReTzar: sets the text a Chat action shows, and gives 1
             case CallKind.Select:
             case CallKind.Unselect:
             case CallKind.ClearSelection:
             case CallKind.PlayMovie:
-            case CallKind.Str:
                 EvalArguments(c);
                 return 0;
             default:
-                // SetTime, God, SetAi, SetNoAttackTime, Count, InProgress, Build: not yet (UNK-64).
+                // SetNoAttackTime, Count, InProgress: not yet (UNK-64); no original map calls them.
                 EvalArguments(c);
                 Fault(ScenarioFault.UnsupportedFunction);
                 return 0;
+        }
+    }
+
+    // @setai(k, mode) (SCN-009; ReTzar 0x4b82e0 -> 0x404460): the computer of kingdom k runs mode 0 nothing, 1 the
+    // economy, 2 war, 3 both. A human kingdom's computer is its own business (AI assistance), so it is left alone.
+    private int SetAi(int player, int mode)
+    {
+        if (!_world.HasPlayer(player) || mode is < 0 or > 3)
+        {
+            return 0;
+        }
+
+        if (!IsResponder(player))
+        {
+            Sim.PlayerFlags halves = Sim.PlayerFlags.AiHalves | Sim.PlayerFlags.AssistEconomy | Sim.PlayerFlags.AssistWar;
+            _world.Players[player].Flags = (_world.Players[player].Flags & ~halves)
+                | (mode == 3 ? Sim.PlayerFlags.None : Sim.PlayerFlags.AiHalves)
+                | ((mode & 1) != 0 && mode != 3 ? Sim.PlayerFlags.AssistEconomy : Sim.PlayerFlags.None)
+                | ((mode & 2) != 0 && mode != 3 ? Sim.PlayerFlags.AssistWar : Sim.PlayerFlags.None);
+        }
+
+        return 1;
+    }
+
+    // @settime(h) (SCN-011; ReTzar 0x4b86e3 -> 0x42b520): the day clock goes to h o'clock (the low byte, under 24) and
+    // runs on from there; 1.
+    private int SetTime(int hour)
+    {
+        hour &= 0xFF;
+        if (hour >= 24)
+        {
+            return 0;
+        }
+
+        _state.ClockShiftMinutes = 0;
+        int now = _world.MinuteAt(_world.Tick.Value);
+        _state.ClockShiftMinutes = (((hour * 60) - now) % 1440 + 1440) % 1440;
+        return 1;
+    }
+
+    // @god(v) (SCN-012; ReTzar 0x4b869f): the current object takes no damage, or does again; 1, or 0 without an object.
+    private int God(bool on)
+    {
+        EntityId e = _current;
+        if (e == EntityId.None || !_world.Entities.IsAlive(e))
+        {
+            return 0;
+        }
+
+        int at = _state.Gods.BinarySearch(e.Value);
+        if (on && at < 0 && _state.Gods.Count < TriggerState.MaxLocked)
+        {
+            _state.Gods.Insert(~at, e.Value);
+        }
+        else if (!on && at >= 0)
+        {
+            _state.Gods.RemoveAt(at);
+        }
+
+        return 1;
+    }
+
+    // @build() (SCN-012; ReTzar 0x4b83a0): the current object, a construction site, gets all its building at once and is
+    // finished as any site that is (the production step completes it).
+    private void Build()
+    {
+        EntityId e = _current;
+        if (e == EntityId.None || !_world.Entities.IsAlive(e) || !_world.Constructions.Has(e))
+        {
+            return;
+        }
+
+        ref Construction site = ref _world.Constructions.Get(e);
+        site.ProgressMs = site.TotalMs;
+        if (_world.Healths.Has(e))
+        {
+            ref Health h = ref _world.Healths.Get(e);
+            h.Current = h.Max;
         }
     }
 

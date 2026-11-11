@@ -1,3 +1,4 @@
+using System.Linq;
 using Tzar2.Content.Compiled;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Editing;
@@ -51,5 +52,24 @@ public class ScenarioSwitchPresentationTests
         var batch = new CommandList();
         ScenarioPresenter.Select(batch, [EntityId.FromValue(5)]);
         Assert.Equal(CommandKind.ScenarioSelect, batch[0].Kind);
+    }
+
+    [Fact]
+    [Trait("Rule", "SCN-009")]
+    public void A_map_played_as_it_is_gives_its_computers_the_ai_its_kingdom_table_sets()
+    {
+        MapDocument doc = Map("$x = 1");
+        doc.Apply("AI", s => s.WithScenario(m => m.WithKingdom(m.Kingdoms.Single(k => k.Number == 2) with { EconomyAi = false, WarAi = true })));
+        const Sim.PlayerFlags Halves = Sim.PlayerFlags.AiHalves | Sim.PlayerFlags.AssistEconomy | Sim.PlayerFlags.AssistWar;
+        using (GameSession campaign = Playtest.Start(doc, Fixtures.Classic, new PlaytestOptions()))
+        {
+            Assert.Equal(Sim.PlayerFlags.AiHalves | Sim.PlayerFlags.AssistWar, campaign.Simulation.World.Players[1].Flags & Halves);
+            Assert.Equal(Sim.PlayerFlags.None, campaign.Simulation.World.Players[0].Flags & Halves);
+        }
+
+        // A custom map's setup chose computer opponents: they play whole.
+        MatchSetup custom = Tzar2.Game.Campaigns.ScenarioMatch.Setup(Playtest.Mission(doc), Fixtures.Classic, custom: new Tzar2.Game.Campaigns.CustomMapSettings());
+        using var match = new GameSession(custom, Fixtures.Classic);
+        Assert.Equal(Sim.PlayerFlags.None, match.Simulation.World.Players[1].Flags & Halves);
     }
 }
