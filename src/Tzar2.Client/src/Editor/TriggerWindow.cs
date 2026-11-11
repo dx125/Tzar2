@@ -541,6 +541,51 @@ public partial class TriggerWindow : Window
         Forms.Text(gg, "New group", groupName, v => groupName = v);
         Forms.Button(box, "Create from the selection", () => { Doc.Apply("Object group", s => s.SetGroup(groupName, _screen.Controller.Selection, out _)); _dirty = true; });
 
+        // ADR 0290: where a name or the selected object is used, before renaming or deleting it.
+        Forms.Heading(box, "Where used");
+        string usedName = string.Empty;
+        int usedKind = 2;
+        GridContainer wu = Forms.Grid(box);
+        Forms.Text(wu, "Name", usedName, v => usedName = v);
+        Forms.Choice(wu, "It is", ["an event", "a timer", "a variable"], usedKind, i => usedKind = i);
+        var uses = new ItemList { CustomMinimumSize = new Vector2(0, 120) };
+        System.Collections.Immutable.ImmutableArray<TriggerUse> shown = [];
+        void Show(System.Collections.Immutable.ImmutableArray<TriggerUse> found, string what)
+        {
+            shown = found;
+            uses.Clear();
+            foreach (TriggerUse u in found)
+            {
+                uses.AddItem(u.Text);
+            }
+
+            _screen.Status(found.IsEmpty ? what + " is not used by the triggers." : $"{what} is used in {found.Length} place(s).");
+        }
+
+        Forms.Button(box, "Find uses of the name", () =>
+        {
+            if (usedName.Trim().Length > 0)
+            {
+                Show(TriggerUses.OfName(Doc.State.Scenario, (NameKind)usedKind, usedName.Trim()), "'" + usedName.Trim() + "'");
+            }
+        });
+        Forms.Button(box, "Find uses of the selected object", () =>
+        {
+            if (!_screen.Controller.Selection.IsDefaultOrEmpty)
+            {
+                int id = _screen.Controller.Selection[0];
+                Show(TriggerUses.OfObject(Doc.State.Scenario, id), Doc.State.Find(id)?.Label ?? "The object");
+            }
+        });
+        uses.ItemActivated += i =>
+        {
+            if ((uint)i < (uint)shown.Length)
+            {
+                Locate(shown[(int)i].At);
+            }
+        };
+        box.AddChild(uses);
+
         Forms.Heading(box, "Search and replace object references");
         int from = 0, to = 0;
         GridContainer sr = Forms.Grid(box);

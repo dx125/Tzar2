@@ -187,4 +187,23 @@ public class PlaytestRewindTests
         Assert.True(next.Paused);
         Assert.Contains("rule 'ring' fired", debugger.Hit, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void The_trigger_history_records_what_fired_and_a_rewind_to_it_plays_it_again()
+    {
+        using GameSession session = Playtest.Start(Mission(), Fixtures.Classic, new PlaytestOptions());
+        using var rewind = new MatchRewind(session);
+        using var debugger = new TriggerDebugger(session);
+        rewind.Rewound += debugger.MoveTo;
+        session.Step(700);
+        DebugFiring ring = Assert.Single(debugger.History, f => !f.IsAction && f.Name == "ring");
+        Assert.Contains(debugger.History, f => f.IsAction && f.Name == "Clock");
+        Assert.InRange(ring.Tick, 590, 640); // the 30 s clock
+
+        // The history's double-click: back to the point before it; what came after is gone and plays again.
+        using GameSession back = rewind.RewindTo(ring.Tick - 1)!;
+        Assert.DoesNotContain(debugger.History, f => f.Tick >= rewind.Tick);
+        back.Step(ring.Tick - rewind.Tick + 25);
+        Assert.Equal(ring.Tick, Assert.Single(debugger.History, f => f.Name == "ring").Tick);
+    }
 }

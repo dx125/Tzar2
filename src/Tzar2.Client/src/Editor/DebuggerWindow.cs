@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using Godot;
+using Tzar2.Core.Ids;
 using Tzar2.Game.Editing;
 using Tzar2.Game.Session;
 
@@ -19,6 +20,10 @@ public partial class DebuggerWindow : Window
     private readonly ItemList _actions = new() { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
     private readonly ItemList _watch = new() { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
     private readonly ItemList _log = new() { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+    private readonly ItemList _history = new() { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+    private System.Collections.Immutable.ImmutableArray<DebugFiring> _historyShown = [];
+    private int _historyCount = -1;
+    private DebugFiring? _historyLast;
     private readonly Label _status = new();
     private int _logShown = -1;
     private int _tickShown = -1;
@@ -56,6 +61,8 @@ public partial class DebuggerWindow : Window
         right.AddChild(_watch);
         Forms.Label(right, "Event log");
         right.AddChild(_log);
+        Forms.Label(right, "History (double-click: rewind the playtest to that moment)");
+        right.AddChild(_history);
         split.AddChild(left);
         split.AddChild(right);
         box.AddChild(split);
@@ -69,6 +76,15 @@ public partial class DebuggerWindow : Window
             _debugger.BreakOnAction((int)i, !_debugger.HasActionBreak((int)i));
             _tickShown = -1;
         };
+        _history.ItemActivated += i =>
+        {
+            // ADR 0290: back to the rewind point at or before the moment, a little before the rule fired.
+            if ((uint)i < (uint)_historyShown.Length && RewindTo is { } rewind)
+            {
+                int tick = _historyShown[(int)i].Tick;
+                _status.Text = rewind(Math.Max(0, tick - 1)) ? $"Rewound to before tick {tick}." : "No rewind point that early.";
+            }
+        };
         CloseRequested += Hide;
         foreach (string action in debugger.ActionNames)
         {
@@ -76,9 +92,29 @@ public partial class DebuggerWindow : Window
         }
     }
 
+    /// <summary>Rewinds the playtest to the point at or before a tick (the game screen's; ADR 0285), or null without rewind.</summary>
+    public Func<int, bool>? RewindTo { get; set; }
+
     /// <inheritdoc/>
     public override void _Process(double delta)
     {
+        System.Collections.Immutable.ImmutableArray<DebugFiring> history = _debugger.History;
+        DebugFiring? newest = history.Length > 0 ? history[^1] : null;
+        if (history.Length != _historyCount || newest != _historyLast)
+        {
+            _historyCount = history.Length;
+            _historyLast = newest;
+            _history.Clear();
+            int tickMs = Tick.DefaultLengthMilliseconds;
+            foreach (DebugFiring f in history.Skip(Math.Max(0, history.Length - 500)))
+            {
+                int seconds = (int)((long)f.Tick * tickMs / 1000);
+                _history.AddItem(string.Create(CultureInfo.InvariantCulture, $"{seconds / 60}:{seconds % 60:00}  {(f.IsAction ? "action" : "rule")} '{f.Name}'"));
+            }
+
+            _historyShown = [.. history.Skip(Math.Max(0, history.Length - 500))];
+        }
+
         DebugWatch w = _debugger.Watch;
         GameSession session = _debugger.Session;
         _status.Text = $"tick {w.Tick} · pass {w.Passes} · {(session.Paused ? "PAUSED" : "running")} · speed {session.SpeedPercent} %" + (_debugger.Hit is { } hit ? " · " + hit : string.Empty);

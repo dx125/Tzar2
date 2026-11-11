@@ -579,13 +579,22 @@ owner's order of 2026-10-26.
        PRES-024, WORLD-024; ADR 0289; log below).
     8. Section 3, taken first (the owner, 2026-11-10: it speeds up testing): **done** - rewind and speeds to 2000 % in
        the playtest, in a campaign played from the editor, and in any single-player match with the setting "Rewind
-       (testing)" (ADR 0285; log below). The batches C, D and E follow, then the ruins, then the rest of section 3.
+       (testing)" (ADR 0285; log below). The rest of section 3, as the owner chose (2026-11-11): **done** - a playability
+       check by the acceptance's bot, a mission goal wizard, a trigger history that rewinds to a firing, and "where
+       used" (ADR 0290; log below).
 
 ## Decision and event log
 
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-11 — The editor's helpers: playability check, mission goal wizard, trigger history, "where used" (ADR 0290;
+  item 26.8).** The owner chose all four remaining proposals of the editor review's section 3.
+  * **Playability check:** the acceptance's bot plays the map or the campaign headless and reports each attempt (by
+    play, or with which help) and where it stalled.
+  * **Goal wizard:** five common goals become ordinary numbered rules; the tests have the bot win each.
+  * **Trigger history:** what fired, when; a double-click rewinds the playtest there.
+  * **Where used:** names and objects in the triggers.
 * **2026-11-11 — Ruins are taken by fighters and score their holder (CAP-007; ADR 0283; item 26.3).** The draft parked
   on 2026-11-08 (#286) was moved onto `main`; with the campaign's computers running only their map's AI (ADR 0288) the
   acceptance completes all 19 missions again, `bigisland` on its second attempt as before. The original campaigns' 18

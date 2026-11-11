@@ -121,6 +121,10 @@ public partial class GameApp
         }
 
         rewind.Rewound += next => Debugger?.MoveTo(next);
+        if (_debuggerWindow is not null)
+        {
+            _debuggerWindow.RewindTo = game.RewindTo; // the trigger history's double-click (ADR 0290)
+        }
 
         void Back() => ShowEditor();
 

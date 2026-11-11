@@ -61,6 +61,12 @@ public sealed record AutoplayOptions
 
     /// <summary>Picks a conversation answer from the candidates (default: the first).</summary>
     public Func<ConversationView, int>? Answer { get; init; }
+
+    /// <summary>Stops the run (the editor's playability check): the mission in play ends as "cancelled", no other starts.</summary>
+    public System.Threading.CancellationToken Cancellation { get; init; }
+
+    /// <summary>Told every few seconds of game time: the map in play and its ticks so far.</summary>
+    public Action<string, int>? Progress { get; init; }
 }
 
 /// <summary>How a mission went in a headless run.</summary>
@@ -129,6 +135,11 @@ public static class CampaignAutoplay
         bool skipped = false;
         while (progress.Current is { } mapId && missions.Count < options.MaxMissions)
         {
+            if (options.Cancellation.IsCancellationRequested)
+            {
+                return new CampaignReport(campaign.Id, false, missions.ToImmutable(), progress, "cancelled");
+            }
+
             MissionReport report;
             MissionEnd end;
             try
@@ -283,8 +294,19 @@ public static class CampaignAutoplay
         var events = new List<Sim.Events.SimEvent>();
         var rejected = new SortedDictionary<string, int>(StringComparer.Ordinal);
         var faulted = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        bool cancelled = false;
         for (; ticks < options.MaxTicksPerMission; ticks++)
         {
+            if (ticks % 500 == 0)
+            {
+                options.Progress?.Invoke(mapId, ticks);
+                if (options.Cancellation.IsCancellationRequested)
+                {
+                    cancelled = true;
+                    break;
+                }
+            }
+
             pilot.Act(ticks);
             session.Step(1);
             session.DrainNotices(notices);
@@ -330,7 +352,7 @@ public static class CampaignAutoplay
         MissionEnd end = CampaignFlow.Finish(campaign, progress, mapId, session, requested, transition);
         MissionResult result = end.Result;
         bool completed = result != MissionResult.Lost;
-        string assist = !completed && ticks >= options.MaxTicksPerMission ? "timeout" : pilot.Assist;
+        string assist = cancelled ? "cancelled" : !completed && ticks >= options.MaxTicksPerMission ? "timeout" : pilot.Assist;
         return (new MissionReport(mapId, completed, result, ticks, assist, end.NextMapId, faults, trace), end);
     }
 
