@@ -32,6 +32,12 @@ public interface IScenarioController
     /// <returns>Why it is refused, or null.</returns>
     CommandRejection? Reply(World world, in Command command);
 
+    /// <summary>Whether <c>@god(1)</c> made the entity take no damage (SCN-012).</summary>
+    bool IsGod(EntityId entity);
+
+    /// <summary>Minutes <c>@settime</c> moved the day clock by (0-1439; SCN-011).</summary>
+    int DayClockShiftMinutes { get; }
+
     /// <summary>Whether the scenario forbids <paramref name="what"/> to the kingdom now (SCN-006, SCN-007).</summary>
     bool Forbids(ScenarioRestriction what, int player);
 
@@ -104,11 +110,31 @@ public static class ScenarioOperations
         }
     }
 
-    /// <summary>Player Lose (Appendix C.7 #17): the kingdoms of <paramref name="mask"/> are defeated at once.</summary>
+    /// <summary>
+    /// Player Lose (Appendix C.7 #17; SCN-010): the kingdoms of <paramref name="mask"/> are defeated at once, and every
+    /// other kingdom still in the match wins, which ends it (ReTzar: the original marks every unlisted kingdom 1-8 a
+    /// winner). The rescue kingdom wins nothing.
+    /// </summary>
     public static void ForceDefeat(World world, uint mask)
     {
         ArgumentNullException.ThrowIfNull(world);
         RequireTick(world);
+        uint others = 0;
+        for (int p = 0; p < world.Players.Length && p < 32; p++)
+        {
+            PlayerFlags f = world.Players[p].Flags;
+            if ((mask & (1u << p)) == 0 && (f & (PlayerFlags.Active | PlayerFlags.Defeated | PlayerFlags.Rescue)) == PlayerFlags.Active)
+            {
+                others |= 1u << p;
+            }
+        }
+
+        if (others != 0 && !VictorySystem.IsOver(world))
+        {
+            ForceVictory(world, others); // defeats the listed ones too
+            return;
+        }
+
         for (int p = 0; p < world.Players.Length; p++)
         {
             if ((mask & (1u << p)) != 0 && (world.Players[p].Flags & PlayerFlags.Active) != 0)

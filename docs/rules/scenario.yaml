@@ -48,3 +48,38 @@ rules:
     status: tested
     adr: [0287]
     note: Read 0 before ADR 0287, so the tutorial's selection lessons never went on. The selection is the interface's, so the client tells the simulation what the player selects (a ScenarioSelect command), only for a scenario that reads $isselected or $flags. $flags models only that bit; $program (the order) still reads 0.
+  SCN-009:
+    rule: A campaign map gives each computer kingdom the AI its kingdom table sets - the economy, war, both or none - and @setai(kingdom, mode) changes it during play (0 none, 1 economy, 2 war, 3 both); a map whose computers the custom setup chose plays them whole.
+    source: ['community ReTzar src/gameplay/ai.rs (State::start: a computer player only for kingdoms whose ai_mode & 3 is not 0; command: none, eco, war, full)', 'community ReTzar src/gameplay/scripting.rs (Function::SetAi, 0x4b82e0 -> 0x404460)', 'data Campaign/Tzar.wcm (@setai(2, 3), @setai(4, 2); many kingdoms with no AI or one half)']
+    status: tested
+    adr: [0288]
+    note: Before ADR 0288 every computer kingdom of a campaign ran its whole AI from the start, so the story's idle kingdoms built and attacked. @setai leaves a human kingdom's own computer (AI assistance) alone; one on a kingdom without a computer does nothing (the original makes one).
+  SCN-010:
+    rule: Player Lose defeats the listed kingdoms and makes every other kingdom still in the match a winner, which ends it; Player Win makes the listed ones winners and defeats the others.
+    source: ['community ReTzar src/gameplay/scripting.rs (Action::Lose and Action::Win: listed == win -> won, else lost, for kingdoms 1-8; end)']
+    status: tested
+    adr: [0288]
+    note: Before ADR 0288 Player Lose only defeated the listed kingdoms and the match went on (UNK-50). The rescue kingdom wins nothing.
+  SCN-011:
+    rule: '@settime(hour) sets the day clock to that hour, minute 0, and it runs on from there; an hour of 24 or more does nothing; it gives 1.'
+    source: ['community ReTzar src/gameplay/scripting.rs (Function::SetTime, 0x4b86e3 -> 0x42b520: the low byte, under 24)', 'data Campaign/Tzar.wcm (@settime(22), @settime(21))']
+    status: tested
+    adr: [0288]
+    note: Tzar2 keeps the shift in the trigger state; the clock only moves when the game has day and night.
+  SCN-012:
+    rule: '@god(1) makes the current object take no damage and @god(0) ends it; @build() finishes the current object when it is a construction site, as any finished site.'
+    source: ['community ReTzar src/gameplay/scripting.rs (Function::God 0x4b869f: the object''s god flag, 1 with an object, else 0; Function::Build 0x4b83a0: 999999 of building)', 'data Campaign/Tzar.wcm (@god(1), @build())']
+    status: tested
+    adr: [0288]
+  SCN-013:
+    rule: '@rnd(a, b) gives a value from a to b, both included, and a when b is below a; @str gives 1; @kingdomcanrescue gives 1 for a kingdom that exists; @getdiplomacy(a, b) gives the relation word of a towards b - 0x40 ally, 0x20 neutral, 0x10 enemy, plus what a offers b: 1 vision, 2 resources, 4 units.'
+    source: ['community ReTzar src/gameplay/scripting.rs (call: Rnd a + random(max(1, b - a + 1)), Str, KingdomCanRescue, GetDiplomacy = relation)']
+    status: tested
+    adr: [0288]
+    note: Tzar2 swapped reversed @rnd bounds and read @getdiplomacy as 0 ally, 1 enemy, 2 neutral (UNK-53, UNK-64). No original map calls @getdiplomacy or @str.
+  SCN-014:
+    rule: Explore Area shows the human player the ground round the area's middle for the time given, 4 seconds when the time is 0, within (width + height) / 4 tiles when that is 1 to 31, else 8.
+    source: ['community ReTzar src/gameplay/scripting.rs (Action::Explore, 0x4bc3dc; 4000 ms for 0 at 0x435069; else the fog revealer''s fog_range)']
+    status: tested
+    adr: [0288]
+    note: Before ADR 0288 an Explore Area of 0 ms showed the area for one tick (UNK-56).

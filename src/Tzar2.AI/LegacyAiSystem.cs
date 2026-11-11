@@ -159,7 +159,8 @@ public sealed class LegacyAiSystem : ISimSystem, IWorldStateExtension
             byte slot = state.Settings.Slot;
             PlayerFlags flags = world.PlayersView[slot].Flags;
             if ((flags & PlayerFlags.Active) == 0 || (flags & PlayerFlags.Defeated) != 0
-                || (state.Settings.Standby && (flags & (PlayerFlags.AiControlled | PlayerFlags.AssistEconomy | PlayerFlags.AssistWar)) == 0))
+                || (state.Settings.Standby && (flags & (PlayerFlags.AiControlled | PlayerFlags.AssistEconomy | PlayerFlags.AssistWar)) == 0)
+                || ((flags & PlayerFlags.AiHalves) != 0 && (flags & (PlayerFlags.AssistEconomy | PlayerFlags.AssistWar)) == 0)) // SCN-009: no AI
             {
                 continue;
             }

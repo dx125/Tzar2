@@ -293,7 +293,8 @@ public sealed partial class LegacyTriggerSystem
         }
     }
 
-    // Explore Area: a temporary reveal for the responders (UNVERIFIED: who, and what "Reveal Fog" adds, UNK-56).
+    // Explore Area (SCN-014; ReTzar 0x4bc3dc): the human kingdoms see round the area's middle for the time given, 4 s when
+    // it is 0 (0x435069); the radius is (width + height) / 4 tiles when that is 1-31, else a fog revealer's 8.
     private void Explore(ExploreAreaAction explore)
     {
         WorldRect area = Resolve(explore.Area);
@@ -302,9 +303,10 @@ public sealed partial class LegacyTriggerSystem
             return;
         }
 
-        int radius = Math.Clamp(Math.Max(area.X1 - area.X0, area.Y1 - area.Y0) / Tile / 2, 1, Visibility.MaxRadiusTiles);
-        // At least one tick: an Explore Area of 0 ms still flashes the area (UNVERIFIED, UNK-56).
-        int ticks = Math.Max(1, (int)Math.Min(int.MaxValue / 2, (long)Math.Max(0, explore.TimeMs) / _world.Config.TickLengthMilliseconds));
+        int quarter = (((area.X1 - area.X0) / Tile) + ((area.Y1 - area.Y0) / Tile)) / 4;
+        int radius = Math.Min(quarter is >= 1 and <= 31 ? quarter : 8, Visibility.MaxRadiusTiles);
+        long ms = explore.TimeMs > 0 ? explore.TimeMs : 4000;
+        int ticks = Math.Max(1, (int)Math.Min(int.MaxValue / 2, ms / _world.Config.TickLengthMilliseconds));
         int expires = (int)Math.Min(int.MaxValue / 2, (long)_world.Tick.Value + ticks);
         for (int p = 0; p < _world.Players.Length; p++)
         {

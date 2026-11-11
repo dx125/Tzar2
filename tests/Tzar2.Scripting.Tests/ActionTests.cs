@@ -122,6 +122,7 @@ public class ActionTests
     }
 
     [Fact]
+    [Trait("Rule", "SCN-010")]
     public void Load_map_player_win_and_player_lose_request_the_next_map()
     {
         var b = new ScenarioBuilder();
@@ -140,8 +141,9 @@ public class ActionTests
         w.Unit("euro.peon", 2, 40, 2);
         using (TriggerDriver d = Once(w, new PlayerLoseAction("lose3", PlayerMasks.Of(3), null), new PlayerWinAction("win1", PlayerMasks.Of(1), "Valley")))
         {
+            // SCN-010: Player Lose of kingdom 3 makes every other kingdom a winner, which ends the match.
             Assert.True((d.World.Players[0].Flags & PlayerFlags.Victorious) != 0);
-            Assert.True((d.World.Players[1].Flags & PlayerFlags.Defeated) != 0);
+            Assert.True((d.World.Players[1].Flags & PlayerFlags.Victorious) != 0);
             Assert.True((d.World.Players[2].Flags & PlayerFlags.Defeated) != 0);
             Assert.Equal(1, d.State.MapRequestAction);
             Assert.Equal(1, d.Of(SimEventKind.MapRequested).Single().Y);

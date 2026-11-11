@@ -570,8 +570,10 @@ owner's order of 2026-10-26.
        and autosaves every 3 minutes; the Lua tab and the validator warn that Lua does not run yet; the map's
        difficulty already works as the original's (ADR 0286; log below).
     6. D - the triggers: `$difficulty`, `$candelobjects`, `$canusediplomacy` and `$isselected` **done** (SCN-005 to
-       SCN-008; ADR 0287; log below); a campaign save keeps its difficulty. Next: the 26 UNVERIFIED readings against
-       ReTzar and the original's code.
+       SCN-008; ADR 0287; log below); a campaign save keeps its difficulty. The UNVERIFIED readings compared with ReTzar
+       (ADR 0288; log below): a campaign's computers run the AI halves their map gives them, `@setai`, `@god`, `@build`,
+       `@settime`, Player Lose, Explore Area and the small results as the original's. Left: Change Diplomacy's merged
+       wishes (UNK-55), the order mapping (UNK-57), wrapping and bitwise operators.
     7. E - the palette's details: tree pictures, the gate's side, units stacking, the authentic import's shadow.
     8. Section 3, taken first (the owner, 2026-11-10: it speeds up testing): **done** - rewind and speeds to 2000 % in
        the playtest, in a campaign played from the editor, and in any single-player match with the setting "Rewind
@@ -582,6 +584,19 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-10 — A campaign's computers run the AI its map gives them; the script functions act as the original's
+  (SCN-009 to SCN-014; ADR 0288; item 26.6).** The trigger engine's UNVERIFIED readings were compared with ReTzar.
+  * **The biggest difference: the AI.** In the original a kingdom has a computer player only when its kingdom table
+    sets the economy, war or both, and `@setai` changes that during play. Tzar2 ran the whole AI for every computer
+    kingdom of a campaign, so the story's idle kingdoms (five of seven in saa4) built and attacked. A map played as it
+    is now gives each computer only its halves.
+  * **The functions the campaign calls now work:** `@setai`, `@god` (no damage), `@build` (the site finishes) and
+    `@settime` (the day clock).
+  * **Player Lose** makes the other kingdoms winners and ends the match.
+  * **Explore Area** of 0 ms shows the area for 4 s.
+  * **Small results:** `@rnd`'s reversed bounds, `@str`, `@kingdomcanrescue` and `@getdiplomacy` give what the
+    original gives.
+  * **Left as they are:** Change Diplomacy's merged wishes, the order mapping, wrapping and bitwise operators.
 * **2026-11-10 — A scenario reads the game's difficulty and the player's selection, and can forbid deleting and
   diplomacy (SCN-005 to SCN-008; ADR 0287; item 26.6).** These reserved variables read 0 before. A count on the
   owner's install found where the original's maps use them:

@@ -428,6 +428,12 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
         return null;
     }
 
+    /// <inheritdoc />
+    public bool IsGod(EntityId entity) => _state.Gods.Count != 0 && _state.Gods.BinarySearch(entity.Value) >= 0;
+
+    /// <inheritdoc />
+    public int DayClockShiftMinutes => _state.ClockShiftMinutes;
+
     // The human kingdoms: they answer conversations, and the script switches and $isselected are theirs.
     private bool IsResponder(int player) => (uint)player < 32 && (_options.ResponderMask & (1u << player)) != 0;
 
