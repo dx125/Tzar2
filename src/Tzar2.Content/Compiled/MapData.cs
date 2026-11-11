@@ -315,6 +315,12 @@ public readonly record struct MapObject(string TypeKey, byte Owner, int X, int Y
     /// <summary>An item's own properties (map.bin v3; ADR 0264), or null for the type's.</summary>
     public MapItem? Item { get; init; }
 
+    /// <summary>
+    /// A tree's picture in its terrain set's strip, 1-31 as the original's map cells hold it, or 0 for one of the pictures
+    /// that grow on its terrain (PRES-022, ADR 0289; map.bin v4). Presentation only: not in the map's hash.
+    /// </summary>
+    public byte Look { get; init; }
+
     /// <summary>Whether any of <see cref="Flags"/>, <see cref="Facing"/> and <see cref="Amount"/> is set (map.bin v2, hash).</summary>
     public bool HasExtras => Flags != MapObjectFlags.None || Facing != 0 || Amount != 0;
 

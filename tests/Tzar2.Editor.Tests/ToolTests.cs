@@ -115,6 +115,31 @@ public class ToolTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-022")]
+    public void A_tree_brush_of_a_kind_plants_its_pictures_and_copies_keep_them()
+    {
+        MapDocument doc = Lake();
+        var occupancy = new Occupancy(doc, Fixtures.Classic);
+        var brush = new TreeBrush("comm.tree", TreeChoice.Specific, 4, 100, Accumulate: false, Seed: 7) { Looks = [9, 10, 11] };
+        using (EditTransaction tx = doc.Begin("Pines"))
+        {
+            Assert.NotEmpty(TreeTools.Plant(tx, occupancy, Palette, 12, 12, brush));
+            tx.Commit();
+        }
+
+        Assert.All(doc.State.Objects, o => Assert.Contains(o.Placement.Look, new byte[] { 9, 10, 11 }));
+        Assert.True(doc.State.Objects.Select(o => o.Placement.Look).Distinct().Count() > 1);
+        MapData map = doc.BuildMap();
+        Assert.Equal(map.Objects.Select(o => o.Look), MapBinary.Read(MapBinary.Write(map)).Objects.Select(o => o.Look));
+
+        // Copied and pasted, a tree keeps its picture.
+        EditorObject first = doc.State.Objects[0];
+        string text = ObjectClipboard.Copy(doc.State, [first.Id]);
+        DocumentState pasted = ObjectClipboard.Paste(doc.State, text, 2, 2, doc.Width, doc.Height, null, out ImmutableArray<int> ids);
+        Assert.Equal(first.Placement.Look, pasted.Find(Assert.Single(ids))!.Placement.Look);
+    }
+
+    [Fact]
     public void Tree_brushes_plant_deterministically_on_free_land_and_delete()
     {
         Assert.Equal(5, Brushes.TreeRadii.Length);
@@ -170,6 +195,19 @@ public class ToolTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-024")]
+    public void A_gates_side_changes_its_pictures_only()
+    {
+        EntityTypeDefinition gate = Fixtures.Classic.EntityTypes[Fixtures.Classic.EntityTypeId("comm.gate_stone")];
+        foreach (MapObjectFlags turn in new[] { MapObjectFlags.None, MapObjectFlags.Rotated })
+        {
+            MapObject one = MapObject.AtTile("comm.gate_stone", 0, 4, 4) with { Flags = turn };
+            Assert.Equal(Occupancy.Footprint(gate, one), Occupancy.Footprint(gate, one with { Flags = turn | MapObjectFlags.Mirrored }));
+        }
+    }
+
+    [Fact]
+    [Trait("Rule", "WORLD-024")]
     public void Placement_rules_follow_the_layers()
     {
         MapDocument doc = Lake();

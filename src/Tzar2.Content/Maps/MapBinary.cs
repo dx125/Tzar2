@@ -18,7 +18,8 @@ namespace Tzar2.Content.Maps;
 /// u16 byte length plus UTF-8. Version 2 (written only when an object carries editor extras, so maps without them keep
 /// their version-1 bytes; ADR 0152) adds per object: u8 flags, u8 facing, i32 amount. Version 3 (written only when an
 /// object carries an item, ADR 0264) adds after them a u8 (1 when an item follows), then u8 effect, i32 power,
-/// i32 charges, string spell, string look.
+/// i32 charges, string spell, string look. Version 4 (written only when a tree has its own picture, ADR 0289) has the
+/// layout of version 3, then u32 count and per tree: u32 object index, u8 picture (1-31).
 /// </remarks>
 public static class MapBinary
 {
@@ -31,6 +32,12 @@ public static class MapBinary
     /// <summary>Version with per-object items as well (ADR 0264).</summary>
     public const ushort ItemsVersion = 3;
 
+    /// <summary>Version 3 with the trees' own pictures after the objects (ADR 0289).</summary>
+    public const ushort LooksVersion = 4;
+
+    /// <summary>The largest tree picture (the strip's 31).</summary>
+    public const byte MaxLook = 31;
+
     private static ReadOnlySpan<byte> Magic => "T2MP"u8;
 
     /// <summary>Encodes <paramref name="map"/>.</summary>
@@ -39,15 +46,18 @@ public static class MapBinary
         ArgumentNullException.ThrowIfNull(map);
         using var ms = new MemoryStream();
         bool extras = false, items = false;
+        int looks = 0;
         foreach (MapObject o in map.Objects)
         {
             extras |= o.HasExtras;
             items |= o.Item is not null;
+            looks += o.Look != 0 ? 1 : 0;
         }
 
+        items |= looks > 0;
         extras |= items;
         ms.Write(Magic);
-        U16(ms, items ? ItemsVersion : extras ? ExtrasVersion : Version);
+        U16(ms, looks > 0 ? LooksVersion : items ? ItemsVersion : extras ? ExtrasVersion : Version);
         Str(ms, map.Name);
         U16(ms, (ushort)map.Width);
         U16(ms, (ushort)map.Height);
@@ -100,6 +110,27 @@ public static class MapBinary
             }
         }
 
+        if (looks > 0)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(b4, looks);
+            ms.Write(b4);
+            for (int i = 0; i < map.Objects.Length; i++)
+            {
+                byte look = map.Objects[i].Look;
+                if (look != 0)
+                {
+                    if (look > MaxLook)
+                    {
+                        throw new ArgumentException($"Map object {i} has picture {look}; trees have 1-{MaxLook}.", nameof(map));
+                    }
+
+                    BinaryPrimitives.WriteInt32LittleEndian(b4, i);
+                    ms.Write(b4);
+                    ms.WriteByte(look);
+                }
+            }
+        }
+
         return ms.ToArray();
     }
 
@@ -114,7 +145,7 @@ public static class MapBinary
         }
 
         ushort version = r.U16();
-        if (version is not (Version or ExtrasVersion or ItemsVersion))
+        if (version is not (Version or ExtrasVersion or ItemsVersion or LooksVersion))
         {
             throw new FormatException($"map.bin: unsupported version {version}.");
         }
@@ -155,7 +186,7 @@ public static class MapBinary
                 o = o with { Flags = (MapObjectFlags)flags, Facing = facing, Amount = amount };
             }
 
-            if (version == ItemsVersion && r.Take(1)[0] is var has and not 0)
+            if (version >= ItemsVersion && r.Take(1)[0] is var has and not 0)
             {
                 var item = new MapItem((ItemEffect)r.Take(1)[0], r.I32(), r.I32(), r.Str(), r.Str());
                 if (has != 1 || !item.IsValid)
@@ -167,6 +198,29 @@ public static class MapBinary
             }
 
             objects.Add(o);
+        }
+
+        if (version >= LooksVersion)
+        {
+            int looks = r.I32();
+            if (looks < 0 || looks > objects.Count)
+            {
+                throw new FormatException($"map.bin: tree picture count {looks} out of range.");
+            }
+
+            int previous = -1;
+            for (int k = 0; k < looks; k++)
+            {
+                int index = r.I32();
+                byte look = r.Take(1)[0];
+                if (index <= previous || index >= objects.Count || look is 0 or > MaxLook)
+                {
+                    throw new FormatException($"map.bin: invalid tree picture {k}.");
+                }
+
+                objects[index] = objects[index] with { Look = look };
+                previous = index;
+            }
         }
 
         if (!r.AtEnd)

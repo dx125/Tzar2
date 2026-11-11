@@ -270,6 +270,10 @@ public static class ObjectClipboard
                 w.WriteNumber("flags", (int)o.Placement.Flags);
                 w.WriteNumber("facing", o.Placement.Facing);
                 w.WriteNumber("amount", o.Placement.Amount);
+                if (o.Placement.Look != 0)
+                {
+                    w.WriteNumber("look", o.Placement.Look); // a tree's own picture (ADR 0289)
+                }
                 w.WriteString("name", o.Info.Name);
                 w.WriteString("title", o.Info.Title);
                 w.WriteNumber("objectFlags", (int)o.Info.Flags);
@@ -331,6 +335,7 @@ public static class ObjectClipboard
                     Flags = (MapObjectFlags)(e.GetProperty("flags").GetInt32() & 7),
                     Facing = (byte)(e.GetProperty("facing").GetInt32() & 7),
                     Amount = Math.Max(0, e.GetProperty("amount").GetInt32()),
+                    Look = e.TryGetProperty("look", out JsonElement look) && look.TryGetInt32(out int l) && l is >= 1 and <= Maps.MapBinary.MaxLook ? (byte)l : (byte)0,
                 };
                 if (placement.TypeKey.Length == 0 || (occupancy is not null && !occupancy.Check(placement).Ok))
                 {

@@ -75,6 +75,19 @@ public partial class EditorScreen : Control
     // Where the map dialogs start: the open file's folder, else the folder the game's CUSTOM MAP reads (ADR 0286).
     private string MapFolder => _path is not null && Path.GetDirectoryName(_path) is { Length: > 0 } dir ? dir : Files.UserFolder(Tzar2.Game.Editing.UserLibrary.MapsFolder);
 
+    // The tree kinds of a terrain set's TERRAIN.INI (ADR 0289), as the game reads them for drawing.
+    private IReadOnlyList<(string Kind, int First, int Count)> TreeKinds(string? setId)
+    {
+        TerrainSet? set = setId is null ? null : _store.TerrainSets.FirstOrDefault(s => string.Equals(s.Id, setId, StringComparison.OrdinalIgnoreCase));
+        if (set?.Table is not { } table || !_store.Vfs.Exists(table))
+        {
+            return [];
+        }
+
+        IniTable ini = IniTable.Parse(_store.Read(table));
+        return TreeLayout.FromIni(ini.Section("trees"), ini.Section("treename"), ini.Section("treeterrain")).Kinds;
+    }
+
     /// <summary>Painting rules for a terrain-set id of the package (null = no set).</summary>
     public TerrainRules RulesFor(string? setId)
     {
@@ -103,6 +116,7 @@ public partial class EditorScreen : Control
         var leftBox = new VBoxContainer { CustomMinimumSize = new Vector2(270, 0) };
         _left = leftBox;
         _tools = new ToolPanel(_controller, Content.Editing.DecorationCatalog.Build(_store.Index, Document.TerrainSet));
+        _tools.RefreshTreeKinds(TreeKinds(Document.TerrainSet));
         leftBox.AddChild(_tools);
         _view = new MapView(_store, _catalog, _controller);
         _minimap = new Minimap(_controller, _view);
@@ -275,6 +289,7 @@ public partial class EditorScreen : Control
         RefreshNamedAreas();
         _tools.RefreshTerrain();
         _tools.RefreshDecorations(Content.Editing.DecorationCatalog.Build(_store.Index, document.TerrainSet));
+        _tools.RefreshTreeKinds(TreeKinds(document.TerrainSet));
         _view.Rebuild();
         _minimap.Refresh();
         _locator.Refresh();
