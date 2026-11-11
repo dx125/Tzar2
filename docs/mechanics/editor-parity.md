@@ -53,7 +53,7 @@ Parity: **97 %** done.
 
 | Id | Feature | Status | Evidence | Notes |
 |---|---|---|---|---|
-| trees-specific | A specific tree | done | ToolTests.Tree_brushes_plant_deterministically_on_free_land_and_delete | a specific tree type of the ruleset; image variants within one type are not selectable (ADR 0152: TREES.INI variants not decoded) |
+| trees-specific | A specific tree | done | ToolTests.Tree_brushes_plant_deterministically_on_free_land_and_delete, ToolTests.A_tree_brush_of_a_kind_plants_its_pictures_and_copies_keep_them | a specific tree type; the Picture choice plants one of a kind's pictures of the terrain set ([treename]), kept per tree and by the converter (ADR 0289) |
 | trees-random-type | A random tree of a type | done | ToolTests.Forest_density_and_tree_choices | the type's group of the palette |
 | trees-random-all | A random tree of all types | done | ToolTests.Forest_density_and_tree_choices |  |
 | trees-delete | Delete trees | done | ToolTests.Tree_brushes_plant_deterministically_on_free_land_and_delete, ControllerTests.Trees_cliffs_decorations_erase_and_areas |  |
@@ -78,10 +78,10 @@ Parity: **97 %** done.
 | bld-palette | Buildings per civilization plus common ones | done | ToolTests.Palette_sections_are_mod_aware_and_items_have_groups |  |
 | bld-harbor | Harbors only on coasts | done | ToolTests.Placement_rules_follow_the_layers |  |
 | bld-walls | Walls by drag, with auto-scroll | done | ToolTests.Gate_modifiers_and_walls_by_drag, ControllerTests.Gate_modifiers_walls_by_drag_and_random_items | auto-scroll as for painting |
-| bld-gates | Gates: Ctrl horizontal/vertical, Alt side, Ctrl+Alt open | done | ToolTests.Gate_modifiers_and_walls_by_drag, ToolTests.Gates_bridges_facing_and_amounts_reach_the_simulation | Rotated and Open reach the sim; the "side" is presentation only (⚠ UNVERIFIED) |
+| bld-gates | Gates: Ctrl horizontal/vertical, Alt side, Ctrl+Alt open | done | ToolTests.Gate_modifiers_and_walls_by_drag, ToolTests.Gates_bridges_facing_and_amounts_reach_the_simulation | Rotated and Open reach the sim; the "side" changes only the pictures, as ReTzar reads the original (PRES-024, ADR 0289) |
 | bld-bridges | Bridges: Alt orientation | done | ToolTests.Bridges_cross_water_and_turn_with_alt |  |
 | unit-palette | Units per civilization, common units, animals/creatures (Nature by default) | done | ToolTests.Palette_sections_are_mod_aware_and_items_have_groups | creatures are Nature's by default |
-| unit-layers | Ground/water/air layers with stacking rules | done | ToolTests.Placement_rules_follow_the_layers | one unit per tile and layer (⚠ UNVERIFIED stacking rule) |
+| unit-layers | Ground/water/air layers with stacking rules | done | ToolTests.Placement_rules_follow_the_layers | one unit per tile and layer; the original maps never put two units on a tile (WORLD-024, ADR 0289) |
 | unit-rotate | TAB / Shift+TAB rotate | done | ToolTests.Units_turn_with_tab_and_resources_restore_their_default, ControllerTests.Placement_refusals_report_a_reason_and_tab_turns | the facing reaches the sim |
 | item-types | 6+ item types | done | ToolTests.Palette_sections_are_mod_aware_and_items_have_groups |  |
 | item-random | Random item within a group | done | ControllerTests.Gate_modifiers_walls_by_drag_and_random_items |  |
@@ -172,7 +172,7 @@ Parity: **97 %** done.
 | m-lua | Lua script editor: highlighting, API completion, inline errors | blocked | TriggerEditorTests.Lua_scripts_are_stored_and_checked, UserLibraryTests.The_validator_warns_that_lua_scripts_do_not_run | scripts/*.lua are stored, highlighted and syntax-checked (strings, comments, brackets, blocks); the tab and the validator (`script.notrun`) warn that the game does not run them yet (ADR 0286); API auto-complete and host diagnostics need the Lua host and API v1, which TDD §25 schedules for M8 |
 | m-localization | Localization tables for map strings (export/import `.po`) | done | TriggerEditorTests.Localization_exports_and_imports_po | gettext .po export and import of every player-visible text |
 | m-mod-palettes | Mod-aware palettes | done | ToolTests.Palette_sections_are_mod_aware_and_items_have_groups | the palette is built from the compiled ruleset |
-| s-authentic-import | (SHOULD) Asset import with an "authentic" conversion | done | StudioTests.Authentic_import_quantises_to_rgb555_flags_foreign_colours_and_casts_a_shadow | Map → Import image with authentic conversion: RGB555 + one-bit alpha, colours checked against the terrain's, shadow sprite from the silhouette (offset ⚠ UNVERIFIED) |
+| s-authentic-import | (SHOULD) Asset import with an "authentic" conversion | done | StudioTests.Authentic_import_quantises_to_rgb555_flags_foreign_colours_and_casts_a_shadow | Map → Import image with authentic conversion: RGB555 + one-bit alpha, colours checked against the terrain's, shadow sprite from the silhouette moved right a tenth of its height and down a twentieth, as the original's buildings measure (PRES-023, ADR 0289) |
 | s-random-templates | (SHOULD, post-1.0 acceptable) Random-map templates editable | blocked |  | SHOULD, "post-1.0 acceptable" (§18.3): the random-map options (type, size, terrain, players, resources, features) are editable in New map → Random, but a saved template format is not designed yet |
 | s-mod-studio | (SHOULD) Rules/data browser ("Mod Studio"), at least read-only | done | StudioTests.The_rules_browser_lists_types_technologies_and_upgrades_and_filters | read-only browser of the compiled ruleset (types, technologies, upgrades), the §18.3 1.0 minimum |
 

@@ -110,3 +110,21 @@ rules:
     status: implemented
     adr: [0281]
     note: Until ADR 0281 neither the game nor the editor drew them (the editor showed a dot); the original campaigns hold about 10,800 patches, 3,400 ground objects, 18 ruins and 8,200 stumps. A picture of the map's terrain set comes before another set's of the same name. The original's per-object pace (payload 0x58) is not converted; the picture's own fps is used.
+  PRES-022:
+    rule: A tree on a map shows the picture of its terrain set's tree strip that the map gives it - the value of its cell, 1 to 31 - and a tree without one a picture of the kinds that grow on its terrain.
+    source: ['community ReTzar src/world.rs (add_trees: the cell''s value >> 11, picture value - 1 of the strip, the same for its shadow)', 'data IMAGES\TERRAIN\*\TERRAIN.INI ([treename] kinds and their counts, [treeterrain])']
+    status: tested
+    adr: [0289]
+    note: Until ADR 0289 the converter kept a tree but not its picture, so the original maps' forests were drawn with pictures picked by terrain. The picture is presentation only, outside the map's hash. The editor's tree brush plants the pictures of a chosen kind, or by terrain.
+  PRES-023:
+    rule: A building's shadow is its silhouette moved right (east) by about a tenth of its height and a little down; only the part its body does not cover is drawn.
+    source: ['data IMAGES\*.IMAGES.INI building pictures and their _s shadows (44 buildings measured by the owner''s install: median move right 14 px, about 0.09 of the height, down 0 to 16 px)', 'community ReTzar src/world.rs (a shadow sheet drawn at its body''s place, only fliers lifted)']
+    status: tested
+    adr: [0289]
+    note: The original's shadows are drawn pictures, slanted projections rather than plain moves; the measure is the best plain move. Tzar2 uses it for the shadows the editor's authentic import makes of a picture (right a tenth of the height, down a twentieth); it was 4 px each way before.
+  PRES-024:
+    rule: A gate's side (which way it faces along its axis) changes only its pictures - the gate, its site and its flags; it stands on the same tiles either way.
+    source: ['community ReTzar src/world.rs (gate: the record''s byte 0x38 & 3 picks g{w|s}{0-3}_anim and _build and the flags'' column; no other use of it)']
+    status: tested
+    adr: [0289]
+    note: The editor's Alt sets it (CTRL-024). It was marked UNVERIFIED in the editor's parity list; ReTzar's reading settles it.

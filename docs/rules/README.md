@@ -110,15 +110,15 @@ t2 rules check --origin "E:\Games\Tzar"     # or set TZAR2_ORIGIN; RulesLedgerTe
 | [Magic, religion and spies](magic.yaml) (MAG) | 40 | 40 | 0 | 0 | 0 | 0 | 0 |
 | [Nature, gateways, day and weather](nature.yaml) (NAT) | 8 | 8 | 0 | 0 | 0 | 0 | 0 |
 | [Unit orders](orders.yaml) (ORD) | 18 | 14 | 4 | 0 | 0 | 0 | 0 |
-| [Animations, effects and sounds](presentation.yaml) (PRES) | 21 | 17 | 4 | 0 | 0 | 0 | 0 |
+| [Animations, effects and sounds](presentation.yaml) (PRES) | 24 | 20 | 4 | 0 | 0 | 0 | 0 |
 | [Production and population](production.yaml) (PROD) | 16 | 11 | 4 | 0 | 0 | 1 | 0 |
 | [Scenario scripts](scenario.yaml) (SCN) | 14 | 13 | 1 | 0 | 0 | 0 | 0 |
 | [Menus, setup and pause](shell.yaml) (SHELL) | 28 | 16 | 9 | 1 | 0 | 2 | 0 |
 | [Technologies and upgrades](technology.yaml) (TECH) | 36 | 32 | 3 | 0 | 0 | 0 | 1 |
 | [Trade, tavern and loans](trade.yaml) (TRADE) | 12 | 11 | 1 | 0 | 0 | 0 | 0 |
 | [Exploration and visibility](visibility.yaml) (FOG) | 7 | 6 | 1 | 0 | 0 | 0 | 0 |
-| [Terrain and movement](world.yaml) (WORLD) | 23 | 17 | 4 | 0 | 0 | 2 | 0 |
-| **All** | 431 | 341 | 72 | 2 | 2 | 10 | 4 |
+| [Terrain and movement](world.yaml) (WORLD) | 24 | 18 | 4 | 0 | 0 | 2 | 0 |
+| **All** | 435 | 345 | 72 | 2 | 2 | 10 | 4 |
 
 ## Not done yet
 

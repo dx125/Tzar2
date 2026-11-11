@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using Godot;
 using Tzar2.Client.Game;
@@ -190,6 +191,7 @@ public partial class MapView : Control
         {
             _frameDirty = false;
             EditorFrames.Fill(_frame, doc.State, _controller.Ruleset, 8, o => !_controller.Layers.IsHidden(LayerSettings.LayerOf(o, _controller.Palette)));
+            _world?.SetTreeLooks(doc.State.Objects.Select(o => o.Placement)); // the trees' own pictures (ADR 0289)
             _interpolator.Push(_frame);
         }
 

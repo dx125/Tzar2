@@ -107,6 +107,7 @@ public sealed class WorldRenderer : IDisposable
     private readonly Dictionary<uint, (int LastSwingMs, uint Blows)> _swings = [];
     private readonly TerrainGrid _grid;
     private MapDecoration[] _decorations = [];
+    private readonly Dictionary<long, byte> _treeLooks = [];
     private int[][] _decorationChunks = [];
     private int _decorationChunkColumns;
 
@@ -234,6 +235,25 @@ public sealed class WorldRenderer : IDisposable
 
     /// <summary>Tiles along a side of the squares decorations are culled by.</summary>
     private const int DecorationChunkTiles = 16;
+
+    /// <summary>
+    /// The trees' own pictures (PRES-022, ADR 0289): a tree standing on the tile of a map object with a <see cref="MapObject.Look"/>
+    /// draws that picture of the strip; the others one that grows on their terrain.
+    /// </summary>
+    public void SetTreeLooks(IEnumerable<MapObject> objects)
+    {
+        ArgumentNullException.ThrowIfNull(objects);
+        _treeLooks.Clear();
+        foreach (MapObject o in objects)
+        {
+            if (o.Look != 0 && o.TypeKey == "comm.tree")
+            {
+                _treeLooks[TileKey(o.X / MapData.UnitsPerTile, o.Y / MapData.UnitsPerTile)] = o.Look;
+            }
+        }
+    }
+
+    private static long TileKey(int x, int y) => ((long)y << 32) | (uint)x;
 
     /// <summary>
     /// The map's decorations to draw (ADR 0281): ground patches flat under everything, ground objects and ruins standing
@@ -536,7 +556,9 @@ public sealed class WorldRenderer : IDisposable
             {
                 // PRES-009: a picture of the kinds that grow on the tile's terrain ([treename], [treeterrain]), the tree
                 // and its shadow placed by their anchors ([trees] pos_tree, pos_shadow).
-                int cell = Trees.Picture(_grid[Math.Clamp(e.TileX, 0, _grid.Width), Math.Clamp(e.TileY, 0, _grid.Height)], phase);
+                int cell = _treeLooks.TryGetValue(TileKey(e.TileX, e.TileY), out byte look) && look <= SpriteBank.TreeCells
+                    ? look - 1 // PRES-022: the map's own picture
+                    : Trees.Picture(_grid[Math.Clamp(e.TileX, 0, _grid.Width), Math.Clamp(e.TileY, 0, _grid.Height)], phase);
                 (int tx, int ty) = Trees.TreeOrigin(e.TileX, e.TileY);
                 var at = new Vector2I(tx, ty);
                 SpriteRenderer layer = options.TranslucentTrees ? _translucent : _objects;

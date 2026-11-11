@@ -612,7 +612,8 @@ public static class LegacyMapConverter
                         continue;
                     }
 
-                    _objects.Add(new MapObject(tree, MapObject.Nature, (x * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2), (y * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2)));
+                    // PRES-022: the cell's value is the tree's picture in the terrain set's strip, kept for the drawing.
+                    _objects.Add(new MapObject(tree, MapObject.Nature, (x * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2), (y * MapData.UnitsPerTile) + (MapData.UnitsPerTile / 2)) { Look = (byte)t });
                     _infos.Add(ObjectInfo.Plain);
                 }
             }

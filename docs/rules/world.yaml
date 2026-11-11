@@ -123,3 +123,9 @@ rules:
     status: tested
     adr: [0282]
     note: Tzar2's path search and step cut no corner from ADR 0021 until ADR 0282. It showed when the map's rocks began to close their cells (WORLD-003) - the first campaign mission's heroes stood at a rock touching a cliff at its corner. Land units, which step cell by cell, cut corners now; ships and flyers, which move continuously in Tzar2 (WORLD-015), still keep clear of them. The original's walls run along the axes only (BLD-011), so no wall is crossed this way.
+  WORLD-024:
+    rule: A map puts at most one unit on a tile.
+    source: ['data Maps\*.wmp and Campaign\*.wcm (the owner''s install, 33 maps converted: no tile holds two units)']
+    status: tested
+    adr: [0289]
+    note: The editor places one unit per tile and layer, as it did; the maps give no case of a flier above a unit on the ground, so whether the original's editor allows one there stays open.

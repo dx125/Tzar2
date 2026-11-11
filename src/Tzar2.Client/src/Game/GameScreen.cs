@@ -337,6 +337,7 @@ public partial class GameScreen : Node
             }
         };
         _world.SetDecorations(_session.Map.Decorations);
+        _world.SetTreeLooks(_session.Map.Objects);
         _composed = null;
         MinimapFromData(set, _grid!);
         if (set.Table is { } treeTable && _store.Vfs.Exists(treeTable))

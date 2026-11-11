@@ -49,6 +49,22 @@ public partial class ToolPanel : TabContainer
         FillTerrain(page);
     }
 
+    /// <summary>
+    /// Offers the tree kinds of the document's terrain set (<c>[treename]</c>: name, first picture, count; ADR 0289): the
+    /// tree brush plants one of the chosen kind's pictures, or one that grows on the terrain.
+    /// </summary>
+    public void RefreshTreeKinds(IReadOnlyList<(string Kind, int First, int Count)> kinds)
+    {
+        ArgumentNullException.ThrowIfNull(kinds);
+        _treeKinds = [.. kinds];
+        _c.TreeBrush = _c.TreeBrush with { Looks = [] };
+        Control page = GetTabControl(1);
+        Forms.Clear(page);
+        FillTrees((VBoxContainer)page);
+    }
+
+    private (string Kind, int First, int Count)[] _treeKinds = [];
+
     /// <summary>Shows the decoration palette of another terrain set.</summary>
     public void RefreshDecorations(IReadOnlyList<DecorationGroup> decorations)
     {
@@ -122,9 +138,10 @@ public partial class ToolPanel : TabContainer
         Forms.Label(page, "Cliffs stand on land only; painting terrain over a cliff removes it. Red tiles have no transition in the terrain set.").AutowrapMode = TextServer.AutowrapMode.WordSmart;
     }
 
-    private void Trees()
+    private void Trees() => FillTrees(Page("Trees"));
+
+    private void FillTrees(VBoxContainer page)
     {
-        VBoxContainer page = Page("Trees");
         GridContainer grid = Forms.Grid(page);
         ImmutableArray<PaletteEntry> trees = _c.Palette.Of(PaletteKind.Tree);
         Forms.Choice(grid, "Tree", trees.Select(t => t.Key).ToArray(), 0, i => _c.TreeBrush = _c.TreeBrush with { TypeKey = trees[i].Key });
@@ -133,6 +150,11 @@ public partial class ToolPanel : TabContainer
         Forms.Number(grid, "Density %", _c.TreeBrush.DensityPercent, 1, 100, v => _c.TreeBrush = _c.TreeBrush with { DensityPercent = v });
         Forms.Check(grid, "Accumulate", _c.TreeBrush.Accumulate, v => _c.TreeBrush = _c.TreeBrush with { Accumulate = v });
         Forms.Check(grid, "Delete trees", _c.DeleteTrees, v => _c.DeleteTrees = v);
+        string[] pictures = [.. new[] { "By terrain" }.Concat(_treeKinds.Select(k => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{k.Kind} ({k.Count})")))];
+        Forms.Choice(grid, "Picture", pictures, 0, i => _c.TreeBrush = _c.TreeBrush with
+        {
+            Looks = i == 0 ? [] : [.. Enumerable.Range(_treeKinds[i - 1].First + 1, _treeKinds[i - 1].Count).Select(n => (byte)n)],
+        });
     }
 
     private void Objects()

@@ -145,6 +145,26 @@ public class LegacyConverterTests
     }
 
     [Fact]
+    [Trait("Rule", "PRES-022")]
+    public void A_tree_keeps_its_picture_through_map_bin_and_out_of_the_hash()
+    {
+        MapData map = LegacyMapConverter.Convert(FullMap().Build(), "full.wmp").Map!;
+        MapObject tree = map.Objects.Single(o => o.TypeKey == "comm.tree");
+        Assert.Equal((byte)12, tree.Look); // the cell's value: picture 12 of the strip, drawn as cell 11
+
+        byte[] bytes = MapBinary.Write(map);
+        Assert.Equal(MapBinary.LooksVersion, BitConverter.ToUInt16(bytes, 4));
+        MapData back = MapBinary.Read(bytes).WithDecorations(map.Decorations);
+        Assert.Equal((byte)12, back.Objects.Single(o => o.TypeKey == "comm.tree").Look);
+        Assert.Equal(bytes, MapBinary.Write(back));
+
+        // Presentation only: the map hashes as without the pictures, and a map without them keeps its older bytes.
+        MapData plain = new MapData(map.Name, map.Width, map.Height, map.TerrainCorners, map.HeightCorners, map.CliffTiles, [.. map.Objects.Select(o => o with { Look = 0 })], map.TerrainSet, map.SetTerrainCorners).WithDecorations(map.Decorations);
+        Assert.Equal(plain.ContentHash, map.ContentHash);
+        Assert.NotEqual(MapBinary.LooksVersion, BitConverter.ToUInt16(MapBinary.Write(plain), 4));
+    }
+
+    [Fact]
     public void Gates_bridges_and_facings_keep_their_placement()
     {
         SyntheticMap m = FullMap();

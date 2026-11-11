@@ -574,7 +574,9 @@ owner's order of 2026-10-26.
        (ADR 0288; log below): a campaign's computers run the AI halves their map gives them, `@setai`, `@god`, `@build`,
        `@settime`, Player Lose, Explore Area and the small results as the original's. Left: Change Diplomacy's merged
        wishes (UNK-55), the order mapping (UNK-57), wrapping and bitwise operators.
-    7. E - the palette's details: tree pictures, the gate's side, units stacking, the authentic import's shadow.
+    7. E - the palette's details: **done** - trees keep and show their own pictures and the brush plants a kind; the
+       gate's side and one unit per tile settled; the imported shadow follows the original's buildings (PRES-022 to
+       PRES-024, WORLD-024; ADR 0289; log below).
     8. Section 3, taken first (the owner, 2026-11-10: it speeds up testing): **done** - rewind and speeds to 2000 % in
        the playtest, in a campaign played from the editor, and in any single-player match with the setting "Rewind
        (testing)" (ADR 0285; log below). The batches C, D and E follow, then the ruins, then the rest of section 3.
@@ -584,6 +586,15 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-11 — The palette's details: tree pictures, the gate's side, units per tile, the imported shadow (PRES-022
+  to PRES-024, WORLD-024; ADR 0289; item 26.7).**
+  * **Tree pictures.** The original maps give each tree a picture of the terrain set's strip; the converter dropped it,
+    so the forests were drawn by terrain. Trees now keep it (`MapObject.Look`, map.bin v4). It is not in the map's
+    hash, so no save or replay is touched. The editor's tree brush offers the set's kinds.
+  * **The gate's side** changes only the pictures (ReTzar).
+  * **One unit per tile:** no original map holds two units on one tile.
+  * **The imported shadow** moves right a tenth of the height and down a twentieth, as measured on 44 of the original's
+    buildings (it was 4 px each way).
 * **2026-11-10 — A campaign's computers run the AI its map gives them; the script functions act as the original's
   (SCN-009 to SCN-014; ADR 0288; item 26.6).** The trigger engine's UNVERIFIED readings were compared with ReTzar.
   * **The biggest difference: the AI.** In the original a kingdom has a computer player only when its kingdom table

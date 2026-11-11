@@ -113,7 +113,14 @@ public enum TreeChoice : byte
 /// <param name="DensityPercent">Forest density: the share of free tiles that get a tree (1–100).</param>
 /// <param name="Accumulate">Accumulation mode: add to the trees already there; otherwise tiles with trees are left alone and the density applies to the brush.</param>
 /// <param name="Seed">Seed of the deterministic choice (the editor passes a stroke counter).</param>
-public sealed record TreeBrush(string TypeKey, TreeChoice Choice, int Radius, int DensityPercent, bool Accumulate, ulong Seed);
+public sealed record TreeBrush(string TypeKey, TreeChoice Choice, int Radius, int DensityPercent, bool Accumulate, ulong Seed)
+{
+    /// <summary>
+    /// The pictures (1-31 of the terrain set's strip) a planted tree takes one of, or none for the pictures that grow on
+    /// its terrain (PRES-022, ADR 0289).
+    /// </summary>
+    public ImmutableArray<byte> Looks { get; init; } = [];
+}
 
 /// <summary>Tree planting and deleting.</summary>
 public static class TreeTools
@@ -162,6 +169,10 @@ public static class TreeTools
 
             string key = candidates[rng.NextInt(candidates.Length)].Key;
             MapObject o = MapObject.AtTile(key, MapObject.Nature, x, y);
+            if (!brush.Looks.IsDefaultOrEmpty)
+            {
+                o = o with { Look = brush.Looks[rng.NextInt(brush.Looks.Length)] };
+            }
             if (!occupancy.Check(o).Ok)
             {
                 continue;

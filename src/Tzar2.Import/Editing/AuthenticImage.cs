@@ -14,12 +14,20 @@ public sealed record AuthenticResult(int Width, int Height, byte[] Rgba, int Out
 /// <summary>
 /// The optional "authentic" conversion of imported user images (TDD §18.3 SHOULD): quantise to RGB555 like the original's
 /// 16-bit art, warn about colours outside the terrain set's palette, and generate a shadow sprite from the silhouette
-/// (the original draws shadows as darkened, offset silhouettes; ⚠ the offset is a placeholder, UNVERIFIED).
+/// (PRES-023: the original's building shadows are their silhouettes moved right, east, by about a tenth of their height
+/// and a little down, of which only the part the body does not cover is stored; measured on 44 buildings).
 /// </summary>
 public static class AuthenticImage
 {
-    /// <summary>Default shadow offset in pixels (right, down).</summary>
-    public const int ShadowOffset = 4;
+    /// <summary>The shadow's move right as a share of the silhouette's height (PRES-023: median 0.09 of 44 buildings).</summary>
+    public const int ShadowRightPerMille = 100;
+
+    /// <summary>The shadow's move down as a share of the silhouette's height (PRES-023: a little; 0.05).</summary>
+    public const int ShadowDownPerMille = 50;
+
+    /// <summary>The shadow's move (right, down) for a silhouette <paramref name="height"/> pixels tall: at least 1 px right.</summary>
+    public static (int Right, int Down) ShadowOffset(int height)
+        => (Math.Max(1, ((height * ShadowRightPerMille) + 500) / 1000), ((height * ShadowDownPerMille) + 500) / 1000);
 
     /// <summary>Converts an RGBA image.</summary>
     /// <param name="rgba">Pixels, 4 bytes each, row-major.</param>
@@ -57,11 +65,26 @@ public static class AuthenticImage
         if (shadow)
         {
             shadowRgba = new byte[rgba.Length];
+            int top = height, bottom = -1;
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    int sx = x - ShadowOffset, sy = y - ShadowOffset;
+                    if (output[(((y * width) + x) * 4) + 3] != 0)
+                    {
+                        top = Math.Min(top, y);
+                        bottom = y;
+                        break;
+                    }
+                }
+            }
+
+            (int right, int down) = ShadowOffset(bottom >= top ? bottom - top + 1 : 0);
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int sx = x - right, sy = y - down;
                     bool caster = sx >= 0 && sy >= 0 && output[(((sy * width) + sx) * 4) + 3] != 0;
                     bool self = output[(((y * width) + x) * 4) + 3] != 0;
                     if (caster && !self)
