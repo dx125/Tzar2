@@ -600,6 +600,10 @@ the process decisions that have no ADR.
     for any civilization, and the player's own in the user folder.
   * **Fair starts:** each start's walk to gold, stone and wood, and which starts reach one another.
   * **One half:** mirrored or turned onto the other, partner kingdoms changing places.
+* **2026-11-13 — Fix: snapshots of campaign maps with prisoners or with a computer left without AI restore again.** The
+  restore check of a kingdom's flags did not know the rescue flags (ADR 0275, since #272) or the AI halves (ADR 0288,
+  since #291). Saving, loading and rewinding such a campaign map failed with "invalid player flags". Found by the
+  tests of the editor's own actions (item 26.9); a test now keeps the check and the flags in step.
 * **2026-11-13 — The editor picks values, keeps recent files and saves a playtest as a file (ADR 0291; item 26.9,
   batch 1).** The owner asked for the editor review's remaining section 3 proposals.
   * **Pickers:** the map's own resources with a thumbnail or a play button, types from the palette by words, the

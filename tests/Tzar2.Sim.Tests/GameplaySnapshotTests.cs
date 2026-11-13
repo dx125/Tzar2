@@ -38,6 +38,22 @@ public class GameplaySnapshotTests
         Assert.Equal(d.World.Players[0].Resources[Resource("wood")], restored.World.Players[0].Resources[Resource("wood")]);
     }
 
+    [Fact]
+    public void Every_player_flag_survives_a_snapshot()
+    {
+        // The rescue flags (ADR 0275) and the AI halves (ADR 0288) once made a campaign snapshot fail to restore.
+        PlayerFlags all = Enum.GetValues<PlayerFlags>().Aggregate(PlayerFlags.None, (a, f) => a | f);
+        Assert.Equal(World.KnownPlayerFlags, all);
+        var world = new World(Classic, Base(), new SimulationConfig { PlayerCount = 2 });
+        world.LoadMap();
+        world.Players[0].Flags |= PlayerFlags.AiHalves | PlayerFlags.AssistEconomy | PlayerFlags.NoRescue;
+        world.Players[1].Flags |= PlayerFlags.Rescue | PlayerFlags.AiHalves;
+        byte[] snapshot = WorldSnapshot.Capture(world);
+        using Simulation restored = Simulation.Restore(snapshot, Classic, world.Map.Data);
+        Assert.Equal(world.Players[0].Flags, restored.World.Players[0].Flags);
+        Assert.Equal(world.Players[1].Flags, restored.World.Players[1].Flags);
+    }
+
     public static TheoryData<string> Corruptions() => ["worker task", "combat mode", "queue overflow", "queue item", "site progress", "stock on a unit", "combat without armament", "negative stockpile"];
 
     [Theory]
