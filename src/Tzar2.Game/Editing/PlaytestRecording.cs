@@ -111,6 +111,14 @@ public sealed record PlaytestRecording(PlaytestOptions Options, ImmutableArray<b
     /// <exception cref="InvalidDataException">Recorded with another ruleset, AI or map.</exception>
     public ReplayPlayback Playback(MapDocument document, Ruleset ruleset) => ReplayPlayback.Open([.. Replay], ruleset, Setup(document, ruleset));
 
+    /// <summary>Whether the recording replays with every stored hash matching, and how many ticks it ran (the client's check).</summary>
+    /// <exception cref="InvalidDataException">The rebuilt map is not the recorded one.</exception>
+    public (bool Matches, int Ticks) Check(MapDocument document, Ruleset ruleset)
+    {
+        ReplayVerification v = Verify(document, ruleset);
+        return (v.Succeeded, v.TicksRun);
+    }
+
     /// <summary>Re-simulates the recording headless and checks every stored hash (tests, bug triage).</summary>
     /// <exception cref="InvalidDataException">The rebuilt map is not the recorded one.</exception>
     public ReplayVerification Verify(MapDocument document, Ruleset ruleset)

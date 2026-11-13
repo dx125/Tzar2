@@ -162,8 +162,8 @@ public static class EditorSmoke
             // The playtest as a file (ADR 0291): the rewound timeline replays exactly, and watching it shows the replay.
             Require(screen.LastPlaytest is not null, "the last playtest can be saved");
             Tzar2.Game.Editing.PlaytestRecording recording = screen.LastPlaytest!();
-            Tzar2.Replay.ReplayVerification verified = recording.Verify(recording.Document(screen.RulesFor), rules);
-            Require(verified.Succeeded && verified.TicksRun >= 20, "the recording replays");
+            (bool matches, int replayed) = recording.Check(recording.Document(screen.RulesFor), rules);
+            Require(matches && replayed >= 20, "the recording replays");
             string recordingPath = Path.Combine(dir, "smoke" + Tzar2.Game.Editing.PlaytestRecording.Extension);
             File.WriteAllBytes(recordingPath, recording.ToBytes());
             app.WatchRecording(screen, recordingPath);
@@ -185,7 +185,7 @@ public static class EditorSmoke
             await Frame(host);
             screen = app.EditorScreen ?? throw new InvalidOperationException("no editor after the recording");
             Require(screen.FilePath is null && screen.Document.State.Scenario.Rules.Length == 1, "the editor shows the map as it was played");
-            play += $" recording={verified.TicksRun}";
+            play += $" recording={replayed}";
         }
 
         // Campaign editor: two maps, saved, reopened, byte-identical.
