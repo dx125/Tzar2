@@ -148,6 +148,7 @@ public partial class CampaignWindow : Window
         try
         {
             SetCampaign(CampaignPackage.Read(File.ReadAllBytes(path), _screen.RulesFor, Path.GetFileName(path)), path);
+            _screen.Remember(path); // File → Open recent (ADR 0291)
             return true;
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
@@ -167,6 +168,7 @@ public partial class CampaignWindow : Window
             File.Move(path + ".tmp", path, overwrite: true);
             _campaign.MarkSaved();
             _path = path;
+            _screen.Remember(path);
             _screen.Status(string.Create(CultureInfo.InvariantCulture, $"Saved campaign {path} ({bytes.Length:N0} bytes)."));
             _dirty = true;
             return true;

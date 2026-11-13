@@ -128,6 +128,37 @@ public sealed class EditorPalette
         return null;
     }
 
+    /// <summary>
+    /// The entries whose key or legacy class contains every word of <paramref name="filter"/> (ignoring case), in palette
+    /// order: the type picker of the trigger editor (ADR 0291). An empty filter keeps every entry.
+    /// </summary>
+    public ImmutableArray<PaletteEntry> Search(string filter)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+        string[] words = filter.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var b = ImmutableArray.CreateBuilder<PaletteEntry>();
+        foreach (PaletteEntry e in Entries)
+        {
+            bool all = true;
+            foreach (string w in words)
+            {
+                if (!e.Key.Contains(w, StringComparison.OrdinalIgnoreCase) && !e.LegacyClass.Contains(w, StringComparison.OrdinalIgnoreCase)
+                    && !e.Kind.ToString().Contains(w, StringComparison.OrdinalIgnoreCase))
+                {
+                    all = false;
+                    break;
+                }
+            }
+
+            if (all)
+            {
+                b.Add(e);
+            }
+        }
+
+        return b.ToImmutable();
+    }
+
     /// <summary>Entries of the same section and group as <paramref name="entry"/> ("random within a group").</summary>
     public ImmutableArray<PaletteEntry> Siblings(PaletteEntry entry)
     {

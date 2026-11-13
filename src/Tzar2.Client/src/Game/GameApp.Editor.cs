@@ -22,6 +22,7 @@ public partial class GameApp
     private CampaignDocument? _editorCampaign;
     private DebuggerWindow? _debuggerWindow;
     private string? _editorPath;
+    private PlaytestRecorder? _playtestRecorder;
 
     /// <summary>The editor screen, or null.</summary>
     public EditorScreen? EditorScreen => (_current as CanvasLayer)?.GetChildCount() > 0 ? (_current as CanvasLayer)!.GetChild(0) as EditorScreen : null;
@@ -44,12 +45,22 @@ public partial class GameApp
 
         Debugger?.Dispose();
         Debugger = null;
+        _playback = null; // a playtest recording being watched (ADR 0291) ends here
         var screen = new EditorScreen(_store, _rules, _catalog, _editorDocument, _editorPath);
+        screen.Preview.SoundFont = _args.SoundFont;
+        if (_playtestRecorder is { Ticks: > 0 } recorder)
+        {
+            screen.LastPlaytest = recorder.Finish; // ADR 0291: the last playtest, saved on request
+        }
+
+        screen.RecordingOpenRequested += path => WatchRecording(screen, path);
         screen.Closed += () =>
         {
             _editorDocument = null;
             _editorPath = null;
             _editorCampaign = null;
+            _playtestRecorder?.Dispose();
+            _playtestRecorder = null;
             ShowMainMenu();
         };
         screen.PlaytestRequested += (options, debug) => StartPlaytest(screen, options, debug);
@@ -109,8 +120,11 @@ public partial class GameApp
             return null;
         }
 
-        // ADR 0285: a playtest can always go back (rewind points, speeds to 2000 %).
+        // ADR 0285: a playtest can always go back (rewind points, speeds to 2000 %); ADR 0291: it is recorded, rewinds
+        // and all, so the editor can save it as a file.
         var rewind = new MatchRewind(session);
+        _playtestRecorder?.Dispose();
+        _playtestRecorder = new PlaytestRecorder(session, editor.Document, options, rewind);
         var game = new GameScreen(_store, _ui!, session, editor.Document.TerrainSet ?? "grass", _args.SoundFont, _settings) { KeepSpeed = true, Rewind = rewind };
         if (debug && session.Scenario is not null)
         {
@@ -133,6 +147,44 @@ public partial class GameApp
         game.MapRequested += notice => GD.Print("Playtest: the scenario asks for the next map '" + notice.Text + "'.");
         Replace(game, music: null);
         return session;
+    }
+
+    /// <summary>
+    /// Shows a playtest recording (ADR 0291) in the replay viewer; the editor comes back with the map as it was played
+    /// (a new, unsaved document).
+    /// </summary>
+    public void WatchRecording(EditorScreen editor, string path)
+    {
+        ArgumentNullException.ThrowIfNull(editor);
+        if (_rules is null)
+        {
+            return;
+        }
+
+        MapDocument played;
+        ReplayPlayback playback;
+        try
+        {
+            PlaytestRecording recording = PlaytestRecording.Parse(File.ReadAllBytes(path));
+            played = recording.Document(editor.RulesFor);
+            playback = recording.Playback(played, _rules);
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
+        {
+            editor.Status("Cannot watch " + path + ": " + e.Message);
+            return;
+        }
+
+        _editorDocument = played;
+        _editorPath = null;
+        _playback = playback;
+        _playbackTerrain = played.TerrainSet ?? "grass";
+        _playbackBack = () =>
+        {
+            _playback = null;
+            ShowEditor();
+        };
+        ShowPlayback();
     }
 
     // Keeps the document while another screen (playtest) is shown.

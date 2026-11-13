@@ -290,8 +290,8 @@ that matters is code that spells data. `CivilizationKeyTests` (#211) now keeps c
 may only go down.
 
 **Local-only tests.** Running them with the original found the reference data pin stale on main (#209). The
-long campaign acceptance test (Editor) loses alex1, bigisland, v_02 and rajba after three attempts; the
-campaign-19 work is bisecting v_02.
+long campaign acceptance test (Editor) lost alex1, bigisland, v_02 and rajba after three attempts then; it completes all
+19 missions since 2026-11-11 (STATUS item 10).
 
 ## Remaining findings and plan
 

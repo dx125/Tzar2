@@ -25,7 +25,7 @@ Status:
 <!-- summary:start -->
 | | Items | Done | Blocked | Planned |
 |---|---|---|---|---|
-| All | 110 | 107 | 3 | 0 |
+| All | 113 | 110 | 3 | 0 |
 
 Parity: **97 %** done.
 <!-- summary:end -->
@@ -167,6 +167,9 @@ Parity: **97 %** done.
 | m-goal-wizard | Mission goal wizard: common goals as ready rules | done | MissionGoalTests.A_destroy_the_enemies_goal_is_won_by_play, MissionGoalTests.A_reach_the_area_goal_is_won_when_the_hero_walks_there, MissionGoalTests.A_keep_alive_goal_loses_when_the_hero_dies | Triggers → Add a mission goal: destroy the enemies, reach an area, hold out, gather, keep alive; ordinary numbered rules (ADR 0290) |
 | m-trigger-history | Trigger history with a rewind to the moment a rule fired | done | PlaytestRewindTests.The_trigger_history_records_what_fired_and_a_rewind_to_it_plays_it_again | the debugger window's History; a double-click rewinds the playtest (ADR 0285, ADR 0290) |
 | m-where-used | Where a name or an object is used in the triggers | done | TriggerUseTests.A_timer_is_found_where_it_is_read_set_and_stopped, TriggerUseTests.An_object_is_found_where_the_triggers_refer_to_it | the rule editor's Areas & groups page: Where used; a double-click locates the place (ADR 0290) |
+| m-recording | A playtest saved as a file and watched again on the map as it was played | done | PlaytestRecordingTests.A_recorded_playtest_replays_the_timeline_it_ended_on, PlaytestRecordingTests.The_recording_opens_in_the_replay_viewer_with_the_map_as_it_was_played, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | Play → save the last playtest (the timeline it ended on, rewinds and all) as a `.t2play`; watch one in the replay viewer (ADR 0291) |
+| m-pickers | Values picked instead of typed: resources with a preview, types, orders, next maps, objects and points on the map | done | PlaytestRecordingTests.The_pickers_offer_the_types_orders_and_campaign_maps, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | thumbnails and play buttons for the map's own resources; the palette's types by words; "Pick on map" for objects and points (ADR 0291) |
+| m-recent | Recent files | done | PlaytestRecordingTests.Recent_files_keep_the_newest_first_once_each, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | File → Open recent: the last 12 maps, campaigns and recordings (ADR 0291) |
 | m-campaign-graph | Visual campaign graph: entries, persistence mapping, carried variables | done | CampaignEditorTests.The_graph_flags_unreachable_maps_dangling_names_and_shows_persistence_and_carried_variables, CampaignEditorTests.An_edited_campaign_plays_through_the_campaign_flow_with_carry_over | GraphEdit view: entries green, unreachable red, dangling names on their node, draggable nodes saved in editor.json |
 | m-areas-groups | Named areas and object groups reusable across triggers | done | TriggerEditorTests.Named_areas_and_object_groups_follow_their_edits, PackageTests.Ids_areas_and_groups_survive_in_editor_json | reused by value: editing one updates every equal trigger area / object set |
 | m-search-replace | Search and replace of object references | done | DocumentTests.Search_and_replace_of_object_references |  |

@@ -274,7 +274,11 @@ public partial class MapView : Control
                     >= Godot.Key.Key1 and <= Godot.Key.Key8 when !key.CtrlPressed => ((char)('1' + (key.Keycode - Godot.Key.Key1))).ToString(),
                     _ => string.Empty,
                 };
-                if (name.Length > 0 && _controller.Key(name, Mods(key)))
+                if (name == "Escape" && Escape?.Invoke() == true)
+                {
+                    AcceptEvent(); // a pick waiting for its click stops (ADR 0291)
+                }
+                else if (name.Length > 0 && _controller.Key(name, Mods(key)))
                 {
                     AcceptEvent();
                 }
@@ -284,6 +288,9 @@ public partial class MapView : Control
 
         _ = doc;
     }
+
+    /// <summary>Asked first when Esc is pressed on the map: true when it handled the key (a pick stops; ADR 0291).</summary>
+    public Func<bool>? Escape { get; set; }
 
     /// <summary>The map point under a local position.</summary>
     public MapPoint PointAt(Vector2 local)

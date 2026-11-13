@@ -61,6 +61,37 @@ public sealed class ReplayPlayback
         return new ReplayPlayback(file, setup, ruleset);
     }
 
+    /// <summary>
+    /// Opens replay bytes whose match the caller rebuilds itself (a playtest recording, ADR 0291: the map travels beside
+    /// the replay, so the header has no setup description).
+    /// </summary>
+    /// <exception cref="InvalidDataException">Not a replay, or recorded with another ruleset, AI or map.</exception>
+    public static ReplayPlayback Open(byte[] replay, Ruleset ruleset, MatchSetup setup)
+    {
+        ArgumentNullException.ThrowIfNull(replay);
+        ArgumentNullException.ThrowIfNull(ruleset);
+        ArgumentNullException.ThrowIfNull(setup);
+        ReplayFile file = ReplayFile.Parse(replay);
+        if (file.Header.RulesetHash != ruleset.ContentHash)
+        {
+            throw new InvalidDataException("The replay was recorded with another ruleset (another package or game version).");
+        }
+
+        if (!file.Header.AiPrograms.SequenceEqual(setup.AiPrograms))
+        {
+            throw new InvalidDataException("The replay's computer kingdoms ran other AI scripts.");
+        }
+
+        var playback = new ReplayPlayback(file, setup, ruleset);
+        if (playback.Session.Simulation.MapHash != file.Header.MapHash)
+        {
+            playback.Session.Dispose();
+            throw new InvalidDataException("The replay was recorded on another version of the map.");
+        }
+
+        return playback;
+    }
+
     /// <summary>The setup that re-simulates a replay (multiplayer if a human kingdom had a standby AI, ADR 0163).</summary>
     /// <exception cref="InvalidDataException">The replay has no setup description.</exception>
     public static MatchSetup SetupOf(ReplayHeader header, SkirmishAi ai) => SetupOf(header, ai, null, null);

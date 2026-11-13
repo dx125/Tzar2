@@ -7,6 +7,7 @@ using Godot;
 using Tzar2.Client.Logic;
 using Tzar2.Client.Viewer;
 using Tzar2.Content.Compiled;
+using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Editing;
 using Tzar2.Content.Terrain;
 
@@ -109,6 +110,8 @@ public partial class EditorScreen : Control
         var layout = new VBoxContainer();
         layout.SetAnchorsPreset(LayoutPreset.FullRect);
         AddChild(layout);
+        AddChild(Preview);
+        LoadRecent();
         layout.AddChild(Menus());
 
         var split = new HSplitContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -127,7 +130,7 @@ public partial class EditorScreen : Control
         split.AddChild(inner);
         inner.AddChild(_view);
         _right = new TabContainer { CustomMinimumSize = new Vector2(340, 0) };
-        _properties = new PropertiesPanel(_controller);
+        _properties = new PropertiesPanel(_controller, Preview);
         _locator = new LocatorPanel(_controller, (x, y) => _view.CenterOnTile(x, y));
         _validation = new ValidationPanel(Locate);
         _right.AddChild(_properties);
@@ -141,7 +144,14 @@ public partial class EditorScreen : Control
         {
             _properties.Refresh();
             _view.Invalidate();
+            if (_pickObject is { } pick && !_controller.Selection.IsEmpty)
+            {
+                _pickObject = null;
+                pick(_controller.Selection[0]);
+                Status("Picked " + (Document.State.Find(_controller.Selection[0])?.Label ?? "the object") + ".");
+            }
         };
+        _view.Escape = CancelPick;
         _controller.Status += Status;
         _view.CameraMoved += () => _minimap.QueueRedraw();
         Attach(_controller.Document);
@@ -267,6 +277,57 @@ public partial class EditorScreen : Control
         }
     }
 
+    /// <summary>Plays and shows the map's own resources (ADR 0291).</summary>
+    public AssetPreview Preview { get; } = new();
+
+    /// <summary>Waits for a click on an object of the map, then gives its id to <paramref name="picked"/> (ADR 0291).</summary>
+    public void PickObject(Action<int> picked)
+    {
+        ArgumentNullException.ThrowIfNull(picked);
+        CancelPick();
+        _pickObject = picked;
+        _controller.Tool = EditorTool.Select;
+        Status("Click an object on the map (Esc cancels).");
+        _view.GrabFocus();
+    }
+
+    /// <summary>Waits for a click on a tile of the map, then gives it to <paramref name="picked"/> (ADR 0291).</summary>
+    public void PickPoint(Action<int, int> picked)
+    {
+        ArgumentNullException.ThrowIfNull(picked);
+        CancelPick();
+        DrawArea(area =>
+        {
+            if (area is RectArea r)
+            {
+                picked((r.Left + r.Right) / 2, (r.Top + r.Bottom) / 2);
+                Status($"Picked tile ({(r.Left + r.Right) / 2}, {(r.Top + r.Bottom) / 2}).");
+            }
+        });
+        Status("Click a tile of the map (Esc cancels).");
+    }
+
+    // Esc on the map: a pick waiting for its click stops (true), else the map's own Esc.
+    private bool CancelPick()
+    {
+        bool waiting = _pickObject is not null || _areaCallback is not null;
+        _pickObject = null;
+        if (_areaCallback is not null)
+        {
+            _areaCallback = null;
+            _controller.Tool = _toolBeforeArea;
+        }
+
+        if (waiting)
+        {
+            Status("Picking cancelled.");
+        }
+
+        return waiting;
+    }
+
+    private Action<int>? _pickObject;
+
     /// <summary>Runs the validator now (the panel also re-validates half a second after every change).</summary>
     public ValidationResult Revalidate()
     {
@@ -308,6 +369,7 @@ public partial class EditorScreen : Control
             File.Move(temp, path, overwrite: true);
             Document.MarkSaved();
             _path = path;
+            Remember(path);
             Status(string.Create(CultureInfo.InvariantCulture, $"Saved {path} ({bytes.Length:N0} bytes)."));
             UpdateTitle();
             return true;
@@ -496,7 +558,14 @@ public partial class EditorScreen : Control
         var bar = new MenuBar { PreferGlobalMenu = false };
         PopupMenu file = Menu(bar, "File");
         Item(file, "New map…", () => Guard(campaignToo: false, () => Dialogs.NewMap(this, _rules, _store.TerrainSets.Count > 0 ? _store.TerrainSets.Select(s => s.Id).ToArray() : ["grass"], doc => Open(doc, null), RulesFor)));
-        Item(file, "Open…", () => Guard(campaignToo: false, () => Files.Open(this, ["*.t2map ; Tzar2 map"], paths => OpenFile(paths[0]), many: false, folder: MapFolder)));
+        Item(file, "Open…", () => Guard(campaignToo: false, () => Files.Open(this, ["*.t2map ; Tzar2 map"], paths =>
+        {
+            if (OpenFile(paths[0]))
+            {
+                Remember(paths[0]);
+            }
+        }, many: false, folder: MapFolder)));
+        RecentMenu(file);
         Item(file, "Open autosave…", () => Guard(campaignToo: false, () => Files.Open(this, ["*.t2map ; Tzar2 map"], paths => OpenAutosave(paths[0]), many: false, folder: Files.UserFolder(EditorAutosave.Folder))));
         Item(file, "Save (Ctrl+S)", () => Save(saveAs: false));
         Item(file, "Save as… (Ctrl+Shift+S)", () => Save(saveAs: true));
@@ -531,7 +600,7 @@ public partial class EditorScreen : Control
         Item(map, "Map properties…", () => Dialogs.MapProperties(this, Document));
         Item(map, "Kingdoms and diplomacy…", () => Dialogs.Kingdoms(this, Document, _rules));
         Item(map, "User resources…", () => Dialogs.Resources(this, Document, path => Tzar2.Import.Maps.PngEncoder.FromBmp(File.ReadAllBytes(path))));
-        Item(map, "Custom sounds and music…", () => Dialogs.Sounds(this, Document, () => _controller.Selection.IsEmpty ? 0 : _controller.Selection[0]));
+        Item(map, "Custom sounds and music…", () => Dialogs.Sounds(this, Document));
         StudioMenu(map);
         MapMenuExtras?.Invoke(map);
         TriggerMenus(bar);
