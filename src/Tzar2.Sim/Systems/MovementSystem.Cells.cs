@@ -58,6 +58,9 @@ public sealed partial class MovementSystem
     // The unit on each anchor tile of the land layers (frame index + 1, 0 for none) and whether it is entering it; the
     // tiles set this tick, to clear them next tick.
     private int[] _tileUnit = [];
+
+    // Per frame unit: whether it keeps its tile against its friends too (Keeps).
+    private byte[] _keeps = [];
     private byte[] _tileEntering = [];
     private readonly List<int> _tilesSet = [];
 
@@ -122,6 +125,16 @@ public sealed partial class MovementSystem
         _reroutes = 0;
         ComponentStore<Motion> motions = world.Motions;
         ComponentStore<CellStep> steps = world.CellSteps;
+
+        if (_keeps.Length < f.Count)
+        {
+            _keeps = new byte[Math.Max(f.Count, 2 * _keeps.Length)];
+        }
+
+        for (int i = 0; i < f.Count; i++)
+        {
+            _keeps[i] = Keeps(world, f, i) ? (byte)1 : (byte)0;
+        }
 
         // Who is where: a unit belongs to the tile it enters, else to the one it stands on. A unit whose tile is taken
         // already (spawned there, landed there) is displaced and steps off it.
@@ -576,7 +589,13 @@ public sealed partial class MovementSystem
 
         _reroutes++;
         s.Rerouted |= flag;
-        int end = Search(world, layer, f, i, here, goal, int.MaxValue, RerouteNodes, everyUnit ? UnitRule.Every : UnitRule.Through, out bool reached);
+        UnitRule rule = everyUnit ? UnitRule.Every : UnitRule.Through;
+        if (Walled(world, layer, f, i, here, goal, rule))
+        {
+            return -1; // the search could not end anywhere: spare it the whole map
+        }
+
+        int end = Search(world, layer, f, i, here, goal, int.MaxValue, RerouteNodes, rule, out bool reached);
         if (!reached || end < 0)
         {
             return -1;
@@ -619,6 +638,46 @@ public sealed partial class MovementSystem
         m.BestDistance = int.MaxValue;
         m.StallTicks = 0;
         return _way[^1];
+    }
+
+    // Whether no tile a search toward `aim` could end on can be entered: `aim` itself when no other unit stands there,
+    // else every tile next to it (and it), other than `here`, is not walkable or a unit's that is a wall to `rule`.
+    private bool Walled(World world, NavLayer layer, Frame f, int i, int here, int aim, UnitRule rule)
+    {
+        if (_tileUnit[aim] == 0 || _tileUnit[aim] - 1 == i)
+        {
+            return !layer.IsWalkable(aim);
+        }
+
+        int width = layer.Width;
+        int ax = aim % width;
+        int ay = aim / width;
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int x = ax + dx;
+                int y = ay + dy;
+                if (!layer.IsWalkable(x, y))
+                {
+                    continue;
+                }
+
+                int t = (y * width) + x;
+                if (t == here)
+                {
+                    continue;
+                }
+
+                int k = _tileUnit[t] - 1;
+                if (k < 0 || k == i || (rule != UnitRule.Every && !Holds(world, f, i, k)))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     // WORLD-022: the unit's next step, the first of the shortest way toward where it heads (the goal when it is near), round
@@ -695,6 +754,20 @@ public sealed partial class MovementSystem
         int expanded = 0;
         bool beyond = rule == UnitRule.Lane && Math.Max(Math.Abs(ax - hx), Math.Abs(ay - hy)) > radius;
         long onward = bestH - (radius / 2 * NavLayer.StraightCost); // an edge tile that far nearer the point leads on toward it
+
+        // The square the search keeps to, cut to the map (the tiles outside it are not walkable).
+        int minX = Math.Max(0, hx - Math.Min(radius, width));
+        int maxX = Math.Min(width - 1, hx + Math.Min(radius, width));
+        int minY = Math.Max(0, hy - Math.Min(radius, layer.Height));
+        int maxY = Math.Min(layer.Height - 1, hy + Math.Min(radius, layer.Height));
+        ReadOnlySpan<byte> walkable = layer.Walkable;
+        int[] tileUnit = _tileUnit;
+        int[] seen = _seen;
+        int[] cost = _cost;
+        int search = _search;
+        bool corners = layer.CutsCorners;
+        bool gates = world.HasGateBars;
+        byte owner = f.Owner[i];
         while (_open.Count > 0 && expanded < nodes)
         {
             int node = _open.Pop(out _);
@@ -716,21 +789,28 @@ public sealed partial class MovementSystem
                 bestNode = node;
             }
 
+            int costHere = cost[node];
             for (int d = 0; d < 8; d++)
             {
                 int nx = nx0 + StepX[d];
                 int ny = ny0 + StepY[d];
-                if (Math.Abs(nx - hx) > radius || Math.Abs(ny - hy) > radius || !Walkable(layer, nx0, ny0, nx, ny))
+                if (nx < minX || nx > maxX || ny < minY || ny > maxY)
                 {
                     continue;
                 }
 
                 int n = (ny * width) + nx;
-                int extra = 0;
-                if (_tileUnit[n] != 0 && _tileUnit[n] - 1 != i)
+                if (walkable[n] == 0 || ((d & 1) != 0 && !corners && (walkable[(ny0 * width) + nx] == 0 || walkable[(ny * width) + nx0] == 0)))
                 {
-                    int k = _tileUnit[n] - 1;
-                    if (rule == UnitRule.Every || Holds(world, f, i, k) || (rule == UnitRule.Lane && Stands(world, f, k, n)))
+                    continue;
+                }
+
+                int extra = 0;
+                int unit = tileUnit[n];
+                if (unit != 0 && unit - 1 != i)
+                {
+                    int k = unit - 1;
+                    if (rule == UnitRule.Every || _keeps[k] != 0 || !MakesWay(world, f, i, k) || (rule == UnitRule.Lane && Stands(world, f, k, n)))
                     {
                         continue; // an enemy, a creature of Nature, a friend at work or fighting where it stands, or for a lane any unit standing: a wall
                     }
@@ -738,19 +818,14 @@ public sealed partial class MovementSystem
                     extra = f.Moving[k] != 0 || _tileEntering[n] != 0 ? MovingUnitCost : StandingUnitCost;
                 }
 
-                if (Barred(world, layer, f.Owner[i], node, n))
+                int g = costHere + ((d & 1) == 0 ? NavLayer.StraightCost : NavLayer.DiagonalCost) + extra;
+                if ((seen[n] == search && cost[n] <= g) || (gates && Barred(world, layer, owner, node, n)))
                 {
                     continue;
                 }
 
-                int g = _cost[node] + (d % 2 == 0 ? NavLayer.StraightCost : NavLayer.DiagonalCost) + extra;
-                if (_seen[n] == _search && _cost[n] <= g)
-                {
-                    continue;
-                }
-
-                _seen[n] = _search;
-                _cost[n] = g;
+                seen[n] = search;
+                cost[n] = g;
                 _from[n] = node;
                 _open.Push((ulong)(g + Octile(nx, ny, ax, ay)), n);
             }
@@ -772,9 +847,12 @@ public sealed partial class MovementSystem
     // Whether unit k keeps its tile against unit i: one that does not make way, or a friend standing at work (a peasant
     // chopping, building, farming) or fighting where it stands; those never step aside (YieldAside), so a way round goes
     // round them as round a wall (the original's occupied tiles, ReTzar 0x4df540).
-    private static bool Holds(World world, Frame f, int i, int k)
-        => !MakesWay(world, f, i, k)
-           || (f.Moving[k] == 0 && (f.Anchored[k] != 0 || (world.Combats.IndexOf(f.Entity[k]) is >= 0 and var c && world.Combats.At(c).Target != 0)));
+    private bool Holds(World world, Frame f, int i, int k) => _keeps[k] != 0 || !MakesWay(world, f, i, k);
+
+    // Whether unit k keeps its tile against its friends too: standing at work or fighting (_keeps, set at the start of
+    // the pass; neither changes during it).
+    private static bool Keeps(World world, Frame f, int k)
+        => f.Moving[k] == 0 && (f.Anchored[k] != 0 || (world.Combats.IndexOf(f.Entity[k]) is >= 0 and var c && world.Combats.At(c).Target != 0));
 
     // Whether unit j makes way for unit i (steps aside, or passes it head on): a friend, or a unit of a kingdom neither of
     // the two counts as an enemy. Enemies and creatures of Nature do not.
