@@ -19,11 +19,13 @@ public partial class PropertiesPanel : VBoxContainer
     private static readonly string[] Owners = ["Kingdom 1", "Kingdom 2", "Kingdom 3", "Kingdom 4", "Kingdom 5", "Kingdom 6", "Kingdom 7", "Kingdom 8", "Nature"];
     private readonly EditorController _c;
     private readonly VBoxContainer _body;
+    private readonly AssetPreview? _preview;
 
-    /// <summary>Creates the panel.</summary>
-    public PropertiesPanel(EditorController controller)
+    /// <summary>Creates the panel; <paramref name="preview"/> plays the map's own sounds (ADR 0291).</summary>
+    public PropertiesPanel(EditorController controller, AssetPreview? preview = null)
     {
         _c = controller;
+        _preview = preview;
         Name = "Properties";
         SizeFlagsVertical = SizeFlags.ExpandFill;
         _body = Forms.Scroll(this);
@@ -69,8 +71,8 @@ public partial class PropertiesPanel : VBoxContainer
             Forms.Optional(g, "Level", first.Info.Level, 1, 1, 100, v => Edit("Level", o => o with { Info = o.Info with { Level = v } }));
             if (!many)
             {
-                Forms.Text(g, "Icon 44×44", first.Info.Icon?.Path ?? string.Empty, v => Edit("Icon", o => o with { Info = o.Info with { Icon = v.Length > 0 ? new ResourceRef(v) : null } }));
-                Forms.Text(g, "Big icon 96×96", first.Info.BigIcon?.Path ?? string.Empty, v => Edit("Big icon", o => o with { Info = o.Info with { BigIcon = v.Length > 0 ? new ResourceRef(v) : null } }));
+                Pickers.Asset(g, "Icon 44×44", _c.Document, AssetKind.Image, first.Info.Icon?.Path, v => Edit("Icon", o => o with { Info = o.Info with { Icon = v } }), _preview);
+                Pickers.Asset(g, "Big icon 96×96", _c.Document, AssetKind.Image, first.Info.BigIcon?.Path, v => Edit("Big icon", o => o with { Info = o.Info with { BigIcon = v } }), _preview);
             }
 
             Forms.Number(g, "Facing", first.Placement.Facing, 0, 7, v => Edit("Facing", o => o with { Placement = o.Placement with { Facing = (byte)v } }));
@@ -148,9 +150,9 @@ public partial class PropertiesPanel : VBoxContainer
             Forms.Multiline(g, "Scroll text", item.Text ?? string.Empty, v => Set("Scroll text", i => i with { Text = v }));
             Forms.Optional(g, "Scroll time (ms)", item.ScrollTimeMs, 10_000, 0, 600_000, v => Set("Scroll time", i => i with { ScrollTimeMs = v }));
             Forms.Check(g, "Auto close", item.AutoClose == true, v => Set("Auto close", i => i with { AutoClose = v }));
-            Forms.Text(g, "Image", item.Image?.Path ?? string.Empty, v => Set("Scroll image", i => i with { Image = v.Length > 0 ? new ResourceRef(v) : null }));
-            Forms.Text(g, "Sound", item.Sound?.Path ?? string.Empty, v => Set("Scroll sound", i => i with { Sound = v.Length > 0 ? new ResourceRef(v) : null }));
-            Forms.Text(g, "Music", item.Music?.Path ?? string.Empty, v => Set("Scroll music", i => i with { Music = v.Length > 0 ? new ResourceRef(v) : null }));
+            Pickers.Asset(g, "Image", _c.Document, AssetKind.Image, item.Image?.Path, v => Set("Scroll image", i => i with { Image = v }), _preview);
+            Pickers.Asset(g, "Sound", _c.Document, AssetKind.Sound, item.Sound?.Path, v => Set("Scroll sound", i => i with { Sound = v }), _preview);
+            Pickers.Asset(g, "Music", _c.Document, AssetKind.Music, item.Music?.Path, v => Set("Scroll music", i => i with { Music = v }), _preview);
         }
         else if (cls.Contains("magic", StringComparison.Ordinal))
         {

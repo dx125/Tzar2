@@ -81,6 +81,23 @@ public static class EditorSmoke
         c.PointerUp(new MapPoint(13, 5, 13, 5), EditorModifiers.Alt);
         Require(screen.Document.State.Find(c.Selection[0])!.TileX == 13, "Alt-drag moves");
 
+        // Picks on the map instead of typed numbers (ADR 0291): an object, then a tile.
+        int peasant = c.Selection[0], picked = -1, pickedX = -1, pickedY = -1;
+        c.Select([]);
+        screen.PickObject(id => picked = id);
+        c.PointerDown(new MapPoint(13, 5, 13, 5), EditorModifiers.None);
+        c.PointerUp(new MapPoint(13, 5, 13, 5), EditorModifiers.None);
+        Require(picked == peasant, "an object picked on the map");
+        screen.PickPoint((x, y) => (pickedX, pickedY) = (x, y));
+        c.PointerDown(new MapPoint(30, 31, 30, 31), EditorModifiers.None);
+        c.PointerUp(new MapPoint(30, 31, 30, 31), EditorModifiers.None);
+        Require(pickedX == 30 && pickedY == 31 && c.Tool == EditorTool.Select, "a tile picked on the map");
+        string typed = string.Empty;
+        var typePicker = new TypePicker(c.Palette, c.PlaceKey, key => typed = key);
+        screen.AddChild(typePicker);
+        await Frame(host);
+        typePicker.QueueFree();
+
         ValidationResult result = screen.Revalidate();
         await Shot(host, "1-map");
 
@@ -141,6 +158,34 @@ public static class EditorSmoke
             await Frame(host);
             screen = app.EditorScreen ?? throw new InvalidOperationException("no editor after the playtest");
             Require(screen.Document.State.Scenario.Rules.Length == 1, "the document survives the playtest");
+
+            // The playtest as a file (ADR 0291): the rewound timeline replays exactly, and watching it shows the replay.
+            Require(screen.LastPlaytest is not null, "the last playtest can be saved");
+            Tzar2.Game.Editing.PlaytestRecording recording = screen.LastPlaytest!();
+            Tzar2.Replay.ReplayVerification verified = recording.Verify(recording.Document(screen.RulesFor), rules);
+            Require(verified.Succeeded && verified.TicksRun >= 20, "the recording replays");
+            string recordingPath = Path.Combine(dir, "smoke" + Tzar2.Game.Editing.PlaytestRecording.Extension);
+            File.WriteAllBytes(recordingPath, recording.ToBytes());
+            app.WatchRecording(screen, recordingPath);
+            watch.Restart();
+            while (app.Game is null && watch.Elapsed.TotalSeconds < 60)
+            {
+                await Frame(host); // the viewer's screen is prepared on a worker thread
+            }
+
+            Game.GameScreen viewer = app.Game ?? throw new InvalidOperationException("no replay viewer for the recording");
+            watch.Restart();
+            while (viewer.Session.TicksRun < 10 && watch.Elapsed.TotalSeconds < 60 && viewer.Session.Fault is null)
+            {
+                await Frame(host);
+            }
+
+            Require(viewer.Session.Fault is null && viewer.Session.TicksRun >= 10, "the recording plays in the viewer");
+            app.ShowEditor();
+            await Frame(host);
+            screen = app.EditorScreen ?? throw new InvalidOperationException("no editor after the recording");
+            Require(screen.FilePath is null && screen.Document.State.Scenario.Rules.Length == 1, "the editor shows the map as it was played");
+            play += $" recording={verified.TicksRun}";
         }
 
         // Campaign editor: two maps, saved, reopened, byte-identical.
@@ -156,7 +201,8 @@ public static class EditorSmoke
         Require(campaignWindow.OpenFile(campaignPath), "campaign reopened");
         Require(CampaignPackage.Write(campaignWindow.Campaign).AsSpan().SequenceEqual(campaignBytes), "campaign round trip");
         campaignWindow.QueueFree();
-        string notes = play + $" campaign={campaignBytes.Length}";
+        string notes = play + $" campaign={campaignBytes.Length} typed={typed.Length}";
+        Require(File.ReadAllText(Path.Combine(ProjectSettings.GlobalizePath("user://"), RecentFiles.FileName)).Contains("smoke.t2camp", StringComparison.Ordinal), "the recent files keep what was saved");
         if (ImportPath is { } legacy)
         {
             ImportWindow import = screen.OpenImport();

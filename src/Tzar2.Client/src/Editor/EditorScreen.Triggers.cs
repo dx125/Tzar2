@@ -95,6 +95,7 @@ public partial class EditorScreen
         Item(play, "Playtest", () => Play(debugger: false));
         Item(play, "Playtest with the trigger debugger", () => Play(debugger: true));
         Item(play, "Check playability (the bot plays it)…", CheckPlayability);
+        RecordingMenu(play);
         play.AddSeparator();
         for (int k = 0; k <= 8; k++)
         {
@@ -119,7 +120,7 @@ public partial class EditorScreen
     {
         int id = _controller.Selection.IsDefaultOrEmpty ? -1 : _controller.Selection[0];
         string label = id >= 0 && Document.State.Find(id) is { } o ? o.Label : string.Empty;
-        var wizard = new GoalWizard(Document, id, label);
+        var wizard = new GoalWizard(Document, id, label, TriggerSchema.MapNames(CampaignContext?.Campaign));
         wizard.Done += Status;
         AddChild(wizard);
     }

@@ -25,6 +25,8 @@ public partial class GameApp
     private bool _networkGameShown;
     private ReplayPlayback? _playback;
     private int _playbackGeneration;
+    private string? _playbackTerrain; // a playtest recording's terrain set (ADR 0291), else the replay's
+    private Action? _playbackBack; // where leaving goes: the editor for a playtest recording, else the replays
 
     private static string UserPath(string sub) => Path.Combine(ProjectSettings.GlobalizePath("user://"), sub);
 
@@ -227,6 +229,8 @@ public partial class GameApp
         try
         {
             _playback = ReplayPlayback.Open(File.ReadAllBytes(file), _rules, _ai, MultiplayerMaps());
+            _playbackTerrain = null;
+            _playbackBack = null;
         }
         catch (Exception e) when (e is IOException or InvalidDataException or ArgumentException)
         {
@@ -242,11 +246,12 @@ public partial class GameApp
         ReplayPlayback playback = _playback!;
         _playbackGeneration = playback.Generation;
         MatchSettings settings = playback.Session.Setup.Descriptor?.Settings ?? new MatchSettings();
-        var screen = new GameScreen(_store, _ui!, playback.Session, Content.MapGen.RandomMapNames.SetId(settings.Terrain), _args.SoundFont, _settings) { KeepSpeed = true };
-        screen.QuitRequested += ShowReplays;
+        Action back = _playbackBack ?? ShowReplays;
+        var screen = new GameScreen(_store, _ui!, playback.Session, _playbackTerrain ?? Content.MapGen.RandomMapNames.SetId(settings.Terrain), _args.SoundFont, _settings) { KeepSpeed = true };
+        screen.QuitRequested += back;
         Replace(screen, music: null);
         var controls = new ReplayControls(playback);
-        controls.LeaveRequested += ShowReplays;
+        controls.LeaveRequested += back;
         var layer = new CanvasLayer { Layer = 5 };
         layer.AddChild(controls);
         screen.AddChild(layer);

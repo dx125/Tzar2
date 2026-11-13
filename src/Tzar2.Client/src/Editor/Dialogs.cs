@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Godot;
@@ -242,10 +243,15 @@ public static class Dialogs
         });
     }
 
-    /// <summary>Custom sounds (point or object source; Every / Looped / Random from–to / Delayed start) and the music playlist.</summary>
-    public static void Sounds(Node host, MapDocument doc, Func<int> selectedObject)
+    /// <summary>
+    /// Custom sounds (point or object source; Every / Looped / Random from–to / Delayed start) and the music playlist: the
+    /// sounds and music picked from the map's own resources and played to hear them, the point or object picked on the map
+    /// (ADR 0291).
+    /// </summary>
+    public static void Sounds(EditorScreen screen, MapDocument doc)
     {
-        Forms.Dialog(host, "Custom sounds and music", new Vector2I(640, 620), body =>
+        ArgumentNullException.ThrowIfNull(screen);
+        Forms.Dialog(screen, "Custom sounds and music", new Vector2I(680, 640), body =>
         {
             void Rebuild()
             {
@@ -259,16 +265,17 @@ public static class Dialogs
                     Forms.Heading(body, s.Name);
                     GridContainer g = Forms.Grid(body);
                     Forms.Text(g, "Name", s.Name, v => Set(x => x with { Name = v }));
-                    Forms.Text(g, "Sound", s.Sound.Path, v => Set(x => x with { Sound = new ResourceRef(v) }));
+                    Pickers.Asset(g, "Sound", doc, AssetKind.Sound, s.Sound.Path, v => Set(x => x with { Sound = v ?? new ResourceRef(string.Empty) }), screen.Preview);
                     Forms.Enum(g, "Repeat", s.Repeat, v => Set(x => x with { Repeat = v }));
                     Forms.Number(g, "Interval / min / delay (ms)", s.IntervalMs, 0, 3_600_000, v => Set(x => x with { IntervalMs = v }));
                     Forms.Number(g, "Max interval (ms, Random)", s.IntervalMaxMs, 0, 3_600_000, v => Set(x => x with { IntervalMaxMs = v }));
                     Forms.Label(g, "Source");
-                    Forms.Label(g, s.SourceObject is int o ? $"object #{o}" : $"point ({s.X}, {s.Y})");
+                    Forms.Label(g, s.SourceObject is int o ? $"object {doc.State.Find(o)?.Label ?? "#" + o.ToString(CultureInfo.InvariantCulture)}" : $"point ({s.X}, {s.Y})");
                     Forms.Number(g, "Point X", s.X, 0, 1024, v => Set(x => x with { X = v }));
                     Forms.Number(g, "Point Y", s.Y, 0, 1024, v => Set(x => x with { Y = v }));
                     var row = new HBoxContainer();
-                    Forms.Button(row, "Follow selected object", () => { Set(x => x with { SourceObject = selectedObject() is > 0 and var id ? id : null }); Rebuild(); });
+                    Pickers.PickPoint(row, screen, (x, y) => { Set(c => c with { SourceObject = null, X = x, Y = y }); Rebuild(); }, "Pick the point on map");
+                    Pickers.PickObject(row, screen, id => { Set(c => c with { SourceObject = id }); Rebuild(); }, "Pick the object on map");
                     Forms.Button(row, "Point source", () => { Set(x => x with { SourceObject = null }); Rebuild(); });
                     Forms.Button(row, "Remove", () => { doc.Apply("Remove sound", st => st.WithScenario(x => x.RemoveSound(index))); Rebuild(); });
                     body.AddChild(row);
@@ -276,14 +283,53 @@ public static class Dialogs
 
                 Forms.Button(body, "Add sound", () =>
                 {
-                    doc.Apply("Add sound", st => st.WithScenario(x => x.AddSound(new CustomSoundDef(x.FreshName("sound"), new ResourceRef("user/sound.wav"), SoundRepeat.Every, 10_000, 0, null, 0, 0), out _)));
+                    string first = doc.State.Of(AssetKind.Sound) is { Length: > 0 } sounds ? sounds[0] : "user/sound.wav";
+                    doc.Apply("Add sound", st => st.WithScenario(x => x.AddSound(new CustomSoundDef(x.FreshName("sound"), new ResourceRef(first), SoundRepeat.Every, 10_000, 0, null, 0, 0), out _)));
                     Rebuild();
                 });
 
                 Forms.Heading(body, "Music playlist (played in random order)");
-                string playlist = string.Join("\n", m.Music.Items.Select(r => r.Path));
-                Forms.Multiline(body, "One resource path per line", playlist, v =>
-                    doc.Apply("Music playlist", st => st.WithScenario(x => x.WithMusic(v.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(p => new ResourceRef(p))))), 120);
+                var playlist = m.Music.Items.Select(r => r.Path).ToList();
+                var known = doc.State.Of(AssetKind.Music).ToList();
+                foreach (string path in playlist.Where(p => !known.Contains(p, StringComparer.OrdinalIgnoreCase)).ToList())
+                {
+                    known.Add(path); // in the playlist, not in the map: shown so it can be taken out
+                }
+
+                if (known.Count == 0)
+                {
+                    Forms.Label(body, "No music in the map yet: import MIDI or OGG files with Map → User resources.");
+                }
+
+                foreach (string path in known)
+                {
+                    string each = path;
+                    var line = new HBoxContainer();
+                    bool missing = doc.State.Export(each) is null;
+                    Forms.Check(line, missing ? each + " (missing)" : each, playlist.Contains(each, StringComparer.OrdinalIgnoreCase), on =>
+                    {
+                        List<string> next = [.. doc.State.Scenario.Music.Items.Select(r => r.Path).Where(p => !string.Equals(p, each, StringComparison.OrdinalIgnoreCase))];
+                        if (on)
+                        {
+                            next.Add(each);
+                        }
+
+                        doc.Apply("Music playlist", st => st.WithScenario(x => x.WithMusic(next.Select(p => new ResourceRef(p)))));
+                    }, inGrid: false);
+                    if (!missing)
+                    {
+                        Forms.Button(line, "▶", () =>
+                        {
+                            if (screen.Preview.Play(doc.State.Export(each)) is { } why)
+                            {
+                                screen.Status(why);
+                            }
+                        });
+                        Forms.Button(line, "■", screen.Preview.Stop);
+                    }
+
+                    body.AddChild(line);
+                }
             }
 
             Rebuild();

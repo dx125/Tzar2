@@ -589,8 +589,12 @@ public partial class TriggerWindow : Window
         Forms.Heading(box, "Search and replace object references");
         int from = 0, to = 0;
         GridContainer sr = Forms.Grid(box);
-        Forms.Number(sr, "Replace object #", from, 0, 1 << 20, v => from = v);
-        Forms.Number(sr, "with object #", to, 0, 1 << 20, v => to = v);
+        SpinBox fromBox = Forms.Number(sr, "Replace object #", from, 0, 1 << 20, v => from = v);
+        SpinBox toBox = Forms.Number(sr, "with object #", to, 0, 1 << 20, v => to = v);
+        var picks = new HBoxContainer();
+        Pickers.PickObject(picks, _screen, id => fromBox.Value = from = id, "Pick the old on map");
+        Pickers.PickObject(picks, _screen, id => toBox.Value = to = id, "Pick the new on map");
+        box.AddChild(picks);
         Forms.Button(box, "Replace in all triggers", () =>
         {
             int replaced = 0;

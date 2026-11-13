@@ -43,11 +43,17 @@ public sealed class SchemaForm
             object? value = f.Get(record);
             switch (f.Kind)
             {
-                case FieldKind.Text or FieldKind.TypeKey or FieldKind.Order:
+                case FieldKind.Text:
                     Forms.Text(g, f.Name, (string?)value ?? string.Empty, v => Set(v));
                     break;
+                case FieldKind.TypeKey:
+                    Pickers.TypeKey(g, f.Name, (string?)value ?? string.Empty, _screen, v => Set(v));
+                    break;
+                case FieldKind.Order:
+                    Pickers.Suggest(g, f.Name, (string?)value ?? string.Empty, TriggerSchema.OrderKeys, v => Set(v));
+                    break;
                 case FieldKind.MapName:
-                    Forms.Text(g, f.Name + " (map name)", (string?)value ?? string.Empty, v => Set(v));
+                    Pickers.Suggest(g, f.Name + " (map name)", (string?)value ?? string.Empty, TriggerSchema.MapNames(_screen.CampaignContext?.Campaign), v => Set(v));
                     break;
                 case FieldKind.LongText:
                     Forms.Multiline(g, f.Name, (string?)value ?? string.Empty, v => Set(v));
@@ -240,6 +246,7 @@ public sealed class SchemaForm
                 commit(_screen.Controller.Selection[0]);
             }
         });
+        Pickers.PickObject(row, _screen, commit);
         Forms.Label(row, id >= 0 && Doc.State.Find(id) is { } o ? o.Label : "(none)");
         g.AddChild(row);
     }
@@ -278,6 +285,7 @@ public sealed class SchemaForm
                 Forms.Enum(inner, "All / Any", n.Quantifier, q => commit(n with { Quantifier = q }));
                 var row = new HBoxContainer();
                 Forms.Button(row, "Use selection", () => commit(n with { ObjectIndices = EquatableArray<int>.From(_screen.Controller.Selection) }));
+                Pickers.PickObject(row, _screen, id => commit(n with { ObjectIndices = EquatableArray<int>.From(n.ObjectIndices.Items.Contains(id) ? n.ObjectIndices.Items : [.. n.ObjectIndices.Items, id]) }), "Add from map");
                 Forms.Button(row, "Select them", () => _screen.Controller.Select(n.ObjectIndices.Items));
                 if (Doc.State.Extras.Groups.Length > 0)
                 {
@@ -302,7 +310,7 @@ public sealed class SchemaForm
                 inner.AddChild(row);
                 break;
             case TypedObjects t:
-                Forms.Text(inner, "Type key", t.TypeKey, v => commit(t with { TypeKey = v }));
+                Pickers.TypeKey(inner, "Type key", t.TypeKey, _screen, v => commit(t with { TypeKey = v }));
                 Players(inner, "Players", t.Players, v => commit(t with { Players = v }));
                 Forms.Enum(inner, "Count is", t.Comparison, v => commit(t with { Comparison = v }));
                 Forms.Number(inner, "Count", t.Count, 0, 100_000, v => commit(t with { Count = v }));
@@ -375,17 +383,7 @@ public sealed class SchemaForm
     }
 
     private void Resource(Node g, string label, ResourceRef? current, AssetKind kind, Action<ResourceRef?> commit)
-    {
-        string[] paths = ["(none)", .. Doc.State.Of(kind)];
-        int selected = current is null ? 0 : Array.IndexOf(paths, current.Path);
-        if (selected < 0)
-        {
-            paths = [.. paths, current!.Path + " (missing)"];
-            selected = paths.Length - 1;
-        }
-
-        Forms.Choice(g, label, paths, selected, i => commit(i == 0 ? null : new ResourceRef(paths[i].Replace(" (missing)", string.Empty, StringComparison.Ordinal))));
-    }
+        => Pickers.Asset(g, label, Doc, kind, current?.Path, commit, _screen.Preview);
 
     private static void Index(Node g, string label, int current, string[] names, Func<int, bool>? filter, Action<int> commit)
     {

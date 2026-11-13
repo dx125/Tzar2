@@ -26,8 +26,11 @@ public partial class GoalWizard : ConfirmationDialog
     private int _amount = 1000;
     private string _next = string.Empty;
 
-    /// <summary>Opens the wizard over <paramref name="document"/>; <paramref name="objectId"/> is the selected object, or -1.</summary>
-    public GoalWizard(MapDocument document, int objectId, string objectLabel)
+    /// <summary>
+    /// Opens the wizard over <paramref name="document"/>; <paramref name="objectId"/> is the selected object, or -1;
+    /// <paramref name="campaignMaps"/> the names the next map may take.
+    /// </summary>
+    public GoalWizard(MapDocument document, int objectId, string objectLabel, System.Collections.Generic.IReadOnlyList<string>? campaignMaps = null)
     {
         ArgumentNullException.ThrowIfNull(document);
         _document = document;
@@ -46,7 +49,7 @@ public partial class GoalWizard : ConfirmationDialog
         Forms.Number(g, "Minutes", _minutes, 1, 600, v => _minutes = v);
         Forms.Choice(g, "Resource", MissionGoals.Resources, 0, i => _resource = i);
         Forms.Number(g, "Amount", _amount, 1, 1_000_000, v => _amount = v);
-        Forms.Text(g, "Next campaign map", _next, v => _next = v);
+        Pickers.Suggest(g, "Next campaign map", _next, campaignMaps ?? [], v => _next = v); // ADR 0291: the campaign's maps
         Forms.Label(box, "The goal becomes ordinary rules (\"Goal N ...\") to edit in the rule editor.").AutowrapMode = TextServer.AutowrapMode.WordSmart;
         AddChild(box);
         Confirmed += Add;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using Tzar2.Content.Compiled.Scenario;
 using Tzar2.Content.Compiled.Scenario.Expressions;
 
@@ -209,6 +210,35 @@ public static class TriggerSchema
         Kind<DelayAction>("delay", "Delay", n => new DelayAction(n, 1000), Ms<DelayAction>("Time", a => a.TimeMs, (a, v) => a with { TimeMs = v })),
         Kind<UnknownAction>("unknown", "Unknown (legacy)", n => new UnknownAction(n, -1, EquatableArray<byte>.Empty), F<UnknownAction>("Legacy record", FieldKind.Raw, a => a.LegacyCode, (a, _) => a)),
     ];
+
+    /// <summary>
+    /// The order keys Object Order tells apart (ADR 0130, UNK-57), offered by the order field (ADR 0291): an attack (on an
+    /// object area, that object), a patrol, a stop, the unit's right click on an object, and a move (any other key).
+    /// </summary>
+    public static ImmutableArray<string> OrderKeys { get; } = ["move", "attack", "patrol", "stop", "default"];
+
+    /// <summary>
+    /// The map names a next-map field offers (ADR 0291): the names of the campaign's maps, in campaign order, or none
+    /// outside a campaign.
+    /// </summary>
+    public static ImmutableArray<string> MapNames(CampaignDocument? campaign)
+    {
+        if (campaign is null)
+        {
+            return [];
+        }
+
+        var b = ImmutableArray.CreateBuilder<string>();
+        foreach (CampaignEntry m in campaign.State.Maps)
+        {
+            if (m.MapName.Length > 0 && !b.Contains(m.MapName, StringComparer.OrdinalIgnoreCase))
+            {
+                b.Add(m.MapName);
+            }
+        }
+
+        return b.ToImmutable();
+    }
 
     /// <summary>The page of an event.</summary>
     public static TriggerKind Of(EventDef e) => Find(Events, e);
