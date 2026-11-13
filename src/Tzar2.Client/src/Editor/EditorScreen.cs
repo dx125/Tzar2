@@ -280,6 +280,9 @@ public partial class EditorScreen : Control
         }
     }
 
+    /// <summary>The prefab library dock (ADR 0292).</summary>
+    public PrefabPanel Prefabs => _prefabs;
+
     /// <summary>Plays and shows the map's own resources (ADR 0291).</summary>
     public AssetPreview Preview { get; } = new();
 
