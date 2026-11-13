@@ -22,6 +22,9 @@ public sealed partial class MovementSystem
     /// <summary>Ticks a unit waits behind one entering its next tile before it goes round (the original: 10 × 250 ms).</summary>
     public const int CellWaitMs = 2500;
 
+    /// <summary>How often a unit waiting behind one on the move looks again whether it may step on (the original: 250 ms).</summary>
+    public const int CellWaitCheckMs = 250;
+
     /// <summary>How far (tiles) a unit looks for its way round the units in its way.</summary>
     public const int DetourRadius = 12;
 
@@ -360,10 +363,18 @@ public sealed partial class MovementSystem
         // WORLD-022: the next step is the first of the shortest way toward where the unit heads, round the units that stand
         // (idle, at work, fighting, held up, or of an enemy), through those walking on at a cost; searched again at every
         // tile, so a unit led into a pocket walks out of it and round, instead of stepping back in toward its point (the
-        // ninth play-test: units stuck in half-closed pockets). A unit held up a while searches only every few ticks.
-        bool due = s.Stood < DetourEvery || (s.Waits > 0 && s.Waits < CellWaitMs / tickMs) || (tick + i) % DetourEvery == 0;
+        // ninth play-test: units stuck in half-closed pockets). A unit held up a while searches only every few ticks; one
+        // waiting behind a unit on the move looks again every CellWaitCheckMs, as the original's (ReTzar 0x4dec92).
+        bool waiting = s.Waits > 0 && s.Waits < CellWaitMs / tickMs;
+        bool due = waiting ? s.Waits % Math.Max(1, CellWaitCheckMs / tickMs) == 0 : s.Stood < DetourEvery || (tick + i) % DetourEvery == 0;
         if (!due)
         {
+            if (waiting)
+            {
+                s.Waits++;
+                return -1;
+            }
+
             return Held(layer, f, i, ref m, ref s, here, goal, blocker: 0);
         }
 
