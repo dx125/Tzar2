@@ -475,13 +475,16 @@ public sealed class EditorController
     public string CopySelection() => ObjectClipboard.Copy(Document.State, Selection);
 
     /// <summary>Pastes clipboard text at the hovered tile; returns how many objects were placed.</summary>
-    public int Paste(string text)
+    public int Paste(string text) => PasteAt(text, Hover.TileX, Hover.TileY);
+
+    /// <summary>Pastes clipboard text (or a prefab, ADR 0292) with its first object at a tile; returns how many objects were placed.</summary>
+    public int PasteAt(string text, int tileX, int tileY, string label = "Paste")
     {
         ArgumentNullException.ThrowIfNull(text);
         ImmutableArray<int> pasted = [];
         try
         {
-            Document.Apply("Paste", s => ObjectClipboard.Paste(s, text, Hover.TileX, Hover.TileY, Document.Width, Document.Height, new Occupancy(Document, Ruleset), out pasted));
+            Document.Apply(label, s => ObjectClipboard.Paste(s, text, tileX, tileY, Document.Width, Document.Height, new Occupancy(Document, Ruleset), out pasted));
         }
         catch (FormatException e)
         {

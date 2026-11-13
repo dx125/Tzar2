@@ -6,9 +6,9 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-11-13 (item 26.9, the rest of the editor review's section 3, batch 1: values picked instead
-  of typed, recent files, a playtest saved as a file; ADR 0291). Before: 2026-11-11 (item 26.8, the editor's helpers;
-  ADR 0290). The decision log below has the earlier updates.
+* **Last updated:** 2026-11-13 (item 26.9, the rest of the editor review's section 3, batch 2: arrows in the campaign
+  graph, a prefab library, fair starts, maps built from one half; ADR 0292). Before: 2026-11-13 (batch 1, ADR 0291),
+  2026-11-11 (item 26.8, ADR 0290). The decision log below has the earlier updates.
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -74,7 +74,7 @@ and it has not been re-run since the handover.
 | M2 Sim core & movement | **Done** | Determinism matrix green on CI; ORIG-01/02/03 tests; B3/B4 within budget (ADR 0026). |
 | M3 Classic gameplay & skirmish | **In progress** | Skirmish vs. Hard AI on all six map types (PR #36). Hotkey parity checklist complete by its own rules ([hotkey-parity.md](mechanics/hotkey-parity.md): 12 bindings blocked on features). The fidelity gate moved to M8 (ADR 0174). Three play-tests by the owner are done and their findings fixed (2026-10-20/21). Open before M3 closes: the ledger of the original's rules ([rules/](rules/README.md)) and its missing rules (work queue 1), and a fourth play-test. |
 | M4 Triggers & campaigns | **In progress** | Converter: all 33 original maps and both campaigns convert (reported). Original campaigns completable: main campaign **19 of 19 measured** (2026-10-22, `t2 campaign run --survey` on the clean GOG install, ADRs 0134, 0220; every map with cheat assistance, none by pure play), tutorial **7 of 7 measured** (2026-10-22). Earlier counts were inflated by AI resignations (ADR 0220). ≥ 90 % of the community corpus converts: **no corpus yet**. Open format unknowns UNK-70…80 need the TzarEdit diff session. |
-| M5 Editor | **Code complete**, acceptance open; the review's sections 1 to 3 done, its last proposals in progress (work queue 26.9) | Parity checklist 110 of 113 done, 3 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` done (26 of 26 missions, run on the owner's PC with every simulation change), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
+| M5 Editor | **Code complete**, acceptance open; the review's sections 1 to 3 done, its last proposals in progress (work queue 26.9) | Parity checklist 113 of 116 done, 3 blocked ([editor-parity.md](mechanics/editor-parity.md)); §18.6 acceptance: `acc-original` done (26 of 26 missions, run on the owner's PC with every simulation change), `acc-fx` still needs a local run with the FX campaigns and a community campaign (`TZAR2_FX_CAMPAIGNS`, `TZAR2_CORPUS`), ADR 0156. |
 | M6 Multiplayer & replays | **Done** (exit criteria met 2026-10-22) | Relay/lobby, lockstep sessions, drop policy, reconnect, desync reports, replays, MP saves and the MP UI (ADRs 0160–0168, 0230, 0231). **500-match soak: 500 of 500 ok, 0 desyncs, 0 failures** (2026-10-22, macOS, `t2 soak --matches 500 --parallel 10 --seed 62`: 2 bots + 2 Hard AIs, 6,000 ticks at 4x, RTT 200 ms, jitter 10 ms, 5 % loss; 251 disconnects and 251 rejoins, 138 after an AI takeover; 749 replays re-simulated; 3.0 M ticks; 65.6 min). Replays recorded on Linux verify on Windows, Linux and macOS (CI `replay-verify`, same final hashes); the nightly 20-match slice passes on Linux and Windows. Matches are 5 minutes, not two hours (ADR 0167). Since the exit: the multiplayer setup (colours, AI scripts, every map and game option; ADR 0232), custom maps in multiplayer with time and score limits (ADRs 0233, 0234; SHELL-018), and the multiplayer menu, lobby and replays on the original's art and font (UI review). |
 | M7 Windows beta | **In progress** | Plan: ADR 0240 (D1–D7). Done: the Windows package (Godot headless export, portable zip, Inno Setup installer, version stamp, uninstall keeps the player's data; ADR 0241), first-run import in the client, the signing step (skipped without secrets; ADR 0242), opt-in crash reports over the Sentry protocol (ADR 0243), the S2 render bench `--bench-render` (D6, ADR 0244; first run on an M5 MacBook at 1080p: 120 FPS, sim p99 14.8 ms above the 12 ms budget, VRAM 3.1 GB). The code review cut the client's memory (terrain tile atlas, ADR 0210; caches and atlas pages freed after a match; a match loaded on a worker thread). The owner's PC (2026-10-23, [min-spec-tuning.md § Results](release/min-spec-tuning.md#results)): S2 passes at 2560 × 1440 (about 1,680 FPS, sim p99 6.8 ms, VRAM 0.33 GB, RAM 2.3 GB, match load 2 s); the headless sim p99 is at most 4.8 ms with 1 to 8 workers; the first-run import takes 10.4 s. Open: the 10-minute skirmish of request 2 (owner), the crash server and the signing certificate (owner), the closed beta (D7). Exit: crash-free ≥ 99.5 %, S2, no P0/P1. |
 | M8 Modding, polish, release | Not started | Also the **fidelity suite ≥ 80 %** (moved from M3, ADR 0174): **10 of 30 (33.3 %)** today, see below. |
@@ -582,8 +582,9 @@ owner's order of 2026-10-26.
        * 1 - **done**: values picked instead of typed (the map's resources with a thumbnail or a play button, types
          from the palette, orders, next maps, objects and points clicked on the map), File → Open recent, and a
          playtest saved as a `.t2play` and watched again on the map as it was played (ADR 0291; log below);
-       * 2 - the campaign graph's arrows make transitions, a prefab library with ready villages, camps and walls, a
-         fair-starts check for multiplayer maps;
+       * 2 - **done**: arrows in the campaign graph make a victory or a defeat lead to a map and the map's page
+         retargets or cuts them; a prefab library (ready-made groups from the ruleset's traits, and the player's own);
+         a fair-starts check for multiplayer maps; a map built from one half, mirrored or turned (ADR 0292; log below);
        * 3 - actions beyond the original's, marked so: patrols along waypoints, waves of reinforcements, a camera
          along points for cut scenes.
 
@@ -592,6 +593,13 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-13 — Campaign arrows, a prefab library, fair starts and maps built from one half (ADR 0292; item 26.9,
+  batch 2).**
+  * **Arrows:** drawn in the campaign graph, they send the map's endings, or add a goal or a defeat rule, to the target.
+  * **Prefabs:** a village, a walled yard, a watch post, a war band and a mining camp built from the ruleset's traits
+    for any civilization, and the player's own in the user folder.
+  * **Fair starts:** each start's walk to gold, stone and wood, and which starts reach one another.
+  * **One half:** mirrored or turned onto the other, partner kingdoms changing places.
 * **2026-11-13 — Fix: snapshots of campaign maps with prisoners or with a computer left without AI restore again.** The
   restore check of a kingdom's flags did not know the rescue flags (ADR 0275, since #272) or the AI halves (ADR 0288,
   since #291). Saving, loading and rewinding such a campaign map failed with "invalid player flags". Found by the

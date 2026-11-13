@@ -189,9 +189,17 @@ public static class EditorSmoke
         }
 
         // Campaign editor: two maps, saved, reopened, byte-identical.
+        // A prefab of the library placed on the map, and the fair-starts check (ADR 0292).
+        int before = screen.Document.State.Objects.Count;
+        Require(screen.Prefabs.Prefabs.Count > 0 && screen.Prefabs.PlaceAt(0, 24, 30) > 0 && screen.Document.State.Objects.Count > before, "a prefab is placed");
+        FairnessReport fairness = screen.ShowFairStarts();
+        await Frame(host);
+
         CampaignWindow campaignWindow = screen.OpenCampaignEditor(CampaignDocument.New("Smoke saga"));
-        campaignWindow.Campaign.AddMap(screen.Document, entry: true);
-        campaignWindow.Campaign.AddMap(NewMap.Empty(new NewMapOptions("Second", 32, screen.Document.TerrainSet), screen.RulesFor(screen.Document.TerrainSet), rules));
+        string firstMap = campaignWindow.Campaign.AddMap(screen.Document, entry: true);
+        string secondMap = campaignWindow.Campaign.AddMap(NewMap.Empty(new NewMapOptions("Second", 32, screen.Document.TerrainSet), screen.RulesFor(screen.Document.TerrainSet), rules));
+        campaignWindow.Link(firstMap, secondMap, Content.Compiled.Scenario.CampaignEdgeKind.Win);
+        Require(campaignWindow.Campaign.Build().Edges.Any(e => e.FromMapId == firstMap && e.ToMapId == secondMap), "an arrow in the graph makes a transition");
         await Frame(host);
         await Frame(host);
         await Shot(host, "5-campaign");
@@ -201,7 +209,7 @@ public static class EditorSmoke
         Require(campaignWindow.OpenFile(campaignPath), "campaign reopened");
         Require(CampaignPackage.Write(campaignWindow.Campaign).AsSpan().SequenceEqual(campaignBytes), "campaign round trip");
         campaignWindow.QueueFree();
-        string notes = play + $" campaign={campaignBytes.Length} typed={typed.Length}";
+        string notes = play + $" campaign={campaignBytes.Length} typed={typed.Length} starts={fairness.Starts.Length}";
         Require(File.ReadAllText(Path.Combine(ProjectSettings.GlobalizePath("user://"), RecentFiles.FileName)).Contains("smoke.t2camp", StringComparison.Ordinal), "the recent files keep what was saved");
         if (ImportPath is { } legacy)
         {
