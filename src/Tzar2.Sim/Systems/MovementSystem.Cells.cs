@@ -74,7 +74,7 @@ public sealed partial class MovementSystem
     private readonly List<int> _tilesSet = [];
 
     // The search for a way round.
-    private readonly MinHeap _open = new();
+    private readonly PackedMinHeap _open = new();
     private int[] _seen = [];
     private int[] _cost = [];
     private int[] _from = [];
