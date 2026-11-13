@@ -49,6 +49,12 @@ public sealed partial class MovementSystem
     /// </summary>
     public const int RerouteNodes = 8192;
 
+    /// <summary>
+    /// Most tiles the check that such a search can end nowhere (its goal shut in by units and the ground) floods back from
+    /// the goal before the search is made.
+    /// </summary>
+    public const int ShutInTiles = 512;
+
     /// <summary>Most such searches in a tick; the units after wait for the next (a crowd held up at once costs less).</summary>
     public const int ReroutesPerTick = 4;
 
@@ -75,6 +81,7 @@ public sealed partial class MovementSystem
     private int _search;
     private int _reroutes;
     private readonly List<int> _way = [];
+    private readonly List<int> _flood = [];
     private int[] _wayPoints = [];
 
     private static readonly int[] StepX = [1, 1, 0, -1, -1, -1, 0, 1];
@@ -601,7 +608,7 @@ public sealed partial class MovementSystem
         _reroutes++;
         s.Rerouted |= flag;
         UnitRule rule = everyUnit ? UnitRule.Every : UnitRule.Through;
-        if (Walled(world, layer, f, i, here, goal, rule))
+        if (ShutIn(world, layer, f, i, here, goal, rule))
         {
             return -1; // the search could not end anywhere: spare it the whole map
         }
@@ -651,44 +658,98 @@ public sealed partial class MovementSystem
         return _way[^1];
     }
 
-    // Whether no tile a search toward `aim` could end on can be entered: `aim` itself when no other unit stands there,
-    // else every tile next to it (and it), other than `here`, is not walkable or a unit's that is a wall to `rule`.
-    private bool Walled(World world, NavLayer layer, Frame f, int i, int here, int aim, UnitRule rule)
+    // Whether a search from `here` toward `aim`, the units' tiles as `rule` says, cannot end anywhere: the tiles it could
+    // end on (`aim`, or those next to it when another unit stands there) and every tile from which the unit could walk to
+    // one of them are fewer than ShutInTiles, and `here` is not next to any (a flood back from them over the tiles such a
+    // search may enter). Such a search over the whole map would look at RerouteNodes tiles and find nothing.
+    private bool ShutIn(World world, NavLayer layer, Frame f, int i, int here, int aim, UnitRule rule)
     {
-        if (_tileUnit[aim] == 0 || _tileUnit[aim] - 1 == i)
+        int width = layer.Width;
+        int height = layer.Height;
+        ReadOnlySpan<byte> walkable = layer.Walkable;
+        bool corners = layer.CutsCorners;
+        _search++;
+        if (_search == int.MaxValue)
         {
-            return !layer.IsWalkable(aim);
+            Array.Clear(_seen);
+            _search = 1;
         }
 
-        int width = layer.Width;
+        _flood.Clear();
+        int reach = _tileUnit[aim] != 0 && _tileUnit[aim] - 1 != i ? 1 : 0;
         int ax = aim % width;
         int ay = aim / width;
-        for (int dy = -1; dy <= 1; dy++)
+        for (int y = Math.Max(0, ay - reach); y <= Math.Min(height - 1, ay + reach); y++)
         {
-            for (int dx = -1; dx <= 1; dx++)
+            for (int x = Math.Max(0, ax - reach); x <= Math.Min(width - 1, ax + reach); x++)
             {
-                int x = ax + dx;
-                int y = ay + dy;
-                if (!layer.IsWalkable(x, y))
-                {
-                    continue;
-                }
-
                 int t = (y * width) + x;
-                if (t == here)
+                if (t != here && Enterable(world, layer, f, i, here, t, rule))
+                {
+                    _seen[t] = _search;
+                    _flood.Add(t);
+                }
+            }
+        }
+
+        for (int head = 0; head < _flood.Count; head++)
+        {
+            if (_flood.Count > ShutInTiles)
+            {
+                return false;
+            }
+
+            int t = _flood[head];
+            int tx = t % width;
+            int ty = t / width;
+            for (int d = 0; d < 8; d++)
+            {
+                int nx = tx + StepX[d];
+                int ny = ty + StepY[d];
+                if ((uint)nx >= (uint)width || (uint)ny >= (uint)height)
                 {
                     continue;
                 }
 
-                int k = _tileUnit[t] - 1;
-                if (k < 0 || k == i || (rule != UnitRule.Every && !Holds(world, f, i, k)))
+                // A step between the two tiles (either way: the corners are the same).
+                int n = (ny * width) + nx;
+                if (walkable[n] == 0 || ((d & 1) != 0 && !corners && (walkable[(ty * width) + nx] == 0 || walkable[(ny * width) + tx] == 0)))
+                {
+                    continue;
+                }
+
+                if (n == here)
                 {
                     return false;
+                }
+
+                if (_seen[n] != _search && Enterable(world, layer, f, i, here, n, rule))
+                {
+                    _seen[n] = _search;
+                    _flood.Add(n);
                 }
             }
         }
 
         return true;
+    }
+
+    // Whether a search for unit i (on `here`) with the units' tiles as `rule` says may step onto tile t (not `here`):
+    // walkable, not the tile of a unit that is a wall to it, and no gate bars it (whichever tile the step comes from).
+    private bool Enterable(World world, NavLayer layer, Frame f, int i, int here, int t, UnitRule rule)
+    {
+        if (!layer.IsWalkable(t))
+        {
+            return false;
+        }
+
+        int k = _tileUnit[t] - 1;
+        if (k >= 0 && k != i && (rule == UnitRule.Every || Holds(world, f, i, k)))
+        {
+            return false;
+        }
+
+        return !world.HasGateBars || !Barred(world, layer, f.Owner[i], here, t);
     }
 
     // WORLD-022: the unit's next step, the first of the shortest way toward where it heads (the goal when it is near), round
