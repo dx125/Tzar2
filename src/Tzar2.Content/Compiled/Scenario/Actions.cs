@@ -195,6 +195,41 @@ public sealed record UnlockViewAction(string Name) : ActionDef(Name);
 /// <param name="TimeMs">Delay.</param>
 public sealed record DelayAction(string Name, int TimeMs) : ActionDef(Name);
 
+/// <summary>
+/// Tzar2's own action, not the original's (ADR 0293): the objects walk a route of points one after another, fighting the
+/// enemies they meet on the way (an attack move), and start again from the first point when <see cref="Loop"/>. Running
+/// it again for a unit gives it the new route.
+/// </summary>
+/// <param name="Name">Action name.</param>
+/// <param name="Objects">The patrolling objects.</param>
+/// <param name="Points">The route's points (an area's centre, or an object followed where it stands).</param>
+/// <param name="Loop">Walks the route again and again; else the objects stop at its last point.</param>
+public sealed record PatrolRouteAction(string Name, ObjectSpec Objects, EquatableArray<AreaSpec> Points, bool Loop) : ActionDef(Name);
+
+/// <summary>
+/// Tzar2's own action, not the original's (ADR 0293): waves of reinforcements. <see cref="Count"/> objects of a type
+/// appear in an area for an owner at once and then every <see cref="IntervalMs"/>, <see cref="Waves"/> times in all;
+/// with a <see cref="Target"/> each wave marches there, fighting what it meets.
+/// </summary>
+/// <param name="Name">Action name.</param>
+/// <param name="TypeKey">Entity type key.</param>
+/// <param name="Owner">Owner kingdom 1–8, or 0 for Nature.</param>
+/// <param name="Count">Objects per wave.</param>
+/// <param name="Area">Where they appear.</param>
+/// <param name="Waves">How many waves.</param>
+/// <param name="IntervalMs">Game time between two waves.</param>
+/// <param name="Target">Where each wave marches, or null to stay.</param>
+public sealed record ReinforcementWavesAction(string Name, string TypeKey, int Owner, int Count, AreaSpec Area, int Waves, int IntervalMs, AreaSpec? Target) : ActionDef(Name);
+
+/// <summary>
+/// Tzar2's own action, not the original's (ADR 0293): a camera move for a cut scene. The view glides from point to point,
+/// <see cref="LegMs"/> for each, and the player cannot scroll meanwhile. Presentation only: the match is not changed.
+/// </summary>
+/// <param name="Name">Action name.</param>
+/// <param name="Points">The points the view passes (an area's centre, or an object where it stands then).</param>
+/// <param name="LegMs">Time from one point to the next.</param>
+public sealed record CameraPathAction(string Name, EquatableArray<AreaSpec> Points, int LegMs) : ActionDef(Name);
+
 /// <summary>An action kind the converter does not understand; kept so nothing is lost silently. Does nothing.</summary>
 /// <param name="Name">Action name.</param>
 /// <param name="LegacyCode">The legacy type code.</param>

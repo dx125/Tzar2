@@ -388,6 +388,24 @@ public static class MapValidator
                     case UnknownAction u:
                         Add(ValidationSeverity.Warning, "action.unknown", F($"Action '{a.Name}' has a legacy type ({u.LegacyCode}) the engine does not understand; it does nothing."), at);
                         break;
+                    case ReinforcementWavesAction x when _rules is not null && _rules.EntityTypeId(x.TypeKey) < 0:
+                        Add(ValidationSeverity.Warning, "action.type", $"'{a.Name}' sends '{x.TypeKey}', which the ruleset does not define.", at);
+                        break;
+                    case ReinforcementWavesAction { Waves: < 1 } or ReinforcementWavesAction { Count: < 1 }:
+                        Add(ValidationSeverity.Warning, "action.waves", $"'{a.Name}' sends nobody: give it at least one wave of one.", at);
+                        break;
+                    case PatrolRouteAction { Points.Length: 0 }:
+                        Add(ValidationSeverity.Warning, "action.route", $"'{a.Name}' has no points to walk.", at);
+                        break;
+                    case CameraPathAction { Points.Length: 0 }:
+                        Add(ValidationSeverity.Warning, "action.route", $"'{a.Name}' has no points to show.", at);
+                        break;
+                }
+
+                // Tzar2's own actions (ADR 0293): the map plays in Tzar2 only.
+                if (TriggerSchema.IsOwn(a))
+                {
+                    Add(ValidationSeverity.Info, "action.own", $"'{a.Name}' is Tzar2's own action: the original game cannot play this map.", at);
                 }
 
                 Resources(a, at);

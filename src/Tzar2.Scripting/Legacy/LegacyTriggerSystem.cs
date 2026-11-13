@@ -203,6 +203,11 @@ public sealed partial class LegacyTriggerSystem : ISimSystem, IWorldStateExtensi
             RunDelayed(tickMs);
         }
 
+        if (_state.Patrols.Count > 0 || _state.Waves.Count > 0)
+        {
+            RunOwnActions(tickMs); // Tzar2's own actions (ADR 0293)
+        }
+
         if (_state.PassRule < 0)
         {
             bool due = _state.ClockMs >= _options.IntervalMs;

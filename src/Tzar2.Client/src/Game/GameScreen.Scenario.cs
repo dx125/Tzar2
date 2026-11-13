@@ -25,6 +25,8 @@ public partial class GameScreen
     private ConversationDialog? _talk;
     private double _viewLockedUntil;
     private bool _storyPause;
+    private readonly Queue<(int X, int Y, double Seconds)> _cameraPath = new();
+    private (int FromX, int FromY, int ToX, int ToY, double Start, double Seconds)? _glide;
 
     /// <summary>Captures the match for SAVE GAME with a label (set by the app for the games it can continue; null: none, as in multiplayer).</summary>
     public System.Func<string, SaveGame>? CaptureSave { get; set; }
@@ -144,6 +146,7 @@ public partial class GameScreen
         }
 
         _notices.Clear();
+        UpdateCameraPath();
         if (_open is null && _modal.Count > 0)
         {
             ShowModal(_modal.Dequeue());
@@ -200,14 +203,50 @@ public partial class GameScreen
             case ScenarioNoticeKind.ScrollView:
                 CenterOn(n.X, n.Y);
                 break;
+            case ScenarioNoticeKind.CameraPoint:
+                _cameraPath.Enqueue((n.X, n.Y, Math.Max(0.05, n.DurationMs / 1000.0)));
+                break;
             case ScenarioNoticeKind.MapRequested:
                 MapRequested?.Invoke(n);
                 break;
         }
     }
 
-    // Lock View holds the camera (scrolling is ignored until it runs out or Unlock View).
-    private bool ViewLocked => _viewLockedUntil > _now;
+    // Lock View holds the camera (scrolling is ignored until it runs out or Unlock View), and so does a camera path.
+    private bool ViewLocked => _viewLockedUntil > _now || _glide is not null || _cameraPath.Count > 0;
+
+    // Camera Path (Tzar2's own action, ADR 0293): the view glides to each point in turn, easing in and out.
+    private void UpdateCameraPath()
+    {
+        if (_glide is null && _cameraPath.Count > 0 && _hud is not null)
+        {
+            Vector2I view = _hud.Layout.View.Size;
+            int fromX = (_pan.X + (view.X / 2)) * WorldRenderer.UnitsPerPixel;
+            int fromY = (_pan.Y + (view.Y / 2)) * WorldRenderer.UnitsPerPixel;
+            (int x, int y, double seconds) = _cameraPath.Dequeue();
+            _glide = (fromX, fromY, x, y, _now, seconds);
+        }
+
+        if (_glide is not { } g)
+        {
+            return;
+        }
+
+        double t = Math.Clamp((_now - g.Start) / g.Seconds, 0, 1);
+        double eased = t * t * (3 - (2 * t));
+        CenterOn((int)(g.FromX + ((g.ToX - g.FromX) * eased)), (int)(g.FromY + ((g.ToY - g.FromY) * eased)));
+        if (t >= 1)
+        {
+            _glide = null;
+        }
+    }
+
+    // A rewind (ADR 0285) drops a camera path under way.
+    private void ForgetCameraPath()
+    {
+        _cameraPath.Clear();
+        _glide = null;
+    }
 
     // A picture the scenario names: the map's own (ADR 0284), else one of the package's.
     private Texture2D? UserImage(string? path)

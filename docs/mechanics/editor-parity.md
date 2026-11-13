@@ -25,7 +25,7 @@ Status:
 <!-- summary:start -->
 | | Items | Done | Blocked | Planned |
 |---|---|---|---|---|
-| All | 116 | 113 | 3 | 0 |
+| All | 117 | 114 | 3 | 0 |
 
 Parity: **97 %** done.
 <!-- summary:end -->
@@ -177,6 +177,7 @@ Parity: **97 %** done.
 | m-prefab-library | Prefab library: ready-made groups and the player's own | done | MapToolTests.The_ready_made_prefabs_are_built_from_traits_and_paste_whole_on_open_land, MapToolTests.A_prefab_goes_to_the_chosen_kingdom_and_nature_keeps_its_own, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | the Prefabs dock: a village, a walled yard, a watch post, a war band and a mining camp from the ruleset's traits, and the user folder `prefabs` (ADR 0292) |
 | m-fair-starts | Fair-starts check for multiplayer maps | done | MapToolTests.The_fair_starts_check_measures_each_starts_walk_to_the_resources, MapToolTests.Water_between_the_starts_and_a_missing_resource_are_findings, Client:The_editor_edits_validates_saves_and_reopens_a_map_headless | each start's walk to gold, stone and wood and the starts it reaches (ADR 0292) |
 | m-mirror | A map built from one half, mirrored or turned | done | MapToolTests.A_map_built_from_its_left_half_gives_the_partner_kingdom_the_mirrored_start | terrain, decorations, objects and starts; partner kingdoms change places (ADR 0292) |
+| m-own-actions | Actions beyond the original's, marked so: patrols along waypoints, waves of reinforcements, a camera along points | done | OwnActionTests.A_patrol_walks_its_route_again_and_again, OwnActionTests.Reinforcement_waves_come_on_time_and_march_to_their_target, OwnActionTests.A_match_with_patrols_and_waves_rewinds_and_plays_on_exactly, OwnActionTests.A_camera_path_tells_the_presentation_its_points_in_order, OwnActionTests.The_own_actions_save_reopen_and_are_marked_as_not_the_originals | Patrol Route, Reinforcement Waves and Camera Path, titled "(Tzar2's own)" and noted by the validator: the original cannot play such a map (ADR 0293) |
 | m-transforms | Multi-select transforms | done | ToolTests.Multi_select_transforms |  |
 | m-layers | Layers with lock/hide | done | ToolTests.Layers_hide_and_lock, ControllerTests.Copy_paste_through_text_and_locked_layers_are_not_selectable |  |
 | m-lua | Lua script editor: highlighting, API completion, inline errors | blocked | TriggerEditorTests.Lua_scripts_are_stored_and_checked, UserLibraryTests.The_validator_warns_that_lua_scripts_do_not_run | scripts/*.lua are stored, highlighted and syntax-checked (strings, comments, brackets, blocks); the tab and the validator (`script.notrun`) warn that the game does not run them yet (ADR 0286); API auto-complete and host diagnostics need the Lua host and API v1, which TDD §25 schedules for M8 |

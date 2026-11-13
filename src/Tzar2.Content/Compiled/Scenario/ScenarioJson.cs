@@ -276,6 +276,26 @@ public static class ScenarioJson
         private void Area(string name, AreaSpec area)
         {
             w.WriteStartObject(name);
+            AreaBody(area);
+            w.WriteEndObject();
+        }
+
+        // A list of areas (the routes and camera paths of Tzar2's own actions, ADR 0293).
+        private void Areas(string name, EquatableArray<AreaSpec> areas)
+        {
+            w.WriteStartArray(name);
+            foreach (AreaSpec a in areas.Items)
+            {
+                w.WriteStartObject();
+                AreaBody(a);
+                w.WriteEndObject();
+            }
+
+            w.WriteEndArray();
+        }
+
+        private void AreaBody(AreaSpec area)
+        {
             switch (area)
             {
                 case RectArea r:
@@ -293,8 +313,6 @@ public static class ScenarioJson
                 default:
                     throw new ArgumentException($"Unknown area {area.GetType().Name}.");
             }
-
-            w.WriteEndObject();
         }
 
         private void Event(EventDef e)
@@ -499,6 +517,31 @@ public static class ScenarioJson
                 case DelayAction x:
                     w.WriteString("kind", "delay");
                     w.WriteNumber("time", x.TimeMs);
+                    break;
+                case PatrolRouteAction x:
+                    w.WriteString("kind", "patrolRoute");
+                    Objects("objects", x.Objects);
+                    Areas("points", x.Points);
+                    w.WriteBoolean("loop", x.Loop);
+                    break;
+                case ReinforcementWavesAction x:
+                    w.WriteString("kind", "reinforcementWaves");
+                    w.WriteString("type", x.TypeKey);
+                    w.WriteNumber("owner", x.Owner);
+                    w.WriteNumber("count", x.Count);
+                    Area("area", x.Area);
+                    w.WriteNumber("waves", x.Waves);
+                    w.WriteNumber("interval", x.IntervalMs);
+                    if (x.Target is { } target)
+                    {
+                        Area("target", target);
+                    }
+
+                    break;
+                case CameraPathAction x:
+                    w.WriteString("kind", "cameraPath");
+                    Areas("points", x.Points);
+                    w.WriteNumber("leg", x.LegMs);
                     break;
                 case UnknownAction x:
                     w.WriteString("kind", "unknown");
@@ -746,9 +789,24 @@ public static class ScenarioJson
             };
         }
 
-        private static AreaSpec Area(JsonElement parent, string name)
+        private static AreaSpec Area(JsonElement parent, string name) => AreaOf(parent.GetProperty(name));
+
+        private static AreaSpec? OptionalArea(JsonElement parent, string name)
+            => parent.TryGetProperty(name, out JsonElement e) && e.ValueKind == JsonValueKind.Object ? AreaOf(e) : null;
+
+        private static EquatableArray<AreaSpec> Areas(JsonElement parent, string name)
         {
-            JsonElement e = parent.GetProperty(name);
+            var list = new List<AreaSpec>();
+            foreach (JsonElement e in parent.GetProperty(name).EnumerateArray())
+            {
+                list.Add(AreaOf(e));
+            }
+
+            return EquatableArray<AreaSpec>.From(list);
+        }
+
+        private static AreaSpec AreaOf(JsonElement e)
+        {
             return Str(e, "kind") switch
             {
                 "rect" => new RectArea(Int(e, "left"), Int(e, "top"), Int(e, "right"), Int(e, "bottom")),
@@ -808,6 +866,9 @@ public static class ScenarioJson
                 "stopTimer" => new StopTimerAction(n, Int(e, "timer")),
                 "unlockView" => new UnlockViewAction(n),
                 "delay" => new DelayAction(n, Int(e, "time")),
+                "patrolRoute" => new PatrolRouteAction(n, Objects(e, "objects"), Areas(e, "points"), Bool(e, "loop")),
+                "reinforcementWaves" => new ReinforcementWavesAction(n, Str(e, "type"), Int(e, "owner"), Int(e, "count"), Area(e, "area"), Int(e, "waves"), Int(e, "interval"), OptionalArea(e, "target")),
+                "cameraPath" => new CameraPathAction(n, Areas(e, "points"), Int(e, "leg")),
                 "unknown" => new UnknownAction(n, Int(e, "code"), ImmutableArray.Create(e.GetProperty("raw").GetBytesFromBase64())),
                 string k => throw new JsonException($"unknown action kind '{k}'"),
             };

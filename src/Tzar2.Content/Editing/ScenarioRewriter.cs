@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Collections.Immutable;
 using Tzar2.Content.Compiled.Scenario;
 
@@ -359,6 +360,9 @@ public static class ScenarioRewriter
             ScrollViewAction x => x with { From = Area(x.From), To = Area(x.To) },
             SpawnObjectAction x => x with { Area = Area(x.Area) },
             SetObjectPropertiesAction x => x with { Objects = Spec(x.Objects) },
+            PatrolRouteAction x => x with { Objects = Spec(x.Objects), Points = EquatableArray<AreaSpec>.From(x.Points.Items.Select(Area)) },
+            ReinforcementWavesAction x => x with { Area = Area(x.Area), Target = x.Target is { } t ? Area(t) : null },
+            CameraPathAction x => x with { Points = EquatableArray<AreaSpec>.From(x.Points.Items.Select(Area)) },
             _ => a,
         };
     }
