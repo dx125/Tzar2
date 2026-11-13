@@ -196,3 +196,4 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0290](0290-the-editors-helpers-playability-goals-history-and-uses.md) | The editor's helpers: playability check, mission goal wizard, trigger history and "where used" | Accepted | 2026-11-11 |
 | [0291](0291-the-editors-pickers-recent-files-and-playtest-recordings.md) | The editor's pickers, recent files and playtest recordings | Accepted | 2026-11-13 |
 | [0292](0292-campaign-arrows-prefab-library-fair-starts-and-mirrored-maps.md) | Campaign arrows, a prefab library, fair starts and maps built from one half | Accepted | 2026-11-13 |
+| [0293](0293-the-editors-own-actions-patrols-waves-and-camera-paths.md) | Tzar2's own trigger actions: patrol routes, reinforcement waves, camera paths | Accepted | 2026-11-13 |

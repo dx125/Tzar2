@@ -36,9 +36,10 @@ public class TriggerEditorTests
         Assert.Equal(Concrete<EventDef>().OrderBy(t => t.Name), TriggerSchema.Events.Select(k => k.RecordType).OrderBy(t => t.Name));
         Assert.Equal(Concrete<ActionDef>().OrderBy(t => t.Name), TriggerSchema.Actions.Select(k => k.RecordType).OrderBy(t => t.Name));
 
-        // Appendix C: 8 events and 27 actions, plus the undocumented Delay and the kept unknown kinds.
+        // Appendix C: 8 events and 27 actions, plus the undocumented Delay, the kept unknown kinds and Tzar2's own (ADR 0293).
         Assert.Equal(8, TriggerSchema.Events.Count(k => k.RecordType != typeof(UnknownEvent)));
-        Assert.Equal(27, TriggerSchema.Actions.Count(k => k.RecordType != typeof(UnknownAction) && k.RecordType != typeof(DelayAction)));
+        Assert.Equal(27, TriggerSchema.Actions.Count(k => k.RecordType != typeof(UnknownAction) && k.RecordType != typeof(DelayAction) && !k.Title.EndsWith(TriggerSchema.OwnMark, StringComparison.Ordinal)));
+        Assert.Equal(3, TriggerSchema.Actions.Count(k => k.Title.EndsWith(TriggerSchema.OwnMark, StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -74,7 +75,8 @@ public class TriggerEditorTests
         FieldKind.Boolean => !(bool)current!,
         FieldKind.Players => (ushort)5,
         FieldKind.Objects or FieldKind.OptionalObjects => new TypedObjects("euro.knight", 1, CountComparison.AtLeast, 2, Quantifier.Any),
-        FieldKind.Area => new RectArea(1, 2, 3, 4),
+        FieldKind.Area or FieldKind.OptionalArea => new RectArea(1, 2, 3, 4),
+        FieldKind.Points => EquatableArray<AreaSpec>.From([new RectArea(1, 2, 1, 2), new ObjectArea(3)]),
         FieldKind.Expression => ScenarioModel.Source("$x > 1"),
         FieldKind.Image or FieldKind.Sound or FieldKind.Music => new ResourceRef("user/a.png"),
         FieldKind.Stance => Stance.Ally,
