@@ -158,6 +158,24 @@ The rows were re-recorded on main 1eb6df4 from 16 probe runs (each the median of
 The s2 rows are kept. The 9V74's slow hosts remain a source of s2 flakes; its rows may need the 9V45's looser
 tolerances if they recur.
 
+**2026-11-13, the cell pass made cheaper; no row re-recorded.** The nightly failed on gameplay every day from 10-29:
+on the EPYC 7763, p50 2.66 ms (10-28) became 3.46 ms after the way round units (#262, WORLD-021), 5.8 ms after the way
+round every unit (#267), and 6.7 ms by 11-13; p99 rose to 14.2 ms, over the 12 ms budget, and the ai p99 failed too.
+The time was all in movement's `cells` section: the step search of WORLD-022 (#269) ran about 250 times a tick, 380 of
+every 600 searches for units waiting behind one on the move (each searched again every tick for up to 2.5 s), and
+whole-map searches spent their 8,192 tiles and found a way 2% of the time. The fix (locally, `cells` p50 2.8 →
+0.95 ms, tick p50 3.7 → 2.2 ms):
+
+* searches with the same results and fewer lookups (cheap tests first, a flag per unit for "keeps its tile", a packed
+  heap with the same order), and a whole-map search skipped when a small flood back from its goal proves it can end
+  nowhere; these keep every hash;
+* a waiting unit looks again every 250 ms, as the original's ten looks (WORLD-020), not every 50 ms tick; this one
+  moves the gameplay and ai hashes.
+
+Four probe nightlies on the EPYC 7763: gameplay normalized p50 3.06-3.19 ms (limit 3.235), p99 10.2-10.7 ms; ai p99
+2.1-2.2 ms. The rows are kept: what remains over the old ones (+4-8%) is the step search the ninth play-test asked
+for. One probe failed s2 p50 by 0.5% and one the ai p50 by 2%, as nightlies did before 10-29 (10-26, 10-27).
+
 ## Alternatives considered
 
 * **Keep the order flood as the gate:** it measures a load no match produces (each player re-ordering 16 units 20
