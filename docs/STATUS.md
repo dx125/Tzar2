@@ -6,9 +6,9 @@ whenever a milestone criterion, the work queue or the decision log changes.** Ho
 [DEVELOPMENT.md](DEVELOPMENT.md). The specification: [TDD.md](TDD.md). Why things are the way they are: the ADRs,
 indexed in [decisions/README.md](decisions/README.md).
 
-* **Last updated:** 2026-11-13 (item 26.9, the rest of the editor review's section 3, batch 3: Tzar2's own trigger
-  actions, patrol routes, reinforcement waves and camera paths; ADR 0293). Before: 2026-11-13 (batches 1 and 2, ADRs
-  0291, 0292), 2026-11-11 (item 26.8, ADR 0290). The decision log below has the earlier updates.
+* **Last updated:** 2026-11-13 (the nightly benchmark passes again: the cell pass made cheaper, ADR 0080 history).
+  Before: 2026-11-13 (item 26.9, the rest of the editor review's section 3, ADRs 0291-0293), 2026-11-11 (item 26.8,
+  ADR 0290). The decision log below has the earlier updates.
 * **Maintainer:** handed over on 2026-10-22 to the next agent ([Handover](#handover-2026-10-22) below); while it is
   paused, Claude maintains the repository with the owner (from 2026-10-23). The product owner also operates the
   Windows PC with the original game for captures and local-only tests.
@@ -596,6 +596,11 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-13 — The nightly benchmark passes again: the cell pass made cheaper (ADR 0080 history).** Gameplay had
+  failed every night since 10-29 (EPYC 7763 tick p50 2.7 → 6.7 ms, p99 over the 12 ms budget) after the ways round
+  units (#262, #267, #269). Same-result search changes, whole-map searches skipped when their goal is shut in, and a
+  waiting unit looking again every 250 ms as the original's (WORLD-020; gameplay and ai hashes re-pinned). Probes:
+  p50 3.06-3.19 ms normalized against the 3.235 limit, p99 about 10.5 ms. The rows are kept.
 * **2026-11-13 — Tzar2's own trigger actions: patrol routes, reinforcement waves, camera paths (ADR 0293; item 26.9,
   batch 3).** Titled "(Tzar2's own)" in the rule editor and noted by the validator, since the original cannot play
   them. The patrols and waves still running live in the trigger state (version 5, written only when used); a test

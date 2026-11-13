@@ -143,6 +143,9 @@ public sealed partial class World
     /// <summary>Whether a kingdom builds, trains and researches at once (<c>hmbuildozer</c>, GAME-19).</summary>
     public bool BuildsInstantly(int player) => HasPlayer(player) && (_kingdoms[player].Cheats & CheatFlags.Buildozer) != 0;
 
+    /// <summary>Whether any tile may bar a step (open gates were recorded); when false, <see cref="GateBars"/> is false.</summary>
+    internal bool HasGateBars => _gateBars.Length != 0;
+
     /// <summary>
     /// Whether an open gate's passage at (<paramref name="toX"/>, <paramref name="toY"/>) bars a unit of
     /// <paramref name="owner"/> coming from (<paramref name="fromX"/>, <paramref name="fromY"/>): gates let only their owner and
