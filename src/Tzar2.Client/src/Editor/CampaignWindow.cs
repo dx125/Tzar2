@@ -119,6 +119,7 @@ public partial class CampaignWindow : Window
             _dirty = true;
         };
         _graph.EndNodeMove += SavePositions;
+        _graph.LinkRequested += AskLink;
         CloseRequested += () =>
         {
             if (_campaign.IsDirty)
@@ -296,6 +297,11 @@ public partial class CampaignWindow : Window
             Forms.Button(_details, "Edit this map in the editor", () => EditMap(id));
         }
 
+        if (_selected is { } from && _campaign.Find(from) is { } map)
+        {
+            Transitions(graph, map);
+        }
+
         Forms.Heading(_details, "Persistence (units carried by name)");
         foreach (System.Collections.Generic.KeyValuePair<string, System.Collections.Immutable.ImmutableArray<string>> p in graph.Persistent)
         {
@@ -312,6 +318,88 @@ public partial class CampaignWindow : Window
         foreach (ValidationIssue i in result.Issues.Where(i => i.Severity >= ValidationSeverity.Warning).Take(60))
         {
             Forms.Label(_details, $"[{i.Severity}] {i.Message}").AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        }
+    }
+
+    // ADR 0292: an arrow drawn in the graph asks whether the victory or the defeat leads there.
+    private void AskLink(string fromId, string toId)
+    {
+        if (_campaign.Find(fromId) is not { } from || _campaign.Find(toId) is not { } to)
+        {
+            return;
+        }
+
+        var menu = new PopupMenu();
+        menu.AddItem($"The victory in {from.MapName} leads to {to.MapName}", 0);
+        menu.AddItem($"The defeat in {from.MapName} leads to {to.MapName}", 1);
+        menu.IdPressed += id =>
+        {
+            Link(fromId, toId, id == 0 ? CampaignEdgeKind.Win : CampaignEdgeKind.Lose);
+            menu.QueueFree();
+        };
+        menu.PopupHide += () => menu.CallDeferred(Node.MethodName.QueueFree);
+        AddChild(menu);
+        menu.Position = (Vector2I)GetMousePosition(); // in this window's own viewport
+        menu.Popup();
+    }
+
+    /// <summary>Makes a map's victory or defeat lead to another map (ADR 0292); returns what was done.</summary>
+    public string Link(string fromId, string toId, CampaignEdgeKind kind)
+    {
+        string done;
+        try
+        {
+            done = CampaignTransitions.Link(_campaign, fromId, toId, kind);
+        }
+        catch (ArgumentException e)
+        {
+            done = e.Message;
+        }
+
+        _screen.Status(done);
+        _dirty = true;
+        return done;
+    }
+
+    // The selected map's transitions: each retargeted to another map, or cut (ADR 0292).
+    private void Transitions(CampaignGraph graph, CampaignEntry map)
+    {
+        Forms.Heading(_details, "Where this map leads");
+        string[] names = ["(nowhere: the campaign ends)", .. _campaign.State.Maps.Select(m => m.MapName)];
+        bool any = false;
+        foreach (CampaignEdge e in graph.Edges.Where(e => e.FromMapId == map.Id))
+        {
+            any = true;
+            int action = e.ActionIndex;
+            string kind = e.Kind switch { CampaignEdgeKind.Win => "Victory", CampaignEdgeKind.Lose => "Defeat", _ => "Load Map" };
+            string label = $"{kind} ({map.Document.State.Scenario.Actions[action].Name})";
+            int current = Array.FindIndex(names, n => string.Equals(n, e.ToMapName, StringComparison.OrdinalIgnoreCase));
+            GridContainer g = Forms.Grid(_details);
+            if (current < 0)
+            {
+                names = [.. names, e.ToMapName];
+                current = names.Length - 1;
+            }
+
+            string[] choices = names;
+            Forms.Choice(g, label, choices, current, i =>
+            {
+                try
+                {
+                    CampaignTransitions.Retarget(_campaign, map.Id, action, i == 0 ? null : choices[i]);
+                }
+                catch (ArgumentException ex)
+                {
+                    _screen.Status(ex.Message);
+                }
+
+                _dirty = true;
+            });
+        }
+
+        if (!any)
+        {
+            Forms.Label(_details, "Nowhere yet: draw an arrow from this map's right edge to another map.").AutowrapMode = TextServer.AutowrapMode.WordSmart;
         }
     }
 

@@ -17,7 +17,8 @@ public sealed record GraphMap(string Id, string Title, bool IsEntry, string? Pro
 /// <summary>
 /// The visual campaign graph (TDD §18.3, REQ-EDT-08): nodes = maps, edges = Load Map / Player Win / Player Lose
 /// transitions (coloured by kind), entry maps green, unreachable maps red, dangling transitions listed on their node.
-/// Nodes can be dragged; selecting one raises <see cref="MapSelected"/>.
+/// Nodes can be dragged; selecting one raises <see cref="MapSelected"/>; an arrow dragged from a map's right port to
+/// another map raises <see cref="LinkRequested"/> (ADR 0292).
 /// </summary>
 public partial class CampaignGraphView : GraphEdit
 {
@@ -33,7 +34,17 @@ public partial class CampaignGraphView : GraphEdit
         CustomMinimumSize = new Vector2(400, 300);
         RightDisconnects = false;
         NodeSelected += node => MapSelected?.Invoke(node.Name.ToString());
+        ConnectionRequest += (from, _, to, _) =>
+        {
+            if (from != to)
+            {
+                LinkRequested?.Invoke(from.ToString(), to.ToString());
+            }
+        };
     }
+
+    /// <summary>Raised when an arrow is drawn from one map to another: from map id, to map id (ADR 0292).</summary>
+    public event Action<string, string>? LinkRequested;
 
     /// <summary>Raised when a map node is selected.</summary>
     public event Action<string>? MapSelected;

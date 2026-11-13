@@ -40,6 +40,7 @@ public partial class EditorScreen : Control
     private readonly EditorAutosave _mapAutosave = new();
     private readonly EditorAutosave _campaignAutosave = new();
     private string _clipboard = string.Empty;
+    private PrefabPanel _prefabs = null!;
 
     /// <summary>Creates the editor over an opened package and its compiled ruleset.</summary>
     public EditorScreen(ContentStore store, Ruleset rules, PresentationCatalog? catalog, MapDocument? document = null, string? path = null)
@@ -137,6 +138,8 @@ public partial class EditorScreen : Control
         _right.AddChild(_locator);
         _right.AddChild(_validation);
         _right.AddChild(new LayersPanel(_controller.Layers, _view.Invalidate));
+        _prefabs = new PrefabPanel(this);
+        _right.AddChild(_prefabs);
         inner.AddChild(_right);
         layout.AddChild(_status);
 
@@ -587,8 +590,13 @@ public partial class EditorScreen : Control
         Item(edit, "Paste at the pointer (Ctrl+V)", () => _controller.Paste(_clipboard));
         Item(edit, "Delete selection (Del)", _controller.DeleteSelection);
         edit.AddSeparator();
-        Item(edit, "Save selection as prefab…", () => Files.Save(this, "prefab.t2prefab.json", path => File.WriteAllText(path, _controller.CopySelection())));
-        Item(edit, "Insert prefab at the pointer…", () => Files.Open(this, ["*.json ; Prefab"], paths => _controller.Paste(File.ReadAllText(paths[0])), many: false));
+        Item(edit, "Save selection as prefab…", () => Files.Save(this, "prefab" + PrefabLibrary.Extension, path =>
+        {
+            File.WriteAllText(path, ObjectClipboard.Copy(Document.State, _controller.Selection, PrefabLibrary.NameOf(path)));
+            _prefabs.Refresh();
+        }, ["*" + PrefabLibrary.Extension + " ; Tzar2 prefab"], Files.UserFolder(PrefabLibrary.Folder)));
+        Item(edit, "Insert prefab at the pointer…", () => Files.Open(this, ["*.json ; Prefab"], paths => _controller.Paste(File.ReadAllText(paths[0])), many: false, folder: Files.UserFolder(PrefabLibrary.Folder)));
+        Item(edit, "Prefab library", () => _right.CurrentTab = _prefabs.GetIndex());
 
         PopupMenu view = Menu(bar, "View");
         Item(view, "Toggle grid", () => _view.ShowGrid = !_view.ShowGrid);
@@ -602,6 +610,7 @@ public partial class EditorScreen : Control
         Item(map, "User resources…", () => Dialogs.Resources(this, Document, path => Tzar2.Import.Maps.PngEncoder.FromBmp(File.ReadAllBytes(path))));
         Item(map, "Custom sounds and music…", () => Dialogs.Sounds(this, Document));
         StudioMenu(map);
+        FairnessMenu(map);
         MapMenuExtras?.Invoke(map);
         TriggerMenus(bar);
         CampaignMenu(bar);
