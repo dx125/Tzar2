@@ -997,12 +997,17 @@ public sealed partial class World
     /// are checked while reading.
     /// </summary>
     /// <exception cref="System.IO.InvalidDataException">An invariant does not hold.</exception>
+    // Every flag a kingdom may carry. The rescue flags (ADR 0275) and the AI halves (ADR 0288) were missing here, so a
+    // snapshot of a campaign map with prisoners or with a computer whose map turns its AI off did not restore: its
+    // saves and rewinds failed. A test now keeps this list and the enum in step.
+    internal const PlayerFlags KnownPlayerFlags = PlayerFlags.Active | PlayerFlags.Defeated | PlayerFlags.Victorious | PlayerFlags.Resigned
+        | PlayerFlags.AiControlled | PlayerFlags.AssistEconomy | PlayerFlags.AssistWar | PlayerFlags.Rescue | PlayerFlags.NoRescue | PlayerFlags.AiHalves;
+
     internal void ValidateRestoredState()
     {
         foreach (PlayerState player in _players)
         {
-            if ((player.Flags & ~(PlayerFlags.Active | PlayerFlags.Defeated | PlayerFlags.Victorious | PlayerFlags.Resigned | PlayerFlags.AiControlled
-                    | PlayerFlags.AssistEconomy | PlayerFlags.AssistWar)) != 0
+            if ((player.Flags & ~KnownPlayerFlags) != 0
                 || (player.Flags & (PlayerFlags.Defeated | PlayerFlags.Victorious)) == (PlayerFlags.Defeated | PlayerFlags.Victorious))
             {
                 throw Invalid($"invalid player flags {player.Flags}");
