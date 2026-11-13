@@ -80,6 +80,12 @@ public enum FieldKind : byte
 
     /// <summary>The undecoded record of an unknown kind (read only).</summary>
     Raw,
+
+    /// <summary>A list of points, each an area's centre or an object (Tzar2's own actions, ADR 0293).</summary>
+    Points,
+
+    /// <summary>An area that may be left out (null).</summary>
+    OptionalArea,
 }
 
 /// <summary>One field of a property page.</summary>
@@ -208,6 +214,21 @@ public static class TriggerSchema
         Kind<StopTimerAction>("stopTimer", "Stop Timer", n => new StopTimerAction(n, -1), F<StopTimerAction>("Timer", FieldKind.TimerAction, a => a.SetTimerActionIndex, (a, v) => a with { SetTimerActionIndex = (int)v! })),
         Kind<UnlockViewAction>("unlockView", "Unlock View", n => new UnlockViewAction(n)),
         Kind<DelayAction>("delay", "Delay", n => new DelayAction(n, 1000), Ms<DelayAction>("Time", a => a.TimeMs, (a, v) => a with { TimeMs = v })),
+        Kind<PatrolRouteAction>("patrolRoute", OwnTitle("Patrol Route"), n => new PatrolRouteAction(n, NoObjects, EquatableArray<AreaSpec>.Empty, true),
+            Objects<PatrolRouteAction>(a => a.Objects, (a, v) => a with { Objects = v }),
+            F<PatrolRouteAction>("Points", FieldKind.Points, a => a.Points, (a, v) => a with { Points = (EquatableArray<AreaSpec>)v! }),
+            Bool<PatrolRouteAction>("Again and again", a => a.Loop, (a, v) => a with { Loop = v })),
+        Kind<ReinforcementWavesAction>("reinforcementWaves", OwnTitle("Reinforcement Waves"), n => new ReinforcementWavesAction(n, string.Empty, 2, 5, NoArea, 3, 60_000, null),
+            F<ReinforcementWavesAction>("Type", FieldKind.TypeKey, a => a.TypeKey, (a, v) => a with { TypeKey = (string)v! }),
+            F<ReinforcementWavesAction>("Owner", FieldKind.Owner, a => a.Owner, (a, v) => a with { Owner = (int)v! }),
+            F<ReinforcementWavesAction>("Per wave", FieldKind.Integer, a => a.Count, (a, v) => a with { Count = (int)v! }),
+            Area<ReinforcementWavesAction>("Appear in", a => a.Area, (a, v) => a with { Area = v }),
+            F<ReinforcementWavesAction>("Waves", FieldKind.Integer, a => a.Waves, (a, v) => a with { Waves = (int)v! }),
+            Ms<ReinforcementWavesAction>("Between waves", a => a.IntervalMs, (a, v) => a with { IntervalMs = v }),
+            F<ReinforcementWavesAction>("March to", FieldKind.OptionalArea, a => a.Target, (a, v) => a with { Target = (AreaSpec?)v })),
+        Kind<CameraPathAction>("cameraPath", OwnTitle("Camera Path"), n => new CameraPathAction(n, EquatableArray<AreaSpec>.Empty, 3000),
+            F<CameraPathAction>("Points", FieldKind.Points, a => a.Points, (a, v) => a with { Points = (EquatableArray<AreaSpec>)v! }),
+            Ms<CameraPathAction>("Time per leg", a => a.LegMs, (a, v) => a with { LegMs = v })),
         Kind<UnknownAction>("unknown", "Unknown (legacy)", n => new UnknownAction(n, -1, EquatableArray<byte>.Empty), F<UnknownAction>("Legacy record", FieldKind.Raw, a => a.LegacyCode, (a, _) => a)),
     ];
 
@@ -239,6 +260,14 @@ public static class TriggerSchema
 
         return b.ToImmutable();
     }
+
+    /// <summary>The mark of Tzar2's own actions, which the original does not have (ADR 0293).</summary>
+    public const string OwnMark = " (Tzar2's own)";
+
+    /// <summary>Whether an action is one of Tzar2's own, which the original cannot play (ADR 0293).</summary>
+    public static bool IsOwn(ActionDef action) => action is PatrolRouteAction or ReinforcementWavesAction or CameraPathAction;
+
+    private static string OwnTitle(string title) => title + OwnMark;
 
     /// <summary>The page of an event.</summary>
     public static TriggerKind Of(EventDef e) => Find(Events, e);

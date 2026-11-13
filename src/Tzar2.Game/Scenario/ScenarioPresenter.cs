@@ -44,6 +44,9 @@ public enum ScenarioNoticeKind : byte
 
     /// <summary>The scenario asked for the next campaign map (the campaign layer acts on it).</summary>
     MapRequested,
+
+    /// <summary>Camera Path (Tzar2's own action, ADR 0293): glide the camera to (X, Y) in <see cref="ScenarioNotice.DurationMs"/>, after the points before it.</summary>
+    CameraPoint,
 }
 
 /// <summary>
@@ -176,7 +179,7 @@ public sealed class ScenarioPresenter
 
     private ScenarioNotice? Translate(SimEvent e)
     {
-        bool local = (e.Player == 0xFF && (e.Kind is SimEventKind.ViewLocked or SimEventKind.ViewUnlocked or SimEventKind.ViewScrolled or SimEventKind.PhraseSaid or SimEventKind.ConversationEnded or SimEventKind.MapRequested))
+        bool local = (e.Player == 0xFF && (e.Kind is SimEventKind.ViewLocked or SimEventKind.ViewUnlocked or SimEventKind.ViewScrolled or SimEventKind.CameraPoint or SimEventKind.PhraseSaid or SimEventKind.ConversationEnded or SimEventKind.MapRequested))
             || ((uint)e.X & _localMask) != 0;
         switch (e.Kind)
         {
@@ -196,6 +199,8 @@ public sealed class ScenarioPresenter
                 return new ScenarioNotice(ScenarioNoticeKind.UnlockView, string.Empty, string.Empty, null, null, null, 0, false, 0, 0, true);
             case SimEventKind.ViewScrolled:
                 return new ScenarioNotice(ScenarioNoticeKind.ScrollView, string.Empty, string.Empty, null, null, null, 0, false, e.X, e.Y, true);
+            case SimEventKind.CameraPoint:
+                return new ScenarioNotice(ScenarioNoticeKind.CameraPoint, string.Empty, string.Empty, null, null, null, e.Arg, false, e.X, e.Y, true);
             case SimEventKind.PhraseSaid when Phrase(e.X, e.Y) is { } p:
                 return new ScenarioNotice(ScenarioNoticeKind.PhraseSaid, Speaker(p), p.Text, PhraseIcon(p), p.Sound?.Path, null, 0, false, 0, 0, true);
             case SimEventKind.ConversationEnded:

@@ -125,6 +125,15 @@ public sealed partial class LegacyTriggerSystem
             case KeepRuleAction:
             case DelayAction: // at the end of a list there is nothing to delay
                 break;
+            case PatrolRouteAction patrol:
+                StartPatrol(index, patrol);
+                break;
+            case ReinforcementWavesAction waves:
+                StartWaves(index, waves);
+                break;
+            case CameraPathAction camera:
+                CameraPath(camera);
+                break;
             case LoadMapAction:
                 RequestMap(index, 0);
                 break;
@@ -406,7 +415,7 @@ public sealed partial class LegacyTriggerSystem
 
     // Spawn Object: Count objects of the type for the owner (legacy 1-8; 0, 9 and 10 become Nature, UNVERIFIED), on the
     // area's free tiles from its centre outwards.
-    private void Spawn(SpawnObjectAction spawn)
+    private void Spawn(SpawnObjectAction spawn, List<EntityId>? spawned = null)
     {
         int type = _world.Ruleset.EntityTypeId(spawn.TypeKey);
         int owner = OwnerOf(spawn.Owner);
@@ -448,7 +457,8 @@ public sealed partial class LegacyTriggerSystem
 
                     if (t.HasFootprint ? PlacementQueries.CanPlace(_world, (ushort)type, tx, ty) : (!t.IsMobile || _world.Map.IsPassable(t.Locomotor, tx, ty)))
                     {
-                        _world.Spawn((ushort)type, owner, (tx * Tile) + (Tile / 2), (ty * Tile) + (Tile / 2));
+                        EntityId made = _world.Spawn((ushort)type, owner, (tx * Tile) + (Tile / 2), (ty * Tile) + (Tile / 2));
+                        spawned?.Add(made);
                         placed++;
                     }
                 }

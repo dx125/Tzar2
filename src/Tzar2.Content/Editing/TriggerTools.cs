@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
@@ -414,6 +415,9 @@ public static class ExtrasEdits
                 ObjectOrderAction x => x with { Area = A(x.Area) },
                 ScrollViewAction x => x with { From = A(x.From), To = A(x.To) },
                 SpawnObjectAction x => x with { Area = A(x.Area) },
+                PatrolRouteAction x => x with { Points = EquatableArray<AreaSpec>.From(x.Points.Items.Select(A)) },
+                ReinforcementWavesAction x => x with { Area = A(x.Area), Target = x.Target is { } t ? A(t) : null },
+                CameraPathAction x => x with { Points = EquatableArray<AreaSpec>.From(x.Points.Items.Select(A)) },
                 _ => a,
             });
         }
@@ -452,6 +456,7 @@ public static class ExtrasEdits
                 LockUnitsAction x => x with { Objects = S(x.Objects) },
                 ObjectOrderAction x => x with { Objects = S(x.Objects) },
                 SetObjectPropertiesAction x => x with { Objects = S(x.Objects) },
+                PatrolRouteAction x => x with { Objects = S(x.Objects) },
                 _ => a,
             });
         }

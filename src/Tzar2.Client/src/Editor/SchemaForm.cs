@@ -88,6 +88,12 @@ public sealed class SchemaForm
                 case FieldKind.Area:
                     Area(g, f.Name, (AreaSpec)value!, v => Set(v));
                     break;
+                case FieldKind.Points:
+                    Points(g, f.Name, (EquatableArray<AreaSpec>)value!, v => Set(v));
+                    break;
+                case FieldKind.OptionalArea:
+                    OptionalArea(g, f.Name, (AreaSpec?)value, v => Set(v));
+                    break;
                 case FieldKind.Expression:
                     Expression(g, f.Name, ((ExpressionDef)value!).Source, v => Set(ScenarioModel.Source(v)));
                     break;
@@ -377,6 +383,103 @@ public sealed class SchemaForm
         {
             ObjectId(inner, "Object", o.ObjectIndex, v => commit(o with { ObjectIndex = v }));
             Forms.Optional(inner, "Radius (tiles)", o.RadiusTiles, 0, 0, 64, v => commit(o with { RadiusTiles = v }));
+        }
+
+        g.AddChild(box);
+    }
+
+    // A route or a camera path (ADR 0293): points picked on the map, the selected object, or named areas.
+    private void Points(Node g, string label, EquatableArray<AreaSpec> points, Action<EquatableArray<AreaSpec>> commit)
+    {
+        Forms.Label(g, label);
+        var box = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        void With(Func<System.Collections.Generic.List<AreaSpec>, System.Collections.Generic.List<AreaSpec>> change) => commit(EquatableArray<AreaSpec>.From(change([.. points.Items])));
+        for (int i = 0; i < points.Length; i++)
+        {
+            int index = i;
+            AreaSpec p = points[i];
+            var row = new HBoxContainer();
+            string text = p switch
+            {
+                RectArea r when r.Left == r.Right && r.Top == r.Bottom => $"{i + 1}. tile ({r.Left}, {r.Top})",
+                RectArea r => $"{i + 1}. area ({r.Left}, {r.Top})–({r.Right}, {r.Bottom})",
+                ObjectArea o => $"{i + 1}. object {Doc.State.Find(o.ObjectIndex)?.Label ?? "#" + o.ObjectIndex.ToString(CultureInfo.InvariantCulture)}",
+                _ => $"{i + 1}.",
+            };
+            Forms.Label(row, text);
+            if (p is RectArea shown)
+            {
+                Forms.Button(row, "Show", () =>
+                {
+                    _screen.ShowArea(shown, label + " " + (index + 1).ToString(CultureInfo.InvariantCulture));
+                    _screen.View.CenterOnTile((shown.Left + shown.Right) / 2, (shown.Top + shown.Bottom) / 2);
+                });
+            }
+
+            Forms.Button(row, "Remove", () => With(l =>
+            {
+                l.RemoveAt(index);
+                return l;
+            }));
+            box.AddChild(row);
+        }
+
+        var add = new HFlowContainer();
+        Pickers.PickPoint(add, _screen, (x, y) => With(l =>
+        {
+            l.Add(new RectArea(x, y, x, y));
+            return l;
+        }), "Add a point on the map");
+        Forms.Button(add, "Add the selected object", () =>
+        {
+            if (!_screen.Controller.Selection.IsEmpty)
+            {
+                With(l =>
+                {
+                    l.Add(new ObjectArea(_screen.Controller.Selection[0]));
+                    return l;
+                });
+            }
+        });
+        if (Doc.State.Extras.Areas.Length > 0)
+        {
+            var named = new OptionButton();
+            named.AddItem("Add a named area…");
+            foreach (NamedArea a in Doc.State.Extras.Areas)
+            {
+                named.AddItem(a.Name);
+            }
+
+            named.ItemSelected += i =>
+            {
+                if (i > 0)
+                {
+                    With(l =>
+                    {
+                        l.Add(Doc.State.Extras.Areas[(int)i - 1].Area);
+                        return l;
+                    });
+                }
+            };
+            add.AddChild(named);
+        }
+
+        box.AddChild(add);
+        g.AddChild(box);
+    }
+
+    // An area that may be left out (a wave that stays where it appears, ADR 0293).
+    private void OptionalArea(Node g, string label, AreaSpec? area, Action<AreaSpec?> commit)
+    {
+        Forms.Label(g, label);
+        var box = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var on = new CheckBox { Text = "Set", ButtonPressed = area is not null };
+        on.Toggled += set => commit(set ? new RectArea(0, 0, 0, 0) : null);
+        box.AddChild(on);
+        if (area is not null)
+        {
+            GridContainer inner = Forms.Grid(box);
+            Area(inner, "Area", area, v => commit(v));
         }
 
         g.AddChild(box);

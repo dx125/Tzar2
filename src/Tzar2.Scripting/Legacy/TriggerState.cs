@@ -27,6 +27,18 @@ public struct TimerState
 /// <param name="RemainingMs">Game time left.</param>
 public readonly record struct DelayedActions(int Rule, int Next, long RemainingMs);
 
+/// <summary>A unit walking a patrol route (Tzar2's own action, ADR 0293).</summary>
+/// <param name="Entity">The unit (<c>EntityId.Value</c>).</param>
+/// <param name="Action">The Patrol Route action.</param>
+/// <param name="Next">The route point it walks to.</param>
+public readonly record struct PatrolState(uint Entity, int Action, int Next);
+
+/// <summary>A Reinforcement Waves action still sending (Tzar2's own action, ADR 0293).</summary>
+/// <param name="Action">The action.</param>
+/// <param name="WavesLeft">Waves still to come.</param>
+/// <param name="RemainingMs">Game time until the next.</param>
+public readonly record struct WaveState(int Action, int WavesLeft, long RemainingMs);
+
 /// <summary>The sizes of a scenario that bound and validate its runtime state.</summary>
 /// <param name="Variables">User variables.</param>
 /// <param name="Events">Event instances.</param>
@@ -171,6 +183,21 @@ public sealed class TriggerState
     /// <summary>Minutes <c>@settime</c> moved the day clock by (0-1439; SCN-011).</summary>
     public int ClockShiftMinutes { get; set; }
 
+    /// <summary>Units on patrol routes, in the order they were sent (ADR 0293).</summary>
+    public List<PatrolState> Patrols { get; } = [];
+
+    /// <summary>Reinforcement waves still to come, in the order they were started (ADR 0293).</summary>
+    public List<WaveState> Waves { get; } = [];
+
+    /// <summary>Most units on patrol routes.</summary>
+    public const int MaxPatrols = 4096;
+
+    /// <summary>Most running reinforcement wave actions.</summary>
+    public const int MaxWaves = 1024;
+
+    /// <summary>Most route points a patrol walks (larger routes wrap).</summary>
+    public const int MaxRoutePoints = 1024;
+
     /// <summary>Whether <paramref name="value"/> is locked.</summary>
     public bool IsLocked(uint value) => Locked.Count != 0 && Locked.BinarySearch(value) >= 0;
 
@@ -188,8 +215,10 @@ public sealed class TriggerState
         }
     }
 
-    // 3 adds the script switches and the selections (ADR 0287), 4 the god objects and the clock's shift (ADR 0288); a state
-    // without them is still written as the older version, byte for byte.
+    // 3 adds the script switches and the selections (ADR 0287), 4 the god objects and the clock's shift (ADR 0288), 5 the
+    // patrols and waves of Tzar2's own actions (ADR 0293); a state without them is still written as the older version,
+    // byte for byte.
+    private const byte VersionWithOwnActions = 5;
     private const byte Version = 4;
     private const byte VersionWithSwitches = 3;
     private const byte VersionWithoutSwitches = 2;
@@ -221,9 +250,10 @@ public sealed class TriggerState
     public void WriteTo(BinaryBufferWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
-        bool extended = HasGodsOrClock;
+        bool own = Patrols.Count > 0 || Waves.Count > 0;
+        bool extended = own || HasGodsOrClock;
         bool switches = extended || HasSwitches;
-        writer.WriteByte(extended ? Version : switches ? VersionWithSwitches : VersionWithoutSwitches);
+        writer.WriteByte(own ? VersionWithOwnActions : extended ? Version : switches ? VersionWithSwitches : VersionWithoutSwitches);
         writer.WriteVarUInt64((ulong)Variables.Length);
         foreach (int v in Variables)
         {
@@ -315,6 +345,25 @@ public sealed class TriggerState
 
             writer.WriteVarInt64(ClockShiftMinutes);
         }
+
+        if (own)
+        {
+            writer.WriteVarUInt64((ulong)Patrols.Count);
+            foreach (PatrolState p in Patrols)
+            {
+                writer.WriteVarUInt64(p.Entity);
+                writer.WriteVarInt64(p.Action);
+                writer.WriteVarInt64(p.Next);
+            }
+
+            writer.WriteVarUInt64((ulong)Waves.Count);
+            foreach (WaveState w in Waves)
+            {
+                writer.WriteVarInt64(w.Action);
+                writer.WriteVarInt64(w.WavesLeft);
+                writer.WriteVarInt64(w.RemainingMs);
+            }
+        }
     }
 
     /// <summary>Reads a state written by <see cref="WriteTo"/> for a scenario of <paramref name="shape"/>.</summary>
@@ -327,7 +376,7 @@ public sealed class TriggerState
         try
         {
             byte version = r.ReadByte();
-            if (version is not (Version or VersionWithSwitches or VersionWithoutSwitches))
+            if (version is not (VersionWithOwnActions or Version or VersionWithSwitches or VersionWithoutSwitches))
             {
                 throw new InvalidDataException("Unsupported trigger state version.");
             }
@@ -501,6 +550,41 @@ public sealed class TriggerState
                 }
 
                 s.ClockShiftMinutes = Int(r.ReadVarInt64(), 0, 1439, "clock shift");
+            }
+
+            if (version >= VersionWithOwnActions)
+            {
+                ulong patrols = r.ReadVarUInt64();
+                if (patrols > MaxPatrols)
+                {
+                    throw new InvalidDataException("Too many patrols.");
+                }
+
+                for (ulong i = 0; i < patrols; i++)
+                {
+                    uint e = UInt(r.ReadVarUInt64(), 1, "patrolling entity");
+                    int action = Int(r.ReadVarInt64(), 0, shape.Actions - 1, "patrol action");
+                    s.Patrols.Add(new PatrolState(e, action, Int(r.ReadVarInt64(), 0, MaxRoutePoints - 1, "patrol point")));
+                }
+
+                ulong waves = r.ReadVarUInt64();
+                if (waves > MaxWaves)
+                {
+                    throw new InvalidDataException("Too many reinforcement waves.");
+                }
+
+                for (ulong i = 0; i < waves; i++)
+                {
+                    int action = Int(r.ReadVarInt64(), 0, shape.Actions - 1, "wave action");
+                    int left = Int(r.ReadVarInt64(), 1, 1_000_000, "waves left");
+                    long remaining = r.ReadVarInt64();
+                    if (remaining < 0 || remaining > int.MaxValue)
+                    {
+                        throw new InvalidDataException("Wave time out of range.");
+                    }
+
+                    s.Waves.Add(new WaveState(action, left, remaining));
+                }
             }
             if (s.Conversation < 0 && (s.Candidates.Count != 0 || s.PendingReply >= 0))
             {

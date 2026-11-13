@@ -115,6 +115,7 @@ public partial class GameScreen
 
         _storyPause = false;
         _viewLockedUntil = 0;
+        ForgetCameraPath();
         _outcomeShown = false;
         _outcomeAt = -1;
         HeldOutcome = MatchOutcome.None;

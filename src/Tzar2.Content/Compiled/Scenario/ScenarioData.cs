@@ -253,6 +253,29 @@ public sealed class ScenarioData
                 case SpawnObjectAction x:
                     Area(x.Area, a.Name);
                     break;
+                case PatrolRouteAction x:
+                    Objects(x.Objects, a.Name);
+                    foreach (AreaSpec p in x.Points.Items)
+                    {
+                        Area(p, a.Name);
+                    }
+
+                    break;
+                case ReinforcementWavesAction x:
+                    Area(x.Area, a.Name);
+                    if (x.Target is { } target)
+                    {
+                        Area(target, a.Name);
+                    }
+
+                    break;
+                case CameraPathAction x:
+                    foreach (AreaSpec p in x.Points.Items)
+                    {
+                        Area(p, a.Name);
+                    }
+
+                    break;
                 case ExpressionAction x:
                     Expression(x.Expression, a.Name);
                     break;

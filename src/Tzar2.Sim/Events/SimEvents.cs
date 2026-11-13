@@ -171,6 +171,12 @@ public enum SimEventKind : ushort
 
     /// <summary>A scenario error (an action that could not run, the CPU budget, a guard): X = rule, Y = action, Arg = <c>ScenarioFault</c>.</summary>
     ScenarioFault = 72,
+
+    /// <summary>
+    /// Camera Path (Tzar2's own action, ADR 0293): the next point the view glides to, (X, Y) world units, in Arg ms. A path's
+    /// points come in one tick, in order; presentation only.
+    /// </summary>
+    CameraPoint = 73,
     // GAME-07…11 (ADRs 0090-0096): values 24-39.
 
     /// <summary>A projectile was fired (Entity = shooter, X, Y = where it is aimed, Arg = projectile id | flight ms &lt;&lt; 8).</summary>
