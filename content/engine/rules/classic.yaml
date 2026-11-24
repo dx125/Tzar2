@@ -25,7 +25,7 @@ ruleset:
   hudResources: [food, wood, stone, gold]   # GAME-01: iron exists in the data but not in the HUD (UNK-14)
   # ADR 0211: a kingdom's civilization is an index into this list. The playable civilizations in the original's race
   # order (its maps and triggers number them 1 European, 2 Arabian, 3 Asian; LegacyMap.Race, trigger variable Race),
-  # then the key of the types they all share. A fork adds a civilization here.
+  # then the key of the types they all share. A mod adds a civilization here.
   civilizations: [euro, arab, asia]
   commonCivilization: comm
 
@@ -190,7 +190,7 @@ world:
   hirePricePercent: 160
   hireGoldPerLevel: 30
   hireOtherPerLevel: 15
-  # The technologies these features need (the original's research names; a fork names its own or none).
+  # The technologies these features need (the original's research names; a mod names its own or none).
   mercenariesTechnology: te_mercenaries
   heroesTechnology: te_heroesquest
   fameTechnology: te_fame

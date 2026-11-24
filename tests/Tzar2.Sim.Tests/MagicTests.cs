@@ -690,15 +690,15 @@ public class MagicTests
     [Trait("Rule", "MAG-017")]
     public void The_crusade_gathering_pace_is_data()
     {
-        // Code review 2026-10 (item 16, for a fork): the steps were literals in MagicSystem. Classic keeps the original's.
+        // Code review 2026-10 (item 16, rules as data): the steps were literals in MagicSystem. Classic keeps the original's.
         Assert.Equal(
             [new CrusadeGatherStep(0, 12), new CrusadeGatherStep(15, 8), new CrusadeGatherStep(20, 4), new CrusadeGatherStep(30, 1)],
             Classic.Combat.CrusadeGather.ToArray());
         Assert.Equal(500, Classic.Combat.CrusaderArrivalMs);
 
-        // A fork gathers every 3 s: two cathedrals bring 4 more in 6 s instead of 24.
-        Ruleset fork = ClassicWith("combat: { crusadeGather: { 0: 3 } }");
-        using var d = new SimDriver(TestMap(40, 20, Structure("euro.cathedral", 0, 4, 4), Structure("euro.cathedral", 0, 4, 12)), ruleset: fork);
+        // A mod gathers every 3 s: two cathedrals bring 4 more in 6 s instead of 24.
+        Ruleset modded = ClassicWith("combat: { crusadeGather: { 0: 3 } }");
+        using var d = new SimDriver(TestMap(40, 20, Structure("euro.cathedral", 0, 4, 4), Structure("euro.cathedral", 0, 4, 12)), ruleset: modded);
         d.World.Players[0].Resources[Resource("gold")] = 5000;
         d.World.Players[0].Resources[Resource("food")] = 5000;
         EntityId cathedral = OfType(d.World, "euro.cathedral").First();

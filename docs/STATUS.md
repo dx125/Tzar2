@@ -25,7 +25,7 @@ queue below.
 
 1. The results of the owner's fifth play-test, when they come (work queue item 5): fix what it finds.
 2. The UI review (item 15): every screen at every modern resolution, and alike to the original.
-3. The codebase review (item 16): performance, resources and memory; modules loose enough for a fork.
+3. The codebase review (item 16): performance, resources and memory; modules loose enough for mods and another client.
 4. The rest of the work queue, and the ledger's open rules (`t2 rules list missing partial unclear`).
 
 **Where to look:**
@@ -246,8 +246,8 @@ owner's order of 2026-10-26.
       UI chain #135…#177 is merged; after the merge, 0 issues on all 22 displays). The likeness findings wait for the
       owner's screenshots. The diplomacy screen's shared victory check showed COMMON CHK's frames the wrong way round
       (red when offered); the model now picks the frame (HUD-012).
-16. **Maintainer (owner's order of 2026-10-22): a full code review for performance, resources and memory, and for a
-    fork.**
+16. **Maintainer (owner's order of 2026-10-22): a full code review for performance, resources and memory, and for
+    modularity.**
     * **Performance and resources:**
       * the sim tick budget (the B3/B4 benches, `AllocationTests`), allocations and GC on the hot paths;
       * asset loading: package import, sprite decoding, atlas packing at match start, textures loaded and never used,
@@ -257,8 +257,8 @@ owner's order of 2026-10-26.
         banks, save lists), threads ended.
 
       Measure with the existing benches and a long match (an hour, 4 AIs, a huge map), and record before and after.
-    * **For a fork.** The owner will fork the finished remake into a game with other rules, another design (perhaps
-      another engine), more races and more unit progression. So:
+    * **Modularity.** Mods and other rulesets may bring other rules, more races and more unit progression, and
+      another client, perhaps on another engine, may replace the Godot one. So:
       * rules and maths in data or in one place each (the YAML ruleset, `ModifierStat`s, the combat and economy
         formulas), never scattered constants;
       * modules loosely coupled: Sim, Content, Game, Client, AI, Scripting, Net. The architecture tests
@@ -313,7 +313,7 @@ owner's order of 2026-10-26.
       * 2026-10-23: the nightly bench gates compare calibration-normalized times and every gate runs after a failure
         (ADR 0080 amendment 1): four nights out of five had failed on slow runners, and b4, gameplay, ai and stress had
         gone unchecked on those nights.
-      * 2026-10-23: the review doc has the second "for a fork" sweep: a ranked list of nine findings, what #204, #205 and
+      * 2026-10-23: the review doc has the second "rules as data" sweep: a ranked list of nine findings, what #204, #205 and
         #211 did, and what remains (UI fallbacks, the client's per-civilization art, map builders by key, some caps).
 17. **Done (2026-10-23, ADR 0264):** the random map generator's items as
     the original makes them (ReTzar 0x4b5c50): spell books of a random spell with 1 to 5 charges, bows, shields and
@@ -596,6 +596,11 @@ owner's order of 2026-10-26.
 Newest first. Technical decisions have ADRs (index: [decisions/README.md](decisions/README.md)); this log also keeps
 the process decisions that have no ADR.
 
+* **2026-11-24 — The docs describe reuse in terms of mods, other rulesets and another client.** ADR 0182, the
+  2026-10 code review, ADRs 0211–0213, 0266 and 0292, STATUS, code comments and one test name say what the
+  core's modularity serves in those terms. ADR 0182's file is now
+  [0182-engine-free-core-original-content-and-ui-models.md](decisions/0182-engine-free-core-original-content-and-ui-models.md).
+  No rule, code path or hash changes.
 * **2026-11-13 — Tzar2's own trigger actions: patrol routes, reinforcement waves, camera paths (ADR 0293; item 26.9,
   batch 3).** Titled "(Tzar2's own)" in the rule editor and noted by the validator, since the original cannot play
   them. The patrols and waves still running live in the trigger state (version 5, written only when used); a test
@@ -1689,8 +1694,8 @@ the process decisions that have no ADR.
 * **2026-10-22 — Handover to the next agent.** The owner's order: finish, write down what is done, hand over. The
   [Handover](#handover-2026-10-22) section gives the scope, where to look and the owner's PC. The work queue gains the
   UI review (item 15: every modern resolution, likeness to the original's texts, fonts and buttons) and the code
-  review (item 16: performance, resources and memory; loose modules and editable rules for a fork with other rules,
-  design, races and progression). DEVELOPMENT.md gains the sources of knowledge about the original, ReTzar among them.
+  review (item 16: performance, resources and memory; loose modules and rules editable as data, for mods with other rules,
+  races and progression). DEVELOPMENT.md gains the sources of knowledge about the original, ReTzar among them.
 
 * **2026-10-22 — Gates and bridges take the cells of their pictures (ADR 0192).** As ReTzar reads the original: a gate
   is 7 × 1 across and 1 × 6 down (`gw0_anim`, `gw2_anim`), its door the three tiles in the middle, with four facings
@@ -2047,8 +2052,8 @@ the process decisions that have no ADR.
     is soft and capped. It becomes work-queue item 4.
   * **The owner's check, that every bonus of buildings and technologies applies**, becomes work-queue item 5.
 * **2026-10-21 — The core stays free of engines and of the original; UI logic moves into models (ADR 0182).**
-  * **Owner's question:** a new game on the same core, with new balance, units and civilizations, perhaps on a 3D
-    engine.
+  * **Owner's question:** how far the core stands apart from the original's content and from Godot, for mods with
+    new balance, units and civilizations and for another client, perhaps a 3D one.
   * **Answer:**
     * The core is ready: it uses no engine, the rules are data, and civilizations are strings.
     * About a thousand lines of game UI logic lived in the Godot client.
@@ -2057,7 +2062,7 @@ the process decisions that have no ADR.
     * The frame is shaped for 2D sprites.
   * **Done now:** the command card is an engine-free model, `Tzar2.Game.Ui.CommandCard`, tested by `CommandCardTests`.
     The client only draws it.
-  * **Deferred until a new game starts:** splitting the legacy importer into its own assembly, a trait for the
+  * **Deferred until a mod or another client needs it:** splitting the legacy importer into its own assembly, a trait for the
     kingdom's seat, AI civilizations as data, the frame's full heading, and the choice of host engine.
   * The work queue's ADR item is done.
 * **2026-10-21 — Every data file of the original is accounted for (ADR 0181, decision 5).**

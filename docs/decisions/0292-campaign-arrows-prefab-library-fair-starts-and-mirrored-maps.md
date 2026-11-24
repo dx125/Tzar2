@@ -55,7 +55,7 @@ The second batch of the editor review's section 3 proposals:
 
 * **Arrows that make a Load Map rule:** a Load Map needs a condition the arrow cannot know; victory and defeat are what
   maps end with.
-* **Ready-made prefabs as data files by type name:** they would break for another ruleset or a fork's civilizations;
+* **Ready-made prefabs as data files by type name:** they would break for another ruleset or a mod's civilizations;
   traits do not.
 * **Fairness by straight-line distance:** walls, water and cliffs make the walk what matters.
 

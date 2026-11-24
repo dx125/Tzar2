@@ -8,10 +8,10 @@ using Xunit;
 namespace Tzar2.Architecture.Tests;
 
 /// <summary>
-/// Code review 2026-10 (item 16, for a fork): which civilizations exist, which type is a kingdom's seat and what a type
+/// Code review 2026-10 (item 16, rules as data): which civilizations exist, which type is a kingdom's seat and what a type
 /// is called are the ruleset's (ADR 0211; <c>Ruleset.CanFoundKingdom</c>, the <c>Seat</c> trait). Code that spells a
 /// civilization key (<c>"euro"</c>, <c>"arab.castle"</c>), an original race name (<c>"European"</c>) or a type by its
-/// key suffix (<c>".castle"</c>, <c>".peon"</c>) is what a fork with a fourth civilization trips over.
+/// key suffix (<c>".castle"</c>, <c>".peon"</c>) is what a mod with a fourth civilization trips over.
 /// </summary>
 public class CivilizationKeyTests
 {
