@@ -22,9 +22,9 @@ public class CivilizationTests
         Assert.Equal(1, sim.World.Players[0].Civilization);
         Assert.Equal(0, sim.World.Players[1].Civilization);
 
-        // A fork that lists its own civilization first gives it to kingdoms without objects, and indexes shift with it.
-        using var fork = new Simulation(ClassicWith("ruleset: { civilizations: [elves, euro, arab, asia] }"), map, new SimulationConfig { PlayerCount = 2, MatchSeed = 3 });
-        Assert.Equal("arab", fork.World.PlayerCivilization(0));
-        Assert.Equal("elves", fork.World.PlayerCivilization(1));
+        // A mod that lists its own civilization first gives it to kingdoms without objects, and indexes shift with it.
+        using var modded = new Simulation(ClassicWith("ruleset: { civilizations: [elves, euro, arab, asia] }"), map, new SimulationConfig { PlayerCount = 2, MatchSeed = 3 });
+        Assert.Equal("arab", modded.World.PlayerCivilization(0));
+        Assert.Equal("elves", modded.World.PlayerCivilization(1));
     }
 }

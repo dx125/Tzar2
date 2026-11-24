@@ -1,10 +1,10 @@
-# Code review 2026-10: performance, resources and memory; readiness for a fork
+# Code review 2026-10: performance, resources and memory; rules as data
 
 Work queue item 16, the owner's order of 2026-10-22. It covers three things:
 
 * **Performance:** the sim's tick budget, asset loading, GPU and texture memory, and leaks.
-* **Fork readiness:** the owner will fork the finished remake into a game with other rules, another design, more races
-  and more unit progression.
+* **Rules as data:** mods and other rulesets may bring other rules, more races and more unit progression, and another
+  client may replace the Godot one.
 * **Module boundaries:** the coupling between the modules.
 
 The findings below are ranked by impact within each part. Each says what was measured, where it is, and what was done
@@ -165,7 +165,7 @@ taken 75 s into a run. The client was a Debug build on the same PC, 4,000 units 
      culture other than English (`C.UTF-8` on macOS): the fidelity analysis formats a number with the current
      culture.
 
-## Findings: readiness for a fork
+## Findings: rules as data
 
 1. **Civilizations are an index into the ordinally sorted list of the ruleset's `civ` keys** (`[arab, asia, comm, euro]`).
    There is no civilization definition. The order leaks:
@@ -197,8 +197,8 @@ taken 75 s into a run. The client was a Debug build on the same PC, 4,000 units 
    * the summon radius and the coast reach.
    * The AI's resource weights and wave sizes are C# option records.
    * Unit progression is global (one `combat:` block), with no per-class curve.
-   * **Proposed:** move them into the `combat:`, `gameplay:` and `ai:` blocks, and allow a curve per class for the
-     fork's progression.
+   * **Proposed:** move them into the `combat:`, `gameplay:` and `ai:` blocks, and allow a curve per class for a
+     mod's progression.
 5. **Technology effects are data-driven** (ADR 0191: `effects` in YAML, applied through `ModifierStat`); this part is
    ready. A new kind of effect needs a new `ModifierStat` and the code that reads it. `AbilityPower` is declared and
    never read.
@@ -260,21 +260,21 @@ twelve AI mutators and the client's namespaces. Its gaps:
 | #209 | `legacy.referenceDataHash` re-pinned; importer PRs run the `TZAR2_ORIGIN` tests after merging main | 5 local Import tests failing → 0 (bisect: #168 moved the hash unpinned, #133 and #139 pinned values from stale branches) |
 | #211 | `CivilizationKeyTests`: civilization keys and type-key suffixes only in a list of files that may only shrink | 20 files listed (see below) |
 
-## For a fork: the second sweep (2026-10-23)
+## Rules as data: the second sweep (2026-10-23)
 
 Sim, Game, AI and the client were searched for rules and formulas outside the ruleset and `ModifierStat`, for
 switches on class and unit names, for the civilization keys and race names, and for fixed lists of the three races.
-Ranked by how likely a fork hits them and how cheap the move is:
+Ranked by how likely a mod hits them and how cheap the move is:
 
 | # | Finding | Where | Status |
 |---|---|---|---|
 | 1 | Whether a civilization can found a kingdom was decided by a type named `"<civ>.castle"`, with `"euro"` as the fallback | `MatchSetup`, `CampaignPlay` (3), `DesyncReports` (2), `RenderBench`, client `GameApp` and render bench | **done** (#204, #211): `Ruleset.SeatTypeId`, `CanFoundKingdom`, `FirstKingdomCivilization`, `KingdomCivilizations`, read from the `Seat` trait |
 | 2 | Game rules written as literals next to settings that were already data | crusade gathering pace and arrival (`MagicSystem`), chase leash (`CombatSystem.LeashFactor`) | **done** (#205) |
-| 3 | Fallback lists `["euro", "arab", "asia"]` and the `"euro"` default where no ruleset is at hand | `SlotChoice.Default`, `RandomMapScreenModel`, `CustomMapScreenModel`, client `Screens` | checked 2026-10-23: the fallback applies only when a caller passes no list; every screen passes the ruleset's `KingdomCivilizations`, so a fork's own races reach them. Left as a last resort; pass the ruleset's `KingdomCivilizations` in, or resolve an empty key at the match (as #187 does for scenarios) |
+| 3 | Fallback lists `["euro", "arab", "asia"]` and the `"euro"` default where no ruleset is at hand | `SlotChoice.Default`, `RandomMapScreenModel`, `CustomMapScreenModel`, client `Screens` | checked 2026-10-23: the fallback applies only when a caller passes no list; every screen passes the ruleset's `KingdomCivilizations`, so a mod's own races reach them. Left as a last resort; pass the ruleset's `KingdomCivilizations` in, or resolve an empty key at the match (as #187 does for scenarios) |
 | 4 | The client's per-civilization art: sprite name suffix (`" e"`, `" r"`, `" a"`) and diplomacy race picture index | `PresentationCatalog`, `DiplomacyScreens` | remaining: a presentation field per civilization in the package manifest |
 | 5 | Map builders place `"<civ>.castle"` and `"<civ>.peon"` by key | `MapGenCatalog` templates, `SkirmishTestMap`, `AiSkirmishScenario`, the client smokes | remaining: the seat from `SeatTypeId`; the starting worker needs a trait (`Harvester` plus a "starting unit" flag) |
 | 6 | Test and demo scenarios spell `euro.*` types | `GameplayScenario` (Sim), `DemoCampaign`, `CampaignAutoplay` | left as is: fixtures for the classic ruleset; the ratchet keeps them from spreading |
-| 7 | Translators of the original's race names (`european`, `Arabian`, the help's E/R/A) | `AiParser`, `AiRulesetModel`, `ScenarioParts`, `OnlineHelp` | left as is: they read the original's files; a fork's own formats use keys |
+| 7 | Translators of the original's race names (`european`, `Arabian`, the help's E/R/A) | `AiParser`, `AiRulesetModel`, `ScenarioParts`, `OnlineHelp` | left as is: they read the original's files; a mod's own formats use keys |
 | 8 | Remaining numeric rules in Sim | the experience curve's shape, the cloak's one-hour bound (a restore bound), the bless, curse and potion caps, the summon radius and the coast reach | checked 2026-10-23: the experience step and the coast reach are data now (#225, #226). What is left is storage bounds (a curse takes at most 100 %, a bless fits its `short`, a potion's levels fit the experience counter) and the summon's free-spot search of 3 tiles, which is engine tuning like row 9. Left in code |
 | 9 | Engine cadences in Sim: chase and repath intervals, replan counts, search radii, shore crowding | `CombatSystem`, `MovementSystem`, `Shore`, `NavalSystem` | not rules (agreed with the coordinator): engine tuning, stays in code |
 
@@ -284,7 +284,7 @@ effects (`ModifierStat`).
 
 **Module boundaries, second look.** A read-only sweep found no leak that the architecture tests miss: project
 references, `Content.Compiled`, the client contract (ADR 0212), the AI's read-only views (ADR 0213), public mutable
-statics, the editor layers, and floats, the wall clock and `System.Random` in Sim, AI and Scripting. For a fork, the leak
+statics, the editor layers, and floats, the wall clock and `System.Random` in Sim, AI and Scripting. For a mod, the leak
 that matters is code that spells data. `CivilizationKeyTests` (#211) now keeps civilization keys, race names and
 `".castle"`/`".peon"` suffixes out of Sim, Game, AI and the client, except in 20 listed files (rows 3–7) whose counts
 may only go down.
@@ -300,7 +300,7 @@ Agreed with the coordinator (2026-10-22). Items 1–4 are done (#185, #187, #186
 1. **The client's view of the match (module boundaries 2–3).** `GameSession` stops handing out `Simulation` and `Ai`,
    and `GameFrame` stops naming `Sim.Kingdoms` types. The client reads only frames, UI models and commands. This gets an
    ADR, and the architecture test checks the public surface the client sees.
-2. **Civilizations everywhere (fork 2).**
+2. **Civilizations everywhere (rules as data 2).**
    * The scenario model's `Civilization` enum gives way to keys or indices into the ruleset's list (ADR 0211).
    * Map generation takes the ruleset's list. Random maps change, so the mapgen goldens are re-pinned with the reason.
 3. **The AI's read-only world (module boundaries 3).** `World.Players`, `World.Kingdoms` and
@@ -310,7 +310,7 @@ Agreed with the coordinator (2026-10-22). Items 1–4 are done (#185, #187, #186
 
 Not planned yet:
 
-* the rest of the formula constants in code (fork 4; second sweep rows 3–5 and 8);
+* the rest of the formula constants in code (rules as data 4; second sweep rows 3–5 and 8);
 * the AI's tuning in C# options;
 * the diplomacy icon and name-suffix maps of the original's art;
 * the replay recording's in-memory keyframes;

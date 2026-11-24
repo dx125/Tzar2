@@ -327,7 +327,7 @@ public class RulesetCompilerTests
     }
 
     [Fact]
-    public void Civilizations_keep_the_rulesets_order_and_a_fork_adds_one_in_data()
+    public void Civilizations_keep_the_rulesets_order_and_a_mod_adds_one_in_data()
     {
         // ADR 0211: the classic order is the original's race order, then the common key; a kingdom's civilization is an
         // index into it, so the order is part of the rules, not an accident of sorting.
@@ -338,20 +338,20 @@ public class RulesetCompilerTests
         Assert.False(classic.IsPlayableCivilization("comm"));
         Assert.False(classic.IsPlayableCivilization("elves"));
 
-        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        Ruleset modded = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
         {
-            OverrideTexts = [new("fork.yaml", "ruleset: { civilizations: [asia, euro, arab, elves] }")],
+            OverrideTexts = [new("modded.yaml", "ruleset: { civilizations: [asia, euro, arab, elves] }")],
         });
-        Assert.Equal(["asia", "euro", "arab", "elves", "comm"], fork.Civilizations);
-        Assert.True(fork.IsPlayableCivilization("elves"));
-        Assert.NotEqual(classic.ContentHash, fork.ContentHash);
+        Assert.Equal(["asia", "euro", "arab", "elves", "comm"], modded.Civilizations);
+        Assert.True(modded.IsPlayableCivilization("elves"));
+        Assert.NotEqual(classic.ContentHash, modded.ContentHash);
     }
 
     [Fact]
     public void The_seat_and_the_feature_technologies_are_data()
     {
         // Code review 2026-10 (item 16): the castles victory counts the Seat trait, not the class name "castle"; the
-        // tavern, gambling and loans name their technologies in world settings, not in code. A fork changes them in YAML.
+        // tavern, gambling and loans name their technologies in world settings, not in code. A mod changes them in YAML.
         Ruleset classic = SyntheticLegacyContent.CompileRuleset();
         Assert.True(classic.EntityTypes[classic.EntityTypeId("euro.castle")].Traits.IsSeat);
         Assert.False(classic.EntityTypes[classic.EntityTypeId("euro.house")].Traits.IsSeat);
@@ -359,19 +359,19 @@ public class RulesetCompilerTests
             ("te_mercenaries", "te_heroesquest", "te_fame", "te_gambling", "te_usury"),
             (classic.World.MercenariesTechnology, classic.World.HeroesTechnology, classic.World.FameTechnology, classic.World.GamblingTechnology, classic.World.LoanTechnology));
 
-        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        Ruleset modded = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
         {
-            OverrideTexts = [new("fork.yaml", "world: { loanTechnology: te_banking, gamblingTechnology: '' }\neuro.house: { Seat: {} }")],
+            OverrideTexts = [new("modded.yaml", "world: { loanTechnology: te_banking, gamblingTechnology: '' }\neuro.house: { Seat: {} }")],
         });
-        Assert.Equal(("te_banking", string.Empty), (fork.World.LoanTechnology, fork.World.GamblingTechnology));
-        Assert.True(fork.EntityTypes[fork.EntityTypeId("euro.house")].Traits.IsSeat);
-        Assert.NotEqual(classic.ContentHash, fork.ContentHash);
+        Assert.Equal(("te_banking", string.Empty), (modded.World.LoanTechnology, modded.World.GamblingTechnology));
+        Assert.True(modded.EntityTypes[modded.EntityTypeId("euro.house")].Traits.IsSeat);
+        Assert.NotEqual(classic.ContentHash, modded.ContentHash);
     }
 
     [Fact]
     public void Map_builders_take_the_seat_and_the_starting_worker_from_the_ruleset()
     {
-        // Code review 2026-10 (item 16, for a fork): map generation and the test maps placed "<civ>.castle" and
+        // Code review 2026-10 (item 16, rules as data): map generation and the test maps placed "<civ>.castle" and
         // "<civ>.peon". The trait StartingWorker marks the peasant as Seat marks the castle; a catalog bound to a ruleset
         // names both by their traits. In classic they are exactly those keys, so maps do not change.
         Ruleset classic = SyntheticLegacyContent.CompileRuleset();
@@ -386,20 +386,20 @@ public class RulesetCompilerTests
             Assert.Equal(civ + ".peon", bound.Kind(MapObjectRole.Peasant)!.Value.KeyFor(civ));
         }
 
-        // A fork whose European kingdom starts from a house with footmen as its workers.
-        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        // A mod whose European kingdom starts from a house with footmen as its workers.
+        Ruleset modded = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
         {
-            OverrideTexts = [new("fork.yaml", "euro.castle: { -Seat: }\neuro.house: { Seat: {} }\neuro.peon: { -StartingWorker: }\neuro.footman: { StartingWorker: {} }")],
+            OverrideTexts = [new("modded.yaml", "euro.castle: { -Seat: }\neuro.house: { Seat: {} }\neuro.peon: { -StartingWorker: }\neuro.footman: { StartingWorker: {} }")],
         });
-        MapGenCatalog forked = MapGenCatalog.Classic.RestrictTo(fork);
-        Assert.Equal(("euro.house", "euro.footman"), (forked.Kind(MapObjectRole.Castle)!.Value.KeyFor("euro"), forked.Kind(MapObjectRole.Peasant)!.Value.KeyFor("euro")));
-        Assert.Equal("arab.castle", forked.Kind(MapObjectRole.Castle)!.Value.KeyFor("arab"));
+        MapGenCatalog moddedCatalog = MapGenCatalog.Classic.RestrictTo(modded);
+        Assert.Equal(("euro.house", "euro.footman"), (moddedCatalog.Kind(MapObjectRole.Castle)!.Value.KeyFor("euro"), moddedCatalog.Kind(MapObjectRole.Peasant)!.Value.KeyFor("euro")));
+        Assert.Equal("arab.castle", moddedCatalog.Kind(MapObjectRole.Castle)!.Value.KeyFor("arab"));
     }
 
     [Fact]
     public void A_kingdom_can_be_of_a_playable_civilization_with_a_seat()
     {
-        // Code review 2026-10 (item 16, for a fork): the match setup, the campaigns and the desync reports asked for a
+        // Code review 2026-10 (item 16, rules as data): the match setup, the campaigns and the desync reports asked for a
         // type named "<civ>.castle"; they ask the ruleset now, which reads the Seat trait. In classic the seats are
         // exactly the castles, so nothing changes there.
         Ruleset classic = SyntheticLegacyContent.CompileRuleset();
@@ -416,16 +416,16 @@ public class RulesetCompilerTests
         Assert.False(classic.CanFoundKingdom("comm"));
         Assert.False(classic.CanFoundKingdom("elves"));
 
-        // A fork's civilization without a seat cannot found a kingdom, whatever its place in the list. With two seats the
+        // A mod's civilization without a seat cannot found a kingdom, whatever its place in the list. With two seats the
         // civilization's seat is the lower type id.
-        Ruleset fork = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
+        Ruleset modded = SyntheticLegacyContent.CompileRuleset("classic", new RulesetCompileOptions
         {
-            OverrideTexts = [new("fork.yaml", "ruleset: { civilizations: [elves, euro, arab, asia] }\neuro.house: { Seat: {} }")],
+            OverrideTexts = [new("modded.yaml", "ruleset: { civilizations: [elves, euro, arab, asia] }\neuro.house: { Seat: {} }")],
         });
-        Assert.Equal(-1, fork.SeatTypeId("elves"));
-        Assert.False(fork.CanFoundKingdom("elves"));
-        Assert.Equal("euro", fork.FirstKingdomCivilization);
-        Assert.Equal(Math.Min(fork.EntityTypeId("euro.house"), fork.EntityTypeId("euro.castle")), fork.SeatTypeId("euro"));
+        Assert.Equal(-1, modded.SeatTypeId("elves"));
+        Assert.False(modded.CanFoundKingdom("elves"));
+        Assert.Equal("euro", modded.FirstKingdomCivilization);
+        Assert.Equal(Math.Min(modded.EntityTypeId("euro.house"), modded.EntityTypeId("euro.castle")), modded.SeatTypeId("euro"));
     }
 
     [Fact]

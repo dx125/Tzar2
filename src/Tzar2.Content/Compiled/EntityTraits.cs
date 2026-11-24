@@ -364,7 +364,7 @@ public sealed partial record EntityTraits
 
     /// <summary>
     /// Whether the type is a kingdom's seat (trait <c>Seat</c>; classic: the castle): the "destroy the castles" victory
-    /// defeats a kingdom that has none left (GAME-17). A fork names its own seats in data.
+    /// defeats a kingdom that has none left (GAME-17). A mod names its own seats in data.
     /// </summary>
     public bool IsSeat { get; init; }
 
@@ -376,7 +376,7 @@ public sealed partial record EntityTraits
 
     /// <summary>
     /// Whether the type is a kingdom's starting worker (trait <c>StartingWorker</c>; classic: the peasant): map builders
-    /// place it next to the seat (<see cref="Ruleset.StartingWorkerTypeId"/>). A fork names its own in data.
+    /// place it next to the seat (<see cref="Ruleset.StartingWorkerTypeId"/>). A mod names its own in data.
     /// </summary>
     public bool IsStartingWorker { get; init; }
 

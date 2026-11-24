@@ -36,7 +36,7 @@ by commands.
 
 * **Make the spans read-only for everyone, with writers going through methods:** that would touch every system and hot
   loop of the sim, and the hot paths need `ref` access. A view for the readers costs nothing.
-* **A separate read-only world interface for the AI:** cleaner for a fork that replaces the AI, but large. The views
+* **A separate read-only world interface for the AI:** cleaner for a mod that replaces the AI, but large. The views
   are a step towards it. The interface can follow if the AI moves out of process.
 
 ## Consequences

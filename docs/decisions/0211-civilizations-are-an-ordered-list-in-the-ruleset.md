@@ -4,7 +4,7 @@
 * **Date:** 2026-10-22
 * **Deciders:** agent (maintainer), code review of work queue item 16
 * **Related:** ADR 0040 (a kingdom's civilization); TDD §10 (triggers); `LegacyMap.Race`;
-  [code review 2026-10](../reviews/2026-10-code-review.md) (readiness for a fork, finding 1)
+  [code review 2026-10](../reviews/2026-10-code-review.md) (rules as data, finding 1)
 
 ## Context
 
@@ -17,7 +17,7 @@ and it leaked:
   the same way by the map converter). A trigger testing `$race == 1` for Europeans never fired.
 * A kingdom with no objects of a civilization defaults to the list's first non-common entry: `arab`.
 * The common key `comm` was a literal in Sim (three places), the AI and the client.
-* A fork with more races cannot choose where they go. Adding one shifts the others, and the race numbers with them.
+* A mod with more races cannot choose where they go. Adding one shifts the others, and the race numbers with them.
 
 ## Decision
 
@@ -30,7 +30,7 @@ and it leaked:
   screen. The common key is part of the ruleset hash.
 * `Race` stays the index + 1, which now gives the original's numbers. A kingdom with no objects of a civilization
   defaults to `euro`, the first one listed.
-* A fork adds a civilization by listing it. A listed civilization with no types yet is allowed, so its index is fixed
+* A mod adds a civilization by listing it. A listed civilization with no types yet is allowed, so its index is fixed
   before its content exists.
 
 Hashes change on purpose: every kingdom's civilization index changes, and with it the state hashes. The AI's command
@@ -42,7 +42,7 @@ mission's trigger hash, and the CI bench hashes of the gameplay and AI scenarios
 * **Map `Race` through a table in the trigger engine** (`euro` → 1 and so on): this fixes the bug but leaves the order
   to sorting and the default to `arab`, and it is a second list of the same civilizations.
 * **A civilization definition block** with a name, a race number and HUD assets each: this is the right shape once a
-  fork has assets of its own. For now the order is all the engine reads, so the list stays as small as that.
+  mod has assets of its own. For now the order is all the engine reads, so the list stays as small as that.
 
 ## Consequences
 
@@ -50,7 +50,7 @@ mission's trigger hash, and the CI bench hashes of the gameplay and AI scenarios
 * Not done here, and listed in the review: the scenario model's `enum Civilization { European, Arabian, Asian, Random }`,
   the client's own `["euro", "arab", "asia"]` lists, the diplomacy icon row, map generation's list and `"euro"` defaults.
   They should read `Ruleset.Civilizations` next.
-* Revisit when a fork needs per-civilization data beyond the order (names, icons, colours): grow the list into
+* Revisit when a mod needs per-civilization data beyond the order (names, icons, colours): grow the list into
   definitions.
 
 ## Amendment (2026-10-23): scenarios and map generation

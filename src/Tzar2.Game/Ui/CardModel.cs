@@ -237,7 +237,7 @@ public readonly record struct CardSlot(CardButton Button, bool Enabled, bool Act
 
 /// <summary>
 /// Where the command card's buttons and the names it shows come from: for the original, its imported MENU.INI,
-/// ORDERS.INI, STRINGS.INI and object INIs (the client's <c>PresentationCatalog</c>); a new game supplies its own.
+/// ORDERS.INI, STRINGS.INI and object INIs (the client's <c>PresentationCatalog</c>); a mod or another client supplies its own.
 /// </summary>
 public interface ICardSource
 {

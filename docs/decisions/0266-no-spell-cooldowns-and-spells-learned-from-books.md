@@ -24,8 +24,8 @@ Two of ReTzar's readings of the original's code disagree with Tzar2.
 
 ## Decision
 
-1. **No spell has a cooldown in the classic ruleset.** The `Spell.cooldownMs` field stays in the model, default 0, so a
-   fork can give spells a wait. Mana, the cast time (still UNVERIFIED) and a book's own pool are what pace casting.
+1. **No spell has a cooldown in the classic ruleset.** The `Spell.cooldownMs` field stays in the model, default 0, so another
+   ruleset can give spells a wait. Mana, the cast time (still UNVERIFIED) and a book's own pool are what pace casting.
 2. **A unit can learn a spell from a book** (ITEM-019):
    * A new store `game.learned` holds `LearnedSpells`, a 64-bit mask over the ruleset's spells. Only units that learned
      something have an entry. A ruleset's first 64 spells can be learned, which is more than the original's 22.
@@ -59,4 +59,4 @@ Two of ReTzar's readings of the original's code disagree with Tzar2.
 * **Keep the cooldowns as Tzar2's own pacing:** rejected. Rules stay faithful (the owner's rule), and the only source
   that reads the original says there is none.
 * **A per-unit spell list of any length:** components are fixed-size data. A mask is enough for every ruleset with up
-  to 64 spells. A fork that needs more widens the mask; that is a layout change like this one.
+  to 64 spells. A ruleset that needs more widens the mask; that is a layout change like this one.

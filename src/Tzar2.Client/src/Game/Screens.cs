@@ -449,7 +449,7 @@ public sealed class SkirmishOptions
 {
     /// <summary>
     /// The civilizations a player may choose: the ruleset's playable ones in its order (ADR 0211; classic: European,
-    /// Arabian, Asian, the original's race numbers 1-3), or those three without a ruleset. A fork adds one in its YAML.
+    /// Arabian, Asian, the original's race numbers 1-3), or those three without a ruleset. A mod adds one in its YAML.
     /// </summary>
     public static string[] CivilizationsOf(Tzar2.Content.Compiled.Ruleset? rules)
     {

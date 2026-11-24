@@ -123,7 +123,7 @@ Every decision that shapes the code, with its context, the alternatives and the 
 | [0179](0179-right-click-default-actions-and-pointers.md) | Give each unit its default action on a right click, and show it with the original's pointers | Accepted | 2026-10-20 |
 | [0180](0180-third-play-test-rules.md) | Queue any number of any items, give loads at once, and let peasants work without being told | Accepted | 2026-10-20 |
 | [0181](0181-a-ledger-of-the-originals-rules-checked-against-tests.md) | Keep a ledger of the original's rules, and check it against the tests | Accepted | 2026-10-21 |
-| [0182](0182-engine-core-original-content-and-a-future-game.md) | Keep the core free of any engine and of the original's content, and move UI logic into engine-free models | Accepted | 2026-10-21 |
+| [0182](0182-engine-free-core-original-content-and-ui-models.md) | Keep the core free of any engine and of the original's content, and move UI logic into engine-free models | Accepted | 2026-10-21 |
 | [0183](0183-ai-assistance-runs-halves-of-a-human-kingdom.md) | Let a human's standby AI run the economy, the war or both of the kingdom when asked (AI assistance) | Accepted | 2026-10-21 |
 | [0184](0184-spies-impersonate-units-of-other-kingdoms.md) | Let a spy take the look of another kingdom's unit until it reveals itself or attacks | Accepted | 2026-10-21 |
 | [0185](0185-repairs-come-in-blows-of-a-quarter-of-the-build-rate.md) | Repair in blows of max / (4 × TIME) every 1.25 s, free, with no falloff | Accepted | 2026-10-21 |

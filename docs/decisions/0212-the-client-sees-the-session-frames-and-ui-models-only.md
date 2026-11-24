@@ -8,7 +8,7 @@
 
 ## Context
 
-The owner will fork the remake, perhaps onto another engine. The client must then be replaceable behind a contract that
+The client must be replaceable, perhaps by one on another engine, behind a contract that
 holds no handle to the running match. ADR 0073 lets the client use only Game, Content and Import, plus
 `Core.Ids`, `Core.Diagnostics`, `Sim.Commands` and `Sim.Events`. `ClientTypeReferenceTests` checks the client's own code.
 Nothing checked what the Game assembly hands out, and some of it gave the client the engines themselves:
@@ -42,7 +42,7 @@ The client used none of them. Only the CLI (`t2`) and tests did.
 ## Alternatives considered
 
 * **Mirror enums in Game (`DiplomaticStance` and so on):** this removes the last Sim names from the contract, at the
-  cost of a mapping layer for values that are already plain data. It can be done if a fork replaces the sim's enums.
+  cost of a mapping layer for values that are already plain data. It can be done if a mod or another client replaces the sim's enums.
 * **A separate host API assembly for tools:** cleaner than `InternalsVisibleTo`, but a new project for four members.
   It can be revisited if more hosts appear.
 
