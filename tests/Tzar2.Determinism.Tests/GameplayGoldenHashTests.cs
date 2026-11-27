@@ -135,8 +135,8 @@ public class GameplayGoldenHashTests(ITestOutputHelper output)
     // (MAG-030 to MAG-033, WAR-020, ADR 0278, 2026-11-06) casters wait for their mana, the freeze, confusion and the blessing
     // are cast at a point, spells take any kingdom's units, the heal goes on while its unit is wounded (the scenario's
     // priest keeps healing): the ruleset, the stream and the final hash.
-    private const ulong GoldenHashStream = 0xBC260ECE01074AD4UL;
-    private const ulong GoldenFinalFullHash = 0x192E8887B98AED1EUL;
+    private const ulong GoldenHashStream = 0x7B5CDD0A5552345FUL;
+    private const ulong GoldenFinalFullHash = 0xC242F6BF6BAF453DUL;
 
     private const int Ticks = 1600;
 

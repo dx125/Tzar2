@@ -119,6 +119,46 @@ public class CellMovementTests
 
     [Fact]
     [Trait("Rule", "WORLD-020")]
+    public void A_unit_waiting_behind_one_on_the_move_looks_again_every_250_ms()
+    {
+        // As the original's (ReTzar 0x4dec92: ten looks, 250 ms apart): a unit waiting behind one entering the tile it
+        // wants, or walking on, steps on only when it looks again, every 250 ms, until it has waited 2.5 s.
+        var units = new List<Tzar2.Content.Compiled.MapObject>();
+        for (int i = 0; i < 24; i++)
+        {
+            units.Add(Unit("euro.footman", 0, 4 + (i % 6), 4 + (i / 6)));
+        }
+
+        using var d = new SimDriver(TestMap(40, 24, [.. units]), ruleset: Classic);
+        EntityId[] all = [.. OfType(d.World, "euro.footman")];
+        int every = MovementSystem.CellWaitCheckMs / d.World.Config.TickLengthMilliseconds;
+        int waitTicks = MovementSystem.CellWaitMs / d.World.Config.TickLengthMilliseconds;
+        Assert.Equal(10, waitTicks / every);
+        d.MoveToTile(0, all, 28, 12);
+        CellStep[] before = new CellStep[all.Length];
+        var looks = new List<int>();
+        d.RunUntil(() =>
+        {
+            for (int k = 0; k < all.Length; k++)
+            {
+                CellStep now = d.World.CellSteps.Has(all[k]) ? d.World.CellSteps.Get(all[k]) : default;
+                if (before[k].To < 0 && now.To >= 0 && before[k].Waits is > 0 and var w && w < waitTicks)
+                {
+                    looks.Add(w); // waited w ticks, then stepped on
+                }
+
+                before[k] = d.World.CellSteps.Has(all[k]) ? now : new CellStep { To = -1 };
+            }
+
+            return !d.AnyMoving(all);
+        }, 1200);
+
+        Assert.NotEmpty(looks);
+        Assert.All(looks, w => Assert.Equal(0, w % every));
+    }
+
+    [Fact]
+    [Trait("Rule", "WORLD-020")]
     public void Many_attackers_of_one_enemy_surround_it()
     {
         var objects = new List<Tzar2.Content.Compiled.MapObject> { Unit("euro.knight", 1, 20, 12) };
