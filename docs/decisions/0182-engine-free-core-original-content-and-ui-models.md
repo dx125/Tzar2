@@ -2,17 +2,15 @@
 
 * **Status:** Accepted
 * **Date:** 2026-10-21
-* **Deciders:** agent (maintainer); product owner (asked how ready the code is for a new game on the same core, 2026-10-21)
+* **Deciders:** agent (maintainer); product owner (asked how separable the core is from the original and from Godot, 2026-10-21)
 * **Related:** TDD §7, §11, REQ-ARCH-01..03; ADRs 0002, 0031, 0032, 0071, 0181
 
 ## Context
 
-The owner plans, later, a new game built on Tzar2. It would have:
+The owner asked how far the core stands apart from two things:
 
-* a new balance;
-* changed units and new civilizations;
-* perhaps a 3D engine;
-* the same logical core.
+* the original's content, which a package of other rules, units and civilizations (a mod) does not need;
+* Godot, which another client, perhaps a 3D one, would replace.
 
 The question was how ready the code is, and what must be kept apart to allow it.
 
@@ -57,20 +55,20 @@ The question was how ready the code is, and what must be kept apart to allow it.
      models of this ADR) and Content (packages, VFS, rules compiler). It is game-neutral and free of any engine.
    * **The original's content:** Formats, Import, the legacy table importer, the legacy AI language, the `classic` and
      `remastered` rulesets, and the 2D client's readers of the original's art.
-   * **A game:** a package (rules, art, texts, AI) plus a client.
+   * **A game or a mod:** a package (rules, art, texts, AI) plus a client.
 2. **Game UI logic lives in engine-free models in `Tzar2.Game.Ui`, tested there; a client draws what they give and
    carries out what they ask.**
    * The first is the command card: `CommandCard` builds the slots and turns a press into commands, an order waiting
      for a target, a building to place, a dialog or a message.
    * It reads its buttons through `ICardSource`. For the original that is the client's `PresentationCatalog`, from
-     `MENU.INI`, `ORDERS.INI` and `STRINGS.INI`; a new game supplies its own.
+     `MENU.INI`, `ORDERS.INI` and `STRINGS.INI`; a mod or another client supplies its own.
    * Next, as they are touched: the selection view, the event messages, the minimap's model.
 3. **New code in the core does not read the original's formats or name its classes;** what the original does by class
    becomes a trait of the rules. Numbers taken from the original's art are compiled into the ruleset at import; the
    simulation never reads art.
 4. **`GameFrame` carries game state at full precision.** A field a 3D client needs (the full heading) is added when
    that client comes; nothing in the frame may only make sense for sprites.
-5. **Deferred until a new game starts**, when its needs are known:
+5. **Deferred until a mod or another client needs it**, when its needs are known:
    * moving `Tzar2.Content/Rules/Legacy*` into a separate assembly behind the compiler's `legacy:` section;
    * a trait for the kingdom's seat instead of the castle's class in the victory check (a rules change, re-pinned
      hashes);
@@ -80,7 +78,7 @@ The question was how ready the code is, and what must be kept apart to allow it.
 
 ## Alternatives considered
 
-* **Split the assemblies now.** Without a second game nobody can say where the seams must run. The cost (moving the
+* **Split the assemblies now.** Without a second package or client nobody can say where the seams must run. The cost (moving the
   importer, re-pinning hashes for the castle trait) brings nothing to the remake today.
 * **Leave the UI logic in the client.** It is where the play-tests found most defects, and CI cannot test it there.
   A 3D client would have to rewrite it.
@@ -95,4 +93,4 @@ The question was how ready the code is, and what must be kept apart to allow it.
   `Tzar2.Client.Tests` references `Tzar2.Game`.
 * Review checks that new UI logic goes into a model, and that the core gains no reads of original formats or
   original class names.
-* Revisit when work on a new game begins: decision 5 then becomes its own plan.
+* Revisit when a total-conversion mod or another client begins: decision 5 then becomes its own plan.

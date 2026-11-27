@@ -110,7 +110,7 @@ public class ExperienceTests
     [Trait("Rule", "EXP-002")]
     public void The_experience_curve_is_data_and_classic_keeps_the_originals()
     {
-        // Code review 2026-10 (item 16, for a fork): the curve's shape was code (level k costs base × k). It is
+        // Code review 2026-10 (item 16, rules as data): the curve's shape was code (level k costs base × k). It is
         // levelBaseXp + levelStepXp × (k − 1) now, -1 for "as base"; classic gives the original's numbers exactly, at
         // every experience speed.
         CombatSettings classic = Classic.Combat;
@@ -140,7 +140,7 @@ public class ExperienceTests
             }
         }
 
-        // A fork with flat levels (every level costs 5) and one that grows faster (2, then 3 more per level).
+        // A mod with flat levels (every level costs 5) and one that grows faster (2, then 3 more per level).
         Ruleset flat = ClassicWith("combat: { levelBaseXp: 5, levelStepXp: 0 }");
         Assert.Equal([0, 1, 6, 11, 16], Enumerable.Range(0, 5).Select(n => CombatStats.XpForLevel(flat.Combat, n)));
         Ruleset steep = ClassicWith("combat: { levelBaseXp: 2, levelStepXp: 3 }");

@@ -72,7 +72,7 @@ public readonly record struct MapObjectKind(string KeyTemplate, int Width, int H
 
     /// <summary>
     /// Keys per civilization that take the template's place: a catalog bound to a ruleset names each civilization's seat
-    /// and starting worker by their traits (code review 2026-10, for a fork), not by <c>&lt;civ&gt;.castle</c>.
+    /// and starting worker by their traits (code review 2026-10, rules as data), not by <c>&lt;civ&gt;.castle</c>.
     /// </summary>
     public ImmutableSortedDictionary<string, string>? Keys { get; init; }
 
@@ -174,7 +174,7 @@ public sealed class MapGenCatalog
     public MapGenCatalog RestrictTo(Ruleset ruleset)
     {
         ArgumentNullException.ThrowIfNull(ruleset);
-        // The ruleset's playable civilizations in its order (ADR 0211; a fork's own ones too); the catalog's list for a
+        // The ruleset's playable civilizations in its order (ADR 0211; a mod's own ones too); the catalog's list for a
         // ruleset that lists none.
         IEnumerable<string> candidates = ruleset.Civilizations.Count > 0 ? ruleset.Civilizations.Where(ruleset.IsPlayableCivilization) : Civilizations;
         var civs = new List<string>();

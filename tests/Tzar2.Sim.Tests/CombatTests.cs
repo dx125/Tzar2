@@ -100,8 +100,8 @@ public class CombatTests
     [Fact]
     public void An_auto_acquired_target_is_dropped_beyond_the_rulesets_leash()
     {
-        // Code review 2026-10 (item 16, for a fork): the leash (twice the sight) was a constant in CombatSystem; it is
-        // gameplay.autoChaseLeashPercent now. A knight outruns the footman that acquired it: classic gives up, a fork with
+        // Code review 2026-10 (item 16, rules as data): the leash (twice the sight) was a constant in CombatSystem; it is
+        // gameplay.autoChaseLeashPercent now. A knight outruns the footman that acquired it: classic gives up, a mod with
         // a 100-sight leash keeps chasing.
         Assert.Equal(200, Classic.Gameplay.AutoChaseLeashPercent);
         foreach ((Ruleset rules, bool chases) in new[] { (Classic, false), (ClassicWith("gameplay: { autoChaseLeashPercent: 10000 }"), true) })

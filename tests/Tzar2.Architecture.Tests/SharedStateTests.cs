@@ -10,7 +10,7 @@ namespace Tzar2.Architecture.Tests;
 /// <summary>
 /// Code review 2026-10 (item 16): no public static state anyone can change. A public static field that is not
 /// <c>readonly</c>, or a <c>readonly</c> one that holds an array or a mutable collection, is global state: one caller
-/// (a match, a test, a fork's mod) changes it for every other one, across matches and threads. Use a <c>const</c>,
+/// (a match, a test, a mod) changes it for every other one, across matches and threads. Use a <c>const</c>,
 /// an <c>ImmutableArray</c>, a <c>ReadOnlySpan</c> property or a frozen collection instead.
 /// </summary>
 public class SharedStateTests

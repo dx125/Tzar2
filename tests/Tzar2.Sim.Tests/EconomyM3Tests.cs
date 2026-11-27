@@ -76,7 +76,7 @@ public class EconomyM3Tests
     [Fact]
     public void A_harbors_reach_to_the_water_is_data()
     {
-        // Code review 2026-10 (item 16, for a fork): the reach was a constant in Sim, the AI and the build ghost; it is
+        // Code review 2026-10 (item 16, rules as data): the reach was a constant in Sim, the AI and the build ghost; it is
         // Building.coastReachTiles now (classic 2). On this coast the ships' water is two tiles beyond column 9 (the
         // first '~' column is shore): the 3-wide harbor fits at column 7 with a reach of 2, not 1, and at column 6
         // only with 3.
